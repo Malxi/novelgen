@@ -10,12 +10,10 @@ import (
 	"nolvegen/internal/llm"
 	"nolvegen/internal/models"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 )
 
 var (
-	composeGenFlag   bool
 	composeRegenFlag string
 )
 
@@ -25,13 +23,12 @@ var composeCmd = &cobra.Command{
 	Long: `Generate a story outline with a rigid 3-level structure (parts → volumes → chapters),
 including plot beats, conflict, and pacing to guide AI writing.
 
-This command reads the story setup from config/init/story_setup.json and creates
-a hierarchical outline structure based on the predefined structure in novel.json.`,
+This command reads the story setup from config/init/story_setup.json and uses AI
+to generate a hierarchical outline structure based on the predefined structure in novel.json.`,
 	RunE: runCompose,
 }
 
 func init() {
-	composeCmd.Flags().BoolVar(&composeGenFlag, "gen", false, "Automatically generate whole outline based on setup")
 	composeCmd.Flags().StringVar(&composeRegenFlag, "regen", "", "Regenerate a specific part, volume, or chapter (e.g., \"1\", \"1_1\", \"1_1_1\")")
 	rootCmd.AddCommand(composeCmd)
 }
@@ -68,13 +65,7 @@ func runCompose(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("outline already exists at %s. Use --regen to regenerate specific parts", outlinePath)
 	}
 
-	if composeGenFlag {
-		// AI generation mode
-		outline, err = generateOutlineWithAI(setup, projectConfig)
-		if err != nil {
-			return fmt.Errorf("failed to generate outline with AI: %w", err)
-		}
-	} else if composeRegenFlag != "" {
+	if composeRegenFlag != "" {
 		// Regenerate specific element
 		outline, err = models.LoadOutline(outlinePath)
 		if err != nil {
@@ -84,10 +75,10 @@ func runCompose(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to regenerate element: %w", err)
 		}
 	} else {
-		// Interactive mode - use predefined structure
-		outline, err = interactiveOutlineWithStructure(setup, projectConfig.Structure)
+		// AI generation mode (default)
+		outline, err = generateOutlineWithAI(setup, projectConfig)
 		if err != nil {
-			return fmt.Errorf("failed to create outline: %w", err)
+			return fmt.Errorf("failed to generate outline with AI: %w", err)
 		}
 	}
 
@@ -116,132 +107,6 @@ func runCompose(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func interactiveOutlineWithStructure(setup *models.StorySetup, structure models.StoryStructure) (*models.Outline, error) {
-	fmt.Println("📖 Story Outline Composition")
-	fmt.Println("=============================")
-	fmt.Printf("Project: %s\n", setup.ProjectName)
-	fmt.Printf("Structure: %d parts × %d volumes × %d chapters = %d total chapters\n\n",
-		structure.TargetParts, structure.TargetVolumes, structure.TargetChapters,
-		structure.TotalChapters())
-
-	outline := &models.Outline{}
-
-	for p := 1; p <= structure.TargetParts; p++ {
-		part := models.Part{
-			ID: fmt.Sprintf("part_%d", p),
-		}
-
-		fmt.Printf("\n--- Part %d ---\n", p)
-
-		// Part title
-		titlePrompt := &survey.Input{
-			Message: "Part title:",
-		}
-		if err := survey.AskOne(titlePrompt, &part.Title, survey.WithValidator(survey.Required)); err != nil {
-			return nil, err
-		}
-
-		// Part summary
-		summaryPrompt := &survey.Multiline{
-			Message: "Part summary:",
-			Help:    "Brief description of what happens in this part",
-		}
-		if err := survey.AskOne(summaryPrompt, &part.Summary); err != nil {
-			return nil, err
-		}
-
-		for v := 1; v <= structure.TargetVolumes; v++ {
-			volume := models.Volume{
-				ID: fmt.Sprintf("vol_%d_%d", p, v),
-			}
-
-			fmt.Printf("\n  --- Volume %d.%d ---\n", p, v)
-
-			// Volume title
-			volTitlePrompt := &survey.Input{
-				Message: "Volume title:",
-			}
-			if err := survey.AskOne(volTitlePrompt, &volume.Title, survey.WithValidator(survey.Required)); err != nil {
-				return nil, err
-			}
-
-			// Volume summary
-			volSummaryPrompt := &survey.Multiline{
-				Message: "Volume summary:",
-				Help:    "Brief description of what happens in this volume",
-			}
-			if err := survey.AskOne(volSummaryPrompt, &volume.Summary); err != nil {
-				return nil, err
-			}
-
-			for c := 1; c <= structure.TargetChapters; c++ {
-				chapter := models.Chapter{
-					ID: fmt.Sprintf("chap_%d_%d_%d", p, v, c),
-				}
-
-				fmt.Printf("\n    --- Chapter %d.%d.%d ---\n", p, v, c)
-
-				// Chapter title
-				chapTitlePrompt := &survey.Input{
-					Message: "Chapter title:",
-				}
-				if err := survey.AskOne(chapTitlePrompt, &chapter.Title, survey.WithValidator(survey.Required)); err != nil {
-					return nil, err
-				}
-
-				// Chapter summary
-				chapSummaryPrompt := &survey.Multiline{
-					Message: "Chapter summary:",
-					Help:    "Brief description of what happens in this chapter",
-				}
-				if err := survey.AskOne(chapSummaryPrompt, &chapter.Summary); err != nil {
-					return nil, err
-				}
-
-				// Plot beats
-				beatsPrompt := &survey.Multiline{
-					Message: "Plot beats (one per line):",
-					Help:    "Key plot points in this chapter",
-				}
-				var beatsStr string
-				if err := survey.AskOne(beatsPrompt, &beatsStr); err != nil {
-					return nil, err
-				}
-				if beatsStr != "" {
-					chapter.Beats = splitLinesAndTrim(beatsStr)
-				}
-
-				// Conflict
-				conflictPrompt := &survey.Input{
-					Message: "Main conflict:",
-					Help:    "The central conflict in this chapter",
-				}
-				if err := survey.AskOne(conflictPrompt, &chapter.Conflict); err != nil {
-					return nil, err
-				}
-
-				// Pacing
-				pacingPrompt := &survey.Select{
-					Message: "Pacing:",
-					Options: []string{"slow", "normal", "fast"},
-					Default: "normal",
-				}
-				if err := survey.AskOne(pacingPrompt, &chapter.Pacing); err != nil {
-					return nil, err
-				}
-
-				volume.Chapters = append(volume.Chapters, chapter)
-			}
-
-			part.Volumes = append(part.Volumes, volume)
-		}
-
-		outline.Parts = append(outline.Parts, part)
-	}
-
-	return outline, nil
-}
-
 func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.ProjectConfig) (*models.Outline, error) {
 	// Load or create LLM config
 	llmConfig, err := llm.LoadOrCreateConfig()
@@ -261,7 +126,7 @@ func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.Proje
 	client := llmConfig.CreateClient()
 	agent := agents.NewComposeAgent(client, llmConfig.Model)
 
-	return agent.GenerateOutlineWithStructure(setup, projectConfig.Structure)
+	return agent.GenerateOutlineWithStructure(setup, projectConfig.Structure, projectConfig.Language)
 }
 
 func regenerateElement(outline *models.Outline, id string, setup *models.StorySetup) error {

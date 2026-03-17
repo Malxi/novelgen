@@ -13,6 +13,9 @@ type ProjectConfig struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
+	// Story language (e.g., "zh" for Chinese, "en" for English)
+	Language string `json:"language"`
+
 	// Story structure configuration (user-defined)
 	Structure StoryStructure `json:"structure"`
 

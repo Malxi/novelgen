@@ -62,6 +62,12 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get story structure: %w", err)
 	}
 
+	// Get language
+	language, err := interactiveLanguage()
+	if err != nil {
+		return fmt.Errorf("failed to get language: %w", err)
+	}
+
 	// Use default LLM config (no interactive prompts)
 	llmConfig := models.DefaultLLMConfig()
 
@@ -71,6 +77,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		Version:       "1.0.0",
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
+		Language:      language,
 		Structure:     structure,
 		ChapterConfig: models.DefaultChapterConfig(),
 		LLM:           llmConfig,
@@ -246,6 +253,40 @@ func interactiveStoryStructure() (models.StoryStructure, error) {
 		totalChapters, structure.TargetParts, structure.TargetVolumes, structure.TargetChapters)
 
 	return structure, nil
+}
+
+func interactiveLanguage() (string, error) {
+	fmt.Println("\n🌐 Language Configuration")
+	fmt.Println("=========================")
+
+	languagePrompt := &survey.Select{
+		Message: "Select the story language:",
+		Options: []string{"中文 (Chinese)", "English", "日本語 (Japanese)", "Español (Spanish)", "Français (French)", "Deutsch (German)"},
+		Default: "中文 (Chinese)",
+	}
+
+	var languageStr string
+	if err := survey.AskOne(languagePrompt, &languageStr); err != nil {
+		return "zh", err
+	}
+
+	// Extract language code
+	switch {
+	case strings.Contains(languageStr, "中文"):
+		return "zh", nil
+	case strings.Contains(languageStr, "English"):
+		return "en", nil
+	case strings.Contains(languageStr, "日本語"):
+		return "ja", nil
+	case strings.Contains(languageStr, "Español"):
+		return "es", nil
+	case strings.Contains(languageStr, "Français"):
+		return "fr", nil
+	case strings.Contains(languageStr, "Deutsch"):
+		return "de", nil
+	default:
+		return "zh", nil
+	}
 }
 
 func generateStorySetupWithAI(prompt string) (*models.StorySetup, error) {
