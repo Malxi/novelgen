@@ -22,8 +22,8 @@ type ProjectConfig struct {
 	// Chapter writing configuration
 	ChapterConfig ChapterConfig `json:"chapter_config"`
 
-	// LLM configuration for this project
-	LLM LLMConfig `json:"llm"`
+	// LLM configuration for this project (only provider and model name)
+	LLM ProjectLLM `json:"llm"`
 }
 
 // StoryStructure defines the target story structure
@@ -63,19 +63,17 @@ func DefaultChapterConfig() ChapterConfig {
 	}
 }
 
-// LLMConfig contains LLM settings for the project
-type LLMConfig struct {
-	Model     string `json:"model"`
-	Context   int    `json:"context"`    // Model's context window size
-	MaxTokens int    `json:"max_tokens"` // Max tokens for generation
+// ProjectLLM contains only provider and model selection for the project
+type ProjectLLM struct {
+	Provider string `json:"provider"` // e.g., "ollama", "openai"
+	Model    string `json:"model"`    // e.g., "qwen3.5:4b", "gpt-4"
 }
 
-// DefaultLLMConfig returns default LLM configuration
-func DefaultLLMConfig() LLMConfig {
-	return LLMConfig{
-		Model:     "qwen3.5:4b",
-		Context:   32000,
-		MaxTokens: 8000,
+// DefaultProjectLLM returns default project LLM selection
+func DefaultProjectLLM() ProjectLLM {
+	return ProjectLLM{
+		Provider: "ollama",
+		Model:    "qwen3.5:4b",
 	}
 }
 

@@ -79,7 +79,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	// Use default LLM config (no interactive prompts)
-	llmConfig := models.DefaultLLMConfig()
+	llmConfig := models.DefaultProjectLLM()
 
 	// Create project config
 	config := &models.ProjectConfig{
@@ -300,18 +300,29 @@ func interactiveLanguage() (string, error) {
 }
 
 func generateStorySetupWithAI(prompt string) (*models.StorySetup, error) {
-	// Load or create LLM config
-	config, err := llm.LoadOrCreateConfig()
+	// Load LLM config
+	cfg, err := llm.LoadOrCreateConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load LLM config: %w", err)
 	}
 
-	fmt.Printf("Using model: %s at %s\n", config.Model, config.BaseURL)
+	// Use default project LLM settings for init
+	projectLLM := models.DefaultProjectLLM()
+
+	provider, model := cfg.GetActiveModel(&projectLLM)
+	if provider == nil || model == nil {
+		return nil, fmt.Errorf("failed to get active LLM configuration")
+	}
+
+	fmt.Printf("Using provider: %s, model: %s at %s\n", provider.Name, model.Name, provider.BaseURL)
 	fmt.Println()
 
 	// Create LLM client and agent
-	client := config.CreateClient()
-	agent := agents.NewInitAgent(client, config)
+	client := cfg.CreateClient(&projectLLM)
+	if client == nil {
+		return nil, fmt.Errorf("failed to create LLM client")
+	}
+	agent := agents.NewInitAgent(client, cfg, &projectLLM)
 
 	return agent.GenerateStorySetup(prompt)
 }

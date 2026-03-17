@@ -148,13 +148,19 @@ func runCompose(cmd *cobra.Command, args []string) error {
 }
 
 func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.ProjectConfig) (*models.Outline, error) {
-	// Load or create LLM config
-	llmConfig, err := llm.LoadOrCreateConfig()
+	// Load LLM config
+	cfg, err := llm.LoadOrCreateConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load LLM config: %w", err)
 	}
 
-	fmt.Printf("Using model: %s at %s\n", llmConfig.Model, llmConfig.BaseURL)
+	// Get active provider and model
+	provider, model := cfg.GetActiveModel(&projectConfig.LLM)
+	if provider == nil || model == nil {
+		return nil, fmt.Errorf("failed to get active LLM configuration")
+	}
+
+	fmt.Printf("Using provider: %s, model: %s at %s\n", provider.Name, model.Name, provider.BaseURL)
 	fmt.Printf("Story structure: %d parts × %d volumes × %d chapters = %d total chapters\n",
 		projectConfig.Structure.TargetParts,
 		projectConfig.Structure.TargetVolumes,
@@ -163,8 +169,11 @@ func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.Proje
 	fmt.Println()
 
 	// Create LLM client and agent
-	client := llmConfig.CreateClient()
-	agent := agents.NewComposeAgent(client, llmConfig)
+	client := cfg.CreateClient(&projectConfig.LLM)
+	if client == nil {
+		return nil, fmt.Errorf("failed to create LLM client")
+	}
+	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 
 	return agent.GenerateOutlineWithStructure(setup, projectConfig.Structure, projectConfig.Language)
 }
@@ -173,7 +182,7 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 	parts := strings.Split(id, "_")
 
 	// Load LLM config
-	llmConfig, err := llm.LoadOrCreateConfig()
+	cfg, err := llm.LoadOrCreateConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load LLM config: %w", err)
 	}
@@ -188,8 +197,11 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 		}
 	}
 
-	client := llmConfig.CreateClient()
-	agent := agents.NewComposeAgent(client, llmConfig)
+	client := cfg.CreateClient(&projectConfig.LLM)
+	if client == nil {
+		return fmt.Errorf("failed to create LLM client")
+	}
+	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 
 	switch len(parts) {
 	case 1:
@@ -306,17 +318,20 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 	logger.Section("Outline Iteration Improvement")
 	logger.Info("Maximum iterations: %d", maxIterations)
 
+	// Load LLM config
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load LLM config: %w", err)
+	}
+
 	// Create LLM client
-	llmCfg := llm.ConfigFromProjectConfig(&projectConfig.LLM)
-	client := llm.NewOpenAIClient(&llm.OpenAIConfig{
-		APIKey:  llmCfg.APIKey,
-		BaseURL: llmCfg.BaseURL,
-		Model:   llmCfg.Model,
-		Timeout: llmCfg.Timeout,
-	})
+	client := cfg.CreateClient(&projectConfig.LLM)
+	if client == nil {
+		return fmt.Errorf("failed to create LLM client")
+	}
 
 	// Create iteration agent
-	iterationAgent := agents.NewIterationAgent(client, llmCfg)
+	iterationAgent := agents.NewIterationAgent(client, cfg, &projectConfig.LLM)
 
 	currentIteration := 0
 	for currentIteration < maxIterations {

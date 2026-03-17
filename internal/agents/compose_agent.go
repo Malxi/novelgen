@@ -13,15 +13,17 @@ import (
 
 // ComposeAgent handles AI generation for story outline
 type ComposeAgent struct {
-	client llm.Client
-	config *llm.Config
+	client     llm.Client
+	config     *llm.Config
+	projectLLM *models.ProjectLLM
 }
 
 // NewComposeAgent creates a new ComposeAgent
-func NewComposeAgent(client llm.Client, config *llm.Config) *ComposeAgent {
+func NewComposeAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM) *ComposeAgent {
 	return &ComposeAgent{
-		client: client,
-		config: config,
+		client:     client,
+		config:     config,
+		projectLLM: projectLLM,
 	}
 }
 
@@ -103,7 +105,7 @@ Story Setup:
 		},
 	}
 
-	options := a.config.GetChatOptions()
+	options := a.config.GetChatOptions(a.projectLLM)
 
 	fmt.Println("Sending request to AI (this may take a while)...")
 	resp, err := a.client.ChatCompletion(messages, options)
@@ -170,7 +172,7 @@ func (a *ComposeAgent) GenerateOutlineWithStructure(setup *models.StorySetup, st
 		{Role: "user", Content: userPrompt},
 	}
 
-	options := a.config.GetChatOptions()
+	options := a.config.GetChatOptions(a.projectLLM)
 
 	logger.Info("Sending request to AI (this may take a while)...")
 	resp, err := a.client.ChatCompletion(messages, options)
@@ -243,7 +245,7 @@ func (a *ComposeAgent) RegeneratePart(part *models.Part, outline *models.Outline
 		{Role: "user", Content: data["element_type"].(string)},
 	}
 
-	options := a.config.GetChatOptions()
+	options := a.config.GetChatOptions(a.projectLLM)
 
 	resp, err := a.client.ChatCompletion(messages, options)
 	if err != nil {
@@ -290,7 +292,7 @@ func (a *ComposeAgent) RegenerateVolume(volume *models.Volume, outline *models.O
 		{Role: "user", Content: data["element_type"].(string)},
 	}
 
-	options := a.config.GetChatOptions()
+	options := a.config.GetChatOptions(a.projectLLM)
 	// Use smaller max tokens for volume regeneration
 	options.MaxTokens = 10000
 
@@ -339,7 +341,7 @@ func (a *ComposeAgent) RegenerateChapter(chapter *models.Chapter, outline *model
 		{Role: "user", Content: data["element_type"].(string)},
 	}
 
-	options := a.config.GetChatOptions()
+	options := a.config.GetChatOptions(a.projectLLM)
 	// Use smaller max tokens for chapter regeneration
 	options.MaxTokens = 5000
 

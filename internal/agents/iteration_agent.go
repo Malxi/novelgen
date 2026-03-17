@@ -13,15 +13,17 @@ import (
 
 // IterationAgent handles AI-driven outline review and improvement
 type IterationAgent struct {
-	client llm.Client
-	config *llm.Config
+	client     llm.Client
+	config     *llm.Config
+	projectLLM *models.ProjectLLM
 }
 
 // NewIterationAgent creates a new IterationAgent
-func NewIterationAgent(client llm.Client, config *llm.Config) *IterationAgent {
+func NewIterationAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM) *IterationAgent {
 	return &IterationAgent{
-		client: client,
-		config: config,
+		client:     client,
+		config:     config,
+		projectLLM: projectLLM,
 	}
 }
 
@@ -73,7 +75,7 @@ func (a *IterationAgent) ReviewOutline(outline *models.Outline, setup *models.St
 		{Role: "user", Content: userPrompt},
 	}
 
-	options := a.config.GetChatOptions()
+	options := a.config.GetChatOptions(a.projectLLM)
 
 	logger.Info("Sending review request to AI...")
 	resp, err := a.client.ChatCompletion(messages, options)
@@ -197,7 +199,7 @@ func (a *IterationAgent) regeneratePart(outline *models.Outline, suggestion prom
 	}
 
 	// Create compose agent for regeneration
-	composeAgent := NewComposeAgent(a.client, a.config)
+	composeAgent := NewComposeAgent(a.client, a.config, a.projectLLM)
 
 	// Build context for regeneration
 	userPrompt := buildReviewContext(suggestion)
@@ -218,7 +220,7 @@ func (a *IterationAgent) regenerateVolume(outline *models.Outline, suggestion pr
 		for j, vol := range part.Volumes {
 			if vol.ID == suggestion.ID {
 				// Create compose agent for regeneration
-				composeAgent := NewComposeAgent(a.client, a.config)
+				composeAgent := NewComposeAgent(a.client, a.config, a.projectLLM)
 
 				userPrompt := buildReviewContext(suggestion)
 				if err := composeAgent.RegenerateVolume(&vol, outline, setup, language, userPrompt); err != nil {
@@ -241,7 +243,7 @@ func (a *IterationAgent) regenerateChapter(outline *models.Outline, suggestion p
 			for k, ch := range vol.Chapters {
 				if ch.ID == suggestion.ID {
 					// Create compose agent for regeneration
-					composeAgent := NewComposeAgent(a.client, a.config)
+					composeAgent := NewComposeAgent(a.client, a.config, a.projectLLM)
 
 					userPrompt := buildReviewContext(suggestion)
 					if err := composeAgent.RegenerateChapter(&ch, outline, setup, language, userPrompt); err != nil {

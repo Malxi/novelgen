@@ -12,15 +12,17 @@ import (
 
 // InitAgent handles AI generation for story setup
 type InitAgent struct {
-	client llm.Client
-	config *llm.Config
+	client     llm.Client
+	config     *llm.Config
+	projectLLM *models.ProjectLLM
 }
 
 // NewInitAgent creates a new InitAgent
-func NewInitAgent(client llm.Client, config *llm.Config) *InitAgent {
+func NewInitAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM) *InitAgent {
 	return &InitAgent{
-		client: client,
-		config: config,
+		client:     client,
+		config:     config,
+		projectLLM: projectLLM,
 	}
 }
 
@@ -48,7 +50,7 @@ func (a *InitAgent) GenerateStorySetup(idea string) (*models.StorySetup, error) 
 		{Role: "user", Content: userPrompt},
 	}
 
-	options := a.config.GetChatOptions()
+	options := a.config.GetChatOptions(a.projectLLM)
 
 	logger.Info("Sending request to AI...")
 	resp, err := a.client.ChatCompletion(messages, options)
