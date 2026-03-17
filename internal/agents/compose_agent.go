@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"nolvegen/internal/llm"
+	"nolvegen/internal/logger"
 	"nolvegen/internal/models"
 	"nolvegen/internal/prompts"
 )
@@ -143,8 +144,10 @@ Story Setup:
 
 // GenerateOutlineWithStructure generates a story outline with a predefined structure
 func (a *ComposeAgent) GenerateOutlineWithStructure(setup *models.StorySetup, structure models.StoryStructure, language string) (*models.Outline, error) {
-	fmt.Println("🤖 Generating story outline with AI...")
-	fmt.Println()
+	logger.Section("COMPOSE AGENT - Outline Generation")
+	logger.Info("Project: %s", setup.ProjectName)
+	logger.Info("Structure: %d parts × %d volumes × %d chapters", structure.TargetParts, structure.TargetVolumes, structure.TargetChapters)
+	logger.Info("Language: %s", language)
 
 	// Create prompt manager
 	pm := prompts.NewPromptManager()
@@ -155,8 +158,12 @@ func (a *ComposeAgent) GenerateOutlineWithStructure(setup *models.StorySetup, st
 
 	systemPrompt, userPrompt, err := pm.Build(prompts.SkillOutlineGen, "with_structure", data)
 	if err != nil {
+		logger.Error("Failed to build prompt: %v", err)
 		return nil, fmt.Errorf("failed to build prompt: %w", err)
 	}
+
+	// Log prompts
+	logger.Prompt(string(prompts.SkillOutlineGen), "with_structure", systemPrompt, userPrompt)
 
 	messages := []llm.Message{
 		{Role: "system", Content: systemPrompt},
@@ -165,27 +172,31 @@ func (a *ComposeAgent) GenerateOutlineWithStructure(setup *models.StorySetup, st
 
 	options := a.config.GetChatOptions()
 
-	fmt.Println("Sending request to AI (this may take a while)...")
+	logger.Info("Sending request to AI (this may take a while)...")
 	resp, err := a.client.ChatCompletion(messages, options)
 	if err != nil {
+		logger.Error("AI request failed: %v", err)
 		return nil, fmt.Errorf("AI request failed: %w", err)
 	}
 
-	fmt.Printf("Received response (%d tokens used)\n", resp.Usage.TotalTokens)
-	fmt.Println()
+	logger.Info("Received response (%d tokens used)", resp.Usage.TotalTokens)
 
 	// Parse the JSON response
 	var outline models.Outline
 	if err := json.Unmarshal([]byte(resp.Content), &outline); err != nil {
 		// Try to extract JSON from markdown code block if present
 		content := extractJSONFromMarkdown(resp.Content)
+		logger.Debug("Extracted JSON from markdown: %s", content)
 		if err := json.Unmarshal([]byte(content), &outline); err != nil {
+			logger.Error("Failed to parse AI response as JSON: %v", err)
+			logger.Debug("Raw response: %s", resp.Content)
 			return nil, fmt.Errorf("failed to parse AI response as JSON: %w\nResponse: %s", err, resp.Content)
 		}
 	}
 
 	// Validate the outline structure
 	if len(outline.Parts) != structure.TargetParts {
+		logger.Error("AI generated %d parts, but %d were requested", len(outline.Parts), structure.TargetParts)
 		return nil, fmt.Errorf("AI generated %d parts, but %d were requested", len(outline.Parts), structure.TargetParts)
 	}
 

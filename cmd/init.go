@@ -10,6 +10,7 @@ import (
 
 	"nolvegen/internal/agents"
 	"nolvegen/internal/llm"
+	"nolvegen/internal/logger"
 	"nolvegen/internal/models"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -34,8 +35,13 @@ func init() {
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
+	// Initialize logger
+	logger.SetDefault(logger.New(logger.DebugLevel))
+	logger.Section("NOLVEGEN INIT")
+
 	// Check if novel.json already exists
 	if _, err := os.Stat("novel.json"); err == nil {
+		logger.Error("A novel project already exists in this directory (novel.json found)")
 		return fmt.Errorf("a novel project already exists in this directory (novel.json found)")
 	}
 
@@ -44,14 +50,18 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	if genPrompt != "" {
 		// AI generation mode
+		logger.Info("AI generation mode with prompt: %s", genPrompt)
 		setup, err = generateStorySetupWithAI(genPrompt)
 		if err != nil {
+			logger.Error("Failed to generate story setup with AI: %v", err)
 			return fmt.Errorf("failed to generate story setup with AI: %w", err)
 		}
 	} else {
 		// Interactive mode
+		logger.Info("Interactive mode")
 		setup, err = interactiveStorySetup()
 		if err != nil {
+			logger.Error("Failed to get story setup: %v", err)
 			return fmt.Errorf("failed to get story setup: %w", err)
 		}
 	}

@@ -8,6 +8,7 @@ import (
 
 	"nolvegen/internal/agents"
 	"nolvegen/internal/llm"
+	"nolvegen/internal/logger"
 	"nolvegen/internal/models"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -42,16 +43,23 @@ func init() {
 }
 
 func runCompose(cmd *cobra.Command, args []string) error {
+	// Initialize logger
+	logger.SetDefault(logger.New(logger.DebugLevel))
+	logger.Section("NOLVEGEN COMPOSE")
+
 	// Check if we're in a novel project
 	if _, err := os.Stat("novel.json"); err != nil {
+		logger.Error("Not a novel project directory (novel.json not found)")
 		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novel init' first")
 	}
 
 	// Load project config
 	projectConfig, err := models.LoadProjectConfig("novel.json")
 	if err != nil {
+		logger.Error("Failed to load novel.json: %v", err)
 		return fmt.Errorf("failed to load novel.json: %w", err)
 	}
+	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Check if story_setup.json exists
 	setupPath := filepath.Join("config", "init", "story_setup.json")
