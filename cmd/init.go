@@ -4,12 +4,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
+	"nolvegen/internal/agents"
+	"nolvegen/internal/llm"
+	"nolvegen/internal/models"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
-	"nolvegen/internal/models"
 )
 
 var genPrompt string
@@ -52,12 +56,35 @@ func runInit(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Get story structure configuration
+	structure, err := interactiveStoryStructure()
+	if err != nil {
+		return fmt.Errorf("failed to get story structure: %w", err)
+	}
+
+	// Use default LLM config (no interactive prompts)
+	llmConfig := models.DefaultLLMConfig()
+
+	// Create project config
+	config := &models.ProjectConfig{
+		Name:          setup.ProjectName,
+		Version:       "1.0.0",
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+		Structure:     structure,
+		ChapterConfig: models.DefaultChapterConfig(),
+		LLM:           llmConfig,
+	}
+
 	// Create project directory structure
-	if err := createProjectStructure(setup); err != nil {
+	if err := createProjectStructure(setup, config); err != nil {
 		return fmt.Errorf("failed to create project structure: %w", err)
 	}
 
 	fmt.Printf("\n✓ Novel project '%s' initialized successfully!\n", setup.ProjectName)
+	fmt.Printf("\n📊 Story Structure: %d parts × %d volumes × %d chapters = %d total chapters\n",
+		structure.TargetParts, structure.TargetVolumes, structure.TargetChapters,
+		structure.TotalChapters())
 	fmt.Println("\nNext steps:")
 	fmt.Println("  - Edit config/init/story_setup.json to refine your story setup")
 	fmt.Println("  - Run 'novel compose' to generate the story outline")
@@ -155,12 +182,8 @@ func interactiveStorySetup() (*models.StorySetup, error) {
 	// POV style
 	povPrompt := &survey.Select{
 		Message: "POV style:",
-		Options: []string{
-			"first-person",
-			"third-person limited",
-			"third-person omniscient",
-		},
-		Default: "third-person limited",
+		Options: []string{"first_person", "third_person_limited", "third_person_omniscient"},
+		Default: "third_person_limited",
 	}
 	if err := survey.AskOne(povPrompt, &setup.POVStyle); err != nil {
 		return nil, err
@@ -169,13 +192,80 @@ func interactiveStorySetup() (*models.StorySetup, error) {
 	return setup, nil
 }
 
-func generateStorySetupWithAI(prompt string) (*models.StorySetup, error) {
-	// TODO: Implement AI generation
-	// For now, return an error indicating this feature is not yet implemented
-	return nil, fmt.Errorf("AI generation is not yet implemented. Please use interactive mode")
+func interactiveStoryStructure() (models.StoryStructure, error) {
+	fmt.Println("\n📖 Story Structure Configuration")
+	fmt.Println("=================================")
+	fmt.Println()
+
+	structure := models.DefaultStoryStructure()
+
+	// Number of parts
+	partsPrompt := &survey.Input{
+		Message: "Number of parts (部):",
+		Help:    "How many major parts will your story have?",
+		Default: "3",
+	}
+	var partsStr string
+	if err := survey.AskOne(partsPrompt, &partsStr, survey.WithValidator(survey.Required)); err != nil {
+		return structure, err
+	}
+	if parts, err := strconv.Atoi(partsStr); err == nil && parts > 0 {
+		structure.TargetParts = parts
+	}
+
+	// Number of volumes per part
+	volumesPrompt := &survey.Input{
+		Message: "Number of volumes per part (卷):",
+		Help:    "How many volumes will each part have?",
+		Default: "2",
+	}
+	var volumesStr string
+	if err := survey.AskOne(volumesPrompt, &volumesStr, survey.WithValidator(survey.Required)); err != nil {
+		return structure, err
+	}
+	if volumes, err := strconv.Atoi(volumesStr); err == nil && volumes > 0 {
+		structure.TargetVolumes = volumes
+	}
+
+	// Number of chapters per volume
+	chaptersPrompt := &survey.Input{
+		Message: "Number of chapters per volume (章):",
+		Help:    "How many chapters will each volume have?",
+		Default: "3",
+	}
+	var chaptersStr string
+	if err := survey.AskOne(chaptersPrompt, &chaptersStr, survey.WithValidator(survey.Required)); err != nil {
+		return structure, err
+	}
+	if chapters, err := strconv.Atoi(chaptersStr); err == nil && chapters > 0 {
+		structure.TargetChapters = chapters
+	}
+
+	totalChapters := structure.TotalChapters()
+	fmt.Printf("\n📊 Total chapters: %d (%d parts × %d volumes × %d chapters)\n",
+		totalChapters, structure.TargetParts, structure.TargetVolumes, structure.TargetChapters)
+
+	return structure, nil
 }
 
-func createProjectStructure(setup *models.StorySetup) error {
+func generateStorySetupWithAI(prompt string) (*models.StorySetup, error) {
+	// Load or create LLM config
+	config, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load LLM config: %w", err)
+	}
+
+	fmt.Printf("Using model: %s at %s\n", config.Model, config.BaseURL)
+	fmt.Println()
+
+	// Create LLM client and agent
+	client := config.CreateClient()
+	agent := agents.NewInitAgent(client, config.Model)
+
+	return agent.GenerateStorySetup(prompt)
+}
+
+func createProjectStructure(setup *models.StorySetup, config *models.ProjectConfig) error {
 	dirs := []string{
 		"config/init",
 		"config/compose",
@@ -198,12 +288,7 @@ func createProjectStructure(setup *models.StorySetup) error {
 		}
 	}
 
-	// Create novel.json
-	config := &models.ProjectConfig{
-		Name:      setup.ProjectName,
-		Version:   "1.0.0",
-		CreatedAt: time.Now(),
-	}
+	// Save novel.json
 	if err := config.Save("novel.json"); err != nil {
 		return fmt.Errorf("failed to save novel.json: %w", err)
 	}
@@ -278,25 +363,13 @@ func splitAndTrim(s string) []string {
 	return result
 }
 
-func splitLinesAndTrim(s string) []string {
-	parts := strings.Split(s, "\n")
-	var result []string
-	for _, p := range parts {
-		trimmed := strings.TrimSpace(p)
-		if trimmed != "" {
-			result = append(result, trimmed)
-		}
-	}
-	return result
-}
-
 func formatList(items []string) string {
 	if len(items) == 0 {
-		return "- (none)"
+		return "None"
 	}
-	var result []string
+	var result strings.Builder
 	for _, item := range items {
-		result = append(result, "- "+item)
+		result.WriteString(fmt.Sprintf("- %s\n", item))
 	}
-	return strings.Join(result, "\n")
+	return result.String()
 }
