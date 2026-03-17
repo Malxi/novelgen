@@ -6,6 +6,7 @@ import (
 
 	"nolvegen/internal/llm"
 	"nolvegen/internal/models"
+	"nolvegen/internal/prompts"
 )
 
 // InitAgent handles AI generation for story setup
@@ -23,38 +24,23 @@ func NewInitAgent(client llm.Client, config *llm.Config) *InitAgent {
 }
 
 // GenerateStorySetup generates a story setup from a prompt
-func (a *InitAgent) GenerateStorySetup(prompt string) (*models.StorySetup, error) {
+func (a *InitAgent) GenerateStorySetup(idea string) (*models.StorySetup, error) {
 	fmt.Println("🤖 Generating story setup with AI...")
 	fmt.Println()
 
-	// Build the prompt
-	systemPrompt := `You are a creative writing assistant specializing in novel planning.
-Your task is to generate a structured story setup based on the user's idea.
+	// Create prompt manager
+	pm := prompts.NewPromptManager()
 
-Respond ONLY with a valid JSON object in the following format:
-{
-  "project_name": "Title of the novel",
-  "genres": ["Genre1", "Genre2"],
-  "premise": "A compelling description of what the story is about",
-  "theme": "The central theme (e.g., 'courage vs power', 'redemption')",
-  "rules": ["Story rule 1", "Story rule 2"],
-  "target_audience": "Target audience (e.g., Young Adult, Adult)",
-  "tone": "Tone/style (e.g., Epic, Hopeful, Dark, Gritty)",
-  "tense": "past or present",
-  "pov_style": "first-person, third-person limited, or third-person omniscient"
-}
-
-Make the story setup creative, coherent, and suitable for a full-length novel.`
+	// Build prompts using the prompt manager
+	data := prompts.BuildStorySetupData(idea)
+	systemPrompt, userPrompt, err := pm.Build(prompts.SkillStorySetup, "default", data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build prompt: %w", err)
+	}
 
 	messages := []llm.Message{
-		{
-			Role:    "system",
-			Content: systemPrompt,
-		},
-		{
-			Role:    "user",
-			Content: fmt.Sprintf("Create a story setup based on this idea: %s", prompt),
-		},
+		{Role: "system", Content: systemPrompt},
+		{Role: "user", Content: userPrompt},
 	}
 
 	options := a.config.GetChatOptions()
