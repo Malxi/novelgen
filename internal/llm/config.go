@@ -8,21 +8,25 @@ import (
 
 // Config represents the LLM configuration
 type Config struct {
-	Provider  string `json:"provider"`  // "openai", "ollama", etc.
-	APIKey    string `json:"api_key"`
-	BaseURL   string `json:"base_url"`
-	Model     string `json:"model"`
-	Timeout   int    `json:"timeout"`   // seconds
+	Provider  string  `json:"provider"` // "openai", "ollama", etc.
+	APIKey    string  `json:"api_key"`
+	BaseURL   string  `json:"base_url"`
+	Model     string  `json:"model"`
+	Timeout   int     `json:"timeout"`    // seconds
+	MaxTokens int     `json:"max_tokens"` // max tokens for generation
+	Temp      float32 `json:"temp"`       // temperature for generation
 }
 
 // DefaultConfig returns a default configuration for local Ollama
 func DefaultConfig() *Config {
 	return &Config{
-		Provider: "ollama",
-		APIKey:   "local-llama",
-		BaseURL:  "http://127.0.0.1:11434/v1",
-		Model:    "qwen3.5:4b",
-		Timeout:  120,
+		Provider:  "ollama",
+		APIKey:    "local-llama",
+		BaseURL:   "http://127.0.0.1:11434/v1",
+		Model:     "qwen3.5:4b",
+		Timeout:   120,
+		MaxTokens: 50000,
+		Temp:      0.8,
 	}
 }
 
@@ -104,4 +108,13 @@ func (c *Config) CreateClient() Client {
 		Model:   c.Model,
 		Timeout: c.Timeout,
 	})
+}
+
+// GetChatOptions returns ChatOptions from the config
+func (c *Config) GetChatOptions() *ChatOptions {
+	return &ChatOptions{
+		Temperature: float64(c.Temp),
+		MaxTokens:   c.MaxTokens,
+		Model:       c.Model,
+	}
 }

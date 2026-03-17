@@ -10,11 +10,13 @@ import (
 	"nolvegen/internal/llm"
 	"nolvegen/internal/models"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 )
 
 var (
-	composeRegenFlag string
+	composeRegenFlag  string
+	composePromptFlag string
 )
 
 var composeCmd = &cobra.Command{
@@ -24,12 +26,18 @@ var composeCmd = &cobra.Command{
 including plot beats, conflict, and pacing to guide AI writing.
 
 This command reads the story setup from config/init/story_setup.json and uses AI
-to generate a hierarchical outline structure based on the predefined structure in novel.json.`,
+to generate a hierarchical outline structure based on the predefined structure in novel.json.
+
+Examples:
+  novel compose                          # Generate full outline
+  novel compose --regen 1_1_1            # Regenerate chapter 1.1.1
+  novel compose --regen 1_1_1 --prompt "make it more intense"  # Regenerate with suggestion`,
 	RunE: runCompose,
 }
 
 func init() {
 	composeCmd.Flags().StringVar(&composeRegenFlag, "regen", "", "Regenerate a specific part, volume, or chapter (e.g., \"1\", \"1_1\", \"1_1_1\")")
+	composeCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Suggestions for regeneration (used with --regen)")
 	rootCmd.AddCommand(composeCmd)
 }
 
@@ -71,7 +79,7 @@ func runCompose(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to load existing outline: %w", err)
 		}
-		if err := regenerateElement(outline, composeRegenFlag, setup); err != nil {
+		if err := regenerateElement(outline, composeRegenFlag, setup, projectConfig); err != nil {
 			return fmt.Errorf("failed to regenerate element: %w", err)
 		}
 	} else {
@@ -124,13 +132,32 @@ func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.Proje
 
 	// Create LLM client and agent
 	client := llmConfig.CreateClient()
-	agent := agents.NewComposeAgent(client, llmConfig.Model)
+	agent := agents.NewComposeAgent(client, llmConfig)
 
 	return agent.GenerateOutlineWithStructure(setup, projectConfig.Structure, projectConfig.Language)
 }
 
-func regenerateElement(outline *models.Outline, id string, setup *models.StorySetup) error {
+func regenerateElement(outline *models.Outline, id string, setup *models.StorySetup, projectConfig *models.ProjectConfig) error {
 	parts := strings.Split(id, "_")
+
+	// Load LLM config
+	llmConfig, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load LLM config: %w", err)
+	}
+
+	// Get user prompt for regeneration (from --prompt flag or interactive)
+	userPrompt := composePromptFlag
+	if userPrompt == "" {
+		var err error
+		userPrompt, err = getRegenPrompt()
+		if err != nil {
+			return fmt.Errorf("failed to get regeneration prompt: %w", err)
+		}
+	}
+
+	client := llmConfig.CreateClient()
+	agent := agents.NewComposeAgent(client, llmConfig)
 
 	switch len(parts) {
 	case 1:
@@ -141,7 +168,7 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 			return fmt.Errorf("part %s not found", partID)
 		}
 		fmt.Printf("Regenerating part: %s\n", partID)
-		// TODO: Implement regeneration logic
+		return agent.RegeneratePart(part, outline, setup, projectConfig.Language, userPrompt)
 
 	case 2:
 		// Regenerate a volume
@@ -151,7 +178,7 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 			return fmt.Errorf("volume %s not found", volumeID)
 		}
 		fmt.Printf("Regenerating volume: %s\n", volumeID)
-		// TODO: Implement regeneration logic
+		return agent.RegenerateVolume(volume, outline, setup, projectConfig.Language, userPrompt)
 
 	case 3:
 		// Regenerate a chapter
@@ -161,13 +188,29 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 			return fmt.Errorf("chapter %s not found", chapterID)
 		}
 		fmt.Printf("Regenerating chapter: %s\n", chapterID)
-		// TODO: Implement regeneration logic
+		return agent.RegenerateChapter(chapter, outline, setup, projectConfig.Language, userPrompt)
 
 	default:
 		return fmt.Errorf("invalid ID format: %s (expected format: \"1\", \"1_1\", or \"1_1_1\")", id)
 	}
+}
 
-	return nil
+func getRegenPrompt() (string, error) {
+	fmt.Println("\n💡 Regeneration Prompt")
+	fmt.Println("======================")
+	fmt.Println("Enter your suggestions for regeneration (e.g., 'make it more intense', 'add a plot twist')")
+	fmt.Println("Press Enter to skip and use default regeneration:")
+
+	promptPrompt := &survey.Multiline{
+		Message: "Your suggestions:",
+	}
+
+	var prompt string
+	if err := survey.AskOne(promptPrompt, &prompt); err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(prompt), nil
 }
 
 func createOutlineMarkdown(outline *models.Outline, path string) error {

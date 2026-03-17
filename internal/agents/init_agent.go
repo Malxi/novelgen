@@ -11,14 +11,14 @@ import (
 // InitAgent handles AI generation for story setup
 type InitAgent struct {
 	client llm.Client
-	model  string
+	config *llm.Config
 }
 
 // NewInitAgent creates a new InitAgent
-func NewInitAgent(client llm.Client, model string) *InitAgent {
+func NewInitAgent(client llm.Client, config *llm.Config) *InitAgent {
 	return &InitAgent{
 		client: client,
-		model:  model,
+		config: config,
 	}
 }
 
@@ -57,11 +57,9 @@ Make the story setup creative, coherent, and suitable for a full-length novel.`
 		},
 	}
 
-	options := &llm.ChatOptions{
-		Temperature: 0.8,
-		MaxTokens:   2000,
-		Model:       a.model,
-	}
+	options := a.config.GetChatOptions()
+	// Use smaller max tokens for story setup generation
+	options.MaxTokens = 2000
 
 	fmt.Println("Sending request to AI...")
 	resp, err := a.client.ChatCompletion(messages, options)

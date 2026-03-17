@@ -301,7 +301,7 @@ func generateStorySetupWithAI(prompt string) (*models.StorySetup, error) {
 
 	// Create LLM client and agent
 	client := config.CreateClient()
-	agent := agents.NewInitAgent(client, config.Model)
+	agent := agents.NewInitAgent(client, config)
 
 	return agent.GenerateStorySetup(prompt)
 }

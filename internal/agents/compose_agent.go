@@ -12,14 +12,14 @@ import (
 // ComposeAgent handles AI generation for story outline
 type ComposeAgent struct {
 	client llm.Client
-	model  string
+	config *llm.Config
 }
 
 // NewComposeAgent creates a new ComposeAgent
-func NewComposeAgent(client llm.Client, model string) *ComposeAgent {
+func NewComposeAgent(client llm.Client, config *llm.Config) *ComposeAgent {
 	return &ComposeAgent{
 		client: client,
-		model:  model,
+		config: config,
 	}
 }
 
@@ -101,11 +101,7 @@ Story Setup:
 		},
 	}
 
-	options := &llm.ChatOptions{
-		Temperature: 0.8,
-		MaxTokens:   50000,
-		Model:       a.model,
-	}
+	options := a.config.GetChatOptions()
 
 	fmt.Println("Sending request to AI (this may take a while)...")
 	resp, err := a.client.ChatCompletion(messages, options)
@@ -168,11 +164,7 @@ func (a *ComposeAgent) GenerateOutlineWithStructure(setup *models.StorySetup, st
 		},
 	}
 
-	options := &llm.ChatOptions{
-		Temperature: 0.8,
-		MaxTokens:   50000,
-		Model:       a.model,
-	}
+	options := a.config.GetChatOptions()
 
 	fmt.Println("Sending request to AI (this may take a while)...")
 	resp, err := a.client.ChatCompletion(messages, options)
@@ -224,6 +216,316 @@ type PromptData struct {
 	Setup         *models.StorySetup
 	Language      string
 	LanguageName  string
+}
+
+// RegeneratePart regenerates a single part with user suggestions
+func (a *ComposeAgent) RegeneratePart(part *models.Part, outline *models.Outline, setup *models.StorySetup, language, userPrompt string) error {
+	fmt.Printf("🤖 Regenerating part with AI...\n")
+
+	// Build context from surrounding parts
+	context := a.buildPartContext(part, outline)
+
+	// Build regeneration prompt
+	regenPrompt := a.buildRegenPrompt("part", part.Title, context, setup, language, userPrompt)
+
+	// Call AI
+	messages := []llm.Message{
+		{Role: "system", Content: regenPrompt},
+		{Role: "user", Content: a.getRegenUserPrompt("part", language, userPrompt)},
+	}
+
+	options := a.config.GetChatOptions()
+	// Use smaller max tokens for part regeneration
+	options.MaxTokens = 10000
+
+	resp, err := a.client.ChatCompletion(messages, options)
+	if err != nil {
+		return fmt.Errorf("AI request failed: %w", err)
+	}
+
+	// Parse response
+	var newPart models.Part
+	if err := json.Unmarshal([]byte(resp.Content), &newPart); err != nil {
+		content := extractJSONFromMarkdown(resp.Content)
+		if err := json.Unmarshal([]byte(content), &newPart); err != nil {
+			return fmt.Errorf("failed to parse AI response: %w", err)
+		}
+	}
+
+	// Update part
+	part.Title = newPart.Title
+	part.Summary = newPart.Summary
+
+	fmt.Printf("✓ Part regenerated: %s\n", part.Title)
+	return nil
+}
+
+// RegenerateVolume regenerates a single volume with user suggestions
+func (a *ComposeAgent) RegenerateVolume(volume *models.Volume, outline *models.Outline, setup *models.StorySetup, language, userPrompt string) error {
+	fmt.Printf("🤖 Regenerating volume with AI...\n")
+
+	// Build context
+	context := a.buildVolumeContext(volume, outline)
+
+	// Build regeneration prompt
+	regenPrompt := a.buildRegenPrompt("volume", volume.Title, context, setup, language, userPrompt)
+
+	// Call AI
+	messages := []llm.Message{
+		{Role: "system", Content: regenPrompt},
+		{Role: "user", Content: a.getRegenUserPrompt("volume", language, userPrompt)},
+	}
+
+	options := a.config.GetChatOptions()
+	// Use smaller max tokens for volume regeneration
+	options.MaxTokens = 10000
+
+	resp, err := a.client.ChatCompletion(messages, options)
+	if err != nil {
+		return fmt.Errorf("AI request failed: %w", err)
+	}
+
+	// Parse response
+	var newVolume models.Volume
+	if err := json.Unmarshal([]byte(resp.Content), &newVolume); err != nil {
+		content := extractJSONFromMarkdown(resp.Content)
+		if err := json.Unmarshal([]byte(content), &newVolume); err != nil {
+			return fmt.Errorf("failed to parse AI response: %w", err)
+		}
+	}
+
+	// Update volume (keep chapters)
+	volume.Title = newVolume.Title
+	volume.Summary = newVolume.Summary
+
+	fmt.Printf("✓ Volume regenerated: %s\n", volume.Title)
+	return nil
+}
+
+// RegenerateChapter regenerates a single chapter with user suggestions
+func (a *ComposeAgent) RegenerateChapter(chapter *models.Chapter, outline *models.Outline, setup *models.StorySetup, language, userPrompt string) error {
+	fmt.Printf("🤖 Regenerating chapter with AI...\n")
+
+	// Build context
+	context := a.buildChapterContext(chapter, outline)
+
+	// Build regeneration prompt
+	regenPrompt := a.buildRegenPrompt("chapter", chapter.Title, context, setup, language, userPrompt)
+
+	// Call AI
+	messages := []llm.Message{
+		{Role: "system", Content: regenPrompt},
+		{Role: "user", Content: a.getRegenUserPrompt("chapter", language, userPrompt)},
+	}
+
+	options := a.config.GetChatOptions()
+	// Use smaller max tokens for chapter regeneration
+	options.MaxTokens = 5000
+
+	resp, err := a.client.ChatCompletion(messages, options)
+	if err != nil {
+		return fmt.Errorf("AI request failed: %w", err)
+	}
+
+	// Parse response
+	var newChapter models.Chapter
+	if err := json.Unmarshal([]byte(resp.Content), &newChapter); err != nil {
+		content := extractJSONFromMarkdown(resp.Content)
+		if err := json.Unmarshal([]byte(content), &newChapter); err != nil {
+			return fmt.Errorf("failed to parse AI response: %w", err)
+		}
+	}
+
+	// Update chapter
+	chapter.Title = newChapter.Title
+	chapter.Summary = newChapter.Summary
+	chapter.Beats = newChapter.Beats
+	chapter.Conflict = newChapter.Conflict
+	chapter.Pacing = newChapter.Pacing
+
+	fmt.Printf("✓ Chapter regenerated: %s\n", chapter.Title)
+	return nil
+}
+
+// buildPartContext builds context for part regeneration
+func (a *ComposeAgent) buildPartContext(part *models.Part, outline *models.Outline) string {
+	var context strings.Builder
+
+	// Find part index
+	partIdx := -1
+	for i, p := range outline.Parts {
+		if p.ID == part.ID {
+			partIdx = i
+			break
+		}
+	}
+
+	if partIdx > 0 {
+		prevPart := outline.Parts[partIdx-1]
+		context.WriteString(fmt.Sprintf("Previous Part (%s): %s\nSummary: %s\n\n",
+			prevPart.ID, prevPart.Title, prevPart.Summary))
+	}
+
+	if partIdx < len(outline.Parts)-1 {
+		nextPart := outline.Parts[partIdx+1]
+		context.WriteString(fmt.Sprintf("Next Part (%s): %s\nSummary: %s\n\n",
+			nextPart.ID, nextPart.Title, nextPart.Summary))
+	}
+
+	return context.String()
+}
+
+// buildVolumeContext builds context for volume regeneration
+func (a *ComposeAgent) buildVolumeContext(volume *models.Volume, outline *models.Outline) string {
+	var context strings.Builder
+
+	// Find volume in outline
+	for _, part := range outline.Parts {
+		for i, vol := range part.Volumes {
+			if vol.ID == volume.ID {
+				// Add part context
+				context.WriteString(fmt.Sprintf("Part: %s\nSummary: %s\n\n", part.Title, part.Summary))
+
+				// Add sibling volumes
+				if i > 0 {
+					prevVol := part.Volumes[i-1]
+					context.WriteString(fmt.Sprintf("Previous Volume (%s): %s\nSummary: %s\n\n",
+						prevVol.ID, prevVol.Title, prevVol.Summary))
+				}
+				if i < len(part.Volumes)-1 {
+					nextVol := part.Volumes[i+1]
+					context.WriteString(fmt.Sprintf("Next Volume (%s): %s\nSummary: %s\n\n",
+						nextVol.ID, nextVol.Title, nextVol.Summary))
+				}
+				return context.String()
+			}
+		}
+	}
+
+	return context.String()
+}
+
+// buildChapterContext builds context for chapter regeneration
+func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *models.Outline) string {
+	var context strings.Builder
+
+	// Find chapter in outline
+	for _, part := range outline.Parts {
+		for _, vol := range part.Volumes {
+			for i, chap := range vol.Chapters {
+				if chap.ID == chapter.ID {
+					// Add volume context
+					context.WriteString(fmt.Sprintf("Part: %s\nVolume: %s\nVolume Summary: %s\n\n",
+						part.Title, vol.Title, vol.Summary))
+
+					// Add sibling chapters
+					if i > 0 {
+						prevChap := vol.Chapters[i-1]
+						context.WriteString(fmt.Sprintf("Previous Chapter (%s): %s\nSummary: %s\n\n",
+							prevChap.ID, prevChap.Title, prevChap.Summary))
+					}
+					if i < len(vol.Chapters)-1 {
+						nextChap := vol.Chapters[i+1]
+						context.WriteString(fmt.Sprintf("Next Chapter (%s): %s\nSummary: %s\n\n",
+							nextChap.ID, nextChap.Title, nextChap.Summary))
+					}
+					return context.String()
+				}
+			}
+		}
+	}
+
+	return context.String()
+}
+
+// buildRegenPrompt builds the regeneration prompt
+func (a *ComposeAgent) buildRegenPrompt(elementType, currentTitle, context string, setup *models.StorySetup, language, userPrompt string) string {
+	langNames := map[string]string{
+		"zh": "中文",
+		"en": "English",
+	}
+	langName := langNames[language]
+	if langName == "" {
+		langName = language
+	}
+
+	suggestions := userPrompt
+	if suggestions == "" {
+		suggestions = "Improve and enhance while maintaining consistency with the overall story"
+	}
+
+	if language == "zh" {
+		return fmt.Sprintf(`你是一位专业的小说大纲创作助手。
+你的任务是重新生成一个%s，基于用户的建议和故事上下文。
+
+当前%s标题：%s
+
+故事上下文：
+%s
+
+故事设定：
+- 项目名称：%s
+- 类型：%s
+- 主题：%s
+- 基调：%s
+
+用户建议：%s
+
+请重新生成这个%s，确保：
+1. 与前后内容保持连贯
+2. 符合整体故事基调
+3. 考虑用户的建议
+4. 所有内容使用%s
+
+请只返回有效的 JSON 对象。`,
+			elementType, elementType, currentTitle, context,
+			setup.ProjectName, strings.Join(setup.Genres, ", "),
+			setup.Theme, setup.Tone,
+			suggestions, elementType, langName)
+	}
+
+	return fmt.Sprintf(`You are a professional novel outlining assistant.
+Your task is to regenerate a %s based on user suggestions and story context.
+
+Current %s title: %s
+
+Story Context:
+%s
+
+Story Setup:
+- Project Name: %s
+- Genres: %s
+- Theme: %s
+- Tone: %s
+
+User Suggestions: %s
+
+Please regenerate this %s, ensuring:
+1. Consistency with surrounding content
+2. Alignment with overall story tone
+3. Consideration of user suggestions
+4. ALL content in %s
+
+Respond ONLY with a valid JSON object.`,
+		elementType, elementType, currentTitle, context,
+		setup.ProjectName, strings.Join(setup.Genres, ", "),
+		setup.Theme, setup.Tone,
+		suggestions, elementType, langName)
+}
+
+// getRegenUserPrompt gets the user prompt for regeneration
+func (a *ComposeAgent) getRegenUserPrompt(elementType, language, userPrompt string) string {
+	if language == "zh" {
+		if userPrompt != "" {
+			return fmt.Sprintf("请根据以下建议重新生成这个%s：%s", elementType, userPrompt)
+		}
+		return fmt.Sprintf("请重新生成这个%s，保持与整体故事的一致性", elementType)
+	}
+
+	if userPrompt != "" {
+		return fmt.Sprintf("Please regenerate this %s based on the following suggestions: %s", elementType, userPrompt)
+	}
+	return fmt.Sprintf("Please regenerate this %s while maintaining consistency with the overall story", elementType)
 }
 
 // buildPromptData creates prompt data with language info
