@@ -49,8 +49,6 @@ func (a *InitAgent) GenerateStorySetup(idea string) (*models.StorySetup, error) 
 	}
 
 	options := a.config.GetChatOptions()
-	// Use smaller max tokens for story setup generation
-	options.MaxTokens = 2000
 
 	logger.Info("Sending request to AI...")
 	resp, err := a.client.ChatCompletion(messages, options)

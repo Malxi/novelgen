@@ -244,8 +244,6 @@ func (a *ComposeAgent) RegeneratePart(part *models.Part, outline *models.Outline
 	}
 
 	options := a.config.GetChatOptions()
-	// Use smaller max tokens for part regeneration
-	options.MaxTokens = 10000
 
 	resp, err := a.client.ChatCompletion(messages, options)
 	if err != nil {

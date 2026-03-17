@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+
+	"nolvegen/internal/models"
 )
 
 // Config represents the LLM configuration
@@ -116,5 +118,18 @@ func (c *Config) GetChatOptions() *ChatOptions {
 		Temperature: float64(c.Temp),
 		MaxTokens:   c.MaxTokens,
 		Model:       c.Model,
+	}
+}
+
+// ConfigFromProjectConfig creates LLM Config from ProjectConfig LLM settings
+func ConfigFromProjectConfig(llmConfig *models.LLMConfig) *Config {
+	return &Config{
+		Provider:  "ollama", // Default provider
+		APIKey:    "local-llama",
+		BaseURL:   "http://127.0.0.1:11434/v1",
+		Model:     llmConfig.Model,
+		Timeout:   120,
+		MaxTokens: llmConfig.MaxTokens,
+		Temp:      0.8,
 	}
 }

@@ -10,9 +10,10 @@ type Skill string
 
 const (
 	// Story skills
-	SkillStorySetup   Skill = "story_setup"
-	SkillOutlineGen   Skill = "outline_generation"
-	SkillOutlineRegen Skill = "outline_regeneration"
+	SkillStorySetup    Skill = "story_setup"
+	SkillOutlineGen    Skill = "outline_generation"
+	SkillOutlineRegen  Skill = "outline_regeneration"
+	SkillOutlineReview Skill = "outline_review"
 
 	// World building skills
 	SkillCharacterCreation Skill = "character_creation"
@@ -134,6 +135,8 @@ func (pm *PromptManager) buildUserPrompt(template *PromptTemplate, data map[stri
 		return buildOutlineGenUserPrompt(data)
 	case SkillOutlineRegen:
 		return buildOutlineRegenUserPrompt(data)
+	case SkillOutlineReview:
+		return buildOutlineReviewUserPrompt(data)
 	default:
 		return "Please generate the requested content."
 	}
@@ -144,4 +147,5 @@ func (pm *PromptManager) registerDefaultPrompts() {
 	registerStorySetupPrompts(pm)
 	registerOutlineGenPrompts(pm)
 	registerOutlineRegenPrompts(pm)
+	registerOutlineReviewPrompts(pm)
 }
