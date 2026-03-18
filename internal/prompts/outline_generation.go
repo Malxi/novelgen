@@ -2,8 +2,6 @@ package prompts
 
 import (
 	"fmt"
-	"strings"
-
 	"nolvegen/internal/models"
 )
 
@@ -39,19 +37,15 @@ func buildOutlineGenUserPrompt(data map[string]interface{}) string {
 
 // BuildOutlineGenData builds data for outline generation prompt
 func BuildOutlineGenData(structure models.StoryStructure, setup *models.StorySetup, language string) map[string]interface{} {
+	// Use StructToPrompt to convert StorySetup to formatted string
+	setupPrompt := StructToPrompt(setup, "")
+
 	return map[string]interface{}{
 		"parts":          structure.TargetParts,
 		"volumes":        structure.TargetVolumes,
 		"chapters":       structure.TargetChapters,
 		"total_chapters": structure.TotalChapters(),
-		"project_name":   setup.ProjectName,
-		"genres":         strings.Join(setup.Genres, ", "),
-		"premise":        setup.Premise,
-		"theme":          setup.Theme,
-		"rules":          strings.Join(setup.Rules, "; "),
-		"tone":           setup.Tone,
-		"tense":          setup.Tense,
-		"pov":            setup.POVStyle,
+		"setup":          setupPrompt,
 		"language":       language,
 	}
 }
@@ -67,6 +61,9 @@ STRICT STRUCTURE REQUIREMENTS:
 
 The outline must follow a strict 3-level structure: Parts → Volumes → Chapters.
 
+Story Setup Information:
+{{setup}}
+
 Guidelines:
 - Follow the EXACT structure specified above
 - Ensure the outline follows a coherent narrative arc across all parts
@@ -75,7 +72,9 @@ Guidelines:
 - Make conflicts clear and compelling
 - Each part should have a clear narrative purpose
 - Each volume should advance the story within its part
-- Each chapter should have clear progression`
+- Each chapter should have clear progression
+- INCORPORATE the storylines into the outline naturally
+- USE the premises and progression systems in the plot (e.g., characters should advance through the progression stages at appropriate points in the story)`
 
 const outlineSchema = `{
   "parts": [

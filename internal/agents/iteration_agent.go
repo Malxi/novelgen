@@ -45,23 +45,14 @@ func (a *IterationAgent) ReviewOutline(outline *models.Outline, setup *models.St
 		return nil, fmt.Errorf("failed to marshal outline: %w", err)
 	}
 
-	// Build story setup data
-	setupData := map[string]interface{}{
-		"project_name": setup.ProjectName,
-		"genres":       setup.Genres,
-		"premise":      setup.Premise,
-		"theme":        setup.Theme,
-		"rules":        setup.Rules,
-		"tone":         setup.Tone,
-		"tense":        setup.Tense,
-		"pov":          setup.POVStyle,
-	}
+	// Use StructToPrompt to convert setup to formatted string
+	setupPrompt := prompts.StructToPrompt(setup, "")
 
 	// Create prompt manager
 	pm := prompts.NewPromptManager()
 
 	// Build prompts
-	data := prompts.BuildOutlineReviewData(string(outlineJSON), setupData, iteration)
+	data := prompts.BuildOutlineReviewData(string(outlineJSON), setupPrompt, iteration)
 	systemPrompt, userPrompt, err := pm.Build(prompts.SkillOutlineReview, "default", data)
 	if err != nil {
 		logger.Error("Failed to build prompt: %v", err)

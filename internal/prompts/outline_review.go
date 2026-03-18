@@ -42,7 +42,7 @@ func registerOutlineReviewPrompts(pm *PromptManager) {
 }
 
 // BuildOutlineReviewData builds data for outline review prompt
-func BuildOutlineReviewData(outlineJSON string, storySetup map[string]interface{}, iteration int) map[string]interface{} {
+func BuildOutlineReviewData(outlineJSON string, storySetup string, iteration int) map[string]interface{} {
 	return map[string]interface{}{
 		"outline":   outlineJSON,
 		"setup":     storySetup,
@@ -55,6 +55,9 @@ func BuildOutlineReviewData(outlineJSON string, storySetup map[string]interface{
 const outlineReviewSystemPrompt = `You are an expert story editor and literary critic specializing in novel structure and narrative design.
 
 Your task is to critically review a story outline and provide detailed feedback for improvement.
+
+Story Setup:
+{{setup}}
 
 Review Criteria:
 1. **Logic & Consistency**: Check for plot holes, contradictions, cause-and-effect problems

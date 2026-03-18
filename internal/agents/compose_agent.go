@@ -32,6 +32,9 @@ func (a *ComposeAgent) GenerateOutline(setup *models.StorySetup) (*models.Outlin
 	fmt.Println("🤖 Generating story outline with AI...")
 	fmt.Println()
 
+	// Use StructToPrompt to convert setup to formatted string
+	setupPrompt := prompts.StructToPrompt(setup, "")
+
 	// Build the system prompt
 	systemPrompt := fmt.Sprintf(`You are a creative writing assistant specializing in novel outlining.
 Your task is to generate a detailed story outline based on the story setup provided.
@@ -74,25 +77,11 @@ Guidelines:
 - Include specific plot beats for each chapter
 - Vary the pacing (slow/normal/fast) based on the story needs
 - Make conflicts clear and compelling
+- INCORPORATE the storylines into the outline naturally
+- USE the premises and progression systems in the plot
 
 Story Setup:
-- Project Name: %s
-- Genres: %s
-- Premise: %s
-- Theme: %s
-- Rules: %s
-- Tone: %s
-- Tense: %s
-- POV: %s`,
-		setup.ProjectName,
-		strings.Join(setup.Genres, ", "),
-		setup.Premise,
-		setup.Theme,
-		strings.Join(setup.Rules, "; "),
-		setup.Tone,
-		setup.Tense,
-		setup.POVStyle,
-	)
+%s`, setupPrompt)
 
 	messages := []llm.Message{
 		{
