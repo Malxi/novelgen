@@ -7,6 +7,7 @@ import (
 
 	"nolvegen/internal/llm"
 	"nolvegen/internal/logger"
+	"nolvegen/internal/logic"
 	"nolvegen/internal/models"
 	"nolvegen/internal/prompts"
 )
@@ -97,6 +98,12 @@ func (a *ComposeAgent) GenerateOutlineWithStructure(setup *models.StorySetup, st
 	}
 
 	totalChapters := structure.TotalChapters()
+
+	// Assign IDs to all elements using IDManager
+	idManager := logic.NewIDManager(&outline)
+	idManager.AssignIDsToOutline()
+	logger.Info("Assigned IDs to all outline elements")
+
 	fmt.Printf("✓ Generated outline with %d part(s), %d volume(s) per part, %d chapter(s) per volume\n",
 		len(outline.Parts), structure.TargetVolumes, structure.TargetChapters)
 	fmt.Printf("  Total: %d chapters\n", totalChapters)

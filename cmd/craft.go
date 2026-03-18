@@ -68,9 +68,9 @@ Examples:
 func init() {
 	craftCmd.AddCommand(craftGenCmd)
 
-	craftGenCmd.Flags().StringVar(&craftChapterFlag, "chapter", "", "Generate elements for specific chapter ID (e.g., 'chap_1_1_1')")
-	craftGenCmd.Flags().StringVar(&craftVolumeFlag, "volume", "", "Generate elements for specific volume ID (e.g., 'vol_1_1')")
-	craftGenCmd.Flags().StringVar(&craftPartFlag, "part", "", "Generate elements for specific part ID (e.g., 'part_1')")
+	craftGenCmd.Flags().StringVar(&craftChapterFlag, "chapter", "", "Generate elements for specific chapter (e.g., '1', 'P1-V1-C1')")
+	craftGenCmd.Flags().StringVar(&craftVolumeFlag, "volume", "", "Generate elements for specific volume (e.g., '1', 'P1-V1')")
+	craftGenCmd.Flags().StringVar(&craftPartFlag, "part", "", "Generate elements for specific part (e.g., '1', 'P1')")
 	craftGenCmd.Flags().StringVar(&craftPromptFlag, "prompt", "", "Additional prompt to guide generation")
 	craftGenCmd.Flags().IntVar(&craftBatchFlag, "batch", 1, "Number of elements to generate in one batch")
 	craftGenCmd.Flags().IntVar(&craftConcurrencyFlag, "concurrency", 1, "Number of concurrent element generations")

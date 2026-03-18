@@ -60,9 +60,9 @@ Examples:
 func init() {
 	writeCmd.AddCommand(writeGenCmd)
 
-	writeGenCmd.Flags().StringVar(&writeChapterFlag, "chapter", "", "Chapter number(s) to generate (e.g., '1', '1-5', or 'chap_1_1_1')")
-	writeGenCmd.Flags().StringVar(&writeVolumeFlag, "volume", "", "Volume number for context (e.g., '1')")
-	writeGenCmd.Flags().StringVar(&writePartFlag, "part", "", "Part number for context (e.g., '1')")
+	writeGenCmd.Flags().StringVar(&writeChapterFlag, "chapter", "", "Chapter number(s) to generate (e.g., '1', '1-5', or 'P1-V1-C1')")
+	writeGenCmd.Flags().StringVar(&writeVolumeFlag, "volume", "", "Volume number for context (e.g., '1', 'P1-V1')")
+	writeGenCmd.Flags().StringVar(&writePartFlag, "part", "", "Part number for context (e.g., '1', 'P1')")
 	writeGenCmd.Flags().IntVar(&writeWordsFlag, "words", 2000, "Target word count for the chapter")
 	writeGenCmd.Flags().BoolVar(&writeAllFlag, "all", false, "Generate content for all chapters")
 	writeGenCmd.Flags().IntVar(&writeContextFlag, "context", 2, "Number of surrounding chapters to include as context")
@@ -266,16 +266,24 @@ func saveFinalChapter(chapter *models.Chapter, content string) error {
 	return os.WriteFile(filename, []byte(sb.String()), 0644)
 }
 
-// extractChapterNumber extracts numeric part from chapter ID
+// extractChapterNumber extracts chapter number from chapter ID
+// Supports formats like "P1-V1-C1" or "C1"
 func extractChapterNumber(chapterID string) string {
-	// Handle formats like "chap_1_1_1" or "chapter-1"
+	// Handle new format like "P1-V1-C1"
+	if strings.Contains(chapterID, "-C") {
+		parts := strings.Split(chapterID, "-C")
+		if len(parts) >= 2 {
+			return parts[len(parts)-1]
+		}
+	}
+	// Handle old format like "chap_1_1_1"
 	parts := strings.Split(chapterID, "_")
 	if len(parts) >= 4 {
 		return parts[3]
 	}
-	parts = strings.Split(chapterID, "-")
-	if len(parts) >= 2 {
-		return parts[1]
+	// Handle format like "C1"
+	if strings.HasPrefix(strings.ToUpper(chapterID), "C") {
+		return strings.TrimPrefix(strings.ToUpper(chapterID), "C")
 	}
 	return chapterID
 }

@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"nolvegen/internal/agents"
 	"nolvegen/internal/llm"
 	"nolvegen/internal/logger"
+	"nolvegen/internal/logic"
 	"nolvegen/internal/models"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -203,11 +205,15 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 	}
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 
+	// Create IDManager for ID resolution
+	idManager := logic.NewIDManager(outline)
+
 	switch len(parts) {
 	case 1:
 		// Regenerate a part
-		partID := "part_" + parts[0]
-		part := outline.GetPartByID(partID)
+		partNum, _ := strconv.Atoi(parts[0])
+		partID := idManager.GeneratePartID(partNum)
+		part := idManager.GetPartByID(partID)
 		if part == nil {
 			return fmt.Errorf("part %s not found", partID)
 		}
@@ -216,8 +222,10 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 
 	case 2:
 		// Regenerate a volume
-		volumeID := fmt.Sprintf("vol_%s_%s", parts[0], parts[1])
-		volume := outline.GetVolumeByID(volumeID)
+		partNum, _ := strconv.Atoi(parts[0])
+		volNum, _ := strconv.Atoi(parts[1])
+		volumeID := idManager.GenerateVolumeID(partNum, volNum)
+		volume, _ := idManager.GetVolumeByID(volumeID)
 		if volume == nil {
 			return fmt.Errorf("volume %s not found", volumeID)
 		}
@@ -226,8 +234,11 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 
 	case 3:
 		// Regenerate a chapter
-		chapterID := fmt.Sprintf("chap_%s_%s_%s", parts[0], parts[1], parts[2])
-		chapter := outline.GetChapterByID(chapterID)
+		partNum, _ := strconv.Atoi(parts[0])
+		volNum, _ := strconv.Atoi(parts[1])
+		chapNum, _ := strconv.Atoi(parts[2])
+		chapterID := idManager.GenerateChapterID(partNum, volNum, chapNum)
+		chapter, _, _ := idManager.GetChapterByID(chapterID)
 		if chapter == nil {
 			return fmt.Errorf("chapter %s not found", chapterID)
 		}

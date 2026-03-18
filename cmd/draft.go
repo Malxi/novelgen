@@ -105,21 +105,21 @@ func init() {
 	draftCmd.AddCommand(draftReviewCmd)
 	draftCmd.AddCommand(draftImproveCmd)
 
-	draftGenCmd.Flags().StringVar(&draftChapterFlag, "chapter", "", "Chapter number(s) to generate (e.g., '1', '1-5', or 'chap_1_1_1')")
-	draftGenCmd.Flags().StringVar(&draftVolumeFlag, "volume", "", "Volume number for context (e.g., '1')")
-	draftGenCmd.Flags().StringVar(&draftPartFlag, "part", "", "Part number for context (e.g., '1')")
+	draftGenCmd.Flags().StringVar(&draftChapterFlag, "chapter", "", "Chapter number(s) to generate (e.g., '1', '1-5', or 'P1-V1-C1')")
+	draftGenCmd.Flags().StringVar(&draftVolumeFlag, "volume", "", "Volume number for context (e.g., '1', 'P1-V1')")
+	draftGenCmd.Flags().StringVar(&draftPartFlag, "part", "", "Part number for context (e.g., '1', 'P1')")
 	draftGenCmd.Flags().IntVar(&draftWordsFlag, "words", 500, "Target word count for the draft")
 	draftGenCmd.Flags().BoolVar(&draftAllFlag, "all", false, "Generate drafts for all chapters")
 	draftGenCmd.Flags().IntVar(&draftConcurrencyFlag, "concurrency", 1, "Number of concurrent chapter generations")
 
-	draftReviewCmd.Flags().StringVar(&draftChapterFlag, "chapter", "", "Chapter to review (e.g., '1' or 'chap_1_1_1')")
-	draftReviewCmd.Flags().StringVar(&draftVolumeFlag, "volume", "", "Volume to review (e.g., '1')")
-	draftReviewCmd.Flags().StringVar(&draftPartFlag, "part", "", "Part to review (e.g., '1')")
+	draftReviewCmd.Flags().StringVar(&draftChapterFlag, "chapter", "", "Chapter to review (e.g., '1' or 'P1-V1-C1')")
+	draftReviewCmd.Flags().StringVar(&draftVolumeFlag, "volume", "", "Volume to review (e.g., '1', 'P1-V1')")
+	draftReviewCmd.Flags().StringVar(&draftPartFlag, "part", "", "Part to review (e.g., '1', 'P1')")
 	draftReviewCmd.Flags().IntVar(&draftConcurrencyFlag, "concurrency", 1, "Number of concurrent reviews")
 
-	draftImproveCmd.Flags().StringVar(&draftChapterFlag, "chapter", "", "Chapter to improve (e.g., '1' or 'chap_1_1_1')")
-	draftImproveCmd.Flags().StringVar(&draftVolumeFlag, "volume", "", "Volume to improve (e.g., '1')")
-	draftImproveCmd.Flags().StringVar(&draftPartFlag, "part", "", "Part to improve (e.g., '1')")
+	draftImproveCmd.Flags().StringVar(&draftChapterFlag, "chapter", "", "Chapter to improve (e.g., '1' or 'P1-V1-C1')")
+	draftImproveCmd.Flags().StringVar(&draftVolumeFlag, "volume", "", "Volume to improve (e.g., '1', 'P1-V1')")
+	draftImproveCmd.Flags().StringVar(&draftPartFlag, "part", "", "Part to improve (e.g., '1', 'P1')")
 	draftImproveCmd.Flags().IntVar(&draftMaxRoundsFlag, "max-rounds", 1, "Maximum improvement rounds")
 	draftImproveCmd.Flags().IntVar(&draftMinScoreFlag, "min-score", 7, "Minimum acceptable score (1-10)")
 	draftImproveCmd.Flags().IntVar(&draftConcurrencyFlag, "concurrency", 1, "Number of concurrent improvements")
@@ -253,7 +253,7 @@ func getChaptersToGenerate(outline *models.Outline, chapterFlag, volumeFlag, par
 	}
 
 	// Check if it's a range (e.g., "1-5")
-	if strings.Contains(chapterFlag, "-") {
+	if strings.Contains(chapterFlag, "-") && !strings.Contains(strings.ToUpper(chapterFlag), "P") {
 		parts := strings.Split(chapterFlag, "-")
 		if len(parts) == 2 {
 			start, err1 := strconv.Atoi(parts[0])
@@ -274,15 +274,8 @@ func getChaptersToGenerate(outline *models.Outline, chapterFlag, volumeFlag, par
 
 // getAllChapters returns all chapters in order
 func getAllChapters(outline *models.Outline) []*models.Chapter {
-	var chapters []*models.Chapter
-	for _, part := range outline.Parts {
-		for _, vol := range part.Volumes {
-			for i := range vol.Chapters {
-				chapters = append(chapters, &vol.Chapters[i])
-			}
-		}
-	}
-	return chapters
+	idManager := logic.NewIDManager(outline)
+	return idManager.GetAllChapters()
 }
 
 // getChapterRange returns chapters from start to end (inclusive)
@@ -302,80 +295,27 @@ func getChapterRange(outline *models.Outline, start, end int) ([]*models.Chapter
 	return allChapters[start-1 : end], nil
 }
 
-// findTargetChapter finds the target chapter based on flags
+// findTargetChapter finds the target chapter based on flags using IDManager
 func findTargetChapter(outline *models.Outline, chapterFlag, volumeFlag, partFlag string) (*models.Chapter, error) {
 	if outline == nil || len(outline.Parts) == 0 {
 		return nil, fmt.Errorf("outline is empty")
 	}
 
-	// If chapter flag contains "chap_", treat it as ID
-	if strings.HasPrefix(chapterFlag, "chap_") {
-		return findChapterByID(outline, chapterFlag)
-	}
+	idManager := logic.NewIDManager(outline)
 
-	// Parse chapter number
-	chapterNum, err := strconv.Atoi(chapterFlag)
+	// Resolve chapter ID using IDManager
+	chapterID, err := idManager.ResolveChapterID(chapterFlag, partFlag, volumeFlag)
 	if err != nil {
-		return nil, fmt.Errorf("invalid chapter number: %s", chapterFlag)
+		return nil, err
 	}
 
-	// If volume specified, find chapter in that volume
-	if volumeFlag != "" {
-		volNum, err := strconv.Atoi(volumeFlag)
-		if err != nil {
-			return nil, fmt.Errorf("invalid volume number: %s", volumeFlag)
-		}
-		return findChapterInVolume(outline, volNum, chapterNum)
+	// Find chapter by ID
+	chapter, _, _ := idManager.GetChapterByID(chapterID)
+	if chapter == nil {
+		return nil, fmt.Errorf("chapter not found: %s", chapterID)
 	}
 
-	// Otherwise find by global chapter number
-	return findChapterByNumber(outline, chapterNum)
-}
-
-// findChapterByID finds a chapter by its ID
-func findChapterByID(outline *models.Outline, chapterID string) (*models.Chapter, error) {
-	for _, part := range outline.Parts {
-		for _, vol := range part.Volumes {
-			for _, ch := range vol.Chapters {
-				if ch.ID == chapterID {
-					return &ch, nil
-				}
-			}
-		}
-	}
-	return nil, fmt.Errorf("chapter not found: %s", chapterID)
-}
-
-// findChapterInVolume finds a chapter by volume and chapter number
-func findChapterInVolume(outline *models.Outline, volNum, chapterNum int) (*models.Chapter, error) {
-	volIdx := volNum - 1
-	chapterIdx := chapterNum - 1
-
-	for _, part := range outline.Parts {
-		if volIdx >= 0 && volIdx < len(part.Volumes) {
-			vol := part.Volumes[volIdx]
-			if chapterIdx >= 0 && chapterIdx < len(vol.Chapters) {
-				return &vol.Chapters[chapterIdx], nil
-			}
-		}
-	}
-	return nil, fmt.Errorf("chapter %d in volume %d not found", chapterNum, volNum)
-}
-
-// findChapterByNumber finds a chapter by global chapter number
-func findChapterByNumber(outline *models.Outline, chapterNum int) (*models.Chapter, error) {
-	currentNum := 0
-	for _, part := range outline.Parts {
-		for _, vol := range part.Volumes {
-			for i := range vol.Chapters {
-				currentNum++
-				if currentNum == chapterNum {
-					return &vol.Chapters[i], nil
-				}
-			}
-		}
-	}
-	return nil, fmt.Errorf("chapter %d not found", chapterNum)
+	return chapter, nil
 }
 
 // saveDraft saves the generated draft to file
@@ -567,62 +507,32 @@ func runDraftImprove(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// getVolumesForDraft returns volumes based on flags
+// getVolumesForDraft returns volumes based on flags using IDManager
 func getVolumesForDraft(outline *models.Outline, volumeFlag, chapterFlag string) []*models.Volume {
-	volumes := make([]*models.Volume, 0)
+	idManager := logic.NewIDManager(outline)
 
 	if chapterFlag != "" {
 		// Find volume containing this chapter
-		// Support both chapter ID (e.g., "C1", "C12") and chapter number
-		for _, part := range outline.Parts {
-			for i := range part.Volumes {
-				for _, chapter := range part.Volumes[i].Chapters {
-					if chapter.ID == chapterFlag || matchChapterNumber(chapter.ID, chapterFlag) {
-						return []*models.Volume{&part.Volumes[i]}
-					}
-				}
+		chapterID, err := idManager.ResolveChapterID(chapterFlag, "", "")
+		if err == nil {
+			_, vol, _ := idManager.GetChapterByID(chapterID)
+			if vol != nil {
+				return []*models.Volume{vol}
 			}
 		}
 	} else if volumeFlag != "" {
 		// Find specific volume
-		// Support both volume ID (e.g., "V1", "V2") and volume number (e.g., "1", "2")
-		for _, part := range outline.Parts {
-			for i := range part.Volumes {
-				if part.Volumes[i].ID == volumeFlag || matchVolumeNumber(part.Volumes[i].ID, volumeFlag) {
-					return []*models.Volume{&part.Volumes[i]}
-				}
-			}
-		}
-	} else {
-		// Return all volumes
-		for _, part := range outline.Parts {
-			for i := range part.Volumes {
-				volumes = append(volumes, &part.Volumes[i])
+		volumeID, err := idManager.ResolveVolumeID(volumeFlag, "")
+		if err == nil {
+			vol, _ := idManager.GetVolumeByID(volumeID)
+			if vol != nil {
+				return []*models.Volume{vol}
 			}
 		}
 	}
 
-	return volumes
-}
-
-// matchVolumeNumber checks if volume ID matches the given number
-// e.g., "V1" matches "1", "V12" matches "12"
-func matchVolumeNumber(volumeID, number string) bool {
-	// Remove "V" prefix and compare
-	if len(volumeID) > 1 && volumeID[0] == 'V' {
-		return volumeID[1:] == number
-	}
-	return volumeID == number
-}
-
-// matchChapterNumber checks if chapter ID matches the given number
-// e.g., "C1" matches "1", "C12" matches "12"
-func matchChapterNumber(chapterID, number string) bool {
-	// Remove "C" prefix and compare
-	if len(chapterID) > 1 && chapterID[0] == 'C' {
-		return chapterID[1:] == number
-	}
-	return chapterID == number
+	// Return all volumes
+	return idManager.GetAllVolumes()
 }
 
 // loadAllDrafts loads all draft files
