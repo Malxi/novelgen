@@ -36,18 +36,8 @@ func NewDraftAgent(client llm.Client, config *llm.Config, projectLLM *models.Pro
 	}
 }
 
-// StateMatrix represents the current state of the story
-type StateMatrix struct {
-	Characters    map[string]*models.Character
-	Locations     map[string]*models.Location
-	Items         map[string]*models.Item
-	Relationships map[string]string
-	Storylines    map[string]string
-	Premises      map[string]string
-}
-
 // GenerateDraft generates a draft chapter
-func (a *DraftAgent) GenerateDraft(chapter *models.Chapter, state *StateMatrix, targetWords int) (string, error) {
+func (a *DraftAgent) GenerateDraft(chapter *models.Chapter, state *models.StateMatrix, targetWords int) (string, error) {
 	a.log.Info("Generating draft for chapter: %s", chapter.ID)
 
 	// Build prompt data
@@ -92,7 +82,7 @@ func (a *DraftAgent) GenerateDraft(chapter *models.Chapter, state *StateMatrix, 
 }
 
 // GenerateDraftWithSuggestions generates a draft chapter with improvement suggestions
-func (a *DraftAgent) GenerateDraftWithSuggestions(chapter *models.Chapter, state *StateMatrix, targetWords int, suggestions string) (string, error) {
+func (a *DraftAgent) GenerateDraftWithSuggestions(chapter *models.Chapter, state *models.StateMatrix, targetWords int, suggestions string) (string, error) {
 	a.log.Info("Generating improved draft for chapter: %s with suggestions", chapter.ID)
 
 	// Build prompt data
@@ -144,7 +134,7 @@ func (a *DraftAgent) GenerateDraftWithSuggestions(chapter *models.Chapter, state
 }
 
 // formatStateMatrix formats the state matrix for the prompt
-func (a *DraftAgent) formatStateMatrix(state *StateMatrix, chapter *models.Chapter) string {
+func (a *DraftAgent) formatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) string {
 	var sb strings.Builder
 
 	sb.WriteString("=== CURRENT STORY STATE ===\n\n")

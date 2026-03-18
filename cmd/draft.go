@@ -195,7 +195,7 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 				stateMatrix := calculateStateMatrix(outline, chapter)
 
 				// Generate draft
-				draft, err := agent.GenerateDraft(chapter, &agents.StateMatrix{
+				draft, err := agent.GenerateDraft(chapter, &models.StateMatrix{
 					Characters:    stateMatrix.Characters,
 					Locations:     stateMatrix.Locations,
 					Items:         stateMatrix.Items,
@@ -375,19 +375,9 @@ func findChapterByNumber(outline *models.Outline, chapterNum int) (*models.Chapt
 	return nil, fmt.Errorf("chapter %d not found", chapterNum)
 }
 
-// StateMatrix represents the current state of the story
-type StateMatrix struct {
-	Characters    map[string]*models.Character
-	Locations     map[string]*models.Location
-	Items         map[string]*models.Item
-	Relationships map[string]string // "char1_char2" -> "relationship state"
-	Storylines    map[string]string // storyline ID -> current state
-	Premises      map[string]string // premise ID -> current state for each character
-}
-
 // calculateStateMatrix calculates the story state up to the target chapter
-func calculateStateMatrix(outline *models.Outline, targetChapter *models.Chapter) *StateMatrix {
-	state := &StateMatrix{
+func calculateStateMatrix(outline *models.Outline, targetChapter *models.Chapter) *models.StateMatrix {
+	state := &models.StateMatrix{
 		Characters:    make(map[string]*models.Character),
 		Locations:     make(map[string]*models.Location),
 		Items:         make(map[string]*models.Item),
@@ -420,7 +410,7 @@ func calculateStateMatrix(outline *models.Outline, targetChapter *models.Chapter
 }
 
 // applyEvent applies a single event to the state matrix
-func applyEvent(state *StateMatrix, event models.Event) {
+func applyEvent(state *models.StateMatrix, event models.Event) {
 	switch event.Type {
 	case "relationship":
 		// Format: relationship between char1 and char2 changes
@@ -469,7 +459,7 @@ func applyEvent(state *StateMatrix, event models.Event) {
 }
 
 // loadElementsIntoState loads generated elements into state matrix
-func loadElementsIntoState(state *StateMatrix) {
+func loadElementsIntoState(state *models.StateMatrix) {
 	root, err := findProjectRoot()
 	if err != nil {
 		return
@@ -898,7 +888,7 @@ func improveChaptersWithAgent(agent *agents.DraftAgent, chapters []*models.Chapt
 				stateMatrix := calculateStateMatrix(outline, chapter)
 
 				// Generate improved draft with suggestions
-				draft, err := agent.GenerateDraftWithSuggestions(chapter, &agents.StateMatrix{
+				draft, err := agent.GenerateDraftWithSuggestions(chapter, &models.StateMatrix{
 					Characters:    stateMatrix.Characters,
 					Locations:     stateMatrix.Locations,
 					Items:         stateMatrix.Items,

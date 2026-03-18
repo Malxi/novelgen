@@ -150,83 +150,6 @@ func (a *ReviewAgent) reviewAllDrafts(volume *models.Volume, chapterContents []p
 	return a.parseVolumeReviewResponse(chapterContents, resp.Content)
 }
 
-// ReviewDraft reviews a single draft
-func (a *ReviewAgent) ReviewDraft(chapter *models.Chapter, draft string) (*DraftReview, error) {
-	log := logger.GetLogger()
-	log.Info("Reviewing draft: %s - %s", chapter.ID, chapter.Title)
-
-	// Get previous and next chapters for context
-	prevChapter, nextChapter := a.getAdjacentChapters(chapter)
-
-	prompt := prompts.BuildReviewPrompt(a.setup, chapter, draft, prevChapter, nextChapter, a.language)
-
-	messages := []llm.Message{
-		{Role: "system", Content: prompts.GetReviewSystemPrompt(a.language)},
-		{Role: "user", Content: prompt},
-	}
-
-	options := a.config.GetChatOptions(a.llmCfg)
-	options.MaxTokens = 4000
-
-	resp, err := a.client.ChatCompletion(messages, options)
-	if err != nil {
-		return nil, fmt.Errorf("review request failed: %w", err)
-	}
-
-	return a.parseReviewResponse(chapter, resp.Content)
-}
-
-func (a *ReviewAgent) parseReviewResponse(chapter *models.Chapter, content string) (*DraftReview, error) {
-	// Extract JSON from response
-	content = extractJSON(content)
-
-	var review DraftReview
-	if err := json.Unmarshal([]byte(content), &review); err != nil {
-		return nil, fmt.Errorf("failed to parse review response: %w", err)
-	}
-
-	// Ensure chapter info is set
-	review.ChapterID = chapter.ID
-	review.ChapterTitle = chapter.Title
-
-	return &review, nil
-}
-
-// extractJSON extracts JSON from markdown code blocks if present
-func extractJSON(content string) string {
-	return extractJSONFromMarkdown(content)
-}
-
-func (a *ReviewAgent) getAdjacentChapters(chapter *models.Chapter) (*models.Chapter, *models.Chapter) {
-	var prevChapter, nextChapter *models.Chapter
-	found := false
-
-	for _, part := range a.outline.Parts {
-		for _, volume := range part.Volumes {
-			for i := range volume.Chapters {
-				if volume.Chapters[i].ID == chapter.ID {
-					found = true
-					if i > 0 {
-						prevChapter = &volume.Chapters[i-1]
-					}
-					if i < len(volume.Chapters)-1 {
-						nextChapter = &volume.Chapters[i+1]
-					}
-					break
-				}
-			}
-			if found {
-				break
-			}
-		}
-		if found {
-			break
-		}
-	}
-
-	return prevChapter, nextChapter
-}
-
 func (a *ReviewAgent) generateSummary(reviews []DraftReview) string {
 	if len(reviews) == 0 {
 		return ""
@@ -254,7 +177,7 @@ func (a *ReviewAgent) generateSummary(reviews []DraftReview) string {
 // parseVolumeReviewResponse parses the response for volume review
 func (a *ReviewAgent) parseVolumeReviewResponse(chapterContents []prompts.ChapterDraftContent, content string) ([]DraftReview, error) {
 	// Extract JSON from response
-	content = extractJSON(content)
+	content = extractJSONFromMarkdown(content)
 
 	// Try to parse as array first
 	var reviews []DraftReview
