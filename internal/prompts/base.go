@@ -18,13 +18,10 @@ const (
 	// World building skills
 	SkillCharacterCreation Skill = "character_creation"
 	SkillLocationCreation  Skill = "location_creation"
-	SkillFactionCreation   Skill = "faction_creation"
 	SkillItemCreation      Skill = "item_creation"
 
 	// Writing skills
 	SkillChapterWriting Skill = "chapter_writing"
-	SkillDialogue       Skill = "dialogue_writing"
-	SkillActionScene    Skill = "action_scene"
 )
 
 // OutputFormat represents the expected output format
@@ -33,7 +30,6 @@ type OutputFormat string
 const (
 	FormatJSON OutputFormat = "json"
 	FormatText OutputFormat = "text"
-	FormatMD   OutputFormat = "markdown"
 )
 
 // PromptTemplate defines a reusable prompt structure

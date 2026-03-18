@@ -7,42 +7,6 @@ import (
 	"nolvegen/internal/models"
 )
 
-// CraftCharactersData contains data for character generation
-type CraftCharactersData struct {
-	StoryTitle    string
-	StoryGenre    string
-	StoryStyle    string
-	StorySetup    string
-	OutlineSample string
-	Characters    []string
-	CustomPrompt  string
-	Language      string
-}
-
-// CraftLocationsData contains data for location generation
-type CraftLocationsData struct {
-	StoryTitle    string
-	StoryGenre    string
-	StoryStyle    string
-	StorySetup    string
-	OutlineSample string
-	Locations     []string
-	CustomPrompt  string
-	Language      string
-}
-
-// CraftItemsData contains data for item generation
-type CraftItemsData struct {
-	StoryTitle    string
-	StoryGenre    string
-	StoryStyle    string
-	StorySetup    string
-	OutlineSample string
-	Items         []string
-	CustomPrompt  string
-	Language      string
-}
-
 // registerCraftPrompts registers all craft-related prompts
 func registerCraftPrompts(pm *PromptManager) {
 	// Character creation prompt
