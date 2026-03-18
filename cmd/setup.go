@@ -57,7 +57,8 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 
 	// AI generation mode
 	logger.Info("AI generation mode with prompt: %s", prompt)
-	setup, err := generateStorySetupWithAI(prompt)
+	logger.Info("Using language: %s", projectConfig.Language)
+	setup, err := generateStorySetupWithAI(prompt, projectConfig.Language)
 	if err != nil {
 		logger.Error("Failed to generate story setup with AI: %v", err)
 		return fmt.Errorf("failed to generate story setup with AI: %w", err)
@@ -79,7 +80,7 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func generateStorySetupWithAI(prompt string) (*models.StorySetup, error) {
+func generateStorySetupWithAI(prompt, language string) (*models.StorySetup, error) {
 	// Load LLM config
 	cfg, err := llm.LoadOrCreateConfig()
 	if err != nil {
@@ -95,6 +96,7 @@ func generateStorySetupWithAI(prompt string) (*models.StorySetup, error) {
 	}
 
 	fmt.Printf("Using provider: %s, model: %s at %s\n", provider.Name, model.Name, provider.BaseURL)
+	fmt.Printf("Language: %s\n", language)
 	fmt.Println()
 
 	// Create LLM client and agent
@@ -102,7 +104,8 @@ func generateStorySetupWithAI(prompt string) (*models.StorySetup, error) {
 	if client == nil {
 		return nil, fmt.Errorf("failed to create LLM client")
 	}
-	agent := agents.NewInitAgent(client, cfg, &projectLLM)
+	agent := agents.NewSetupAgent(client, cfg, &projectLLM)
+	agent.SetLanguage(language)
 
 	return agent.GenerateStorySetup(prompt)
 }
@@ -151,6 +154,12 @@ func createStorySetupMarkdown(setup *models.StorySetup, path string) error {
 
 ### POV Style
 %s
+
+## Storylines
+%s
+
+## Premises
+%s
 `,
 		setup.ProjectName,
 		formatList(setup.Genres),
@@ -161,9 +170,48 @@ func createStorySetupMarkdown(setup *models.StorySetup, path string) error {
 		setup.Tone,
 		setup.Tense,
 		setup.POVStyle,
+		formatStorylines(setup.Storylines),
+		formatPremises(setup.Premises),
 	)
 
 	return os.WriteFile(path, []byte(content), 0644)
+}
+
+func formatStorylines(storylines []models.Storyline) string {
+	if len(storylines) == 0 {
+		return "No storylines defined."
+	}
+	var result strings.Builder
+	for _, s := range storylines {
+		result.WriteString(fmt.Sprintf("\n### %s\n", s.Name))
+		result.WriteString(fmt.Sprintf("- **Type**: %s\n", s.Type))
+		result.WriteString(fmt.Sprintf("- **Importance**: %d/10\n", s.Importance))
+		result.WriteString(fmt.Sprintf("- **Description**: %s\n", s.Description))
+	}
+	return result.String()
+}
+
+func formatPremises(premises []models.Premise) string {
+	if len(premises) == 0 {
+		return "No premises defined."
+	}
+	var result strings.Builder
+	for _, p := range premises {
+		result.WriteString(fmt.Sprintf("\n### %s (%s)\n", p.Name, p.Category))
+		result.WriteString(fmt.Sprintf("%s\n\n", p.Description))
+		if len(p.Progression) > 0 {
+			result.WriteString("**Progression System:**\n\n")
+			for _, stage := range p.Progression {
+				result.WriteString(fmt.Sprintf("**Level %d: %s**\n", stage.Level, stage.Name))
+				result.WriteString(fmt.Sprintf("- Description: %s\n", stage.Description))
+				if stage.Requirements != "" {
+					result.WriteString(fmt.Sprintf("- Requirements: %s\n", stage.Requirements))
+				}
+				result.WriteString("\n")
+			}
+		}
+	}
+	return result.String()
 }
 
 func formatList(items []string) string {

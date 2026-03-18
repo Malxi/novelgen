@@ -10,43 +10,56 @@ import (
 	"nolvegen/internal/prompts"
 )
 
-// InitAgent handles AI generation for story setup
-type InitAgent struct {
+// SetupAgent handles AI generation for story setup
+type SetupAgent struct {
 	client     llm.Client
 	config     *llm.Config
 	projectLLM *models.ProjectLLM
+	language   string
 }
 
-// NewInitAgent creates a new InitAgent
-func NewInitAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM) *InitAgent {
-	return &InitAgent{
+// NewSetupAgent creates a new SetupAgent
+func NewSetupAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM) *SetupAgent {
+	return &SetupAgent{
 		client:     client,
 		config:     config,
 		projectLLM: projectLLM,
+		language:   "zh", // default to Chinese
 	}
 }
 
+// SetLanguage sets the output language
+func (a *SetupAgent) SetLanguage(language string) {
+	a.language = language
+}
+
 // GenerateStorySetup generates a story setup from a prompt
-func (a *InitAgent) GenerateStorySetup(idea string) (*models.StorySetup, error) {
-	logger.Section("INIT AGENT - Story Setup Generation")
+func (a *SetupAgent) GenerateStorySetup(idea string) (*models.StorySetup, error) {
+	logger.Section("SETUP AGENT - Story Setup Generation")
 	logger.Info("Idea: %s", idea)
+	logger.Info("Language: %s", a.language)
 
-	// Create prompt manager
-	pm := prompts.NewPromptManager()
+	// Build prompts manually with language support
+	systemPrompt := prompts.GetStorySetupSystemPrompt(a.language)
+	userPrompt := fmt.Sprintf("Create a story setup based on this idea: %s", idea)
 
-	// Build prompts using the prompt manager
-	data := prompts.BuildStorySetupData(idea)
-	systemPrompt, userPrompt, err := pm.Build(prompts.SkillStorySetup, "default", data)
-	if err != nil {
-		logger.Error("Failed to build prompt: %v", err)
-		return nil, fmt.Errorf("failed to build prompt: %w", err)
-	}
+	// Add output requirements
+	outputRequirements := fmt.Sprintf(`
+
+=== OUTPUT REQUIREMENTS ===
+Format: json
+Language: All content MUST be in %s
+Structure:
+%s
+=== END REQUIREMENTS ===`, prompts.GetLanguageName(a.language), prompts.GetStorySetupSchema())
+
+	fullSystemPrompt := systemPrompt + outputRequirements
 
 	// Log prompts
-	logger.Prompt(string(prompts.SkillStorySetup), "default", systemPrompt, userPrompt)
+	logger.Prompt(string(prompts.SkillStorySetup), "default", fullSystemPrompt, userPrompt)
 
 	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
+		{Role: "system", Content: fullSystemPrompt},
 		{Role: "user", Content: userPrompt},
 	}
 
