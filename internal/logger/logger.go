@@ -43,6 +43,14 @@ type Logger struct {
 	projectDir string
 }
 
+// LoggerInterface defines the logger interface
+type LoggerInterface interface {
+	Debug(format string, args ...interface{})
+	Info(format string, args ...interface{})
+	Warn(format string, args ...interface{})
+	Error(format string, args ...interface{})
+}
+
 var defaultLogger *Logger
 
 func init() {
@@ -184,6 +192,11 @@ func (l *Logger) ErrorWithDetails(err error, details string) {
 
 // Default returns the default logger
 func Default() *Logger {
+	return defaultLogger
+}
+
+// GetLogger returns the default logger as interface (alias for Default)
+func GetLogger() LoggerInterface {
 	return defaultLogger
 }
 
