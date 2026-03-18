@@ -146,6 +146,9 @@ func (pm *PromptManager) buildUserPrompt(template *PromptTemplate, data map[stri
 		if template.Name == "final" {
 			return buildFinalChapterUserPrompt(data)
 		}
+		if template.Name == "improve" {
+			return buildImproveChapterUserPrompt(data)
+		}
 		return buildChapterWritingUserPrompt(data)
 	default:
 		return "Please generate the requested content."

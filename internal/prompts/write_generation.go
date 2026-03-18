@@ -15,6 +15,15 @@ func registerWritePrompts(pm *PromptManager) {
 		SystemPrompt: buildFinalChapterSystemPrompt(),
 		OutputFormat: FormatText,
 	})
+
+	// Improved chapter writing prompt with review suggestions
+	pm.Register(&PromptTemplate{
+		Skill:        SkillChapterWriting,
+		Name:         "improve",
+		Description:  "Generate improved chapter content based on review feedback",
+		SystemPrompt: buildImproveChapterSystemPrompt(),
+		OutputFormat: FormatText,
+	})
 }
 
 func buildFinalChapterSystemPrompt() string {
@@ -96,6 +105,12 @@ func buildFinalChapterUserPrompt(data map[string]interface{}) string {
 
 	sb.WriteString("\n")
 
+	// State matrix - story state at this point
+	if stateMatrix, ok := data["state_matrix"].(string); ok && stateMatrix != "" {
+		sb.WriteString(stateMatrix)
+		sb.WriteString("\n")
+	}
+
 	// Target word count
 	if words, ok := data["target_words"].(int); ok && words > 0 {
 		sb.WriteString(fmt.Sprintf("TARGET LENGTH: Approximately %d words\n\n", words))
@@ -110,6 +125,114 @@ func buildFinalChapterUserPrompt(data map[string]interface{}) string {
 	sb.WriteString("\n- Subtle foreshadowing of future events based on upcoming chapter summaries")
 	sb.WriteString("\n- A satisfying chapter arc that leaves readers wanting more")
 	sb.WriteString("\n\nWrite only the chapter content, no meta-commentary or chapter headers.")
+
+	return sb.String()
+}
+
+func buildImproveChapterSystemPrompt() string {
+	return `You are a professional novelist and creative writer specializing in long-form fiction.
+Your task is to rewrite and improve a chapter based on specific review feedback.
+
+IMPROVEMENT GUIDELINES:
+1. Carefully analyze the review suggestions and address each point
+2. Maintain the original chapter's core events and plot progression
+3. Fix identified issues: plot holes, character inconsistencies, pacing problems, etc.
+4. Enhance strengths mentioned in the review
+5. Preserve continuity with surrounding chapters
+6. Keep the same target word count and chapter structure
+7. Write in a professional, polished style suitable for publication
+
+REVIEW FEEDBACK PRIORITY:
+- Address critical issues first (plot holes, major inconsistencies)
+- Fix character voice and behavior inconsistencies
+- Improve pacing where flagged
+- Enhance weak descriptions or dialogue
+- Strengthen emotional impact where noted
+- Maintain all positive aspects that were praised
+
+CONTINUITY REQUIREMENTS:
+- Review the previous chapters' content carefully
+- Maintain consistency with established character voices and behaviors
+- Ensure plot progression flows logically from what came before
+- Plant seeds for future developments based on upcoming chapter summaries
+- Avoid contradictions with established facts or character traits`
+}
+
+// buildImproveChapterUserPrompt builds the user prompt for improved chapter generation
+func buildImproveChapterUserPrompt(data map[string]interface{}) string {
+	var sb strings.Builder
+
+	// Story context
+	if title, ok := data["story_title"].(string); ok && title != "" {
+		sb.WriteString(fmt.Sprintf("Story Title: %s\n", title))
+	}
+	if genre, ok := data["story_genre"].(string); ok && genre != "" {
+		sb.WriteString(fmt.Sprintf("Genre: %s\n", genre))
+	}
+	if style, ok := data["story_style"].(string); ok && style != "" {
+		sb.WriteString(fmt.Sprintf("Style: %s\n", style))
+	}
+
+	sb.WriteString("\n")
+
+	// Context from surrounding chapters
+	if context, ok := data["context"].(string); ok && context != "" {
+		sb.WriteString(context)
+		sb.WriteString("\n")
+	}
+
+	// Current chapter info
+	if chapterID, ok := data["chapter_id"].(string); ok {
+		sb.WriteString(fmt.Sprintf("CURRENT CHAPTER: %s\n", chapterID))
+	}
+	if chapterTitle, ok := data["chapter_title"].(string); ok {
+		sb.WriteString(fmt.Sprintf("Chapter Title: %s\n", chapterTitle))
+	}
+	if summary, ok := data["chapter_summary"].(string); ok && summary != "" {
+		sb.WriteString(fmt.Sprintf("Chapter Summary: %s\n", summary))
+	}
+
+	sb.WriteString("\n")
+
+	// Characters in this chapter
+	if characters, ok := data["characters"].(string); ok && characters != "" {
+		sb.WriteString(fmt.Sprintf("Characters Present: %s\n", characters))
+	}
+
+	// Location
+	if location, ok := data["location"].(string); ok && location != "" {
+		sb.WriteString(fmt.Sprintf("Primary Location: %s\n", location))
+	}
+
+	sb.WriteString("\n")
+
+	// State matrix - story state at this point
+	if stateMatrix, ok := data["state_matrix"].(string); ok && stateMatrix != "" {
+		sb.WriteString(stateMatrix)
+		sb.WriteString("\n")
+	}
+
+	// Target word count
+	if words, ok := data["target_words"].(int); ok && words > 0 {
+		sb.WriteString(fmt.Sprintf("TARGET LENGTH: Approximately %d words\n\n", words))
+	}
+
+	// Review suggestions
+	if suggestions, ok := data["suggestions"].(string); ok && suggestions != "" {
+		sb.WriteString("=== REVIEW FEEDBACK & IMPROVEMENT SUGGESTIONS ===\n")
+		sb.WriteString(suggestions)
+		sb.WriteString("\n\n")
+	}
+
+	sb.WriteString("Rewrite the chapter addressing ALL the review feedback above. Focus on:")
+	sb.WriteString("\n- Fixing all identified issues and inconsistencies")
+	sb.WriteString("\n- Maintaining seamless continuity with previous chapters")
+	sb.WriteString("\n- Preserving the core plot while improving execution")
+	sb.WriteString("\n- Strengthening character voices and dialogue")
+	sb.WriteString("\n- Improving pacing and tension where flagged")
+	sb.WriteString("\n- Enhancing descriptions and emotional impact")
+	sb.WriteString("\n- Keeping the same target word count")
+	sb.WriteString("\n\nWrite only the improved chapter content, no meta-commentary or chapter headers.")
 
 	return sb.String()
 }
