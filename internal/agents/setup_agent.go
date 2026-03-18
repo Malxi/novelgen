@@ -51,7 +51,7 @@ Format: json
 Language: All content MUST be in %s
 Structure:
 %s
-=== END REQUIREMENTS ===`, prompts.GetLanguageName(a.language), prompts.GetStorySetupSchema())
+=== END REQUIREMENTS ===`, prompts.GetLanguageName(a.language), prompts.StructToJSONSchema(models.StorySetup{}, "  "))
 
 	fullSystemPrompt := systemPrompt + outputRequirements
 

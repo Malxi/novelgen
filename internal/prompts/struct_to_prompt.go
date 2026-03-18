@@ -254,3 +254,202 @@ func toSnakeCase(s string) string {
 	}
 	return strings.ToLower(result.String())
 }
+
+// StructToJSONSchema converts a struct to a JSON schema representation for AI output format
+// It uses reflection to generate a schema that shows the expected JSON structure
+//
+// Tags:
+//   - json:"name" - field name in JSON
+//   - json:"name,omitempty" - optional field
+//   - desc:"description" - field description for schema
+//
+// Example:
+//
+//	type StorySetup struct {
+//	    ProjectName string `json:"project_name" desc:"Name of the novel project"`
+//	}
+//	schema := StructToJSONSchema(StorySetup{}, "  ")
+func StructToJSONSchema(v interface{}, indent string) string {
+	if v == nil {
+		return "null"
+	}
+
+	val := reflect.ValueOf(v)
+	if val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return "null"
+		}
+		val = val.Elem()
+	}
+
+	switch val.Kind() {
+	case reflect.Struct:
+		return structToJSONSchema(val, indent)
+	case reflect.Slice, reflect.Array:
+		return sliceToJSONSchema(val, indent)
+	case reflect.Map:
+		return mapToJSONSchema(val, indent)
+	case reflect.String:
+		return "\"string\""
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return "number"
+	case reflect.Float32, reflect.Float64:
+		return "number"
+	case reflect.Bool:
+		return "boolean"
+	default:
+		return "unknown"
+	}
+}
+
+// structToJSONSchema converts a struct to JSON schema format
+func structToJSONSchema(val reflect.Value, indent string) string {
+	typ := val.Type()
+	var result strings.Builder
+
+	result.WriteString("{\n")
+
+	fieldCount := 0
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+		fieldType := typ.Field(i)
+
+		// Skip unexported fields
+		if !field.CanInterface() {
+			continue
+		}
+
+		// Get json tag
+		jsonTag := fieldType.Tag.Get("json")
+		if jsonTag == "-" {
+			continue
+		}
+
+		// Parse json tag
+		fieldName := fieldType.Name
+		isOptional := false
+		if jsonTag != "" {
+			parts := strings.Split(jsonTag, ",")
+			if parts[0] != "" {
+				fieldName = parts[0]
+			}
+			for _, part := range parts[1:] {
+				if part == "omitempty" {
+					isOptional = true
+				}
+			}
+		}
+
+		// Get description from desc tag
+		desc := fieldType.Tag.Get("desc")
+
+		if fieldCount > 0 {
+			result.WriteString(",\n")
+		}
+		fieldCount++
+
+		// Write field
+		result.WriteString(fmt.Sprintf("%s\"%s\": ", indent+"  ", fieldName))
+
+		// Write value/schema
+		fieldSchema := fieldToJSONSchema(field, indent+"  ")
+		result.WriteString(fieldSchema)
+
+		// Add description comment if present
+		if desc != "" {
+			result.WriteString(fmt.Sprintf(" // %s", desc))
+		}
+		if isOptional {
+			result.WriteString(" (optional)")
+		}
+	}
+
+	if fieldCount > 0 {
+		result.WriteString("\n")
+	}
+	result.WriteString(indent + "}")
+
+	return result.String()
+}
+
+// fieldToJSONSchema converts a single field to JSON schema format
+func fieldToJSONSchema(val reflect.Value, indent string) string {
+	switch val.Kind() {
+	case reflect.String:
+		return "\"string\""
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return "0"
+	case reflect.Float32, reflect.Float64:
+		return "0.0"
+	case reflect.Bool:
+		return "true"
+	case reflect.Slice, reflect.Array:
+		return sliceToJSONSchema(val, indent)
+	case reflect.Struct:
+		return structToJSONSchema(val, indent)
+	case reflect.Ptr:
+		if val.IsNil() {
+			return "null"
+		}
+		return fieldToJSONSchema(val.Elem(), indent)
+	case reflect.Map:
+		return mapToJSONSchema(val, indent)
+	default:
+		return fmt.Sprintf("\"%s\"", val.Type().String())
+	}
+}
+
+// sliceToJSONSchema converts a slice to JSON schema format
+func sliceToJSONSchema(val reflect.Value, indent string) string {
+	if val.Len() == 0 {
+		// Try to get element type from type info
+		elemType := val.Type().Elem()
+		switch elemType.Kind() {
+		case reflect.String:
+			return "[\"string\"]"
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			return "[0]"
+		case reflect.Float32, reflect.Float64:
+			return "[0.0]"
+		case reflect.Bool:
+			return "[true]"
+		case reflect.Struct:
+			// Create zero value of element to get schema
+			elemVal := reflect.New(elemType).Elem()
+			return "[\n" + indent + "  " + structToJSONSchema(elemVal, indent+"  ") + "\n" + indent + "]"
+		default:
+			return "[]"
+		}
+	}
+
+	// Use first element as example
+	elemSchema := fieldToJSONSchema(val.Index(0), indent+"  ")
+	return "[\n" + indent + "  " + elemSchema + "\n" + indent + "]"
+}
+
+// mapToJSONSchema converts a map to JSON schema format
+func mapToJSONSchema(val reflect.Value, indent string) string {
+	if val.Len() == 0 {
+		return "{}"
+	}
+
+	var result strings.Builder
+	result.WriteString("{\n")
+
+	keys := val.MapKeys()
+	for i, key := range keys {
+		if i > 0 {
+			result.WriteString(",\n")
+		}
+		value := val.MapIndex(key)
+		keyStr := fmt.Sprintf("%v", key.Interface())
+		valueSchema := fieldToJSONSchema(value, indent+"  ")
+		result.WriteString(fmt.Sprintf("%s\"%s\": %s", indent+"  ", keyStr, valueSchema))
+	}
+
+	result.WriteString("\n" + indent + "}")
+	return result.String()
+}

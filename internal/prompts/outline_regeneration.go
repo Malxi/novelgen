@@ -15,7 +15,7 @@ func registerOutlineRegenPrompts(pm *PromptManager) {
 		Description:  "Regenerate a part",
 		SystemPrompt: outlineRegenSystemPrompt,
 		OutputFormat: FormatJSON,
-		OutputSchema: partSchema,
+		OutputModel:  models.Part{}, // Auto-generate schema from struct
 	})
 
 	pm.Register(&PromptTemplate{
@@ -24,7 +24,7 @@ func registerOutlineRegenPrompts(pm *PromptManager) {
 		Description:  "Regenerate a volume",
 		SystemPrompt: outlineRegenSystemPrompt,
 		OutputFormat: FormatJSON,
-		OutputSchema: volumeSchema,
+		OutputModel:  models.Volume{}, // Auto-generate schema from struct
 	})
 
 	pm.Register(&PromptTemplate{
@@ -33,7 +33,7 @@ func registerOutlineRegenPrompts(pm *PromptManager) {
 		Description:  "Regenerate a chapter",
 		SystemPrompt: outlineRegenSystemPrompt,
 		OutputFormat: FormatJSON,
-		OutputSchema: chapterSchema,
+		OutputModel:  models.Chapter{}, // Auto-generate schema from struct
 	})
 }
 
@@ -92,24 +92,3 @@ Please regenerate this {{element_type}}, ensuring:
 2. Alignment with overall story tone
 3. Consideration of user suggestions
 4. ALL content in the specified language`
-
-const partSchema = `{
-  "id": "part_1",
-  "title": "Part Title",
-  "summary": "Brief summary of this part"
-}`
-
-const volumeSchema = `{
-  "id": "vol_1_1",
-  "title": "Volume Title",
-  "summary": "Brief summary of this volume"
-}`
-
-const chapterSchema = `{
-  "id": "chap_1_1_1",
-  "title": "Chapter Title",
-  "summary": "Brief summary of this chapter",
-  "beats": ["Plot beat 1", "Plot beat 2", "Plot beat 3"],
-  "conflict": "Main conflict in this chapter",
-  "pacing": "slow|normal|fast"
-}`

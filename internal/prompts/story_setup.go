@@ -1,6 +1,10 @@
 package prompts
 
-import "fmt"
+import (
+	"fmt"
+
+	"nolvegen/internal/models"
+)
 
 // registerStorySetupPrompts registers all story setup prompts
 func registerStorySetupPrompts(pm *PromptManager) {
@@ -10,7 +14,7 @@ func registerStorySetupPrompts(pm *PromptManager) {
 		Description:  "Generate story setup from user idea",
 		SystemPrompt: storySetupSystemPrompt,
 		OutputFormat: FormatJSON,
-		OutputSchema: storySetupSchema,
+		OutputModel:  models.StorySetup{}, // Auto-generate schema from struct
 	})
 }
 
@@ -74,11 +78,6 @@ func GetLanguageName(code string) string {
 	}
 }
 
-// GetStorySetupSchema returns the JSON schema for story setup
-func GetStorySetupSchema() string {
-	return storySetupSchema
-}
-
 const storySetupSystemPrompt = `You are a creative writing assistant specializing in novel planning.
 Your task is to generate a structured story setup based on the user's idea.
 
@@ -96,50 +95,3 @@ For premises with progression systems:
 - Higher levels should be progressively more powerful and harder to achieve
 - Include specific requirements or conditions for advancement
 - Make each stage distinct and meaningful to the story`
-
-const storySetupSchema = `{
-  "project_name": "小说标题（中文）",
-  "genres": ["类型1", "类型2"],
-  "premise": "故事核心设定的中文描述",
-  "theme": "核心主题（如：勇气与力量、救赎、成长等）",
-  "rules": ["故事规则1", "故事规则2"],
-  "target_audience": "目标读者（如：青少年、成人、全年龄）",
-  "tone": "风格基调（如：史诗、希望、黑暗、热血、悬疑）",
-  "tense": "past 或 present",
-  "pov_style": "first_person, third_person_limited, 或 third_person_omniscient",
-  "storylines": [
-    {
-      "name": "故事线名称（如：主角的成长之路）",
-      "description": "故事线的详细中文描述",
-      "type": "main, subplot, 或 character_arc",
-      "importance": 10
-    }
-  ],
-  "premises": [
-    {
-      "name": "设定名称（如：战斗机甲）",
-      "description": "该设定的中文描述",
-      "category": "类别如：机甲, 基因进化, 飞船, 魔法, 武道, 异能等",
-      "progression": [
-        {
-          "level": 1,
-          "name": "阶段名称（如：标准型机甲）",
-          "description": "该阶段的能力和特点的中文描述",
-          "requirements": "晋升到该阶段的要求"
-        },
-        {
-          "level": 2,
-          "name": "阶段名称（如：精锐型机甲）",
-          "description": "该阶段的能力和特点的中文描述",
-          "requirements": "晋升到该阶段的要求"
-        },
-        {
-          "level": 3,
-          "name": "阶段名称（如：传奇型机甲）",
-          "description": "该阶段的能力和特点的中文描述",
-          "requirements": "晋升到该阶段的要求"
-        }
-      ]
-    }
-  ]
-}`

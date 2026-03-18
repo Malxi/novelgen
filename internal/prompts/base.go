@@ -43,7 +43,8 @@ type PromptTemplate struct {
 	Description  string
 	SystemPrompt string
 	OutputFormat OutputFormat
-	OutputSchema string // JSON schema or structure description
+	OutputSchema string      // JSON schema string (optional, will be auto-generated from OutputModel if empty)
+	OutputModel  interface{} // Struct instance for auto-generating JSON schema (optional)
 	Language     string
 }
 
@@ -113,8 +114,14 @@ func (pm *PromptManager) buildOutputRequirements(template *PromptTemplate) strin
 	parts = append(parts, "=== OUTPUT REQUIREMENTS ===")
 	parts = append(parts, fmt.Sprintf("Format: %s", template.OutputFormat))
 
-	if template.OutputSchema != "" {
-		parts = append(parts, fmt.Sprintf("Structure:\n%s", template.OutputSchema))
+	// Get schema - use explicit OutputSchema or auto-generate from OutputModel
+	schema := template.OutputSchema
+	if schema == "" && template.OutputModel != nil {
+		schema = StructToJSONSchema(template.OutputModel, "  ")
+	}
+
+	if schema != "" {
+		parts = append(parts, fmt.Sprintf("Structure:\n%s", schema))
 	}
 
 	if template.Language != "" {

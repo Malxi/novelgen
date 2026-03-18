@@ -37,7 +37,7 @@ func registerOutlineReviewPrompts(pm *PromptManager) {
 		Description:  "Review outline for logical consistency, engagement, and pacing",
 		SystemPrompt: outlineReviewSystemPrompt,
 		OutputFormat: FormatJSON,
-		OutputSchema: outlineReviewSchema,
+		OutputModel:  ReviewResult{}, // Auto-generate schema from struct
 	})
 }
 
@@ -81,27 +81,6 @@ Provide SPECIFIC, ACTIONABLE suggestions. Each suggestion must identify:
 - Priority level (high/medium/low)
 
 Respond ONLY with a valid JSON object.`
-
-const outlineReviewSchema = `{
-  "overall_score": <number 0-100>,
-  "logic_score": <number 0-100>,
-  "engagement_score": <number 0-100>,
-  "pacing_score": <number 0-100>,
-  "coherence_score": <number 0-100>,
-  "summary": "<overall assessment in 2-3 sentences>",
-  "strengths": ["<strength 1>", "<strength 2>", ...],
-  "weaknesses": ["<weakness 1>", "<weakness 2>", ...],
-  "suggestions": [
-    {
-      "type": "<part|volume|chapter>",
-      "id": "<e.g., 1, 1_1, 1_1_1>",
-      "title": "<current title>",
-      "issue": "<specific problem description>",
-      "suggestion": "<concrete improvement recommendation>",
-      "priority": "<high|medium|low>"
-    }
-  ]
-}`
 
 // ParseReviewResult parses the AI response into ReviewResult
 func ParseReviewResult(content string) (*ReviewResult, error) {

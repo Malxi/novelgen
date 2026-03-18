@@ -13,7 +13,7 @@ func registerOutlineGenPrompts(pm *PromptManager) {
 		Description:  "Generate outline with predefined structure",
 		SystemPrompt: outlineGenSystemPrompt,
 		OutputFormat: FormatJSON,
-		OutputSchema: outlineSchema,
+		OutputModel:  models.Outline{}, // Auto-generate schema from struct
 	})
 }
 
