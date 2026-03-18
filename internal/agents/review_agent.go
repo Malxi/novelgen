@@ -3,11 +3,11 @@ package agents
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"nolvegen/internal/llm"
 	"nolvegen/internal/logger"
 	"nolvegen/internal/models"
+	"nolvegen/internal/prompts"
 )
 
 // ReviewAgent reviews drafts and provides improvement suggestions
@@ -92,7 +92,7 @@ func (a *ReviewAgent) ReviewVolume(volume *models.Volume, drafts map[string]stri
 	log.Info("Reviewing volume: %s - %s", volume.ID, volume.Title)
 
 	// Build all chapters content
-	var chapterContents []chapterDraftContent
+	var chapterContents []prompts.ChapterDraftContent
 	for i := range volume.Chapters {
 		chapter := &volume.Chapters[i]
 		draft, exists := drafts[chapter.ID]
@@ -100,7 +100,7 @@ func (a *ReviewAgent) ReviewVolume(volume *models.Volume, drafts map[string]stri
 			log.Warn("No draft found for chapter: %s", chapter.ID)
 			continue
 		}
-		chapterContents = append(chapterContents, chapterDraftContent{
+		chapterContents = append(chapterContents, prompts.ChapterDraftContent{
 			Chapter: chapter,
 			Draft:   draft,
 		})
@@ -127,25 +127,20 @@ func (a *ReviewAgent) ReviewVolume(volume *models.Volume, drafts map[string]stri
 	}, nil
 }
 
-// chapterDraftContent holds chapter and its draft
-type chapterDraftContent struct {
-	Chapter *models.Chapter
-	Draft   string
-}
-
 // reviewAllDrafts reviews all drafts in a volume together
-func (a *ReviewAgent) reviewAllDrafts(volume *models.Volume, chapterContents []chapterDraftContent) ([]DraftReview, error) {
+func (a *ReviewAgent) reviewAllDrafts(volume *models.Volume, chapterContents []prompts.ChapterDraftContent) ([]DraftReview, error) {
 	log := logger.GetLogger()
 	log.Info("Sending %d chapters for batch review", len(chapterContents))
 
-	prompt := a.buildVolumeReviewPrompt(volume, chapterContents)
+	prompt := prompts.BuildVolumeReviewPrompt(a.setup, volume, chapterContents, a.language)
 
 	messages := []llm.Message{
-		{Role: "system", Content: a.getVolumeSystemPrompt()},
+		{Role: "system", Content: prompts.GetVolumeReviewSystemPrompt(a.language)},
 		{Role: "user", Content: prompt},
 	}
 
 	options := a.config.GetChatOptions(a.llmCfg)
+	options.MaxTokens = 8000 // Increase for multiple chapters
 
 	resp, err := a.client.ChatCompletion(messages, options)
 	if err != nil {
@@ -153,41 +148,6 @@ func (a *ReviewAgent) reviewAllDrafts(volume *models.Volume, chapterContents []c
 	}
 
 	return a.parseVolumeReviewResponse(chapterContents, resp.Content)
-}
-
-// getVolumeSystemPrompt returns system prompt for volume review
-func (a *ReviewAgent) getVolumeSystemPrompt() string {
-	if a.language == "zh" {
-		return `你是一位专业的小说编辑和评论家。你的任务是审阅整个卷（volume）的所有章节草稿，并提供详细的改进建议。
-
-请从以下几个维度对每章进行评价：
-1. 剧情连贯性 - 与前后章节的情节是否连贯
-2. 情节合理性 - 剧情逻辑是否合理，有无漏洞
-3. 角色一致性 - 角色行为是否符合其设定
-4. 节奏把控 - 故事节奏是否恰当
-
-同时请从整个卷的层面评价：
-- 卷的整体结构是否合理
-- 章节之间的衔接是否流畅
-- 是否有跨章节的情节漏洞
-
-请以JSON格式输出评价结果，包含所有章节的评价。`
-	}
-
-	return `You are a professional novel editor and critic. Your task is to review all chapters in an entire volume and provide detailed improvement suggestions.
-
-Please evaluate each chapter from the following dimensions:
-1. Plot Coherence - Is the plot coherent with previous and next chapters?
-2. Plot Rationality - Is the plot logic reasonable? Any flaws?
-3. Character Consistency - Do characters act according to their established traits?
-4. Pacing - Is the story pacing appropriate?
-
-Also evaluate at the volume level:
-- Is the overall volume structure reasonable?
-- Are transitions between chapters smooth?
-- Are there any cross-chapter plot holes?
-
-Please output the review results in JSON format, including reviews for all chapters.`
 }
 
 // ReviewDraft reviews a single draft
@@ -198,14 +158,15 @@ func (a *ReviewAgent) ReviewDraft(chapter *models.Chapter, draft string) (*Draft
 	// Get previous and next chapters for context
 	prevChapter, nextChapter := a.getAdjacentChapters(chapter)
 
-	prompt := a.buildReviewPrompt(chapter, draft, prevChapter, nextChapter)
+	prompt := prompts.BuildReviewPrompt(a.setup, chapter, draft, prevChapter, nextChapter, a.language)
 
 	messages := []llm.Message{
-		{Role: "system", Content: a.getSystemPrompt()},
+		{Role: "system", Content: prompts.GetReviewSystemPrompt(a.language)},
 		{Role: "user", Content: prompt},
 	}
 
 	options := a.config.GetChatOptions(a.llmCfg)
+	options.MaxTokens = 4000
 
 	resp, err := a.client.ChatCompletion(messages, options)
 	if err != nil {
@@ -213,156 +174,6 @@ func (a *ReviewAgent) ReviewDraft(chapter *models.Chapter, draft string) (*Draft
 	}
 
 	return a.parseReviewResponse(chapter, resp.Content)
-}
-
-func (a *ReviewAgent) getSystemPrompt() string {
-	if a.language == "zh" {
-		return `你是一位专业的小说编辑和评论家。你的任务是审阅小说草稿并提供详细的改进建议。
-
-请从以下几个维度进行评价：
-1. 剧情连贯性 - 与前后章节的情节是否连贯
-2. 情节合理性 - 剧情逻辑是否合理，有无漏洞
-3. 角色一致性 - 角色行为是否符合其设定
-4. 节奏把控 - 故事节奏是否恰当
-
-请以JSON格式输出评价结果。`
-	}
-
-	return `You are a professional novel editor and critic. Your task is to review draft chapters and provide detailed improvement suggestions.
-
-Please evaluate from the following dimensions:
-1. Plot Coherence - Is the plot coherent with previous and next chapters?
-2. Plot Rationality - Is the plot logic reasonable? Any flaws?
-3. Character Consistency - Do characters act according to their established traits?
-4. Pacing - Is the story pacing appropriate?
-
-Please output the review result in JSON format.`
-}
-
-func (a *ReviewAgent) buildReviewPrompt(chapter *models.Chapter, draft string, prevChapter, nextChapter *models.Chapter) string {
-	var sb strings.Builder
-
-	if a.language == "zh" {
-		sb.WriteString("# 小说草稿审阅\n\n")
-
-		sb.WriteString("## 故事设定\n")
-		sb.WriteString(fmt.Sprintf("类型: %s\n", strings.Join(a.setup.Genres, ", ")))
-		sb.WriteString(fmt.Sprintf("核心设定: %s\n\n", a.setup.Premise))
-
-		sb.WriteString("## 当前章节大纲\n")
-		sb.WriteString(fmt.Sprintf("章节ID: %s\n", chapter.ID))
-		sb.WriteString(fmt.Sprintf("标题: %s\n", chapter.Title))
-		sb.WriteString(fmt.Sprintf("摘要: %s\n", chapter.Summary))
-		sb.WriteString(fmt.Sprintf("角色: %s\n", strings.Join(chapter.Characters, ", ")))
-		sb.WriteString(fmt.Sprintf("地点: %s\n\n", chapter.Location))
-
-		if prevChapter != nil {
-			sb.WriteString("## 前一章节\n")
-			sb.WriteString(fmt.Sprintf("标题: %s\n", prevChapter.Title))
-			sb.WriteString(fmt.Sprintf("摘要: %s\n\n", prevChapter.Summary))
-		}
-
-		if nextChapter != nil {
-			sb.WriteString("## 后一章节\n")
-			sb.WriteString(fmt.Sprintf("标题: %s\n", nextChapter.Title))
-			sb.WriteString(fmt.Sprintf("摘要: %s\n\n", nextChapter.Summary))
-		}
-
-		sb.WriteString("## 待审阅草稿\n")
-		sb.WriteString(draft)
-		sb.WriteString("\n\n")
-
-		sb.WriteString("## 输出要求\n")
-		sb.WriteString("请提供以下JSON格式的评价：\n")
-		sb.WriteString(`{
-  "chapter_id": "章节ID",
-  "chapter_title": "章节标题",
-  "overall_score": 7,
-  "plot_coherence": {
-    "score": 7,
-    "issues": ["问题1", "问题2"],
-    "suggestions": ["建议1", "建议2"]
-  },
-  "plot_rationality": {
-    "score": 8,
-    "logic_flaws": ["漏洞1"],
-    "suggestions": ["建议1"]
-  },
-  "character_consistency": {
-    "score": 9,
-    "inconsistencies": [],
-    "suggestions": []
-  },
-  "pacing_review": {
-    "score": 6,
-    "issues": ["节奏拖沓"],
-    "suggestions": ["加快节奏"]
-  },
-  "suggestions": ["总体建议1", "总体建议2"],
-  "needs_revision": true
-}`)
-	} else {
-		sb.WriteString("# Novel Draft Review\n\n")
-
-		sb.WriteString("## Story Setup\n")
-		sb.WriteString(fmt.Sprintf("Genres: %s\n", strings.Join(a.setup.Genres, ", ")))
-		sb.WriteString(fmt.Sprintf("Premise: %s\n\n", a.setup.Premise))
-
-		sb.WriteString("## Current Chapter Outline\n")
-		sb.WriteString(fmt.Sprintf("Chapter ID: %s\n", chapter.ID))
-		sb.WriteString(fmt.Sprintf("Title: %s\n", chapter.Title))
-		sb.WriteString(fmt.Sprintf("Summary: %s\n", chapter.Summary))
-		sb.WriteString(fmt.Sprintf("Characters: %s\n", strings.Join(chapter.Characters, ", ")))
-		sb.WriteString(fmt.Sprintf("Location: %s\n\n", chapter.Location))
-
-		if prevChapter != nil {
-			sb.WriteString("## Previous Chapter\n")
-			sb.WriteString(fmt.Sprintf("Title: %s\n", prevChapter.Title))
-			sb.WriteString(fmt.Sprintf("Summary: %s\n\n", prevChapter.Summary))
-		}
-
-		if nextChapter != nil {
-			sb.WriteString("## Next Chapter\n")
-			sb.WriteString(fmt.Sprintf("Title: %s\n", nextChapter.Title))
-			sb.WriteString(fmt.Sprintf("Summary: %s\n\n", nextChapter.Summary))
-		}
-
-		sb.WriteString("## Draft to Review\n")
-		sb.WriteString(draft)
-		sb.WriteString("\n\n")
-
-		sb.WriteString("## Output Requirements\n")
-		sb.WriteString("Please provide review in the following JSON format:\n")
-		sb.WriteString(`{
-  "chapter_id": "chapter_id",
-  "chapter_title": "Chapter Title",
-  "overall_score": 7,
-  "plot_coherence": {
-    "score": 7,
-    "issues": ["issue1", "issue2"],
-    "suggestions": ["suggestion1", "suggestion2"]
-  },
-  "plot_rationality": {
-    "score": 8,
-    "logic_flaws": ["flaw1"],
-    "suggestions": ["suggestion1"]
-  },
-  "character_consistency": {
-    "score": 9,
-    "inconsistencies": [],
-    "suggestions": []
-  },
-  "pacing_review": {
-    "score": 6,
-    "issues": ["pacing too slow"],
-    "suggestions": ["speed up pacing"]
-  },
-  "suggestions": ["overall suggestion1", "overall suggestion2"],
-  "needs_revision": true
-}`)
-	}
-
-	return sb.String()
 }
 
 func (a *ReviewAgent) parseReviewResponse(chapter *models.Chapter, content string) (*DraftReview, error) {
@@ -440,137 +251,8 @@ func (a *ReviewAgent) generateSummary(reviews []DraftReview) string {
 	return fmt.Sprintf("Reviewed %d chapters, average score %.1f/10, %d chapters need revision", len(reviews), avgScore, needsRevision)
 }
 
-// buildVolumeReviewPrompt builds prompt for reviewing entire volume
-func (a *ReviewAgent) buildVolumeReviewPrompt(volume *models.Volume, chapterContents []chapterDraftContent) string {
-	var sb strings.Builder
-
-	if a.language == "zh" {
-		sb.WriteString("# 小说卷审阅\n\n")
-
-		sb.WriteString("## 故事设定\n")
-		sb.WriteString(fmt.Sprintf("类型: %s\n", strings.Join(a.setup.Genres, ", ")))
-		sb.WriteString(fmt.Sprintf("核心设定: %s\n\n", a.setup.Premise))
-
-		sb.WriteString(fmt.Sprintf("## 卷信息: %s\n", volume.Title))
-		sb.WriteString(fmt.Sprintf("摘要: %s\n\n", volume.Summary))
-
-		sb.WriteString("## 章节大纲\n")
-		for _, cc := range chapterContents {
-			ch := cc.Chapter
-			sb.WriteString(fmt.Sprintf("\n### %s: %s\n", ch.ID, ch.Title))
-			sb.WriteString(fmt.Sprintf("摘要: %s\n", ch.Summary))
-			sb.WriteString(fmt.Sprintf("角色: %s\n", strings.Join(ch.Characters, ", ")))
-			sb.WriteString(fmt.Sprintf("地点: %s\n", ch.Location))
-		}
-
-		sb.WriteString("\n## 待审阅草稿\n")
-		for _, cc := range chapterContents {
-			sb.WriteString(fmt.Sprintf("\n---\n### %s: %s\n\n", cc.Chapter.ID, cc.Chapter.Title))
-			sb.WriteString(cc.Draft)
-			sb.WriteString("\n")
-		}
-
-		sb.WriteString("\n## 输出要求\n")
-		sb.WriteString("请提供以下JSON格式的评价，包含所有章节的评价数组：\n")
-		sb.WriteString(`{
-  "reviews": [
-    {
-      "chapter_id": "C1",
-      "chapter_title": "章节标题",
-      "overall_score": 7,
-      "plot_coherence": {
-        "score": 7,
-        "issues": ["问题1", "问题2"],
-        "suggestions": ["建议1", "建议2"]
-      },
-      "plot_rationality": {
-        "score": 8,
-        "logic_flaws": ["漏洞1"],
-        "suggestions": ["建议1"]
-      },
-      "character_consistency": {
-        "score": 9,
-        "inconsistencies": [],
-        "suggestions": []
-      },
-      "pacing_review": {
-        "score": 6,
-        "issues": ["节奏拖沓"],
-        "suggestions": ["加快节奏"]
-      },
-      "suggestions": ["总体建议1", "总体建议2"],
-      "needs_revision": true
-    }
-  ],
-  "volume_summary": "对整个卷的总体评价"
-}`)
-	} else {
-		sb.WriteString("# Novel Volume Review\n\n")
-
-		sb.WriteString("## Story Setup\n")
-		sb.WriteString(fmt.Sprintf("Genres: %s\n", strings.Join(a.setup.Genres, ", ")))
-		sb.WriteString(fmt.Sprintf("Premise: %s\n\n", a.setup.Premise))
-
-		sb.WriteString(fmt.Sprintf("## Volume Info: %s\n", volume.Title))
-		sb.WriteString(fmt.Sprintf("Summary: %s\n\n", volume.Summary))
-
-		sb.WriteString("## Chapter Outlines\n")
-		for _, cc := range chapterContents {
-			ch := cc.Chapter
-			sb.WriteString(fmt.Sprintf("\n### %s: %s\n", ch.ID, ch.Title))
-			sb.WriteString(fmt.Sprintf("Summary: %s\n", ch.Summary))
-			sb.WriteString(fmt.Sprintf("Characters: %s\n", strings.Join(ch.Characters, ", ")))
-			sb.WriteString(fmt.Sprintf("Location: %s\n", ch.Location))
-		}
-
-		sb.WriteString("\n## Drafts to Review\n")
-		for _, cc := range chapterContents {
-			sb.WriteString(fmt.Sprintf("\n---\n### %s: %s\n\n", cc.Chapter.ID, cc.Chapter.Title))
-			sb.WriteString(cc.Draft)
-			sb.WriteString("\n")
-		}
-
-		sb.WriteString("\n## Output Requirements\n")
-		sb.WriteString("Please provide reviews in the following JSON format with an array of all chapter reviews:\n")
-		sb.WriteString(`{
-  "reviews": [
-    {
-      "chapter_id": "C1",
-      "chapter_title": "Chapter Title",
-      "overall_score": 7,
-      "plot_coherence": {
-        "score": 7,
-        "issues": ["issue1", "issue2"],
-        "suggestions": ["suggestion1", "suggestion2"]
-      },
-      "plot_rationality": {
-        "score": 8,
-        "logic_flaws": ["flaw1"],
-        "suggestions": ["suggestion1"]
-      },
-      "character_consistency": {
-        "score": 9,
-        "inconsistencies": [],
-        "suggestions": []
-      },
-      "pacing_review": {
-        "score": 6,
-        "issues": ["pacing too slow"],
-        "suggestions": ["speed up pacing"]
-      },
-      "suggestions": ["overall suggestion1", "overall suggestion2"],
-      "needs_revision": true
-    }
-  ],
-  "volume_summary": "Overall evaluation of the entire volume"
-}`)
-	}
-
-	return sb.String()
-}
-
 // parseVolumeReviewResponse parses the response for volume review
-func (a *ReviewAgent) parseVolumeReviewResponse(chapterContents []chapterDraftContent, content string) ([]DraftReview, error) {
+func (a *ReviewAgent) parseVolumeReviewResponse(chapterContents []prompts.ChapterDraftContent, content string) ([]DraftReview, error) {
 	// Extract JSON from response
 	content = extractJSON(content)
 
