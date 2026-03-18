@@ -18,9 +18,9 @@ import (
 )
 
 var (
-	composeRegenFlag   string
-	composePromptFlag  string
-	composeIterateFlag int
+	composeRegenFlag     string
+	composePromptFlag    string
+	composeMaxRoundsFlag int
 )
 
 var composeCmd = &cobra.Command{
@@ -35,16 +35,33 @@ to generate a hierarchical outline structure based on the predefined structure i
 Examples:
   novel compose                          # Generate full outline
   novel compose --regen 1_1_1            # Regenerate chapter 1.1.1
-  novel compose --regen 1_1_1 --prompt "make it more intense"  # Regenerate with suggestion
-  novel compose --iterate 3              # Generate and iterate 3 times for improvement
-  novel compose --iterate 2              # Improve existing outline with 2 iterations`,
+  novel compose --regen 1_1_1 --prompt "make it more intense"  # Regenerate with suggestion`,
 	RunE: runCompose,
 }
 
+var composeImproveCmd = &cobra.Command{
+	Use:   "improve",
+	Short: "Improve existing outline through AI review",
+	Long: `Improve an existing outline by running AI review and enhancement cycles.
+
+This command loads the current outline and runs multiple rounds of AI self-review
+to identify weaknesses and improve the story structure, pacing, and coherence.
+
+Examples:
+  novel compose improve                  # Improve outline with 1 round
+  novel compose improve --max-rounds 3   # Run 3 improvement rounds
+  novel compose improve --max-rounds 2   # Multiple iterations for refinement`,
+	RunE: runComposeImprove,
+}
+
 func init() {
+	composeCmd.AddCommand(composeImproveCmd)
+
 	composeCmd.Flags().StringVar(&composeRegenFlag, "regen", "", "Regenerate a specific part, volume, or chapter (e.g., \"1\", \"1_1\", \"1_1_1\")")
 	composeCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Suggestions for regeneration (used with --regen)")
-	composeCmd.Flags().IntVar(&composeIterateFlag, "iterate", 0, "Number of iterations for AI self-review and improvement (default: 0)")
+
+	composeImproveCmd.Flags().IntVar(&composeMaxRoundsFlag, "max-rounds", 1, "Maximum number of improvement rounds")
+
 	rootCmd.AddCommand(composeCmd)
 }
 
@@ -83,11 +100,6 @@ func runCompose(cmd *cobra.Command, args []string) error {
 	outlinePath := filepath.Join("config", "compose", "outline.json")
 	var outline *models.Outline
 
-	// Allow iteration on existing outline
-	if _, err := os.Stat(outlinePath); err == nil && composeRegenFlag == "" && composeIterateFlag == 0 {
-		return fmt.Errorf("outline already exists at %s. Use --regen to regenerate specific parts or --iterate to improve", outlinePath)
-	}
-
 	if composeRegenFlag != "" {
 		// Regenerate specific element
 		outline, err = models.LoadOutline(outlinePath)
@@ -97,30 +109,16 @@ func runCompose(cmd *cobra.Command, args []string) error {
 		if err := regenerateElement(outline, composeRegenFlag, setup, projectConfig); err != nil {
 			return fmt.Errorf("failed to regenerate element: %w", err)
 		}
-	} else if composeIterateFlag > 0 && outlineExists(outlinePath) {
-		// Iterate on existing outline
-		logger.Info("Loading existing outline for iteration")
-		outline, err = models.LoadOutline(outlinePath)
-		if err != nil {
-			return fmt.Errorf("failed to load existing outline: %w", err)
-		}
-		if err := iterateOutlineImprovement(outline, setup, projectConfig, composeIterateFlag); err != nil {
-			logger.Error("Iteration improvement failed: %v", err)
-			return fmt.Errorf("iteration improvement failed: %w", err)
-		}
 	} else {
+		// Check if outline already exists
+		if _, err := os.Stat(outlinePath); err == nil {
+			return fmt.Errorf("outline already exists at %s. Use --regen to regenerate specific parts or 'novel compose improve' to improve", outlinePath)
+		}
+
 		// AI generation mode (default)
 		outline, err = generateOutlineWithAI(setup, projectConfig)
 		if err != nil {
 			return fmt.Errorf("failed to generate outline with AI: %w", err)
-		}
-
-		// Iterative improvement if requested
-		if composeIterateFlag > 0 {
-			if err := iterateOutlineImprovement(outline, setup, projectConfig, composeIterateFlag); err != nil {
-				logger.Error("Iteration improvement failed: %v", err)
-				// Continue with original outline if iteration fails
-			}
 		}
 	}
 
@@ -144,7 +142,73 @@ func runCompose(cmd *cobra.Command, args []string) error {
 		projectConfig.Structure.TotalChapters())
 	fmt.Println("\nNext steps:")
 	fmt.Println("  - Edit config/compose/outline.json to refine your outline")
-	fmt.Println("  - Run 'novel worldbuild' to create world elements")
+	fmt.Println("  - Run 'novel compose improve' to improve the outline with AI review")
+	fmt.Println("  - Run 'novel craft' to create world elements")
+
+	return nil
+}
+
+// runComposeImprove runs the outline improvement command
+func runComposeImprove(cmd *cobra.Command, args []string) error {
+	// Initialize logger
+	logger.SetDefault(logger.New(logger.DebugLevel))
+	logger.Section("NOLVEGEN COMPOSE IMPROVE")
+
+	// Check if we're in a novel project
+	if _, err := os.Stat("novel.json"); err != nil {
+		logger.Error("Not a novel project directory (novel.json not found)")
+		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novel init' first")
+	}
+
+	// Load project config
+	projectConfig, err := models.LoadProjectConfig("novel.json")
+	if err != nil {
+		logger.Error("Failed to load novel.json: %v", err)
+		return fmt.Errorf("failed to load novel.json: %w", err)
+	}
+	logger.Info("Loaded project config: %s", projectConfig.Name)
+
+	// Check if story_setup.json exists
+	setupPath := filepath.Join("config", "init", "story_setup.json")
+	if _, err := os.Stat(setupPath); err != nil {
+		return fmt.Errorf("story setup not found at %s. Run 'novel setup gen' first", setupPath)
+	}
+
+	// Load story setup
+	setup, err := models.LoadStorySetup(setupPath)
+	if err != nil {
+		return fmt.Errorf("failed to load story setup: %w", err)
+	}
+
+	// Load existing outline
+	outlinePath := filepath.Join("config", "compose", "outline.json")
+	outline, err := models.LoadOutline(outlinePath)
+	if err != nil {
+		return fmt.Errorf("failed to load existing outline: %w", err)
+	}
+	logger.Info("Loaded existing outline for improvement")
+
+	// Run improvement
+	if err := iterateOutlineImprovement(outline, setup, projectConfig, composeMaxRoundsFlag); err != nil {
+		logger.Error("Improvement failed: %v", err)
+		return fmt.Errorf("improvement failed: %w", err)
+	}
+
+	// Save improved outline
+	if err := outline.Save(outlinePath); err != nil {
+		return fmt.Errorf("failed to save improved outline: %w", err)
+	}
+
+	// Update markdown version
+	mdPath := filepath.Join("config", "compose", "outline.md")
+	if err := createOutlineMarkdown(outline, mdPath); err != nil {
+		return fmt.Errorf("failed to save outline markdown: %w", err)
+	}
+
+	fmt.Printf("\n✓ Outline improved and saved to %s\n", outlinePath)
+	fmt.Println("\nNext steps:")
+	fmt.Println("  - Edit config/compose/outline.json to refine your outline")
+	fmt.Println("  - Run 'novel craft' to create world elements")
 
 	return nil
 }
@@ -271,11 +335,6 @@ func getRegenPrompt() (string, error) {
 func createOutlineMarkdown(outline *models.Outline, path string) error {
 	// Use the ToMarkdown method to ensure all fields are included
 	return os.WriteFile(path, []byte(outline.ToMarkdown()), 0644)
-}
-
-func outlineExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }
 
 func splitLinesAndTrim(s string) []string {
