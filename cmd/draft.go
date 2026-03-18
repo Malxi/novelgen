@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"nolvegen/internal/agents"
 	"nolvegen/internal/llm"
@@ -17,11 +18,12 @@ import (
 )
 
 var (
-	draftChapterFlag string
-	draftVolumeFlag  string
-	draftPartFlag    string
-	draftWordsFlag   int
-	draftAllFlag     bool
+	draftChapterFlag     string
+	draftVolumeFlag      string
+	draftPartFlag        string
+	draftWordsFlag       int
+	draftAllFlag         bool
+	draftConcurrencyFlag int
 )
 
 var draftCmd = &cobra.Command{
@@ -67,6 +69,7 @@ func init() {
 	draftGenCmd.Flags().StringVar(&draftPartFlag, "part", "", "Part number for context (e.g., '1')")
 	draftGenCmd.Flags().IntVar(&draftWordsFlag, "words", 500, "Target word count for the draft")
 	draftGenCmd.Flags().BoolVar(&draftAllFlag, "all", false, "Generate drafts for all chapters")
+	draftGenCmd.Flags().IntVar(&draftConcurrencyFlag, "concurrency", 1, "Number of concurrent chapter generations")
 
 	rootCmd.AddCommand(draftCmd)
 }
@@ -113,37 +116,65 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.Info("Generating drafts for %d chapter(s)", len(chapters))
+	log.Info("Generating drafts for %d chapter(s) with concurrency %d", len(chapters), draftConcurrencyFlag)
 
-	// Generate drafts for each chapter
-	for i, chapter := range chapters {
-		log.Info("[%d/%d] Generating draft for chapter: %s - %s", i+1, len(chapters), chapter.ID, chapter.Title)
-
-		// Calculate story state matrix
-		stateMatrix := calculateStateMatrix(outline, chapter)
-
-		// Generate draft
-		draft, err := agent.GenerateDraft(chapter, &agents.StateMatrix{
-			Characters:    stateMatrix.Characters,
-			Locations:     stateMatrix.Locations,
-			Items:         stateMatrix.Items,
-			Relationships: stateMatrix.Relationships,
-			Storylines:    stateMatrix.Storylines,
-			Premises:      stateMatrix.Premises,
-		}, draftWordsFlag)
-		if err != nil {
-			log.Error("Failed to generate draft for chapter %s: %v", chapter.ID, err)
-			continue
-		}
-
-		// Save draft
-		if err := saveDraft(chapter, draft); err != nil {
-			log.Error("Failed to save draft for chapter %s: %v", chapter.ID, err)
-			continue
-		}
-
-		log.Info("Draft saved: %d words", len(strings.Fields(draft)))
+	// Use worker pool for concurrent generation
+	concurrency := draftConcurrencyFlag
+	if concurrency <= 0 {
+		concurrency = 1
 	}
+	if concurrency > len(chapters) {
+		concurrency = len(chapters)
+	}
+
+	// Create work channel and wait group
+	chapterChan := make(chan *models.Chapter, len(chapters))
+	var wg sync.WaitGroup
+
+	// Start workers
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			for chapter := range chapterChan {
+				log.Info("[Worker %d] Generating draft for chapter: %s - %s", workerID, chapter.ID, chapter.Title)
+
+				// Calculate story state matrix
+				stateMatrix := calculateStateMatrix(outline, chapter)
+
+				// Generate draft
+				draft, err := agent.GenerateDraft(chapter, &agents.StateMatrix{
+					Characters:    stateMatrix.Characters,
+					Locations:     stateMatrix.Locations,
+					Items:         stateMatrix.Items,
+					Relationships: stateMatrix.Relationships,
+					Storylines:    stateMatrix.Storylines,
+					Premises:      stateMatrix.Premises,
+				}, draftWordsFlag)
+				if err != nil {
+					log.Error("Failed to generate draft for chapter %s: %v", chapter.ID, err)
+					continue
+				}
+
+				// Save draft
+				if err := saveDraft(chapter, draft); err != nil {
+					log.Error("Failed to save draft for chapter %s: %v", chapter.ID, err)
+					continue
+				}
+
+				log.Info("[Worker %d] Draft saved for chapter %s: %d words", workerID, chapter.ID, len(strings.Fields(draft)))
+			}
+		}(i)
+	}
+
+	// Send chapters to workers
+	for _, chapter := range chapters {
+		chapterChan <- chapter
+	}
+	close(chapterChan)
+
+	// Wait for all workers to complete
+	wg.Wait()
 
 	log.Info("Draft generation complete")
 	return nil

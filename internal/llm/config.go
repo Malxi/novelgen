@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"nolvegen/internal/logger"
 	"nolvegen/internal/models"
 )
 
@@ -129,15 +130,20 @@ func LoadOrCreateConfig() (*Config, error) {
 
 // GetActiveProvider returns the active provider config based on project settings
 func (c *Config) GetActiveProvider(projectLLM *models.ProjectLLM) *ProviderConfig {
+	log := logger.GetLogger()
 	providerName := c.DefaultProvider
 	if projectLLM.Provider != "" {
 		providerName = projectLLM.Provider
 	}
 
+	log.Debug("Looking for provider: %s", providerName)
+
 	if provider, ok := c.Providers[providerName]; ok {
+		log.Debug("Found provider: %s", providerName)
 		return provider
 	}
 	// Fall back to default provider
+	log.Warn("Provider not found: %s, falling back to default: %s", providerName, c.DefaultProvider)
 	if provider, ok := c.Providers[c.DefaultProvider]; ok {
 		return provider
 	}
@@ -146,8 +152,10 @@ func (c *Config) GetActiveProvider(projectLLM *models.ProjectLLM) *ProviderConfi
 
 // GetActiveModel returns the active model config based on project settings
 func (c *Config) GetActiveModel(projectLLM *models.ProjectLLM) (*ProviderConfig, *ModelConfig) {
+	log := logger.GetLogger()
 	provider := c.GetActiveProvider(projectLLM)
 	if provider == nil {
+		log.Error("No provider available")
 		return nil, nil
 	}
 
@@ -156,12 +164,17 @@ func (c *Config) GetActiveModel(projectLLM *models.ProjectLLM) (*ProviderConfig,
 		modelName = projectLLM.Model
 	}
 
+	log.Info("Looking for model: %s in provider: %s", modelName, provider.Name)
+
 	if model, ok := provider.Models[modelName]; ok {
+		log.Info("Using model: %s (provider: %s)", modelName, provider.Name)
 		return provider, model
 	}
 
 	// Fall back to first available model
+	log.Warn("Model not found: %s, falling back to first available model", modelName)
 	for _, model := range provider.Models {
+		log.Warn("Using fallback model: %s (provider: %s)", model.Name, provider.Name)
 		return provider, model
 	}
 

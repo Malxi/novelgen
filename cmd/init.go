@@ -17,6 +17,7 @@ var (
 	initChapterFlag  int
 	initGenreFlag    string
 	initModeFlag     string
+	initProviderFlag string
 	initLanguageFlag string
 )
 
@@ -35,6 +36,7 @@ func init() {
 	initCmd.Flags().IntVar(&initChapterFlag, "chapter", 20, "Number of chapters")
 	initCmd.Flags().StringVar(&initGenreFlag, "genre", "", "Genre(s), comma-separated (e.g., '科幻,废土')")
 	initCmd.Flags().StringVar(&initModeFlag, "mode", "", "LLM model to use (e.g., 'gpt-5.2')")
+	initCmd.Flags().StringVar(&initProviderFlag, "provider", "ollama", "LLM provider (ollama, openai, etc.)")
 	initCmd.Flags().StringVar(&initLanguageFlag, "language", "zh", "Story language (zh, en, ja, etc.)")
 }
 
@@ -74,12 +76,19 @@ func runInit(cmd *cobra.Command, args []string) error {
 			TargetChapters: initChapterFlag,
 		},
 		ChapterConfig: models.DefaultChapterConfig(),
-		LLM:           models.DefaultProjectLLM(),
+		LLM: models.ProjectLLM{
+			Provider: initProviderFlag,
+			Model:    initModeFlag,
+		},
 	}
 
-	// Override model if specified
-	if initModeFlag != "" {
-		config.LLM.Model = initModeFlag
+	// Set default model if not specified
+	if config.LLM.Model == "" {
+		if initProviderFlag == "openai" {
+			config.LLM.Model = "gpt-4"
+		} else {
+			config.LLM.Model = "qwen3.5:4b"
+		}
 	}
 
 	// Create project directory structure
@@ -96,10 +105,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 	fmt.Printf("\n📊 Story Structure: %d parts × %d volumes × %d chapters = %d total chapters\n",
 		config.Structure.TargetParts, config.Structure.TargetVolumes, config.Structure.TargetChapters,
 		config.Structure.TotalChapters())
-	fmt.Printf("� Genre(s): %s\n", strings.Join(genres, ", "))
-	if initModeFlag != "" {
-		fmt.Printf("🤖 Model: %s\n", initModeFlag)
-	}
+	fmt.Printf("🎭 Genre(s): %s\n", strings.Join(genres, ", "))
+	fmt.Printf("🤖 Provider: %s, Model: %s\n", config.LLM.Provider, config.LLM.Model)
 	fmt.Println("\nNext steps:")
 	fmt.Println("  - Run 'novel setup' to create story setup")
 	fmt.Println("  - Or run 'novel setup --gen \"<your prompt>\"' to generate with AI")

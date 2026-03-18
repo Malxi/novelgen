@@ -58,7 +58,7 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 	// AI generation mode
 	logger.Info("AI generation mode with prompt: %s", prompt)
 	logger.Info("Using language: %s", projectConfig.Language)
-	setup, err := generateStorySetupWithAI(prompt, projectConfig.Language)
+	setup, err := generateStorySetupWithAI(prompt, projectConfig.Language, &projectConfig.LLM)
 	if err != nil {
 		logger.Error("Failed to generate story setup with AI: %v", err)
 		return fmt.Errorf("failed to generate story setup with AI: %w", err)
@@ -80,17 +80,26 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func generateStorySetupWithAI(prompt, language string) (*models.StorySetup, error) {
+func generateStorySetupWithAI(prompt, language string, projectLLM *models.ProjectLLM) (*models.StorySetup, error) {
 	// Load LLM config
 	cfg, err := llm.LoadOrCreateConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load LLM config: %w", err)
 	}
 
-	// Use default project LLM settings for init
-	projectLLM := models.DefaultProjectLLM()
+	// Use project LLM settings from novel.json
+	if projectLLM.Provider == "" {
+		projectLLM.Provider = "ollama"
+	}
+	if projectLLM.Model == "" {
+		if projectLLM.Provider == "openai" {
+			projectLLM.Model = "gpt-4"
+		} else {
+			projectLLM.Model = "qwen3.5:4b"
+		}
+	}
 
-	provider, model := cfg.GetActiveModel(&projectLLM)
+	provider, model := cfg.GetActiveModel(projectLLM)
 	if provider == nil || model == nil {
 		return nil, fmt.Errorf("failed to get active LLM configuration")
 	}
@@ -100,11 +109,11 @@ func generateStorySetupWithAI(prompt, language string) (*models.StorySetup, erro
 	fmt.Println()
 
 	// Create LLM client and agent
-	client := cfg.CreateClient(&projectLLM)
+	client := cfg.CreateClient(projectLLM)
 	if client == nil {
 		return nil, fmt.Errorf("failed to create LLM client")
 	}
-	agent := agents.NewSetupAgent(client, cfg, &projectLLM)
+	agent := agents.NewSetupAgent(client, cfg, projectLLM)
 	agent.SetLanguage(language)
 
 	return agent.GenerateStorySetup(prompt)

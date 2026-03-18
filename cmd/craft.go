@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"nolvegen/internal/agents"
 	"nolvegen/internal/llm"
@@ -15,11 +16,12 @@ import (
 )
 
 var (
-	craftChapterFlag string
-	craftVolumeFlag  string
-	craftPartFlag    string
-	craftPromptFlag  string
-	craftBatchFlag   int
+	craftChapterFlag     string
+	craftVolumeFlag      string
+	craftPartFlag        string
+	craftPromptFlag      string
+	craftBatchFlag       int
+	craftConcurrencyFlag int
 )
 
 var craftCmd = &cobra.Command{
@@ -56,7 +58,10 @@ Examples:
   novel craft gen --chapter 1 --prompt "focus on combat abilities"
 
   # Generate in small batches
-  novel craft gen --batch 5`,
+  novel craft gen --batch 5
+
+  # Generate with concurrency
+  novel craft gen --concurrency 3`,
 	RunE: runCraftGen,
 }
 
@@ -68,6 +73,7 @@ func init() {
 	craftGenCmd.Flags().StringVar(&craftPartFlag, "part", "", "Generate elements for specific part ID (e.g., 'part_1')")
 	craftGenCmd.Flags().StringVar(&craftPromptFlag, "prompt", "", "Additional prompt to guide generation")
 	craftGenCmd.Flags().IntVar(&craftBatchFlag, "batch", 1, "Number of elements to generate in one batch")
+	craftGenCmd.Flags().IntVar(&craftConcurrencyFlag, "concurrency", 1, "Number of concurrent element generations")
 
 	rootCmd.AddCommand(craftCmd)
 }
@@ -467,31 +473,73 @@ func generateCharacters(agent *agents.CraftAgent, characters []string, generated
 	}
 
 	log := logger.GetLogger()
+	log.Info("Generating %d characters with concurrency %d, batch size %d", len(characters), craftConcurrencyFlag, batchSize)
 
+	// Use worker pool for concurrent generation
+	concurrency := craftConcurrencyFlag
+	if concurrency <= 0 {
+		concurrency = 1
+	}
+
+	// Create batches
+	batches := make([][]string, 0)
 	for i := 0; i < len(characters); i += batchSize {
 		end := i + batchSize
 		if end > len(characters) {
 			end = len(characters)
 		}
-
-		batch := characters[i:end]
-		log.Info("Generating characters batch: batch=%d, count=%d", i/batchSize+1, len(batch))
-
-		results, err := agent.GenerateCharacters(batch, craftPromptFlag)
-		if err != nil {
-			return err
-		}
-
-		// Save results
-		if err := saveCharacters(results); err != nil {
-			return err
-		}
-
-		// Update generated tracking
-		for name := range results {
-			generated.Characters[name] = true
-		}
+		batches = append(batches, characters[i:end])
 	}
+
+	if concurrency > len(batches) {
+		concurrency = len(batches)
+	}
+
+	// Create work channel and wait group
+	batchChan := make(chan []string, len(batches))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	// Start workers
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			for batch := range batchChan {
+				log.Info("[Worker %d] Generating characters batch: count=%d", workerID, len(batch))
+
+				results, err := agent.GenerateCharacters(batch, craftPromptFlag)
+				if err != nil {
+					log.Error("[Worker %d] Failed to generate characters batch: %v", workerID, err)
+					continue
+				}
+
+				// Save results
+				if err := saveCharacters(results); err != nil {
+					log.Error("[Worker %d] Failed to save characters: %v", workerID, err)
+					continue
+				}
+
+				// Update generated tracking
+				mu.Lock()
+				for name := range results {
+					generated.Characters[name] = true
+				}
+				mu.Unlock()
+
+				log.Info("[Worker %d] Saved %d characters", workerID, len(results))
+			}
+		}(i)
+	}
+
+	// Send batches to workers
+	for _, batch := range batches {
+		batchChan <- batch
+	}
+	close(batchChan)
+
+	// Wait for all workers to complete
+	wg.Wait()
 
 	return nil
 }
@@ -502,31 +550,73 @@ func generateLocations(agent *agents.CraftAgent, locations []string, generated *
 	}
 
 	log := logger.GetLogger()
+	log.Info("Generating %d locations with concurrency %d, batch size %d", len(locations), craftConcurrencyFlag, batchSize)
 
+	// Use worker pool for concurrent generation
+	concurrency := craftConcurrencyFlag
+	if concurrency <= 0 {
+		concurrency = 1
+	}
+
+	// Create batches
+	batches := make([][]string, 0)
 	for i := 0; i < len(locations); i += batchSize {
 		end := i + batchSize
 		if end > len(locations) {
 			end = len(locations)
 		}
-
-		batch := locations[i:end]
-		log.Info("Generating locations batch: batch=%d, count=%d", i/batchSize+1, len(batch))
-
-		results, err := agent.GenerateLocations(batch, craftPromptFlag)
-		if err != nil {
-			return err
-		}
-
-		// Save results
-		if err := saveLocations(results); err != nil {
-			return err
-		}
-
-		// Update generated tracking
-		for name := range results {
-			generated.Locations[name] = true
-		}
+		batches = append(batches, locations[i:end])
 	}
+
+	if concurrency > len(batches) {
+		concurrency = len(batches)
+	}
+
+	// Create work channel and wait group
+	batchChan := make(chan []string, len(batches))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	// Start workers
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			for batch := range batchChan {
+				log.Info("[Worker %d] Generating locations batch: count=%d", workerID, len(batch))
+
+				results, err := agent.GenerateLocations(batch, craftPromptFlag)
+				if err != nil {
+					log.Error("[Worker %d] Failed to generate locations batch: %v", workerID, err)
+					continue
+				}
+
+				// Save results
+				if err := saveLocations(results); err != nil {
+					log.Error("[Worker %d] Failed to save locations: %v", workerID, err)
+					continue
+				}
+
+				// Update generated tracking
+				mu.Lock()
+				for name := range results {
+					generated.Locations[name] = true
+				}
+				mu.Unlock()
+
+				log.Info("[Worker %d] Saved %d locations", workerID, len(results))
+			}
+		}(i)
+	}
+
+	// Send batches to workers
+	for _, batch := range batches {
+		batchChan <- batch
+	}
+	close(batchChan)
+
+	// Wait for all workers to complete
+	wg.Wait()
 
 	return nil
 }
@@ -537,31 +627,73 @@ func generateItems(agent *agents.CraftAgent, items []string, generated *Generate
 	}
 
 	log := logger.GetLogger()
+	log.Info("Generating %d items with concurrency %d, batch size %d", len(items), craftConcurrencyFlag, batchSize)
 
+	// Use worker pool for concurrent generation
+	concurrency := craftConcurrencyFlag
+	if concurrency <= 0 {
+		concurrency = 1
+	}
+
+	// Create batches
+	batches := make([][]string, 0)
 	for i := 0; i < len(items); i += batchSize {
 		end := i + batchSize
 		if end > len(items) {
 			end = len(items)
 		}
-
-		batch := items[i:end]
-		log.Info("Generating items batch: batch=%d, count=%d", i/batchSize+1, len(batch))
-
-		results, err := agent.GenerateItems(batch, craftPromptFlag)
-		if err != nil {
-			return err
-		}
-
-		// Save results
-		if err := saveItems(results); err != nil {
-			return err
-		}
-
-		// Update generated tracking
-		for name := range results {
-			generated.Items[name] = true
-		}
+		batches = append(batches, items[i:end])
 	}
+
+	if concurrency > len(batches) {
+		concurrency = len(batches)
+	}
+
+	// Create work channel and wait group
+	batchChan := make(chan []string, len(batches))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	// Start workers
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			for batch := range batchChan {
+				log.Info("[Worker %d] Generating items batch: count=%d", workerID, len(batch))
+
+				results, err := agent.GenerateItems(batch, craftPromptFlag)
+				if err != nil {
+					log.Error("[Worker %d] Failed to generate items batch: %v", workerID, err)
+					continue
+				}
+
+				// Save results
+				if err := saveItems(results); err != nil {
+					log.Error("[Worker %d] Failed to save items: %v", workerID, err)
+					continue
+				}
+
+				// Update generated tracking
+				mu.Lock()
+				for name := range results {
+					generated.Items[name] = true
+				}
+				mu.Unlock()
+
+				log.Info("[Worker %d] Saved %d items", workerID, len(results))
+			}
+		}(i)
+	}
+
+	// Send batches to workers
+	for _, batch := range batches {
+		batchChan <- batch
+	}
+	close(batchChan)
+
+	// Wait for all workers to complete
+	wg.Wait()
 
 	return nil
 }

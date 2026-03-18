@@ -147,6 +147,9 @@ func (pm *PromptManager) buildUserPrompt(template *PromptTemplate, data map[stri
 	case SkillCharacterCreation, SkillLocationCreation, SkillItemCreation:
 		return buildCraftUserPrompt(template.Skill, data)
 	case SkillChapterWriting:
+		if template.Name == "final" {
+			return buildFinalChapterUserPrompt(data)
+		}
 		return buildChapterWritingUserPrompt(data)
 	default:
 		return "Please generate the requested content."
@@ -161,4 +164,5 @@ func (pm *PromptManager) registerDefaultPrompts() {
 	registerOutlineReviewPrompts(pm)
 	registerCraftPrompts(pm)
 	registerDraftPrompts(pm)
+	registerWritePrompts(pm)
 }
