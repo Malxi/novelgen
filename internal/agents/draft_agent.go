@@ -52,17 +52,17 @@ func (a *DraftAgent) GenerateDraft(chapter *models.Chapter, state *StateMatrix, 
 
 	// Build prompt data
 	data := map[string]interface{}{
-		"story_title":    a.setup.ProjectName,
-		"story_genre":    strings.Join(a.setup.Genres, ", "),
-		"story_style":    a.setup.Tone,
-		"chapter_id":     chapter.ID,
-		"chapter_title":  chapter.Title,
+		"story_title":     a.setup.ProjectName,
+		"story_genre":     strings.Join(a.setup.Genres, ", "),
+		"story_style":     a.setup.Tone,
+		"chapter_id":      chapter.ID,
+		"chapter_title":   chapter.Title,
 		"chapter_summary": chapter.Summary,
-		"characters":     strings.Join(chapter.Characters, ", "),
-		"location":       chapter.Location,
-		"state_matrix":   a.formatStateMatrix(state, chapter),
-		"target_words":   targetWords,
-		"language":       a.language,
+		"characters":      strings.Join(chapter.Characters, ", "),
+		"location":        chapter.Location,
+		"state_matrix":    a.formatStateMatrix(state, chapter),
+		"target_words":    targetWords,
+		"language":        a.language,
 	}
 
 	// Build prompts using PromptManager
@@ -86,6 +86,58 @@ func (a *DraftAgent) GenerateDraft(chapter *models.Chapter, state *StateMatrix, 
 	response, err := a.client.ChatCompletion(messages, opts)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate draft: %w", err)
+	}
+
+	return response.Content, nil
+}
+
+// GenerateDraftWithSuggestions generates a draft chapter with improvement suggestions
+func (a *DraftAgent) GenerateDraftWithSuggestions(chapter *models.Chapter, state *StateMatrix, targetWords int, suggestions string) (string, error) {
+	a.log.Info("Generating improved draft for chapter: %s with suggestions", chapter.ID)
+
+	// Build prompt data
+	data := map[string]interface{}{
+		"story_title":     a.setup.ProjectName,
+		"story_genre":     strings.Join(a.setup.Genres, ", "),
+		"story_style":     a.setup.Tone,
+		"chapter_id":      chapter.ID,
+		"chapter_title":   chapter.Title,
+		"chapter_summary": chapter.Summary,
+		"characters":      strings.Join(chapter.Characters, ", "),
+		"location":        chapter.Location,
+		"state_matrix":    a.formatStateMatrix(state, chapter),
+		"target_words":    targetWords,
+		"language":        a.language,
+		"suggestions":     suggestions,
+	}
+
+	// Build prompts using PromptManager
+	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillChapterWriting, "iterate", data)
+	if err != nil {
+		// Fallback to default if iterate template doesn't exist
+		systemPrompt, userPrompt, err = a.pm.Build(prompts.SkillChapterWriting, "default", data)
+		if err != nil {
+			return "", fmt.Errorf("failed to build prompt: %w", err)
+		}
+		// Add suggestions to user prompt
+		userPrompt += "\n\n## 改进建议\n" + suggestions + "\n\n请根据以上建议改进本章内容。"
+	}
+
+	// Call LLM
+	messages := []llm.Message{
+		{Role: "system", Content: systemPrompt},
+		{Role: "user", Content: userPrompt},
+	}
+
+	opts := a.config.GetChatOptions(a.projectLLM)
+	// Draft generation needs more tokens
+	if opts.MaxTokens < 4000 {
+		opts.MaxTokens = 4000
+	}
+
+	response, err := a.client.ChatCompletion(messages, opts)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate improved draft: %w", err)
 	}
 
 	return response.Content, nil

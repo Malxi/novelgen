@@ -24,15 +24,19 @@ var (
 	draftWordsFlag       int
 	draftAllFlag         bool
 	draftConcurrencyFlag int
+	draftMaxRoundsFlag   int
+	draftMinScoreFlag    int
 )
 
 var draftCmd = &cobra.Command{
 	Use:   "draft",
-	Short: "Generate draft chapters",
-	Long: `Generate draft chapters based on outline and current story state.
+	Short: "Generate and improve draft chapters",
+	Long: `Generate, review, and improve draft chapters based on outline and story state.
 
-The draft command calculates the story state matrix by applying events from
-previous chapters, then generates a ~500 word draft for the specified chapter.`,
+Commands:
+  gen      - Generate new drafts
+  review   - Review drafts and provide feedback
+  improve  - Improve drafts based on review feedback`,
 }
 
 var draftGenCmd = &cobra.Command{
@@ -61,8 +65,44 @@ Examples:
 	RunE: runDraftGen,
 }
 
+var draftReviewCmd = &cobra.Command{
+	Use:   "review",
+	Short: "Review drafts and provide feedback",
+	Long: `Review drafts and generate detailed feedback for improvement.
+
+Examples:
+  # Review all drafts in volume 1
+  novel draft review --volume 1
+
+  # Review specific chapter
+  novel draft review --chapter 1
+
+  # Review with concurrency
+  novel draft review --volume 1 --concurrency 3`,
+	RunE: runDraftReview,
+}
+
+var draftImproveCmd = &cobra.Command{
+	Use:   "improve",
+	Short: "Improve drafts based on review feedback",
+	Long: `Improve drafts by regenerating chapters that need revision.
+
+Examples:
+  # Improve all chapters in volume 1
+  novel draft improve --volume 1
+
+  # Improve with max 3 rounds
+  novel draft improve --volume 1 --max-rounds 3
+
+  # Only improve chapters with score below 7
+  novel draft improve --volume 1 --min-score 7`,
+	RunE: runDraftImprove,
+}
+
 func init() {
 	draftCmd.AddCommand(draftGenCmd)
+	draftCmd.AddCommand(draftReviewCmd)
+	draftCmd.AddCommand(draftImproveCmd)
 
 	draftGenCmd.Flags().StringVar(&draftChapterFlag, "chapter", "", "Chapter number(s) to generate (e.g., '1', '1-5', or 'chap_1_1_1')")
 	draftGenCmd.Flags().StringVar(&draftVolumeFlag, "volume", "", "Volume number for context (e.g., '1')")
@@ -70,6 +110,18 @@ func init() {
 	draftGenCmd.Flags().IntVar(&draftWordsFlag, "words", 500, "Target word count for the draft")
 	draftGenCmd.Flags().BoolVar(&draftAllFlag, "all", false, "Generate drafts for all chapters")
 	draftGenCmd.Flags().IntVar(&draftConcurrencyFlag, "concurrency", 1, "Number of concurrent chapter generations")
+
+	draftReviewCmd.Flags().StringVar(&draftChapterFlag, "chapter", "", "Chapter to review (e.g., '1' or 'chap_1_1_1')")
+	draftReviewCmd.Flags().StringVar(&draftVolumeFlag, "volume", "", "Volume to review (e.g., '1')")
+	draftReviewCmd.Flags().StringVar(&draftPartFlag, "part", "", "Part to review (e.g., '1')")
+	draftReviewCmd.Flags().IntVar(&draftConcurrencyFlag, "concurrency", 1, "Number of concurrent reviews")
+
+	draftImproveCmd.Flags().StringVar(&draftChapterFlag, "chapter", "", "Chapter to improve (e.g., '1' or 'chap_1_1_1')")
+	draftImproveCmd.Flags().StringVar(&draftVolumeFlag, "volume", "", "Volume to improve (e.g., '1')")
+	draftImproveCmd.Flags().StringVar(&draftPartFlag, "part", "", "Part to improve (e.g., '1')")
+	draftImproveCmd.Flags().IntVar(&draftMaxRoundsFlag, "max-rounds", 1, "Maximum improvement rounds")
+	draftImproveCmd.Flags().IntVar(&draftMinScoreFlag, "min-score", 7, "Minimum acceptable score (1-10)")
+	draftImproveCmd.Flags().IntVar(&draftConcurrencyFlag, "concurrency", 1, "Number of concurrent improvements")
 
 	rootCmd.AddCommand(draftCmd)
 }
@@ -468,4 +520,469 @@ func saveDraft(chapter *models.Chapter, draft string) error {
 	content := fmt.Sprintf("# %s\n\n%s\n\n%s\n", chapter.Title, chapter.Summary, draft)
 
 	return os.WriteFile(filename, []byte(content), 0644)
+}
+
+// runDraftReview reviews drafts and provides feedback
+func runDraftReview(cmd *cobra.Command, args []string) error {
+	log := logger.GetLogger()
+
+	// Load project config
+	config, err := loadProjectConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load project config: %w", err)
+	}
+
+	// Load story setup
+	setup, err := loadStorySetup()
+	if err != nil {
+		return fmt.Errorf("failed to load story setup: %w", err)
+	}
+
+	// Load outline
+	outline, err := loadOutline()
+	if err != nil {
+		return fmt.Errorf("failed to load outline: %w", err)
+	}
+
+	// Load drafts
+	drafts := loadAllDrafts()
+	if len(drafts) == 0 {
+		return fmt.Errorf("no drafts found. Run 'novel draft gen' first")
+	}
+
+	// Load LLM config
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load LLM config: %w", err)
+	}
+
+	// Create LLM client
+	client := cfg.CreateClient(&config.LLM)
+	if client == nil {
+		return fmt.Errorf("failed to create LLM client")
+	}
+
+	// Create review agent
+	agent := agents.NewReviewAgent(client, cfg, &config.LLM, setup, outline, config.Language)
+
+	// Get volumes to review
+	volumes := getVolumesForDraft(outline, draftVolumeFlag, draftChapterFlag)
+	if len(volumes) == 0 {
+		return fmt.Errorf("no volumes found to review")
+	}
+
+	// Review each volume
+	for _, volume := range volumes {
+		log.Info("Reviewing volume: %s - %s", volume.ID, volume.Title)
+
+		// Filter drafts for this volume
+		volumeDrafts := filterDraftsForVolume(drafts, volume)
+
+		review, err := agent.ReviewVolume(volume, volumeDrafts)
+		if err != nil {
+			log.Error("Failed to review volume %s: %v", volume.ID, err)
+			continue
+		}
+
+		// Save review
+		if err := saveVolumeReview(review); err != nil {
+			log.Error("Failed to save review: %v", err)
+			continue
+		}
+
+		log.Info("Review saved for volume %s", volume.ID)
+		log.Info("Summary: %s", review.Summary)
+
+		// Print chapters that need revision
+		needsRevision := 0
+		for _, r := range review.Reviews {
+			if r.NeedsRevision {
+				needsRevision++
+				log.Info("Chapter %s needs revision (score: %d)", r.ChapterID, r.OverallScore)
+			}
+		}
+		log.Info("Total chapters needing revision: %d", needsRevision)
+	}
+
+	return nil
+}
+
+// runDraftImprove improves drafts based on review feedback
+func runDraftImprove(cmd *cobra.Command, args []string) error {
+	log := logger.GetLogger()
+
+	// Load project config
+	config, err := loadProjectConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load project config: %w", err)
+	}
+
+	// Load story setup
+	setup, err := loadStorySetup()
+	if err != nil {
+		return fmt.Errorf("failed to load story setup: %w", err)
+	}
+
+	// Load outline
+	outline, err := loadOutline()
+	if err != nil {
+		return fmt.Errorf("failed to load outline: %w", err)
+	}
+
+	// Load LLM config
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load LLM config: %w", err)
+	}
+
+	// Create LLM client
+	client := cfg.CreateClient(&config.LLM)
+	if client == nil {
+		return fmt.Errorf("failed to create LLM client")
+	}
+
+	// Create draft agent
+	draftAgent := agents.NewDraftAgent(client, cfg, &config.LLM, setup, outline, config.Language)
+
+	// Get volumes to improve
+	volumes := getVolumesForDraft(outline, draftVolumeFlag, draftChapterFlag)
+	if len(volumes) == 0 {
+		return fmt.Errorf("no volumes found to improve")
+	}
+
+	// Run improvement rounds
+	for round := 1; round <= draftMaxRoundsFlag; round++ {
+		log.Info("=== Improvement Round %d/%d ===", round, draftMaxRoundsFlag)
+
+		improvedCount := 0
+
+		for _, volume := range volumes {
+			// Load review for this volume
+			review, err := loadVolumeReview(volume.ID)
+			if err != nil {
+				log.Warn("No review found for volume %s, skipping", volume.ID)
+				continue
+			}
+
+			// Get chapters that need improvement
+			chaptersToImprove := getChaptersNeedingImprovement(review, outline, draftMinScoreFlag)
+			if len(chaptersToImprove) == 0 {
+				log.Info("Volume %s: All chapters meet quality threshold", volume.ID)
+				continue
+			}
+
+			log.Info("Volume %s: Improving %d chapters", volume.ID, len(chaptersToImprove))
+
+			// Improve chapters concurrently
+			improved := improveChaptersWithAgent(draftAgent, chaptersToImprove, review.Reviews, outline, draftConcurrencyFlag)
+			improvedCount += improved
+		}
+
+		log.Info("Round %d complete: %d chapters improved", round, improvedCount)
+
+		if improvedCount == 0 {
+			log.Info("No more chapters need improvement")
+			break
+		}
+
+		// Re-review after improvement (if not last round)
+		if round < draftMaxRoundsFlag {
+			log.Info("Re-reviewing after improvements...")
+			if err := runDraftReview(cmd, args); err != nil {
+				log.Error("Re-review failed: %v", err)
+			}
+		}
+	}
+
+	log.Info("Improvement process complete")
+	return nil
+}
+
+// getVolumesForDraft returns volumes based on flags
+func getVolumesForDraft(outline *models.Outline, volumeFlag, chapterFlag string) []*models.Volume {
+	volumes := make([]*models.Volume, 0)
+
+	if chapterFlag != "" {
+		// Find volume containing this chapter
+		// Support both chapter ID (e.g., "C1", "C12") and chapter number
+		for _, part := range outline.Parts {
+			for i := range part.Volumes {
+				for _, chapter := range part.Volumes[i].Chapters {
+					if chapter.ID == chapterFlag || matchChapterNumber(chapter.ID, chapterFlag) {
+						return []*models.Volume{&part.Volumes[i]}
+					}
+				}
+			}
+		}
+	} else if volumeFlag != "" {
+		// Find specific volume
+		// Support both volume ID (e.g., "V1", "V2") and volume number (e.g., "1", "2")
+		for _, part := range outline.Parts {
+			for i := range part.Volumes {
+				if part.Volumes[i].ID == volumeFlag || matchVolumeNumber(part.Volumes[i].ID, volumeFlag) {
+					return []*models.Volume{&part.Volumes[i]}
+				}
+			}
+		}
+	} else {
+		// Return all volumes
+		for _, part := range outline.Parts {
+			for i := range part.Volumes {
+				volumes = append(volumes, &part.Volumes[i])
+			}
+		}
+	}
+
+	return volumes
+}
+
+// matchVolumeNumber checks if volume ID matches the given number
+// e.g., "V1" matches "1", "V12" matches "12"
+func matchVolumeNumber(volumeID, number string) bool {
+	// Remove "V" prefix and compare
+	if len(volumeID) > 1 && volumeID[0] == 'V' {
+		return volumeID[1:] == number
+	}
+	return volumeID == number
+}
+
+// matchChapterNumber checks if chapter ID matches the given number
+// e.g., "C1" matches "1", "C12" matches "12"
+func matchChapterNumber(chapterID, number string) bool {
+	// Remove "C" prefix and compare
+	if len(chapterID) > 1 && chapterID[0] == 'C' {
+		return chapterID[1:] == number
+	}
+	return chapterID == number
+}
+
+// loadAllDrafts loads all draft files
+func loadAllDrafts() map[string]string {
+	drafts := make(map[string]string)
+
+	root, err := findProjectRoot()
+	if err != nil {
+		return drafts
+	}
+
+	draftsDir := filepath.Join(root, "drafts")
+	entries, err := os.ReadDir(draftsDir)
+	if err != nil {
+		return drafts
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
+			continue
+		}
+
+		chapterID := strings.TrimSuffix(entry.Name(), ".md")
+		data, err := os.ReadFile(filepath.Join(draftsDir, entry.Name()))
+		if err == nil {
+			drafts[chapterID] = string(data)
+		}
+	}
+
+	return drafts
+}
+
+// filterDraftsForVolume filters drafts for a specific volume
+func filterDraftsForVolume(drafts map[string]string, volume *models.Volume) map[string]string {
+	result := make(map[string]string)
+	for _, chapter := range volume.Chapters {
+		if draft, exists := drafts[chapter.ID]; exists {
+			result[chapter.ID] = draft
+		}
+	}
+	return result
+}
+
+// saveVolumeReview saves a volume review to file
+func saveVolumeReview(review *agents.VolumeReview) error {
+	root, err := findProjectRoot()
+	if err != nil {
+		return err
+	}
+
+	reviewDir := filepath.Join(root, "config", "reviews")
+	if err := os.MkdirAll(reviewDir, 0755); err != nil {
+		return fmt.Errorf("failed to create reviews directory: %w", err)
+	}
+
+	reviewPath := filepath.Join(reviewDir, review.VolumeID+"_review.json")
+	data, err := json.MarshalIndent(review, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal review: %w", err)
+	}
+
+	return os.WriteFile(reviewPath, data, 0644)
+}
+
+// loadVolumeReview loads a volume review from file
+func loadVolumeReview(volumeID string) (*agents.VolumeReview, error) {
+	root, err := findProjectRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	reviewPath := filepath.Join(root, "config", "reviews", volumeID+"_review.json")
+	data, err := os.ReadFile(reviewPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var review agents.VolumeReview
+	if err := json.Unmarshal(data, &review); err != nil {
+		return nil, err
+	}
+
+	return &review, nil
+}
+
+// getChaptersNeedingImprovement returns chapters that need improvement
+func getChaptersNeedingImprovement(review *agents.VolumeReview, outline *models.Outline, minScore int) []*models.Chapter {
+	chapters := make([]*models.Chapter, 0)
+
+	for _, r := range review.Reviews {
+		if r.NeedsRevision || r.OverallScore < minScore {
+			chapter := outline.GetChapterByID(r.ChapterID)
+			if chapter != nil {
+				chapters = append(chapters, chapter)
+			}
+		}
+	}
+
+	return chapters
+}
+
+// improveChaptersWithAgent improves chapters using the draft agent
+func improveChaptersWithAgent(agent *agents.DraftAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, concurrency int) int {
+	log := logger.GetLogger()
+
+	if concurrency <= 0 {
+		concurrency = 1
+	}
+	if concurrency > len(chapters) {
+		concurrency = len(chapters)
+	}
+
+	// Create review map for quick lookup
+	reviewMap := make(map[string]*agents.DraftReview)
+	for i := range reviews {
+		reviewMap[reviews[i].ChapterID] = &reviews[i]
+	}
+
+	// Create work channel and wait group
+	chapterChan := make(chan *models.Chapter, len(chapters))
+	var wg sync.WaitGroup
+	improvedCount := 0
+	var mu sync.Mutex
+
+	// Start workers
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			for chapter := range chapterChan {
+				review := reviewMap[chapter.ID]
+				if review == nil {
+					continue
+				}
+
+				log.Info("[Worker %d] Improving chapter: %s - %s", workerID, chapter.ID, chapter.Title)
+
+				// Build improvement prompt
+				suggestions := buildImprovementSuggestions(review)
+
+				// Calculate state matrix
+				stateMatrix := calculateStateMatrix(outline, chapter)
+
+				// Generate improved draft with suggestions
+				draft, err := agent.GenerateDraftWithSuggestions(chapter, &agents.StateMatrix{
+					Characters:    stateMatrix.Characters,
+					Locations:     stateMatrix.Locations,
+					Items:         stateMatrix.Items,
+					Relationships: stateMatrix.Relationships,
+					Storylines:    stateMatrix.Storylines,
+					Premises:      stateMatrix.Premises,
+				}, 500, suggestions)
+
+				if err != nil {
+					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
+					continue
+				}
+
+				// Save improved draft
+				if err := saveDraft(chapter, draft); err != nil {
+					log.Error("[Worker %d] Failed to save improved draft for chapter %s: %v", workerID, chapter.ID, err)
+					continue
+				}
+
+				mu.Lock()
+				improvedCount++
+				mu.Unlock()
+
+				log.Info("[Worker %d] Improved draft saved for chapter %s: %d words", workerID, chapter.ID, len(strings.Fields(draft)))
+			}
+		}(i)
+	}
+
+	// Send chapters to workers
+	for _, chapter := range chapters {
+		chapterChan <- chapter
+	}
+	close(chapterChan)
+
+	// Wait for all workers to complete
+	wg.Wait()
+
+	return improvedCount
+}
+
+// buildImprovementSuggestions builds improvement suggestions from review
+func buildImprovementSuggestions(review *agents.DraftReview) string {
+	var sb strings.Builder
+
+	sb.WriteString("## 改进建议\n\n")
+
+	if len(review.PlotCoherence.Suggestions) > 0 {
+		sb.WriteString("### 剧情连贯性\n")
+		for _, s := range review.PlotCoherence.Suggestions {
+			sb.WriteString("- " + s + "\n")
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(review.PlotRationality.Suggestions) > 0 {
+		sb.WriteString("### 情节合理性\n")
+		for _, s := range review.PlotRationality.Suggestions {
+			sb.WriteString("- " + s + "\n")
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(review.CharacterConsistency.Suggestions) > 0 {
+		sb.WriteString("### 角色一致性\n")
+		for _, s := range review.CharacterConsistency.Suggestions {
+			sb.WriteString("- " + s + "\n")
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(review.PacingReview.Suggestions) > 0 {
+		sb.WriteString("### 节奏把控\n")
+		for _, s := range review.PacingReview.Suggestions {
+			sb.WriteString("- " + s + "\n")
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(review.Suggestions) > 0 {
+		sb.WriteString("### 总体建议\n")
+		for _, s := range review.Suggestions {
+			sb.WriteString("- " + s + "\n")
+		}
+	}
+
+	return sb.String()
 }
