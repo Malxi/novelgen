@@ -64,6 +64,32 @@ The outline must follow a strict 3-level structure: Parts → Volumes → Chapte
 Story Setup Information:
 {{setup}}
 
+Chapter Summary Format:
+- Summary MUST follow this format: "角色 在 什么地方 发生了 什么事"
+- Example: "李明 在 废弃工厂 发现了 秘密实验室"
+
+Chapter Event Types (track all significant changes):
+1. relationship - Character relationship changes (e.g., allies become enemies, romance begins)
+   - Characters: [characterA, characterB]
+   - Subject: relationship name/type
+   - Change: description of how relationship changed
+2. goal - Character goal updates (e.g., new objective, goal achieved, goal abandoned)
+   - Characters: [character]
+   - Subject: goal description
+   - Change: new/achieved/abandoned/changed
+3. item - Character acquires or loses important items
+   - Characters: [character]
+   - Subject: item name
+   - Change: get/lost/damaged
+4. premise - Character progression system updates (e.g., mecha upgrade, gene evolution)
+   - Characters: [character]
+   - Subject: premise name (e.g., "机甲系统")
+   - Change: level up/new ability/breakthrough
+5. storyline - Storyline progress updates
+   - Characters: []
+   - Subject: storyline name
+   - Change: started/advanced/completed/twist
+
 Guidelines:
 - Follow the EXACT structure specified above
 - Ensure the outline follows a coherent narrative arc across all parts
@@ -74,31 +100,5 @@ Guidelines:
 - Each volume should advance the story within its part
 - Each chapter should have clear progression
 - INCORPORATE the storylines into the outline naturally
-- USE the premises and progression systems in the plot (e.g., characters should advance through the progression stages at appropriate points in the story)`
-
-const outlineSchema = `{
-  "parts": [
-    {
-      "id": "part_1",
-      "title": "Part Title",
-      "summary": "Brief summary of this part",
-      "volumes": [
-        {
-          "id": "vol_1_1",
-          "title": "Volume Title",
-          "summary": "Brief summary of this volume",
-          "chapters": [
-            {
-              "id": "chap_1_1_1",
-              "title": "Chapter Title",
-              "summary": "Brief summary of this chapter",
-              "beats": ["Plot beat 1", "Plot beat 2", "Plot beat 3"],
-              "conflict": "Main conflict in this chapter",
-              "pacing": "slow|normal|fast"
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}`
+- USE the premises and progression systems in the plot (e.g., characters should advance through the progression stages at appropriate points in the story)
+- TRACK all significant changes using Events (relationships, goals, items, premise progress, storyline updates)`

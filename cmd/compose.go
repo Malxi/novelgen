@@ -258,42 +258,8 @@ func getRegenPrompt() (string, error) {
 }
 
 func createOutlineMarkdown(outline *models.Outline, path string) error {
-	var content strings.Builder
-
-	content.WriteString("# Story Outline\n\n")
-
-	for _, part := range outline.Parts {
-		content.WriteString(fmt.Sprintf("## %s: %s\n\n", part.ID, part.Title))
-		content.WriteString(fmt.Sprintf("**Summary:** %s\n\n", part.Summary))
-
-		for _, volume := range part.Volumes {
-			content.WriteString(fmt.Sprintf("### %s: %s\n\n", volume.ID, volume.Title))
-			content.WriteString(fmt.Sprintf("**Summary:** %s\n\n", volume.Summary))
-
-			for _, chapter := range volume.Chapters {
-				content.WriteString(fmt.Sprintf("#### %s: %s\n\n", chapter.ID, chapter.Title))
-				content.WriteString(fmt.Sprintf("**Summary:** %s\n\n", chapter.Summary))
-
-				if len(chapter.Beats) > 0 {
-					content.WriteString("**Plot Beats:**\n")
-					for _, beat := range chapter.Beats {
-						content.WriteString(fmt.Sprintf("- %s\n", beat))
-					}
-					content.WriteString("\n")
-				}
-
-				if chapter.Conflict != "" {
-					content.WriteString(fmt.Sprintf("**Conflict:** %s\n\n", chapter.Conflict))
-				}
-
-				if chapter.Pacing != "" {
-					content.WriteString(fmt.Sprintf("**Pacing:** %s\n\n", chapter.Pacing))
-				}
-			}
-		}
-	}
-
-	return os.WriteFile(path, []byte(content.String()), 0644)
+	// Use the ToMarkdown method to ensure all fields are included
+	return os.WriteFile(path, []byte(outline.ToMarkdown()), 0644)
 }
 
 func outlineExists(path string) bool {
