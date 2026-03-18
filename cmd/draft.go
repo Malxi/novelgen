@@ -12,6 +12,7 @@ import (
 	"nolvegen/internal/agents"
 	"nolvegen/internal/llm"
 	"nolvegen/internal/logger"
+	"nolvegen/internal/logic"
 	"nolvegen/internal/models"
 
 	"github.com/spf13/cobra"
@@ -162,6 +163,15 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 	// Create draft agent
 	agent := agents.NewDraftAgent(client, cfg, &config.LLM, setup, outline, config.Language)
 
+	// Get project root for state matrix manager
+	root, err := findProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to find project root: %w", err)
+	}
+
+	// Create state matrix manager
+	stateManager := logic.NewStateMatrixManager(root)
+
 	// Get list of chapters to generate
 	chapters, err := getChaptersToGenerate(outline, draftChapterFlag, draftVolumeFlag, draftPartFlag, draftAllFlag)
 	if err != nil {
@@ -192,17 +202,10 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 				log.Info("[Worker %d] Generating draft for chapter: %s - %s", workerID, chapter.ID, chapter.Title)
 
 				// Calculate story state matrix
-				stateMatrix := calculateStateMatrix(outline, chapter)
+				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
 
 				// Generate draft
-				draft, err := agent.GenerateDraft(chapter, &models.StateMatrix{
-					Characters:    stateMatrix.Characters,
-					Locations:     stateMatrix.Locations,
-					Items:         stateMatrix.Items,
-					Relationships: stateMatrix.Relationships,
-					Storylines:    stateMatrix.Storylines,
-					Premises:      stateMatrix.Premises,
-				}, draftWordsFlag)
+				draft, err := agent.GenerateDraft(chapter, stateMatrix, draftWordsFlag)
 				if err != nil {
 					log.Error("Failed to generate draft for chapter %s: %v", chapter.ID, err)
 					continue
@@ -373,130 +376,6 @@ func findChapterByNumber(outline *models.Outline, chapterNum int) (*models.Chapt
 		}
 	}
 	return nil, fmt.Errorf("chapter %d not found", chapterNum)
-}
-
-// calculateStateMatrix calculates the story state up to the target chapter
-func calculateStateMatrix(outline *models.Outline, targetChapter *models.Chapter) *models.StateMatrix {
-	state := &models.StateMatrix{
-		Characters:    make(map[string]*models.Character),
-		Locations:     make(map[string]*models.Location),
-		Items:         make(map[string]*models.Item),
-		Relationships: make(map[string]string),
-		Storylines:    make(map[string]string),
-		Premises:      make(map[string]string),
-	}
-
-	// Load all generated elements
-	loadElementsIntoState(state)
-
-	// Apply events from all chapters up to target
-	for _, part := range outline.Parts {
-		for _, vol := range part.Volumes {
-			for _, ch := range vol.Chapters {
-				// Stop when we reach target chapter
-				if ch.ID == targetChapter.ID {
-					return state
-				}
-
-				// Apply events from this chapter
-				for _, event := range ch.Events {
-					applyEvent(state, event)
-				}
-			}
-		}
-	}
-
-	return state
-}
-
-// applyEvent applies a single event to the state matrix
-func applyEvent(state *models.StateMatrix, event models.Event) {
-	switch event.Type {
-	case "relationship":
-		// Format: relationship between char1 and char2 changes
-		if len(event.Characters) >= 2 {
-			key := event.Characters[0] + "_" + event.Characters[1]
-			state.Relationships[key] = event.Change
-		}
-	case "goal":
-		// Character goal update
-		if len(event.Characters) > 0 {
-			charName := event.Characters[0]
-			if char, exists := state.Characters[charName]; exists {
-				// Update character's goals based on event
-				if event.Change != "" {
-					char.Goals = append(char.Goals, event.Change)
-				}
-			}
-		}
-	case "item":
-		// Character gets or loses item
-		if len(event.Characters) > 0 && event.Subject != "" {
-			charName := event.Characters[0]
-			itemName := event.Subject
-			if event.Change == "get" {
-				if item, exists := state.Items[itemName]; exists {
-					item.Owner = charName
-				}
-			} else if event.Change == "lost" {
-				if item, exists := state.Items[itemName]; exists {
-					item.Owner = ""
-				}
-			}
-		}
-	case "premise":
-		// Character premise/progression update
-		if len(event.Characters) > 0 {
-			key := event.Characters[0] + "_" + event.Subject
-			state.Premises[key] = event.Change
-		}
-	case "storyline":
-		// Storyline progression
-		if event.Subject != "" {
-			state.Storylines[event.Subject] = event.Change
-		}
-	}
-}
-
-// loadElementsIntoState loads generated elements into state matrix
-func loadElementsIntoState(state *models.StateMatrix) {
-	root, err := findProjectRoot()
-	if err != nil {
-		return
-	}
-
-	// Load characters
-	charPath := filepath.Join(root, "config", "craft", "characters.json")
-	if data, err := os.ReadFile(charPath); err == nil {
-		var chars map[string]*models.Character
-		if err := json.Unmarshal(data, &chars); err == nil {
-			for name, char := range chars {
-				state.Characters[name] = char
-			}
-		}
-	}
-
-	// Load locations
-	locPath := filepath.Join(root, "config", "craft", "locations.json")
-	if data, err := os.ReadFile(locPath); err == nil {
-		var locs map[string]*models.Location
-		if err := json.Unmarshal(data, &locs); err == nil {
-			for name, loc := range locs {
-				state.Locations[name] = loc
-			}
-		}
-	}
-
-	// Load items
-	itemPath := filepath.Join(root, "config", "craft", "items.json")
-	if data, err := os.ReadFile(itemPath); err == nil {
-		var items map[string]*models.Item
-		if err := json.Unmarshal(data, &items); err == nil {
-			for name, item := range items {
-				state.Items[name] = item
-			}
-		}
-	}
 }
 
 // saveDraft saves the generated draft to file
@@ -849,6 +728,14 @@ func getChaptersNeedingImprovement(review *agents.VolumeReview, outline *models.
 func improveChaptersWithAgent(agent *agents.DraftAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, concurrency int) int {
 	log := logger.GetLogger()
 
+	// Get project root for state matrix manager
+	root, err := findProjectRoot()
+	if err != nil {
+		log.Error("Failed to find project root: %v", err)
+		return 0
+	}
+	stateManager := logic.NewStateMatrixManager(root)
+
 	if concurrency <= 0 {
 		concurrency = 1
 	}
@@ -885,17 +772,10 @@ func improveChaptersWithAgent(agent *agents.DraftAgent, chapters []*models.Chapt
 				suggestions := buildImprovementSuggestions(review)
 
 				// Calculate state matrix
-				stateMatrix := calculateStateMatrix(outline, chapter)
+				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
 
 				// Generate improved draft with suggestions
-				draft, err := agent.GenerateDraftWithSuggestions(chapter, &models.StateMatrix{
-					Characters:    stateMatrix.Characters,
-					Locations:     stateMatrix.Locations,
-					Items:         stateMatrix.Items,
-					Relationships: stateMatrix.Relationships,
-					Storylines:    stateMatrix.Storylines,
-					Premises:      stateMatrix.Premises,
-				}, 500, suggestions)
+				draft, err := agent.GenerateDraftWithSuggestions(chapter, stateMatrix, 500, suggestions)
 
 				if err != nil {
 					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
