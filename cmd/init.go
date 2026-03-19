@@ -108,8 +108,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 	fmt.Printf("🎭 Genre(s): %s\n", strings.Join(genres, ", "))
 	fmt.Printf("🤖 Provider: %s, Model: %s\n", config.LLM.Provider, config.LLM.Model)
 	fmt.Println("\nNext steps:")
-	fmt.Println("  - Run 'novel setup' to create story setup")
-	fmt.Println("  - Or run 'novel setup --gen \"<your prompt>\"' to generate with AI")
+	fmt.Println("  - Run 'novel setup gen \"<your story idea>\"' to generate story setup with AI")
+	fmt.Println("  - Or manually edit story/setup/story_setup.json to define your story")
 
 	return nil
 }

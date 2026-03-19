@@ -18,25 +18,62 @@ import (
 )
 
 var (
-	composeRegenFlag     string
+	composeIDFlag        string
 	composePromptFlag    string
 	composeMaxRoundsFlag int
 )
 
 var composeCmd = &cobra.Command{
 	Use:   "compose",
-	Short: "Generate or improve a story outline",
-	Long: `Generate a story outline with a rigid 3-level structure (parts → volumes → chapters),
-including plot beats, conflict, and pacing to guide AI writing.
+	Short: "Generate story outline",
+	Long: `Generate a story outline with a rigid 3-level structure (parts → volumes → chapters).
 
-This command reads the story setup from story/setup/story_setup.json and uses AI
-to generate a hierarchical outline structure based on the predefined structure in novel.json.
+The outline includes detailed information for each chapter:
+  - Summary: What happens in this chapter
+  - Characters: Who appears in this chapter
+  - Location: Where the chapter takes place
+  - Events: State changes (relationships, goals, items, etc.)
+  - Beats: Key plot points
+  - Conflict: Central tension
+  - Pacing: Chapter rhythm
+
+This command reads story/setup/story_setup.json and generates story/compose/outline.json.
+
+Subcommands:
+  gen     - Generate new outline
+  regen   - Regenerate specific part/volume/chapter
+  improve - Improve existing outline through AI review`,
+}
+
+var composeGenCmd = &cobra.Command{
+	Use:   "gen",
+	Short: "Generate new story outline",
+	Long: `Generate a new story outline based on story setup.
+
+This command reads story/setup/story_setup.json and uses AI to generate
+a hierarchical outline structure based on the predefined structure in novel.json.
 
 Examples:
-  novel compose                          # Generate full outline
-  novel compose --regen 1_1_1            # Regenerate chapter 1.1.1
-  novel compose --regen 1_1_1 --prompt "make it more intense"  # Regenerate with suggestion`,
-	RunE: runCompose,
+  novel compose gen                      # Generate full outline`,
+	RunE: runComposeGen,
+}
+
+var composeRegenCmd = &cobra.Command{
+	Use:   "regen [id]",
+	Short: "Regenerate specific part, volume, or chapter",
+	Long: `Regenerate a specific part, volume, or chapter from the existing outline.
+
+The ID format is:
+  - "1"       - Part 1
+  - "1_1"     - Part 1, Volume 1
+  - "1_1_1"   - Part 1, Volume 1, Chapter 1
+
+Examples:
+  novel compose regen 1_1_1              # Regenerate chapter 1.1.1
+  novel compose regen 1_1_1 --prompt "make it more intense"
+  novel compose regen 1_1 --prompt "add more conflict"`,
+	Args: cobra.ExactArgs(1),
+	RunE: runComposeRegen,
 }
 
 var composeImproveCmd = &cobra.Command{
@@ -49,26 +86,25 @@ to identify weaknesses and improve the story structure, pacing, and coherence.
 
 Examples:
   novel compose improve                  # Improve outline with 1 round
-  novel compose improve --max-rounds 3   # Run 3 improvement rounds
-  novel compose improve --max-rounds 2   # Multiple iterations for refinement`,
+  novel compose improve --max-rounds 3   # Run 3 improvement rounds`,
 	RunE: runComposeImprove,
 }
 
 func init() {
+	composeCmd.AddCommand(composeGenCmd)
+	composeCmd.AddCommand(composeRegenCmd)
 	composeCmd.AddCommand(composeImproveCmd)
 
-	composeCmd.Flags().StringVar(&composeRegenFlag, "regen", "", "Regenerate a specific part, volume, or chapter (e.g., \"1\", \"1_1\", \"1_1_1\")")
-	composeCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Suggestions for regeneration (used with --regen)")
-
+	composeRegenCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Suggestions for regeneration")
 	composeImproveCmd.Flags().IntVar(&composeMaxRoundsFlag, "max-rounds", 1, "Maximum number of improvement rounds")
 
 	rootCmd.AddCommand(composeCmd)
 }
 
-func runCompose(cmd *cobra.Command, args []string) error {
+func runComposeGen(cmd *cobra.Command, args []string) error {
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
-	logger.Section("NOLVEGEN COMPOSE")
+	logger.Section("NOLVEGEN COMPOSE GEN")
 
 	// Check if we're in a novel project
 	if _, err := os.Stat("novel.json"); err != nil {
@@ -98,28 +134,14 @@ func runCompose(cmd *cobra.Command, args []string) error {
 
 	// Check if outline already exists
 	outlinePath := filepath.Join("story", "compose", "outline.json")
-	var outline *models.Outline
+	if _, err := os.Stat(outlinePath); err == nil {
+		return fmt.Errorf("outline already exists at %s. Use 'novel compose regen' to regenerate or 'novel compose improve' to improve", outlinePath)
+	}
 
-	if composeRegenFlag != "" {
-		// Regenerate specific element
-		outline, err = models.LoadOutline(outlinePath)
-		if err != nil {
-			return fmt.Errorf("failed to load existing outline: %w", err)
-		}
-		if err := regenerateElement(outline, composeRegenFlag, setup, projectConfig); err != nil {
-			return fmt.Errorf("failed to regenerate element: %w", err)
-		}
-	} else {
-		// Check if outline already exists
-		if _, err := os.Stat(outlinePath); err == nil {
-			return fmt.Errorf("outline already exists at %s. Use --regen to regenerate specific parts or 'novel compose improve' to improve", outlinePath)
-		}
-
-		// AI generation mode (default)
-		outline, err = generateOutlineWithAI(setup, projectConfig)
-		if err != nil {
-			return fmt.Errorf("failed to generate outline with AI: %w", err)
-		}
+	// AI generation mode
+	outline, err := generateOutlineWithAI(setup, projectConfig)
+	if err != nil {
+		return fmt.Errorf("failed to generate outline with AI: %w", err)
 	}
 
 	// Save outline
@@ -148,7 +170,70 @@ func runCompose(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// runComposeImprove runs the outline improvement command
+func runComposeRegen(cmd *cobra.Command, args []string) error {
+	id := args[0]
+
+	// Initialize logger
+	logger.SetDefault(logger.New(logger.DebugLevel))
+	logger.Section("NOLVEGEN COMPOSE REGEN")
+
+	// Check if we're in a novel project
+	if _, err := os.Stat("novel.json"); err != nil {
+		logger.Error("Not a novel project directory (novel.json not found)")
+		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novel init' first")
+	}
+
+	// Load project config
+	projectConfig, err := models.LoadProjectConfig("novel.json")
+	if err != nil {
+		logger.Error("Failed to load novel.json: %v", err)
+		return fmt.Errorf("failed to load novel.json: %w", err)
+	}
+	logger.Info("Loaded project config: %s", projectConfig.Name)
+
+	// Check if story_setup.json exists
+	setupPath := filepath.Join("story", "setup", "story_setup.json")
+	if _, err := os.Stat(setupPath); err != nil {
+		return fmt.Errorf("story setup not found at %s. Run 'novel setup gen' first", setupPath)
+	}
+
+	// Load story setup
+	setup, err := models.LoadStorySetup(setupPath)
+	if err != nil {
+		return fmt.Errorf("failed to load story setup: %w", err)
+	}
+
+	// Load existing outline
+	outlinePath := filepath.Join("story", "compose", "outline.json")
+	outline, err := models.LoadOutline(outlinePath)
+	if err != nil {
+		return fmt.Errorf("failed to load existing outline: %w", err)
+	}
+
+	// Regenerate specific element
+	if err := regenerateElement(outline, id, setup, projectConfig); err != nil {
+		return fmt.Errorf("failed to regenerate element: %w", err)
+	}
+
+	// Save outline
+	if err := outline.Save(outlinePath); err != nil {
+		return fmt.Errorf("failed to save outline: %w", err)
+	}
+
+	// Create markdown version
+	mdPath := filepath.Join("story", "compose", "outline.md")
+	if err := createOutlineMarkdown(outline, mdPath); err != nil {
+		return fmt.Errorf("failed to save outline markdown: %w", err)
+	}
+
+	fmt.Printf("\n✓ Outline regenerated and saved to %s\n", outlinePath)
+	fmt.Println("\nNext steps:")
+	fmt.Println("  - Edit story/compose/outline.json to refine your outline")
+	fmt.Println("  - Run 'novel craft' to create world elements")
+
+	return nil
+}
+
 func runComposeImprove(cmd *cobra.Command, args []string) error {
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
@@ -253,7 +338,7 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 		return fmt.Errorf("failed to load LLM config: %w", err)
 	}
 
-	// Get user prompt for regeneration (from --prompt flag or interactive)
+	// Get user prompt for regeneration
 	userPrompt := composePromptFlag
 	if userPrompt == "" {
 		var err error

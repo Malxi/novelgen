@@ -12,7 +12,14 @@ import (
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Manage LLM configuration",
-	Long:  `Configure the LLM provider settings for AI generation features.`,
+	Long: `Configure the LLM provider settings for AI generation features.
+
+This command manages the global LLM configuration stored in ~/.nolvegen/llm_config.json.
+You can configure multiple providers (OpenAI, Ollama, etc.) and switch between them.
+
+Subcommands:
+  show - Display current LLM configuration
+  set  - Configure LLM settings interactively`,
 }
 
 var configShowCmd = &cobra.Command{

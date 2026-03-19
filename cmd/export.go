@@ -22,8 +22,15 @@ var exportCmd = &cobra.Command{
 	Short: "Export novel to various formats",
 	Long: `Export the completed novel to various formats.
 
-The export command reads all generated chapters and compiles them into
-a single file in the specified format.`,
+This command reads all generated final chapters from the chapters/ directory
+and compiles them into a single file with proper formatting.
+
+Supported formats:
+  - markdown (.md): Formatted with headers and metadata
+  - text (.txt): Plain text format
+
+Subcommands:
+  novel - Export the complete novel`,
 }
 
 var exportNovelCmd = &cobra.Command{

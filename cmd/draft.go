@@ -34,10 +34,18 @@ var draftCmd = &cobra.Command{
 	Short: "Generate and improve draft chapters",
 	Long: `Generate, review, and improve draft chapters based on outline and story state.
 
-Commands:
-  gen      - Generate new drafts
-  review   - Review drafts and provide feedback
-  improve  - Improve drafts based on review feedback`,
+Drafts are preliminary versions of chapters saved to the drafts/ directory.
+They serve as the foundation for final chapter generation.
+
+Subcommands:
+  gen      - Generate new draft chapters
+  review   - Review drafts and provide detailed feedback
+  improve  - Improve drafts based on review feedback
+
+The typical workflow:
+  1. draft gen     - Generate initial drafts
+  2. draft review  - Review and identify issues
+  3. draft improve - Fix issues based on review`,
 }
 
 var draftGenCmd = &cobra.Command{

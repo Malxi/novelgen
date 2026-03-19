@@ -26,14 +26,20 @@ var (
 
 var craftCmd = &cobra.Command{
 	Use:   "craft",
-	Short: "Generate story elements (characters, locations, items) from outline",
-	Long: `Scan the outline and generate detailed story elements including:
-- Characters: detailed character profiles
-- Locations: detailed location descriptions  
-- Items: detailed item descriptions
+	Short: "Generate story world elements",
+	Long: `Generate detailed world elements (characters, locations, items) from the outline.
 
-Elements are generated progressively following the chapter order.
-Already generated elements are skipped by default.`,
+This command scans the outline to identify all story elements and generates
+detailed profiles for each:
+  - Characters: appearance, personality, background, motivation, goals, relationships
+  - Locations: description, atmosphere, sensory details, history, significance
+  - Items: appearance, function, origin, powers, limitations, significance
+
+Generated elements are saved to story/craft/ directory.
+Already generated elements are skipped by default (incremental generation).
+
+Subcommands:
+  gen - Generate story elements`,
 }
 
 var craftGenCmd = &cobra.Command{

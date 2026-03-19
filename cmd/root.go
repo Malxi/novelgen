@@ -8,13 +8,19 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "novel",
-	Short: "A CLI tool for novel generation",
-	Long: `Novel Generation Tool is a command-line interface designed to facilitate
-step-by-step novel creation through a structured "decompress" workflow.
+	Short: "A CLI tool for AI-assisted novel generation",
+	Long: `Nolvegen is a command-line tool for AI-assisted novel creation.
 
-It guides users from initial idea to complete chapter drafts by progressively
-expanding and injecting context at each stage, while ensuring consistency across
-all story elements.`,
+It provides a structured workflow to guide you from initial idea to complete novel:
+  1. init     - Initialize a new novel project
+  2. setup    - Create story setup (genre, premise, theme, etc.)
+  3. compose  - Generate story outline (parts → volumes → chapters)
+  4. craft    - Create detailed world elements (characters, locations, items)
+  5. draft    - Generate and improve draft chapters
+  6. write    - Generate final polished chapters
+  7. export   - Export the completed novel to various formats
+
+Use "novel <command> --help" for more information about a command.`,
 }
 
 func Execute() {

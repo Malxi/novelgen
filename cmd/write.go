@@ -31,10 +31,21 @@ var (
 var writeCmd = &cobra.Command{
 	Use:   "write",
 	Short: "Generate final chapter content",
-	Long: `Generate final chapter content based on drafts with context continuity.
+	Long: `Generate polished final chapter content based on drafts.
 
-The write command reads draft chapters and generates polished final content,
-ensuring continuity with surrounding chapters by including them as context.`,
+This command reads draft chapters and generates refined final content,
+ensuring continuity with surrounding chapters by including them as context.
+
+Features:
+  - Context-aware generation (includes surrounding chapters)
+  - State matrix tracking (character states, relationships, items)
+  - Consistent voice and style across chapters
+
+Final chapters are saved to the chapters/ directory.
+
+Subcommands:
+  gen      - Generate final chapters from drafts
+  improve  - Improve final chapters based on review`,
 }
 
 var writeGenCmd = &cobra.Command{
