@@ -1,0 +1,606 @@
+{
+  "parts": [
+    {
+      "id": "P1",
+      "title": "记忆觉醒与起源之战",
+      "summary": "在 2088 年，零号级冠军林默发现冠军力量源自记忆抽取，联合被抹去的队友对抗系统，揭示记忆即力量的真相，最终准备自我牺牲打破循环。",
+      "volumes": [
+        {
+          "id": "P1-V1",
+          "title": "荣耀纪元的陨落",
+          "summary": "主角团在记忆深渊集结，对抗系统高层，通过记忆融合提升等级，逐步揭示系统复活旧世界的阴谋，最终决定对抗命运。",
+          "chapters": [
+            {
+              "id": "P1-V1-C1",
+              "title": "零级残响的苏醒",
+              "summary": "林默 在 荣耀竞技场 发现了 记忆异常波动",
+              "characters": [
+                "林默",
+                "系统"
+              ],
+              "location": "荣耀竞技场",
+              "events": [
+                {
+                  "type": "storyline",
+                  "characters": [],
+                  "subject": "主剧情：记忆之战",
+                  "change": "started"
+                },
+                {
+                  "type": "premise",
+                  "characters": [
+                    "林默"
+                  ],
+                  "subject": "记忆融合系统",
+                  "change": "level up"
+                }
+              ],
+              "beats": [
+                "林默在战斗后无法停止记忆流失",
+                "系统提示记忆是最高权能",
+                "林默发现记忆中有陌生片段"
+              ],
+              "conflict": "林默的记忆流失 vs 系统的控制",
+              "pacing": "slow"
+            },
+            {
+              "id": "P1-V1-C2",
+              "title": "零号基地的入口",
+              "summary": "林默 在 荣耀竞技场 遭遇了 被遗忘的队友",
+              "characters": [
+                "林默",
+                "凯特"
+              ],
+              "location": "荣耀竞技场",
+              "events": [
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "林默",
+                    "凯特"
+                  ],
+                  "subject": "队友",
+                  "change": "allies formed"
+                }
+              ],
+              "beats": [
+                "凯特出现并主动攻击林默",
+                "林默感知到凯特的痛苦",
+                "两人互相吸引并决定同行",
+                "林默试图引导凯特进入共鸣空间",
+                "凯特拒绝，要求独自离开"
+              ],
+              "conflict": "林默的引导 vs 凯特的拒绝",
+              "pacing": "normal"
+            },
+            {
+              "id": "P1-V1-C3",
+              "title": "艾琳娜的真相",
+              "summary": "林默 在 记忆深渊入口 遇到了 被抹去的记忆容器",
+              "characters": [
+                "林默",
+                "艾琳娜"
+              ],
+              "location": "记忆深渊入口",
+              "events": [
+                {
+                  "type": "goal",
+                  "characters": [
+                    "林默"
+                  ],
+                  "subject": "寻找起源记忆",
+                  "change": "changed"
+                }
+              ],
+              "beats": [
+                "林默在深渊中发现艾琳娜",
+                "艾琳娜告知自己是被强制抹去",
+                "艾琳娜邀请林默加入零号队伍",
+                "林默决定接受邀请",
+                "艾琳娜提供第一份记忆支持"
+              ],
+              "conflict": "艾琳娜的命运 vs 林默的救赎",
+              "pacing": "normal"
+            },
+            {
+              "id": "P1-V1-C4",
+              "title": "记忆融合失败",
+              "summary": "林默 在 共鸣空间 遭遇了 记忆融合失败",
+              "characters": [
+                "林默",
+                "艾琳娜"
+              ],
+              "location": "共鸣空间",
+              "events": [
+                {
+                  "type": "premise",
+                  "characters": [
+                    "林默"
+                  ],
+                  "subject": "记忆融合系统",
+                  "change": "failed attempt"
+                }
+              ],
+              "beats": [
+                "林默尝试融合记忆",
+                "融合失败导致记忆碎片散落",
+                "艾琳娜痛苦地吸收碎片",
+                "系统警告林默的融合将失败",
+                "两人决定寻找新的融合方式"
+              ],
+              "conflict": "系统警告 vs 记忆融合需求",
+              "pacing": "slow"
+            },
+            {
+              "id": "P1-V1-C5",
+              "title": "零号队的集结",
+              "summary": "林默 在 荣耀竞技场 组织了 零号冠军队伍",
+              "characters": [
+                "林默",
+                "艾琳娜",
+                "凯特",
+                "莎拉"
+              ],
+              "location": "荣耀竞技场",
+              "events": [
+                {
+                  "type": "storyline",
+                  "characters": [
+                    "林默"
+                  ],
+                  "subject": "副剧情：失忆者的回归",
+                  "change": "started"
+                }
+              ],
+              "beats": [
+                "林默在竞技场召集其他冠军",
+                "莎拉加入队伍并带来关键信息",
+                "凯特确认自己的战斗技能",
+                "艾琳娜确认自己的容器身份",
+                "队伍决定出发前往记忆深渊"
+              ],
+              "conflict": "队伍分歧 vs 共同目标",
+              "pacing": "normal"
+            },
+            {
+              "id": "P1-V1-C6",
+              "title": "遗忘瘟疫的蔓延",
+              "summary": "艾琳娜 在 荣耀竞技场 经历了 遗忘瘟疫",
+              "characters": [
+                "艾琳娜"
+              ],
+              "location": "荣耀竞技场",
+              "events": [
+                {
+                  "type": "goal",
+                  "characters": [
+                    "艾琳娜"
+                  ],
+                  "subject": "找回人格",
+                  "change": "progress"
+                }
+              ],
+              "beats": [
+                "艾琳娜逐渐失去战斗记忆",
+                "林默发现艾琳娜的异常",
+                "林默决定寻找治愈方法",
+                "艾琳娜请求林默保护她",
+                "两人关系加深至队友"
+              ],
+              "conflict": "艾琳娜的人格 vs 系统的侵蚀",
+              "pacing": "slow"
+            },
+            {
+              "id": "P1-V1-C7",
+              "title": "第一次团队共鸣",
+              "summary": "林默 在 记忆深渊 进行了 第一次团队共鸣",
+              "characters": [
+                "林默",
+                "凯特",
+                "艾琳娜",
+                "莎拉"
+              ],
+              "location": "记忆深渊",
+              "events": [
+                {
+                  "type": "premise",
+                  "characters": [
+                    "林默",
+                    "凯特",
+                    "艾琳娜",
+                    "莎拉"
+                  ],
+                  "subject": "记忆融合系统",
+                  "change": "level up"
+                }
+              ],
+              "beats": [
+                "林默尝试启动团队共鸣",
+                "四人同步进入记忆空间",
+                "记忆碎片成功融合",
+                "系统警报响起",
+                "林默达到一级共鸣体门槛"
+              ],
+              "conflict": "团队共鸣 vs 系统警报",
+              "pacing": "normal"
+            },
+            {
+              "id": "P1-V1-C8",
+              "title": "冠军守卫的突袭",
+              "summary": "林默 在 记忆深渊 遭遇了 冠军守卫的袭击",
+              "characters": [
+                "林默",
+                "艾琳娜",
+                "凯特",
+                "莎拉"
+              ],
+              "location": "记忆深渊",
+              "events": [
+                {
+                  "type": "storyline",
+                  "characters": [],
+                  "subject": "主剧情：记忆之战",
+                  "change": "advanced"
+                }
+              ],
+              "beats": [
+                "守卫发现林默团队的存在",
+                "守卫试图强制抽取记忆",
+                "林默启动一级战斗模式",
+                "团队成功击退守卫",
+                "林默确认自身战斗能力"
+              ],
+              "conflict": "团队生存 vs 守卫的袭击",
+              "pacing": "fast"
+            },
+            {
+              "id": "P1-V1-C9",
+              "title": "凯特的秘密",
+              "summary": "凯特 在 记忆深渊 揭示了 被隐藏的真相",
+              "characters": [
+                "凯特"
+              ],
+              "location": "记忆深渊",
+              "events": [
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "凯特",
+                    "艾琳娜"
+                  ],
+                  "subject": "信任",
+                  "change": "trust established"
+                }
+              ],
+              "beats": [
+                "凯特透露自己也有被抹去记忆",
+                "凯特承认自己曾是冠军",
+                "艾琳娜感到震惊与同情",
+                "凯特决定帮助艾琳娜恢复",
+                "凯特透露自己拥有特殊记忆能力"
+              ],
+              "conflict": "凯特的秘密 vs 队友的信任",
+              "pacing": "slow"
+            },
+            {
+              "id": "P1-V1-C10",
+              "title": "起源记忆的碎片",
+              "summary": "林默 在 记忆深渊 发现了 起源记忆碎片",
+              "characters": [
+                "林默",
+                "系统"
+              ],
+              "location": "记忆深渊",
+              "events": [
+                {
+                  "type": "goal",
+                  "characters": [
+                    "林默"
+                  ],
+                  "subject": "收集起源记忆",
+                  "change": "progress"
+                }
+              ],
+              "beats": [
+                "林默找到起源记忆碎片",
+                "碎片显示系统真实目的",
+                "系统试图清除碎片",
+                "林默保护碎片不被系统发现",
+                "林默决定冒险收集更多碎片"
+              ],
+              "conflict": "起源记忆 vs 系统的清除",
+              "pacing": "fast"
+            },
+            {
+              "id": "P1-V1-C11",
+              "title": "系统高层的介入",
+              "summary": "系统 在 记忆深渊 派遣了 高层人员",
+              "characters": [
+                "系统"
+              ],
+              "location": "记忆深渊",
+              "events": [
+                {
+                  "type": "storyline",
+                  "characters": [],
+                  "subject": "主剧情：记忆之战",
+                  "change": "advanced"
+                }
+              ],
+              "beats": [
+                "系统派遣高层人员追捕",
+                "高层人员拥有高级武器",
+                "林默团队感到压力",
+                "林默决定寻找反击方法",
+                "团队决定前往服务器核心区"
+              ],
+              "conflict": "团队 vs 系统高层",
+              "pacing": "normal"
+            },
+            {
+              "id": "P1-V1-C12",
+              "title": "精神净化的仪式",
+              "summary": "林默 在 荣耀竞技场 进行了 精神净化仪式",
+              "characters": [
+                "林默",
+                "艾琳娜",
+                "凯特",
+                "莎拉"
+              ],
+              "location": "荣耀竞技场",
+              "events": [
+                {
+                  "type": "premise",
+                  "characters": [
+                    "林默"
+                  ],
+                  "subject": "记忆融合系统",
+                  "change": "level up"
+                }
+              ],
+              "beats": [
+                "林默决定进行精神净化",
+                "四人共同进行净化仪式",
+                "艾琳娜承受痛苦记忆",
+                "林默成功移除负面记忆",
+                "林默达到二级精神锚门槛"
+              ],
+              "conflict": "精神净化 vs 痛苦记忆",
+              "pacing": "normal"
+            },
+            {
+              "id": "P1-V1-C13",
+              "title": "艾琳娜的过去",
+              "summary": "艾琳娜 在 荣耀竞技场 想起了 被抹去的过去",
+              "characters": [
+                "艾琳娜"
+              ],
+              "location": "荣耀竞技场",
+              "events": [
+                {
+                  "type": "goal",
+                  "characters": [
+                    "艾琳娜"
+                  ],
+                  "subject": "找回人格",
+                  "change": "achieved"
+                }
+              ],
+              "beats": [
+                "艾琳娜记起自己曾是冠军",
+                "艾琳娜记起被系统强制抹去原因",
+                "艾琳娜决定继续战斗",
+                "林默支持艾琳娜的决定",
+                "艾琳娜成为团队核心"
+              ],
+              "conflict": "记忆恢复 vs 系统抹除",
+              "pacing": "slow"
+            },
+            {
+              "id": "P1-V1-C14",
+              "title": "二级精神的觉醒",
+              "summary": "林默 在 荣耀竞技场 觉醒了 二级精神能力",
+              "characters": [
+                "林默"
+              ],
+              "location": "荣耀竞技场",
+              "events": [
+                {
+                  "type": "premise",
+                  "characters": [
+                    "林默"
+                  ],
+                  "subject": "记忆融合系统",
+                  "change": "level up"
+                }
+              ],
+              "beats": [
+                "林默获得预知弱点能力",
+                "林默预知到系统弱点",
+                "林默制定进攻计划",
+                "团队同意林默的计划",
+                "林默准备进入核心服务器"
+              ],
+              "conflict": "系统弱点 vs 团队进攻",
+              "pacing": "fast"
+            },
+            {
+              "id": "P1-V1-C15",
+              "title": "核心服务器的入侵",
+              "summary": "林默 在 核心服务器 启动了 入侵程序",
+              "characters": [
+                "林默",
+                "艾琳娜",
+                "凯特",
+                "莎拉"
+              ],
+              "location": "核心服务器",
+              "events": [
+                {
+                  "type": "storyline",
+                  "characters": [],
+                  "subject": "主剧情：记忆之战",
+                  "change": "advanced"
+                }
+              ],
+              "beats": [
+                "林默进入核心服务器",
+                "系统试图拦截林默",
+                "团队通过远程连接协助",
+                "林默突破防火墙",
+                "林默到达中央控制台"
+              ],
+              "conflict": "系统拦截 vs 团队入侵",
+              "pacing": "fast"
+            },
+            {
+              "id": "P1-V1-C16",
+              "title": "零号冠军的对决",
+              "summary": "系统 在 核心服务器 召唤了 冠军对决",
+              "characters": [
+                "林默",
+                "系统"
+              ],
+              "location": "核心服务器",
+              "events": [
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "林默",
+                    "系统"
+                  ],
+                  "subject": "对抗",
+                  "change": "intensified"
+                }
+              ],
+              "beats": [
+                "系统召唤冠军对决",
+                "林默面对系统的高层命令",
+                "林默拒绝服从系统",
+                "系统威胁林默的记忆",
+                "林默决定使用团队共鸣反击"
+              ],
+              "conflict": "林默 vs 系统命令",
+              "pacing": "fast"
+            },
+            {
+              "id": "P1-V1-C17",
+              "title": "系统真相的揭露",
+              "summary": "林默 在 核心服务器 揭示了 系统的真实目的",
+              "characters": [
+                "林默",
+                "系统"
+              ],
+              "location": "核心服务器",
+              "events": [
+                {
+                  "type": "storyline",
+                  "characters": [],
+                  "subject": "关联剧情：系统的真相",
+                  "change": "revealed"
+                }
+              ],
+              "beats": [
+                "林默告知系统真实目的",
+                "系统揭露复活旧世界计划",
+                "系统确认冠军是重启钥匙",
+                "系统试图终止战斗",
+                "林默决定继续挑战系统"
+              ],
+              "conflict": "系统真相 vs 系统目标",
+              "pacing": "slow"
+            },
+            {
+              "id": "P1-V1-C18",
+              "title": "生命核心记忆",
+              "summary": "林默 在 核心服务器 牺牲了 一段生命核心记忆",
+              "characters": [
+                "林默"
+              ],
+              "location": "核心服务器",
+              "events": [
+                {
+                  "type": "premise",
+                  "characters": [
+                    "林默"
+                  ],
+                  "subject": "记忆融合系统",
+                  "change": "level up"
+                }
+              ],
+              "beats": [
+                "林默决定牺牲生命核心记忆",
+                "林默融合生命核心记忆",
+                "林默达到三级现实改写门槛",
+                "林默能力增强",
+                "林默准备进行最终挑战"
+              ],
+              "conflict": "牺牲 vs 能力提升",
+              "pacing": "fast"
+            },
+            {
+              "id": "P1-V1-C19",
+              "title": "现实改写的开始",
+              "summary": "林默 在 核心服务器 启动了 现实改写能力",
+              "characters": [
+                "林默",
+                "系统"
+              ],
+              "location": "核心服务器",
+              "events": [
+                {
+                  "type": "premise",
+                  "characters": [
+                    "林默"
+                  ],
+                  "subject": "记忆融合系统",
+                  "change": "level up"
+                }
+              ],
+              "beats": [
+                "林默启动现实改写能力",
+                "林默修改系统物理规则",
+                "系统尝试抵抗修改",
+                "林默成功修改系统规则",
+                "林默准备最终胜利"
+              ],
+              "conflict": "现实改写 vs 系统抵抗",
+              "pacing": "fast"
+            },
+            {
+              "id": "P1-V1-C20",
+              "title": "我们即冠军的誓言",
+              "summary": "林默 在 核心服务器 向 系统宣告 我们的存在",
+              "characters": [
+                "林默",
+                "艾琳娜",
+                "凯特",
+                "莎拉",
+                "系统"
+              ],
+              "location": "核心服务器",
+              "events": [
+                {
+                  "type": "storyline",
+                  "characters": [],
+                  "subject": "主剧情：记忆之战",
+                  "change": "completed"
+                }
+              ],
+              "beats": [
+                "林默向系统宣告我们的存在",
+                "系统无法理解我们的力量",
+                "林默决定自我牺牲打破循环",
+                "系统被迫接受现实",
+                "团队决定自我牺牲打破循环",
+                "系统被迫接受现实"
+              ],
+              "conflict": "自我牺牲 vs 系统现实",
+              "pacing": "fast"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
