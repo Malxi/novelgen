@@ -74,7 +74,7 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 	fmt.Printf("🎭 Genre(s): %s\n", strings.Join(setup.Genres, ", "))
 	fmt.Printf("📖 Premise: %.100s...\n", setup.Premise)
 	fmt.Println("\nNext steps:")
-	fmt.Println("  - Edit config/init/story_setup.json to refine your story setup")
+	fmt.Println("  - Edit story/setup/story_setup.json to refine your story setup")
 	fmt.Println("  - Run 'novel compose' to generate the story outline")
 
 	return nil
@@ -120,14 +120,14 @@ func generateStorySetupWithAI(prompt, language string, projectLLM *models.Projec
 }
 
 func saveStorySetup(setup *models.StorySetup) error {
-	// Create story_setup.json in config/init/
-	setupPath := filepath.Join("config", "init", "story_setup.json")
+	// Create story_setup.json in story/setup/
+	setupPath := filepath.Join("story", "setup", "story_setup.json")
 	if err := setup.Save(setupPath); err != nil {
 		return fmt.Errorf("failed to save story_setup.json: %w", err)
 	}
 
 	// Create story_setup.md (markdown version for easier editing)
-	mdPath := filepath.Join("config", "init", "story_setup.md")
+	mdPath := filepath.Join("story", "setup", "story_setup.md")
 	if err := createStorySetupMarkdown(setup, mdPath); err != nil {
 		return fmt.Errorf("failed to save story_setup.md: %w", err)
 	}

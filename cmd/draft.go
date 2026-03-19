@@ -583,7 +583,7 @@ func saveVolumeReview(review *agents.VolumeReview) error {
 		return err
 	}
 
-	reviewDir := filepath.Join(root, "config", "reviews")
+	reviewDir := filepath.Join(root, "story", "reviews")
 	if err := os.MkdirAll(reviewDir, 0755); err != nil {
 		return fmt.Errorf("failed to create reviews directory: %w", err)
 	}
@@ -604,7 +604,7 @@ func loadVolumeReview(volumeID string) (*agents.VolumeReview, error) {
 		return nil, err
 	}
 
-	reviewPath := filepath.Join(root, "config", "reviews", volumeID+"_review.json")
+	reviewPath := filepath.Join(root, "story", "reviews", volumeID+"_review.json")
 	data, err := os.ReadFile(reviewPath)
 	if err != nil {
 		return nil, err

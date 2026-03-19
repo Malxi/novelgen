@@ -108,7 +108,7 @@ func (m *StateMatrixManager) loadElementsIntoState(state *models.StateMatrix) {
 	}
 
 	// Load characters
-	charPath := filepath.Join(m.projectRoot, "config", "craft", "characters.json")
+	charPath := filepath.Join(m.projectRoot, "story", "craft", "characters.json")
 	if data, err := os.ReadFile(charPath); err == nil {
 		var chars map[string]*models.Character
 		if err := json.Unmarshal(data, &chars); err == nil {
@@ -119,7 +119,7 @@ func (m *StateMatrixManager) loadElementsIntoState(state *models.StateMatrix) {
 	}
 
 	// Load locations
-	locPath := filepath.Join(m.projectRoot, "config", "craft", "locations.json")
+	locPath := filepath.Join(m.projectRoot, "story", "craft", "locations.json")
 	if data, err := os.ReadFile(locPath); err == nil {
 		var locs map[string]*models.Location
 		if err := json.Unmarshal(data, &locs); err == nil {
@@ -130,7 +130,7 @@ func (m *StateMatrixManager) loadElementsIntoState(state *models.StateMatrix) {
 	}
 
 	// Load items
-	itemPath := filepath.Join(m.projectRoot, "config", "craft", "items.json")
+	itemPath := filepath.Join(m.projectRoot, "story", "craft", "items.json")
 	if data, err := os.ReadFile(itemPath); err == nil {
 		var items map[string]*models.Item
 		if err := json.Unmarshal(data, &items); err == nil {

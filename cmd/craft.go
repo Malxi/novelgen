@@ -404,7 +404,7 @@ func loadGeneratedElements() *GeneratedElements {
 	}
 
 	// Load characters
-	charPath := filepath.Join(root, "config", "craft", "characters.json")
+	charPath := filepath.Join(root, "story", "craft", "characters.json")
 	if data, err := os.ReadFile(charPath); err == nil {
 		var chars map[string]interface{}
 		if err := json.Unmarshal(data, &chars); err == nil {
@@ -415,7 +415,7 @@ func loadGeneratedElements() *GeneratedElements {
 	}
 
 	// Load locations
-	locPath := filepath.Join(root, "config", "craft", "locations.json")
+	locPath := filepath.Join(root, "story", "craft", "locations.json")
 	if data, err := os.ReadFile(locPath); err == nil {
 		var locs map[string]interface{}
 		if err := json.Unmarshal(data, &locs); err == nil {
@@ -426,7 +426,7 @@ func loadGeneratedElements() *GeneratedElements {
 	}
 
 	// Load items
-	itemPath := filepath.Join(root, "config", "craft", "items.json")
+	itemPath := filepath.Join(root, "story", "craft", "items.json")
 	if data, err := os.ReadFile(itemPath); err == nil {
 		var items map[string]interface{}
 		if err := json.Unmarshal(data, &items); err == nil {
@@ -703,7 +703,7 @@ func saveCharacters(characters map[string]*models.Character) error {
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(root, "config", "craft", "characters.json")
+	path := filepath.Join(root, "story", "craft", "characters.json")
 	return saveJSON(path, characters)
 }
 
@@ -712,7 +712,7 @@ func saveLocations(locations map[string]*models.Location) error {
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(root, "config", "craft", "locations.json")
+	path := filepath.Join(root, "story", "craft", "locations.json")
 	return saveJSON(path, locations)
 }
 
@@ -721,7 +721,7 @@ func saveItems(items map[string]*models.Item) error {
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(root, "config", "craft", "items.json")
+	path := filepath.Join(root, "story", "craft", "items.json")
 	return saveJSON(path, items)
 }
 
@@ -798,7 +798,7 @@ func loadStorySetup() (*models.StorySetup, error) {
 	if err != nil {
 		return nil, err
 	}
-	path := filepath.Join(root, "config", "init", "story_setup.json")
+	path := filepath.Join(root, "story", "setup", "story_setup.json")
 	return models.LoadStorySetup(path)
 }
 
@@ -807,6 +807,6 @@ func loadOutline() (*models.Outline, error) {
 	if err != nil {
 		return nil, err
 	}
-	path := filepath.Join(root, "config", "compose", "outline.json")
+	path := filepath.Join(root, "story", "compose", "outline.json")
 	return models.LoadOutline(path)
 }

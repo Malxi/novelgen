@@ -29,7 +29,7 @@ var composeCmd = &cobra.Command{
 	Long: `Generate a story outline with a rigid 3-level structure (parts → volumes → chapters),
 including plot beats, conflict, and pacing to guide AI writing.
 
-This command reads the story setup from config/init/story_setup.json and uses AI
+This command reads the story setup from story/setup/story_setup.json and uses AI
 to generate a hierarchical outline structure based on the predefined structure in novel.json.
 
 Examples:
@@ -85,9 +85,9 @@ func runCompose(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Check if story_setup.json exists
-	setupPath := filepath.Join("config", "init", "story_setup.json")
+	setupPath := filepath.Join("story", "setup", "story_setup.json")
 	if _, err := os.Stat(setupPath); err != nil {
-		return fmt.Errorf("story setup not found at %s. Run 'novel init' first", setupPath)
+		return fmt.Errorf("story setup not found at %s. Run 'novel setup gen' first", setupPath)
 	}
 
 	// Load story setup
@@ -97,7 +97,7 @@ func runCompose(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if outline already exists
-	outlinePath := filepath.Join("config", "compose", "outline.json")
+	outlinePath := filepath.Join("story", "compose", "outline.json")
 	var outline *models.Outline
 
 	if composeRegenFlag != "" {
@@ -128,7 +128,7 @@ func runCompose(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create markdown version
-	mdPath := filepath.Join("config", "compose", "outline.md")
+	mdPath := filepath.Join("story", "compose", "outline.md")
 	if err := createOutlineMarkdown(outline, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
@@ -141,7 +141,7 @@ func runCompose(cmd *cobra.Command, args []string) error {
 		projectConfig.Structure.TargetChapters,
 		projectConfig.Structure.TotalChapters())
 	fmt.Println("\nNext steps:")
-	fmt.Println("  - Edit config/compose/outline.json to refine your outline")
+	fmt.Println("  - Edit story/compose/outline.json to refine your outline")
 	fmt.Println("  - Run 'novel compose improve' to improve the outline with AI review")
 	fmt.Println("  - Run 'novel craft' to create world elements")
 
@@ -169,7 +169,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Check if story_setup.json exists
-	setupPath := filepath.Join("config", "init", "story_setup.json")
+	setupPath := filepath.Join("story", "setup", "story_setup.json")
 	if _, err := os.Stat(setupPath); err != nil {
 		return fmt.Errorf("story setup not found at %s. Run 'novel setup gen' first", setupPath)
 	}
@@ -181,7 +181,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load existing outline
-	outlinePath := filepath.Join("config", "compose", "outline.json")
+	outlinePath := filepath.Join("story", "compose", "outline.json")
 	outline, err := models.LoadOutline(outlinePath)
 	if err != nil {
 		return fmt.Errorf("failed to load existing outline: %w", err)
@@ -200,14 +200,14 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	}
 
 	// Update markdown version
-	mdPath := filepath.Join("config", "compose", "outline.md")
+	mdPath := filepath.Join("story", "compose", "outline.md")
 	if err := createOutlineMarkdown(outline, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
 	fmt.Printf("\n✓ Outline improved and saved to %s\n", outlinePath)
 	fmt.Println("\nNext steps:")
-	fmt.Println("  - Edit config/compose/outline.json to refine your outline")
+	fmt.Println("  - Edit story/compose/outline.json to refine your outline")
 	fmt.Println("  - Run 'novel craft' to create world elements")
 
 	return nil
@@ -394,7 +394,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 		}
 
 		// Save intermediate result
-		outlinePath := filepath.Join("config", "compose", fmt.Sprintf("outline_iter_%d.json", currentIteration))
+		outlinePath := filepath.Join("story", "compose", fmt.Sprintf("outline_iter_%d.json", currentIteration))
 		if err := outline.Save(outlinePath); err != nil {
 			logger.Error("Failed to save intermediate outline: %v", err)
 		} else {

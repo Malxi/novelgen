@@ -116,19 +116,13 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 func createProjectStructure(config *models.ProjectConfig) error {
 	dirs := []string{
-		"config/init",
-		"config/compose",
-		"config/worldbuilding/characters",
-		"config/worldbuilding/weapons",
-		"config/worldbuilding/items",
-		"config/worldbuilding/locations",
-		"config/worldbuilding/factions",
-		"config/storyline",
-		"config/events",
-		"data/chapters",
-		"data/snapshots",
+		"story/setup",
+		"story/compose",
+		"story/craft",
+		"story/reviews",
+		"chapters",
+		"drafts",
 		"logs",
-		"version",
 	}
 
 	for _, dir := range dirs {
@@ -138,7 +132,7 @@ func createProjectStructure(config *models.ProjectConfig) error {
 	}
 
 	// Create placeholder story_setup.md
-	mdPath := filepath.Join("config", "init", "story_setup.md")
+	mdPath := filepath.Join("story", "setup", "story_setup.md")
 	placeholder := fmt.Sprintf(`# %s
 
 ## Story Setup
