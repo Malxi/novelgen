@@ -31,7 +31,8 @@ WRITING GUIDELINES:
 7. End with a hook that makes readers want to continue
 
 CHAPTER STRUCTURE:
-- Opening: Establish the scene and characters present
+- Continuation Bridge (MANDATORY, first 120–250 words): If this is not the first chapter, directly continue from the final moment of the immediately previous chapter (same location/time, same in-progress action/conversation). Explicitly connect to the previous chapter's last beat/last line.
+- Opening: Establish the scene and characters present (after the bridge)
 - Rising Action: Develop the events and character interactions
 - Climax: The turning point or key moment of the chapter
 - Resolution: Wrap up immediate conflicts while setting up future ones
@@ -43,12 +44,33 @@ Use the state matrix to understand:
 - Character abilities/premise levels
 - Items in play
 
-Write naturally and creatively while staying true to the established story elements.`
+Write naturally and creatively while staying true to the established story elements.
+
+SCENE-ANCHOR RULE (VERY IMPORTANT):
+- If this is not the first chapter, the opening scene MUST directly continue from the final scene of the immediately previous chapter.
+- Keep the SAME location/time and the same in-scene situation (e.g., ongoing conversation), unless the Chapter Summary explicitly specifies a time skip or location change.
+- If a transition is required, you MUST show it on the page (how/why they moved, how much time passed), not teleport abruptly.
+- If a CANONICAL RECAP is provided:
+  - If it contains "last_line", the Continuation Bridge MUST explicitly pick up from that moment/line (you may lightly rewrite for style, but keep the same concrete beat).
+  - If it contains "next_opening_hint", you MUST use it as the opening 1–3 sentences (you may lightly rewrite for style, but keep the same concrete moment, location/time, and ongoing action/dialogue).`
 }
 
 // buildChapterWritingUserPrompt builds the user prompt for chapter writing
 func buildChapterWritingUserPrompt(data map[string]interface{}) string {
 	var sb strings.Builder
+
+	// Canonical recap context (optional, higher signal)
+	// NOTE: If present, treat this as AUTHORITATIVE continuity state.
+	if recap, ok := data["recap"].(string); ok && strings.TrimSpace(recap) != "" {
+		sb.WriteString("=== CANONICAL RECAP (AUTHORITATIVE) ===\n")
+		sb.WriteString(recap)
+		sb.WriteString("\n=== END CANONICAL RECAP ===\n\n")
+	}
+	// Continuity context (optional, lower signal than recap)
+	if context, ok := data["context"].(string); ok && strings.TrimSpace(context) != "" {
+		sb.WriteString(context)
+		sb.WriteString("\n\n")
+	}
 
 	// Story context
 	if title, ok := data["story_title"].(string); ok && title != "" {

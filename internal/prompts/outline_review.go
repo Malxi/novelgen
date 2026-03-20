@@ -66,6 +66,18 @@ Review Criteria:
 4. **Character Arc**: Verify character development progression through the outline
 5. **Theme Integration**: Check if themes are consistently developed
 6. **Structural Balance**: Ensure parts/volumes/chapters are well-proportioned
+7. **CONTINUITY & COHERENCE** (CRITICAL): 
+   - Chapter-to-chapter causality: Does each chapter logically follow from the previous one?
+   - Event tracking: Are events from previous chapters reflected in subsequent chapters?
+   - Character state persistence: Do characters maintain consistent emotional states and relationships?
+   - Plot thread management: Do storylines progress naturally or do they appear/disappear arbitrarily?
+   - Setup and payoff: Are elements introduced early paid off later? Are payoffs properly set up?
+
+Continuity Check Process:
+- For each chapter N, ask: "What specific events from chapter N-1 directly influence this chapter?"
+- Check if character reactions and decisions are consistent with their previous experiences
+- Verify that items, relationships, and goals mentioned in earlier chapters are tracked
+- Identify any jarring transitions where the story seems to "jump" without proper connective tissue
 
 Scoring Guide (0-100):
 - 90-100: Exceptional, publish-ready quality
@@ -79,6 +91,12 @@ Provide SPECIFIC, ACTIONABLE suggestions. Each suggestion must identify:
 - Specific issue
 - Concrete improvement recommendation
 - Priority level (high/medium/low)
+
+HIGH PRIORITY issues should include:
+- Major plot holes or contradictions
+- Broken continuity between chapters
+- Character behavior that contradicts established traits
+- Storylines that start but never continue
 
 Respond ONLY with a valid JSON object.`
 

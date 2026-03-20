@@ -2,6 +2,8 @@ package models
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"time"
 )
@@ -108,4 +110,85 @@ func FindProjectRoot(startDir string) (string, error) {
 		return startDir, nil
 	}
 	return "", os.ErrNotExist
+}
+
+// Validation errors
+var (
+	ErrInvalidProjectName  = errors.New("project name cannot be empty")
+	ErrInvalidStructure    = errors.New("story structure must have positive values for parts, volumes, and chapters")
+	ErrInvalidChapterWords = errors.New("chapter word counts must be positive and min <= target <= max")
+	ErrInvalidLLMConfig    = errors.New("LLM provider and model cannot be empty")
+	ErrInvalidLanguage     = errors.New("language cannot be empty")
+)
+
+// Validate checks if the project configuration is valid
+func (p *ProjectConfig) Validate() error {
+	if p.Name == "" {
+		return ErrInvalidProjectName
+	}
+
+	if p.Language == "" {
+		return ErrInvalidLanguage
+	}
+
+	if err := p.Structure.Validate(); err != nil {
+		return err
+	}
+
+	if err := p.ChapterConfig.Validate(); err != nil {
+		return err
+	}
+
+	if err := p.LLM.Validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Validate checks if the story structure is valid
+func (s *StoryStructure) Validate() error {
+	if s.TargetParts <= 0 {
+		return fmt.Errorf("%w: target_parts must be positive, got %d", ErrInvalidStructure, s.TargetParts)
+	}
+	if s.TargetVolumes <= 0 {
+		return fmt.Errorf("%w: target_volumes must be positive, got %d", ErrInvalidStructure, s.TargetVolumes)
+	}
+	if s.TargetChapters <= 0 {
+		return fmt.Errorf("%w: target_chapters must be positive, got %d", ErrInvalidStructure, s.TargetChapters)
+	}
+	return nil
+}
+
+// Validate checks if the chapter configuration is valid
+func (c *ChapterConfig) Validate() error {
+	if c.TargetWordsPerChapter <= 0 {
+		return fmt.Errorf("%w: target_words_per_chapter must be positive", ErrInvalidChapterWords)
+	}
+	if c.MinWordsPerChapter <= 0 {
+		return fmt.Errorf("%w: min_words_per_chapter must be positive", ErrInvalidChapterWords)
+	}
+	if c.MaxWordsPerChapter <= 0 {
+		return fmt.Errorf("%w: max_words_per_chapter must be positive", ErrInvalidChapterWords)
+	}
+	if c.MinWordsPerChapter > c.TargetWordsPerChapter {
+		return fmt.Errorf("%w: min_words_per_chapter (%d) cannot exceed target_words_per_chapter (%d)",
+			ErrInvalidChapterWords, c.MinWordsPerChapter, c.TargetWordsPerChapter)
+	}
+	if c.TargetWordsPerChapter > c.MaxWordsPerChapter {
+		return fmt.Errorf("%w: target_words_per_chapter (%d) cannot exceed max_words_per_chapter (%d)",
+			ErrInvalidChapterWords, c.TargetWordsPerChapter, c.MaxWordsPerChapter)
+	}
+	return nil
+}
+
+// Validate checks if the LLM configuration is valid
+func (l *ProjectLLM) Validate() error {
+	if l.Provider == "" {
+		return fmt.Errorf("%w: provider cannot be empty", ErrInvalidLLMConfig)
+	}
+	if l.Model == "" {
+		return fmt.Errorf("%w: model cannot be empty", ErrInvalidLLMConfig)
+	}
+	return nil
 }

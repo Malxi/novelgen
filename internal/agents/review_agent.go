@@ -22,15 +22,18 @@ type ReviewAgent struct {
 
 // DraftReview contains review results for a single draft
 type DraftReview struct {
-	ChapterID            string              `json:"chapter_id"`
-	ChapterTitle         string              `json:"chapter_title"`
-	OverallScore         int                 `json:"overall_score"`         // 1-10
-	PlotCoherence        PlotCoherenceReview `json:"plot_coherence"`        // 剧情连贯性
-	PlotRationality      RationalityReview   `json:"plot_rationality"`      // 情节合理性
-	CharacterConsistency CharacterReview     `json:"character_consistency"` // 角色一致性
-	PacingReview         PacingReview        `json:"pacing_review"`         // 节奏评价
-	Suggestions          []string            `json:"suggestions"`           // 改进建议
-	NeedsRevision        bool                `json:"needs_revision"`        // 是否需要重写
+	ChapterID            string                `json:"chapter_id"`
+	ChapterTitle         string                `json:"chapter_title"`
+	OverallScore         int                   `json:"overall_score"`         // 1-10
+	PlotCoherence        PlotCoherenceReview   `json:"plot_coherence"`        // 剧情连贯性
+	PlotRationality      RationalityReview     `json:"plot_rationality"`      // 情节合理性
+	CharacterConsistency CharacterReview       `json:"character_consistency"` // 角色一致性
+	PacingReview         PacingReview          `json:"pacing_review"`         // 节奏评价
+	SceneContinuity      SceneContinuityReview `json:"scene_continuity"`      // 场景/转场连续性
+	CharacterPresence    PresenceReview        `json:"character_presence"`    // 角色出场一致性（启发式）
+	RecapQuality         GateReview            `json:"recap_quality"`         // Recap 质量门禁（启发式）
+	Suggestions          []string              `json:"suggestions"`           // 改进建议
+	NeedsRevision        bool                  `json:"needs_revision"`        // 是否需要重写
 }
 
 // PlotCoherenceReview evaluates plot continuity
@@ -59,6 +62,27 @@ type PacingReview struct {
 	Score       int      `json:"score"`       // 1-10
 	Issues      []string `json:"issues"`      // 节奏问题
 	Suggestions []string `json:"suggestions"` // 改进建议
+}
+
+// SceneContinuityReview evaluates scene-to-scene continuity (teleport transitions)
+type SceneContinuityReview struct {
+	Score       int      `json:"score"`
+	Issues      []string `json:"issues"`
+	Suggestions []string `json:"suggestions"`
+}
+
+// PresenceReview evaluates whether outlined entities actually appear in the draft.
+type PresenceReview struct {
+	Score       int      `json:"score"`
+	Issues      []string `json:"issues"`
+	Suggestions []string `json:"suggestions"`
+}
+
+// GateReview is a generic quality gate result (heuristics + deterministic validators).
+type GateReview struct {
+	Score       int      `json:"score"`
+	Issues      []string `json:"issues"`
+	Suggestions []string `json:"suggestions"`
 }
 
 // VolumeReview contains reviews for all drafts in a volume

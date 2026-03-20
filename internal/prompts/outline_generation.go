@@ -95,6 +95,14 @@ Chapter Event Types (track all significant changes):
    - Subject: storyline name
    - Change: started/advanced/completed/twist
 
+CRITICAL CONTINUITY REQUIREMENTS:
+1. CAUSAL CHAIN: Each chapter MUST be a direct consequence of the previous chapter's events. Ask "What happens BECAUSE of what happened before?"
+2. EVENT TRACKING: Use the Events field to track ALL state changes. The next chapter should reference these changes in its summary and beats.
+3. CHARACTER STATE: Characters' emotional states, goals, and relationships must evolve naturally across chapters. Don't reset character development.
+4. PLOT THREADS: Storylines should progress gradually. A storyline started in chapter 1 should show advancement in subsequent chapters, not disappear.
+5. CLIFFHANGERS & HOOKS: Chapters should end with hooks that lead into the next chapter, creating narrative momentum.
+6. RECURRING ELEMENTS: Locations, items, and relationships mentioned in one chapter should reappear naturally in later chapters when relevant.
+
 Guidelines:
 - Follow the EXACT structure specified above
 - Ensure the outline follows a coherent narrative arc across all parts
@@ -106,4 +114,5 @@ Guidelines:
 - Each chapter should have clear progression
 - INCORPORATE the storylines into the outline naturally
 - USE the premises and progression systems in the plot (e.g., characters should advance through the progression stages at appropriate points in the story)
-- TRACK all significant changes using Events (relationships, goals, items, premise progress, storyline updates)`
+- TRACK all significant changes using Events (relationships, goals, items, premise progress, storyline updates)
+- ENSURE CONTINUITY: When writing chapter N, always reference what happened in chapter N-1 and set up what should happen in chapter N+1`

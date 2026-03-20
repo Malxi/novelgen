@@ -85,7 +85,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 	// Set default model if not specified
 	if config.LLM.Model == "" {
 		if initProviderFlag == "openai" {
-			config.LLM.Model = "gpt-4"
+			// Keep in sync with llm_config.json defaults
+			config.LLM.Model = "gpt-5.2"
 		} else {
 			config.LLM.Model = "qwen3.5:4b"
 		}

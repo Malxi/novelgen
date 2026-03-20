@@ -87,8 +87,16 @@ Story Setup:
 
 User Suggestions: {{suggestions}}
 
+REGENERATION REQUIREMENTS - CRITICAL:
+1. CONTINUITY IS PARAMOUNT: The regenerated chapter MUST directly follow from the events of previous chapters. Reference specific events, character states, and plot developments from the "Previous Chapters" section.
+2. SET UP THE NEXT CHAPTER: This chapter MUST naturally lead into the "Next Chapter" described in the context. Create a bridge that makes the next chapter's events feel inevitable.
+3. PRESERVE EVENTS: If the current chapter has events listed, ensure the regenerated version includes those same events (or appropriate replacements that serve the same narrative purpose).
+4. CHARACTER CONSISTENCY: Characters must behave consistently with their established emotional states and relationships from previous chapters.
+5. CAUSAL LOGIC: Every plot beat must be a logical consequence of what came before. Ask "Why is this happening NOW?" and "What caused this?"
+
 Please regenerate this {{element_type}}, ensuring:
-1. Consistency with surrounding content
-2. Alignment with overall story tone
-3. Consideration of user suggestions
-4. ALL content in the specified language`
+1. Strict continuity with previous chapters - reference specific events and their consequences
+2. Proper setup for the next chapter - create narrative momentum
+3. Alignment with overall story tone
+4. Consideration of user suggestions
+5. ALL content in the specified language`

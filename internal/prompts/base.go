@@ -1,7 +1,9 @@
 package prompts
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"strings"
 )
 
@@ -16,12 +18,27 @@ const (
 	SkillOutlineReview Skill = "outline_review"
 
 	// World building skills
-	SkillCharacterCreation Skill = "character_creation"
-	SkillLocationCreation  Skill = "location_creation"
-	SkillItemCreation      Skill = "item_creation"
+	SkillCharacterCreation     Skill = "character_creation"
+	SkillLocationCreation      Skill = "location_creation"
+	SkillItemCreation          Skill = "item_creation"
+	SkillOrganizationCreation  Skill = "organization_creation"
+	SkillRaceCreation          Skill = "race_creation"
+	SkillAbilitySystemCreation Skill = "ability_system_creation"
+	SkillWorldLoreCreation     Skill = "world_lore_creation"
+
+	// Craft review and improvement skills
+	SkillCharacterReview      Skill = "character_review"
+	SkillLocationReview       Skill = "location_review"
+	SkillItemReview           Skill = "item_review"
+	SkillCharacterImprovement Skill = "character_improvement"
+	SkillLocationImprovement  Skill = "location_improvement"
+	SkillItemImprovement      Skill = "item_improvement"
 
 	// Writing skills
 	SkillChapterWriting Skill = "chapter_writing"
+
+	// Recap skill
+	SkillChapterRecap Skill = "chapter_recap"
 )
 
 // OutputFormat represents the expected output format
@@ -93,14 +110,31 @@ func (pm *PromptManager) Build(skill Skill, name string, data map[string]interfa
 	return fullSystemPrompt, userPrompt, nil
 }
 
-// interpolate replaces placeholders in template
-func (pm *PromptManager) interpolate(template string, data map[string]interface{}) string {
-	result := template
-	for key, value := range data {
-		placeholder := fmt.Sprintf("{{%s}}", key)
-		result = strings.ReplaceAll(result, placeholder, fmt.Sprintf("%v", value))
+// interpolate replaces placeholders in template using Go's text/template
+func (pm *PromptManager) interpolate(tmpl string, data map[string]interface{}) string {
+	// Try to use Go template first
+	t, err := template.New("prompt").Parse(tmpl)
+	if err != nil {
+		// Fallback to simple string replacement for backward compatibility
+		result := tmpl
+		for key, value := range data {
+			placeholder := fmt.Sprintf("{{%s}}", key)
+			result = strings.ReplaceAll(result, placeholder, fmt.Sprintf("%v", value))
+		}
+		return result
 	}
-	return result
+
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, data); err != nil {
+		// Fallback to simple string replacement
+		result := tmpl
+		for key, value := range data {
+			placeholder := fmt.Sprintf("{{%s}}", key)
+			result = strings.ReplaceAll(result, placeholder, fmt.Sprintf("%v", value))
+		}
+		return result
+	}
+	return buf.String()
 }
 
 // buildOutputRequirements builds output requirements section
@@ -140,8 +174,25 @@ func (pm *PromptManager) buildUserPrompt(template *PromptTemplate, data map[stri
 		return buildOutlineRegenUserPrompt(data)
 	case SkillOutlineReview:
 		return buildOutlineReviewUserPrompt(data)
-	case SkillCharacterCreation, SkillLocationCreation, SkillItemCreation:
+	case SkillCharacterCreation, SkillLocationCreation, SkillItemCreation,
+		SkillOrganizationCreation, SkillRaceCreation, SkillAbilitySystemCreation, SkillWorldLoreCreation:
 		return buildCraftUserPrompt(template.Skill, data)
+	case SkillCharacterReview, SkillLocationReview, SkillItemReview:
+		if elementType, ok := data["element_type"].(string); ok {
+			return buildCraftReviewUserPrompt(elementType, data)
+		}
+		return "Please review the provided elements."
+	case SkillCharacterImprovement, SkillLocationImprovement, SkillItemImprovement:
+		// Extract element type from skill name
+		skillStr := string(template.Skill)
+		if strings.Contains(skillStr, "character") {
+			return buildCraftImprovementUserPrompt("characters", data)
+		} else if strings.Contains(skillStr, "location") {
+			return buildCraftImprovementUserPrompt("locations", data)
+		} else if strings.Contains(skillStr, "item") {
+			return buildCraftImprovementUserPrompt("items", data)
+		}
+		return "Please improve the provided elements."
 	case SkillChapterWriting:
 		if template.Name == "final" {
 			return buildFinalChapterUserPrompt(data)
@@ -150,6 +201,8 @@ func (pm *PromptManager) buildUserPrompt(template *PromptTemplate, data map[stri
 			return buildImproveChapterUserPrompt(data)
 		}
 		return buildChapterWritingUserPrompt(data)
+	case SkillChapterRecap:
+		return buildRecapUserPrompt(data)
 	default:
 		return "Please generate the requested content."
 	}
@@ -162,6 +215,8 @@ func (pm *PromptManager) registerDefaultPrompts() {
 	registerOutlineRegenPrompts(pm)
 	registerOutlineReviewPrompts(pm)
 	registerCraftPrompts(pm)
+	registerCraftReviewPrompts(pm)
 	registerDraftPrompts(pm)
 	registerWritePrompts(pm)
+	registerRecapPrompts(pm)
 }

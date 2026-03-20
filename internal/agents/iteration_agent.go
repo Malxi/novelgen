@@ -11,6 +11,14 @@ import (
 	"nolvegen/internal/prompts"
 )
 
+// Constants for iteration control
+const (
+	// QualityThreshold is the minimum overall score to stop iteration
+	QualityThreshold = 85
+	// HighPriority is the priority level for critical issues
+	HighPriority = "high"
+)
+
 // IterationAgent handles AI-driven outline review and improvement
 type IterationAgent struct {
 	client     llm.Client
@@ -148,7 +156,7 @@ func (a *IterationAgent) ApplyImprovements(outline *models.Outline, review *Revi
 	// For now, we apply high priority suggestions only
 	appliedCount := 0
 	for _, s := range sortedSuggestions {
-		if s.Priority != "high" {
+		if s.Priority != HighPriority {
 			continue // Skip medium/low priority for now
 		}
 
@@ -264,8 +272,8 @@ func ShouldContinueIteration(review *ReviewResult, iteration int, maxIterations 
 		return false
 	}
 
-	// Stop if overall score is good enough (>= 85)
-	if review.OverallScore >= 85 {
+	// Stop if overall score is good enough
+	if review.OverallScore >= QualityThreshold {
 		logger.Info("Outline quality is good (score: %.1f), stopping iteration", review.OverallScore)
 		return false
 	}
@@ -273,7 +281,7 @@ func ShouldContinueIteration(review *ReviewResult, iteration int, maxIterations 
 	// Stop if no high priority suggestions
 	hasHighPriority := false
 	for _, s := range review.Suggestions {
-		if s.Priority == "high" {
+		if s.Priority == HighPriority {
 			hasHighPriority = true
 			break
 		}

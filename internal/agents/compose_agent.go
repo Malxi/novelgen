@@ -327,21 +327,42 @@ func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *mod
 		for _, vol := range part.Volumes {
 			for i, chap := range vol.Chapters {
 				if chap.ID == chapter.ID {
-					// Add volume context
-					context.WriteString(fmt.Sprintf("Part: %s\nVolume: %s\nVolume Summary: %s\n\n",
-						part.Title, vol.Title, vol.Summary))
+					// Add part and volume context
+					context.WriteString(fmt.Sprintf("=== CURRENT LOCATION IN STORY ===\n"))
+					context.WriteString(fmt.Sprintf("Part: %s\nPart Summary: %s\n\n", part.Title, part.Summary))
+					context.WriteString(fmt.Sprintf("Volume: %s\nVolume Summary: %s\n\n", vol.Title, vol.Summary))
 
-					// Add sibling chapters
+					// Add previous chapters context (up to 2 chapters back for better continuity)
+					context.WriteString("=== PREVIOUS CHAPTERS (For Continuity) ===\n")
 					if i > 0 {
 						prevChap := vol.Chapters[i-1]
-						context.WriteString(fmt.Sprintf("Previous Chapter (%s): %s\nSummary: %s\n\n",
-							prevChap.ID, prevChap.Title, prevChap.Summary))
+						context.WriteString(fmt.Sprintf("Previous Chapter (%s): %s\n", prevChap.ID, prevChap.Title))
+						context.WriteString(fmt.Sprintf("Summary: %s\n", prevChap.Summary))
+						context.WriteString(fmt.Sprintf("Events: %s\n", formatEvents(prevChap.Events)))
+						context.WriteString(fmt.Sprintf("Beats: %s\n\n", strings.Join(prevChap.Beats, "; ")))
 					}
+					if i > 1 {
+						prev2Chap := vol.Chapters[i-2]
+						context.WriteString(fmt.Sprintf("Two Chapters Back (%s): %s\n", prev2Chap.ID, prev2Chap.Title))
+						context.WriteString(fmt.Sprintf("Summary: %s\n", prev2Chap.Summary))
+						context.WriteString(fmt.Sprintf("Key Events: %s\n\n", formatEvents(prev2Chap.Events)))
+					}
+
+					// Add next chapter context
 					if i < len(vol.Chapters)-1 {
 						nextChap := vol.Chapters[i+1]
-						context.WriteString(fmt.Sprintf("Next Chapter (%s): %s\nSummary: %s\n\n",
-							nextChap.ID, nextChap.Title, nextChap.Summary))
+						context.WriteString("=== NEXT CHAPTER (What This Chapter Must Lead To) ===\n")
+						context.WriteString(fmt.Sprintf("Next Chapter (%s): %s\n", nextChap.ID, nextChap.Title))
+						context.WriteString(fmt.Sprintf("Summary: %s\n", nextChap.Summary))
+						context.WriteString(fmt.Sprintf("This chapter MUST set up: %s\n\n", nextChap.Summary))
 					}
+
+					// Add current chapter to regenerate
+					context.WriteString("=== CURRENT CHAPTER TO REGENERATE ===\n")
+					context.WriteString(fmt.Sprintf("Chapter Title: %s\n", chapter.Title))
+					context.WriteString(fmt.Sprintf("Current Summary: %s\n", chapter.Summary))
+					context.WriteString(fmt.Sprintf("Current Events: %s\n", formatEvents(chapter.Events)))
+
 					return context.String()
 				}
 			}
@@ -349,4 +370,17 @@ func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *mod
 	}
 
 	return context.String()
+}
+
+// formatEvents formats events for context display
+func formatEvents(events []models.Event) string {
+	if len(events) == 0 {
+		return "None"
+	}
+	var parts []string
+	for _, e := range events {
+		part := fmt.Sprintf("[%s: %s - %s]", e.Type, e.Subject, e.Change)
+		parts = append(parts, part)
+	}
+	return strings.Join(parts, ", ")
 }

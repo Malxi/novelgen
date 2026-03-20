@@ -14,9 +14,11 @@ func GetVolumeReviewSystemPrompt(language string) string {
 
 请从以下几个维度对每章进行评价：
 1. 剧情连贯性 - 与前后章节的情节是否连贯
-2. 情节合理性 - 剧情逻辑是否合理，有无漏洞
-3. 角色一致性 - 角色行为是否符合其设定
-4. 节奏把控 - 故事节奏是否恰当
+2. 场景/转场连续性 - 本章开头是否承接上一章结尾，有无“瞬移换地点/换话题”的断裂
+3. 角色出场一致性 - 章节大纲标注的角色是否真的在正文出现；开头是否突然冒出未在大纲 characters 列表中的关键角色
+4. 情节合理性 - 剧情逻辑是否合理，有无漏洞
+5. 角色一致性 - 角色行为是否符合其设定
+6. 节奏把控 - 故事节奏是否恰当
 
 同时请从整个卷的层面评价：
 - 卷的整体结构是否合理
@@ -30,9 +32,11 @@ func GetVolumeReviewSystemPrompt(language string) string {
 
 Please evaluate each chapter from the following dimensions:
 1. Plot Coherence - Is the plot coherent with previous and next chapters?
-2. Plot Rationality - Is the plot logic reasonable? Any flaws?
-3. Character Consistency - Do characters act according to their established traits?
-4. Pacing - Is the story pacing appropriate?
+2. Scene Continuity - Does the opening directly continue from the previous chapter ending, or does it "teleport" to a new place/topic without justification?
+3. Character Presence - Do the outlined characters actually appear in the draft? Does the opening suddenly feature a major character not listed in the outline characters?
+4. Plot Rationality - Is the plot logic reasonable? Any flaws?
+5. Character Consistency - Do characters act according to their established traits?
+6. Pacing - Is the story pacing appropriate?
 
 Also evaluate at the volume level:
 - Is the overall volume structure reasonable?
@@ -90,6 +94,21 @@ func BuildVolumeReviewPrompt(setup *models.StorySetup, volume *models.Volume, ch
         "score": 7,
         "issues": ["问题1", "问题2"],
         "suggestions": ["建议1", "建议2"]
+      },
+      "scene_continuity": {
+        "score": 6,
+        "issues": ["上一章结尾在A场景对话，但本章开头直接瞬移到B场景"],
+        "suggestions": ["补一个转场桥段并用上一章最后一句/最后一幕承接开场"]
+      },
+      "character_presence": {
+        "score": 8,
+        "issues": ["大纲角色A未在正文出现"],
+        "suggestions": ["补写角色A出场/台词；若不出场则修正大纲 characters 列表"]
+      },
+      "recap_quality": {
+        "score": 7,
+        "issues": ["recap 缺少 next_opening_hint 或 last_line（连续性锚点不完整）"],
+        "suggestions": ["确保 recap 包含 location/present/last_line/next_opening_hint；必要时重新抽取 recap"]
       },
       "plot_rationality": {
         "score": 8,
@@ -150,6 +169,21 @@ func BuildVolumeReviewPrompt(setup *models.StorySetup, volume *models.Volume, ch
         "score": 7,
         "issues": ["issue1", "issue2"],
         "suggestions": ["suggestion1", "suggestion2"]
+      },
+      "scene_continuity": {
+        "score": 6,
+        "issues": ["Previous chapter ends in scene A, but this chapter opens by teleporting to scene B"],
+        "suggestions": ["Add a transition bridge and directly continue from the previous last beat/last line"]
+      },
+      "character_presence": {
+        "score": 8,
+        "issues": ["Outlined character A never appears in the draft"],
+        "suggestions": ["Add character A's presence/dialogue; if they should not appear, fix the outline characters list"]
+      },
+      "recap_quality": {
+        "score": 7,
+        "issues": ["recap missing next_opening_hint or last_line (continuity anchor incomplete)"],
+        "suggestions": ["Ensure recap includes location/present/last_line/next_opening_hint; re-extract recap if needed"]
       },
       "plot_rationality": {
         "score": 8,

@@ -50,6 +50,12 @@ STRICT REQUIREMENTS:
 3. Characters should fit the story's genre and style
 4. Include specific details that can be referenced in writing
 
+RELATIONSHIPS RULE (VERY IMPORTANT):
+- The "relationships" field MUST ONLY include relationships that already exist at the START of the story (chapter 1 opening).
+- Do NOT invent or pre-fill relationships that will be formed later in the plot.
+- If you are not 100% sure a relationship exists at the start, OMIT it from "relationships".
+- Keep relationships minimal: only the few strongest, canonical starting links (family, mentor/student, boss/subordinate, sworn enemies at start).
+
 Character fields:
 - name: Full name of the character
 - aliases: Array of nicknames or alternative names (optional)
@@ -62,7 +68,7 @@ Character fields:
 - goals: Array of character's goals
 - fears: Array of fears (optional)
 - skills: Array of abilities/skills (optional)
-- relationships: Object mapping other character names to relationship descriptions (optional)
+- relationships: Object mapping other character names to relationship descriptions (optional; START-OF-STORY ONLY)
 - role_in_story: Character's role (protagonist/antagonist/supporting/mentor/etc)
 - character_arc: How this character develops (optional)
 - voice: Speaking style and mannerisms (optional)
@@ -170,6 +176,7 @@ func buildCharacterUserPrompt(data map[string]interface{}) string {
 
 	sb.WriteString("\n\nGenerate detailed character profiles for the characters listed above.")
 	sb.WriteString(" Each character should fit the story's world and have a distinct personality.")
+	sb.WriteString(" IMPORTANT: In 'relationships', include ONLY relationships that exist at the very start of the story. Do NOT add future relationships that happen later in the plot.")
 	sb.WriteString(" Return the result as a JSON object with character names as keys.")
 
 	return sb.String()

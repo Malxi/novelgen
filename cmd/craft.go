@@ -16,30 +16,38 @@ import (
 )
 
 var (
-	craftChapterFlag     string
-	craftVolumeFlag      string
-	craftPartFlag        string
-	craftPromptFlag      string
-	craftBatchFlag       int
-	craftConcurrencyFlag int
+	craftChapterFlag      string
+	craftVolumeFlag       string
+	craftPartFlag         string
+	craftPromptFlag       string
+	craftBatchFlag        int
+	craftConcurrencyFlag  int
+	craftMaxRoundsFlag    int
+	craftElementTypeFlag  string
+	craftStartChaptersFlg int
 )
 
 var craftCmd = &cobra.Command{
 	Use:   "craft",
 	Short: "Generate story world elements",
-	Long: `Generate detailed world elements (characters, locations, items) from the outline.
+	Long: `Generate detailed world elements from the outline and story setup.
 
-This command scans the outline to identify all story elements and generates
+This command scans the outline and setup to identify all story elements and generates
 detailed profiles for each:
-  - Characters: appearance, personality, background, motivation, goals, relationships
+  - Characters: appearance, personality, background, motivation, goals, relationships, affiliations
   - Locations: description, atmosphere, sensory details, history, significance
   - Items: appearance, function, origin, powers, limitations, significance
+  - Organizations: factions, guilds, empires with goals, structure, relationships
+  - Races: species with biology, culture, society, abilities
+  - Ability Systems: magic, cultivation, technology systems with mechanics
+  - World Lore: history, culture, myths, rules that shape the world
 
 Generated elements are saved to story/craft/ directory.
 Already generated elements are skipped by default (incremental generation).
 
 Subcommands:
-  gen - Generate story elements`,
+  gen     - Generate story elements
+  improve - Improve existing elements through AI review`,
 }
 
 var craftGenCmd = &cobra.Command{
@@ -71,8 +79,38 @@ Examples:
 	RunE: runCraftGen,
 }
 
+var craftImproveCmd = &cobra.Command{
+	Use:   "improve",
+	Short: "Improve existing elements through AI review",
+	Long: `Improve existing story elements by running AI review and enhancement cycles.
+
+This command loads the current elements (characters, locations, items) and runs 
+multiple rounds of AI self-review to identify weaknesses and improve the quality,
+consistency, and depth of the world building.
+
+Examples:
+  # Improve all elements with 1 round
+  novel craft improve
+
+  # Improve only characters
+  novel craft improve --type characters
+
+  # Improve only locations
+  novel craft improve --type locations
+
+  # Improve only items
+  novel craft improve --type items
+
+  # Run 3 improvement rounds
+  novel craft improve --max-rounds 3`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return fmt.Errorf("craft improve command is not yet implemented")
+	},
+}
+
 func init() {
 	craftCmd.AddCommand(craftGenCmd)
+	craftCmd.AddCommand(craftImproveCmd)
 
 	craftGenCmd.Flags().StringVar(&craftChapterFlag, "chapter", "", "Generate elements for specific chapter (e.g., '1', 'P1-V1-C1')")
 	craftGenCmd.Flags().StringVar(&craftVolumeFlag, "volume", "", "Generate elements for specific volume (e.g., '1', 'P1-V1')")
@@ -80,6 +118,11 @@ func init() {
 	craftGenCmd.Flags().StringVar(&craftPromptFlag, "prompt", "", "Additional prompt to guide generation")
 	craftGenCmd.Flags().IntVar(&craftBatchFlag, "batch", 1, "Number of elements to generate in one batch")
 	craftGenCmd.Flags().IntVar(&craftConcurrencyFlag, "concurrency", 1, "Number of concurrent element generations")
+	craftGenCmd.Flags().IntVar(&craftStartChaptersFlg, "start-chapters", 3, "Chapters window to treat as start-of-story for relationship hardening")
+
+	craftImproveCmd.Flags().StringVar(&craftElementTypeFlag, "type", "all", "Element type to improve (all/characters/locations/items)")
+	craftImproveCmd.Flags().IntVar(&craftMaxRoundsFlag, "max-rounds", 1, "Maximum number of improvement rounds")
+	craftImproveCmd.Flags().StringVar(&craftPromptFlag, "prompt", "", "Additional prompt to guide improvement")
 
 	rootCmd.AddCommand(craftCmd)
 }
@@ -106,7 +149,7 @@ func runCraftGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Extract elements from outline
-	extractor := NewElementExtractor(outline)
+	extractor := NewElementExtractor(outline, setup)
 	elements := extractor.Extract()
 
 	log.Info("Extracted elements from outline: characters=%d, locations=%d, items=%d",
@@ -168,7 +211,8 @@ func runCraftGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Generate characters
-	if err := generateCharacters(agent, elementsToGenerate.Characters, generated, batchSize); err != nil {
+	startChars := getStartOfStoryCharacters(outline, craftStartChaptersFlg)
+	if err := generateCharacters(agent, elementsToGenerate.Characters, generated, batchSize, startChars); err != nil {
 		return fmt.Errorf("failed to generate characters: %w", err)
 	}
 
@@ -189,37 +233,55 @@ func runCraftGen(cmd *cobra.Command, args []string) error {
 // ElementExtractor extracts story elements from outline
 type ElementExtractor struct {
 	outline *models.Outline
+	setup   *models.StorySetup
 }
 
 // ExtractedElements holds all extracted elements
 type ExtractedElements struct {
-	Characters []string
-	Locations  []string
-	Items      []string
+	Characters     []string
+	Locations      []string
+	Items          []string
+	Organizations  []string
+	Races          []string
+	AbilitySystems []string
+	WorldLore      []string
 }
 
 // GeneratedElements tracks already generated elements
 type GeneratedElements struct {
-	Characters map[string]bool
-	Locations  map[string]bool
-	Items      map[string]bool
+	Characters     map[string]bool
+	Locations      map[string]bool
+	Items          map[string]bool
+	Organizations  map[string]bool
+	Races          map[string]bool
+	AbilitySystems map[string]bool
+	WorldLore      map[string]bool
 }
 
-func NewElementExtractor(outline *models.Outline) *ElementExtractor {
-	return &ElementExtractor{outline: outline}
+func NewElementExtractor(outline *models.Outline, setup *models.StorySetup) *ElementExtractor {
+	return &ElementExtractor{outline: outline, setup: setup}
 }
 
 func (e *ElementExtractor) Extract() *ExtractedElements {
 	result := &ExtractedElements{
-		Characters: make([]string, 0),
-		Locations:  make([]string, 0),
-		Items:      make([]string, 0),
+		Characters:     make([]string, 0),
+		Locations:      make([]string, 0),
+		Items:          make([]string, 0),
+		Organizations:  make([]string, 0),
+		Races:          make([]string, 0),
+		AbilitySystems: make([]string, 0),
+		WorldLore:      make([]string, 0),
 	}
 
 	charMap := make(map[string]bool)
 	locMap := make(map[string]bool)
 	itemMap := make(map[string]bool)
+	orgMap := make(map[string]bool)
+	raceMap := make(map[string]bool)
+	systemMap := make(map[string]bool)
+	loreMap := make(map[string]bool)
 
+	// Extract from outline chapters
 	for _, part := range e.outline.Parts {
 		for _, volume := range part.Volumes {
 			for _, chapter := range volume.Chapters {
@@ -249,6 +311,31 @@ func (e *ElementExtractor) Extract() *ExtractedElements {
 			}
 		}
 	}
+
+	// Extract from story setup premises (ability systems)
+	if e.setup != nil {
+		for _, premise := range e.setup.Premises {
+			if premise.Name != "" && !systemMap[premise.Name] {
+				systemMap[premise.Name] = true
+				result.AbilitySystems = append(result.AbilitySystems, premise.Name)
+			}
+		}
+
+		// Extract from storylines (potential organizations or lore)
+		for _, storyline := range e.setup.Storylines {
+			if storyline.Name != "" {
+				// Storylines could represent factions/organizations
+				if !orgMap[storyline.Name] && len(result.Organizations) < 10 {
+					orgMap[storyline.Name] = true
+					result.Organizations = append(result.Organizations, storyline.Name)
+				}
+			}
+		}
+	}
+
+	// Suppress unused variable warnings
+	_ = raceMap
+	_ = loreMap
 
 	return result
 }
@@ -447,9 +534,13 @@ func loadGeneratedElements() *GeneratedElements {
 
 func filterUnGenerated(elements *ExtractedElements, generated *GeneratedElements) *ExtractedElements {
 	result := &ExtractedElements{
-		Characters: make([]string, 0),
-		Locations:  make([]string, 0),
-		Items:      make([]string, 0),
+		Characters:     make([]string, 0),
+		Locations:      make([]string, 0),
+		Items:          make([]string, 0),
+		Organizations:  make([]string, 0),
+		Races:          make([]string, 0),
+		AbilitySystems: make([]string, 0),
+		WorldLore:      make([]string, 0),
 	}
 
 	for _, char := range elements.Characters {
@@ -470,10 +561,34 @@ func filterUnGenerated(elements *ExtractedElements, generated *GeneratedElements
 		}
 	}
 
+	for _, org := range elements.Organizations {
+		if !generated.Organizations[org] {
+			result.Organizations = append(result.Organizations, org)
+		}
+	}
+
+	for _, race := range elements.Races {
+		if !generated.Races[race] {
+			result.Races = append(result.Races, race)
+		}
+	}
+
+	for _, system := range elements.AbilitySystems {
+		if !generated.AbilitySystems[system] {
+			result.AbilitySystems = append(result.AbilitySystems, system)
+		}
+	}
+
+	for _, lore := range elements.WorldLore {
+		if !generated.WorldLore[lore] {
+			result.WorldLore = append(result.WorldLore, lore)
+		}
+	}
+
 	return result
 }
 
-func generateCharacters(agent *agents.CraftAgent, characters []string, generated *GeneratedElements, batchSize int) error {
+func generateCharacters(agent *agents.CraftAgent, characters []string, generated *GeneratedElements, batchSize int, startChars map[string]bool) error {
 	if len(characters) == 0 {
 		return nil
 	}
@@ -519,6 +634,9 @@ func generateCharacters(agent *agents.CraftAgent, characters []string, generated
 					log.Error("[Worker %d] Failed to generate characters batch: %v", workerID, err)
 					continue
 				}
+
+				// Harden: strip non-start-of-story relationships to prevent future relationship leakage
+				hardenCharacterRelationships(results, startChars)
 
 				// Save results
 				if err := saveCharacters(results); err != nil {
@@ -815,4 +933,41 @@ func loadOutline() (*models.Outline, error) {
 	}
 	path := filepath.Join(root, "story", "compose", "outline.json")
 	return models.LoadOutline(path)
+}
+
+func loadAllElements() (map[string]*models.Character, map[string]*models.Location, map[string]*models.Item, error) {
+	root, err := findProjectRoot()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	characters := make(map[string]*models.Character)
+	locations := make(map[string]*models.Location)
+	items := make(map[string]*models.Item)
+
+	// Load characters
+	charPath := filepath.Join(root, "story", "craft", "characters.json")
+	if data, err := os.ReadFile(charPath); err == nil {
+		if err := json.Unmarshal(data, &characters); err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to parse characters: %w", err)
+		}
+	}
+
+	// Load locations
+	locPath := filepath.Join(root, "story", "craft", "locations.json")
+	if data, err := os.ReadFile(locPath); err == nil {
+		if err := json.Unmarshal(data, &locations); err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to parse locations: %w", err)
+		}
+	}
+
+	// Load items
+	itemPath := filepath.Join(root, "story", "craft", "items.json")
+	if data, err := os.ReadFile(itemPath); err == nil {
+		if err := json.Unmarshal(data, &items); err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to parse items: %w", err)
+		}
+	}
+
+	return characters, locations, items, nil
 }

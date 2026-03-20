@@ -47,8 +47,16 @@ CONTINUITY REQUIREMENTS:
 5. Plant seeds for future developments based on upcoming chapter summaries
 6. Avoid contradictions with established facts or character traits
 
+SCENE-ANCHOR RULE (VERY IMPORTANT):
+- The opening scene of this chapter MUST directly continue from the final scene of the immediately previous chapter.
+- Keep the SAME location/time and the same in-scene situation (e.g., ongoing conversation), unless the Chapter Summary EXPLICITLY specifies a time skip or location change.
+- If a transition is required, you MUST show it on the page (how/why they moved, how much time passed), not teleport abruptly.
+- If a CANONICAL RECAP is provided and it contains the field "next_opening_hint", you MUST use it as the opening 1–3 sentences (you may lightly rewrite for style, but keep the same concrete moment, location/time, and ongoing action/dialogue).
+- If the review feedback contains a block titled "【硬性修复指令：补转场桥段】", you MUST treat it as a hard requirement and follow it exactly.
+
 CHAPTER STRUCTURE:
-- Opening: Establish the scene with sensory details, set the tone
+- Continuation Bridge (MANDATORY, first 200–400 words): Directly continue from the final moment of the immediately previous chapter (same location/time, same in-progress action/conversation). This bridge must explicitly connect to the previous chapter's last beat/last line.
+- Opening: Establish the scene with sensory details, set the tone (after the bridge)
 - Rising Action: Develop tension through character interactions and events
 - Climax: The key moment or turning point of the chapter
 - Resolution: Resolve immediate conflicts while setting up future ones
@@ -74,7 +82,14 @@ func buildFinalChapterUserPrompt(data map[string]interface{}) string {
 
 	sb.WriteString("\n")
 
-	// Context from surrounding chapters
+	// Canonical recap context (optional, higher signal)
+	// If present, treat as AUTHORITATIVE continuity state for scene-anchor.
+	if recap, ok := data["recap"].(string); ok && recap != "" {
+		sb.WriteString("=== CANONICAL RECAP (AUTHORITATIVE) ===\n")
+		sb.WriteString(recap)
+		sb.WriteString("\n=== END CANONICAL RECAP ===\n\n")
+	}
+	// Context from surrounding chapters (lower signal than recap)
 	if context, ok := data["context"].(string); ok && context != "" {
 		sb.WriteString(context)
 		sb.WriteString("\n")
@@ -155,7 +170,19 @@ CONTINUITY REQUIREMENTS:
 - Maintain consistency with established character voices and behaviors
 - Ensure plot progression flows logically from what came before
 - Plant seeds for future developments based on upcoming chapter summaries
-- Avoid contradictions with established facts or character traits`
+- Avoid contradictions with established facts or character traits
+
+SCENE-ANCHOR RULE (VERY IMPORTANT):
+- The opening scene of this chapter MUST directly continue from the final scene of the immediately previous chapter.
+- Keep the SAME location/time and the same in-scene situation (e.g., ongoing conversation), unless the Chapter Summary EXPLICITLY specifies a time skip or location change.
+- If a transition is required, you MUST show it on the page (how/why they moved, how much time passed), not teleport abruptly.
+- If a CANONICAL RECAP is provided and it contains the field "next_opening_hint", you MUST use it as the opening 1–3 sentences (you may lightly rewrite for style, but keep the same concrete moment, location/time, and ongoing action/dialogue).
+- If the review feedback contains a block titled "【硬性修复指令：补转场桥段】", you MUST treat it as a hard requirement and follow it exactly.
+
+CHAPTER STRUCTURE:
+- Continuation Bridge (MANDATORY, first 200–400 words): Directly continue from the final moment of the immediately previous chapter (same location/time, same in-progress action/conversation). This bridge must explicitly connect to the previous chapter's last beat/last line.
+
+Write in a professional, polished style suitable for publication.`
 }
 
 // buildImproveChapterUserPrompt builds the user prompt for improved chapter generation
@@ -175,7 +202,14 @@ func buildImproveChapterUserPrompt(data map[string]interface{}) string {
 
 	sb.WriteString("\n")
 
-	// Context from surrounding chapters
+	// Canonical recap context (optional, higher signal)
+	// If present, treat as AUTHORITATIVE continuity state for scene-anchor.
+	if recap, ok := data["recap"].(string); ok && recap != "" {
+		sb.WriteString("=== CANONICAL RECAP (AUTHORITATIVE) ===\n")
+		sb.WriteString(recap)
+		sb.WriteString("\n=== END CANONICAL RECAP ===\n\n")
+	}
+	// Context from surrounding chapters (lower signal than recap)
 	if context, ok := data["context"].(string); ok && context != "" {
 		sb.WriteString(context)
 		sb.WriteString("\n")

@@ -11,21 +11,26 @@ import (
 	"nolvegen/internal/llm"
 	"nolvegen/internal/logger"
 	"nolvegen/internal/logic"
+	"nolvegen/internal/logic/continuity/recap"
 	"nolvegen/internal/models"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	writeChapterFlag     string
-	writeVolumeFlag      string
-	writePartFlag        string
-	writeWordsFlag       int
-	writeAllFlag         bool
-	writeContextFlag     int
-	writeConcurrencyFlag int
-	writeMaxRoundsFlag   int
-	writeMinScoreFlag    int
+	writeChapterFlag               string
+	writeVolumeFlag                string
+	writePartFlag                  string
+	writeWordsFlag                 int
+	writeAllFlag                   bool
+	writeContextFlag               int
+	writeConcurrencyFlag           int
+	writeMaxRoundsFlag             int
+	writeMinScoreFlag              int
+	writeBridgeRetriesFlag         int
+	writeTeleportFixFlag           bool
+	writeCharacterPatchRetriesFlag int
+	writeCharacterFixFlag          bool
 )
 
 var writeCmd = &cobra.Command{
@@ -112,6 +117,10 @@ func init() {
 	writeImproveCmd.Flags().IntVar(&writeMaxRoundsFlag, "max-rounds", 1, "Maximum improvement rounds")
 	writeImproveCmd.Flags().IntVar(&writeMinScoreFlag, "min-score", 7, "Minimum acceptable score (1-10)")
 	writeImproveCmd.Flags().IntVar(&writeConcurrencyFlag, "concurrency", 1, "Number of concurrent improvements")
+	writeImproveCmd.Flags().IntVar(&writeBridgeRetriesFlag, "bridge-retries", 1, "Max retries for teleport transition bridge patch")
+	writeImproveCmd.Flags().BoolVar(&writeTeleportFixFlag, "enable-teleport-auto-fix", true, "Enable automatic teleport transition fixes")
+	writeImproveCmd.Flags().IntVar(&writeCharacterPatchRetriesFlag, "character-patch-retries", 1, "Max retries for character presence patch")
+	writeImproveCmd.Flags().BoolVar(&writeCharacterFixFlag, "enable-character-presence-auto-fix", true, "Enable automatic character presence fixes")
 
 	rootCmd.AddCommand(writeCmd)
 }
@@ -160,6 +169,9 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 
 	// Create state matrix manager
 	stateManager := logic.NewStateMatrixManager(root)
+	// Create recap agent + store (auto-persist recaps for continuity)
+	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM, config.Language)
+	recapStore := recap.NewStore(root)
 
 	// Get list of chapters to generate
 	chapters, err := getChaptersToGenerate(outline, writeChapterFlag, writeVolumeFlag, writePartFlag, writeAllFlag)
@@ -209,6 +221,37 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 					continue
 				}
 
+				// Auto-extract + persist recap for this final chapter (best-effort)
+				if recapData, err := recapAgent.Extract(chapter.ID, chapter.Title, content); err == nil {
+					if ok, reasons := recap.ValidateMinimal(recapData); !ok {
+						log.Warn("[Worker %d] Recap minimal validation failed for %s: %v", workerID, chapter.ID, reasons)
+
+						// One retry with explicit feedback to force required fields.
+						fb := recapGateFeedback(reasons, recapData)
+						if recap2, err2 := recapAgent.ExtractWithFeedback(chapter.ID, chapter.Title, content, fb); err2 == nil {
+							if okR, reasonsR := recap.ValidateMinimal(recap2); okR {
+								recapData = recap2
+							} else {
+								log.Warn("[Worker %d] Recap retry still failed minimal validation for %s: %v", workerID, chapter.ID, reasonsR)
+								goto recap_done
+							}
+						} else {
+							log.Warn("[Worker %d] Recap retry extract failed for %s: %v", workerID, chapter.ID, err2)
+							goto recap_done
+						}
+					}
+
+					if ok2, reasons2 := recap.ValidateConsistency(recapData); !ok2 {
+						log.Warn("[Worker %d] Recap consistency validation warning for %s: %v", workerID, chapter.ID, reasons2)
+					}
+					if err := recapStore.Save(recapData); err != nil {
+						log.Warn("[Worker %d] Failed to save recap for %s: %v", workerID, chapter.ID, err)
+					}
+				} else {
+					log.Warn("[Worker %d] Failed to extract recap for %s: %v", workerID, chapter.ID, err)
+				}
+			recap_done:
+
 				log.Info("[Worker %d] Content saved for chapter %s: %d words", workerID, chapter.ID, len(strings.Fields(content)))
 			}
 		}(i)
@@ -256,6 +299,14 @@ func loadChapterContext(outline *models.Outline, targetChapter *models.Chapter, 
 		if idx >= 0 {
 			draft := loadDraftContent(allChapters[idx].ID)
 			if draft != "" {
+				// Ensure there's at least an offline recap persisted for the previous
+				// chapter so later steps (e.g., transition checks / future drafts) can
+				// use it even when generation is out-of-order.
+				if i == 1 {
+					persistOfflineRecapIfMissing(allChapters[idx], draft)
+				}
+
+				// Note: Recap extraction is handled separately via recap command
 				context.Previous = append([]*agents.ContextChapter{{
 					Chapter: allChapters[idx],
 					Content: draft,
@@ -489,6 +540,30 @@ func improveChaptersWithWriteAgent(agent *agents.WriteAgent, chapters []*models.
 					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
 					continue
 				}
+
+				// Apply enabled minimal-change fixers (teleport bridge, character presence)
+				knownChars := collectKnownCharactersFromOutline(outline)
+				fixed, sum := applyImproveFixesWrite(
+					log,
+					workerID,
+					chapter,
+					outline,
+					loadFinalChapterContent(chapter),
+					suggestions,
+					writeTeleportFixFlag,
+					writeBridgeRetriesFlag,
+					func(s string) (string, error) {
+						return agent.GenerateChapterWithSuggestions(chapter, context, stateMatrix, writeWordsFlag, s)
+					},
+					writeCharacterFixFlag,
+					writeCharacterPatchRetriesFlag,
+					knownChars,
+					func(s string) (string, error) {
+						return agent.GenerateChapterWithSuggestions(chapter, context, stateMatrix, writeWordsFlag, s)
+					},
+				)
+				content = fixed
+				log.Info("[Worker %d] Fix summary for %s: %s", workerID, chapter.ID, sum.String())
 
 				// Save improved content
 				if err := saveFinalChapter(chapter, content); err != nil {

@@ -13,20 +13,26 @@ import (
 	"nolvegen/internal/llm"
 	"nolvegen/internal/logger"
 	"nolvegen/internal/logic"
+	"nolvegen/internal/logic/continuity/recap"
 	"nolvegen/internal/models"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	draftChapterFlag     string
-	draftVolumeFlag      string
-	draftPartFlag        string
-	draftWordsFlag       int
-	draftAllFlag         bool
-	draftConcurrencyFlag int
-	draftMaxRoundsFlag   int
-	draftMinScoreFlag    int
+	draftChapterFlag               string
+	draftVolumeFlag                string
+	draftPartFlag                  string
+	draftWordsFlag                 int
+	draftAllFlag                   bool
+	draftConcurrencyFlag           int
+	draftContextFlag               int
+	draftMaxRoundsFlag             int
+	draftMinScoreFlag              int
+	draftBridgeRetriesFlag         int
+	draftTeleportFixFlag           bool
+	draftCharacterPatchRetriesFlag int
+	draftCharacterFixFlag          bool
 )
 
 var draftCmd = &cobra.Command{
@@ -118,6 +124,7 @@ func init() {
 	draftGenCmd.Flags().StringVar(&draftPartFlag, "part", "", "Part number for context (e.g., '1', 'P1')")
 	draftGenCmd.Flags().IntVar(&draftWordsFlag, "words", 500, "Target word count for the draft")
 	draftGenCmd.Flags().BoolVar(&draftAllFlag, "all", false, "Generate drafts for all chapters")
+	draftGenCmd.Flags().IntVar(&draftContextFlag, "context", 1, "Number of previous chapters to include as continuity context")
 	draftGenCmd.Flags().IntVar(&draftConcurrencyFlag, "concurrency", 1, "Number of concurrent chapter generations")
 
 	draftReviewCmd.Flags().StringVar(&draftChapterFlag, "chapter", "", "Chapter to review (e.g., '1' or 'P1-V1-C1')")
@@ -131,6 +138,10 @@ func init() {
 	draftImproveCmd.Flags().IntVar(&draftMaxRoundsFlag, "max-rounds", 1, "Maximum improvement rounds")
 	draftImproveCmd.Flags().IntVar(&draftMinScoreFlag, "min-score", 7, "Minimum acceptable score (1-10)")
 	draftImproveCmd.Flags().IntVar(&draftConcurrencyFlag, "concurrency", 1, "Number of concurrent improvements")
+	draftImproveCmd.Flags().IntVar(&draftBridgeRetriesFlag, "bridge-retries", 1, "Max retries for teleport transition bridge patch")
+	draftImproveCmd.Flags().BoolVar(&draftTeleportFixFlag, "enable-teleport-auto-fix", true, "Enable automatic teleport transition fixes")
+	draftImproveCmd.Flags().IntVar(&draftCharacterPatchRetriesFlag, "character-patch-retries", 1, "Max retries for character presence patch")
+	draftImproveCmd.Flags().BoolVar(&draftCharacterFixFlag, "enable-character-presence-auto-fix", true, "Enable automatic character presence fixes")
 
 	rootCmd.AddCommand(draftCmd)
 }
@@ -179,6 +190,9 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 
 	// Create state matrix manager
 	stateManager := logic.NewStateMatrixManager(root)
+	// Create recap agent + store (auto-persist recaps for continuity)
+	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM, config.Language)
+	recapStore := recap.NewStore(root)
 
 	// Get list of chapters to generate
 	chapters, err := getChaptersToGenerate(outline, draftChapterFlag, draftVolumeFlag, draftPartFlag, draftAllFlag)
@@ -212,18 +226,60 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 				// Calculate story state matrix
 				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
 
+				// Load continuity context from previous draft chapters
+				contextText := loadPreviousDraftContext(outline, chapter, draftContextFlag)
+				// Extract a compact recap from the immediately previous chapter (if available)
+				prevRecap := loadPreviousDraftRecap(outline, chapter)
+
 				// Generate draft
-				draft, err := agent.GenerateDraft(chapter, stateMatrix, draftWordsFlag)
+				draft, err := agent.GenerateDraftWithContext(chapter, stateMatrix, draftWordsFlag, contextText, prevRecap)
 				if err != nil {
 					log.Error("Failed to generate draft for chapter %s: %v", chapter.ID, err)
 					continue
 				}
+
+				// Persist a best-effort recap for this chapter so the NEXT chapter can
+				// reuse a stable, compact continuity anchor without additional LLM calls.
+				persistOfflineRecap(chapter, draft)
 
 				// Save draft
 				if err := saveDraft(chapter, draft); err != nil {
 					log.Error("Failed to save draft for chapter %s: %v", chapter.ID, err)
 					continue
 				}
+
+				// Auto-extract + persist recap for this chapter (best-effort)
+				if recapData, err := recapAgent.Extract(chapter.ID, chapter.Title, draft); err == nil {
+					if ok, reasons := recap.ValidateMinimal(recapData); !ok {
+						log.Warn("[Worker %d] Recap minimal validation failed for %s: %v", workerID, chapter.ID, reasons)
+
+						// One retry with explicit feedback to force required fields.
+						fb := recapGateFeedback(reasons, recapData)
+						if recap2, err2 := recapAgent.ExtractWithFeedback(chapter.ID, chapter.Title, draft, fb); err2 == nil {
+							if okR, reasonsR := recap.ValidateMinimal(recap2); okR {
+								recapData = recap2
+							} else {
+								log.Warn("[Worker %d] Recap retry still failed minimal validation for %s: %v", workerID, chapter.ID, reasonsR)
+								// Fallback: keep offline recap we already persisted; do not overwrite store with low-quality recap.
+								goto recap_done
+							}
+						} else {
+							log.Warn("[Worker %d] Recap retry extract failed for %s: %v", workerID, chapter.ID, err2)
+							goto recap_done
+						}
+					}
+
+					if ok2, reasons2 := recap.ValidateConsistency(recapData); !ok2 {
+						log.Warn("[Worker %d] Recap consistency validation warning for %s: %v", workerID, chapter.ID, reasons2)
+						// Still save, but note: minimal fields are present; hint may be weak.
+					}
+					if err := recapStore.Save(recapData); err != nil {
+						log.Warn("[Worker %d] Failed to save recap for %s: %v", workerID, chapter.ID, err)
+					}
+				} else {
+					log.Warn("[Worker %d] Failed to extract recap for %s: %v", workerID, chapter.ID, err)
+				}
+			recap_done:
 
 				log.Info("[Worker %d] Draft saved for chapter %s: %d words", workerID, chapter.ID, len(strings.Fields(draft)))
 			}
@@ -400,6 +456,9 @@ func runDraftReview(cmd *cobra.Command, args []string) error {
 			log.Error("Failed to review volume %s: %v", volume.ID, err)
 			continue
 		}
+
+		// Apply deterministic heuristic checks (best-effort) to catch obvious issues
+		applyHeuristicTransitionChecks(volume, volumeDrafts, review)
 
 		// Save review
 		if err := saveVolumeReview(review); err != nil {
@@ -694,11 +753,34 @@ func improveChaptersWithAgent(agent *agents.DraftAgent, chapters []*models.Chapt
 
 				// Generate improved draft with suggestions
 				draft, err := agent.GenerateDraftWithSuggestions(chapter, stateMatrix, 500, suggestions)
-
 				if err != nil {
 					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
 					continue
 				}
+
+				// Apply enabled minimal-change fixers (teleport bridge, character presence)
+				knownChars := collectKnownCharactersFromOutline(outline)
+				fixed, sum := applyImproveFixesDraft(
+					log,
+					workerID,
+					chapter,
+					outline,
+					loadDraftContent(chapter.ID),
+					suggestions,
+					draftTeleportFixFlag,
+					draftBridgeRetriesFlag,
+					func(s string) (string, error) {
+						return agent.GenerateDraftWithSuggestions(chapter, stateMatrix, 500, s)
+					},
+					draftCharacterFixFlag,
+					draftCharacterPatchRetriesFlag,
+					knownChars,
+					func(s string) (string, error) {
+						return agent.GenerateDraftWithSuggestions(chapter, stateMatrix, 500, s)
+					},
+				)
+				draft = fixed
+				log.Info("[Worker %d] Fix summary for %s: %s", workerID, chapter.ID, sum.String())
 
 				// Save improved draft
 				if err := saveDraft(chapter, draft); err != nil {
@@ -732,6 +814,22 @@ func buildImprovementSuggestions(review *agents.DraftReview) string {
 	var sb strings.Builder
 
 	sb.WriteString("## 改进建议\n\n")
+
+	if len(review.SceneContinuity.Suggestions) > 0 {
+		sb.WriteString("### 场景/转场连续性\n")
+		for _, s := range review.SceneContinuity.Suggestions {
+			sb.WriteString("- " + s + "\n")
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(review.CharacterPresence.Suggestions) > 0 {
+		sb.WriteString("### 角色出场一致性\n")
+		for _, s := range review.CharacterPresence.Suggestions {
+			sb.WriteString("- " + s + "\n")
+		}
+		sb.WriteString("\n")
+	}
 
 	if len(review.PlotCoherence.Suggestions) > 0 {
 		sb.WriteString("### 剧情连贯性\n")
