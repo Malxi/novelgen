@@ -143,7 +143,10 @@ func init() {
 	draftImproveCmd.Flags().IntVar(&draftCharacterPatchRetriesFlag, "character-patch-retries", 1, "Max retries for character presence patch")
 	draftImproveCmd.Flags().BoolVar(&draftCharacterFixFlag, "enable-character-presence-auto-fix", true, "Enable automatic character presence fixes")
 
-	rootCmd.AddCommand(draftCmd)
+	// Register draft command using the new plugin mechanism
+	RegisterCommand(func() *cobra.Command {
+		return draftCmd
+	})
 }
 
 func runDraftGen(cmd *cobra.Command, args []string) error {

@@ -124,7 +124,10 @@ func init() {
 	craftImproveCmd.Flags().IntVar(&craftMaxRoundsFlag, "max-rounds", 1, "Maximum number of improvement rounds")
 	craftImproveCmd.Flags().StringVar(&craftPromptFlag, "prompt", "", "Additional prompt to guide improvement")
 
-	rootCmd.AddCommand(craftCmd)
+	// Register craft command using the new plugin mechanism
+	RegisterCommand(func() *cobra.Command {
+		return craftCmd
+	})
 }
 
 func runCraftGen(cmd *cobra.Command, args []string) error {

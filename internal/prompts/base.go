@@ -72,6 +72,7 @@ func NewPromptManager() *PromptManager {
 		templates: make(map[Skill]map[string]*PromptTemplate),
 	}
 	pm.registerDefaultPrompts()
+	pm.registerAllPrompts() // Register additional prompts from plugin files
 	return pm
 }
 
@@ -203,6 +204,8 @@ func (pm *PromptManager) buildUserPrompt(template *PromptTemplate, data map[stri
 		return buildChapterWritingUserPrompt(data)
 	case SkillChapterRecap:
 		return buildRecapUserPrompt(data)
+	case SkillTranslation:
+		return buildTranslateUserPrompt(data)
 	default:
 		return "Please generate the requested content."
 	}

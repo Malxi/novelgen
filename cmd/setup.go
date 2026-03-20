@@ -99,10 +99,14 @@ Examples:
 }
 
 func init() {
-	setupCmd.AddCommand(setupGenCmd)
-	setupCmd.AddCommand(setupRegenCmd)
-	setupCmd.AddCommand(setupImproveCmd)
-	setupCmd.AddCommand(setupImportCmd)
+	// Register setup command using the new plugin mechanism
+	RegisterCommand(func() *cobra.Command {
+		setupCmd.AddCommand(setupGenCmd)
+		setupCmd.AddCommand(setupRegenCmd)
+		setupCmd.AddCommand(setupImproveCmd)
+		setupCmd.AddCommand(setupImportCmd)
+		return setupCmd
+	})
 
 	// Regen flags
 	setupRegenCmd.Flags().StringVar(&setupRegenPrompt, "prompt", "", "Guidance for regeneration")

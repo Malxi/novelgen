@@ -98,7 +98,10 @@ func init() {
 	composeRegenCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Suggestions for regeneration")
 	composeImproveCmd.Flags().IntVar(&composeMaxRoundsFlag, "max-rounds", 1, "Maximum number of improvement rounds")
 
-	rootCmd.AddCommand(composeCmd)
+	// Register compose command using the new plugin mechanism
+	RegisterCommand(func() *cobra.Command {
+		return composeCmd
+	})
 }
 
 func runComposeGen(cmd *cobra.Command, args []string) error {

@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"sort"
 
+	"nolvegen/internal/llm"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
-	"nolvegen/internal/llm"
 )
 
 var configCmd = &cobra.Command{
@@ -258,5 +259,8 @@ func maskAPIKey(key string) string {
 func init() {
 	configCmd.AddCommand(configShowCmd)
 	configCmd.AddCommand(configSetCmd)
-	rootCmd.AddCommand(configCmd)
+	// Register config command using the new plugin mechanism
+	RegisterCommand(func() *cobra.Command {
+		return configCmd
+	})
 }

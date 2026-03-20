@@ -38,6 +38,11 @@ func init() {
 	initCmd.Flags().StringVar(&initModeFlag, "mode", "", "LLM model to use (e.g., 'gpt-5.2')")
 	initCmd.Flags().StringVar(&initProviderFlag, "provider", "ollama", "LLM provider (ollama, openai, etc.)")
 	initCmd.Flags().StringVar(&initLanguageFlag, "language", "zh", "Story language (zh, en, ja, etc.)")
+
+	// Register init command using the new plugin mechanism
+	RegisterCommand(func() *cobra.Command {
+		return initCmd
+	})
 }
 
 func runInit(cmd *cobra.Command, args []string) error {

@@ -122,7 +122,10 @@ func init() {
 	writeImproveCmd.Flags().IntVar(&writeCharacterPatchRetriesFlag, "character-patch-retries", 1, "Max retries for character presence patch")
 	writeImproveCmd.Flags().BoolVar(&writeCharacterFixFlag, "enable-character-presence-auto-fix", true, "Enable automatic character presence fixes")
 
-	rootCmd.AddCommand(writeCmd)
+	// Register write command using the new plugin mechanism
+	RegisterCommand(func() *cobra.Command {
+		return writeCmd
+	})
 }
 
 func runWriteGen(cmd *cobra.Command, args []string) error {

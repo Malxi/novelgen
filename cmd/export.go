@@ -59,7 +59,10 @@ func init() {
 	exportNovelCmd.Flags().StringVar(&exportFormatFlag, "format", "md", "Export format (md, txt)")
 	exportNovelCmd.Flags().StringVar(&exportOutputFlag, "output", "", "Output file path (default: <project_name>.<format>)")
 
-	rootCmd.AddCommand(exportCmd)
+	// Register export command using the new plugin mechanism
+	RegisterCommand(func() *cobra.Command {
+		return exportCmd
+	})
 }
 
 func runExportNovel(cmd *cobra.Command, args []string) error {

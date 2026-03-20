@@ -29,7 +29,5 @@ func Execute() {
 	}
 }
 
-func init() {
-	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(setupCmd)
-}
+// init is called after all other init() functions in the cmd package
+// Commands register themselves via RegisterCommand() in their init() functions

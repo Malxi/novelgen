@@ -55,7 +55,10 @@ func init() {
 	recapGenCmd.Flags().StringVar(&recapSourceFlag, "source", "drafts", "Source text: drafts|chapters")
 	recapGenCmd.Flags().IntVar(&recapConcurrencyFlag, "concurrency", 1, "Number of concurrent recap generations")
 
-	rootCmd.AddCommand(recapCmd)
+	// Register recap command using the new plugin mechanism
+	RegisterCommand(func() *cobra.Command {
+		return recapCmd
+	})
 }
 
 func runRecapGen(cmd *cobra.Command, args []string) error {
