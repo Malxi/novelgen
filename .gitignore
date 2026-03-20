@@ -1,0 +1,6 @@
+logs/
+run/
+mine/
+test/
+*.exe
+*.zip
