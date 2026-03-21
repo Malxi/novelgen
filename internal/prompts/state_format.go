@@ -49,8 +49,16 @@ func FormatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) strin
 	// Active storylines
 	if len(state.Storylines) > 0 {
 		sb.WriteString("Active Storylines:\n")
-		for storyline, status := range state.Storylines {
-			sb.WriteString(fmt.Sprintf("- %s: %s\n", storyline, status))
+		for id, sl := range state.Storylines {
+			sb.WriteString(fmt.Sprintf("- %s", sl.Name))
+			if sl.Description != "" {
+				sb.WriteString(fmt.Sprintf(" (%s)", sl.Description))
+			}
+			sb.WriteString(fmt.Sprintf(": %s\n", sl.Status))
+			// Also show the ID for reference
+			if id != sl.Name {
+				sb.WriteString(fmt.Sprintf("  [ID: %s]\n", id))
+			}
 		}
 		sb.WriteString("\n")
 	}

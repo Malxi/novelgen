@@ -2,7 +2,10 @@ package agents
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
@@ -76,6 +79,11 @@ func (a *WriteAgent) GenerateChapter(chapter *models.Chapter, context *ChapterCo
 		return "", fmt.Errorf("failed to build prompt: %w", err)
 	}
 
+	// Log context to file for debugging
+	if err := a.logWriteContext(chapter.ID, "final", systemPrompt, userPrompt); err != nil {
+		a.log.Warn("Failed to log write context: %v", err)
+	}
+
 	// Call LLM
 	messages := []llm.Message{
 		{Role: "system", Content: systemPrompt},
@@ -90,6 +98,33 @@ func (a *WriteAgent) GenerateChapter(chapter *models.Chapter, context *ChapterCo
 	}
 
 	return response.Content, nil
+}
+
+// logWriteContext logs the write context to a markdown file for debugging
+func (a *WriteAgent) logWriteContext(chapterID, variant, systemPrompt, userPrompt string) error {
+	debugDir := filepath.Join("logs", "write_contexts")
+	if err := os.MkdirAll(debugDir, 0755); err != nil {
+		return fmt.Errorf("failed to create debug directory: %w", err)
+	}
+
+	timestamp := time.Now().Format("20060102_150405")
+	filename := filepath.Join(debugDir, fmt.Sprintf("%s_%s_%s.md", chapterID, variant, timestamp))
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("# Write Context: %s (%s)\n\n", chapterID, variant))
+	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().Format("2006-01-02 15:04:05")))
+
+	sb.WriteString("## System Prompt\n\n")
+	sb.WriteString("```\n")
+	sb.WriteString(systemPrompt)
+	sb.WriteString("\n```\n\n")
+
+	sb.WriteString("## User Prompt\n\n")
+	sb.WriteString("```\n")
+	sb.WriteString(userPrompt)
+	sb.WriteString("\n```\n")
+
+	return os.WriteFile(filename, []byte(sb.String()), 0644)
 }
 
 // GenerateChapterWithSuggestions generates improved chapter content with review suggestions
@@ -117,6 +152,11 @@ func (a *WriteAgent) GenerateChapterWithSuggestions(chapter *models.Chapter, con
 	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillChapterWriting, "improve", data)
 	if err != nil {
 		return "", fmt.Errorf("failed to build prompt: %w", err)
+	}
+
+	// Log context to file for debugging
+	if err := a.logWriteContext(chapter.ID, "improve", systemPrompt, userPrompt); err != nil {
+		a.log.Warn("Failed to log write context: %v", err)
 	}
 
 	// Call LLM

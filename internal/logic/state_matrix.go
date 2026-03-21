@@ -11,11 +11,36 @@ import (
 // StateMatrixManager handles StateMatrix calculations and operations
 type StateMatrixManager struct {
 	projectRoot string
+	setup       *models.StorySetup // cached setup for storyline descriptions
 }
 
 // NewStateMatrixManager creates a new StateMatrixManager
 func NewStateMatrixManager(projectRoot string) *StateMatrixManager {
 	return &StateMatrixManager{projectRoot: projectRoot}
+}
+
+// loadSetup loads the story setup from file
+func (m *StateMatrixManager) loadSetup() *models.StorySetup {
+	if m.setup != nil {
+		return m.setup
+	}
+	if m.projectRoot == "" {
+		return nil
+	}
+
+	setupPath := filepath.Join(m.projectRoot, "story", "setup", "story_setup.json")
+	data, err := os.ReadFile(setupPath)
+	if err != nil {
+		return nil
+	}
+
+	var setup models.StorySetup
+	if err := json.Unmarshal(data, &setup); err != nil {
+		return nil
+	}
+
+	m.setup = &setup
+	return m.setup
 }
 
 // CalculateStateMatrix calculates the story state up to the target chapter
@@ -26,7 +51,7 @@ func (m *StateMatrixManager) CalculateStateMatrix(outline *models.Outline, targe
 		Items:         make(map[string]*models.Item),
 		Relationships: make(map[string]string),
 		Goals:         make(map[string][]string),
-		Storylines:    make(map[string]string),
+		Storylines:    make(map[string]*models.StorylineState),
 		Premises:      make(map[string]string),
 	}
 
@@ -39,6 +64,13 @@ func (m *StateMatrixManager) CalculateStateMatrix(outline *models.Outline, targe
 			for _, ch := range vol.Chapters {
 				// Stop when we reach target chapter
 				if ch.ID == targetChapter.ID {
+					// Process storyline events from target chapter to get descriptions
+					// but mark them as "starting" rather than "started"
+					for _, event := range ch.Events {
+						if event.Type == "storyline" && event.Subject != "" {
+							m.applyStorylineEventWithDescription(state, event)
+						}
+					}
 					return state
 				}
 
@@ -95,8 +127,52 @@ func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.
 	case "storyline":
 		// Storyline progression
 		if event.Subject != "" {
-			state.Storylines[event.Subject] = event.Change
+			// Find storyline description from setup
+			storylineName := event.Subject
+			storylineDesc := ""
+			if setup := m.loadSetup(); setup != nil {
+				for _, sl := range setup.Storylines {
+					if sl.Name == event.Subject {
+						storylineName = sl.Name
+						storylineDesc = sl.Description
+						break
+					}
+				}
+			}
+			state.Storylines[event.Subject] = &models.StorylineState{
+				Name:        storylineName,
+				Description: storylineDesc,
+				Status:      event.Change,
+			}
 		}
+	}
+}
+
+// applyStorylineEventWithDescription applies a storyline event to get its description
+// This is used for storyline events in the current chapter so AI knows what the storyline is about
+func (m *StateMatrixManager) applyStorylineEventWithDescription(state *models.StateMatrix, event models.Event) {
+	if event.Subject == "" {
+		return
+	}
+
+	// Find storyline description from setup
+	storylineName := event.Subject
+	storylineDesc := ""
+	if setup := m.loadSetup(); setup != nil {
+		for _, sl := range setup.Storylines {
+			if sl.Name == event.Subject {
+				storylineName = sl.Name
+				storylineDesc = sl.Description
+				break
+			}
+		}
+	}
+
+	// Add to state with "(starting this chapter)" marker
+	state.Storylines[event.Subject] = &models.StorylineState{
+		Name:        storylineName,
+		Description: storylineDesc,
+		Status:      event.Change + " (starting this chapter)",
 	}
 }
 
