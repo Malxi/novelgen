@@ -62,6 +62,12 @@ CHAPTER STRUCTURE:
 - Resolution: Resolve immediate conflicts while setting up future ones
 - Transition: Smoothly lead into the next chapter's events
 
+IMPORTANT RULES:
+1. DO NOT include a summary or synopsis at the beginning of the chapter
+2. DO NOT write "本章讲述了..." or similar meta descriptions
+3. Start directly with the story content (Continuation Bridge)
+4. The Chapter Summary provided is for your reference only, do not include it in the output
+
 Write in a professional, polished style suitable for publication.`
 }
 
@@ -181,6 +187,12 @@ SCENE-ANCHOR RULE (VERY IMPORTANT):
 
 CHAPTER STRUCTURE:
 - Continuation Bridge (MANDATORY, first 200–400 words): Directly continue from the final moment of the immediately previous chapter (same location/time, same in-progress action/conversation). This bridge must explicitly connect to the previous chapter's last beat/last line.
+
+IMPORTANT RULES:
+1. DO NOT include a summary or synopsis at the beginning of the chapter
+2. DO NOT write "本章讲述了..." or similar meta descriptions
+3. Start directly with the story content (Continuation Bridge)
+4. The Chapter Summary provided is for your reference only, do not include it in the output
 
 Write in a professional, polished style suitable for publication.`
 }

@@ -243,6 +243,37 @@ func extractLastNonEmptyLine(text string) string {
 	return ""
 }
 
+// loadNextChapters returns upcoming chapters for foreshadowing.
+// nextCount = number of upcoming chapters to include.
+func loadNextChapters(outline *models.Outline, targetChapter *models.Chapter, nextCount int) []*models.Chapter {
+	if nextCount <= 0 {
+		return nil
+	}
+
+	allChapters := getAllChapters(outline)
+	targetIndex := -1
+	for i, ch := range allChapters {
+		if ch.ID == targetChapter.ID {
+			targetIndex = i
+			break
+		}
+	}
+	if targetIndex < 0 || targetIndex >= len(allChapters)-1 {
+		return nil
+	}
+
+	end := targetIndex + 1 + nextCount
+	if end > len(allChapters) {
+		end = len(allChapters)
+	}
+
+	result := make([]*models.Chapter, 0, end-targetIndex-1)
+	for i := targetIndex + 1; i < end; i++ {
+		result = append(result, allChapters[i])
+	}
+	return result
+}
+
 // recapGateFeedback builds feedback for recap validation failures.
 func recapGateFeedback(reasons []string, r *models.ChapterRecap) string {
 	var sb strings.Builder

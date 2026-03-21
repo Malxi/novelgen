@@ -52,7 +52,13 @@ SCENE-ANCHOR RULE (VERY IMPORTANT):
 - If a transition is required, you MUST show it on the page (how/why they moved, how much time passed), not teleport abruptly.
 - If a CANONICAL RECAP is provided:
   - If it contains "last_line", the Continuation Bridge MUST explicitly pick up from that moment/line (you may lightly rewrite for style, but keep the same concrete beat).
-  - If it contains "next_opening_hint", you MUST use it as the opening 1–3 sentences (you may lightly rewrite for style, but keep the same concrete moment, location/time, and ongoing action/dialogue).`
+  - If it contains "next_opening_hint", you MUST use it as the opening 1–3 sentences (you may lightly rewrite for style, but keep the same concrete moment, location/time, and ongoing action/dialogue).
+
+IMPORTANT RULES:
+1. DO NOT include a summary or synopsis at the beginning of the chapter
+2. DO NOT write "本章讲述了..." or similar meta descriptions
+3. Start directly with the story content (Continuation Bridge)
+4. The Chapter Summary provided is for your reference only, do not include it in the output`
 }
 
 // buildChapterWritingUserPrompt builds the user prompt for chapter writing

@@ -233,9 +233,11 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 				contextText := loadPreviousDraftContext(outline, chapter, draftContextFlag)
 				// Extract a compact recap from the immediately previous chapter (if available)
 				prevRecap := loadPreviousDraftRecap(outline, chapter)
+				// Load next chapters for foreshadowing (default: 2 chapters ahead)
+				nextChapters := loadNextChapters(outline, chapter, 2)
 
 				// Generate draft
-				draft, err := agent.GenerateDraftWithContext(chapter, stateMatrix, draftWordsFlag, contextText, prevRecap)
+				draft, err := agent.GenerateDraftWithContext(chapter, stateMatrix, draftWordsFlag, contextText, prevRecap, nextChapters)
 				if err != nil {
 					log.Error("Failed to generate draft for chapter %s: %v", chapter.ID, err)
 					continue

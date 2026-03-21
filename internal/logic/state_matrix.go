@@ -25,6 +25,7 @@ func (m *StateMatrixManager) CalculateStateMatrix(outline *models.Outline, targe
 		Locations:     make(map[string]*models.Location),
 		Items:         make(map[string]*models.Item),
 		Relationships: make(map[string]string),
+		Goals:         make(map[string][]string),
 		Storylines:    make(map[string]string),
 		Premises:      make(map[string]string),
 	}
@@ -65,11 +66,9 @@ func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.
 		// Character goal update
 		if len(event.Characters) > 0 {
 			charName := event.Characters[0]
-			if char, exists := state.Characters[charName]; exists {
-				// Update character's goals based on event
-				if event.Change != "" {
-					char.Goals = append(char.Goals, event.Change)
-				}
+			// Update character's goals in state matrix
+			if event.Change != "" {
+				state.Goals[charName] = append(state.Goals[charName], event.Change)
 			}
 		}
 	case "item":

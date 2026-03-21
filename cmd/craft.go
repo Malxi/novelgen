@@ -214,8 +214,7 @@ func runCraftGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Generate characters
-	startChars := getStartOfStoryCharacters(outline, craftStartChaptersFlg)
-	if err := generateCharacters(agent, elementsToGenerate.Characters, generated, batchSize, startChars); err != nil {
+	if err := generateCharacters(agent, elementsToGenerate.Characters, generated, batchSize); err != nil {
 		return fmt.Errorf("failed to generate characters: %w", err)
 	}
 
@@ -591,7 +590,7 @@ func filterUnGenerated(elements *ExtractedElements, generated *GeneratedElements
 	return result
 }
 
-func generateCharacters(agent *agents.CraftAgent, characters []string, generated *GeneratedElements, batchSize int, startChars map[string]bool) error {
+func generateCharacters(agent *agents.CraftAgent, characters []string, generated *GeneratedElements, batchSize int) error {
 	if len(characters) == 0 {
 		return nil
 	}
@@ -637,9 +636,6 @@ func generateCharacters(agent *agents.CraftAgent, characters []string, generated
 					log.Error("[Worker %d] Failed to generate characters batch: %v", workerID, err)
 					continue
 				}
-
-				// Harden: strip non-start-of-story relationships to prevent future relationship leakage
-				hardenCharacterRelationships(results, startChars)
 
 				// Save results
 				if err := saveCharacters(results); err != nil {

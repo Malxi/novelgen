@@ -84,40 +84,6 @@ func getStartOfStoryCharacters(outline *models.Outline, firstNChapters int) map[
 	return set
 }
 
-// hardenCharacterRelationships strips relationships that reference characters not present at story start.
-// This prevents LLMs from pre-filling future relationships when crafting full-cast character sheets.
-func hardenCharacterRelationships(chars map[string]*models.Character, startChars map[string]bool) {
-	if len(chars) == 0 || len(startChars) == 0 {
-		return
-	}
-
-	for _, ch := range chars {
-		if ch == nil || len(ch.Relationships) == 0 {
-			continue
-		}
-		filtered := make(map[string]string)
-		for other, rel := range ch.Relationships {
-			otherName := strings.TrimSpace(other)
-			if otherName == "" {
-				continue
-			}
-			if startChars[otherName] {
-				filtered[otherName] = rel
-			}
-		}
-		// If this character itself is not a start-of-story character, we drop all its relationships
-		// to avoid implying pre-existing links for late entrants.
-		if !startChars[strings.TrimSpace(ch.Name)] {
-			filtered = map[string]string{}
-		}
-		if len(filtered) == 0 {
-			ch.Relationships = nil
-		} else {
-			ch.Relationships = filtered
-		}
-	}
-}
-
 // loadDraftContent loads draft content for a chapter from the drafts directory.
 func loadDraftContent(chapterID string) string {
 	root, err := findProjectRoot()

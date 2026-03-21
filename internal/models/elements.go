@@ -1,26 +1,23 @@
 package models
 
 // Character represents a detailed character profile
+// Note: Dynamic fields like relationships, goals, character_arc are managed by StateMatrix
 type Character struct {
-	Name          string            `json:"name"`
-	Aliases       []string          `json:"aliases,omitempty"`
-	Age           string            `json:"age,omitempty"`
-	Gender        string            `json:"gender,omitempty"`
-	Race          string            `json:"race,omitempty"`
-	Appearance    string            `json:"appearance"`
-	Personality   []string          `json:"personality"`
-	Background    string            `json:"background"`
-	Motivation    string            `json:"motivation"`
-	Goals         []string          `json:"goals"`
-	Fears         []string          `json:"fears,omitempty"`
-	Skills        []string          `json:"skills,omitempty"`
-	Abilities     []string          `json:"abilities,omitempty"`
-	Relationships map[string]string `json:"relationships,omitempty"`
-	Affiliations  []string          `json:"affiliations,omitempty"`
-	RoleInStory   string            `json:"role_in_story"`
-	CharacterArc  string            `json:"character_arc,omitempty"`
-	Voice         string            `json:"voice,omitempty"`
-	Notes         string            `json:"notes,omitempty"`
+	Name         string   `json:"name"`
+	Aliases      []string `json:"aliases,omitempty"`
+	Age          string   `json:"age,omitempty"`
+	Gender       string   `json:"gender,omitempty"`
+	Race         string   `json:"race,omitempty"`
+	Appearance   string   `json:"appearance"`
+	Personality  []string `json:"personality"`
+	Background   string   `json:"background"`
+	Motivation   string   `json:"motivation"`
+	Skills       []string `json:"skills,omitempty"`
+	Abilities    []string `json:"abilities,omitempty"`
+	Affiliations []string `json:"affiliations,omitempty"`
+	RoleInStory  string   `json:"role_in_story"`
+	Voice        string   `json:"voice,omitempty"`
+	Notes        string   `json:"notes,omitempty"`
 }
 
 // Location represents a detailed location description
@@ -50,20 +47,20 @@ type SensoryDetails struct {
 
 // Item represents a detailed item description
 type Item struct {
-	Name         string   `json:"name"`
-	Type         string   `json:"type"`
-	Description  string   `json:"description"`
-	Appearance   string   `json:"appearance"`
-	Function     string   `json:"function"`
-	Origin       string   `json:"origin,omitempty"`
-	History      string   `json:"history,omitempty"`
-	Powers       []string `json:"powers,omitempty"`
-	Limitations  []string `json:"limitations,omitempty"`
-	Owner        string   `json:"owner,omitempty"`
-	Significance string   `json:"significance"`
-	RelatedItems []string `json:"related_items,omitempty"`
+	Name         string     `json:"name"`
+	Type         string     `json:"type"`
+	Description  string     `json:"description"`
+	Appearance   string     `json:"appearance"`
+	Function     string     `json:"function"`
+	Origin       string     `json:"origin,omitempty"`
+	History      string     `json:"history,omitempty"`
+	Powers       []string   `json:"powers,omitempty"`
+	Limitations  []string   `json:"limitations,omitempty"`
+	Owner        string     `json:"owner,omitempty"`
+	Significance string     `json:"significance"`
+	RelatedItems []string   `json:"related_items,omitempty"`
 	Secrets      StringList `json:"secrets,omitempty"`
-	Notes        string   `json:"notes,omitempty"`
+	Notes        string     `json:"notes,omitempty"`
 }
 
 // Organization represents a faction, guild, or organization in the story
