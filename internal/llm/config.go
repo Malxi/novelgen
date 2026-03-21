@@ -81,27 +81,31 @@ func LoadConfig(path string) (*Config, error) {
 }
 
 // GetConfigPath returns the path to the config file
+// Priority: global config > local config
 func GetConfigPath() string {
-	// First check for local config
+	// First check for global config in user's home directory
+	homeDir, err := os.UserHomeDir()
+	if err == nil {
+		globalConfigPath := filepath.Join(homeDir, ".novelgen", "llm_config.json")
+		if _, err := os.Stat(globalConfigPath); err == nil {
+			return globalConfigPath
+		}
+	}
+
+	// Then check for local config
 	if _, err := os.Stat("llm_config.json"); err == nil {
 		return "llm_config.json"
 	}
 
-	// Then check for global config in user's home directory
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "llm_config.json"
+	// Return global path as default (for error messages)
+	if homeDir != "" {
+		return filepath.Join(homeDir, ".novelgen", "llm_config.json")
 	}
-
-	globalConfigPath := filepath.Join(homeDir, ".novelgen", "llm_config.json")
-	if _, err := os.Stat(globalConfigPath); err == nil {
-		return globalConfigPath
-	}
-
 	return "llm_config.json"
 }
 
-// LoadOrCreateConfig loads the config or creates a default one
+// LoadOrCreateConfig loads the config or returns an error if not found
+// It will NOT automatically create a config file - user must configure it manually
 func LoadOrCreateConfig() (*Config, error) {
 	path := GetConfigPath()
 
@@ -109,23 +113,35 @@ func LoadOrCreateConfig() (*Config, error) {
 		return LoadConfig(path)
 	}
 
-	// Create default config
-	config := DefaultConfig()
+	// Config not found - provide helpful error message
+	homeDir, _ := os.UserHomeDir()
+	globalConfigPath := filepath.Join(homeDir, ".novelgen", "llm_config.json")
 
-	// Ensure directory exists
-	dir := filepath.Dir(path)
-	if dir != "." {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return config, err
-		}
-	}
-
-	// Save default config
-	if err := config.Save(path); err != nil {
-		return config, err
-	}
-
-	return config, nil
+	return nil, fmt.Errorf("LLM configuration not found.\n\n"+
+		"Please create a configuration file at one of these locations:\n"+
+		"  1. Global: %%s\n"+
+		"  2. Local:  llm_config.json (in current directory)\n\n"+
+		"Example configuration:\n"+
+		"{\n"+
+		"  \"providers\": {\n"+
+		"    \"ollama\": {\n"+
+		"      \"name\": \"ollama\",\n"+
+		"      \"api_key\": \"local-llama\",\n"+
+		"      \"base_url\": \"http://127.0.0.1:11434/v1\",\n"+
+		"      \"timeout\": 120,\n"+
+		"      \"models\": {\n"+
+		"        \"qwen3.5:4b\": {\n"+
+		"          \"name\": \"qwen3.5:4b\",\n"+
+		"          \"context\": 32000,\n"+
+		"          \"max_tokens\": 8000,\n"+
+		"          \"temp\": 0.8\n"+
+		"        }\n"+
+		"      }\n"+
+		"    }\n"+
+		"  },\n"+
+		"  \"default_provider\": \"ollama\",\n"+
+		"  \"default_model\": \"qwen3.5:4b\"\n"+
+		"}", globalConfigPath)
 }
 
 // GetActiveProvider returns the active provider config based on project settings
