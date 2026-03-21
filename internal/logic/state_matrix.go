@@ -68,7 +68,7 @@ func (m *StateMatrixManager) CalculateStateMatrix(outline *models.Outline, targe
 					// but mark them as "starting" rather than "started"
 					for _, event := range ch.Events {
 						if event.Type == "storyline" && event.Subject != "" {
-							m.applyStorylineEventWithDescription(state, event)
+							m.applyStorylineEventWithDescription(state, event, ch.ID)
 						}
 					}
 					return state
@@ -76,7 +76,7 @@ func (m *StateMatrixManager) CalculateStateMatrix(outline *models.Outline, targe
 
 				// Apply events from this chapter
 				for _, event := range ch.Events {
-					m.applyEvent(state, event)
+					m.applyEvent(state, event, ch.ID)
 				}
 			}
 		}
@@ -86,7 +86,7 @@ func (m *StateMatrixManager) CalculateStateMatrix(outline *models.Outline, targe
 }
 
 // applyEvent applies a single event to the state matrix
-func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.Event) {
+func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.Event, chapterID string) {
 	switch event.Type {
 	case "relationship":
 		// Format: relationship between char1 and char2 changes
@@ -153,7 +153,7 @@ func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.
 			state.Premises[key] = event.Change
 		}
 	case "storyline":
-		// Storyline progression
+		// Storyline progression - accumulate history
 		if event.Subject != "" {
 			// Find storyline description from setup
 			storylineName := event.Subject
@@ -167,19 +167,35 @@ func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.
 					}
 				}
 			}
-			state.Storylines[event.Subject] = &models.StorylineState{
-				Name:        storylineName,
-				Description: storylineDesc,
-				Status:      event.Change,
-				Progress:    event.Details, // 使用 Details 字段存储进度描述
+
+			// Get or create storyline state
+			slState, exists := state.Storylines[event.Subject]
+			if !exists {
+				slState = &models.StorylineState{
+					Name:            storylineName,
+					Description:     storylineDesc,
+					ProgressHistory: []models.StorylineProgress{},
+				}
+				state.Storylines[event.Subject] = slState
 			}
+
+			// Update current status and progress
+			slState.Status = event.Change
+			slState.Progress = event.Details
+
+			// Append to history
+			slState.ProgressHistory = append(slState.ProgressHistory, models.StorylineProgress{
+				ChapterID: chapterID,
+				Status:    event.Change,
+				Details:   event.Details,
+			})
 		}
 	}
 }
 
 // applyStorylineEventWithDescription applies a storyline event to get its description
 // This is used for storyline events in the current chapter so AI knows what the storyline is about
-func (m *StateMatrixManager) applyStorylineEventWithDescription(state *models.StateMatrix, event models.Event) {
+func (m *StateMatrixManager) applyStorylineEventWithDescription(state *models.StateMatrix, event models.Event, chapterID string) {
 	if event.Subject == "" {
 		return
 	}
@@ -197,13 +213,27 @@ func (m *StateMatrixManager) applyStorylineEventWithDescription(state *models.St
 		}
 	}
 
-	// Add to state with "(starting this chapter)" marker
-	state.Storylines[event.Subject] = &models.StorylineState{
-		Name:        storylineName,
-		Description: storylineDesc,
-		Status:      event.Change + " (starting this chapter)",
-		Progress:    event.Details,
+	// Get or create storyline state
+	slState, exists := state.Storylines[event.Subject]
+	if !exists {
+		slState = &models.StorylineState{
+			Name:            storylineName,
+			Description:     storylineDesc,
+			ProgressHistory: []models.StorylineProgress{},
+		}
+		state.Storylines[event.Subject] = slState
 	}
+
+	// Update with "(starting this chapter)" marker
+	slState.Status = event.Change + " (starting this chapter)"
+	slState.Progress = event.Details
+
+	// Append to history
+	slState.ProgressHistory = append(slState.ProgressHistory, models.StorylineProgress{
+		ChapterID: chapterID,
+		Status:    event.Change,
+		Details:   event.Details,
+	})
 }
 
 // loadElementsIntoState loads generated elements into state matrix

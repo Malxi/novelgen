@@ -1,11 +1,19 @@
 package models
 
+// StorylineProgress represents a single step in storyline progression
+type StorylineProgress struct {
+	ChapterID string `json:"chapter_id"` // Which chapter this progress happened
+	Status    string `json:"status"`     // Status at this step (started, progressed, etc.)
+	Details   string `json:"details"`    // Progress description
+}
+
 // StorylineState represents the current state of a storyline
 type StorylineState struct {
-	Name        string // Storyline name/title
-	Description string // Storyline description
-	Status      string // Current status (started, progressed, completed, etc.)
-	Progress    string // Current progress description (e.g., "主角刚发现线索", "追逐战即将开始")
+	Name            string              // Storyline name/title
+	Description     string              // Storyline description
+	Status          string              // Current status (started, progressed, completed, etc.)
+	Progress        string              // Current progress description
+	ProgressHistory []StorylineProgress // All progress steps (accumulated)
 }
 
 // StateMatrix represents the current state of the story at a specific point

@@ -80,11 +80,17 @@ func FormatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) strin
 				sb.WriteString(fmt.Sprintf(" (%s)", sl.Description))
 			}
 			sb.WriteString(fmt.Sprintf(": %s", sl.Status))
-			// Show progress if available
-			if sl.Progress != "" {
-				sb.WriteString(fmt.Sprintf(" - %s", sl.Progress))
-			}
 			sb.WriteString("\n")
+
+			// Show full progress history
+			if len(sl.ProgressHistory) > 0 {
+				sb.WriteString("  Progress History:\n")
+				for i, progress := range sl.ProgressHistory {
+					sb.WriteString(fmt.Sprintf("    Step %d [%s]: %s - %s\n",
+						i+1, progress.ChapterID, progress.Status, progress.Details))
+				}
+			}
+
 			// Also show the ID for reference
 			if id != sl.Name {
 				sb.WriteString(fmt.Sprintf("  [ID: %s]\n", id))

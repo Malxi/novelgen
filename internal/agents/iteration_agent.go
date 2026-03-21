@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"novelgen/internal/llm"
@@ -163,20 +162,27 @@ func (a *IterationAgent) ApplyImprovements(outline *models.Outline, review *Revi
 			continue // Skip medium/low priority for now
 		}
 
-		logger.Info("Applying suggestion for %s %s: %s", s.Type, s.ID, s.Suggestion)
+		suggestion := s
+		suggestion.Type = strings.ToLower(strings.TrimSpace(suggestion.Type))
+		suggestion.ID = normalizeSuggestionID(outline, suggestion)
+
+		logger.Info("Applying suggestion for %s %s: %s", suggestion.Type, suggestion.ID, suggestion.Suggestion)
 
 		var err error
-		switch s.Type {
+		switch suggestion.Type {
 		case "part":
-			err = a.regeneratePart(outline, s, setup, language)
+			err = a.regeneratePart(outline, suggestion, setup, language)
 		case "volume":
-			err = a.regenerateVolume(outline, s, setup, language)
+			err = a.regenerateVolume(outline, suggestion, setup, language)
 		case "chapter":
-			err = a.regenerateChapter(outline, s, setup, language)
+			err = a.regenerateChapter(outline, suggestion, setup, language)
+		default:
+			logger.Warn("Unknown suggestion type: %s", suggestion.Type)
+			continue
 		}
 
 		if err != nil {
-			logger.Error("Failed to apply suggestion for %s %s: %v", s.Type, s.ID, err)
+			logger.Error("Failed to apply suggestion for %s %s: %v", suggestion.Type, suggestion.ID, err)
 			continue
 		}
 		appliedCount++
@@ -265,6 +271,87 @@ func (a *IterationAgent) regenerateChapter(outline *models.Outline, suggestion p
 func buildReviewContext(suggestion prompts.ReviewSuggestion) string {
 	return fmt.Sprintf("Issue: %s\nSuggestion: %s\nPriority: %s",
 		suggestion.Issue, suggestion.Suggestion, suggestion.Priority)
+}
+
+func normalizeSuggestionID(outline *models.Outline, suggestion prompts.ReviewSuggestion) string {
+	id := strings.TrimSpace(suggestion.ID)
+	if id == "" || outline == nil {
+		return id
+	}
+
+	// Already new-style ID
+	upper := strings.ToUpper(id)
+	if strings.HasPrefix(upper, "P") {
+		switch suggestion.Type {
+		case "part":
+			if strings.Contains(upper, "-V") {
+				parts := strings.Split(upper, "-V")
+				return parts[0]
+			}
+			if strings.Contains(upper, "-C") {
+				parts := strings.Split(upper, "-C")
+				return parts[0]
+			}
+		case "volume":
+			if strings.Contains(upper, "-C") {
+				parts := strings.Split(upper, "-C")
+				return parts[0]
+			}
+		}
+		return upper
+	}
+
+	// Legacy format "1_1_1" or "1_1" or "1"
+	parts := strings.Split(id, "_")
+	idManager := logic.NewIDManager(outline)
+	getNum := func(idx int) string {
+		if idx < 0 || idx >= len(parts) {
+			return ""
+		}
+		return extractDigits(parts[idx])
+	}
+
+	switch suggestion.Type {
+	case "part":
+		if n := getNum(0); n != "" {
+			if resolved, err := idManager.ResolvePartID(n); err == nil {
+				return resolved
+			}
+		}
+	case "volume":
+		if len(parts) >= 2 {
+			partNum := getNum(0)
+			volNum := getNum(1)
+			if partNum != "" && volNum != "" {
+				if resolved, err := idManager.ResolveVolumeID(volNum, partNum); err == nil {
+					return resolved
+				}
+			}
+		}
+	case "chapter":
+		if len(parts) >= 3 {
+			partNum := getNum(0)
+			volNum := getNum(1)
+			chapNum := getNum(2)
+			if partNum != "" && volNum != "" && chapNum != "" {
+				if resolved, err := idManager.ResolveChapterID(chapNum, partNum, volNum); err == nil {
+					return resolved
+				}
+			}
+		}
+	}
+
+	return id
+}
+
+func extractDigits(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // ShouldContinueIteration determines if we should continue iterating
