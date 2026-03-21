@@ -279,6 +279,7 @@ func loadChapterContext(outline *models.Outline, targetChapter *models.Chapter, 
 		Current:  targetChapter,
 		Previous: make([]*agents.ContextChapter, 0),
 		Next:     make([]*agents.ContextChapter, 0),
+		Recap:    "",
 	}
 
 	allChapters := getAllChapters(outline)
@@ -294,6 +295,12 @@ func loadChapterContext(outline *models.Outline, targetChapter *models.Chapter, 
 
 	if targetIndex == -1 {
 		return context
+	}
+
+	if recapJSON := loadPreviousRecapJSON(outline, targetChapter); strings.TrimSpace(recapJSON) != "" {
+		context.Recap = recapJSON
+	} else if draftRecap := loadPreviousDraftRecap(outline, targetChapter); strings.TrimSpace(draftRecap) != "" {
+		context.Recap = draftRecap
 	}
 
 	// Load previous chapters

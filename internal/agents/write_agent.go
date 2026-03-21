@@ -27,6 +27,7 @@ type ChapterContext struct {
 	Previous []*ContextChapter
 	Current  *models.Chapter
 	Next     []*ContextChapter
+	Recap    string
 }
 
 // ContextChapter represents a chapter with its content
@@ -64,6 +65,7 @@ func (a *WriteAgent) GenerateChapter(chapter *models.Chapter, context *ChapterCo
 		"characters":      strings.Join(chapter.Characters, ", "),
 		"location":        chapter.Location,
 		"context":         a.formatContext(context),
+		"recap":           context.Recap,
 		"state_matrix":    a.formatStateMatrix(state, chapter),
 		"target_words":    targetWords,
 		"language":        a.language,
@@ -110,6 +112,7 @@ func (a *WriteAgent) GenerateChapterWithSuggestions(chapter *models.Chapter, con
 		"characters":      strings.Join(chapter.Characters, ", "),
 		"location":        chapter.Location,
 		"context":         a.formatContext(context),
+		"recap":           context.Recap,
 		"state_matrix":    a.formatStateMatrix(state, chapter),
 		"target_words":    targetWords,
 		"suggestions":     suggestions,
