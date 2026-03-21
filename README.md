@@ -386,8 +386,15 @@ project-root/
 
 ## 安装
 
-```bash
-go build -o nolvegen.exe
+```powershell
+# 生成固定路径的可执行文件（bin/nolvegen.exe）
+./build.ps1
+
+# Windows bat 版本（双击或命令行执行）
+# build.bat
+
+# 或直接使用 go build
+# go build -o bin/nolvegen.exe
 ```
 
 ## 使用帮助
