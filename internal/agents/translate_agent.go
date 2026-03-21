@@ -3,9 +3,9 @@ package agents
 import (
 	"fmt"
 
-	"nolvegen/internal/llm"
-	"nolvegen/internal/logger"
-	"nolvegen/internal/models"
+	"novelgen/internal/llm"
+	"novelgen/internal/logger"
+	"novelgen/internal/models"
 )
 
 // init registers the translate agent factory

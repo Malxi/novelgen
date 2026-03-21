@@ -2,7 +2,7 @@ package prompts
 
 import (
 	"fmt"
-	"nolvegen/internal/models"
+	"novelgen/internal/models"
 )
 
 // registerOutlineGenPrompts registers all outline generation prompts

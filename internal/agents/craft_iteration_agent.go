@@ -6,10 +6,10 @@ import (
 	"sort"
 	"strings"
 
-	"nolvegen/internal/llm"
-	"nolvegen/internal/logger"
-	"nolvegen/internal/models"
-	"nolvegen/internal/prompts"
+	"novelgen/internal/llm"
+	"novelgen/internal/logger"
+	"novelgen/internal/models"
+	"novelgen/internal/prompts"
 )
 
 // CraftReviewResult represents the review result for craft elements

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"nolvegen/internal/models"
+	"novelgen/internal/models"
 )
 
 // registerCraftPrompts registers all craft-related prompts

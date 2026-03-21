@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"nolvegen/internal/llm"
-	"nolvegen/internal/logger"
-	"nolvegen/internal/models"
-	"nolvegen/internal/prompts"
+	"novelgen/internal/llm"
+	"novelgen/internal/logger"
+	"novelgen/internal/models"
+	"novelgen/internal/prompts"
 )
 
 // CraftAgent generates detailed story elements (characters, locations, items)

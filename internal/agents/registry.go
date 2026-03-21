@@ -1,8 +1,8 @@
 package agents
 
 import (
-	"nolvegen/internal/llm"
-	"nolvegen/internal/models"
+	"novelgen/internal/llm"
+	"novelgen/internal/models"
 )
 
 // Agent is the common interface for all AI agents

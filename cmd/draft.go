@@ -9,12 +9,12 @@ import (
 	"strings"
 	"sync"
 
-	"nolvegen/internal/agents"
-	"nolvegen/internal/llm"
-	"nolvegen/internal/logger"
-	"nolvegen/internal/logic"
-	"nolvegen/internal/logic/continuity/recap"
-	"nolvegen/internal/models"
+	"novelgen/internal/agents"
+	"novelgen/internal/llm"
+	"novelgen/internal/logger"
+	"novelgen/internal/logic"
+	"novelgen/internal/logic/continuity/recap"
+	"novelgen/internal/models"
 
 	"github.com/spf13/cobra"
 )
@@ -61,22 +61,22 @@ var draftGenCmd = &cobra.Command{
 
 Examples:
   # Generate draft for chapter 1
-  novel draft gen --chapter 1
+  novelgen draft gen --chapter 1
 
   # Generate draft for chapters 1 to 5
-  novel draft gen --chapter 1-5
+  novelgen draft gen --chapter 1-5
 
   # Generate draft for all chapters
-  novel draft gen --all
+  novelgen draft gen --all
 
   # Generate draft for specific chapter by ID
-  novel draft gen --chapter chap_1_1_1
+  novelgen draft gen --chapter chap_1_1_1
 
   # Generate with custom word count
-  novel draft gen --chapter 1 --words 800
+  novelgen draft gen --chapter 1 --words 800
 
   # Generate for first chapter of volume 2
-  novel draft gen --volume 2 --chapter 1`,
+  novelgen draft gen --volume 2 --chapter 1`,
 	RunE: runDraftGen,
 }
 
@@ -87,13 +87,13 @@ var draftReviewCmd = &cobra.Command{
 
 Examples:
   # Review all drafts in volume 1
-  novel draft review --volume 1
+  novelgen draft review --volume 1
 
   # Review specific chapter
-  novel draft review --chapter 1
+  novelgen draft review --chapter 1
 
   # Review with concurrency
-  novel draft review --volume 1 --concurrency 3`,
+  novelgen draft review --volume 1 --concurrency 3`,
 	RunE: runDraftReview,
 }
 
@@ -104,13 +104,13 @@ var draftImproveCmd = &cobra.Command{
 
 Examples:
   # Improve all chapters in volume 1
-  novel draft improve --volume 1
+  novelgen draft improve --volume 1
 
   # Improve with max 3 rounds
-  novel draft improve --volume 1 --max-rounds 3
+  novelgen draft improve --volume 1 --max-rounds 3
 
   # Only improve chapters with score below 7
-  novel draft improve --volume 1 --min-score 7`,
+  novelgen draft improve --volume 1 --min-score 7`,
 	RunE: runDraftImprove,
 }
 
@@ -423,7 +423,7 @@ func runDraftReview(cmd *cobra.Command, args []string) error {
 	// Load drafts
 	drafts := loadAllDrafts()
 	if len(drafts) == 0 {
-		return fmt.Errorf("no drafts found. Run 'novel draft gen' first")
+		return fmt.Errorf("no drafts found. Run 'novelgen draft gen' first")
 	}
 
 	// Load LLM config

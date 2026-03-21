@@ -1,4 +1,4 @@
-module nolvegen
+module novelgen
 
 go 1.21
 

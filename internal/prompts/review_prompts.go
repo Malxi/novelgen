@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"nolvegen/internal/models"
+	"novelgen/internal/models"
 )
 
 // GetVolumeReviewSystemPrompt returns system prompt for volume review

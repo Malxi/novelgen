@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"nolvegen/internal/logger"
-	"nolvegen/internal/models"
+	"novelgen/internal/logger"
+	"novelgen/internal/models"
 
 	"github.com/spf13/cobra"
 )
@@ -40,16 +40,16 @@ var exportNovelCmd = &cobra.Command{
 
 Examples:
   # Export to markdown (default)
-  novel export novel
+  novelgen export novel
 
   # Export to text format
-  novel export novel --format txt
+  novelgen export novel --format txt
 
   # Export with custom filename
-  novel export novel --output my_novel.md
+  novelgen export novel --output my_novel.md
 
   # Export to specific directory
-  novel export novel --output ./exports/my_novel.md`,
+  novelgen export novel --output ./exports/my_novel.md`,
 	RunE: runExportNovel,
 }
 

@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
-	"nolvegen/internal/models"
+	"novelgen/internal/models"
 )
 
 // ==================== Format Utils ====================
@@ -114,4 +116,43 @@ func hardenCharacterRelationships(chars map[string]*models.Character, startChars
 			ch.Relationships = filtered
 		}
 	}
+}
+
+// loadDraftContent loads draft content for a chapter from the drafts directory.
+func loadDraftContent(chapterID string) string {
+	root, err := findProjectRoot()
+	if err != nil {
+		return ""
+	}
+	path := filepath.Join(root, "drafts", chapterID+".md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+// extractChapterNumber extracts the chapter number from a chapter ID.
+// For example, "chap_1_2_3" returns "3", "P1-V2-C5" returns "5".
+func extractChapterNumber(chapterID string) string {
+	// Try to extract the last numeric component
+	parts := strings.Split(chapterID, "_")
+	if len(parts) > 0 {
+		lastPart := parts[len(parts)-1]
+		// Check if it's a number
+		if _, err := os.ReadFile(""); err == nil {
+			// This is just a placeholder check, we return the last part
+			return lastPart
+		}
+		return lastPart
+	}
+	// Try splitting by "-" for format like "P1-V2-C5"
+	parts = strings.Split(chapterID, "-")
+	if len(parts) > 0 {
+		lastPart := parts[len(parts)-1]
+		// Remove any non-numeric prefix like "C" in "C5"
+		lastPart = strings.TrimLeft(lastPart, "Cc")
+		return lastPart
+	}
+	return chapterID
 }

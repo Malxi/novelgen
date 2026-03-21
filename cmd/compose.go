@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"strings"
 
-	"nolvegen/internal/agents"
-	"nolvegen/internal/llm"
-	"nolvegen/internal/logger"
-	"nolvegen/internal/logic"
-	"nolvegen/internal/models"
+	"novelgen/internal/agents"
+	"novelgen/internal/llm"
+	"novelgen/internal/logger"
+	"novelgen/internal/logic"
+	"novelgen/internal/models"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -54,7 +54,7 @@ This command reads story/setup/story_setup.json and uses AI to generate
 a hierarchical outline structure based on the predefined structure in novel.json.
 
 Examples:
-  novel compose gen                      # Generate full outline`,
+  novelgen compose gen                      # Generate full outline`,
 	RunE: runComposeGen,
 }
 
@@ -69,9 +69,9 @@ The ID format is:
   - "1_1_1"   - Part 1, Volume 1, Chapter 1
 
 Examples:
-  novel compose regen 1_1_1              # Regenerate chapter 1.1.1
-  novel compose regen 1_1_1 --prompt "make it more intense"
-  novel compose regen 1_1 --prompt "add more conflict"`,
+  novelgen compose regen 1_1_1              # Regenerate chapter 1.1.1
+  novelgen compose regen 1_1_1 --prompt "make it more intense"
+  novelgen compose regen 1_1 --prompt "add more conflict"`,
 	Args: cobra.ExactArgs(1),
 	RunE: runComposeRegen,
 }
@@ -85,8 +85,8 @@ This command loads the current outline and runs multiple rounds of AI self-revie
 to identify weaknesses and improve the story structure, pacing, and coherence.
 
 Examples:
-  novel compose improve                  # Improve outline with 1 round
-  novel compose improve --max-rounds 3   # Run 3 improvement rounds`,
+  novelgen compose improve                  # Improve outline with 1 round
+  novelgen compose improve --max-rounds 3   # Run 3 improvement rounds`,
 	RunE: runComposeImprove,
 }
 
@@ -107,12 +107,12 @@ func init() {
 func runComposeGen(cmd *cobra.Command, args []string) error {
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
-	logger.Section("NOLVEGEN COMPOSE GEN")
+	logger.Section("NOVELGEN COMPOSE GEN")
 
 	// Check if we're in a novel project
 	if _, err := os.Stat("novel.json"); err != nil {
 		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novel init' first")
+		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first")
 	}
 
 	// Load project config
@@ -126,7 +126,7 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 	// Check if story_setup.json exists
 	setupPath := filepath.Join("story", "setup", "story_setup.json")
 	if _, err := os.Stat(setupPath); err != nil {
-		return fmt.Errorf("story setup not found at %s. Run 'novel setup gen' first", setupPath)
+		return fmt.Errorf("story setup not found at %s. Run 'novelgen setup gen' first", setupPath)
 	}
 
 	// Load story setup
@@ -138,7 +138,7 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 	// Check if outline already exists
 	outlinePath := filepath.Join("story", "compose", "outline.json")
 	if _, err := os.Stat(outlinePath); err == nil {
-		return fmt.Errorf("outline already exists at %s. Use 'novel compose regen' to regenerate or 'novel compose improve' to improve", outlinePath)
+		return fmt.Errorf("outline already exists at %s. Use 'novelgen compose regen' to regenerate or 'novelgen compose improve' to improve", outlinePath)
 	}
 
 	// AI generation mode
@@ -167,8 +167,8 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 		projectConfig.Structure.TotalChapters())
 	fmt.Println("\nNext steps:")
 	fmt.Println("  - Edit story/compose/outline.json to refine your outline")
-	fmt.Println("  - Run 'novel compose improve' to improve the outline with AI review")
-	fmt.Println("  - Run 'novel craft' to create world elements")
+	fmt.Println("  - Run 'novelgen compose improve' to improve the outline with AI review")
+	fmt.Println("  - Run 'novelgen craft' to create world elements")
 
 	return nil
 }
@@ -178,12 +178,12 @@ func runComposeRegen(cmd *cobra.Command, args []string) error {
 
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
-	logger.Section("NOLVEGEN COMPOSE REGEN")
+	logger.Section("NOVELGEN COMPOSE REGEN")
 
 	// Check if we're in a novel project
 	if _, err := os.Stat("novel.json"); err != nil {
 		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novel init' first")
+		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first")
 	}
 
 	// Load project config
@@ -197,7 +197,7 @@ func runComposeRegen(cmd *cobra.Command, args []string) error {
 	// Check if story_setup.json exists
 	setupPath := filepath.Join("story", "setup", "story_setup.json")
 	if _, err := os.Stat(setupPath); err != nil {
-		return fmt.Errorf("story setup not found at %s. Run 'novel setup gen' first", setupPath)
+		return fmt.Errorf("story setup not found at %s. Run 'novelgen setup gen' first", setupPath)
 	}
 
 	// Load story setup
@@ -232,7 +232,7 @@ func runComposeRegen(cmd *cobra.Command, args []string) error {
 	fmt.Printf("\n✓ Outline regenerated and saved to %s\n", outlinePath)
 	fmt.Println("\nNext steps:")
 	fmt.Println("  - Edit story/compose/outline.json to refine your outline")
-	fmt.Println("  - Run 'novel craft' to create world elements")
+	fmt.Println("  - Run 'novelgen craft' to create world elements")
 
 	return nil
 }
@@ -240,12 +240,12 @@ func runComposeRegen(cmd *cobra.Command, args []string) error {
 func runComposeImprove(cmd *cobra.Command, args []string) error {
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
-	logger.Section("NOLVEGEN COMPOSE IMPROVE")
+	logger.Section("NOVELGEN COMPOSE IMPROVE")
 
 	// Check if we're in a novel project
 	if _, err := os.Stat("novel.json"); err != nil {
 		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novel init' first")
+		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first")
 	}
 
 	// Load project config
@@ -259,7 +259,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	// Check if story_setup.json exists
 	setupPath := filepath.Join("story", "setup", "story_setup.json")
 	if _, err := os.Stat(setupPath); err != nil {
-		return fmt.Errorf("story setup not found at %s. Run 'novel setup gen' first", setupPath)
+		return fmt.Errorf("story setup not found at %s. Run 'novelgen setup gen' first", setupPath)
 	}
 
 	// Load story setup
@@ -296,7 +296,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	fmt.Printf("\n✓ Outline improved and saved to %s\n", outlinePath)
 	fmt.Println("\nNext steps:")
 	fmt.Println("  - Edit story/compose/outline.json to refine your outline")
-	fmt.Println("  - Run 'novel craft' to create world elements")
+	fmt.Println("  - Run 'novelgen craft' to create world elements")
 
 	return nil
 }

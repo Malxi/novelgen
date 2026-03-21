@@ -93,7 +93,7 @@ func (l *Logger) EnableFileLogging() error {
 		return fmt.Errorf("failed to create log directory: %w", err)
 	}
 
-	logFile := filepath.Join(logDir, fmt.Sprintf("nolvegen_%s.log", time.Now().Format("20060102_150405")))
+	logFile := filepath.Join(logDir, fmt.Sprintf("novelgen_%s.log", time.Now().Format("20060102_150405")))
 	file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open log file: %w", err)

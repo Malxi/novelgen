@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"nolvegen/internal/logger"
-	"nolvegen/internal/models"
+	"novelgen/internal/logger"
+	"novelgen/internal/models"
 )
 
 // ModelConfig represents configuration for a specific model
@@ -93,7 +93,7 @@ func GetConfigPath() string {
 		return "llm_config.json"
 	}
 
-	globalConfigPath := filepath.Join(homeDir, ".nolvegen", "llm_config.json")
+	globalConfigPath := filepath.Join(homeDir, ".novelgen", "llm_config.json")
 	if _, err := os.Stat(globalConfigPath); err == nil {
 		return globalConfigPath
 	}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"nolvegen/internal/models"
+	"novelgen/internal/models"
 )
 
 // registerOutlineRegenPrompts registers all outline regeneration prompts

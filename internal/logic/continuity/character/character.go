@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"nolvegen/internal/models"
+	"novelgen/internal/models"
 )
 
 // CharacterCheckResult is a lightweight heuristic check for character consistency.

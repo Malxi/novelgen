@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"nolvegen/internal/models"
+	"novelgen/internal/models"
 )
 
 // Store persists per-chapter recaps for continuity

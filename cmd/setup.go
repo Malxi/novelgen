@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"nolvegen/internal/agents"
-	"nolvegen/internal/llm"
-	"nolvegen/internal/logger"
-	"nolvegen/internal/models"
+	"novelgen/internal/agents"
+	"novelgen/internal/llm"
+	"novelgen/internal/logger"
+	"novelgen/internal/models"
 
 	"github.com/spf13/cobra"
 )
@@ -46,8 +46,8 @@ var setupGenCmd = &cobra.Command{
 	Long: `Generate story setup using AI based on your story idea prompt.
 
 Examples:
-  novel setup gen "一个关于太空探险的故事"
-  novel setup gen "赛博朋克背景下的侦探故事"`,
+  novelgen setup gen "一个关于太空探险的故事"
+  novelgen setup gen "赛博朋克背景下的侦探故事"`,
 	Args: cobra.ExactArgs(1),
 	RunE: runSetupGen,
 }
@@ -61,9 +61,9 @@ This command reads the existing story setup and regenerates it
 based on the optional prompt guidance.
 
 Examples:
-  novel setup regen                      # Regenerate with current setup
-  novel setup regen --prompt "增加更多悬疑元素"
-  novel setup regen --prompt "改为喜剧风格"`,
+  novelgen setup regen                      # Regenerate with current setup
+  novelgen setup regen --prompt "增加更多悬疑元素"
+  novelgen setup regen --prompt "改为喜剧风格"`,
 	RunE: runSetupRegen,
 }
 
@@ -76,8 +76,8 @@ This command analyzes the current story setup and suggests improvements
 to make it more compelling, coherent, and complete.
 
 Examples:
-  novel setup improve                    # Improve with 1 round
-  novel setup improve --max-rounds 3     # Improve with up to 3 rounds`,
+  novelgen setup improve                    # Improve with 1 round
+  novelgen setup improve --max-rounds 3     # Improve with up to 3 rounds`,
 	RunE: runSetupImprove,
 }
 
@@ -92,8 +92,8 @@ parses its content, and converts it to story_setup.json format.
 Use this after manually editing the markdown file to update the JSON.
 
 Examples:
-  novel setup import                     # Import from story/setup/story_setup.md
-  novel setup import my_setup.md         # Import from custom markdown file`,
+  novelgen setup import                     # Import from story/setup/story_setup.md
+  novelgen setup import my_setup.md         # Import from custom markdown file`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runSetupImport,
 }
@@ -120,12 +120,12 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
-	logger.Section("NOLVEGEN SETUP")
+	logger.Section("NOVELGEN SETUP")
 
 	// Check if we're in a project directory
 	if _, err := os.Stat("novel.json"); err != nil {
 		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novel init <book_name>' first")
+		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first")
 	}
 
 	// Load project config
@@ -156,7 +156,7 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 	fmt.Printf("📖 Premise: %.100s...\n", setup.Premise)
 	fmt.Println("\nNext steps:")
 	fmt.Println("  - Edit story/setup/story_setup.json to refine your story setup")
-	fmt.Println("  - Run 'novel compose gen' to generate the story outline")
+	fmt.Println("  - Run 'novelgen compose gen' to generate the story outline")
 
 	return nil
 }
@@ -164,12 +164,12 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 func runSetupRegen(cmd *cobra.Command, args []string) error {
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
-	logger.Section("NOLVEGEN SETUP REGEN")
+	logger.Section("NOVELGEN SETUP REGEN")
 
 	// Check if we're in a project directory
 	if _, err := os.Stat("novel.json"); err != nil {
 		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novel init <book_name>' first")
+		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first")
 	}
 
 	// Load project config
@@ -225,12 +225,12 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 func runSetupImprove(cmd *cobra.Command, args []string) error {
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
-	logger.Section("NOLVEGEN SETUP IMPROVE")
+	logger.Section("NOVELGEN SETUP IMPROVE")
 
 	// Check if we're in a project directory
 	if _, err := os.Stat("novel.json"); err != nil {
 		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novel init <book_name>' first")
+		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first")
 	}
 
 	// Load project config
@@ -302,12 +302,12 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 func runSetupImport(cmd *cobra.Command, args []string) error {
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
-	logger.Section("NOLVEGEN SETUP IMPORT")
+	logger.Section("NOVELGEN SETUP IMPORT")
 
 	// Check if we're in a project directory
 	if _, err := os.Stat("novel.json"); err != nil {
 		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novel init <book_name>' first")
+		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first")
 	}
 
 	// Load project config

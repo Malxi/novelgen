@@ -4,9 +4,9 @@ set -euo pipefail
 # A lightweight hourly scheduler (no cron/systemd required).
 # It skips runs if the lock is held (i.e., a run is already in progress).
 
-LOCKFILE="/tmp/nolvegen_hourly_job.lock"
-LOG="/root/.openclaw/workspace/projects/nolvegen/logs/hourly_runner.log"
-JOB="/root/.openclaw/workspace/projects/nolvegen/scripts/hourly_check.sh"
+LOCKFILE="/tmp/novelgen_hourly_job.lock"
+LOG="/root/.openclaw/workspace/projects/novelgen/logs/hourly_runner.log"
+JOB="/root/.openclaw/workspace/projects/novelgen/scripts/hourly_check.sh"
 
 while true; do
   TS="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"

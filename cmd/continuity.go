@@ -6,11 +6,11 @@ import (
 	"sort"
 	"strings"
 
-	"nolvegen/internal/agents"
-	"nolvegen/internal/logic/continuity/character"
-	"nolvegen/internal/logic/continuity/recap"
-	"nolvegen/internal/logic/continuity/transition"
-	"nolvegen/internal/models"
+	"novelgen/internal/agents"
+	"novelgen/internal/logic/continuity/character"
+	"novelgen/internal/logic/continuity/recap"
+	"novelgen/internal/logic/continuity/transition"
+	"novelgen/internal/models"
 )
 
 // ==================== Context Loading ====================

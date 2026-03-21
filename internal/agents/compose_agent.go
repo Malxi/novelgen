@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"nolvegen/internal/llm"
-	"nolvegen/internal/logger"
-	"nolvegen/internal/logic"
-	"nolvegen/internal/models"
-	"nolvegen/internal/prompts"
+	"novelgen/internal/llm"
+	"novelgen/internal/logger"
+	"novelgen/internal/logic"
+	"novelgen/internal/models"
+	"novelgen/internal/prompts"
 )
 
 // ComposeAgent handles AI generation for story outline

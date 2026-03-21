@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"nolvegen/internal/models"
+	"novelgen/internal/models"
 )
 
 // TransitionCheckResult is a lightweight heuristic check for chapter-to-chapter transitions.

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"nolvegen/internal/llm"
+	"novelgen/internal/llm"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -15,7 +15,7 @@ var configCmd = &cobra.Command{
 	Short: "Manage LLM configuration",
 	Long: `Configure the LLM provider settings for AI generation features.
 
-This command manages the global LLM configuration stored in ~/.nolvegen/llm_config.json.
+This command manages the global LLM configuration stored in ~/.novelgen/llm_config.json.
 You can configure multiple providers (OpenAI, Ollama, etc.) and switch between them.
 
 Subcommands:

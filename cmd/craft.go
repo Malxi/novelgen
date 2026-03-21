@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"sync"
 
-	"nolvegen/internal/agents"
-	"nolvegen/internal/llm"
-	"nolvegen/internal/logger"
-	"nolvegen/internal/models"
+	"novelgen/internal/agents"
+	"novelgen/internal/llm"
+	"novelgen/internal/logger"
+	"novelgen/internal/models"
 
 	"github.com/spf13/cobra"
 )
@@ -57,25 +57,25 @@ var craftGenCmd = &cobra.Command{
 
 Examples:
   # Generate all elements from outline
-  novel craft gen
+  novelgen craft gen
 
   # Generate elements for specific chapter
-  novel craft gen --chapter 1
+  novelgen craft gen --chapter 1
 
   # Generate elements for specific volume
-  novel craft gen --volume 1
+  novelgen craft gen --volume 1
 
   # Generate elements for specific part
-  novel craft gen --part 1
+  novelgen craft gen --part 1
 
   # Generate with custom prompt adjustment
-  novel craft gen --chapter 1 --prompt "focus on combat abilities"
+  novelgen craft gen --chapter 1 --prompt "focus on combat abilities"
 
   # Generate in small batches
-  novel craft gen --batch 5
+  novelgen craft gen --batch 5
 
   # Generate with concurrency
-  novel craft gen --concurrency 3`,
+  novelgen craft gen --concurrency 3`,
 	RunE: runCraftGen,
 }
 
@@ -90,19 +90,19 @@ consistency, and depth of the world building.
 
 Examples:
   # Improve all elements with 1 round
-  novel craft improve
+  novelgen craft improve
 
   # Improve only characters
-  novel craft improve --type characters
+  novelgen craft improve --type characters
 
   # Improve only locations
-  novel craft improve --type locations
+  novelgen craft improve --type locations
 
   # Improve only items
-  novel craft improve --type items
+  novelgen craft improve --type items
 
   # Run 3 improvement rounds
-  novel craft improve --max-rounds 3`,
+  novelgen craft improve --max-rounds 3`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("craft improve command is not yet implemented")
 	},

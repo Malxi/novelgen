@@ -2,18 +2,18 @@
 set -euo pipefail
 
 # Prevent overlap
-LOCKFILE="/tmp/nolvegen_hourly_check.lock"
+LOCKFILE="/tmp/novelgen_hourly_check.lock"
 exec 9>"$LOCKFILE"
 if ! flock -n 9; then
   exit 0
 fi
 
 TS="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-LOG="/root/.openclaw/workspace/projects/nolvegen/logs/hourly_check.log"
+LOG="/root/.openclaw/workspace/projects/novelgen/logs/hourly_check.log"
 
 {
   echo "[$TS] hourly_check start"
-  cd /root/.openclaw/workspace/projects/nolvegen
+  cd /root/.openclaw/workspace/projects/novelgen
 
   # Format (safe, deterministic)
   if command -v gofmt >/dev/null 2>&1; then

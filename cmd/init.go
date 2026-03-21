@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"nolvegen/internal/logger"
-	"nolvegen/internal/models"
+	"novelgen/internal/logger"
+	"novelgen/internal/models"
 
 	"github.com/spf13/cobra"
 )
@@ -27,7 +27,7 @@ var initCmd = &cobra.Command{
 	Long: `Initialize a new novel project with the specified configuration.
 
 This command creates a new novel project directory structure and novel.json
-configuration file. It does NOT generate story setup - use 'novel setup' for that.`,
+configuration file. It does NOT generate story setup - use 'novelgen setup' for that.`,
 	Args: cobra.ExactArgs(1),
 	RunE: runInit,
 }
@@ -50,7 +50,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
-	logger.Section("NOLVEGEN INIT")
+	logger.Section("NOVELGEN INIT")
 
 	// Check if novel.json already exists
 	if _, err := os.Stat("novel.json"); err == nil {
@@ -114,7 +114,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	fmt.Printf("🎭 Genre(s): %s\n", strings.Join(genres, ", "))
 	fmt.Printf("🤖 Provider: %s, Model: %s\n", config.LLM.Provider, config.LLM.Model)
 	fmt.Println("\nNext steps:")
-	fmt.Println("  - Run 'novel setup gen \"<your story idea>\"' to generate story setup with AI")
+	fmt.Println("  - Run 'novelgen setup gen \"<your story idea>\"' to generate story setup with AI")
 	fmt.Println("  - Or manually edit story/setup/story_setup.json to define your story")
 
 	return nil

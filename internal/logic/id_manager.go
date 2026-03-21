@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"nolvegen/internal/models"
+	"novelgen/internal/models"
 )
 
 // IDManager handles ID generation and mapping for story structure elements

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"nolvegen/internal/agents"
-	"nolvegen/internal/llm"
-	"nolvegen/internal/logger"
-	"nolvegen/internal/models"
-	"nolvegen/internal/prompts"
+	"novelgen/internal/agents"
+	"novelgen/internal/llm"
+	"novelgen/internal/logger"
+	"novelgen/internal/models"
+	"novelgen/internal/prompts"
 
 	"github.com/spf13/cobra"
 )
@@ -36,9 +36,9 @@ This command translates chapters, story setup, or other text files
 while preserving the narrative style and formatting.
 
 Examples:
-  novel translate story/chapters/chapter_001.txt
-  novel translate story/setup/story_setup.md --target-lang en
-  novel translate chapter.txt --source-lang zh --target-lang en --output chapter_en.txt`,
+  novelgen translate story/chapters/chapter_001.txt
+  novelgen translate story/setup/story_setup.md --target-lang en
+  novelgen translate chapter.txt --source-lang zh --target-lang en --output chapter_en.txt`,
 	Args: cobra.ExactArgs(1),
 	RunE: runTranslate,
 }
@@ -55,12 +55,12 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
-	logger.Section("NOLVEGEN TRANSLATE")
+	logger.Section("NOVELGEN TRANSLATE")
 
 	// Check if we're in a project directory
 	if _, err := os.Stat("novel.json"); err != nil {
 		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novel init <book_name>' first")
+		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first")
 	}
 
 	// Load project config

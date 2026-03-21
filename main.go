@@ -1,7 +1,7 @@
 package main
 
 import (
-	"nolvegen/cmd"
+	"novelgen/cmd"
 )
 
 func main() {

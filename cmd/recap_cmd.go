@@ -8,11 +8,11 @@ import (
 	"strings"
 	"sync"
 
-	"nolvegen/internal/agents"
-	"nolvegen/internal/llm"
-	"nolvegen/internal/logger"
-	"nolvegen/internal/logic/continuity/recap"
-	"nolvegen/internal/models"
+	"novelgen/internal/agents"
+	"novelgen/internal/llm"
+	"novelgen/internal/logger"
+	"novelgen/internal/logic/continuity/recap"
+	"novelgen/internal/models"
 
 	"github.com/spf13/cobra"
 )
@@ -39,11 +39,11 @@ var recapGenCmd = &cobra.Command{
 	Long: `Generate recap JSON for chapters.
 
 Examples:
-  novel recap gen --chapter 1
-  novel recap gen --chapter 1-10
-  novel recap gen --all
-  novel recap gen --source drafts
-  novel recap gen --source chapters`,
+  novelgen recap gen --chapter 1
+  novelgen recap gen --chapter 1-10
+  novelgen recap gen --all
+  novelgen recap gen --source drafts
+  novelgen recap gen --source chapters`,
 	RunE: runRecapGen,
 }
 

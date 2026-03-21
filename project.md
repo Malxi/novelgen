@@ -83,13 +83,13 @@ novels/
 
 The tool supports creating multiple novel projects. Each project is self-contained in its own directory:
 
-- Run `novel init` in any directory to create a new novel project
+- Run `novelgen init` in any directory to create a new novel project
 - If `novel.json` already exists in the current directory, an error will be raised
 - All other commands (`compose`, `worldbuild`, `storyline`, `write`, `check`, `sync`) automatically detect the project by searching for `novel.json` in the current directory and parent directories
 
 # 3. CLI Commands
 
-## 3.1 `novel init`
+## 3.1 `novelgen init`
 
 **Purpose**: Initialize a new novel project and define core story setup, with added fields to ensure consistent tone and perspective.
 
@@ -127,7 +127,7 @@ The tool supports creating multiple novel projects. Each project is self-contain
 ### Example
 
 ```bash
-novel init --template fantasy
+novelgen init --template fantasy
 # Interactive prompts:
 # Project name: The Dragon's Covenant
 # Genre: Fantasy, Adventure
@@ -139,7 +139,7 @@ novel init --template fantasy
 # Tone: Epic, Hopeful
 ```
 
-## 3.2 `novel compose`
+## 3.2 `novelgen compose`
 
 **Purpose**: Generate a story outline with a rigid 3-level structure (parts → volumes → chapters), including plot beats, conflict, and pacing to guide AI writing.
 
@@ -175,7 +175,7 @@ novel init --template fantasy
 ### Example
 
 ```bash
-novel compose
+novelgen compose
 # Reads story_setup.json
 # Interactive prompts:
 # Number of parts: 3
@@ -185,7 +185,7 @@ novel compose
 # Generates outline.json with 3-level structure and detailed chapter beats
 ```
 
-## 3.3 `novel worldbuild`
+## 3.3 `novelgen worldbuild`
 
 **Purpose**: Create detailed worldbuilding elements for the novel, including relationship mapping to ensure consistent character/faction dynamics.
 
@@ -208,12 +208,12 @@ novel compose
 ### Example
 
 ```bash
-novel worldbuild gen --element characters
+novelgen worldbuild gen --element characters
 # Reads setup and outline
 # Generates Kael.json
 ```
 
-## 3.4 `novel storyline`
+## 3.4 `novelgen storyline`
 
 **Purpose**: Inject worldbuilding elements into the outline to create concrete, playable storylines for each chapter, with clear goals, conflict, and POV.
 
@@ -254,7 +254,7 @@ novel worldbuild gen --element characters
 ### Example
 
 ```bash
-novel storyline
+novelgen storyline
 # Reads outline and worldbuilding files
 # Interactive prompts:
 # Part 1 Volume 1 Chapter 1 (Introduction): POV Character: Kael, Location: Eldermore Forest, Items: Dragon Egg, Goal: Hide the egg, Conflict: Fear of being caught, Foreshadowing: Egg glows when Kael touches it
@@ -262,7 +262,7 @@ novel storyline
 # Generates storylines.json
 ```
 
-## 3.5 `novel events`
+## 3.5 `novelgen events`
 
 **Purpose**: Manage story events with a standardized format that enables state reconstruction at any chapter without AI involvement.
 
@@ -305,7 +305,7 @@ novel storyline
 ### Example
 
 ```bash
-novel events
+novelgen events
 # Reads storylines and chapter drafts
 # Interactive prompts:
 # Event 1: Type: item_acquisition, Subject: char_1, Object: item_1, Action: acquires, Location: loc_2, Chapter: chap_1_1_1
@@ -315,14 +315,14 @@ novel events
 # Generates events.json with structured events and state snapshots
 
 # State reconstruction example
-novel events --reconstruct chap_1_1_2
+novelgen events --reconstruct chap_1_1_2
 # Reconstructs and displays story state at Chapter 1.1.2
 # Output: Character Kael has inventory [item_1], status [has_dragon_egg], knowledge [egg_is_alive, egg_contains_dragon]
 # Output: Item egg has status [active, hatching_soon], location: char_1
 # Output: Relationship Kael-Gareth: strained (trust: 0.7)
 ```
 
-## 3.6 `novel write`
+## 3.6 `novelgen write`
 
 **Purpose**: Use AI to draft full chapters based on finalized storylines, with strict style and consistency constraints to avoid OOC or worldbreaking content.
 
@@ -367,14 +367,14 @@ novel events --reconstruct chap_1_1_2
 ### Example
 
 ```bash
-novel write --model gpt-4 --length 3000 --version
+novelgen write --model gpt-4 --length 3000 --version
 # Reads storylines.json and all context
 # AI generates Chapter 1 (version 1): Kael discovers the dragon egg in the forest
 # AI generates Chapter 2 (version 1): Kael hides the egg and is questioned by Gareth
 # Saves chapters to data/chapters/chap1/v1.txt and chap2/v1.txt
 ```
 
-## 3.6 `novel check`
+## 3.6 `novelgen check`
 
 **Purpose**: Automatically validate the consistency of all story elements to prevent plot holes, OOC behavior, and world rule violations.
 
@@ -413,14 +413,14 @@ novel write --model gpt-4 --length 3000 --version
 ### Example
 
 ```bash
-novel check --auto-fix --report consistency_report.txt
+novelgen check --auto-fix --report consistency_report.txt
 # Reads all project data
 # Identifies: Kael's trait "cowardly" in Chapter 3 conflicts with "brave" in characters.json
 # Auto-fixes: Tense shift in Chapter 2 (present → past)
 # Saves report to consistency_report.txt
 ```
 
-## 3.7 `novel sync` 
+## 3.7 `novelgen sync` 
 
 **Purpose**: Automatically update downstream content when edits are made to upstream files (e.g., outline, worldbuilding), ensuring all elements stay in sync.
 
@@ -453,7 +453,7 @@ novel check --auto-fix --report consistency_report.txt
 ### Example
 
 ```bash
-novel sync
+novelgen sync
 # Detects: New character (Lira) added to characters.json
 # Updates: storylines.json to include Lira in Chapter 5 (per outline context)
 # Generates: sync_report.txt with details of changes
@@ -904,38 +904,38 @@ novel sync
 # 5. Workflow Example
 
 1. **Initialize Project**:
-        `novel init --template fantasy
+        `novelgen init --template fantasy
 # Creates story_setup.json with theme, tense, and POV style`
 
 2. **Generate 3-Level Outline**:
-        `novel compose
+        `novelgen compose
 # Creates outline.json with parts → volumes → chapters, including beats and conflict`
 
 3. **Build World & Relationships**:
-        `novel worldbuild
+        `novelgen worldbuild
 # Creates characters.json, locations.json, relationships.json, etc.`
 
 4. **Inject Storylines**:
-        `novel storyline
+        `novelgen storyline
 # Creates storylines.json with POV, goals, conflict, and foreshadowing`
 
 5. **Manage Story Events**:
-        `novel events --auto
+        `novelgen events --auto
 # Extracts events from storylines and generates events.json`
 
 6. **Validate Consistency**:
-        `novel check --auto-fix
+        `novelgen check --auto-fix
 # Fixes minor consistency issues and generates a report`
 
 7. **Draft Chapters**:
-        `novel write --model gpt-4 --length 3000 --version
+        `novelgen write --model gpt-4 --length 3000 --version
 # Generates chapter drafts with versioning, using events from previous chapters`
 
 8. **Iterate & Sync**:
         `# Edit characters.json (add new character Lira)
-novel sync
+novelgen sync
 # Updates storylines.json and events.json to include Lira
-novel write --regenerate chap_1_2_1
+novelgen write --regenerate chap_1_2_1
 # Regenerates Chapter 1.2.1 to include Lira and related events`
 
 # 6. Key Features

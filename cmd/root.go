@@ -7,9 +7,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "novel",
+	Use:   "novelgen",
 	Short: "A CLI tool for AI-assisted novel generation",
-	Long: `Nolvegen is a command-line tool for AI-assisted novel creation.
+	Long: `Novelgen is a command-line tool for AI-assisted novel creation.
 
 It provides a structured workflow to guide you from initial idea to complete novel:
   1. init     - Initialize a new novel project
@@ -20,7 +20,7 @@ It provides a structured workflow to guide you from initial idea to complete nov
   6. write    - Generate final polished chapters
   7. export   - Export the completed novel to various formats
 
-Use "novel <command> --help" for more information about a command.`,
+Use "novelgen <command> --help" for more information about a command.`,
 }
 
 func Execute() {

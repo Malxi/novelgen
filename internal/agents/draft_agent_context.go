@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"nolvegen/internal/llm"
-	"nolvegen/internal/models"
-	"nolvegen/internal/prompts"
+	"novelgen/internal/llm"
+	"novelgen/internal/models"
+	"novelgen/internal/prompts"
 )
 
 // GenerateDraftWithContext generates a draft chapter with extra continuity context.

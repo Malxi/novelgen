@@ -3,7 +3,7 @@ package prompts
 import (
 	"fmt"
 
-	"nolvegen/internal/models"
+	"novelgen/internal/models"
 )
 
 // registerStorySetupPrompts registers all story setup prompts

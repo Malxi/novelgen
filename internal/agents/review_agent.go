@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"nolvegen/internal/llm"
-	"nolvegen/internal/logger"
-	"nolvegen/internal/models"
-	"nolvegen/internal/prompts"
+	"novelgen/internal/llm"
+	"novelgen/internal/logger"
+	"novelgen/internal/models"
+	"novelgen/internal/prompts"
 )
 
 // ReviewAgent reviews drafts and provides improvement suggestions

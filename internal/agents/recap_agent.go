@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"nolvegen/internal/llm"
-	"nolvegen/internal/logger"
-	"nolvegen/internal/logic/continuity/recap"
-	"nolvegen/internal/models"
-	"nolvegen/internal/prompts"
+	"novelgen/internal/llm"
+	"novelgen/internal/logger"
+	"novelgen/internal/logic/continuity/recap"
+	"novelgen/internal/models"
+	"novelgen/internal/prompts"
 )
 
 // RecapAgent extracts a canonical recap JSON from chapter text

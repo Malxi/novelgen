@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"nolvegen/internal/logger"
+	"novelgen/internal/logger"
 )
 
 // Client interface for LLM providers

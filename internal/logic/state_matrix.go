@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"nolvegen/internal/models"
+	"novelgen/internal/models"
 )
 
 // StateMatrixManager handles StateMatrix calculations and operations

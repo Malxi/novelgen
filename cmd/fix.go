@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"nolvegen/internal/logger"
-	"nolvegen/internal/logic/continuity/character"
-	"nolvegen/internal/logic/continuity/transition"
-	"nolvegen/internal/models"
+	"novelgen/internal/logger"
+	"novelgen/internal/logic/continuity/character"
+	"novelgen/internal/logic/continuity/transition"
+	"novelgen/internal/models"
 )
 
 // ==================== Fix Summary ====================

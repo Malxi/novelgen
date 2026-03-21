@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"nolvegen/internal/llm"
-	"nolvegen/internal/logger"
-	"nolvegen/internal/models"
-	"nolvegen/internal/prompts"
+	"novelgen/internal/llm"
+	"novelgen/internal/logger"
+	"novelgen/internal/models"
+	"novelgen/internal/prompts"
 )
 
 // WriteAgent generates final chapter content with continuity
