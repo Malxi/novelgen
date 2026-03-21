@@ -5,6 +5,7 @@ type StorylineState struct {
 	Name        string // Storyline name/title
 	Description string // Storyline description
 	Status      string // Current status (started, progressed, completed, etc.)
+	Progress    string // Current progress description (e.g., "主角刚发现线索", "追逐战即将开始")
 }
 
 // StateMatrix represents the current state of the story at a specific point

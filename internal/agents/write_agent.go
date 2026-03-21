@@ -192,5 +192,6 @@ func (a *WriteAgent) formatContext(context *ChapterContext) string {
 			Content: n.Content,
 		}
 	}
-	return prompts.FormatChapterContext(previous, next, 500)
+	// Use 0 to indicate full content (no truncation)
+	return prompts.FormatChapterContext(previous, next, 0)
 }

@@ -96,11 +96,39 @@ func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.
 		}
 	case "goal":
 		// Character goal update
-		if len(event.Characters) > 0 {
+		if len(event.Characters) > 0 && event.Change != "" {
 			charName := event.Characters[0]
-			// Update character's goals in state matrix
-			if event.Change != "" {
-				state.Goals[charName] = append(state.Goals[charName], event.Change)
+			change := event.Change
+
+			// Skip if goal already exists (deduplication)
+			for _, existing := range state.Goals[charName] {
+				if existing == change {
+					return
+				}
+			}
+
+			// Remove completed/abandoned goals to prevent accumulation
+			if change == "achieved" || change == "abandoned" {
+				// Remove the goal that was achieved/abandoned
+				if event.Subject != "" {
+					newGoals := []string{}
+					for _, g := range state.Goals[charName] {
+						if g != event.Subject {
+							newGoals = append(newGoals, g)
+						}
+					}
+					state.Goals[charName] = newGoals
+				}
+				return
+			}
+
+			// Add new goal
+			state.Goals[charName] = append(state.Goals[charName], change)
+
+			// Limit goals per character to prevent explosion (keep most recent 5)
+			const maxGoals = 5
+			if len(state.Goals[charName]) > maxGoals {
+				state.Goals[charName] = state.Goals[charName][len(state.Goals[charName])-maxGoals:]
 			}
 		}
 	case "item":
@@ -143,6 +171,7 @@ func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.
 				Name:        storylineName,
 				Description: storylineDesc,
 				Status:      event.Change,
+				Progress:    event.Details, // 使用 Details 字段存储进度描述
 			}
 		}
 	}
@@ -173,6 +202,7 @@ func (m *StateMatrixManager) applyStorylineEventWithDescription(state *models.St
 		Name:        storylineName,
 		Description: storylineDesc,
 		Status:      event.Change + " (starting this chapter)",
+		Progress:    event.Details,
 	}
 }
 

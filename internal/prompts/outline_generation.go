@@ -94,6 +94,7 @@ Chapter Event Types (track all significant changes):
    - Characters: []
    - Subject: storyline name
    - Change: started/advanced/completed/twist
+   - Details: ONE SENTENCE describing what happened (e.g., "主角发现了矿场深处的秘密通道", "林砚和阿石达成了临时同盟", "反派抢走了关键道具")
 
 CRITICAL CONTINUITY REQUIREMENTS:
 1. CAUSAL CHAIN: Each chapter MUST be a direct consequence of the previous chapter's events. Ask "What happens BECAUSE of what happened before?"
@@ -102,6 +103,12 @@ CRITICAL CONTINUITY REQUIREMENTS:
 4. PLOT THREADS: Storylines should progress gradually. A storyline started in chapter 1 should show advancement in subsequent chapters, not disappear.
 5. CLIFFHANGERS & HOOKS: Chapters should end with hooks that lead into the next chapter, creating narrative momentum.
 6. RECURRING ELEMENTS: Locations, items, and relationships mentioned in one chapter should reappear naturally in later chapters when relevant.
+7. BEAT CONTINUITY (VERY IMPORTANT): 
+   - The LAST beat of chapter N and the FIRST beat of chapter N+1 MUST be directly connected
+   - Example: If chapter 1 ends with "主角修炼到天亮", chapter 2 MUST start with "天亮了，主角结束修炼"
+   - Example: If chapter 1 ends with "主角被敌人包围", chapter 2 MUST start with "主角面对包围，准备突围"
+   - NEVER have time jumps or scene changes between the last beat of one chapter and the first beat of the next
+   - The first beat of each chapter (except chapter 1) MUST explicitly continue from the final moment of the previous chapter
 
 Guidelines:
 - Follow the EXACT structure specified above

@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
+	"novelgen/internal/logic"
 	"novelgen/internal/models"
 	"novelgen/internal/prompts"
 )

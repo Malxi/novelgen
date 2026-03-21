@@ -43,10 +43,11 @@ type Chapter struct {
 
 // Event represents a story event that changes state
 type Event struct {
-	Type       string   `json:"type" md:"type"`             // relationship, goal, item, premise, storyline
-	Characters []string `json:"characters" md:"characters"` // 涉及的角色
-	Subject    string   `json:"subject" md:"subject"`       // 目标角色/物品/体系/故事线
-	Change     string   `json:"change" md:"change"`         // 变化描述
+	Type       string   `json:"type" md:"type"`                 // relationship, goal, item, premise, storyline
+	Characters []string `json:"characters" md:"characters"`     // 涉及的角色
+	Subject    string   `json:"subject" md:"subject"`           // 目标角色/物品/体系/故事线
+	Change     string   `json:"change" md:"change"`             // 变化描述 (started, progressed, completed, etc.)
+	Details    string   `json:"details,omitempty" md:"details"` // 额外详情，用于 storyline 进度描述等
 }
 
 // Event type constants
@@ -220,6 +221,10 @@ func (e *Event) ToMarkdown() string {
 
 	if e.Change != "" {
 		sb.WriteString(fmt.Sprintf(": %s", e.Change))
+	}
+
+	if e.Details != "" {
+		sb.WriteString(fmt.Sprintf(" - %s", e.Details))
 	}
 
 	sb.WriteString("\n")

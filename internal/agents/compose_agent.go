@@ -252,6 +252,9 @@ func (a *ComposeAgent) RegenerateChapter(chapter *models.Chapter, outline *model
 	// Update chapter
 	chapter.Title = newChapter.Title
 	chapter.Summary = newChapter.Summary
+	chapter.Characters = newChapter.Characters
+	chapter.Location = newChapter.Location
+	chapter.Events = newChapter.Events
 	chapter.Beats = newChapter.Beats
 	chapter.Conflict = newChapter.Conflict
 	chapter.Pacing = newChapter.Pacing

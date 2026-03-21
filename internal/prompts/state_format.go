@@ -39,22 +39,52 @@ func FormatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) strin
 	// Location
 	if chapter.Location != "" {
 		sb.WriteString(fmt.Sprintf("Location: %s\n", chapter.Location))
-		if loc, exists := state.Locations[chapter.Location]; exists {
-			sb.WriteString(fmt.Sprintf("  Description: %s\n", loc.Description))
-			sb.WriteString(fmt.Sprintf("  Atmosphere: %s\n", loc.Atmosphere))
+
+		// Try to find location info - chapter.Location might be a compound string like "矿井口与下井滑道"
+		// So we try to match any known location that appears in the string
+		foundLocation := false
+		for locName, loc := range state.Locations {
+			if strings.Contains(chapter.Location, locName) {
+				sb.WriteString(fmt.Sprintf("  [%s] Description: %s\n", locName, loc.Description))
+				sb.WriteString(fmt.Sprintf("  [%s] Atmosphere: %s\n", locName, loc.Atmosphere))
+				foundLocation = true
+			}
 		}
+
+		// Fallback: try exact match
+		if !foundLocation {
+			if loc, exists := state.Locations[chapter.Location]; exists {
+				sb.WriteString(fmt.Sprintf("  Description: %s\n", loc.Description))
+				sb.WriteString(fmt.Sprintf("  Atmosphere: %s\n", loc.Atmosphere))
+			}
+		}
+
 		sb.WriteString("\n")
 	}
 
-	// Active storylines
-	if len(state.Storylines) > 0 {
+	// Active storylines (filter out completed ones)
+	activeStorylines := make(map[string]*models.StorylineState)
+	for id, sl := range state.Storylines {
+		// Skip completed storylines
+		if sl.Status == "completed" || strings.Contains(sl.Status, "completed") {
+			continue
+		}
+		activeStorylines[id] = sl
+	}
+
+	if len(activeStorylines) > 0 {
 		sb.WriteString("Active Storylines:\n")
-		for id, sl := range state.Storylines {
+		for id, sl := range activeStorylines {
 			sb.WriteString(fmt.Sprintf("- %s", sl.Name))
 			if sl.Description != "" {
 				sb.WriteString(fmt.Sprintf(" (%s)", sl.Description))
 			}
-			sb.WriteString(fmt.Sprintf(": %s\n", sl.Status))
+			sb.WriteString(fmt.Sprintf(": %s", sl.Status))
+			// Show progress if available
+			if sl.Progress != "" {
+				sb.WriteString(fmt.Sprintf(" - %s", sl.Progress))
+			}
+			sb.WriteString("\n")
 			// Also show the ID for reference
 			if id != sl.Name {
 				sb.WriteString(fmt.Sprintf("  [ID: %s]\n", id))
@@ -63,22 +93,53 @@ func FormatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) strin
 		sb.WriteString("\n")
 	}
 
-	// Character relationships
+	// Character relationships (only show relationships involving characters in this chapter)
 	if len(state.Relationships) > 0 {
-		sb.WriteString("Key Relationships:\n")
+		relevantRelations := make(map[string]string)
 		for pair, relation := range state.Relationships {
-			sb.WriteString(fmt.Sprintf("- %s: %s\n", pair, relation))
+			// Check if either character in the pair is in this chapter
+			chars := strings.Split(pair, "_")
+			if len(chars) >= 2 {
+				for _, chapterChar := range chapter.Characters {
+					if chars[0] == chapterChar || chars[1] == chapterChar {
+						relevantRelations[pair] = relation
+						break
+					}
+				}
+			}
 		}
-		sb.WriteString("\n")
+		if len(relevantRelations) > 0 {
+			sb.WriteString("Key Relationships:\n")
+			for pair, relation := range relevantRelations {
+				sb.WriteString(fmt.Sprintf("- %s: %s\n", pair, relation))
+			}
+			sb.WriteString("\n")
+		}
 	}
 
-	// Character premise states
+	// Character premise states (only show for characters in this chapter)
 	if len(state.Premises) > 0 {
-		sb.WriteString("Character Progression:\n")
+		relevantPremises := make(map[string]string)
 		for key, progress := range state.Premises {
-			sb.WriteString(fmt.Sprintf("- %s: %s\n", key, progress))
+			// Key format: "characterName_premiseName"
+			parts := strings.Split(key, "_")
+			if len(parts) >= 1 {
+				charName := parts[0]
+				for _, chapterChar := range chapter.Characters {
+					if charName == chapterChar {
+						relevantPremises[key] = progress
+						break
+					}
+				}
+			}
 		}
-		sb.WriteString("\n")
+		if len(relevantPremises) > 0 {
+			sb.WriteString("Character Progression:\n")
+			for key, progress := range relevantPremises {
+				sb.WriteString(fmt.Sprintf("- %s: %s\n", key, progress))
+			}
+			sb.WriteString("\n")
+		}
 	}
 
 	// Items relevant to this chapter
@@ -176,9 +237,9 @@ func FormatChapterContext(previous []*ContextChapter, next []*ContextChapter, ma
 		for _, prev := range previous {
 			sb.WriteString(fmt.Sprintf("\n--- %s: %s ---\n", prev.Chapter.ID, prev.Chapter.Title))
 			sb.WriteString(fmt.Sprintf("Summary: %s\n", prev.Chapter.Summary))
-			// Include a snippet of the content
+			// Include a snippet of the content (or full content if maxSnippetLen is 0)
 			content := prev.Content
-			if len(content) > maxSnippetLen {
+			if maxSnippetLen > 0 && len(content) > maxSnippetLen {
 				content = content[:maxSnippetLen] + "..."
 			}
 			sb.WriteString(fmt.Sprintf("Content:\n%s\n", content))
