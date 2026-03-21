@@ -1,8 +1,8 @@
 {
-  "name": "绝世老爹",
+  "name": "飞出太阳系",
   "version": "1.0.0",
-  "created_at": "2026-03-19T11:48:31.4333959+08:00",
-  "updated_at": "2026-03-19T11:48:31.4344701+08:00",
+  "created_at": "2026-03-20T23:53:20.2411855+08:00",
+  "updated_at": "2026-03-20T23:53:20.2422174+08:00",
   "language": "zh",
   "structure": {
     "target_parts": 1,
@@ -15,7 +15,7 @@
     "max_words_per_chapter": 5000
   },
   "llm": {
-    "provider": "ollama",
-    "model": "qwen3.5:4b"
+    "provider": "openai",
+    "model": "gpt-5.2"
   }
 }

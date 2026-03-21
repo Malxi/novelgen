@@ -49,16 +49,16 @@ novel init my_novel --genre "科幻" --chapter 20
 
 **子命令：**
 - `gen <prompt>` - 使用 AI 从提示生成故事设定
-- `regen` - 重新生成故事设定
-  - `--prompt` (string) - 重新生成时的建议
-- `improve` - 改进现有故事设定
-  - `--max-rounds` (int, 默认 1) - 最大改进轮数
+- `regen [--prompt]` - 重新生成故事设定
+- `improve [--max-rounds]` - 改进现有故事设定
+- `import [markdown_file]` - 从 Markdown 导入故事设定
 
 **示例：**
 ```bash
 novel setup gen "一个关于太空探险的故事"
 novel setup regen --prompt "增加更多悬疑元素"
 novel setup improve --max-rounds 2
+novel setup import story/setup/story_setup.md
 ```
 
 ---
@@ -71,8 +71,7 @@ novel setup improve --max-rounds 2
 - `gen` - 生成新大纲
 - `regen [id]` - 重新生成特定部分
   - `--prompt` (string) - 重新生成时的建议
-- `improve` - 改进现有大纲
-  - `--max-rounds` (int, 默认 1) - 最大改进轮数
+- `improve [--max-rounds]` - 改进现有大纲
 
 **示例：**
 ```bash
@@ -90,6 +89,7 @@ novel compose improve --max-rounds 3   # 改进大纲3轮
 
 **子命令：**
 - `gen` - 生成元素
+- `improve` - 改进现有元素
 
 **Options：**
 | Option | 类型 | 默认值 | 说明 |
@@ -100,12 +100,15 @@ novel compose improve --max-rounds 3   # 改进大纲3轮
 | `--prompt` | string | "" | 额外提示 |
 | `--batch` | int | 1 | 每批生成数量 |
 | `--concurrency` | int | 1 | 并发数 |
+| `--type` | string | "all" | 元素类型（all/characters/locations/items） |
+| `--max-rounds` | int | 1 | 改进轮数 |
 
 **示例：**
 ```bash
 novel craft gen                        # 生成所有元素
 novel craft gen --chapter 1            # 生成第1章的元素
 novel craft gen --concurrency 3        # 并发生成
+novel craft improve --type characters --max-rounds 2
 ```
 
 ---
@@ -125,6 +128,7 @@ novel craft gen --concurrency 3        # 并发生成
 | `--words` | int | 500 | 目标字数 |
 | `--all` | bool | false | 生成所有章节 |
 | `--concurrency` | int | 1 | 并发数 |
+| `--context` | int | 1 | 上下文章节数 |
 
 #### `draft review` - 评审草稿
 | Option | 类型 | 默认值 | 说明 |
@@ -143,6 +147,10 @@ novel craft gen --concurrency 3        # 并发生成
 | `--max-rounds` | int | 1 | 最大改进轮数 |
 | `--min-score` | int | 7 | 最低可接受分数 (1-10) |
 | `--concurrency` | int | 1 | 并发数 |
+| `--enable-teleport-auto-fix` | bool | true | 启用瞬移自动修复 |
+| `--enable-character-presence-auto-fix` | bool | true | 启用角色出场自动修复 |
+| `--bridge-retries` | int | 1 | 转场桥段重试次数 |
+| `--character-patch-retries` | int | 1 | 角色补丁重试次数 |
 
 **示例：**
 ```bash
@@ -181,6 +189,10 @@ novel draft improve --volume 1 --max-rounds 3
 | `--max-rounds` | int | 1 | 最大改进轮数 |
 | `--min-score` | int | 7 | 最低可接受分数 |
 | `--concurrency` | int | 1 | 并发数 |
+| `--enable-teleport-auto-fix` | bool | true | 启用瞬移自动修复 |
+| `--enable-character-presence-auto-fix` | bool | true | 启用角色出场自动修复 |
+| `--bridge-retries` | int | 1 | 转场桥段重试次数 |
+| `--character-patch-retries` | int | 1 | 角色补丁重试次数 |
 
 **示例：**
 ```bash
@@ -213,7 +225,52 @@ novel export novel --output my_book.md # 指定输出文件
 
 ---
 
-### 8. `novel config` - 管理 LLM 配置
+### 8. `novel recap` - 章节回顾
+
+提取高信号、规范的章节回顾 JSON，用于改善章节间连续性。
+
+**子命令：**
+- `gen` - 生成回顾 JSON
+
+**Options：**
+| Option | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `--chapter` | string | "" | 章节号 |
+| `--all` | bool | false | 所有章节 |
+| `--source` | string | "drafts" | 源文本（drafts/chapters） |
+| `--concurrency` | int | 1 | 并发数 |
+
+**示例：**
+```bash
+novel recap gen --chapter 1            # 生成第1章回顾
+novel recap gen --chapter 1-10         # 生成第1-10章回顾
+novel recap gen --all                  # 生成所有章节回顾
+novel recap gen --source chapters      # 从最终章节生成
+```
+
+---
+
+### 9. `novel translate` - 翻译内容
+
+使用 AI 将小说内容从一种语言翻译为另一种语言。
+
+**Options：**
+| Option | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `--source-lang` | string | "zh" | 源语言 |
+| `--target-lang` | string | "en" | 目标语言 |
+| `--output` | string | "" | 输出文件 |
+
+**示例：**
+```bash
+novel translate story/chapters/chapter_001.txt
+novel translate story/setup/story_setup.md --target-lang en
+novel translate chapter.txt --source-lang zh --target-lang en --output chapter_en.txt
+```
+
+---
+
+### 10. `novel config` - 管理 LLM 配置
 
 管理 AI 生成功能的 LLM 提供商设置。
 
@@ -239,7 +296,7 @@ novel init my_novel --genre "科幻" --chapter 20
 novel setup gen "一个关于太空探险的故事"
 
 # 3. 生成大纲
-novel compose
+novel compose gen
 
 # 4. 生成世界元素
 novel craft gen
@@ -251,11 +308,20 @@ novel draft gen --all
 novel draft review --all
 novel draft improve --all --max-rounds 3
 
-# 7. 生成最终章节
+# 7. 生成章节回顾（用于连续性）
+novel recap gen --all
+
+# 8. 生成最终章节
 novel write gen --all
 
-# 8. 导出小说
+# 9. 改进最终章节
+novel write improve --all --max-rounds 2
+
+# 10. 导出小说
 novel export novel --output my_novel.md
+
+# 11. 翻译（可选）
+novel translate my_novel.md --target-lang en --output my_novel_en.md
 ```
 
 ---
@@ -277,8 +343,10 @@ project-root/
 │   │   ├── characters.json
 │   │   ├── locations.json
 │   │   └── items.json
+│   ├── recaps/             # 章节回顾
+│   │   └── {chapter_id}.json
 │   └── reviews/            # 评审结果
-│       └── V1_review.json
+│       └── V{n}_review.json
 ├── chapters/               # 最终章节
 │   └── chapter-{n}.md
 ├── drafts/                 # 草稿
