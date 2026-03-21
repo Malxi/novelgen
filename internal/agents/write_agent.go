@@ -83,10 +83,6 @@ func (a *WriteAgent) GenerateChapter(chapter *models.Chapter, context *ChapterCo
 	}
 
 	opts := a.config.GetChatOptions(a.projectLLM)
-	// Final chapter generation needs more tokens
-	if opts.MaxTokens < 6000 {
-		opts.MaxTokens = 6000
-	}
 
 	response, err := a.client.ChatCompletion(messages, opts)
 	if err != nil {
@@ -130,10 +126,6 @@ func (a *WriteAgent) GenerateChapterWithSuggestions(chapter *models.Chapter, con
 	}
 
 	opts := a.config.GetChatOptions(a.projectLLM)
-	// Final chapter generation needs more tokens
-	if opts.MaxTokens < 6000 {
-		opts.MaxTokens = 6000
-	}
 
 	response, err := a.client.ChatCompletion(messages, opts)
 	if err != nil {

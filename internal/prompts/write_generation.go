@@ -145,7 +145,8 @@ func buildFinalChapterUserPrompt(data map[string]interface{}) string {
 	sb.WriteString("\n- Natural dialogue that reveals character and moves the story forward")
 	sb.WriteString("\n- Subtle foreshadowing of future events based on upcoming chapter summaries")
 	sb.WriteString("\n- A satisfying chapter arc that leaves readers wanting more")
-	sb.WriteString("\n\nWrite only the chapter content, no meta-commentary or chapter headers.")
+	sb.WriteString("\n\nCRITICAL: Start directly with the story content. DO NOT write any summary, synopsis, or '本章讲述了...' at the beginning.")
+	sb.WriteString("\nWrite only the chapter content, no meta-commentary or chapter headers.")
 
 	return sb.String()
 }
@@ -278,7 +279,8 @@ func buildImproveChapterUserPrompt(data map[string]interface{}) string {
 	sb.WriteString("\n- Improving pacing and tension where flagged")
 	sb.WriteString("\n- Enhancing descriptions and emotional impact")
 	sb.WriteString("\n- Keeping the same target word count")
-	sb.WriteString("\n\nWrite only the improved chapter content, no meta-commentary or chapter headers.")
+	sb.WriteString("\n\nCRITICAL: Start directly with the story content. DO NOT write any summary, synopsis, or '本章讲述了...' at the beginning.")
+	sb.WriteString("\nWrite only the improved chapter content, no meta-commentary or chapter headers.")
 
 	return sb.String()
 }

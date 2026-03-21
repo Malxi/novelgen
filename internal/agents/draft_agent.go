@@ -67,10 +67,6 @@ func (a *DraftAgent) GenerateDraft(chapter *models.Chapter, state *models.StateM
 	}
 
 	opts := a.config.GetChatOptions(a.projectLLM)
-	// Draft generation needs more tokens
-	if opts.MaxTokens < 4000 {
-		opts.MaxTokens = 4000
-	}
 
 	response, err := a.client.ChatCompletion(messages, opts)
 	if err != nil {
@@ -118,10 +114,6 @@ func (a *DraftAgent) GenerateDraftWithSuggestions(chapter *models.Chapter, state
 	}
 
 	opts := a.config.GetChatOptions(a.projectLLM)
-	// Draft generation needs more tokens
-	if opts.MaxTokens < 4000 {
-		opts.MaxTokens = 4000
-	}
 
 	response, err := a.client.ChatCompletion(messages, opts)
 	if err != nil {
@@ -183,9 +175,6 @@ func (a *DraftAgent) GenerateDraftWithContext(chapter *models.Chapter, state *mo
 	}
 
 	opts := a.config.GetChatOptions(a.projectLLM)
-	if opts.MaxTokens < 4000 {
-		opts.MaxTokens = 4000
-	}
 
 	response, err := a.client.ChatCompletion(messages, opts)
 	if err != nil {

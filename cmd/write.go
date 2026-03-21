@@ -361,8 +361,6 @@ func saveFinalChapter(chapter *models.Chapter, content string) error {
 	// Build content with header
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", chapter.Title))
-	sb.WriteString(fmt.Sprintf("**章节概要**: %s\n\n", chapter.Summary))
-	sb.WriteString("---\n\n")
 	sb.WriteString(content)
 
 	return os.WriteFile(filename, []byte(sb.String()), 0644)

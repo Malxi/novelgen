@@ -120,7 +120,8 @@ func buildChapterWritingUserPrompt(data map[string]interface{}) string {
 	sb.WriteString("\n- Covering all events mentioned in the chapter summary")
 	sb.WriteString("\n- Maintaining the established tone and style")
 	sb.WriteString("\n- Creating an engaging narrative that flows naturally")
-	sb.WriteString("\n\nWrite only the chapter content, no meta-commentary.")
+	sb.WriteString("\n\nCRITICAL: Start directly with the story content. DO NOT write any summary, synopsis, or '本章讲述了...' at the beginning.")
+	sb.WriteString("\nWrite only the chapter content, no meta-commentary.")
 
 	return sb.String()
 }

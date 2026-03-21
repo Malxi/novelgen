@@ -395,7 +395,7 @@ func saveDraft(chapter *models.Chapter, draft string) error {
 	}
 
 	filename := filepath.Join(draftsDir, chapter.ID+".md")
-	content := fmt.Sprintf("# %s\n\n%s\n\n%s\n", chapter.Title, chapter.Summary, draft)
+	content := fmt.Sprintf("# %s\n\n%s\n", chapter.Title, draft)
 
 	return os.WriteFile(filename, []byte(content), 0644)
 }
