@@ -1,0 +1,21 @@
+{
+  "name": "飞出太阳系",
+  "version": "1.0.0",
+  "created_at": "2026-03-20T23:53:20.2411855+08:00",
+  "updated_at": "2026-03-20T23:53:20.2422174+08:00",
+  "language": "zh",
+  "structure": {
+    "target_parts": 1,
+    "target_volumes": 1,
+    "target_chapters": 20
+  },
+  "chapter_config": {
+    "target_words_per_chapter": 3000,
+    "min_words_per_chapter": 2000,
+    "max_words_per_chapter": 5000
+  },
+  "llm": {
+    "provider": "openai",
+    "model": "gpt-5.2"
+  }
+}
