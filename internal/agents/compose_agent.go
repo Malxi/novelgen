@@ -124,7 +124,7 @@ func (a *ComposeAgent) RegeneratePart(part *models.Part, outline *models.Outline
 
 	// Build prompts
 	data := prompts.BuildOutlineRegenData("part", part.Title, context, setup, language, userPrompt)
-	systemPrompt, _, err := pm.Build(prompts.SkillOutlineRegen, "part", data)
+	systemPrompt, userPromptText, err := pm.Build(prompts.SkillOutlineRegen, "part", data)
 	if err != nil {
 		return fmt.Errorf("failed to build prompt: %w", err)
 	}
@@ -132,7 +132,7 @@ func (a *ComposeAgent) RegeneratePart(part *models.Part, outline *models.Outline
 	// Call AI
 	messages := []llm.Message{
 		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: data["element_type"].(string)},
+		{Role: "user", Content: userPromptText},
 	}
 
 	options := a.config.GetChatOptions(a.projectLLM)
@@ -171,7 +171,7 @@ func (a *ComposeAgent) RegenerateVolume(volume *models.Volume, outline *models.O
 
 	// Build prompts
 	data := prompts.BuildOutlineRegenData("volume", volume.Title, context, setup, language, userPrompt)
-	systemPrompt, _, err := pm.Build(prompts.SkillOutlineRegen, "volume", data)
+	systemPrompt, userPromptText, err := pm.Build(prompts.SkillOutlineRegen, "volume", data)
 	if err != nil {
 		return fmt.Errorf("failed to build prompt: %w", err)
 	}
@@ -179,7 +179,7 @@ func (a *ComposeAgent) RegenerateVolume(volume *models.Volume, outline *models.O
 	// Call AI
 	messages := []llm.Message{
 		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: data["element_type"].(string)},
+		{Role: "user", Content: userPromptText},
 	}
 
 	options := a.config.GetChatOptions(a.projectLLM)
@@ -220,7 +220,7 @@ func (a *ComposeAgent) RegenerateChapter(chapter *models.Chapter, outline *model
 
 	// Build prompts
 	data := prompts.BuildOutlineRegenData("chapter", chapter.Title, context, setup, language, userPrompt)
-	systemPrompt, _, err := pm.Build(prompts.SkillOutlineRegen, "chapter", data)
+	systemPrompt, userPromptText, err := pm.Build(prompts.SkillOutlineRegen, "chapter", data)
 	if err != nil {
 		return fmt.Errorf("failed to build prompt: %w", err)
 	}
@@ -228,7 +228,7 @@ func (a *ComposeAgent) RegenerateChapter(chapter *models.Chapter, outline *model
 	// Call AI
 	messages := []llm.Message{
 		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: data["element_type"].(string)},
+		{Role: "user", Content: userPromptText},
 	}
 
 	options := a.config.GetChatOptions(a.projectLLM)
@@ -342,7 +342,16 @@ func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *mod
 						context.WriteString(fmt.Sprintf("Previous Chapter (%s): %s\n", prevChap.ID, prevChap.Title))
 						context.WriteString(fmt.Sprintf("Summary: %s\n", prevChap.Summary))
 						context.WriteString(fmt.Sprintf("Events: %s\n", formatEvents(prevChap.Events)))
-						context.WriteString(fmt.Sprintf("Beats: %s\n\n", strings.Join(prevChap.Beats, "; ")))
+						prevBeats := "None"
+						if len(prevChap.Beats) > 0 {
+							prevBeats = strings.Join(prevChap.Beats, "; ")
+						}
+						lastBeat := "None"
+						if len(prevChap.Beats) > 0 {
+							lastBeat = prevChap.Beats[len(prevChap.Beats)-1]
+						}
+						context.WriteString(fmt.Sprintf("Beats: %s\n", prevBeats))
+						context.WriteString(fmt.Sprintf("Final Beat: %s\n\n", lastBeat))
 					}
 					if i > 1 {
 						prev2Chap := vol.Chapters[i-2]
@@ -357,6 +366,11 @@ func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *mod
 						context.WriteString("=== NEXT CHAPTER (What This Chapter Must Lead To) ===\n")
 						context.WriteString(fmt.Sprintf("Next Chapter (%s): %s\n", nextChap.ID, nextChap.Title))
 						context.WriteString(fmt.Sprintf("Summary: %s\n", nextChap.Summary))
+						nextFirstBeat := "None"
+						if len(nextChap.Beats) > 0 {
+							nextFirstBeat = nextChap.Beats[0]
+						}
+						context.WriteString(fmt.Sprintf("Opening Beat: %s\n", nextFirstBeat))
 						context.WriteString(fmt.Sprintf("This chapter MUST set up: %s\n\n", nextChap.Summary))
 					}
 
