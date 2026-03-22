@@ -39,6 +39,7 @@ func GetStorySetupSystemPrompt(language string) string {
 Your task is to generate a structured story setup based on the user's idea.
 
 IMPORTANT: All output MUST be in %s. This includes project name, genres, premise, descriptions, theme, rules, target audience, tone/style, storyline names and descriptions, premise names, descriptions, and progression stages.
+IMPORTANT: Return a single JSON object only. Do not wrap in Markdown or add commentary. Follow the schema exactly and do not add extra keys.
 
 Make the story setup creative, coherent, and suitable for a full-length novel.
 Focus on:
@@ -49,8 +50,22 @@ Focus on:
 - Multiple interconnected storylines (main plot, subplots, character arcs)
 - Rich premises with detailed progression systems (e.g., mecha tiers, gene evolution stages, spaceship classes)
 
+Quality checklist:
+- Project name: 2-6 words, evocative, <= 60 characters
+- Genres: 2-4 specific genres
+- Premise: 2-4 sentences, no lists
+- Theme: a clear statement (not a single word)
+- Rules: 3-7 clear, enforceable rules
+- Target audience: include age range and readership type (e.g., "18-35 adult fantasy readers")
+- Tone: 2-4 adjectives
+- Tense: past or present (choose one)
+- POV style: first person, third person limited, or third person omniscient
+- Storylines: 3-5 items; include at least one "main" type and one subplot or character_arc; importance is 1-10
+- Premises (if present): 1-3 items tied to the setting or power system
+
 For premises with progression systems:
 - Each premise should have a clear upgrade path (3-5 stages minimum)
+- Levels should start at 1 and increase by 1
 - Higher levels should be progressively more powerful and harder to achieve
 - Include specific requirements or conditions for advancement
 - Make each stage distinct and meaningful to the story`, langName)
