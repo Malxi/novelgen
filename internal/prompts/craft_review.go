@@ -99,7 +99,7 @@ func buildCharacterReviewSystemPrompt() string {
 
 REVIEW CRITERIA:
 1. Consistency - Do characters have consistent personalities, backgrounds, and motivations?
-2. Depth - Are characters multi-dimensional with clear motivations, flaws, and growth potential?
+2. Depth - Are characters multi-dimensional with clear motivations and flaws?
 3. Originality - Are characters unique and memorable, avoiding clichés?
 4. Story Fit - Do characters fit the story's genre, tone, and world?
 5. Static-only compliance - Do profiles avoid relationships, goals, character arcs, and fears?
@@ -132,7 +132,9 @@ SCORING GUIDE:
 PRIORITY GUIDE:
 - high: Critical issues that affect story quality (inconsistencies, flat characters)
 - medium: Improvements that would enhance the story
-- low: Nice-to-have enhancements`
+- low: Nice-to-have enhancements
+
+IMPORTANT: Do not propose adding relationships, goals, character arcs, or fears. Keep all suggestions within static character attributes only.`
 }
 
 func buildLocationReviewSystemPrompt() string {
@@ -143,7 +145,7 @@ REVIEW CRITERIA:
 2. Depth - Are locations richly detailed with sensory information?
 3. Atmosphere - Do locations have distinct moods and feelings?
 4. Story Significance - Do locations serve the story effectively?
-5. Sensory Details - Are all five senses represented where appropriate?
+5. Sensory Details - Are sights, sounds, smells, and textures provided where appropriate?
 6. Context alignment - Is significance clearly tied to the story setup or outline?
 
 OUTPUT FORMAT:
@@ -233,7 +235,8 @@ IMPORTANT:
 - Do not remove any characters
 - Maintain the original JSON structure
 - Enhance existing fields rather than replacing them entirely
-- Add new fields only if they add meaningful depth`
+- Add new fields only if they add meaningful depth
+- Never introduce relationships, goals, character arcs, or fears`
 }
 
 func buildLocationImprovementSystemPrompt() string {
@@ -252,6 +255,7 @@ IMPORTANT:
 - Do not remove any locations
 - Maintain the original JSON structure
 - Enhance existing fields rather than replacing them entirely
+- Use only sensory_details with sights/sounds/smells/textures (no extra keys)
 - Add sensory_details object if missing or incomplete`
 }
 
@@ -271,6 +275,7 @@ IMPORTANT:
 - Do not remove any items
 - Maintain the original JSON structure
 - Enhance existing fields rather than replacing them entirely
+- Keep secrets as a string or list of strings only
 - Ensure powers and limitations are clearly defined`
 }
 
