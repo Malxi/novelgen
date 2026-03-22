@@ -51,6 +51,7 @@ func (a *CraftAgent) GenerateCharacters(names []string, customPrompt string) (ma
 		"story_setup":    prompts.StructToPrompt(a.setup, ""),
 		"outline_sample": a.getOutlineSample(),
 		"language":       a.language,
+		"language_name":  prompts.GetLanguageName(a.language),
 	}
 
 	// Build prompts using PromptManager
@@ -99,6 +100,7 @@ func (a *CraftAgent) GenerateLocations(names []string, customPrompt string) (map
 		"story_setup":    prompts.StructToPrompt(a.setup, ""),
 		"outline_sample": a.getOutlineSample(),
 		"language":       a.language,
+		"language_name":  prompts.GetLanguageName(a.language),
 	}
 
 	// Build prompts using PromptManager
@@ -150,6 +152,7 @@ func (a *CraftAgent) GenerateItems(names []string, customPrompt string) (map[str
 		"story_setup":    prompts.StructToPrompt(a.setup, ""),
 		"outline_sample": a.getOutlineSample(),
 		"language":       a.language,
+		"language_name":  prompts.GetLanguageName(a.language),
 	}
 
 	// Build prompts using PromptManager

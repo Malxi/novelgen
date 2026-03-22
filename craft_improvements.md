@@ -8,3 +8,5 @@ Improvements will be documented here in the following format:
 
 ---
 
+- improve: [completed] Enforce craft prompt output language using template interpolation with language_name data.
+- improve: [completed] Tie craft element motivations and significance to the story setup/outline in generation prompts.

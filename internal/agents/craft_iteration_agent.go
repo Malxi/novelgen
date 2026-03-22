@@ -69,12 +69,13 @@ func (a *CraftIterationAgent) ReviewCharacters(characters map[string]*models.Cha
 
 	// Build prompt data
 	data := map[string]interface{}{
-		"element_type": "characters",
-		"elements":     string(charsJSON),
-		"story_setup":  prompts.StructToPrompt(a.setup, ""),
-		"outline":      a.getOutlineSummary(),
-		"iteration":    iteration,
-		"language":     a.language,
+		"element_type":  "characters",
+		"elements":      string(charsJSON),
+		"story_setup":   prompts.StructToPrompt(a.setup, ""),
+		"outline":       a.getOutlineSummary(),
+		"iteration":     iteration,
+		"language":      a.language,
+		"language_name": prompts.GetLanguageName(a.language),
 	}
 
 	// Build prompts
@@ -126,12 +127,13 @@ func (a *CraftIterationAgent) ReviewLocations(locations map[string]*models.Locat
 
 	// Build prompt data
 	data := map[string]interface{}{
-		"element_type": "locations",
-		"elements":     string(locsJSON),
-		"story_setup":  prompts.StructToPrompt(a.setup, ""),
-		"outline":      a.getOutlineSummary(),
-		"iteration":    iteration,
-		"language":     a.language,
+		"element_type":  "locations",
+		"elements":      string(locsJSON),
+		"story_setup":   prompts.StructToPrompt(a.setup, ""),
+		"outline":       a.getOutlineSummary(),
+		"iteration":     iteration,
+		"language":      a.language,
+		"language_name": prompts.GetLanguageName(a.language),
 	}
 
 	// Build prompts
@@ -182,12 +184,13 @@ func (a *CraftIterationAgent) ReviewItems(items map[string]*models.Item, iterati
 
 	// Build prompt data
 	data := map[string]interface{}{
-		"element_type": "items",
-		"elements":     string(itemsJSON),
-		"story_setup":  prompts.StructToPrompt(a.setup, ""),
-		"outline":      a.getOutlineSummary(),
-		"iteration":    iteration,
-		"language":     a.language,
+		"element_type":  "items",
+		"elements":      string(itemsJSON),
+		"story_setup":   prompts.StructToPrompt(a.setup, ""),
+		"outline":       a.getOutlineSummary(),
+		"iteration":     iteration,
+		"language":      a.language,
+		"language_name": prompts.GetLanguageName(a.language),
 	}
 
 	// Build prompts
@@ -262,6 +265,7 @@ func (a *CraftIterationAgent) ImproveCharacters(characters map[string]*models.Ch
 		"outline":       a.getOutlineSummary(),
 		"custom_prompt": customPrompt,
 		"language":      a.language,
+		"language_name": prompts.GetLanguageName(a.language),
 	}
 
 	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillCharacterImprovement, "default", data)
@@ -336,6 +340,7 @@ func (a *CraftIterationAgent) ImproveLocations(locations map[string]*models.Loca
 		"outline":       a.getOutlineSummary(),
 		"custom_prompt": customPrompt,
 		"language":      a.language,
+		"language_name": prompts.GetLanguageName(a.language),
 	}
 
 	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillLocationImprovement, "default", data)
@@ -409,6 +414,7 @@ func (a *CraftIterationAgent) ImproveItems(items map[string]*models.Item, review
 		"outline":       a.getOutlineSummary(),
 		"custom_prompt": customPrompt,
 		"language":      a.language,
+		"language_name": prompts.GetLanguageName(a.language),
 	}
 
 	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillItemImprovement, "default", data)

@@ -50,6 +50,7 @@ STRICT REQUIREMENTS:
 3. Characters should fit the story's genre and style
 4. Include specific details that can be referenced in writing
 5. Focus on STATIC attributes only - do NOT include dynamic story elements
+6. Keep all content in the specified language
 
 IMPORTANT - DO NOT INCLUDE:
 - relationships: Relationships are managed dynamically by the story system
@@ -84,6 +85,7 @@ STRICT REQUIREMENTS:
 2. Each location MUST have a distinct atmosphere
 3. Locations should fit the story's genre and style
 4. Include sensory details that can be used in writing
+5. Keep all content in the specified language
 
 Location fields:
 - name: Full location name
@@ -110,6 +112,7 @@ STRICT REQUIREMENTS:
 2. Each item MUST have significance to the story
 3. Items should fit the story's genre and style
 4. Include details about appearance, function, and importance
+5. Keep all content in the specified language
 
 Item fields:
 - name: Full item name
@@ -154,6 +157,9 @@ func buildCharacterUserPrompt(data map[string]interface{}) string {
 	if style, ok := data["story_style"].(string); ok && style != "" {
 		sb.WriteString(fmt.Sprintf("Style: %s\n", style))
 	}
+	if language, ok := data["language"].(string); ok && language != "" {
+		sb.WriteString(fmt.Sprintf("Language: %s\n", GetLanguageName(language)))
+	}
 
 	sb.WriteString("\nStory Setup:\n")
 	if setup, ok := data["story_setup"].(string); ok {
@@ -176,6 +182,7 @@ func buildCharacterUserPrompt(data map[string]interface{}) string {
 
 	sb.WriteString("\n\nGenerate detailed character profiles for the characters listed above.")
 	sb.WriteString(" Each character should fit the story's world and have a distinct personality.")
+	sb.WriteString(" Tie each character's motivation and background to the story setup and outline details where possible.")
 	sb.WriteString(" IMPORTANT: Only include STATIC character attributes. Do NOT include relationships, goals, character_arc, or fears - these are managed dynamically by the story system.")
 	sb.WriteString(" Return the result as a JSON object with character names as keys.")
 
@@ -193,6 +200,9 @@ func buildLocationUserPrompt(data map[string]interface{}) string {
 	}
 	if style, ok := data["story_style"].(string); ok && style != "" {
 		sb.WriteString(fmt.Sprintf("Style: %s\n", style))
+	}
+	if language, ok := data["language"].(string); ok && language != "" {
+		sb.WriteString(fmt.Sprintf("Language: %s\n", GetLanguageName(language)))
 	}
 
 	sb.WriteString("\nStory Setup:\n")
@@ -216,6 +226,7 @@ func buildLocationUserPrompt(data map[string]interface{}) string {
 
 	sb.WriteString("\n\nGenerate detailed location descriptions for the locations listed above.")
 	sb.WriteString(" Each location should have a distinct atmosphere and fit the story's world.")
+	sb.WriteString(" Emphasize why each location matters to the story setup or outline events.")
 	sb.WriteString(" Return the result as a JSON object with location names as keys.")
 
 	return sb.String()
@@ -232,6 +243,9 @@ func buildItemUserPrompt(data map[string]interface{}) string {
 	}
 	if style, ok := data["story_style"].(string); ok && style != "" {
 		sb.WriteString(fmt.Sprintf("Style: %s\n", style))
+	}
+	if language, ok := data["language"].(string); ok && language != "" {
+		sb.WriteString(fmt.Sprintf("Language: %s\n", GetLanguageName(language)))
 	}
 
 	sb.WriteString("\nStory Setup:\n")
@@ -255,6 +269,7 @@ func buildItemUserPrompt(data map[string]interface{}) string {
 
 	sb.WriteString("\n\nGenerate detailed item descriptions for the items listed above.")
 	sb.WriteString(" Each item should have significance to the story and fit the world's setting.")
+	sb.WriteString(" Link each item's significance to specific story setup or outline context where possible.")
 	sb.WriteString(" Return the result as a JSON object with item names as keys.")
 
 	return sb.String()

@@ -18,6 +18,7 @@ func registerCraftReviewPrompts(pm *PromptManager) {
 		SystemPrompt: buildCharacterReviewSystemPrompt(),
 		OutputFormat: FormatJSON,
 		OutputModel:  CraftReviewResult{},
+		Language:     "{{.language_name}}",
 	})
 
 	// Location review prompt
@@ -28,6 +29,7 @@ func registerCraftReviewPrompts(pm *PromptManager) {
 		SystemPrompt: buildLocationReviewSystemPrompt(),
 		OutputFormat: FormatJSON,
 		OutputModel:  CraftReviewResult{},
+		Language:     "{{.language_name}}",
 	})
 
 	// Item review prompt
@@ -38,6 +40,7 @@ func registerCraftReviewPrompts(pm *PromptManager) {
 		SystemPrompt: buildItemReviewSystemPrompt(),
 		OutputFormat: FormatJSON,
 		OutputModel:  CraftReviewResult{},
+		Language:     "{{.language_name}}",
 	})
 
 	// Character improvement prompt
@@ -48,6 +51,7 @@ func registerCraftReviewPrompts(pm *PromptManager) {
 		SystemPrompt: buildCharacterImprovementSystemPrompt(),
 		OutputFormat: FormatJSON,
 		OutputModel:  map[string]interface{}{}, // Will be Character map
+		Language:     "{{.language_name}}",
 	})
 
 	// Location improvement prompt
@@ -58,6 +62,7 @@ func registerCraftReviewPrompts(pm *PromptManager) {
 		SystemPrompt: buildLocationImprovementSystemPrompt(),
 		OutputFormat: FormatJSON,
 		OutputModel:  map[string]interface{}{}, // Will be Location map
+		Language:     "{{.language_name}}",
 	})
 
 	// Item improvement prompt
@@ -68,6 +73,7 @@ func registerCraftReviewPrompts(pm *PromptManager) {
 		SystemPrompt: buildItemImprovementSystemPrompt(),
 		OutputFormat: FormatJSON,
 		OutputModel:  map[string]interface{}{}, // Will be Item map
+		Language:     "{{.language_name}}",
 	})
 }
 
@@ -97,6 +103,7 @@ REVIEW CRITERIA:
 3. Originality - Are characters unique and memorable, avoiding clichés?
 4. Story Fit - Do characters fit the story's genre, tone, and world?
 5. Static-only compliance - Do profiles avoid relationships, goals, character arcs, and fears?
+6. Context alignment - Do motivations/backgrounds tie clearly to the story setup or outline?
 
 OUTPUT FORMAT:
 Return a JSON object with the following structure:
@@ -137,6 +144,7 @@ REVIEW CRITERIA:
 3. Atmosphere - Do locations have distinct moods and feelings?
 4. Story Significance - Do locations serve the story effectively?
 5. Sensory Details - Are all five senses represented where appropriate?
+6. Context alignment - Is significance clearly tied to the story setup or outline?
 
 OUTPUT FORMAT:
 Return a JSON object with the following structure:
@@ -177,6 +185,7 @@ REVIEW CRITERIA:
 3. Originality - Are items unique and interesting?
 4. Function Clarity - Are item functions and limitations clear?
 5. Integration - Do items connect well to characters and plot?
+6. Context alignment - Is significance tied to the story setup or outline?
 
 OUTPUT FORMAT:
 Return a JSON object with the following structure:
@@ -217,6 +226,7 @@ IMPROVEMENT GUIDELINES:
 3. Preserve static-only profiles (no relationships, goals, character arcs, or fears)
 4. Add specific details that writers can use
 5. Ensure characters fit the story's genre and tone
+6. Keep all content in the specified language
 
 IMPORTANT:
 - Return the COMPLETE set of characters with improvements applied
@@ -235,6 +245,7 @@ IMPROVEMENT GUIDELINES:
 3. Strengthen atmosphere and mood
 4. Clarify location significance to the story
 5. Ensure locations fit together logically
+6. Keep all content in the specified language
 
 IMPORTANT:
 - Return the COMPLETE set of locations with improvements applied
@@ -253,6 +264,7 @@ IMPROVEMENT GUIDELINES:
 3. Enhance item significance to the story
 4. Ensure consistency with world rules
 5. Add interesting details about history and origin
+6. Keep all content in the specified language
 
 IMPORTANT:
 - Return the COMPLETE set of items with improvements applied
