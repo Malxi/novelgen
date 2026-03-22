@@ -1,8 +1,11 @@
 package prompts
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+
+	"novelgen/internal/logger"
 )
 
 // registerCraftReviewPrompts registers all craft review and improvement prompts
@@ -93,7 +96,7 @@ REVIEW CRITERIA:
 2. Depth - Are characters multi-dimensional with clear motivations, flaws, and growth potential?
 3. Originality - Are characters unique and memorable, avoiding clichés?
 4. Story Fit - Do characters fit the story's genre, tone, and world?
-5. Relationships - Are character relationships clear and meaningful?
+5. Static-only compliance - Do profiles avoid relationships, goals, character arcs, and fears?
 
 OUTPUT FORMAT:
 Return a JSON object with the following structure:
@@ -211,7 +214,7 @@ func buildCharacterImprovementSystemPrompt() string {
 IMPROVEMENT GUIDELINES:
 1. Address all high-priority suggestions
 2. Maintain character consistency while adding depth
-3. Enhance character arcs and relationships
+3. Preserve static-only profiles (no relationships, goals, character arcs, or fears)
 4. Add specific details that writers can use
 5. Ensure characters fit the story's genre and tone
 
@@ -313,9 +316,34 @@ func buildCraftImprovementUserPrompt(elementType string, data map[string]interfa
 	}
 
 	sb.WriteString("\n\n## Suggestions to Address\n")
-	if suggestions, ok := data["suggestions"].([]interface{}); ok {
-		for i, s := range suggestions {
-			if suggestion, ok := s.(map[string]interface{}); ok {
+	if suggestions, ok := data["suggestions"]; ok {
+		switch typed := suggestions.(type) {
+		case []CraftReviewSuggestion:
+			for i, suggestion := range typed {
+				sb.WriteString(fmt.Sprintf("\n%d. %s (Priority: %s)\n", i+1, suggestion.ElementName, suggestion.Priority))
+				sb.WriteString(fmt.Sprintf("   Issue: %s\n", suggestion.Issue))
+				sb.WriteString(fmt.Sprintf("   Suggestion: %s\n", suggestion.Suggestion))
+			}
+		case []interface{}:
+			for i, s := range typed {
+				if suggestion, ok := s.(map[string]interface{}); ok {
+					sb.WriteString(fmt.Sprintf("\n%d. %s (Priority: %s)\n", i+1, suggestion["element_name"], suggestion["priority"]))
+					sb.WriteString(fmt.Sprintf("   Issue: %s\n", suggestion["issue"]))
+					sb.WriteString(fmt.Sprintf("   Suggestion: %s\n", suggestion["suggestion"]))
+				}
+			}
+		default:
+			payload, err := json.Marshal(typed)
+			if err != nil {
+				logger.Debug("Failed to marshal suggestions for prompt: %v", err)
+				break
+			}
+			var fallback []map[string]interface{}
+			if err := json.Unmarshal(payload, &fallback); err != nil {
+				logger.Debug("Failed to unmarshal suggestions for prompt: %v", err)
+				break
+			}
+			for i, suggestion := range fallback {
 				sb.WriteString(fmt.Sprintf("\n%d. %s (Priority: %s)\n", i+1, suggestion["element_name"], suggestion["priority"]))
 				sb.WriteString(fmt.Sprintf("   Issue: %s\n", suggestion["issue"]))
 				sb.WriteString(fmt.Sprintf("   Suggestion: %s\n", suggestion["suggestion"]))
