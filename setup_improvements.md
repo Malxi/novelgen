@@ -7,3 +7,6 @@ Improvements will be documented here in the following format:
 
 ---
 
+- improve: [completed] Tighten setup prompt constraints to enforce canonical tense/POV/tone formats and consistency across fields.
+- improve: [completed] Normalize and validate setup outputs (trim strings, enforce tense/POV enums) before saving.
+

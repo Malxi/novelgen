@@ -3,6 +3,7 @@ package agents
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
@@ -87,7 +88,15 @@ Structure:
 		}
 	}
 
-	// Validate required fields
+	// Normalize and validate required fields
+	setup.ProjectName = strings.TrimSpace(setup.ProjectName)
+	setup.Premise = strings.TrimSpace(setup.Premise)
+	setup.Theme = strings.TrimSpace(setup.Theme)
+	setup.TargetAudience = strings.TrimSpace(setup.TargetAudience)
+	setup.Tone = strings.TrimSpace(setup.Tone)
+	setup.Tense = strings.TrimSpace(strings.ToLower(setup.Tense))
+	setup.POVStyle = strings.TrimSpace(strings.ToLower(setup.POVStyle))
+
 	if setup.ProjectName == "" {
 		logger.Warn("AI did not generate project name, using default")
 		setup.ProjectName = "Untitled Novel"
@@ -95,6 +104,14 @@ Structure:
 	if setup.Premise == "" {
 		logger.Error("AI did not generate a premise")
 		return nil, fmt.Errorf("AI did not generate a premise")
+	}
+	if setup.Tense != "" && setup.Tense != "past" && setup.Tense != "present" {
+		logger.Warn("Invalid tense value '%s', clearing", setup.Tense)
+		setup.Tense = ""
+	}
+	if setup.POVStyle != "" && setup.POVStyle != "first person" && setup.POVStyle != "third person limited" && setup.POVStyle != "third person omniscient" {
+		logger.Warn("Invalid POV style value '%s', clearing", setup.POVStyle)
+		setup.POVStyle = ""
 	}
 
 	// Log result
@@ -184,13 +201,29 @@ Structure:
 		}
 	}
 
-	// Validate required fields
+	// Normalize and validate required fields
+	improvedSetup.ProjectName = strings.TrimSpace(improvedSetup.ProjectName)
+	improvedSetup.Premise = strings.TrimSpace(improvedSetup.Premise)
+	improvedSetup.Theme = strings.TrimSpace(improvedSetup.Theme)
+	improvedSetup.TargetAudience = strings.TrimSpace(improvedSetup.TargetAudience)
+	improvedSetup.Tone = strings.TrimSpace(improvedSetup.Tone)
+	improvedSetup.Tense = strings.TrimSpace(strings.ToLower(improvedSetup.Tense))
+	improvedSetup.POVStyle = strings.TrimSpace(strings.ToLower(improvedSetup.POVStyle))
+
 	if improvedSetup.ProjectName == "" {
 		improvedSetup.ProjectName = existingSetup.ProjectName
 	}
 	if improvedSetup.Premise == "" {
 		logger.Error("AI did not generate a premise")
 		return nil, fmt.Errorf("AI did not generate a premise")
+	}
+	if improvedSetup.Tense != "" && improvedSetup.Tense != "past" && improvedSetup.Tense != "present" {
+		logger.Warn("Invalid tense value '%s', clearing", improvedSetup.Tense)
+		improvedSetup.Tense = ""
+	}
+	if improvedSetup.POVStyle != "" && improvedSetup.POVStyle != "first person" && improvedSetup.POVStyle != "third person limited" && improvedSetup.POVStyle != "third person omniscient" {
+		logger.Warn("Invalid POV style value '%s', clearing", improvedSetup.POVStyle)
+		improvedSetup.POVStyle = ""
 	}
 
 	// Log result
