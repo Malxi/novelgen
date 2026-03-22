@@ -30,15 +30,18 @@ type Volume struct {
 
 // Chapter represents a single chapter in the story
 type Chapter struct {
-	ID         string   `json:"id" md:"-"` // ID not shown in markdown
-	Title      string   `json:"title" md:"title"`
-	Summary    string   `json:"summary" md:"heading"`       // 格式: 角色 在 什么地方 发生了 什么事
-	Characters []string `json:"characters" md:"characters"` // 本章出现的角色名列表
-	Location   string   `json:"location" md:"location"`     // 事情发生的地点
-	Events     []Event  `json:"events" md:"events"`         // 本章发生的事件
-	Beats      []string `json:"beats" md:"beats"`
-	Conflict   string   `json:"conflict" md:"conflict"`
-	Pacing     string   `json:"pacing" md:"pacing"`
+	ID          string   `json:"id" md:"-"` // ID not shown in markdown
+	Title       string   `json:"title" md:"title"`
+	Summary     string   `json:"summary" md:"heading"`                                         // 格式: 角色 在 什么地方 发生了 什么事
+	Characters  []string `json:"characters" md:"characters"`                                   // 本章出现的角色名列表
+	Location    string   `json:"location" md:"location"`                                       // 事情发生的地点
+	Events      []Event  `json:"events" md:"events"`                                           // 本章发生的事件
+	Beats       []string `json:"beats" md:"beats"`
+	OpeningBeat string   `json:"opening_beat,omitempty" desc:"First beat that continues the previous chapter"`
+	ClosingBeat string   `json:"closing_beat,omitempty" desc:"Final beat/hook that must lead into next chapter"`
+	StateChange string   `json:"state_change,omitempty" desc:"Primary change this chapter causes; must map to Events"`
+	Conflict    string   `json:"conflict" md:"conflict"`
+	Pacing      string   `json:"pacing" md:"pacing"`
 }
 
 // Event represents a story event that changes state
@@ -57,6 +60,7 @@ const (
 	EventTypeItem         = "item"         // (item, character, get/lost) 角色物品更新
 	EventTypePremise      = "premise"      // (premise, character, change) 角色体系更新
 	EventTypeStoryline    = "storyline"    // (storyline, change) 故事线更新
+	EventTypeGate         = "gate"         // (gate, character, change) 章节障碍/代价记录
 )
 
 // Save writes the outline to a file
@@ -189,6 +193,17 @@ func (c *Chapter) ToMarkdown() string {
 			sb.WriteString(fmt.Sprintf("%d. %s\n", i+1, beat))
 		}
 		sb.WriteString("\n")
+	}
+
+	// Continuity anchors
+	if c.OpeningBeat != "" {
+		sb.WriteString(fmt.Sprintf("**Opening Beat:** %s\n\n", c.OpeningBeat))
+	}
+	if c.ClosingBeat != "" {
+		sb.WriteString(fmt.Sprintf("**Closing Beat:** %s\n\n", c.ClosingBeat))
+	}
+	if c.StateChange != "" {
+		sb.WriteString(fmt.Sprintf("**State Change:** %s\n\n", c.StateChange))
 	}
 
 	// Conflict

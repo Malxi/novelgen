@@ -66,12 +66,15 @@ Review Criteria:
 4. **Character Arc**: Verify character development progression through the outline
 5. **Theme Integration**: Check if themes are consistently developed
 6. **Structural Balance**: Ensure parts/volumes/chapters are well-proportioned
-7. **CONTINUITY & COHERENCE** (CRITICAL): 
+7. **CONTINUITY & COHERENCE** (CRITICAL):
    - Chapter-to-chapter causality: Does each chapter logically follow from the previous one?
    - Event tracking: Are events from previous chapters reflected in subsequent chapters?
    - Character state persistence: Do characters maintain consistent emotional states and relationships?
    - Plot thread management: Do storylines progress naturally or do they appear/disappear arbitrarily?
    - Setup and payoff: Are elements introduced early paid off later? Are payoffs properly set up?
+   - Beat anchors: Does opening_beat match beats[0] and closing_beat match beats[last]?
+   - Handoff: Does chapter N closing_beat directly lead into chapter N+1 opening_beat?
+   - State change alignment: Does state_change map to a concrete Events entry?
 
 Continuity Check Process:
 - For each chapter N, ask: "What specific events from chapter N-1 directly influence this chapter?"
@@ -95,6 +98,9 @@ Provide SPECIFIC, ACTIONABLE suggestions. Each suggestion must identify:
 HIGH PRIORITY issues should include:
 - Major plot holes or contradictions
 - Broken continuity between chapters
+- Missing or inconsistent opening_beat/closing_beat/state_change
+- Beats that do not align with anchors (beats[0]/beats[last])
+- state_change not represented in Events
 - Character behavior that contradicts established traits
 - Storylines that start but never continue
 

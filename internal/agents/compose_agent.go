@@ -256,6 +256,9 @@ func (a *ComposeAgent) RegenerateChapter(chapter *models.Chapter, outline *model
 	chapter.Location = newChapter.Location
 	chapter.Events = newChapter.Events
 	chapter.Beats = newChapter.Beats
+	chapter.OpeningBeat = newChapter.OpeningBeat
+	chapter.ClosingBeat = newChapter.ClosingBeat
+	chapter.StateChange = newChapter.StateChange
 	chapter.Conflict = newChapter.Conflict
 	chapter.Pacing = newChapter.Pacing
 
@@ -350,8 +353,17 @@ func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *mod
 						if len(prevChap.Beats) > 0 {
 							lastBeat = prevChap.Beats[len(prevChap.Beats)-1]
 						}
-						context.WriteString(fmt.Sprintf("Beats: %s\n", prevBeats))
-						context.WriteString(fmt.Sprintf("Final Beat: %s\n\n", lastBeat))
+						prevClosing := prevChap.ClosingBeat
+					if prevClosing == "" {
+						prevClosing = lastBeat
+					}
+					context.WriteString(fmt.Sprintf("Beats: %s\n", prevBeats))
+						context.WriteString(fmt.Sprintf("Final Beat: %s\n", lastBeat))
+					context.WriteString(fmt.Sprintf("Closing Beat: %s\n", prevClosing))
+					if prevChap.StateChange != "" {
+						context.WriteString(fmt.Sprintf("State Change: %s\n", prevChap.StateChange))
+					}
+					context.WriteString("\n")
 					}
 					if i > 1 {
 						prev2Chap := vol.Chapters[i-2]
@@ -366,7 +378,7 @@ func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *mod
 						context.WriteString("=== NEXT CHAPTER (What This Chapter Must Lead To) ===\n")
 						context.WriteString(fmt.Sprintf("Next Chapter (%s): %s\n", nextChap.ID, nextChap.Title))
 						context.WriteString(fmt.Sprintf("Summary: %s\n", nextChap.Summary))
-						nextFirstBeat := "None"
+						nextFirstBeat := nextChap.OpeningBeat
 						if len(nextChap.Beats) > 0 {
 							nextFirstBeat = nextChap.Beats[0]
 						}

@@ -85,6 +85,9 @@ Chapter Field Requirements:
 - Location MUST match the summary location and cannot be empty
 - Conflict MUST be one concise sentence that states the immediate opposing force or dilemma
 - Pacing MUST be one of: slow, normal, fast
+- opening_beat MUST match beats[0] and directly continue from the previous chapter's final beat
+- closing_beat MUST match beats[last] and set up the next chapter's opening beat
+- state_change MUST be a one-sentence primary change that maps to one concrete Events entry
 
 Chapter Event Types (track all significant changes):
 1. relationship - Character relationship changes (e.g., allies become enemies, romance begins)
@@ -126,6 +129,7 @@ CRITICAL CONTINUITY REQUIREMENTS:
    - Example: If chapter 1 ends with "主角被敌人包围", chapter 2 MUST start with "主角面对包围，准备突围"
    - NEVER have time jumps or scene changes between the last beat of one chapter and the first beat of the next
    - The first beat of each chapter (except chapter 1) MUST explicitly continue from the final moment of the previous chapter
+   - opening_beat MUST equal beats[0]; closing_beat MUST equal beats[last]
 
 Guidelines:
 - Follow the EXACT structure specified above
@@ -143,5 +147,6 @@ Guidelines:
 - TRACK all significant changes using Events (relationships, goals, items, premise progress, storyline updates)
 - ENSURE CONTINUITY: When writing chapter N, always reference what happened in chapter N-1 and set up what should happen in chapter N+1
 - Beats MUST begin with a continuation from the previous chapter's final beat ("Therefore,") or the prior beat ("Then,") to enforce causal flow
-- For each chapter, ensure at least ONE event entry reflects the chapter's core change (relationship/goal/item/premise/storyline) so state tracking remains usable
+- For each chapter, ensure at least ONE event entry reflects the chapter's core change (relationship/goal/item/premise/storyline/gate) so state tracking remains usable
+- state_change MUST be mirrored by exactly one concrete Events entry (same change described)
 - When a chapter introduces a new obstacle or cost, add a gate event to record it`

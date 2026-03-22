@@ -94,10 +94,13 @@ REGENERATION REQUIREMENTS - CRITICAL:
 4. GOAL EVENT PRECISION: When an event Change is "achieved" or "abandoned", the Subject MUST name the resolved goal so downstream state tracking can remove it.
 5. CHARACTER CONSISTENCY: Characters must behave consistently with their established emotional states and relationships from previous chapters.
 6. CAUSAL LOGIC: Every plot beat must be a logical consequence of what came before. Ask "Why is this happening NOW?" and "What caused this?"
+7. CONTINUITY ANCHORS: For chapters, opening_beat MUST match beats[0] and directly continue the previous chapter's closing_beat; closing_beat MUST match beats[last] and set up the next chapter's opening beat. state_change MUST map to one concrete Events entry.
+8. STRUCTURE STABILITY: Do NOT alter part/volume/chapter counts. Make surgical edits only; keep the outline schema intact.
 
 Please regenerate this {{element_type}}, ensuring:
 1. Strict continuity with previous chapters - reference specific events and their consequences
 2. Proper setup for the next chapter - create narrative momentum
 3. Alignment with overall story tone
 4. Consideration of user suggestions
-5. ALL content in the specified language`
+5. Preserve or re-derive opening_beat, closing_beat, and state_change so they remain consistent with surrounding chapters
+6. ALL content in the specified language`
