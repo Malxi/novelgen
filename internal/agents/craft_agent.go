@@ -168,9 +168,6 @@ func (a *CraftAgent) GenerateItems(names []string, customPrompt string) (map[str
 	}
 
 	opts := a.config.GetChatOptions(a.projectLLM)
-	if opts.MaxTokens < 8000 {
-		opts.MaxTokens = 8000
-	}
 
 	response, err := a.client.ChatCompletion(messages, opts)
 	if err != nil {

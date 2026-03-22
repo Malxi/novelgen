@@ -6,8 +6,8 @@
   "language": "zh",
   "structure": {
     "target_parts": 1,
-    "target_volumes": 1,
-    "target_chapters": 20
+    "target_volumes": 2,
+    "target_chapters": 10
   },
   "chapter_config": {
     "target_words_per_chapter": 3000,

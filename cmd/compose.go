@@ -18,9 +18,10 @@ import (
 )
 
 var (
-	composeIDFlag        string
-	composePromptFlag    string
-	composeMaxRoundsFlag int
+	composeIDFlag          string
+	composePromptFlag      string
+	composeMaxRoundsFlag   int
+	composeConcurrencyFlag int
 )
 
 var composeCmd = &cobra.Command{
@@ -97,6 +98,7 @@ func init() {
 
 	composeRegenCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Suggestions for regeneration")
 	composeImproveCmd.Flags().IntVar(&composeMaxRoundsFlag, "max-rounds", 1, "Maximum number of improvement rounds")
+	composeImproveCmd.Flags().IntVar(&composeConcurrencyFlag, "concurrency", 3, "Maximum number of concurrent regeneration tasks")
 
 	// Register compose command using the new plugin mechanism
 	RegisterCommand(func() *cobra.Command {
@@ -277,7 +279,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded existing outline for improvement")
 
 	// Run improvement
-	if err := iterateOutlineImprovement(outline, setup, projectConfig, composeMaxRoundsFlag); err != nil {
+	if err := iterateOutlineImprovement(outline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag); err != nil {
 		logger.Error("Improvement failed: %v", err)
 		return fmt.Errorf("improvement failed: %w", err)
 	}
@@ -438,9 +440,10 @@ func splitLinesAndTrim(s string) []string {
 }
 
 // iterateOutlineImprovement runs the review-improvement loop
-func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int) error {
+func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, concurrency int) error {
 	logger.Section("Outline Iteration Improvement")
 	logger.Info("Maximum iterations: %d", maxIterations)
+	logger.Info("Concurrency: %d", concurrency)
 
 	// Load LLM config
 	cfg, err := llm.LoadOrCreateConfig()
@@ -469,16 +472,23 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 			return err
 		}
 
-		// Check if we should continue
-		if !agents.ShouldContinueIteration(review, currentIteration, maxIterations) {
-			logger.Info("Stopping iteration - quality threshold met or no critical issues")
-			break
+		// Apply improvements first (even on last iteration if there are high priority issues)
+		hasHighPriority := false
+		for _, s := range review.Suggestions {
+			if s.Priority == agents.HighPriority {
+				hasHighPriority = true
+				break
+			}
 		}
 
-		// Apply improvements
-		if err := iterationAgent.ApplyImprovements(outline, review, setup, projectConfig.Language); err != nil {
-			logger.Error("Failed to apply improvements: %v", err)
-			// Continue to next iteration even if some improvements fail
+		if hasHighPriority {
+			logger.Info("Applying improvements for high priority issues...")
+			if err := iterationAgent.ApplyImprovements(outline, review, setup, projectConfig.Language, concurrency); err != nil {
+				logger.Error("Failed to apply improvements: %v", err)
+				// Continue to next iteration even if some improvements fail
+			}
+		} else {
+			logger.Info("No high priority issues to fix")
 		}
 
 		// Save intermediate result
@@ -487,6 +497,12 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 			logger.Error("Failed to save intermediate outline: %v", err)
 		} else {
 			logger.Info("Saved intermediate outline to %s", outlinePath)
+		}
+
+		// Check if we should continue to next iteration
+		if !agents.ShouldContinueIteration(review, currentIteration, maxIterations) {
+			logger.Info("Stopping iteration - quality threshold met or no critical issues")
+			break
 		}
 	}
 

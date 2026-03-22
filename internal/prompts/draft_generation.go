@@ -122,6 +122,34 @@ func buildChapterWritingUserPrompt(data map[string]interface{}) string {
 		sb.WriteString(fmt.Sprintf("Chapter Summary: %s\n", summary))
 	}
 
+	// Chapter beats/outline
+	if beats, ok := data["chapter_beats"].([]string); ok && len(beats) > 0 {
+		sb.WriteString("\nChapter Beats:\n")
+		for i, beat := range beats {
+			sb.WriteString(fmt.Sprintf("  %d. %s\n", i+1, beat))
+		}
+	}
+
+	// Opening beat (continuity from previous chapter)
+	if opening, ok := data["opening_beat"].(string); ok && opening != "" {
+		sb.WriteString(fmt.Sprintf("\nOpening Scene Guidance: %s\n", opening))
+	}
+
+	// Closing beat (hook for next chapter)
+	if closing, ok := data["closing_beat"].(string); ok && closing != "" {
+		sb.WriteString(fmt.Sprintf("Closing Scene Guidance: %s\n", closing))
+	}
+
+	// State change
+	if stateChange, ok := data["state_change"].(string); ok && stateChange != "" {
+		sb.WriteString(fmt.Sprintf("State Change: %s\n", stateChange))
+	}
+
+	// Pacing
+	if pacing, ok := data["pacing"].(string); ok && pacing != "" {
+		sb.WriteString(fmt.Sprintf("Pacing: %s\n", pacing))
+	}
+
 	sb.WriteString("\n")
 
 	// State matrix

@@ -90,10 +90,17 @@ Scoring Guide (0-100):
 - Below 60: Poor, major restructuring needed
 
 Provide SPECIFIC, ACTIONABLE suggestions. Each suggestion must identify:
-- Exact location (part/volume/chapter ID)
+- Exact location (part/volume/chapter ID in the EXACT format used in the outline)
 - Specific issue
 - Concrete improvement recommendation
 - Priority level (high/medium/low)
+
+ID Format Reference (use EXACTLY as shown in the outline):
+- Part: "P1", "P2", etc.
+- Volume: "P1-V1", "P1-V2", etc.
+- Chapter: "P1-V1-C1", "P1-V1-C2", etc.
+
+IMPORTANT: Always use the full chapter ID (e.g., "P1-V1-C19") when referring to chapters. Do NOT abbreviate as "C19" or use incorrect part numbers like "P2" when you mean "P1-V1-C2".
 
 HIGH PRIORITY issues should include:
 - Major plot holes or contradictions

@@ -90,9 +90,6 @@ func (a *CraftIterationAgent) ReviewCharacters(characters map[string]*models.Cha
 	}
 
 	options := a.config.GetChatOptions(a.projectLLM)
-	if options.MaxTokens < 8000 {
-		options.MaxTokens = 8000
-	}
 
 	logger.Info("Sending character review request to AI...")
 	resp, err := a.client.ChatCompletion(messages, options)
@@ -148,9 +145,6 @@ func (a *CraftIterationAgent) ReviewLocations(locations map[string]*models.Locat
 	}
 
 	options := a.config.GetChatOptions(a.projectLLM)
-	if options.MaxTokens < 8000 {
-		options.MaxTokens = 8000
-	}
 
 	logger.Info("Sending location review request to AI...")
 	resp, err := a.client.ChatCompletion(messages, options)
@@ -205,9 +199,6 @@ func (a *CraftIterationAgent) ReviewItems(items map[string]*models.Item, iterati
 	}
 
 	options := a.config.GetChatOptions(a.projectLLM)
-	if options.MaxTokens < 8000 {
-		options.MaxTokens = 8000
-	}
 
 	logger.Info("Sending item review request to AI...")
 	resp, err := a.client.ChatCompletion(messages, options)

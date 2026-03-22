@@ -164,7 +164,6 @@ func (a *ReviewAgent) reviewAllDrafts(volume *models.Volume, chapterContents []p
 	}
 
 	options := a.config.GetChatOptions(a.llmCfg)
-	options.MaxTokens = 8000 // Increase for multiple chapters
 
 	resp, err := a.client.ChatCompletion(messages, options)
 	if err != nil {

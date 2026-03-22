@@ -273,7 +273,26 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// loadChapterContext loads surrounding chapter drafts for context
+// loadChapterContent loads chapter content, preferring final version over draft
+func loadChapterContent(chapterID string) string {
+	// Try to load final chapter first
+	root, err := findProjectRoot()
+	if err != nil {
+		return loadDraftContent(chapterID)
+	}
+
+	// Check for final chapter
+	finalPath := filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapterID))
+	if data, err := os.ReadFile(finalPath); err == nil {
+		return string(data)
+	}
+
+	// Fallback to draft
+	return loadDraftContent(chapterID)
+}
+
+// loadChapterContext loads surrounding chapter content for context
+// Prefers final chapters over drafts when available
 func loadChapterContext(outline *models.Outline, targetChapter *models.Chapter, contextCount int) *agents.ChapterContext {
 	context := &agents.ChapterContext{
 		Current:  targetChapter,
@@ -303,43 +322,68 @@ func loadChapterContext(outline *models.Outline, targetChapter *models.Chapter, 
 		context.Recap = draftRecap
 	}
 
-	// Load previous chapters
+	// Load previous chapters (prefer final, fallback to draft, then outline)
 	for i := 1; i <= contextCount; i++ {
 		idx := targetIndex - i
 		if idx >= 0 {
-			draft := loadDraftContent(allChapters[idx].ID)
-			if draft != "" {
+			ch := allChapters[idx]
+			content := loadChapterContent(ch.ID)
+			// If no final/draft, build from outline
+			if content == "" {
+				content = buildChapterContentFromOutline(ch)
+			}
+			if content != "" {
 				// Ensure there's at least an offline recap persisted for the previous
 				// chapter so later steps (e.g., transition checks / future drafts) can
 				// use it even when generation is out-of-order.
-				if i == 1 {
-					persistOfflineRecapIfMissing(allChapters[idx], draft)
+				if i == 1 && content != "" {
+					persistOfflineRecapIfMissing(ch, content)
 				}
 
 				// Note: Recap extraction is handled separately via recap command
 				context.Previous = append([]*agents.ContextChapter{{
-					Chapter: allChapters[idx],
-					Content: draft,
+					Chapter: ch,
+					Content: content,
 				}}, context.Previous...)
 			}
 		}
 	}
 
-	// Load next chapters
+	// Load next chapters (prefer final, fallback to draft, then outline)
 	for i := 1; i <= contextCount; i++ {
 		idx := targetIndex + i
 		if idx < len(allChapters) {
-			draft := loadDraftContent(allChapters[idx].ID)
-			if draft != "" {
+			ch := allChapters[idx]
+			content := loadChapterContent(ch.ID)
+			// If no final/draft, build from outline
+			if content == "" {
+				content = buildChapterContentFromOutline(ch)
+			}
+			if content != "" {
 				context.Next = append(context.Next, &agents.ContextChapter{
-					Chapter: allChapters[idx],
-					Content: draft,
+					Chapter: ch,
+					Content: content,
 				})
 			}
 		}
 	}
 
 	return context
+}
+
+// buildChapterContentFromOutline builds chapter content from outline data
+// Used as fallback when no draft or final content exists
+func buildChapterContentFromOutline(chapter *models.Chapter) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Chapter: %s\n", chapter.ID))
+	sb.WriteString(fmt.Sprintf("Summary: %s\n", chapter.Summary))
+	if len(chapter.Beats) > 0 {
+		sb.WriteString("Beats:\n")
+		for i, beat := range chapter.Beats {
+			sb.WriteString(fmt.Sprintf("  %d. %s\n", i+1, beat))
+		}
+	}
+	return sb.String()
 }
 
 // saveFinalChapter saves the generated final chapter content
