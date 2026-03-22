@@ -94,6 +94,12 @@ func ValidateConsistency(r *models.ChapterRecap) (ok bool, reasons []string) {
 		return false, []string{"last_line 或 next_opening_hint 为空"}
 	}
 
+	// Guardrail: next_opening_hint should be short. Long hints tend to drift into
+	// "advice" or new scene writing and reduce continuity quality.
+	if len([]rune(hint)) > 220 {
+		reasons = append(reasons, "next_opening_hint 过长（建议 1–3 句，避免跑题）")
+	}
+
 	key := firstMeaningfulToken(ll)
 	if key != "" && !strings.Contains(hint, key) {
 		reasons = append(reasons, "next_opening_hint 与 last_line 缺少明显承接词（可能跑题）")

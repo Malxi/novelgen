@@ -184,7 +184,16 @@ func buildOfflineRecap(ch *models.Chapter, text string) *models.ChapterRecap {
 	}
 	if strings.TrimSpace(lastLine) != "" {
 		r.Unresolved = []string{lastLine}
-		r.NextOpeningHint = lastLine + "（紧接上一章最后一刻，地点与时间不变。）"
+
+		// NextOpeningHint is meant to be a usable, concrete scene-anchor for the next chapter.
+		// Keep it deterministic and as specific as possible (location), so the model can
+		// reliably open on the same moment instead of "teleporting".
+		loc := strings.TrimSpace(ch.Location)
+		suffix := "（紧接上一章最后一刻，地点与时间不变。）"
+		if loc != "" {
+			suffix = fmt.Sprintf("（紧接上一章最后一刻，仍在%s，地点与时间不变。）", loc)
+		}
+		r.NextOpeningHint = lastLine + suffix
 	}
 	return r
 }

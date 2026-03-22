@@ -119,7 +119,7 @@ func LoadOrCreateConfig() (*Config, error) {
 
 	return nil, fmt.Errorf("LLM configuration not found.\n\n"+
 		"Please create a configuration file at one of these locations:\n"+
-		"  1. Global: %%s\n"+
+		"  1. Global: %s\n"+
 		"  2. Local:  llm_config.json (in current directory)\n\n"+
 		"Example configuration:\n"+
 		"{\n"+
