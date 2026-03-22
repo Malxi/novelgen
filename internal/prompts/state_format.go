@@ -151,6 +151,88 @@ func FormatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) strin
 	// Items relevant to this chapter
 	formatItems(&sb, state, chapter)
 
+	// Active Gates/Obstacles affecting characters in this chapter
+	if len(state.Gates) > 0 {
+		relevantGates := make(map[string]*models.GateState)
+		for gateName, gate := range state.Gates {
+			// Check if gate affects any character in this chapter
+			for _, chapterChar := range chapter.Characters {
+				if gate.Characters == chapterChar {
+					relevantGates[gateName] = gate
+					break
+				}
+			}
+		}
+		if len(relevantGates) > 0 {
+			sb.WriteString("Active Obstacles/Gates:\n")
+			for _, gate := range relevantGates {
+				sb.WriteString(fmt.Sprintf("- %s", gate.Name))
+				if gate.Status != "" {
+					sb.WriteString(fmt.Sprintf(" [%s]", gate.Status))
+				}
+				if gate.Characters != "" {
+					sb.WriteString(fmt.Sprintf(" (affecting: %s)", gate.Characters))
+				}
+				sb.WriteString("\n")
+				if gate.Details != "" {
+					sb.WriteString(fmt.Sprintf("  Details: %s\n", gate.Details))
+				}
+			}
+			sb.WriteString("\n")
+		}
+	}
+
+	// Character Status (physical/mental states)
+	if len(state.Status) > 0 {
+		relevantStatus := make(map[string]*models.StatusState)
+		for statusKey, status := range state.Status {
+			// Check if status affects any character in this chapter
+			for _, chapterChar := range chapter.Characters {
+				if strings.HasPrefix(statusKey, chapterChar+"_") {
+					relevantStatus[statusKey] = status
+					break
+				}
+			}
+		}
+		if len(relevantStatus) > 0 {
+			sb.WriteString("Character Status:\n")
+			for _, status := range relevantStatus {
+				sb.WriteString(fmt.Sprintf("- %s: %s", status.Type, status.State))
+				if status.Severity != "" {
+					sb.WriteString(fmt.Sprintf(" (%s)", status.Severity))
+				}
+				sb.WriteString("\n")
+				if status.Details != "" {
+					sb.WriteString(fmt.Sprintf("  Details: %s\n", status.Details))
+				}
+			}
+			sb.WriteString("\n")
+		}
+	}
+
+	// Character Memories/Information
+	if len(state.Memories) > 0 {
+		hasRelevantMemories := false
+		for _, chapterChar := range chapter.Characters {
+			if memories, exists := state.Memories[chapterChar]; exists && len(memories) > 0 {
+				if !hasRelevantMemories {
+					sb.WriteString("Character Knowledge/Memories:\n")
+					hasRelevantMemories = true
+				}
+				sb.WriteString(fmt.Sprintf("- %s knows:\n", chapterChar))
+				for _, memory := range memories {
+					sb.WriteString(fmt.Sprintf("  • [%s] %s\n", memory.Category, memory.Info))
+					if memory.Details != "" {
+						sb.WriteString(fmt.Sprintf("    %s\n", memory.Details))
+					}
+				}
+			}
+		}
+		if hasRelevantMemories {
+			sb.WriteString("\n")
+		}
+	}
+
 	// Chapter events to cover
 	if len(chapter.Events) > 0 {
 		sb.WriteString("Events to cover in this chapter:\n")

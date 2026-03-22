@@ -144,11 +144,6 @@ func buildFinalChapterUserPrompt(data map[string]interface{}) string {
 		sb.WriteString(fmt.Sprintf("Closing Scene Guidance: %s\n", closing))
 	}
 
-	// State change
-	if stateChange, ok := data["state_change"].(string); ok && stateChange != "" {
-		sb.WriteString(fmt.Sprintf("State Change: %s\n", stateChange))
-	}
-
 	// Pacing
 	if pacing, ok := data["pacing"].(string); ok && pacing != "" {
 		sb.WriteString(fmt.Sprintf("Pacing: %s\n", pacing))

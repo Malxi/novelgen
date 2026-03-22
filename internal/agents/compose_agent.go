@@ -205,11 +205,14 @@ func (a *ComposeAgent) RegenerateVolume(volume *models.Volume, outline *models.O
 		}
 	}
 
-	// Update volume (keep chapters)
+	// Update volume (including chapters)
 	volume.Title = newVolume.Title
 	volume.Summary = newVolume.Summary
+	if len(newVolume.Chapters) > 0 {
+		volume.Chapters = newVolume.Chapters
+	}
 
-	fmt.Printf("✓ Volume regenerated: %s\n", volume.Title)
+	fmt.Printf("✓ Volume regenerated: %s (%d chapters)\n", volume.Title, len(volume.Chapters))
 	return nil
 }
 
@@ -267,7 +270,6 @@ func (a *ComposeAgent) RegenerateChapter(chapter *models.Chapter, outline *model
 	chapter.Beats = newChapter.Beats
 	chapter.OpeningBeat = newChapter.OpeningBeat
 	chapter.ClosingBeat = newChapter.ClosingBeat
-	chapter.StateChange = newChapter.StateChange
 	chapter.Conflict = newChapter.Conflict
 	chapter.Pacing = newChapter.Pacing
 
@@ -363,16 +365,13 @@ func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *mod
 							lastBeat = prevChap.Beats[len(prevChap.Beats)-1]
 						}
 						prevClosing := prevChap.ClosingBeat
-					if prevClosing == "" {
-						prevClosing = lastBeat
-					}
-					context.WriteString(fmt.Sprintf("Beats: %s\n", prevBeats))
+						if prevClosing == "" {
+							prevClosing = lastBeat
+						}
+						context.WriteString(fmt.Sprintf("Beats: %s\n", prevBeats))
 						context.WriteString(fmt.Sprintf("Final Beat: %s\n", lastBeat))
-					context.WriteString(fmt.Sprintf("Closing Beat: %s\n", prevClosing))
-					if prevChap.StateChange != "" {
-						context.WriteString(fmt.Sprintf("State Change: %s\n", prevChap.StateChange))
-					}
-					context.WriteString("\n")
+						context.WriteString(fmt.Sprintf("Closing Beat: %s\n", prevClosing))
+						context.WriteString("\n")
 					}
 					if i > 1 {
 						prev2Chap := vol.Chapters[i-2]
@@ -453,9 +452,6 @@ func validateChapterOutput(chapter *models.Chapter) error {
 	if chapter.ClosingBeat == "" {
 		return fmt.Errorf("closing_beat is required")
 	}
-	if chapter.StateChange == "" {
-		return fmt.Errorf("state_change is required")
-	}
 	if chapter.OpeningBeat != chapter.Beats[0] {
 		return fmt.Errorf("opening_beat must match beats[0]")
 	}
@@ -464,18 +460,6 @@ func validateChapterOutput(chapter *models.Chapter) error {
 	}
 	if len(chapter.Events) == 0 {
 		return fmt.Errorf("events are required")
-	}
-	matches := 0
-	for _, event := range chapter.Events {
-		if strings.TrimSpace(event.Change) == strings.TrimSpace(chapter.StateChange) {
-			matches++
-		}
-	}
-	if matches == 0 {
-		return fmt.Errorf("state_change must match one Events.Change entry")
-	}
-	if matches > 1 {
-		return fmt.Errorf("state_change must match exactly one Events.Change entry")
 	}
 	return nil
 }

@@ -53,6 +53,9 @@ func (m *StateMatrixManager) CalculateStateMatrix(outline *models.Outline, targe
 		Goals:         make(map[string][]string),
 		Storylines:    make(map[string]*models.StorylineState),
 		Premises:      make(map[string]string),
+		Gates:         make(map[string]*models.GateState),
+		Status:        make(map[string]*models.StatusState),
+		Memories:      make(map[string][]*models.MemoryState),
 	}
 
 	// Load all generated elements
@@ -189,6 +192,61 @@ func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.
 				Status:    event.Change,
 				Details:   event.Details,
 			})
+		}
+	case "gate":
+		// Gate/obstacle introduced, escalated, or overcome
+		if event.Subject != "" {
+			charName := ""
+			if len(event.Characters) > 0 {
+				charName = event.Characters[0]
+			}
+
+			gateState := &models.GateState{
+				Name:       event.Subject,
+				Status:     event.Change,
+				Characters: charName,
+				ChapterID:  chapterID,
+				Details:    event.Details,
+			}
+
+			// If gate is overcome, remove it from active gates
+			if event.Change == "overcome" {
+				delete(state.Gates, event.Subject)
+			} else {
+				// Store or update the gate
+				state.Gates[event.Subject] = gateState
+			}
+		}
+	case "status":
+		// Character physical/mental status change
+		if len(event.Characters) > 0 && event.Subject != "" {
+			charName := event.Characters[0]
+			statusKey := charName + "_" + event.Subject
+
+			// If status is resolved/recovered, remove it
+			if event.Change == "resolved" || event.Change == "recovered" || event.Change == "healed" {
+				delete(state.Status, statusKey)
+			} else {
+				// Store or update status
+				state.Status[statusKey] = &models.StatusState{
+					Type:      event.Subject,
+					State:     event.Change,
+					ChapterID: chapterID,
+					Details:   event.Details,
+				}
+			}
+		}
+	case "memory":
+		// Character learns/acquires information
+		if len(event.Characters) > 0 && event.Subject != "" {
+			charName := event.Characters[0]
+			memory := &models.MemoryState{
+				Info:      event.Subject,
+				Category:  event.Change,
+				ChapterID: chapterID,
+				Details:   event.Details,
+			}
+			state.Memories[charName] = append(state.Memories[charName], memory)
 		}
 	}
 }

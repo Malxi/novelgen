@@ -49,6 +49,52 @@ const (
 	FormatText OutputFormat = "text"
 )
 
+// SharedEventTypesDocumentation is the shared documentation for all event types
+// Used by both outline generation and regeneration prompts
+const SharedEventTypesDocumentation = `Event Types (use these to track state changes):
+1. relationship - Character relationship changes
+   - Characters: [characterA, characterB]
+   - Subject: relationship name/type
+   - Change: description of how relationship changed
+2. goal - Character goal updates (e.g., new objective, goal achieved, goal abandoned)
+   - Characters: [character]
+   - Subject: goal name/description (required when resolving a goal)
+   - Change: use the exact goal description when introducing/updating; use only "achieved" or "abandoned" when resolving (and then Subject MUST name the resolved goal)
+3. item - Character acquires or loses important items
+   - Characters: [character]
+   - Subject: item name
+   - Change: get/lost (use lost for destroyed or removed items)
+4. premise - Character progression system updates (e.g., mecha upgrade, gene evolution)
+   - Characters: [character]
+   - Subject: premise name (e.g., "机甲系统")
+   - Change: level up/new ability/breakthrough
+5. storyline - Storyline progress updates
+   - Characters: []
+   - Subject: storyline name
+   - Change: started/advanced/completed/twist
+   - Details: ONE SENTENCE describing what happened
+6. gate - Immediate obstacle, cost, or setback introduced in the chapter
+   - Characters: [character]
+   - Subject: obstacle or stake name (e.g., "sealed vault", "time limit", "wounded ally")
+   - Change: introduced/escalated/overcome
+7. status - Character physical/mental status changes (injury, illness, emotion, etc.)
+   - Characters: [character]
+   - Subject: status type (e.g., "injury", "poison", "fatigue", "fear")
+   - Change: current state (e.g., "bleeding", "infected", "exhausted", "terrified")
+   - Details: description of the status and severity
+8. memory - Information or knowledge a character acquires
+   - Characters: [character]
+   - Subject: the information learned (e.g., "矿场有秘密通道", "黑六是内鬼")
+   - Change: info/secret/knowledge/event (type of information)
+   - Details: context about how/where the information was obtained
+
+Event Guidelines:
+- For each chapter, ensure at least ONE event entry reflects the chapter's core change (relationship/goal/item/premise/storyline/gate/status/memory) so state tracking remains usable
+- When a chapter introduces a new obstacle or cost, add a gate event to record it
+- When a character gets injured, poisoned, or experiences strong emotions, add a status event
+- When a character learns important information, add a memory event
+- GOAL EVENT PRECISION: When an event Change is "achieved" or "abandoned", the Subject MUST name the resolved goal so downstream state tracking can remove it`
+
 // PromptTemplate defines a reusable prompt structure
 type PromptTemplate struct {
 	Skill        Skill

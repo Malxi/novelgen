@@ -40,11 +40,11 @@ func BuildOutlineGenData(structure models.StoryStructure, setup *models.StorySet
 	// Use StructToPrompt to convert StorySetup to formatted string
 	setupPrompt := StructToPrompt(setup, "")
 
-	summaryFormat := "Summary MUST be ONE sentence following: CHARACTER in LOCATION attempts ACTION, but OBSTACLE/STAKE. Example: Maya in a ruined observatory discovers a hidden chamber but triggers a security lockdown."
+	summaryFormat := "Summary MUST be ONE sentence following: CHARACTER in LOCATION does EVENT. Example: Maya in a ruined observatory discovers a hidden chamber."
 	if language == "zh" {
-		summaryFormat = "Summary MUST be ONE sentence following: 角色 在 什么地方 做了 什么事，却 遇到 什么阻碍/代价。Example: 李明 在 废弃工厂 发现了 秘密实验室，却 引爆了 警报。"
+		summaryFormat = "Summary MUST be ONE sentence following: 人物 在 地点 发生了 事件。Example: 李明 在 废弃工厂 发现了 秘密实验室。"
 	} else if language != "en" {
-		summaryFormat = "Summary MUST be ONE sentence following: CHARACTER in LOCATION attempts ACTION, but OBSTACLE/STAKE (translate into the target language). Example: Maya in a ruined observatory discovers a hidden chamber but triggers a security lockdown."
+		summaryFormat = "Summary MUST be ONE sentence following: CHARACTER in LOCATION does EVENT (translate into the target language). Example: Maya in a ruined observatory discovers a hidden chamber."
 	}
 
 	return map[string]interface{}{
@@ -89,32 +89,7 @@ Chapter Field Requirements:
 - closing_beat MUST match beats[last] and set up the next chapter's opening beat
 - state_change MUST be a one-sentence primary change that maps to one concrete Events entry (use the same change in Events.Change)
 
-Chapter Event Types (track all significant changes):
-1. relationship - Character relationship changes (e.g., allies become enemies, romance begins)
-   - Characters: [characterA, characterB]
-   - Subject: relationship name/type
-   - Change: description of how relationship changed
-2. goal - Character goal updates (e.g., new objective, goal achieved, goal abandoned)
-   - Characters: [character]
-   - Subject: goal name/description (required when resolving a goal)
-   - Change: use the exact goal description when introducing/updating; use only "achieved" or "abandoned" when resolving (and then Subject MUST name the resolved goal)
-3. item - Character acquires or loses important items
-   - Characters: [character]
-   - Subject: item name
-   - Change: get/lost (use lost for destroyed or removed items)
-4. premise - Character progression system updates (e.g., mecha upgrade, gene evolution)
-   - Characters: [character]
-   - Subject: premise name (e.g., "机甲系统")
-   - Change: level up/new ability/breakthrough
-5. storyline - Storyline progress updates
-   - Characters: []
-   - Subject: storyline name
-   - Change: started/advanced/completed/twist
-   - Details: ONE SENTENCE describing what happened (e.g., "主角发现了矿场深处的秘密通道", "林砚和阿石达成了临时同盟", "反派抢走了关键道具")
-6. gate - Immediate obstacle, cost, or setback introduced in the chapter
-   - Characters: [character]
-   - Subject: obstacle or stake name (e.g., "sealed vault", "time limit", "wounded ally")
-   - Change: introduced/escalated/overcome
+` + SharedEventTypesDocumentation + `
 
 CRITICAL CONTINUITY REQUIREMENTS:
 1. CAUSAL CHAIN: Each chapter MUST be a direct consequence of the previous chapter's events. Ask "What happens BECAUSE of what happened before?"
@@ -144,9 +119,5 @@ Guidelines:
 - Each chapter should have clear progression
 - INCORPORATE the storylines into the outline naturally
 - USE the premises and progression systems in the plot (e.g., characters should advance through the progression stages at appropriate points in the story)
-- TRACK all significant changes using Events (relationships, goals, items, premise progress, storyline updates)
 - ENSURE CONTINUITY: When writing chapter N, always reference what happened in chapter N-1 and set up what should happen in chapter N+1
-- Beats MUST begin with a continuation from the previous chapter's final beat ("Therefore,") or the prior beat ("Then,") to enforce causal flow
-- For each chapter, ensure at least ONE event entry reflects the chapter's core change (relationship/goal/item/premise/storyline/gate) so state tracking remains usable
-- state_change MUST be mirrored by exactly one concrete Events entry (same change described in Events.Change)
-- When a chapter introduces a new obstacle or cost, add a gate event to record it`
+- Beats MUST begin with a continuation from the previous chapter's final beat ("Therefore,") or the prior beat ("Then,") to enforce causal flow`
