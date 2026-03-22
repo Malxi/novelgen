@@ -99,6 +99,11 @@ func (a *ComposeAgent) GenerateOutlineWithStructure(setup *models.StorySetup, st
 
 	totalChapters := structure.TotalChapters()
 
+	// Validate chapter anchors and state change mapping
+	if err := validateOutlineChapters(&outline); err != nil {
+		return nil, err
+	}
+
 	// Assign IDs to all elements using IDManager
 	idManager := logic.NewIDManager(&outline)
 	idManager.AssignIDsToOutline()
@@ -247,6 +252,10 @@ func (a *ComposeAgent) RegenerateChapter(chapter *models.Chapter, outline *model
 		if err := json.Unmarshal([]byte(content), &newChapter); err != nil {
 			return fmt.Errorf("failed to parse AI response: %w", err)
 		}
+	}
+
+	if err := validateChapterOutput(&newChapter); err != nil {
+		return err
 	}
 
 	// Update chapter
@@ -412,4 +421,61 @@ func formatEvents(events []models.Event) string {
 		parts = append(parts, part)
 	}
 	return strings.Join(parts, ", ")
+}
+
+func validateOutlineChapters(outline *models.Outline) error {
+	if outline == nil {
+		return fmt.Errorf("outline is nil")
+	}
+	for partIdx := range outline.Parts {
+		for volIdx := range outline.Parts[partIdx].Volumes {
+			for chapIdx := range outline.Parts[partIdx].Volumes[volIdx].Chapters {
+				chapter := &outline.Parts[partIdx].Volumes[volIdx].Chapters[chapIdx]
+				if err := validateChapterOutput(chapter); err != nil {
+					return fmt.Errorf("chapter %d.%d.%d invalid: %w", partIdx+1, volIdx+1, chapIdx+1, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func validateChapterOutput(chapter *models.Chapter) error {
+	if chapter == nil {
+		return fmt.Errorf("chapter is nil")
+	}
+	if len(chapter.Beats) == 0 {
+		return fmt.Errorf("beats are required")
+	}
+	if chapter.OpeningBeat == "" {
+		return fmt.Errorf("opening_beat is required")
+	}
+	if chapter.ClosingBeat == "" {
+		return fmt.Errorf("closing_beat is required")
+	}
+	if chapter.StateChange == "" {
+		return fmt.Errorf("state_change is required")
+	}
+	if chapter.OpeningBeat != chapter.Beats[0] {
+		return fmt.Errorf("opening_beat must match beats[0]")
+	}
+	if chapter.ClosingBeat != chapter.Beats[len(chapter.Beats)-1] {
+		return fmt.Errorf("closing_beat must match beats[last]")
+	}
+	if len(chapter.Events) == 0 {
+		return fmt.Errorf("events are required")
+	}
+	matches := 0
+	for _, event := range chapter.Events {
+		if strings.TrimSpace(event.Change) == strings.TrimSpace(chapter.StateChange) {
+			matches++
+		}
+	}
+	if matches == 0 {
+		return fmt.Errorf("state_change must match one Events.Change entry")
+	}
+	if matches > 1 {
+		return fmt.Errorf("state_change must match exactly one Events.Change entry")
+	}
+	return nil
 }

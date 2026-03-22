@@ -210,7 +210,7 @@ func (a *IterationAgent) regeneratePart(outline *models.Outline, suggestion prom
 	composeAgent := NewComposeAgent(a.client, a.config, a.projectLLM)
 
 	// Build context for regeneration
-	userPrompt := buildReviewContext(suggestion)
+	userPrompt := buildReviewContext(outline, suggestion)
 
 	// Regenerate the part
 	part := &outline.Parts[partIndex]
@@ -230,7 +230,7 @@ func (a *IterationAgent) regenerateVolume(outline *models.Outline, suggestion pr
 				// Create compose agent for regeneration
 				composeAgent := NewComposeAgent(a.client, a.config, a.projectLLM)
 
-				userPrompt := buildReviewContext(suggestion)
+				userPrompt := buildReviewContext(outline, suggestion)
 				if err := composeAgent.RegenerateVolume(&vol, outline, setup, language, userPrompt); err != nil {
 					return err
 				}
@@ -253,7 +253,7 @@ func (a *IterationAgent) regenerateChapter(outline *models.Outline, suggestion p
 					// Create compose agent for regeneration
 					composeAgent := NewComposeAgent(a.client, a.config, a.projectLLM)
 
-					userPrompt := buildReviewContext(suggestion)
+					userPrompt := buildReviewContext(outline, suggestion)
 					if err := composeAgent.RegenerateChapter(&ch, outline, setup, language, userPrompt); err != nil {
 						return err
 					}
@@ -268,9 +268,69 @@ func (a *IterationAgent) regenerateChapter(outline *models.Outline, suggestion p
 }
 
 // buildReviewContext builds context string from review suggestion
-func buildReviewContext(suggestion prompts.ReviewSuggestion) string {
-	return fmt.Sprintf("Issue: %s\nSuggestion: %s\nPriority: %s",
-		suggestion.Issue, suggestion.Suggestion, suggestion.Priority)
+func buildReviewContext(outline *models.Outline, suggestion prompts.ReviewSuggestion) string {
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf("Target Type: %s\n", suggestion.Type))
+	if suggestion.ID != "" {
+		sb.WriteString(fmt.Sprintf("Target ID: %s\n", suggestion.ID))
+	}
+	if suggestion.Title != "" {
+		sb.WriteString(fmt.Sprintf("Target Title: %s\n", suggestion.Title))
+	}
+	sb.WriteString(fmt.Sprintf("Issue: %s\n", suggestion.Issue))
+	sb.WriteString(fmt.Sprintf("Suggestion: %s\n", suggestion.Suggestion))
+	sb.WriteString(fmt.Sprintf("Priority: %s\n", suggestion.Priority))
+
+	if outline != nil && strings.EqualFold(strings.TrimSpace(suggestion.Type), "chapter") {
+		if closing, opening := lookupChapterHandoff(outline, suggestion.ID); closing != "" || opening != "" {
+			sb.WriteString("Continuity Handoff:\n")
+			if closing != "" {
+				sb.WriteString(fmt.Sprintf("- Previous closing_beat: %s\n", closing))
+			}
+			if opening != "" {
+				sb.WriteString(fmt.Sprintf("- Next opening_beat: %s\n", opening))
+			}
+		}
+	}
+
+	return strings.TrimSpace(sb.String())
+}
+
+func lookupChapterHandoff(outline *models.Outline, chapterID string) (string, string) {
+	if outline == nil || chapterID == "" {
+		return "", ""
+	}
+	for partIdx := range outline.Parts {
+		for volIdx := range outline.Parts[partIdx].Volumes {
+			chapters := outline.Parts[partIdx].Volumes[volIdx].Chapters
+			for chapIdx := range chapters {
+				if chapters[chapIdx].ID != chapterID {
+					continue
+				}
+				var previousClosing string
+				if chapIdx > 0 {
+					prev := chapters[chapIdx-1]
+					previousClosing = prev.ClosingBeat
+					if previousClosing == "" && len(prev.Beats) > 0 {
+						previousClosing = prev.Beats[len(prev.Beats)-1]
+					}
+				}
+
+				var nextOpening string
+				if chapIdx < len(chapters)-1 {
+					next := chapters[chapIdx+1]
+					nextOpening = next.OpeningBeat
+					if nextOpening == "" && len(next.Beats) > 0 {
+						nextOpening = next.Beats[0]
+					}
+				}
+
+				return previousClosing, nextOpening
+			}
+		}
+	}
+	return "", ""
 }
 
 func normalizeSuggestionID(outline *models.Outline, suggestion prompts.ReviewSuggestion) string {

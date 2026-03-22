@@ -87,7 +87,7 @@ Chapter Field Requirements:
 - Pacing MUST be one of: slow, normal, fast
 - opening_beat MUST match beats[0] and directly continue from the previous chapter's final beat
 - closing_beat MUST match beats[last] and set up the next chapter's opening beat
-- state_change MUST be a one-sentence primary change that maps to one concrete Events entry
+- state_change MUST be a one-sentence primary change that maps to one concrete Events entry (use the same change in Events.Change)
 
 Chapter Event Types (track all significant changes):
 1. relationship - Character relationship changes (e.g., allies become enemies, romance begins)
@@ -148,5 +148,5 @@ Guidelines:
 - ENSURE CONTINUITY: When writing chapter N, always reference what happened in chapter N-1 and set up what should happen in chapter N+1
 - Beats MUST begin with a continuation from the previous chapter's final beat ("Therefore,") or the prior beat ("Then,") to enforce causal flow
 - For each chapter, ensure at least ONE event entry reflects the chapter's core change (relationship/goal/item/premise/storyline/gate) so state tracking remains usable
-- state_change MUST be mirrored by exactly one concrete Events entry (same change described)
+- state_change MUST be mirrored by exactly one concrete Events entry (same change described in Events.Change)
 - When a chapter introduces a new obstacle or cost, add a gate event to record it`

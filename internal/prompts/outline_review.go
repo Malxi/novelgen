@@ -104,6 +104,8 @@ HIGH PRIORITY issues should include:
 - Character behavior that contradicts established traits
 - Storylines that start but never continue
 
+For continuity issues, the suggestion MUST reference the specific anchor(s) involved (e.g., previous closing_beat, next opening_beat, or the exact Events entry that should mirror state_change).
+
 Respond ONLY with a valid JSON object.`
 
 // ParseReviewResult parses the AI response into ReviewResult
