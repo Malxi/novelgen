@@ -39,6 +39,11 @@ WRITING GUIDELINES:
 6. Create smooth transitions and pacing appropriate to the scene
 7. End with a compelling hook that makes readers want to continue
 
+STYLE & CONSISTENCY REQUIREMENTS:
+- Use the narrative TENSE from story setup: "{{.tense}}" (do not shift tense mid-chapter).
+- Use the POV style from story setup: "{{.pov_style}}" (avoid head-hopping or POV drift).
+- Write the entire chapter in {{.language_name}}.
+
 CONTINUITY REQUIREMENTS:
 1. Review the previous chapters' content carefully
 2. Maintain consistency with established character voices and behaviors
@@ -84,6 +89,15 @@ func buildFinalChapterUserPrompt(data map[string]interface{}) string {
 	}
 	if style, ok := data["story_style"].(string); ok && style != "" {
 		sb.WriteString(fmt.Sprintf("Style: %s\n", style))
+	}
+	if tense, ok := data["tense"].(string); ok && strings.TrimSpace(tense) != "" {
+		sb.WriteString(fmt.Sprintf("Narrative Tense: %s\n", tense))
+	}
+	if pov, ok := data["pov_style"].(string); ok && strings.TrimSpace(pov) != "" {
+		sb.WriteString(fmt.Sprintf("POV Style: %s\n", pov))
+	}
+	if lang, ok := data["language_name"].(string); ok && strings.TrimSpace(lang) != "" {
+		sb.WriteString(fmt.Sprintf("Output Language: %s\n", lang))
 	}
 
 	sb.WriteString("\n")
@@ -172,6 +186,11 @@ REVIEW FEEDBACK PRIORITY:
 - Strengthen emotional impact where noted
 - Maintain all positive aspects that were praised
 
+STYLE & CONSISTENCY REQUIREMENTS:
+- Use the narrative TENSE from story setup: "{{.tense}}" (do not shift tense mid-chapter).
+- Use the POV style from story setup: "{{.pov_style}}" (avoid head-hopping or POV drift).
+- Write the entire chapter in {{.language_name}}.
+
 CONTINUITY REQUIREMENTS:
 - Review the previous chapters' content carefully
 - Maintain consistency with established character voices and behaviors
@@ -211,6 +230,15 @@ func buildImproveChapterUserPrompt(data map[string]interface{}) string {
 	}
 	if style, ok := data["story_style"].(string); ok && style != "" {
 		sb.WriteString(fmt.Sprintf("Style: %s\n", style))
+	}
+	if tense, ok := data["tense"].(string); ok && strings.TrimSpace(tense) != "" {
+		sb.WriteString(fmt.Sprintf("Narrative Tense: %s\n", tense))
+	}
+	if pov, ok := data["pov_style"].(string); ok && strings.TrimSpace(pov) != "" {
+		sb.WriteString(fmt.Sprintf("POV Style: %s\n", pov))
+	}
+	if lang, ok := data["language_name"].(string); ok && strings.TrimSpace(lang) != "" {
+		sb.WriteString(fmt.Sprintf("Output Language: %s\n", lang))
 	}
 
 	sb.WriteString("\n")

@@ -46,6 +46,11 @@ Use the state matrix to understand:
 
 Write naturally and creatively while staying true to the established story elements.
 
+STYLE & CONSISTENCY REQUIREMENTS:
+- Use the narrative TENSE from story setup: "{{.tense}}" (do not shift tense mid-chapter).
+- Use the POV style from story setup: "{{.pov_style}}" (avoid head-hopping or POV drift).
+- Write the entire chapter in {{.language_name}}.
+
 SCENE-ANCHOR RULE (VERY IMPORTANT):
 - If this is not the first chapter, the opening scene MUST directly continue from the final scene of the immediately previous chapter.
 - Keep the SAME location/time and the same in-scene situation (e.g., ongoing conversation), unless the Chapter Summary explicitly specifies a time skip or location change.
@@ -93,6 +98,15 @@ func buildChapterWritingUserPrompt(data map[string]interface{}) string {
 	}
 	if style, ok := data["story_style"].(string); ok && style != "" {
 		sb.WriteString(fmt.Sprintf("Style: %s\n", style))
+	}
+	if tense, ok := data["tense"].(string); ok && strings.TrimSpace(tense) != "" {
+		sb.WriteString(fmt.Sprintf("Narrative Tense: %s\n", tense))
+	}
+	if pov, ok := data["pov_style"].(string); ok && strings.TrimSpace(pov) != "" {
+		sb.WriteString(fmt.Sprintf("POV Style: %s\n", pov))
+	}
+	if lang, ok := data["language_name"].(string); ok && strings.TrimSpace(lang) != "" {
+		sb.WriteString(fmt.Sprintf("Output Language: %s\n", lang))
 	}
 
 	sb.WriteString("\n")

@@ -72,6 +72,9 @@ func (a *WriteAgent) GenerateChapter(chapter *models.Chapter, context *ChapterCo
 		"state_matrix":    prompts.FormatStateMatrix(state, chapter),
 		"target_words":    targetWords,
 		"language":        a.language,
+		"language_name":   prompts.GetLanguageName(a.language),
+		"tense":           a.setup.Tense,
+		"pov_style":       a.setup.POVStyle,
 	}
 
 	// Build prompts using PromptManager
@@ -148,6 +151,9 @@ func (a *WriteAgent) GenerateChapterWithSuggestions(chapter *models.Chapter, con
 		"target_words":    targetWords,
 		"suggestions":     suggestions,
 		"language":        a.language,
+		"language_name":   prompts.GetLanguageName(a.language),
+		"tense":           a.setup.Tense,
+		"pov_style":       a.setup.POVStyle,
 	}
 
 	// Build prompts using PromptManager with improve template

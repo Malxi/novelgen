@@ -56,6 +56,9 @@ func (a *DraftAgent) GenerateDraft(chapter *models.Chapter, state *models.StateM
 		"state_matrix":    prompts.FormatStateMatrix(state, chapter),
 		"target_words":    targetWords,
 		"language":        a.language,
+		"language_name":   prompts.GetLanguageName(a.language),
+		"tense":           a.setup.Tense,
+		"pov_style":       a.setup.POVStyle,
 	}
 
 	// Build prompts using PromptManager
@@ -141,6 +144,9 @@ func (a *DraftAgent) GenerateDraftWithSuggestions(chapter *models.Chapter, state
 		"state_matrix":    prompts.FormatStateMatrix(state, chapter),
 		"target_words":    targetWords,
 		"language":        a.language,
+		"language_name":   prompts.GetLanguageName(a.language),
+		"tense":           a.setup.Tense,
+		"pov_style":       a.setup.POVStyle,
 		"suggestions":     suggestions,
 		"context":         contextText,
 		"recap":           recap,
@@ -215,6 +221,9 @@ func (a *DraftAgent) GenerateDraftWithContext(chapter *models.Chapter, state *mo
 		"state_matrix":    prompts.FormatStateMatrix(state, chapter),
 		"target_words":    targetWords,
 		"language":        a.language,
+		"language_name":   prompts.GetLanguageName(a.language),
+		"tense":           a.setup.Tense,
+		"pov_style":       a.setup.POVStyle,
 		"context":         contextText,
 		"recap":           recap,
 		"next_chapters":   nextContext,
