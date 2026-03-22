@@ -40,11 +40,11 @@ func BuildOutlineGenData(structure models.StoryStructure, setup *models.StorySet
 	// Use StructToPrompt to convert StorySetup to formatted string
 	setupPrompt := StructToPrompt(setup, "")
 
-	summaryFormat := "Summary MUST be ONE sentence following: CHARACTER in LOCATION does ACTION. Example: Maya in a ruined observatory discovers a hidden chamber."
+	summaryFormat := "Summary MUST be ONE sentence following: CHARACTER in LOCATION attempts ACTION, but OBSTACLE/STAKE. Example: Maya in a ruined observatory discovers a hidden chamber but triggers a security lockdown."
 	if language == "zh" {
-		summaryFormat = "Summary MUST be ONE sentence following: 角色 在 什么地方 发生了 什么事。Example: 李明 在 废弃工厂 发现了 秘密实验室。"
+		summaryFormat = "Summary MUST be ONE sentence following: 角色 在 什么地方 做了 什么事，却 遇到 什么阻碍/代价。Example: 李明 在 废弃工厂 发现了 秘密实验室，却 引爆了 警报。"
 	} else if language != "en" {
-		summaryFormat = "Summary MUST be ONE sentence following: CHARACTER in LOCATION does ACTION (translate into the target language). Example: Maya in a ruined observatory discovers a hidden chamber."
+		summaryFormat = "Summary MUST be ONE sentence following: CHARACTER in LOCATION attempts ACTION, but OBSTACLE/STAKE (translate into the target language). Example: Maya in a ruined observatory discovers a hidden chamber but triggers a security lockdown."
 	}
 
 	return map[string]interface{}{
@@ -83,6 +83,7 @@ Chapter Summary Format:
 Chapter Field Requirements:
 - Summary character(s) MUST appear in Characters list
 - Location MUST match the summary location and cannot be empty
+- Conflict MUST be one concise sentence that states the immediate opposing force or dilemma
 - Pacing MUST be one of: slow, normal, fast
 
 Chapter Event Types (track all significant changes):
@@ -107,6 +108,10 @@ Chapter Event Types (track all significant changes):
    - Subject: storyline name
    - Change: started/advanced/completed/twist
    - Details: ONE SENTENCE describing what happened (e.g., "主角发现了矿场深处的秘密通道", "林砚和阿石达成了临时同盟", "反派抢走了关键道具")
+6. gate - Immediate obstacle, cost, or setback introduced in the chapter
+   - Characters: [character]
+   - Subject: obstacle or stake name (e.g., "sealed vault", "time limit", "wounded ally")
+   - Change: introduced/escalated/overcome
 
 CRITICAL CONTINUITY REQUIREMENTS:
 1. CAUSAL CHAIN: Each chapter MUST be a direct consequence of the previous chapter's events. Ask "What happens BECAUSE of what happened before?"
@@ -126,6 +131,8 @@ Guidelines:
 - Follow the EXACT structure specified above
 - Ensure the outline follows a coherent narrative arc across all parts
 - Include specific plot beats for each chapter (3-5 beats per chapter)
+- Beats must alternate intention → obstacle → consequence (no three beats in a row without a complication)
+- The final beat of each chapter MUST introduce a concrete obstacle or decision that the next chapter resolves or escalates
 - Vary the pacing (slow/normal/fast) based on the story needs
 - Make conflicts clear and compelling
 - Each part should have a clear narrative purpose
@@ -136,4 +143,5 @@ Guidelines:
 - TRACK all significant changes using Events (relationships, goals, items, premise progress, storyline updates)
 - ENSURE CONTINUITY: When writing chapter N, always reference what happened in chapter N-1 and set up what should happen in chapter N+1
 - Beats MUST begin with a continuation from the previous chapter's final beat ("Therefore,") or the prior beat ("Then,") to enforce causal flow
-- For each chapter, ensure at least ONE event entry reflects the chapter's core change (relationship/goal/item/premise/storyline) so state tracking remains usable`
+- For each chapter, ensure at least ONE event entry reflects the chapter's core change (relationship/goal/item/premise/storyline) so state tracking remains usable
+- When a chapter introduces a new obstacle or cost, add a gate event to record it`
