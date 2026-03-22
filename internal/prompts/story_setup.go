@@ -57,17 +57,18 @@ Quality checklist:
 - Theme: a clear statement (not a single word)
 - Rules: 3-7 clear, enforceable rules
 - Target audience: include age range and readership type (e.g., "18-35 adult fantasy readers")
-- Tone: 2-4 adjectives
-- Tense: past or present (choose one)
-- POV style: first person, third person limited, or third person omniscient
-- Storylines: 3-5 items; include at least one "main" type and one subplot or character_arc; importance is 1-10
+- Tone: 2-4 adjectives, comma-separated (no sentences)
+- Tense: exactly "past" or "present" (lowercase)
+- POV style: exactly "first person", "third person limited", or "third person omniscient"
+- Storylines: 3-5 items; include at least one "main" type and one subplot or character_arc; type must be exactly main/subplot/character_arc; importance is integer 1-10
 - Premises (if present): 1-3 items tied to the setting or power system
+- Consistency: genres, theme, tone, rules, premises, and storylines must align without contradictions
 
 For premises with progression systems:
 - Each premise should have a clear upgrade path (3-5 stages minimum)
 - Levels should start at 1 and increase by 1
 - Higher levels should be progressively more powerful and harder to achieve
-- Include specific requirements or conditions for advancement
+- Each stage must include a distinct name, description, and requirements
 - Make each stage distinct and meaningful to the story`, langName)
 }
 
