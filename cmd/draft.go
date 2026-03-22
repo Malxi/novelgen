@@ -756,8 +756,15 @@ func improveChaptersWithAgent(agent *agents.DraftAgent, chapters []*models.Chapt
 				// Calculate state matrix
 				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
 
+				// Load continuity context from previous draft chapters
+				contextText := loadPreviousDraftContext(outline, chapter, draftContextFlag)
+				// Extract a compact recap from the immediately previous chapter (if available)
+				prevRecap := loadPreviousDraftRecap(outline, chapter)
+				// Load next chapters for foreshadowing (default: 2 chapters ahead)
+				nextChapters := loadNextChapters(outline, chapter, 2)
+
 				// Generate improved draft with suggestions
-				draft, err := agent.GenerateDraftWithSuggestions(chapter, stateMatrix, 500, suggestions)
+				draft, err := agent.GenerateDraftWithSuggestions(chapter, stateMatrix, 500, suggestions, contextText, prevRecap, nextChapters)
 				if err != nil {
 					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
 					continue
@@ -775,13 +782,13 @@ func improveChaptersWithAgent(agent *agents.DraftAgent, chapters []*models.Chapt
 					draftTeleportFixFlag,
 					draftBridgeRetriesFlag,
 					func(s string) (string, error) {
-						return agent.GenerateDraftWithSuggestions(chapter, stateMatrix, 500, s)
+						return agent.GenerateDraftWithSuggestions(chapter, stateMatrix, 500, s, contextText, prevRecap, nextChapters)
 					},
 					draftCharacterFixFlag,
 					draftCharacterPatchRetriesFlag,
 					knownChars,
 					func(s string) (string, error) {
-						return agent.GenerateDraftWithSuggestions(chapter, stateMatrix, 500, s)
+						return agent.GenerateDraftWithSuggestions(chapter, stateMatrix, 500, s, contextText, prevRecap, nextChapters)
 					},
 				)
 				draft = fixed

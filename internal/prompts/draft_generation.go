@@ -58,7 +58,8 @@ IMPORTANT RULES:
 1. DO NOT include a summary or synopsis at the beginning of the chapter
 2. DO NOT write "本章讲述了..." or similar meta descriptions
 3. Start directly with the story content (Continuation Bridge)
-4. The Chapter Summary provided is for your reference only, do not include it in the output`
+4. The Chapter Summary provided is for your reference only, do not include it in the output
+5. If UPCOMING CHAPTERS are provided, foreshadow them subtly (no spoilers or scene jumps).`
 }
 
 // buildChapterWritingUserPrompt builds the user prompt for chapter writing
@@ -75,6 +76,11 @@ func buildChapterWritingUserPrompt(data map[string]interface{}) string {
 	// Continuity context (optional, lower signal than recap)
 	if context, ok := data["context"].(string); ok && strings.TrimSpace(context) != "" {
 		sb.WriteString(context)
+		sb.WriteString("\n\n")
+	}
+	// Upcoming chapters (optional, for foreshadowing)
+	if next, ok := data["next_chapters"].(string); ok && strings.TrimSpace(next) != "" {
+		sb.WriteString(next)
 		sb.WriteString("\n\n")
 	}
 

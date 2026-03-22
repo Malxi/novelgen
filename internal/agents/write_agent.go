@@ -61,6 +61,7 @@ func (a *WriteAgent) GenerateChapter(chapter *models.Chapter, context *ChapterCo
 	data := map[string]interface{}{
 		"story_genre":     strings.Join(a.setup.Genres, ", "),
 		"story_style":     a.setup.Tone,
+		"story_title":     a.setup.ProjectName,
 		"chapter_id":      chapter.ID,
 		"chapter_title":   chapter.Title,
 		"chapter_summary": chapter.Summary,
@@ -135,6 +136,7 @@ func (a *WriteAgent) GenerateChapterWithSuggestions(chapter *models.Chapter, con
 	data := map[string]interface{}{
 		"story_genre":     strings.Join(a.setup.Genres, ", "),
 		"story_style":     a.setup.Tone,
+		"story_title":     a.setup.ProjectName,
 		"chapter_id":      chapter.ID,
 		"chapter_title":   chapter.Title,
 		"chapter_summary": chapter.Summary,

@@ -47,6 +47,7 @@ func (a *DraftAgent) GenerateDraft(chapter *models.Chapter, state *models.StateM
 	data := map[string]interface{}{
 		"story_genre":     strings.Join(a.setup.Genres, ", "),
 		"story_style":     a.setup.Tone,
+		"story_title":     a.setup.ProjectName,
 		"chapter_id":      chapter.ID,
 		"chapter_title":   chapter.Title,
 		"chapter_summary": chapter.Summary,
@@ -112,13 +113,26 @@ func (a *DraftAgent) logDraftContext(chapterID, systemPrompt, userPrompt string)
 }
 
 // GenerateDraftWithSuggestions generates a draft chapter with improvement suggestions
-func (a *DraftAgent) GenerateDraftWithSuggestions(chapter *models.Chapter, state *models.StateMatrix, targetWords int, suggestions string) (string, error) {
+func (a *DraftAgent) GenerateDraftWithSuggestions(chapter *models.Chapter, state *models.StateMatrix, targetWords int, suggestions string, contextText string, recap string, nextChapters []*models.Chapter) (string, error) {
 	a.log.Info("Generating improved draft for chapter: %s with suggestions", chapter.ID)
+
+	// Build next chapters context for foreshadowing
+	var nextContext string
+	if len(nextChapters) > 0 {
+		var sb strings.Builder
+		sb.WriteString("UPCOMING CHAPTERS (for foreshadowing):\n")
+		for _, next := range nextChapters {
+			sb.WriteString(fmt.Sprintf("\n--- %s: %s ---\n", next.ID, next.Title))
+			sb.WriteString(fmt.Sprintf("Summary: %s\n", next.Summary))
+		}
+		nextContext = sb.String()
+	}
 
 	// Build prompt data
 	data := map[string]interface{}{
 		"story_genre":     strings.Join(a.setup.Genres, ", "),
 		"story_style":     a.setup.Tone,
+		"story_title":     a.setup.ProjectName,
 		"chapter_id":      chapter.ID,
 		"chapter_title":   chapter.Title,
 		"chapter_summary": chapter.Summary,
@@ -128,6 +142,9 @@ func (a *DraftAgent) GenerateDraftWithSuggestions(chapter *models.Chapter, state
 		"target_words":    targetWords,
 		"language":        a.language,
 		"suggestions":     suggestions,
+		"context":         contextText,
+		"recap":           recap,
+		"next_chapters":   nextContext,
 	}
 
 	// Build prompts using PromptManager
@@ -189,6 +206,7 @@ func (a *DraftAgent) GenerateDraftWithContext(chapter *models.Chapter, state *mo
 	data := map[string]interface{}{
 		"story_genre":     strings.Join(a.setup.Genres, ", "),
 		"story_style":     a.setup.Tone,
+		"story_title":     a.setup.ProjectName,
 		"chapter_id":      chapter.ID,
 		"chapter_title":   chapter.Title,
 		"chapter_summary": chapter.Summary,
