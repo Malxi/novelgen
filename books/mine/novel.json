@@ -15,7 +15,7 @@
     "max_words_per_chapter": 5000
   },
   "llm": {
-    "provider": "openai",
-    "model": "gpt-5.2"
+    "provider": "ollama",
+    "model": "qwen3.5:4b"
   }
 }

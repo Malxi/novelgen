@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -139,7 +140,7 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 	// AI generation mode
 	logger.Info("AI generation mode with prompt: %s", prompt)
 	logger.Info("Using language: %s", projectConfig.Language)
-	setup, err := generateStorySetupWithAI(prompt, projectConfig.Language, &projectConfig.LLM)
+	setup, err := generateStorySetupWithAI(cmd.Context(), prompt, projectConfig.Language, &projectConfig.LLM)
 	if err != nil {
 		logger.Error("Failed to generate story setup with AI: %v", err)
 		return fmt.Errorf("failed to generate story setup with AI: %w", err)
@@ -203,7 +204,7 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 
 	// Regenerate story setup
 	logger.Info("Regenerating story setup...")
-	setup, err := generateStorySetupWithAI(prompt, projectConfig.Language, &projectConfig.LLM)
+	setup, err := generateStorySetupWithAI(cmd.Context(), prompt, projectConfig.Language, &projectConfig.LLM)
 	if err != nil {
 		logger.Error("Failed to regenerate story setup: %v", err)
 		return fmt.Errorf("failed to regenerate story setup: %w", err)
@@ -275,13 +276,13 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 	for round := 1; round <= setupMaxRounds; round++ {
 		logger.Section(fmt.Sprintf("IMPROVEMENT ROUND %d/%d", round, setupMaxRounds))
 
-		improvedSetup, err := agent.ImproveStorySetup(setup)
+		improveResult, err := agent.Improve(cmd.Context(), agents.SetupImproveInput{ExistingSetup: *setup})
 		if err != nil {
 			logger.Error("Failed to improve story setup: %v", err)
 			return fmt.Errorf("failed to improve story setup: %w", err)
 		}
 
-		setup = improvedSetup
+		setup = &improveResult.Setup
 
 		// Save after each round
 		if err := saveStorySetup(setup); err != nil {
@@ -602,7 +603,7 @@ func fillSetupField(setup *models.StorySetup, section, content string) {
 	}
 }
 
-func generateStorySetupWithAI(prompt, language string, projectLLM *models.ProjectLLM) (*models.StorySetup, error) {
+func generateStorySetupWithAI(ctx context.Context, prompt, language string, projectLLM *models.ProjectLLM) (*models.StorySetup, error) {
 	// Load LLM config
 	cfg, err := llm.LoadOrCreateConfig()
 	if err != nil {
@@ -638,7 +639,11 @@ func generateStorySetupWithAI(prompt, language string, projectLLM *models.Projec
 	agent := agents.NewSetupAgent(client, cfg, projectLLM)
 	agent.SetLanguage(language)
 
-	return agent.GenerateStorySetup(prompt)
+	result, err := agent.Generate(ctx, agents.SetupGenInput{Idea: prompt})
+	if err != nil {
+		return nil, err
+	}
+	return &result.Setup, nil
 }
 
 func saveStorySetup(setup *models.StorySetup) error {
