@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -331,7 +332,8 @@ func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.Proje
 	}
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 
-	return agent.GenerateOutlineWithStructure(setup, projectConfig.Structure, projectConfig.Language)
+	ctx := context.Background()
+	return agent.GenerateOutlineWithStructure(ctx, setup, projectConfig.Structure, projectConfig.Language)
 }
 
 func regenerateElement(outline *models.Outline, id string, setup *models.StorySetup, projectConfig *models.ProjectConfig) error {
@@ -362,6 +364,8 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 	// Create IDManager for ID resolution
 	idManager := logic.NewIDManager(outline)
 
+	ctx := context.Background()
+
 	switch len(parts) {
 	case 1:
 		// Regenerate a part
@@ -372,7 +376,7 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 			return fmt.Errorf("part %s not found", partID)
 		}
 		fmt.Printf("Regenerating part: %s\n", partID)
-		return agent.RegeneratePart(part, outline, setup, projectConfig.Language, userPrompt)
+		return agent.RegeneratePart(ctx, part, outline, setup, projectConfig.Language, userPrompt)
 
 	case 2:
 		// Regenerate a volume
@@ -384,7 +388,7 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 			return fmt.Errorf("volume %s not found", volumeID)
 		}
 		fmt.Printf("Regenerating volume: %s\n", volumeID)
-		return agent.RegenerateVolume(volume, outline, setup, projectConfig.Language, userPrompt)
+		return agent.RegenerateVolume(ctx, volume, outline, setup, projectConfig.Language, userPrompt)
 
 	case 3:
 		// Regenerate a chapter
@@ -397,7 +401,7 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 			return fmt.Errorf("chapter %s not found", chapterID)
 		}
 		fmt.Printf("Regenerating chapter: %s\n", chapterID)
-		return agent.RegenerateChapter(chapter, outline, setup, projectConfig.Language, userPrompt)
+		return agent.RegenerateChapter(ctx, chapter, outline, setup, projectConfig.Language, userPrompt)
 
 	default:
 		return fmt.Errorf("invalid ID format: %s (expected format: \"1\", \"1_1\", or \"1_1_1\")", id)

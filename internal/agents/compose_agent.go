@@ -1,7 +1,7 @@
 package agents
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"strings"
 
@@ -9,151 +9,143 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
-	"novelgen/internal/prompts"
 )
 
+// ComposeGenInput is the input for outline generation
+type ComposeGenInput struct {
+	Setup     models.StorySetup     `md:"setup"`
+	Structure models.StoryStructure `md:"structure"`
+}
+
+// ComposeGenOutput is the output for outline generation
+type ComposeGenOutput struct {
+	Outline models.Outline `md:"outline"`
+}
+
+// ComposeRegenInput is the input for outline regeneration
+type ComposeRegenInput struct {
+	Outline     models.Outline `md:"outline"`
+	ElementType string         `md:"element_type"` // "part", "volume", "chapter"
+	ElementID   string         `md:"element_id"`
+	Suggestions string         `md:"suggestions"`
+}
+
+// ComposeRegenOutput is the output for outline regeneration
+type ComposeRegenOutput struct {
+	Part    *models.Part    `md:"part,omitempty"`
+	Volume  *models.Volume  `md:"volume,omitempty"`
+	Chapter *models.Chapter `md:"chapter,omitempty"`
+}
+
 // ComposeAgent handles AI generation for story outline
+// It wraps BaseAgent to provide type-safe methods
 type ComposeAgent struct {
-	client     llm.Client
-	config     *llm.Config
-	projectLLM *models.ProjectLLM
+	base *BaseAgent
 }
 
 // NewComposeAgent creates a new ComposeAgent
 func NewComposeAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM) *ComposeAgent {
-	return &ComposeAgent{
-		client:     client,
-		config:     config,
-		projectLLM: projectLLM,
-	}
+	base := NewBaseAgent(BaseAgentConfig{
+		Name:       "ComposeAgent",
+		Client:     client,
+		Config:     config,
+		ProjectLLM: projectLLM,
+		Language:   "zh",
+	})
+
+	return &ComposeAgent{base: base}
+}
+
+// SetLanguage sets the output language
+func (a *ComposeAgent) SetLanguage(language string) {
+	a.base.SetLanguage(language)
 }
 
 // GenerateOutlineWithStructure generates a story outline with a predefined structure
-func (a *ComposeAgent) GenerateOutlineWithStructure(setup *models.StorySetup, structure models.StoryStructure, language string) (*models.Outline, error) {
+// This is the type-safe wrapper around BaseAgent.Execute
+func (a *ComposeAgent) GenerateOutlineWithStructure(ctx context.Context, setup *models.StorySetup, structure models.StoryStructure, language string) (*models.Outline, error) {
 	logger.Section("COMPOSE AGENT - Outline Generation")
 	logger.Info("Project: %s", setup.ProjectName)
 	logger.Info("Structure: %d parts × %d volumes × %d chapters", structure.TargetParts, structure.TargetVolumes, structure.TargetChapters)
 	logger.Info("Language: %s", language)
 
-	// Create prompt manager
-	pm := prompts.NewPromptManager()
+	// Set language
+	a.SetLanguage(language)
 
-	// Build prompts using the prompt manager
-	data := prompts.BuildOutlineGenData(structure, setup, language)
-	data["language"] = language
-
-	systemPrompt, userPrompt, err := pm.Build(prompts.SkillOutlineGen, "with_structure", data)
-	if err != nil {
-		logger.Error("Failed to build prompt: %v", err)
-		return nil, fmt.Errorf("failed to build prompt: %w", err)
+	var output ComposeGenOutput
+	params := InvokeParams{
+		Skills:  []string{"compose-gen"},
+		Command: "generate a story outline with the specified structure",
 	}
 
-	// Log prompts
-	logger.Prompt(string(prompts.SkillOutlineGen), "with_structure", systemPrompt, userPrompt)
-
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPrompt},
+	input := ComposeGenInput{
+		Setup:     *setup,
+		Structure: structure,
 	}
 
-	options := a.config.GetChatOptions(a.projectLLM)
-
-	logger.Info("Sending request to AI (this may take a while)...")
-	resp, err := a.client.ChatCompletion(messages, options)
-	if err != nil {
-		logger.Error("AI request failed: %v", err)
-		return nil, fmt.Errorf("AI request failed: %w", err)
-	}
-
-	logger.Info("Received response (%d tokens used)", resp.Usage.TotalTokens)
-
-	// Parse the JSON response
-	var outline models.Outline
-	if err := json.Unmarshal([]byte(resp.Content), &outline); err != nil {
-		// Try to extract JSON from markdown code block if present
-		content := extractJSONFromMarkdown(resp.Content)
-		logger.Debug("Extracted JSON from markdown: %s", content)
-		if err := json.Unmarshal([]byte(content), &outline); err != nil {
-			logger.Error("Failed to parse AI response as JSON: %v", err)
-			logger.Debug("Raw response: %s", resp.Content)
-			return nil, fmt.Errorf("failed to parse AI response as JSON: %w\nResponse: %s", err, resp.Content)
-		}
+	if err := a.base.Execute(ctx, params, input, &output.Outline); err != nil {
+		return nil, err
 	}
 
 	// Validate the outline structure
-	if len(outline.Parts) != structure.TargetParts {
-		logger.Error("AI generated %d parts, but %d were requested", len(outline.Parts), structure.TargetParts)
-		return nil, fmt.Errorf("AI generated %d parts, but %d were requested", len(outline.Parts), structure.TargetParts)
+	if err := a.validateOutlineStructure(&output.Outline, structure); err != nil {
+		return nil, err
 	}
-
-	for i, part := range outline.Parts {
-		if len(part.Volumes) != structure.TargetVolumes {
-			return nil, fmt.Errorf("part %d has %d volumes, but %d were requested", i+1, len(part.Volumes), structure.TargetVolumes)
-		}
-		for j, volume := range part.Volumes {
-			if len(volume.Chapters) != structure.TargetChapters {
-				return nil, fmt.Errorf("volume %d.%d has %d chapters, but %d were requested", i+1, j+1, len(volume.Chapters), structure.TargetChapters)
-			}
-		}
-	}
-
-	totalChapters := structure.TotalChapters()
 
 	// Validate chapter anchors and state change mapping
-	if err := validateOutlineChapters(&outline); err != nil {
+	if err := a.validateOutlineChapters(&output.Outline); err != nil {
 		return nil, err
 	}
 
 	// Assign IDs to all elements using IDManager
-	idManager := logic.NewIDManager(&outline)
+	idManager := logic.NewIDManager(&output.Outline)
 	idManager.AssignIDsToOutline()
 	logger.Info("Assigned IDs to all outline elements")
 
+	totalChapters := structure.TotalChapters()
 	fmt.Printf("✓ Generated outline with %d part(s), %d volume(s) per part, %d chapter(s) per volume\n",
-		len(outline.Parts), structure.TargetVolumes, structure.TargetChapters)
+		len(output.Outline.Parts), structure.TargetVolumes, structure.TargetChapters)
 	fmt.Printf("  Total: %d chapters\n", totalChapters)
 	fmt.Println()
 
-	return &outline, nil
+	return &output.Outline, nil
 }
 
 // RegeneratePart regenerates a single part with user suggestions
-func (a *ComposeAgent) RegeneratePart(part *models.Part, outline *models.Outline, setup *models.StorySetup, language, userPrompt string) error {
+func (a *ComposeAgent) RegeneratePart(ctx context.Context, part *models.Part, outline *models.Outline, setup *models.StorySetup, language, suggestions string) error {
 	fmt.Printf("🤖 Regenerating part with AI...\n")
+
+	// Set language
+	a.SetLanguage(language)
 
 	// Build context from surrounding parts
 	context := a.buildPartContext(part, outline)
 
-	// Create prompt manager
-	pm := prompts.NewPromptManager()
-
-	// Build prompts
-	data := prompts.BuildOutlineRegenData("part", part.Title, context, setup, language, userPrompt)
-	systemPrompt, userPromptText, err := pm.Build(prompts.SkillOutlineRegen, "part", data)
-	if err != nil {
-		return fmt.Errorf("failed to build prompt: %w", err)
+	params := InvokeParams{
+		Skills:  []string{"compose-regen"},
+		Command: "regenerate a part while maintaining continuity",
 	}
 
-	// Call AI
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPromptText},
+	input := ComposeRegenInput{
+		Outline:     *outline,
+		ElementType: "part",
+		ElementID:   part.ID,
+		Suggestions: suggestions,
 	}
 
-	options := a.config.GetChatOptions(a.projectLLM)
-
-	resp, err := a.client.ChatCompletion(messages, options)
-	if err != nil {
-		return fmt.Errorf("AI request failed: %w", err)
+	// Add context to the base agent's execution
+	// We need to pass context through the input
+	inputWithContext := struct {
+		ComposeRegenInput
+		Context string `md:"context"`
+	}{
+		ComposeRegenInput: input,
+		Context:           context,
 	}
 
-	// Parse response
 	var newPart models.Part
-	if err := json.Unmarshal([]byte(resp.Content), &newPart); err != nil {
-		content := extractJSONFromMarkdown(resp.Content)
-		if err := json.Unmarshal([]byte(content), &newPart); err != nil {
-			return fmt.Errorf("failed to parse AI response: %w", err)
-		}
+	if err := a.base.Execute(ctx, params, inputWithContext, &newPart); err != nil {
+		return err
 	}
 
 	// Update part
@@ -165,44 +157,39 @@ func (a *ComposeAgent) RegeneratePart(part *models.Part, outline *models.Outline
 }
 
 // RegenerateVolume regenerates a single volume with user suggestions
-func (a *ComposeAgent) RegenerateVolume(volume *models.Volume, outline *models.Outline, setup *models.StorySetup, language, userPrompt string) error {
+func (a *ComposeAgent) RegenerateVolume(ctx context.Context, volume *models.Volume, outline *models.Outline, setup *models.StorySetup, language, suggestions string) error {
 	fmt.Printf("🤖 Regenerating volume with AI...\n")
+
+	// Set language
+	a.SetLanguage(language)
 
 	// Build context
 	context := a.buildVolumeContext(volume, outline)
 
-	// Create prompt manager
-	pm := prompts.NewPromptManager()
-
-	// Build prompts
-	data := prompts.BuildOutlineRegenData("volume", volume.Title, context, setup, language, userPrompt)
-	systemPrompt, userPromptText, err := pm.Build(prompts.SkillOutlineRegen, "volume", data)
-	if err != nil {
-		return fmt.Errorf("failed to build prompt: %w", err)
+	params := InvokeParams{
+		Skills:  []string{"compose-regen"},
+		Command: "regenerate a volume while maintaining continuity",
 	}
 
-	// Call AI
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPromptText},
+	input := ComposeRegenInput{
+		Outline:     *outline,
+		ElementType: "volume",
+		ElementID:   volume.ID,
+		Suggestions: suggestions,
 	}
 
-	options := a.config.GetChatOptions(a.projectLLM)
-	// Use smaller max tokens for volume regeneration
-	options.MaxTokens = 10000
-
-	resp, err := a.client.ChatCompletion(messages, options)
-	if err != nil {
-		return fmt.Errorf("AI request failed: %w", err)
+	// Add context to the base agent's execution
+	inputWithContext := struct {
+		ComposeRegenInput
+		Context string `md:"context"`
+	}{
+		ComposeRegenInput: input,
+		Context:           context,
 	}
 
-	// Parse response
 	var newVolume models.Volume
-	if err := json.Unmarshal([]byte(resp.Content), &newVolume); err != nil {
-		content := extractJSONFromMarkdown(resp.Content)
-		if err := json.Unmarshal([]byte(content), &newVolume); err != nil {
-			return fmt.Errorf("failed to parse AI response: %w", err)
-		}
+	if err := a.base.Execute(ctx, params, inputWithContext, &newVolume); err != nil {
+		return err
 	}
 
 	// Update volume (including chapters)
@@ -217,47 +204,42 @@ func (a *ComposeAgent) RegenerateVolume(volume *models.Volume, outline *models.O
 }
 
 // RegenerateChapter regenerates a single chapter with user suggestions
-func (a *ComposeAgent) RegenerateChapter(chapter *models.Chapter, outline *models.Outline, setup *models.StorySetup, language, userPrompt string) error {
+func (a *ComposeAgent) RegenerateChapter(ctx context.Context, chapter *models.Chapter, outline *models.Outline, setup *models.StorySetup, language, suggestions string) error {
 	fmt.Printf("🤖 Regenerating chapter with AI...\n")
+
+	// Set language
+	a.SetLanguage(language)
 
 	// Build context
 	context := a.buildChapterContext(chapter, outline)
 
-	// Create prompt manager
-	pm := prompts.NewPromptManager()
-
-	// Build prompts
-	data := prompts.BuildOutlineRegenData("chapter", chapter.Title, context, setup, language, userPrompt)
-	systemPrompt, userPromptText, err := pm.Build(prompts.SkillOutlineRegen, "chapter", data)
-	if err != nil {
-		return fmt.Errorf("failed to build prompt: %w", err)
+	params := InvokeParams{
+		Skills:  []string{"compose-regen"},
+		Command: "regenerate a chapter while maintaining continuity",
 	}
 
-	// Call AI
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPromptText},
+	input := ComposeRegenInput{
+		Outline:     *outline,
+		ElementType: "chapter",
+		ElementID:   chapter.ID,
+		Suggestions: suggestions,
 	}
 
-	options := a.config.GetChatOptions(a.projectLLM)
-	// Use smaller max tokens for chapter regeneration
-	options.MaxTokens = 5000
-
-	resp, err := a.client.ChatCompletion(messages, options)
-	if err != nil {
-		return fmt.Errorf("AI request failed: %w", err)
+	// Add context to the base agent's execution
+	inputWithContext := struct {
+		ComposeRegenInput
+		Context string `md:"context"`
+	}{
+		ComposeRegenInput: input,
+		Context:           context,
 	}
 
-	// Parse response
 	var newChapter models.Chapter
-	if err := json.Unmarshal([]byte(resp.Content), &newChapter); err != nil {
-		content := extractJSONFromMarkdown(resp.Content)
-		if err := json.Unmarshal([]byte(content), &newChapter); err != nil {
-			return fmt.Errorf("failed to parse AI response: %w", err)
-		}
+	if err := a.base.Execute(ctx, params, inputWithContext, &newChapter); err != nil {
+		return err
 	}
 
-	if err := validateChapterOutput(&newChapter); err != nil {
+	if err := a.validateChapterOutput(&newChapter); err != nil {
 		return err
 	}
 
@@ -355,7 +337,7 @@ func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *mod
 						prevChap := vol.Chapters[i-1]
 						context.WriteString(fmt.Sprintf("Previous Chapter (%s): %s\n", prevChap.ID, prevChap.Title))
 						context.WriteString(fmt.Sprintf("Summary: %s\n", prevChap.Summary))
-						context.WriteString(fmt.Sprintf("Events: %s\n", formatEvents(prevChap.Events)))
+						context.WriteString(fmt.Sprintf("Events: %s\n", a.formatEvents(prevChap.Events)))
 						prevBeats := "None"
 						if len(prevChap.Beats) > 0 {
 							prevBeats = strings.Join(prevChap.Beats, "; ")
@@ -377,7 +359,7 @@ func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *mod
 						prev2Chap := vol.Chapters[i-2]
 						context.WriteString(fmt.Sprintf("Two Chapters Back (%s): %s\n", prev2Chap.ID, prev2Chap.Title))
 						context.WriteString(fmt.Sprintf("Summary: %s\n", prev2Chap.Summary))
-						context.WriteString(fmt.Sprintf("Key Events: %s\n\n", formatEvents(prev2Chap.Events)))
+						context.WriteString(fmt.Sprintf("Key Events: %s\n\n", a.formatEvents(prev2Chap.Events)))
 					}
 
 					// Add next chapter context
@@ -398,7 +380,7 @@ func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *mod
 					context.WriteString("=== CURRENT CHAPTER TO REGENERATE ===\n")
 					context.WriteString(fmt.Sprintf("Chapter Title: %s\n", chapter.Title))
 					context.WriteString(fmt.Sprintf("Current Summary: %s\n", chapter.Summary))
-					context.WriteString(fmt.Sprintf("Current Events: %s\n", formatEvents(chapter.Events)))
+					context.WriteString(fmt.Sprintf("Current Events: %s\n", a.formatEvents(chapter.Events)))
 
 					return context.String()
 				}
@@ -410,7 +392,7 @@ func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *mod
 }
 
 // formatEvents formats events for context display
-func formatEvents(events []models.Event) string {
+func (a *ComposeAgent) formatEvents(events []models.Event) string {
 	if len(events) == 0 {
 		return "None"
 	}
@@ -422,7 +404,29 @@ func formatEvents(events []models.Event) string {
 	return strings.Join(parts, ", ")
 }
 
-func validateOutlineChapters(outline *models.Outline) error {
+// validateOutlineStructure validates the outline matches the expected structure
+func (a *ComposeAgent) validateOutlineStructure(outline *models.Outline, structure models.StoryStructure) error {
+	if len(outline.Parts) != structure.TargetParts {
+		logger.Error("AI generated %d parts, but %d were requested", len(outline.Parts), structure.TargetParts)
+		return fmt.Errorf("AI generated %d parts, but %d were requested", len(outline.Parts), structure.TargetParts)
+	}
+
+	for i, part := range outline.Parts {
+		if len(part.Volumes) != structure.TargetVolumes {
+			return fmt.Errorf("part %d has %d volumes, but %d were requested", i+1, len(part.Volumes), structure.TargetVolumes)
+		}
+		for j, volume := range part.Volumes {
+			if len(volume.Chapters) != structure.TargetChapters {
+				return fmt.Errorf("volume %d.%d has %d chapters, but %d were requested", i+1, j+1, len(volume.Chapters), structure.TargetChapters)
+			}
+		}
+	}
+
+	return nil
+}
+
+// validateOutlineChapters validates all chapters in the outline
+func (a *ComposeAgent) validateOutlineChapters(outline *models.Outline) error {
 	if outline == nil {
 		return fmt.Errorf("outline is nil")
 	}
@@ -430,7 +434,7 @@ func validateOutlineChapters(outline *models.Outline) error {
 		for volIdx := range outline.Parts[partIdx].Volumes {
 			for chapIdx := range outline.Parts[partIdx].Volumes[volIdx].Chapters {
 				chapter := &outline.Parts[partIdx].Volumes[volIdx].Chapters[chapIdx]
-				if err := validateChapterOutput(chapter); err != nil {
+				if err := a.validateChapterOutput(chapter); err != nil {
 					return fmt.Errorf("chapter %d.%d.%d invalid: %w", partIdx+1, volIdx+1, chapIdx+1, err)
 				}
 			}
@@ -439,7 +443,8 @@ func validateOutlineChapters(outline *models.Outline) error {
 	return nil
 }
 
-func validateChapterOutput(chapter *models.Chapter) error {
+// validateChapterOutput validates a chapter's output
+func (a *ComposeAgent) validateChapterOutput(chapter *models.Chapter) error {
 	if chapter == nil {
 		return fmt.Errorf("chapter is nil")
 	}
