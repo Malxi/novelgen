@@ -160,9 +160,9 @@ func (l *Logger) Section(name string) {
 }
 
 // Prompt logs prompt information
-func (l *Logger) Prompt(skill, name string, systemPrompt, userPrompt string) {
+func (l *Logger) Prompt(agent, name string, systemPrompt, userPrompt string) {
 	l.Section("PROMPT")
-	l.Info("Skill: %s", skill)
+	l.Info("Agent: %s", agent)
 	l.Info("Template: %s", name)
 	l.Debug("System Prompt:\n%s", systemPrompt)
 	l.Debug("User Prompt:\n%s", userPrompt)
@@ -226,8 +226,8 @@ func Section(name string) {
 	defaultLogger.Section(name)
 }
 
-func Prompt(skill, name string, systemPrompt, userPrompt string) {
-	defaultLogger.Prompt(skill, name, systemPrompt, userPrompt)
+func Prompt(agent, name string, systemPrompt, userPrompt string) {
+	defaultLogger.Prompt(agent, name, systemPrompt, userPrompt)
 }
 
 func LLMRequest(model string, messages int, maxTokens int) {

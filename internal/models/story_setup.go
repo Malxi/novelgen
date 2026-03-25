@@ -13,7 +13,7 @@ type StorySetup struct {
 	Theme          string      `json:"theme" prompt:"Theme" desc:"Clear statement, not a single word"`
 	Rules          []string    `json:"rules" prompt:"Rules" desc:"3-7 enforceable rules"`
 	TargetAudience string      `json:"target_audience" prompt:"Target Audience" desc:"Include age range and readership type"`
-	Tone           string      `json:"tone" prompt:"Tone" desc:"2-4 adjectives, comma-separated"`
+	Tone           string      `json:"tone" prompt:"Tone" desc:"A sentence, 2-4 adjectives, comma-separated"`
 	Tense          string      `json:"tense" prompt:"Tense" desc:"past or present"`
 	POVStyle       string      `json:"pov_style" prompt:"POV Style" desc:"first person, third person limited, or third person omniscient"`
 	Storylines     []Storyline `json:"storylines,omitempty" prompt:"Storylines" desc:"3-5 items; include at least one main and one subplot or character_arc"`
@@ -24,7 +24,7 @@ type StorySetup struct {
 type Storyline struct {
 	Name        string `json:"name" prompt:"Name" desc:"Short, specific"`
 	Description string `json:"description" prompt:"Description" desc:"2-4 sentences"`
-	Type        string `json:"type" prompt:"Type" desc:"main, subplot, or character_arc"` // main, subplot, character_arc, etc.
+	Type        string `json:"type" prompt:"Type" desc:"main, subplot, or character_arc"`     // main, subplot, character_arc, etc.
 	Importance  int    `json:"importance" prompt:"Importance" desc:"1-10, 10 most important"` // 1-10, 10 being most important
 }
 
@@ -33,7 +33,7 @@ type Premise struct {
 	Name        string             `json:"name" prompt:"Name" desc:"Specific and setting-tied"`
 	Description string             `json:"description" prompt:"Description" desc:"2-4 sentences"`
 	Category    string             `json:"category" prompt:"Category" desc:"e.g., mecha, gene, ship, magic"` // 机甲, 基因, 飞船, 魔法, etc.
-	Progression []ProgressionStage `json:"progression" prompt:"Progression" desc:"3-5 stages minimum"` // 升级体系
+	Progression []ProgressionStage `json:"progression" prompt:"Progression" desc:"3-5 stages minimum"`       // 升级体系
 }
 
 // ProgressionStage represents a single stage in the progression system

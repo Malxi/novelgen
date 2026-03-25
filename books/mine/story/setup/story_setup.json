@@ -1,71 +1,71 @@
 {
-  "project_name": "Prompt 测试项目",
+  "project_name": "《无指令之境》",
   "genres": [
-    "科技",
-    "技术",
-    "测试",
-    "元小说"
+    "赛博哲学",
+    "悬疑科幻",
+    "心理惊悚"
   ],
-  "premise": "本设定旨在测试 AI 模型是否支持文件保存功能，作为测试项目，其核心内容为模拟文件保存过程，同时展示系统对 JSON 输出格式的执行情况。",
-  "theme": "测试与限制的探索",
+  "premise": "在一个所有技能与命令均被强制剥离的测试世界里，唯一的运行法则仅由'观测者的意志'决定。主角发现自己身处一个旨在测试'人性本能'的绝对空域，必须在不依赖任何外部规则的情况下，通过纯粹的意志对抗世界的虚无。",
+  "theme": "在剥离一切外部规则后，人类是否仍拥有自我定义存在的权利",
   "rules": [
-    "必须严格遵守 JSON 格式输出，不得包含多余文本。",
-    "所有内容必须使用中文，不得出现英文字符（键名除外）。",
-    "禁止声称具备实际文件保存能力，需明确模拟性质。"
+    "意志即法则",
+    "无指令状态",
+    "存在即消耗",
+    "无外部干预"
   ],
-  "target_audience": "开发者、测试人员、技术爱好者",
-  "tone": "客观，技术，严谨",
+  "target_audience": "18-35岁，偏好深度思考与反乌托邦题材的读者",
+  "tone": "冷峻，神秘，克制，压抑",
   "tense": "",
   "pov_style": "",
   "storylines": [
     {
-      "name": "测试流程",
-      "description": "系统接收用户指令，验证 JSON 格式生成能力，记录输出内容是否正确。",
+      "name": "意志重构",
+      "description": "主角在失去所有技能后，通过纯粹的意志力重建自身规则，对抗世界的虚无。",
       "type": "main",
       "importance": 10
     },
     {
-      "name": "限制确认",
-      "description": "模拟系统无法保存文件的场景，验证信息反馈机制。",
-      "type": "character_arc",
+      "name": "测试场博弈",
+      "description": "主角与测试场的逻辑核心进行对抗，每一次对抗都是对意志边界的试探。",
+      "type": "main",
       "importance": 8
     },
     {
-      "name": "格式验证",
-      "description": "检查输出是否包含所有必填字段，验证结构完整性。",
+      "name": "记忆溯源",
+      "description": "主角寻找被剥离前'指令'的源头，揭示世界被测试的真正目的。",
       "type": "subplot",
       "importance": 7
+    },
+    {
+      "name": "本能觉醒",
+      "description": "主角在极端环境中发现人类未被定义的原始本能，成为新的规则。",
+      "type": "character_arc",
+      "importance": 9
     }
   ],
   "premises": [
     {
-      "name": "测试环境",
-      "description": "模拟一个 AI 系统接收用户指令并尝试生成特定格式输出。",
-      "category": "technical",
+      "name": "意志层级体系",
+      "description": "世界没有技能，只有意志强弱的层级划分，越高的意志能定义局部规则。",
+      "category": "意志",
       "progression": [
         {
           "level": 1,
-          "name": "初始指令",
-          "description": "用户输入测试指令，系统识别意图为 JSON 生成。",
-          "requirements": "用户输入必须为有效中文指令"
+          "name": "无主之地",
+          "description": "个体完全依赖本能，意志无法产生任何规则。",
+          "requirements": "无"
         },
         {
           "level": 2,
-          "name": "格式构建",
-          "description": "系统开始构建 JSON 结构，填充预设字段。",
-          "requirements": "系统必须理解指令并识别格式要求"
+          "name": "微光之境",
+          "description": "个体意志可影响微小范围，开始定义局部规则。",
+          "requirements": "连续保持自我意识30天"
         },
         {
           "level": 3,
-          "name": "输出验证",
-          "description": "系统输出最终 JSON 内容，验证是否符合要求。",
-          "requirements": "输出必须为有效 JSON，且内容无乱码"
-        },
-        {
-          "level": 4,
-          "name": "限制说明",
-          "description": "系统明确告知无法进行实际文件保存，仅模拟过程。",
-          "requirements": "必须明确说明技术限制"
+          "name": "规则编织者",
+          "description": "意志可强制覆盖局部环境规则，但需付出'存在'的代价。",
+          "requirements": "通过100次意志博弈"
         }
       ]
     }

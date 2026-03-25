@@ -20,7 +20,6 @@ import (
 // It loads prompts from skill files and provides common LLM interaction logic.
 type BaseAgent struct {
 	name        string
-	skills      []string
 	client      llm.Client
 	config      *llm.Config
 	projectLLM  *models.ProjectLLM
@@ -31,7 +30,6 @@ type BaseAgent struct {
 // BaseAgentConfig holds configuration for creating a BaseAgent
 type BaseAgentConfig struct {
 	Name       string
-	Skills     []string
 	Client     llm.Client
 	Config     *llm.Config
 	ProjectLLM *models.ProjectLLM
@@ -46,7 +44,6 @@ func NewBaseAgent(cfg BaseAgentConfig) *BaseAgent {
 
 	return &BaseAgent{
 		name:        cfg.Name,
-		skills:      cfg.Skills,
 		client:      cfg.Client,
 		config:      cfg.Config,
 		projectLLM:  cfg.ProjectLLM,
@@ -60,36 +57,40 @@ func (a *BaseAgent) SetLanguage(language string) {
 	a.language = language
 }
 
+// InvokeParams holds the parameters for invoking an agent
+type InvokeParams struct {
+	Skills  []string
+	Command string
+}
+
 // Execute sends the input to AI and returns the result
 // This is the core method that all agents use
-func (a *BaseAgent) Execute(ctx context.Context, input interface{}, output interface{}) error {
-	// Load system prompt from skill file
-	systemPrompt, err := a.loadSystemPrompt()
+func (a *BaseAgent) Execute(ctx context.Context, params InvokeParams, input interface{}, output interface{}) error {
+	// Use provided params or fall back to agent defaults
+	// Load system prompt from skill files
+	skillPrompt, err := a.loadSystemPromptWithSkills(params.Skills)
 	if err != nil {
 		return fmt.Errorf("failed to load system prompt: %w", err)
 	}
 
 	// Build user prompt from input
-	userPrompt := prompts.StructToMarkdown(input, 0)
+	userPrompt := fmt.Sprintf("Follow skill to %s based on the input %s\n",
+		params.Command, prompts.StructToMarkdown(input, 0))
 
 	// Add output requirements
 	outputRequirements := a.buildOutputRequirements(output)
-	fullSystemPrompt := systemPrompt + outputRequirements
+	systemPrompt := skillPrompt + outputRequirements
 
-	// Log prompts - use first skill name for logging
-	skillName := "unknown"
-	if len(a.skills) > 0 {
-		skillName = a.skills[0]
-	}
-	logger.Prompt(skillName, "default", fullSystemPrompt, userPrompt)
+	// Log prompts
+	logger.Prompt(a.name, "default", systemPrompt, userPrompt)
 
 	// Save prompts to file for debugging
-	if err := a.savePromptsToFile(skillName, fullSystemPrompt, userPrompt); err != nil {
+	if err := a.savePromptsToFile(a.name, systemPrompt, userPrompt); err != nil {
 		logger.Debug("[%s] Failed to save prompts to file: %v", a.name, err)
 	}
 
 	messages := []llm.Message{
-		{Role: "system", Content: fullSystemPrompt},
+		{Role: "system", Content: systemPrompt},
 		{Role: "user", Content: userPrompt},
 	}
 
@@ -112,34 +113,28 @@ func (a *BaseAgent) Execute(ctx context.Context, input interface{}, output inter
 	return nil
 }
 
-// loadSystemPrompt loads the system prompt from skill files
-// Multiple skills are concatenated with separators
-func (a *BaseAgent) loadSystemPrompt() (string, error) {
+// loadSystemPromptWithSkills loads the system prompt from specified skills
+// All skills are wrapped with skill markers
+func (a *BaseAgent) loadSystemPromptWithSkills(skills []string) (string, error) {
 	vars := map[string]string{
 		"language": prompts.GetLanguageName(a.language),
 	}
 
-	var prompts []string
-	for _, skillName := range a.skills {
+	var result strings.Builder
+	result.WriteString("=== SKILLS ===\n\n")
+
+	for _, skillName := range skills {
 		prompt, err := a.skillLoader.LoadWithVars(skillName, vars)
 		if err != nil {
 			return "", fmt.Errorf("failed to load skill %s: %w", skillName, err)
 		}
-		prompts = append(prompts, prompt)
-	}
 
-	// Join multiple skills with separators
-	if len(prompts) == 1 {
-		return prompts[0], nil
-	}
-
-	var result strings.Builder
-	for i, prompt := range prompts {
-		if i > 0 {
-			result.WriteString("\n\n=== ADDITIONAL INSTRUCTIONS ===\n\n")
-		}
+		result.WriteString(fmt.Sprintf("=== SKILL: %s ===\n\n", skillName))
 		result.WriteString(prompt)
+		result.WriteString("\n\n")
 	}
+
+	result.WriteString("=== END of SKILLS ===")
 	return result.String(), nil
 }
 
@@ -156,7 +151,7 @@ Structure:
 }
 
 // savePromptsToFile saves the prompts to a file for debugging
-func (a *BaseAgent) savePromptsToFile(skillName, systemPrompt, userPrompt string) error {
+func (a *BaseAgent) savePromptsToFile(agentName, systemPrompt, userPrompt string) error {
 	// Create logs directory if it doesn't exist
 	logsDir := filepath.Join("logs", "prompts")
 	if err := os.MkdirAll(logsDir, 0755); err != nil {
@@ -165,13 +160,12 @@ func (a *BaseAgent) savePromptsToFile(skillName, systemPrompt, userPrompt string
 
 	// Generate filename with timestamp
 	timestamp := time.Now().Format("20060102_150405")
-	filename := fmt.Sprintf("%s_%s_%s.md", a.name, skillName, timestamp)
+	filename := fmt.Sprintf("%s_%s.md", agentName, timestamp)
 	filepath := filepath.Join(logsDir, filename)
 
 	// Build content
 	var content strings.Builder
-	content.WriteString(fmt.Sprintf("# Agent: %s\n", a.name))
-	content.WriteString(fmt.Sprintf("# Skill: %s\n", skillName))
+	content.WriteString(fmt.Sprintf("# Agent: %s\n", agentName))
 	content.WriteString(fmt.Sprintf("# Time: %s\n\n", time.Now().Format("2006-01-02 15:04:05")))
 	content.WriteString("---\n\n")
 	content.WriteString("# SYSTEM PROMPT\n\n")

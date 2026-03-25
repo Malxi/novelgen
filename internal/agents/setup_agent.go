@@ -39,7 +39,6 @@ type SetupAgent struct {
 func NewSetupAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM) *SetupAgent {
 	base := NewBaseAgent(BaseAgentConfig{
 		Name:       "SetupAgent",
-		Skills:     []string{"setup-gen"},
 		Client:     client,
 		Config:     config,
 		ProjectLLM: projectLLM,
@@ -62,7 +61,11 @@ func (a *SetupAgent) Generate(ctx context.Context, input SetupGenInput) (SetupGe
 	logger.Info("Language: %s", a.base.language)
 
 	var output SetupGenOutput
-	if err := a.base.Execute(ctx, input, &output.Setup); err != nil {
+	params := InvokeParams{
+		Skills:  []string{"setup-gen"},
+		Command: "generate a story setup",
+	}
+	if err := a.base.Execute(ctx, params, input, &output.Setup); err != nil {
 		return SetupGenOutput{}, err
 	}
 
@@ -85,18 +88,12 @@ func (a *SetupAgent) Improve(ctx context.Context, input SetupImproveInput) (Setu
 	logger.Info("Project: %s", input.ExistingSetup.ProjectName)
 	logger.Info("Language: %s", a.base.language)
 
-	// Create a temporary agent with the improve skill
-	improveBase := NewBaseAgent(BaseAgentConfig{
-		Name:       "SetupAgent",
-		Skills:     []string{"setup-improve"},
-		Client:     a.base.client,
-		Config:     a.base.config,
-		ProjectLLM: a.base.projectLLM,
-		Language:   a.base.language,
-	})
-
 	var output SetupImproveOutput
-	if err := improveBase.Execute(ctx, input, &output.Setup); err != nil {
+	params := InvokeParams{
+		Skills:  []string{"setup-improve"},
+		Command: "improve the story setup",
+	}
+	if err := a.base.Execute(ctx, params, input, &output.Setup); err != nil {
 		return SetupImproveOutput{}, err
 	}
 
