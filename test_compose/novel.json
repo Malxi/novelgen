@@ -1,0 +1,21 @@
+{
+  "name": "test_book",
+  "version": "1.0.0",
+  "created_at": "2026-03-25T23:52:24.8017151+08:00",
+  "updated_at": "2026-03-25T23:52:24.8033086+08:00",
+  "language": "zh",
+  "structure": {
+    "target_parts": 1,
+    "target_volumes": 1,
+    "target_chapters": 6
+  },
+  "chapter_config": {
+    "target_words_per_chapter": 3000,
+    "min_words_per_chapter": 2000,
+    "max_words_per_chapter": 5000
+  },
+  "llm": {
+    "provider": "ollama",
+    "model": "qwen3.5:4b"
+  }
+}

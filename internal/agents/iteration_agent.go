@@ -48,27 +48,30 @@ func (a *IterationAgent) ReviewOutline(outline *models.Outline, setup *models.St
 	logger.Section("ITERATION AGENT - Review Outline")
 	logger.Info("Iteration: %d", iteration)
 
-	// Convert outline to JSON
-	outlineJSON, err := json.MarshalIndent(outline, "", "  ")
-	if err != nil {
-		logger.Error("Failed to marshal outline: %v", err)
-		return nil, fmt.Errorf("failed to marshal outline: %w", err)
-	}
-
-	// Use StructToPrompt to convert setup to formatted string
-	setupPrompt := prompts.StructToPrompt(setup, "")
-
 	// Create prompt manager
 	pm := prompts.NewPromptManager()
 
-	// Build prompts
-	data := prompts.BuildOutlineReviewData(string(outlineJSON), setupPrompt, iteration)
-	systemPrompt, userPrompt, err := pm.Build(prompts.SkillOutlineReview, "default", data)
+	// Convert outline and setup to JSON strings
+	outlineJSON, err := json.MarshalIndent(outline, "", "  ")
 	if err != nil {
-		logger.Error("Failed to build prompt: %v", err)
-		return nil, fmt.Errorf("failed to build prompt: %w", err)
+		return nil, fmt.Errorf("failed to marshal outline: %w", err)
+	}
+	setupJSON, err := json.MarshalIndent(setup, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal setup: %w", err)
 	}
 
+	// Build review data
+	data := prompts.BuildOutlineReviewData(string(outlineJSON), string(setupJSON), iteration)
+
+	// Build prompts
+	systemPrompt, userPrompt, err := pm.Build(prompts.SkillOutlineReview, "default", data)
+	if err != nil {
+		logger.Error("Failed to build review prompt: %v", err)
+		return nil, fmt.Errorf("failed to build review prompt: %w", err)
+	}
+
+	// Log prompts
 	logger.Prompt(string(prompts.SkillOutlineReview), "default", systemPrompt, userPrompt)
 
 	messages := []llm.Message{
@@ -87,209 +90,129 @@ func (a *IterationAgent) ReviewOutline(outline *models.Outline, setup *models.St
 
 	logger.Info("Received review response (%d tokens used)", resp.Usage.TotalTokens)
 
-	// Parse review result
-	reviewResult, err := prompts.ParseReviewResult(resp.Content)
-	if err != nil {
-		logger.Error("Failed to parse review result: %v", err)
-		logger.Debug("Raw response: %s", resp.Content)
-		return nil, fmt.Errorf("failed to parse review result: %w", err)
-	}
-
-	// Log review summary
-	logger.Section("Review Summary")
-	logger.Info("Overall Score: %.1f/100", reviewResult.OverallScore)
-	logger.Info("Logic Score: %.1f/100", reviewResult.LogicScore)
-	logger.Info("Engagement Score: %.1f/100", reviewResult.EngagementScore)
-	logger.Info("Pacing Score: %.1f/100", reviewResult.PacingScore)
-	logger.Info("Coherence Score: %.1f/100", reviewResult.CoherenceScore)
-	logger.Info("Suggestions: %d", len(reviewResult.Suggestions))
-
-	// Log high priority suggestions
-	highPriorityCount := 0
-	for _, s := range reviewResult.Suggestions {
-		if s.Priority == "high" {
-			highPriorityCount++
+	// Parse the JSON response
+	var reviewResult prompts.ReviewResult
+	if err := json.Unmarshal([]byte(resp.Content), &reviewResult); err != nil {
+		// Try to extract JSON from markdown code block if present
+		content := extractJSONFromMarkdown(resp.Content)
+		if err := json.Unmarshal([]byte(content), &reviewResult); err != nil {
+			logger.Error("Failed to parse AI review response as JSON: %v", err)
+			logger.Debug("Raw response: %s", resp.Content)
+			return nil, fmt.Errorf("failed to parse AI review response as JSON: %w", err)
 		}
 	}
-	if highPriorityCount > 0 {
-		logger.Warn("High priority issues: %d", highPriorityCount)
+
+	// Log review results
+	logger.Section("Review Results")
+	logger.Info("Overall Score: %d/100", reviewResult.OverallScore)
+	logger.Info("Summary: %s", reviewResult.Summary)
+	logger.Info("Number of Suggestions: %d", len(reviewResult.Suggestions))
+
+	for i, suggestion := range reviewResult.Suggestions {
+		logger.Info("Suggestion %d: [%s] %s (%s) - %s", i+1, suggestion.Priority, suggestion.ID, suggestion.Title, suggestion.Issue)
 	}
 
 	return &ReviewResult{
-		ReviewResult: reviewResult,
+		ReviewResult: &reviewResult,
 		Iteration:    iteration,
 	}, nil
 }
 
-// ApplyImprovements applies review suggestions to improve the outline
-// Now operates at volume level - all suggestions for a volume are processed together
+// ApplyImprovements applies improvements based on review suggestions
 func (a *IterationAgent) ApplyImprovements(outline *models.Outline, review *ReviewResult, setup *models.StorySetup, language string, concurrency int) error {
 	logger.Section("ITERATION AGENT - Apply Improvements")
-	logger.Info("Processing %d suggestions", len(review.Suggestions))
-	if concurrency <= 0 {
-		concurrency = 3 // Default concurrency
-	}
 
-	// Normalize IDs and filter high priority suggestions
-	highPrioritySugs := []prompts.ReviewSuggestion{}
+	// Filter high priority suggestions
+	var highPrioritySuggestions []prompts.ReviewSuggestion
 	for _, s := range review.Suggestions {
 		if s.Priority == HighPriority {
-			s.ID = normalizeSuggestionID(outline, s)
-			highPrioritySugs = append(highPrioritySugs, s)
+			highPrioritySuggestions = append(highPrioritySuggestions, s)
 		}
 	}
 
-	if len(highPrioritySugs) == 0 {
-		logger.Info("No high-priority suggestions to apply")
+	if len(highPrioritySuggestions) == 0 {
+		logger.Info("No high priority suggestions to apply")
 		return nil
 	}
 
-	logger.Info("Applying %d high-priority suggestions at volume level", len(highPrioritySugs))
+	logger.Info("Applying %d high priority improvements", len(highPrioritySuggestions))
 
-	// Group suggestions by volume
-	volumeSuggestions := a.groupSuggestionsByVolume(outline, highPrioritySugs)
-	logger.Info("Found suggestions for %d volumes", len(volumeSuggestions))
+	// Group suggestions by volume for efficient regeneration
+	volumeGroups := a.groupSuggestionsByVolume(outline, highPrioritySuggestions)
 
-	// Process each volume concurrently
-	executor := logic.NewExecutor(concurrency)
-	appliedCount := 0
-
-	for volumeID, suggestions := range volumeSuggestions {
-		logger.Info("Volume %s: %d suggestions", volumeID, len(suggestions))
-
-		taskData := &volumeTaskData{
-			outline:     outline,
-			volumeID:    volumeID,
-			suggestions: suggestions,
-			setup:       setup,
-			language:    language,
-			agent:       a,
-		}
-
-		task := &logic.Task{
-			ID:      volumeID,
-			Data:    taskData,
-			Execute: executeVolumeTask,
-		}
-		executor.AddTask(task)
-	}
-
-	// Execute all volume tasks concurrently
-	ctx := context.Background()
-	results := executor.Execute(ctx)
-
-	// Process results
-	for _, result := range results {
-		if result.Error != nil {
-			logger.Error("Failed to apply suggestions for volume %s: %v", result.TaskID, result.Error)
-		} else {
-			appliedCount++
+	// Process each volume's suggestions
+	for volumeID, suggestions := range volumeGroups {
+		if err := a.processVolumeSuggestions(outline, volumeID, suggestions, setup, language); err != nil {
+			logger.Error("Failed to process suggestions for volume %s: %v", volumeID, err)
+			// Continue with other volumes even if one fails
 		}
 	}
 
-	logger.Info("Applied improvements to %d volumes", appliedCount)
 	return nil
 }
 
 // groupSuggestionsByVolume groups suggestions by their parent volume
 func (a *IterationAgent) groupSuggestionsByVolume(outline *models.Outline, suggestions []prompts.ReviewSuggestion) map[string][]prompts.ReviewSuggestion {
 	groups := make(map[string][]prompts.ReviewSuggestion)
+	idManager := logic.NewIDManager(outline)
 
-	for _, s := range suggestions {
-		targetType := determineTargetTypeFromID(outline, s.ID)
+	for _, suggestion := range suggestions {
 		var volumeID string
 
-		switch targetType {
+		switch suggestion.Type {
 		case "part":
-			// Part-level suggestions apply to all volumes in the part
-			for _, part := range outline.Parts {
-				if part.ID == s.ID {
-					for _, vol := range part.Volumes {
-						groups[vol.ID] = append(groups[vol.ID], s)
-					}
-					break
-				}
+			// Find which volume contains this part's chapters that need fixing
+			part := idManager.GetPartByID(suggestion.ID)
+			if part != nil && len(part.Volumes) > 0 {
+				// Use the first volume as the target for part-level issues
+				volumeID = part.Volumes[0].ID
 			}
-			continue
 		case "volume":
-			volumeID = s.ID
+			volumeID = suggestion.ID
 		case "chapter":
-			// Find parent volume for chapter
-			for _, part := range outline.Parts {
-				for _, vol := range part.Volumes {
-					for _, chap := range vol.Chapters {
-						if chap.ID == s.ID {
-							volumeID = vol.ID
-							break
-						}
-					}
-					if volumeID != "" {
-						break
-					}
-				}
-				if volumeID != "" {
-					break
-				}
+			// Find the parent volume of this chapter
+			_, volume, _ := idManager.GetChapterByID(suggestion.ID)
+			if volume != nil {
+				volumeID = volume.ID
 			}
 		}
 
 		if volumeID != "" {
-			groups[volumeID] = append(groups[volumeID], s)
+			groups[volumeID] = append(groups[volumeID], suggestion)
 		}
 	}
 
 	return groups
 }
 
-// volumeTaskData holds data for volume-level execution
-type volumeTaskData struct {
-	outline     *models.Outline
-	volumeID    string
-	suggestions []prompts.ReviewSuggestion
-	setup       *models.StorySetup
-	language    string
-	agent       *IterationAgent
-}
-
-// executeVolumeTask executes regeneration for a volume with all its suggestions
-func executeVolumeTask(ctx context.Context, data interface{}) error {
-	taskData, ok := data.(*volumeTaskData)
-	if !ok {
-		return fmt.Errorf("invalid task data type")
-	}
-
-	logger.Info("Regenerating volume %s with %d suggestions", taskData.volumeID, len(taskData.suggestions))
-
-	// Build combined user prompt from all suggestions
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Improvements needed for volume %s:\n\n", taskData.volumeID))
-	for i, s := range taskData.suggestions {
-		sb.WriteString(fmt.Sprintf("%d. [%s] %s\n", i+1, s.Type, s.Issue))
-		sb.WriteString(fmt.Sprintf("   Suggestion: %s\n\n", s.Suggestion))
-	}
-	combinedPrompt := sb.String()
+// processVolumeSuggestions processes all suggestions for a single volume
+func (a *IterationAgent) processVolumeSuggestions(
+	outline *models.Outline,
+	volumeID string,
+	suggestions []prompts.ReviewSuggestion,
+	setup *models.StorySetup,
+	language string,
+) error {
+	logger.Info("Processing %d suggestions for volume %s", len(suggestions), volumeID)
 
 	// Find the volume
-	for i, part := range taskData.outline.Parts {
-		for j, vol := range part.Volumes {
-			if vol.ID == taskData.volumeID {
-				// Regenerate volume with combined suggestions
-				if err := taskData.agent.regenerateVolumeWithSuggestions(
-					taskData.outline,
-					&taskData.outline.Parts[i].Volumes[j],
-					taskData.setup,
-					taskData.language,
-					combinedPrompt,
-					taskData.suggestions,
-				); err != nil {
-					return fmt.Errorf("failed to regenerate volume %s: %w", taskData.volumeID, err)
-				}
-				return nil
-			}
-		}
+	idManager := logic.NewIDManager(outline)
+	volume, _ := idManager.GetVolumeByID(volumeID)
+	if volume == nil {
+		return fmt.Errorf("volume %s not found", volumeID)
 	}
 
-	return fmt.Errorf("volume %s not found", taskData.volumeID)
+	// Build combined prompt from all suggestions
+	var combinedPrompt strings.Builder
+	combinedPrompt.WriteString(fmt.Sprintf("Improve volume '%s' based on the following issues:\n\n", volume.Title))
+
+	for i, suggestion := range suggestions {
+		combinedPrompt.WriteString(fmt.Sprintf("%d. [%s] %s (%s): %s\n", i+1, suggestion.Priority, suggestion.ID, suggestion.Title, suggestion.Issue))
+		combinedPrompt.WriteString(fmt.Sprintf("   Suggestion: %s\n\n", suggestion.Suggestion))
+	}
+
+	// Regenerate the volume with combined suggestions
+	return a.regenerateVolumeWithSuggestions(outline, volume, setup, language, combinedPrompt.String(), suggestions)
 }
 
 // regeneratePart regenerates a part based on review suggestion
@@ -313,8 +236,9 @@ func (a *IterationAgent) regeneratePart(outline *models.Outline, suggestion prom
 	userPrompt := buildReviewContext(outline, suggestion)
 
 	// Regenerate the part
+	ctx := context.Background()
 	part := &outline.Parts[partIndex]
-	if err := composeAgent.RegeneratePart(part, outline, setup, language, userPrompt); err != nil {
+	if err := composeAgent.RegeneratePart(ctx, part, outline, setup, language, userPrompt); err != nil {
 		return err
 	}
 
@@ -324,6 +248,7 @@ func (a *IterationAgent) regeneratePart(outline *models.Outline, suggestion prom
 // regenerateVolume regenerates a volume based on review suggestion
 func (a *IterationAgent) regenerateVolume(outline *models.Outline, suggestion prompts.ReviewSuggestion, setup *models.StorySetup, language string) error {
 	// Find the volume
+	ctx := context.Background()
 	for i, part := range outline.Parts {
 		for j, vol := range part.Volumes {
 			if vol.ID == suggestion.ID {
@@ -331,7 +256,7 @@ func (a *IterationAgent) regenerateVolume(outline *models.Outline, suggestion pr
 				composeAgent := NewComposeAgent(a.client, a.config, a.projectLLM)
 
 				userPrompt := buildReviewContext(outline, suggestion)
-				if err := composeAgent.RegenerateVolume(&vol, outline, setup, language, userPrompt); err != nil {
+				if err := composeAgent.RegenerateVolume(ctx, &vol, outline, setup, language, userPrompt); err != nil {
 					return err
 				}
 
@@ -346,6 +271,7 @@ func (a *IterationAgent) regenerateVolume(outline *models.Outline, suggestion pr
 // regenerateChapter regenerates a chapter based on review suggestion
 func (a *IterationAgent) regenerateChapter(outline *models.Outline, suggestion prompts.ReviewSuggestion, setup *models.StorySetup, language string) error {
 	// Find the chapter
+	ctx := context.Background()
 	for i, part := range outline.Parts {
 		for j, vol := range part.Volumes {
 			for k, ch := range vol.Chapters {
@@ -354,7 +280,7 @@ func (a *IterationAgent) regenerateChapter(outline *models.Outline, suggestion p
 					composeAgent := NewComposeAgent(a.client, a.config, a.projectLLM)
 
 					userPrompt := buildReviewContext(outline, suggestion)
-					if err := composeAgent.RegenerateChapter(&ch, outline, setup, language, userPrompt); err != nil {
+					if err := composeAgent.RegenerateChapter(ctx, &ch, outline, setup, language, userPrompt); err != nil {
 						return err
 					}
 
@@ -382,10 +308,11 @@ func (a *IterationAgent) regenerateVolumeWithSuggestions(
 	composeAgent := NewComposeAgent(a.client, a.config, a.projectLLM)
 
 	// Build context with volume info and all suggestions
-	context := a.buildVolumeContextWithSuggestions(volume, outline, suggestions)
+	ctx := context.Background()
+	contextStr := a.buildVolumeContextWithSuggestions(volume, outline, suggestions)
 
 	// Regenerate the volume
-	if err := composeAgent.RegenerateVolume(volume, outline, setup, language, combinedPrompt+"\n\n"+context); err != nil {
+	if err := composeAgent.RegenerateVolume(ctx, volume, outline, setup, language, combinedPrompt+"\n\n"+contextStr); err != nil {
 		return err
 	}
 
@@ -423,305 +350,29 @@ func (a *IterationAgent) buildVolumeContextWithSuggestions(volume *models.Volume
 
 // buildReviewContext builds context string from review suggestion
 func buildReviewContext(outline *models.Outline, suggestion prompts.ReviewSuggestion) string {
-	var sb strings.Builder
+	var context strings.Builder
 
-	sb.WriteString(fmt.Sprintf("Target Type: %s\n", suggestion.Type))
-	if suggestion.ID != "" {
-		sb.WriteString(fmt.Sprintf("Target ID: %s\n", suggestion.ID))
-	}
-	if suggestion.Title != "" {
-		sb.WriteString(fmt.Sprintf("Target Title: %s\n", suggestion.Title))
-	}
-	sb.WriteString(fmt.Sprintf("Issue: %s\n", suggestion.Issue))
-	sb.WriteString(fmt.Sprintf("Suggestion: %s\n", suggestion.Suggestion))
-	sb.WriteString(fmt.Sprintf("Priority: %s\n", suggestion.Priority))
+	context.WriteString(fmt.Sprintf("Issue: %s\n", suggestion.Issue))
+	context.WriteString(fmt.Sprintf("Suggestion: %s\n", suggestion.Suggestion))
+	context.WriteString(fmt.Sprintf("Priority: %s\n", suggestion.Priority))
 
-	if outline != nil && strings.EqualFold(strings.TrimSpace(suggestion.Type), "chapter") {
-		if closing, opening := lookupChapterHandoff(outline, suggestion.ID); closing != "" || opening != "" {
-			sb.WriteString("Continuity Handoff:\n")
-			if closing != "" {
-				sb.WriteString(fmt.Sprintf("- Previous closing_beat: %s\n", closing))
-			}
-			if opening != "" {
-				sb.WriteString(fmt.Sprintf("- Next opening_beat: %s\n", opening))
-			}
-		}
-	}
-
-	return strings.TrimSpace(sb.String())
+	return context.String()
 }
 
-func lookupChapterHandoff(outline *models.Outline, chapterID string) (string, string) {
-	if outline == nil || chapterID == "" {
-		return "", ""
-	}
-	for partIdx := range outline.Parts {
-		for volIdx := range outline.Parts[partIdx].Volumes {
-			chapters := outline.Parts[partIdx].Volumes[volIdx].Chapters
-			for chapIdx := range chapters {
-				if chapters[chapIdx].ID != chapterID {
-					continue
-				}
-				var previousClosing string
-				if chapIdx > 0 {
-					prev := chapters[chapIdx-1]
-					previousClosing = prev.ClosingBeat
-					if previousClosing == "" && len(prev.Beats) > 0 {
-						previousClosing = prev.Beats[len(prev.Beats)-1]
-					}
-				}
-
-				var nextOpening string
-				if chapIdx < len(chapters)-1 {
-					next := chapters[chapIdx+1]
-					nextOpening = next.OpeningBeat
-					if nextOpening == "" && len(next.Beats) > 0 {
-						nextOpening = next.Beats[0]
-					}
-				}
-
-				return previousClosing, nextOpening
-			}
-		}
-	}
-	return "", ""
-}
-
-func normalizeSuggestionID(outline *models.Outline, suggestion prompts.ReviewSuggestion) string {
-	id := strings.TrimSpace(suggestion.ID)
-	if id == "" || outline == nil {
-		return id
-	}
-
-	// Determine target type from ID format using IDManager
-	targetType := determineTargetTypeFromID(outline, id)
-
-	// Already new-style ID
-	upper := strings.ToUpper(id)
-	if strings.HasPrefix(upper, "P") {
-		switch targetType {
-		case "part":
-			if strings.Contains(upper, "-V") {
-				parts := strings.Split(upper, "-V")
-				return parts[0]
-			}
-			if strings.Contains(upper, "-C") {
-				parts := strings.Split(upper, "-C")
-				return parts[0]
-			}
-		case "volume":
-			if strings.Contains(upper, "-C") {
-				parts := strings.Split(upper, "-C")
-				return parts[0]
-			}
-		}
-		return upper
-	}
-
-	// Legacy format "1_1_1" or "1_1" or "1"
-	parts := strings.Split(id, "_")
-	idManager := logic.NewIDManager(outline)
-	getNum := func(idx int) string {
-		if idx < 0 || idx >= len(parts) {
-			return ""
-		}
-		return extractDigits(parts[idx])
-	}
-
-	switch targetType {
-	case "part":
-		if n := getNum(0); n != "" {
-			if resolved, err := idManager.ResolvePartID(n); err == nil {
-				return resolved
-			}
-		}
-	case "volume":
-		if len(parts) >= 2 {
-			partNum := getNum(0)
-			volNum := getNum(1)
-			if partNum != "" && volNum != "" {
-				if resolved, err := idManager.ResolveVolumeID(volNum, partNum); err == nil {
-					return resolved
-				}
-			}
-		}
-	case "chapter":
-		if len(parts) >= 3 {
-			partNum := getNum(0)
-			volNum := getNum(1)
-			chapNum := getNum(2)
-			if partNum != "" && volNum != "" && chapNum != "" {
-				if resolved, err := idManager.ResolveChapterID(chapNum, partNum, volNum); err == nil {
-					return resolved
-				}
-			}
-		}
-	}
-
-	return id
-}
-
-func extractDigits(s string) string {
-	var b strings.Builder
-	for _, r := range s {
-		if r >= '0' && r <= '9' {
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
-}
-
-// determineTargetTypeFromID determines the target type (part/volume/chapter) from the ID format
-// It uses IDManager to intelligently resolve IDs based on what actually exists in the outline
-// ID formats:
-//   - Part: "P1", "1"
-//   - Volume: "P1-V1", "1_1"
-//   - Chapter: "P1-V1-C4", "1_1_4", "C4" (ambiguous, will try to resolve)
-func determineTargetTypeFromID(outline *models.Outline, id string) string {
-	id = strings.TrimSpace(id)
-	if id == "" || outline == nil {
-		return ""
-	}
-
-	idManager := logic.NewIDManager(outline)
-	upper := strings.ToUpper(id)
-
-	// Try to find as chapter first (most specific)
-	// Handle formats: P1-V1-C4, P1-V1-C4, C4
-	if strings.Contains(upper, "-C") || strings.HasPrefix(upper, "C") {
-		// Full chapter ID: P1-V1-C4
-		if strings.Contains(upper, "-C") && strings.Contains(upper, "-V") {
-			if _, _, _, err := idManager.ParseChapterID(id); err == nil {
-				if chapter := findChapterInOutline(outline, id); chapter != nil {
-					return "chapter"
-				}
-			}
-		}
-		// Ambiguous format like "C4" - try to resolve to full chapter ID
-		if strings.HasPrefix(upper, "C") {
-			chapNum := strings.TrimPrefix(upper, "C")
-			// Try to find chapter in the outline
-			for _, part := range outline.Parts {
-				for _, vol := range part.Volumes {
-					for _, chap := range vol.Chapters {
-						if strings.HasSuffix(strings.ToUpper(chap.ID), "-C"+chapNum) {
-							return "chapter"
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// Try to find as volume: P1-V1
-	if strings.Contains(upper, "-V") {
-		if _, _, err := idManager.ParseVolumeID(id); err == nil {
-			if volume := findVolumeInOutline(outline, id); volume != nil {
-				return "volume"
-			}
-		}
-	}
-
-	// Try to find as part: P1
-	if strings.HasPrefix(upper, "P") {
-		if _, err := idManager.ParsePartID(id); err == nil {
-			if part := findPartInOutline(outline, id); part != nil {
-				return "part"
-			}
-		}
-	}
-
-	// Legacy format: 1_1_4 (chapter), 1_1 (volume), 1 (part)
-	parts := strings.Split(id, "_")
-	switch len(parts) {
-	case 3:
-		// Try as chapter
-		if resolved, err := idManager.ResolveChapterID(parts[2], parts[0], parts[1]); err == nil {
-			if chapter := findChapterInOutline(outline, resolved); chapter != nil {
-				return "chapter"
-			}
-		}
-	case 2:
-		// Try as volume
-		if resolved, err := idManager.ResolveVolumeID(parts[1], parts[0]); err == nil {
-			if volume := findVolumeInOutline(outline, resolved); volume != nil {
-				return "volume"
-			}
-		}
-	case 1:
-		// Could be part number or chapter number
-		// Try as part first
-		if resolved, err := idManager.ResolvePartID(parts[0]); err == nil {
-			if part := findPartInOutline(outline, resolved); part != nil {
-				return "part"
-			}
-		}
-		// Try as chapter number (e.g., "2" might mean "P1-V1-C2")
-		for _, part := range outline.Parts {
-			for _, vol := range part.Volumes {
-				for _, chap := range vol.Chapters {
-					if strings.HasSuffix(chap.ID, "-C"+parts[0]) || strings.HasSuffix(chap.ID, "_"+parts[0]) {
-						return "chapter"
-					}
-				}
-			}
-		}
-	}
-
-	return ""
-}
-
-// findPartInOutline finds a part by ID
-func findPartInOutline(outline *models.Outline, id string) *models.Part {
-	for i := range outline.Parts {
-		if outline.Parts[i].ID == id {
-			return &outline.Parts[i]
-		}
-	}
-	return nil
-}
-
-// findVolumeInOutline finds a volume by ID
-func findVolumeInOutline(outline *models.Outline, id string) *models.Volume {
-	for _, part := range outline.Parts {
-		for i := range part.Volumes {
-			if part.Volumes[i].ID == id {
-				return &part.Volumes[i]
-			}
-		}
-	}
-	return nil
-}
-
-// findChapterInOutline finds a chapter by ID
-func findChapterInOutline(outline *models.Outline, id string) *models.Chapter {
-	for _, part := range outline.Parts {
-		for _, vol := range part.Volumes {
-			for i := range vol.Chapters {
-				if vol.Chapters[i].ID == id {
-					return &vol.Chapters[i]
-				}
-			}
-		}
-	}
-	return nil
-}
-
-// ShouldContinueIteration determines if we should continue iterating
-func ShouldContinueIteration(review *ReviewResult, iteration int, maxIterations int) bool {
+// ShouldContinueIteration determines if iteration should continue
+func ShouldContinueIteration(review *ReviewResult, currentIteration, maxIterations int) bool {
 	// Stop if we've reached max iterations
-	if iteration >= maxIterations {
-		logger.Info("Reached maximum iterations (%d)", maxIterations)
+	if currentIteration >= maxIterations {
 		return false
 	}
 
-	// Stop if overall score is good enough
+	// Stop if quality threshold is met
 	if review.OverallScore >= QualityThreshold {
-		logger.Info("Outline quality is good (score: %.1f), stopping iteration", review.OverallScore)
+		logger.Info("Quality threshold met (score: %d >= %d)", review.OverallScore, QualityThreshold)
 		return false
 	}
 
-	// Stop if no high priority suggestions
+	// Stop if no high priority issues
 	hasHighPriority := false
 	for _, s := range review.Suggestions {
 		if s.Priority == HighPriority {
@@ -729,8 +380,9 @@ func ShouldContinueIteration(review *ReviewResult, iteration int, maxIterations 
 			break
 		}
 	}
+
 	if !hasHighPriority {
-		logger.Info("No high priority issues remaining, stopping iteration")
+		logger.Info("No high priority issues remaining")
 		return false
 	}
 

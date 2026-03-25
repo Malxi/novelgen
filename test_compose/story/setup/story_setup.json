@@ -1,0 +1,42 @@
+{
+  "project_name": "星际迷航",
+  "genres": ["科幻", "冒险"],
+  "premise": "在遥远的未来，人类已经掌握了星际旅行技术。主角是一名年轻的太空船船长，在一次例行巡逻中意外发现了一个古老的文明遗迹，这个发现将改变人类对宇宙的认知。",
+  "theme": "探索未知与自我发现",
+  "target_audience": "青少年及成年科幻爱好者",
+  "tone": "悬疑与希望并存",
+  "tense": "present",
+  "pov_style": "third person limited",
+  "storylines": [
+    {
+      "name": "主线：遗迹探索",
+      "description": "主角带领团队探索古老遗迹，揭开宇宙秘密"
+    }
+  ],
+  "characters": [
+    {
+      "name": "林凯",
+      "role": "主角",
+      "description": "年轻的太空船船长，勇敢但缺乏经验",
+      "goals": ["探索遗迹", "保护船员"]
+    }
+  ],
+  "premises": [
+    {
+      "name": "星际联盟",
+      "description": "管理银河系人类殖民地的政治组织"
+    }
+  ],
+  "progression_systems": [
+    {
+      "name": "船长成长",
+      "description": "主角从新手船长成长为经验丰富的领导者"
+    }
+  ],
+  "settings": [
+    {
+      "name": "阿尔法星区",
+      "description": "故事主要发生的星域，包含多个行星系统"
+    }
+  ]
+}
