@@ -1,222 +1,327 @@
 package agents
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"strings"
 
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
-	"novelgen/internal/prompts"
 )
 
-// CraftAgent generates detailed story elements (characters, locations, items)
-type CraftAgent struct {
-	client     llm.Client
-	config     *llm.Config
-	projectLLM *models.ProjectLLM
-	setup      *models.StorySetup
-	outline    *models.Outline
-	language   string
-	log        logger.LoggerInterface
-	pm         *prompts.PromptManager
+// CraftGenCharactersInput is the input for character generation
+type CraftGenCharactersInput struct {
+	StorySetup       models.StorySetup `md:"story_setup"`
+	Outline          models.Outline    `md:"outline"`
+	RelevantChapters []string          `md:"relevant_chapters"`
+	Characters       []string          `md:"characters"`
+	CustomPrompt     string            `md:"custom_prompt,omitempty"`
 }
 
-// NewCraftAgent creates a new craft agent
-func NewCraftAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM, setup *models.StorySetup, outline *models.Outline, language string) *CraftAgent {
+// CraftGenCharactersOutput is the output for character generation
+type CraftGenCharactersOutput struct {
+	Characters map[string]models.Character `md:"characters"`
+}
+
+// CraftGenLocationsInput is the input for location generation
+type CraftGenLocationsInput struct {
+	StorySetup       models.StorySetup `md:"story_setup"`
+	Outline          models.Outline    `md:"outline"`
+	RelevantChapters []string          `md:"relevant_chapters"`
+	Locations        []string          `md:"locations"`
+	CustomPrompt     string            `md:"custom_prompt,omitempty"`
+}
+
+// CraftGenLocationsOutput is the output for location generation
+type CraftGenLocationsOutput struct {
+	Locations map[string]models.Location `md:"locations"`
+}
+
+// CraftGenItemsInput is the input for item generation
+type CraftGenItemsInput struct {
+	StorySetup       models.StorySetup `md:"story_setup"`
+	Outline          models.Outline    `md:"outline"`
+	RelevantChapters []string          `md:"relevant_chapters"`
+	Items            []string          `md:"items"`
+	CustomPrompt     string            `md:"custom_prompt,omitempty"`
+}
+
+// CraftGenItemsOutput is the output for item generation
+type CraftGenItemsOutput struct {
+	Items map[string]models.Item `md:"items"`
+}
+
+// CraftAgent generates detailed story elements (characters, locations, items)
+// It wraps BaseAgent to provide type-safe methods
+type CraftAgent struct {
+	base    *BaseAgent
+	setup   *models.StorySetup
+	outline *models.Outline
+}
+
+// NewCraftAgent creates a new CraftAgent
+func NewCraftAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM, setup *models.StorySetup, outline *models.Outline) *CraftAgent {
+	base := NewBaseAgent(BaseAgentConfig{
+		Name:       "CraftAgent",
+		Client:     client,
+		Config:     config,
+		ProjectLLM: projectLLM,
+		Language:   "zh",
+	})
+
 	return &CraftAgent{
-		client:     client,
-		config:     config,
-		projectLLM: projectLLM,
-		setup:      setup,
-		outline:    outline,
-		language:   language,
-		log:        logger.GetLogger(),
-		pm:         prompts.NewPromptManager(),
+		base:    base,
+		setup:   setup,
+		outline: outline,
 	}
+}
+
+// SetLanguage sets the output language
+func (a *CraftAgent) SetLanguage(language string) {
+	a.base.SetLanguage(language)
 }
 
 // GenerateCharacters generates detailed character profiles
-func (a *CraftAgent) GenerateCharacters(names []string, customPrompt string) (map[string]*models.Character, error) {
-	a.log.Info("Generating characters: count=%d", len(names))
+func (a *CraftAgent) GenerateCharacters(ctx context.Context, names []string, customPrompt string) (map[string]models.Character, error) {
+	logger.Section("CRAFT AGENT - Character Generation")
+	logger.Info("Characters: %v", names)
+	logger.Info("Language: %s", a.base.language)
 
-	// Build prompt data
-	data := map[string]interface{}{
-		"story_title":    a.setup.ProjectName,
-		"story_genre":    strings.Join(a.setup.Genres, ", "),
-		"story_style":    a.setup.Tone,
-		"characters":     names,
-		"custom_prompt":  customPrompt,
-		"story_setup":    prompts.StructToPrompt(a.setup, ""),
-		"outline_sample": a.getOutlineSample(),
-		"language":       a.language,
-		"language_name":  prompts.GetLanguageName(a.language),
+	// Find chapters where these characters appear
+	relevantChapters := a.findChaptersWithCharacters(names)
+	logger.Info("Found %d relevant chapters for these characters", len(relevantChapters))
+
+	input := CraftGenCharactersInput{
+		StorySetup:       *a.setup,
+		Outline:          *a.outline,
+		RelevantChapters: relevantChapters,
+		Characters:       names,
+		CustomPrompt:     customPrompt,
 	}
 
-	// Build prompts using PromptManager
-	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillCharacterCreation, "default", data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build prompt: %w", err)
+	var output CraftGenCharactersOutput
+	params := InvokeParams{
+		Skills:  []string{"craft-characters"},
+		Command: "generate detailed character profiles",
 	}
 
-	// Call LLM with options from config
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPrompt},
+	if err := a.base.Execute(ctx, params, input, &output.Characters); err != nil {
+		return nil, err
 	}
 
-	opts := a.config.GetChatOptions(a.projectLLM)
-
-	response, err := a.client.ChatCompletion(messages, opts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate characters: %w", err)
-	}
-
-	// Parse response
-	var characters map[string]*models.Character
-	if err := json.Unmarshal([]byte(response.Content), &characters); err != nil {
-		// Try to extract JSON from markdown code block
-		jsonStr := extractJSONFromMarkdown(response.Content)
-		if err := json.Unmarshal([]byte(jsonStr), &characters); err != nil {
-			return nil, fmt.Errorf("failed to parse character response: %w", err)
+	// Validate and normalize
+	for name, char := range output.Characters {
+		if char.Name == "" {
+			char.Name = name
 		}
+		output.Characters[name] = char
 	}
 
-	return characters, nil
+	logger.Info("✓ Generated %d characters", len(output.Characters))
+	return output.Characters, nil
 }
 
 // GenerateLocations generates detailed location descriptions
-func (a *CraftAgent) GenerateLocations(names []string, customPrompt string) (map[string]*models.Location, error) {
-	a.log.Info("Generating locations: count=%d", len(names))
+func (a *CraftAgent) GenerateLocations(ctx context.Context, names []string, customPrompt string) (map[string]models.Location, error) {
+	logger.Section("CRAFT AGENT - Location Generation")
+	logger.Info("Locations: %v", names)
+	logger.Info("Language: %s", a.base.language)
 
-	// Build prompt data
-	data := map[string]interface{}{
-		"story_title":    a.setup.ProjectName,
-		"story_genre":    strings.Join(a.setup.Genres, ", "),
-		"story_style":    a.setup.Tone,
-		"locations":      names,
-		"custom_prompt":  customPrompt,
-		"story_setup":    prompts.StructToPrompt(a.setup, ""),
-		"outline_sample": a.getOutlineSample(),
-		"language":       a.language,
-		"language_name":  prompts.GetLanguageName(a.language),
+	// Find chapters where these locations appear
+	relevantChapters := a.findChaptersWithLocations(names)
+	logger.Info("Found %d relevant chapters for these locations", len(relevantChapters))
+
+	input := CraftGenLocationsInput{
+		StorySetup:       *a.setup,
+		Outline:          *a.outline,
+		RelevantChapters: relevantChapters,
+		Locations:        names,
+		CustomPrompt:     customPrompt,
 	}
 
-	// Build prompts using PromptManager
-	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillLocationCreation, "default", data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build prompt: %w", err)
+	var output CraftGenLocationsOutput
+	params := InvokeParams{
+		Skills:  []string{"craft-locations"},
+		Command: "generate detailed location descriptions",
 	}
 
-	// Call LLM with options from config
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPrompt},
+	if err := a.base.Execute(ctx, params, input, &output.Locations); err != nil {
+		return nil, err
 	}
 
-	opts := a.config.GetChatOptions(a.projectLLM)
-	// Locations need more tokens due to detailed sensory descriptions
-	if opts.MaxTokens < 12000 {
-		opts.MaxTokens = 12000
-	}
-
-	response, err := a.client.ChatCompletion(messages, opts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate locations: %w", err)
-	}
-
-	// Parse response
-	var locations map[string]*models.Location
-	if err := json.Unmarshal([]byte(response.Content), &locations); err != nil {
-		jsonStr := extractJSONFromMarkdown(response.Content)
-		if err := json.Unmarshal([]byte(jsonStr), &locations); err != nil {
-			return nil, fmt.Errorf("failed to parse location response: %w", err)
+	// Validate and normalize
+	for name, loc := range output.Locations {
+		if loc.Name == "" {
+			loc.Name = name
 		}
+		output.Locations[name] = loc
 	}
 
-	return locations, nil
+	logger.Info("✓ Generated %d locations", len(output.Locations))
+	return output.Locations, nil
 }
 
 // GenerateItems generates detailed item descriptions
-func (a *CraftAgent) GenerateItems(names []string, customPrompt string) (map[string]*models.Item, error) {
-	a.log.Info("Generating items: count=%d", len(names))
+func (a *CraftAgent) GenerateItems(ctx context.Context, names []string, customPrompt string) (map[string]models.Item, error) {
+	logger.Section("CRAFT AGENT - Item Generation")
+	logger.Info("Items: %v", names)
+	logger.Info("Language: %s", a.base.language)
 
-	// Build prompt data
-	data := map[string]interface{}{
-		"story_title":    a.setup.ProjectName,
-		"story_genre":    strings.Join(a.setup.Genres, ", "),
-		"story_style":    a.setup.Tone,
-		"items":          names,
-		"custom_prompt":  customPrompt,
-		"story_setup":    prompts.StructToPrompt(a.setup, ""),
-		"outline_sample": a.getOutlineSample(),
-		"language":       a.language,
-		"language_name":  prompts.GetLanguageName(a.language),
+	// Find chapters where these items appear
+	relevantChapters := a.findChaptersWithItems(names)
+	logger.Info("Found %d relevant chapters for these items", len(relevantChapters))
+
+	input := CraftGenItemsInput{
+		StorySetup:       *a.setup,
+		Outline:          *a.outline,
+		RelevantChapters: relevantChapters,
+		Items:            names,
+		CustomPrompt:     customPrompt,
 	}
 
-	// Build prompts using PromptManager
-	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillItemCreation, "default", data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build prompt: %w", err)
+	var output CraftGenItemsOutput
+	params := InvokeParams{
+		Skills:  []string{"craft-items"},
+		Command: "generate detailed item descriptions",
 	}
 
-	// Call LLM with options from config
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPrompt},
+	if err := a.base.Execute(ctx, params, input, &output.Items); err != nil {
+		return nil, err
 	}
 
-	opts := a.config.GetChatOptions(a.projectLLM)
-
-	response, err := a.client.ChatCompletion(messages, opts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate items: %w", err)
-	}
-
-	// Parse response
-	var items map[string]*models.Item
-	if err := json.Unmarshal([]byte(response.Content), &items); err != nil {
-		jsonStr := extractJSONFromMarkdown(response.Content)
-		if err := json.Unmarshal([]byte(jsonStr), &items); err != nil {
-			return nil, fmt.Errorf("failed to parse item response: %w", err)
+	// Validate and normalize
+	for name, item := range output.Items {
+		if item.Name == "" {
+			item.Name = name
 		}
+		output.Items[name] = item
 	}
 
-	return items, nil
+	logger.Info("✓ Generated %d items", len(output.Items))
+	return output.Items, nil
 }
 
-func (a *CraftAgent) getOutlineSample() string {
-	if a.outline == nil || len(a.outline.Parts) == 0 {
-		return "No outline available"
+// findChaptersWithCharacters finds chapters that mention the given characters
+func (a *CraftAgent) findChaptersWithCharacters(characterNames []string) []string {
+	if a.outline == nil {
+		return nil
 	}
 
-	var sample strings.Builder
-	sample.WriteString("Story Outline:\n")
+	var relevantChapters []string
+	nameSet := make(map[string]bool)
+	for _, name := range characterNames {
+		nameSet[name] = true
+	}
 
-	// Add first part as sample
-	part := a.outline.Parts[0]
-	sample.WriteString(fmt.Sprintf("Part: %s\n", part.Title))
+	for _, part := range a.outline.Parts {
+		for _, vol := range part.Volumes {
+			for _, ch := range vol.Chapters {
+				// Check if any character appears in this chapter's character list
+				for _, char := range ch.Characters {
+					if nameSet[char] {
+						chapterInfo := fmt.Sprintf("Chapter %s: %s\nSummary: %s", ch.ID, ch.Title, ch.Summary)
+						relevantChapters = append(relevantChapters, chapterInfo)
+						break
+					}
+				}
 
-	if len(part.Volumes) > 0 {
-		vol := part.Volumes[0]
-		sample.WriteString(fmt.Sprintf("  Volume: %s\n", vol.Title))
-
-		if len(vol.Chapters) > 0 {
-			// Show first 3 chapters
-			maxChapters := 3
-			if len(vol.Chapters) < maxChapters {
-				maxChapters = len(vol.Chapters)
-			}
-			for i := 0; i < maxChapters; i++ {
-				ch := vol.Chapters[i]
-				sample.WriteString(fmt.Sprintf("    Chapter %s: %s\n", ch.ID, ch.Title))
-				if ch.Summary != "" {
-					sample.WriteString(fmt.Sprintf("      Summary: %s\n", ch.Summary))
+				// Also check in events
+				for _, event := range ch.Events {
+					for _, char := range event.Characters {
+						if nameSet[char] {
+							chapterInfo := fmt.Sprintf("Chapter %s: %s\nSummary: %s", ch.ID, ch.Title, ch.Summary)
+							relevantChapters = append(relevantChapters, chapterInfo)
+							break
+						}
+					}
 				}
 			}
 		}
 	}
 
-	return sample.String()
+	return relevantChapters
+}
+
+// findChaptersWithLocations finds chapters that mention the given locations
+func (a *CraftAgent) findChaptersWithLocations(locationNames []string) []string {
+	if a.outline == nil {
+		return nil
+	}
+
+	var relevantChapters []string
+	nameSet := make(map[string]bool)
+	for _, name := range locationNames {
+		nameSet[name] = true
+	}
+
+	for _, part := range a.outline.Parts {
+		for _, vol := range part.Volumes {
+			for _, ch := range vol.Chapters {
+				// Check if location matches
+				if nameSet[ch.Location] {
+					chapterInfo := fmt.Sprintf("Chapter %s: %s\nSummary: %s", ch.ID, ch.Title, ch.Summary)
+					relevantChapters = append(relevantChapters, chapterInfo)
+					continue
+				}
+
+				// Also check in summary and title
+				content := ch.Title + " " + ch.Summary
+				for name := range nameSet {
+					if strings.Contains(content, name) {
+						chapterInfo := fmt.Sprintf("Chapter %s: %s\nSummary: %s", ch.ID, ch.Title, ch.Summary)
+						relevantChapters = append(relevantChapters, chapterInfo)
+						break
+					}
+				}
+			}
+		}
+	}
+
+	return relevantChapters
+}
+
+// findChaptersWithItems finds chapters that mention the given items
+func (a *CraftAgent) findChaptersWithItems(itemNames []string) []string {
+	if a.outline == nil {
+		return nil
+	}
+
+	var relevantChapters []string
+	nameSet := make(map[string]bool)
+	for _, name := range itemNames {
+		nameSet[name] = true
+	}
+
+	for _, part := range a.outline.Parts {
+		for _, vol := range part.Volumes {
+			for _, ch := range vol.Chapters {
+				// Check in events for item-related events
+				found := false
+				for _, event := range ch.Events {
+					if nameSet[event.Subject] {
+						chapterInfo := fmt.Sprintf("Chapter %s: %s\nSummary: %s", ch.ID, ch.Title, ch.Summary)
+						relevantChapters = append(relevantChapters, chapterInfo)
+						found = true
+						break
+					}
+				}
+				if found {
+					continue
+				}
+
+				// Also check in summary and title
+				content := ch.Title + " " + ch.Summary
+				for name := range nameSet {
+					if strings.Contains(content, name) {
+						chapterInfo := fmt.Sprintf("Chapter %s: %s\nSummary: %s", ch.ID, ch.Title, ch.Summary)
+						relevantChapters = append(relevantChapters, chapterInfo)
+						break
+					}
+				}
+			}
+		}
+	}
+
+	return relevantChapters
 }

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -205,7 +206,8 @@ func runCraftGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create craft agent
-	agent := agents.NewCraftAgent(client, cfg, &config.LLM, setup, outline, config.Language)
+	agent := agents.NewCraftAgent(client, cfg, &config.LLM, setup, outline)
+	agent.SetLanguage(config.Language)
 
 	// Generate elements in batches
 	batchSize := craftBatchFlag
@@ -213,18 +215,20 @@ func runCraftGen(cmd *cobra.Command, args []string) error {
 		batchSize = 1
 	}
 
+	ctx := context.Background()
+
 	// Generate characters
-	if err := generateCharacters(agent, elementsToGenerate.Characters, generated, batchSize); err != nil {
+	if err := generateCharacters(ctx, agent, elementsToGenerate.Characters, generated, batchSize); err != nil {
 		return fmt.Errorf("failed to generate characters: %w", err)
 	}
 
 	// Generate locations
-	if err := generateLocations(agent, elementsToGenerate.Locations, generated, batchSize); err != nil {
+	if err := generateLocations(ctx, agent, elementsToGenerate.Locations, generated, batchSize); err != nil {
 		return fmt.Errorf("failed to generate locations: %w", err)
 	}
 
 	// Generate items
-	if err := generateItems(agent, elementsToGenerate.Items, generated, batchSize); err != nil {
+	if err := generateItems(ctx, agent, elementsToGenerate.Items, generated, batchSize); err != nil {
 		return fmt.Errorf("failed to generate items: %w", err)
 	}
 
@@ -590,7 +594,7 @@ func filterUnGenerated(elements *ExtractedElements, generated *GeneratedElements
 	return result
 }
 
-func generateCharacters(agent *agents.CraftAgent, characters []string, generated *GeneratedElements, batchSize int) error {
+func generateCharacters(ctx context.Context, agent *agents.CraftAgent, characters []string, generated *GeneratedElements, batchSize int) error {
 	if len(characters) == 0 {
 		return nil
 	}
@@ -631,7 +635,7 @@ func generateCharacters(agent *agents.CraftAgent, characters []string, generated
 			for batch := range batchChan {
 				log.Info("[Worker %d] Generating characters batch: count=%d", workerID, len(batch))
 
-				results, err := agent.GenerateCharacters(batch, craftPromptFlag)
+				results, err := agent.GenerateCharacters(ctx, batch, craftPromptFlag)
 				if err != nil {
 					log.Error("[Worker %d] Failed to generate characters batch: %v", workerID, err)
 					continue
@@ -667,7 +671,7 @@ func generateCharacters(agent *agents.CraftAgent, characters []string, generated
 	return nil
 }
 
-func generateLocations(agent *agents.CraftAgent, locations []string, generated *GeneratedElements, batchSize int) error {
+func generateLocations(ctx context.Context, agent *agents.CraftAgent, locations []string, generated *GeneratedElements, batchSize int) error {
 	if len(locations) == 0 {
 		return nil
 	}
@@ -708,7 +712,7 @@ func generateLocations(agent *agents.CraftAgent, locations []string, generated *
 			for batch := range batchChan {
 				log.Info("[Worker %d] Generating locations batch: count=%d", workerID, len(batch))
 
-				results, err := agent.GenerateLocations(batch, craftPromptFlag)
+				results, err := agent.GenerateLocations(ctx, batch, craftPromptFlag)
 				if err != nil {
 					log.Error("[Worker %d] Failed to generate locations batch: %v", workerID, err)
 					continue
@@ -744,7 +748,7 @@ func generateLocations(agent *agents.CraftAgent, locations []string, generated *
 	return nil
 }
 
-func generateItems(agent *agents.CraftAgent, items []string, generated *GeneratedElements, batchSize int) error {
+func generateItems(ctx context.Context, agent *agents.CraftAgent, items []string, generated *GeneratedElements, batchSize int) error {
 	if len(items) == 0 {
 		return nil
 	}
@@ -785,7 +789,7 @@ func generateItems(agent *agents.CraftAgent, items []string, generated *Generate
 			for batch := range batchChan {
 				log.Info("[Worker %d] Generating items batch: count=%d", workerID, len(batch))
 
-				results, err := agent.GenerateItems(batch, craftPromptFlag)
+				results, err := agent.GenerateItems(ctx, batch, craftPromptFlag)
 				if err != nil {
 					log.Error("[Worker %d] Failed to generate items batch: %v", workerID, err)
 					continue
@@ -821,7 +825,7 @@ func generateItems(agent *agents.CraftAgent, items []string, generated *Generate
 	return nil
 }
 
-func saveCharacters(characters map[string]*models.Character) error {
+func saveCharacters(characters map[string]models.Character) error {
 	root, err := findProjectRoot()
 	if err != nil {
 		return err
@@ -830,7 +834,7 @@ func saveCharacters(characters map[string]*models.Character) error {
 	return saveJSON(path, characters)
 }
 
-func saveLocations(locations map[string]*models.Location) error {
+func saveLocations(locations map[string]models.Location) error {
 	root, err := findProjectRoot()
 	if err != nil {
 		return err
@@ -839,7 +843,7 @@ func saveLocations(locations map[string]*models.Location) error {
 	return saveJSON(path, locations)
 }
 
-func saveItems(items map[string]*models.Item) error {
+func saveItems(items map[string]models.Item) error {
 	root, err := findProjectRoot()
 	if err != nil {
 		return err

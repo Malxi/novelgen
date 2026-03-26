@@ -1,472 +1,463 @@
 package agents
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"sort"
 	"strings"
 
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
-	"novelgen/internal/prompts"
 )
 
-// CraftReviewResult represents the review result for craft elements
-type CraftReviewResult struct {
-	OverallScore     float64                 `json:"overall_score"`
-	ConsistencyScore float64                 `json:"consistency_score"`
-	DepthScore       float64                 `json:"depth_score"`
-	OriginalityScore float64                 `json:"originality_score"`
-	Suggestions      []CraftReviewSuggestion `json:"suggestions"`
-	Iteration        int                     `json:"iteration"`
+// CraftReviewCharactersInput is the input for character review
+type CraftReviewCharactersInput struct {
+	StorySetup   models.StorySetup           `md:"story_setup"`
+	Outline      string                      `md:"outline"`
+	Characters   map[string]models.Character `md:"characters"`
+	Iteration    int                         `md:"iteration"`
 }
 
-// CraftReviewSuggestion represents a single improvement suggestion
-type CraftReviewSuggestion struct {
-	ElementName string `json:"element_name"`
-	Issue       string `json:"issue"`
-	Suggestion  string `json:"suggestion"`
-	Priority    string `json:"priority"` // high, medium, low
+// CraftReviewCharactersOutput is the output for character review
+type CraftReviewCharactersOutput struct {
+	Result models.ReviewResult `md:"result"`
+}
+
+// CraftReviewLocationsInput is the input for location review
+type CraftReviewLocationsInput struct {
+	StorySetup   models.StorySetup          `md:"story_setup"`
+	Outline      string                     `md:"outline"`
+	Locations    map[string]models.Location `md:"locations"`
+	Iteration    int                        `md:"iteration"`
+}
+
+// CraftReviewLocationsOutput is the output for location review
+type CraftReviewLocationsOutput struct {
+	Result models.ReviewResult `md:"result"`
+}
+
+// CraftReviewItemsInput is the input for item review
+type CraftReviewItemsInput struct {
+	StorySetup   models.StorySetup      `md:"story_setup"`
+	Outline      string                 `md:"outline"`
+	Items        map[string]models.Item `md:"items"`
+	Iteration    int                    `md:"iteration"`
+}
+
+// CraftReviewItemsOutput is the output for item review
+type CraftReviewItemsOutput struct {
+	Result models.ReviewResult `md:"result"`
+}
+
+// CraftImproveCharactersInput is the input for character improvement
+type CraftImproveCharactersInput struct {
+	StorySetup   models.StorySetup           `md:"story_setup"`
+	Outline      string                      `md:"outline"`
+	Characters   map[string]models.Character `md:"characters"`
+	ReviewResult models.ReviewResult         `md:"review_result"`
+	CustomPrompt string                      `md:"custom_prompt,omitempty"`
+}
+
+// CraftImproveCharactersOutput is the output for character improvement
+type CraftImproveCharactersOutput struct {
+	Characters map[string]models.Character `md:"characters"`
+}
+
+// CraftImproveLocationsInput is the input for location improvement
+type CraftImproveLocationsInput struct {
+	StorySetup   models.StorySetup          `md:"story_setup"`
+	Outline      string                     `md:"outline"`
+	Locations    map[string]models.Location `md:"locations"`
+	ReviewResult models.ReviewResult        `md:"review_result"`
+	CustomPrompt string                     `md:"custom_prompt,omitempty"`
+}
+
+// CraftImproveLocationsOutput is the output for location improvement
+type CraftImproveLocationsOutput struct {
+	Locations map[string]models.Location `md:"locations"`
+}
+
+// CraftImproveItemsInput is the input for item improvement
+type CraftImproveItemsInput struct {
+	StorySetup   models.StorySetup      `md:"story_setup"`
+	Outline      string                 `md:"outline"`
+	Items        map[string]models.Item `md:"items"`
+	ReviewResult models.ReviewResult    `md:"review_result"`
+	CustomPrompt string                 `md:"custom_prompt,omitempty"`
+}
+
+// CraftImproveItemsOutput is the output for item improvement
+type CraftImproveItemsOutput struct {
+	Items map[string]models.Item `md:"items"`
 }
 
 // CraftIterationAgent handles AI-driven element review and improvement
+// It wraps BaseAgent to provide type-safe methods
 type CraftIterationAgent struct {
-	client     llm.Client
-	config     *llm.Config
-	projectLLM *models.ProjectLLM
-	setup      *models.StorySetup
-	outline    *models.Outline
-	language   string
-	log        logger.LoggerInterface
-	pm         *prompts.PromptManager
+	base    *BaseAgent
+	setup   *models.StorySetup
+	outline *models.Outline
 }
 
 // NewCraftIterationAgent creates a new CraftIterationAgent
-func NewCraftIterationAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM, setup *models.StorySetup, outline *models.Outline, language string) *CraftIterationAgent {
+func NewCraftIterationAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM, setup *models.StorySetup, outline *models.Outline) *CraftIterationAgent {
+	base := NewBaseAgent(BaseAgentConfig{
+		Name:       "CraftIterationAgent",
+		Client:     client,
+		Config:     config,
+		ProjectLLM: projectLLM,
+		Language:   "zh",
+	})
+
 	return &CraftIterationAgent{
-		client:     client,
-		config:     config,
-		projectLLM: projectLLM,
-		setup:      setup,
-		outline:    outline,
-		language:   language,
-		log:        logger.GetLogger(),
-		pm:         prompts.NewPromptManager(),
+		base:    base,
+		setup:   setup,
+		outline: outline,
 	}
+}
+
+// SetLanguage sets the output language
+func (a *CraftIterationAgent) SetLanguage(language string) {
+	a.base.SetLanguage(language)
 }
 
 // ReviewCharacters reviews characters and returns improvement suggestions
-func (a *CraftIterationAgent) ReviewCharacters(characters map[string]*models.Character, iteration int) (*CraftReviewResult, error) {
-	logger.Section("CRAFT ITERATION AGENT - Review Characters")
+func (a *CraftIterationAgent) ReviewCharacters(ctx context.Context, characters map[string]models.Character, iteration int) (models.ReviewResult, error) {
+	logger.Section("CRAFT ITERATION AGENT - Character Review")
 	logger.Info("Iteration: %d, Characters: %d", iteration, len(characters))
+	logger.Info("Language: %s", a.base.language)
 
-	// Convert characters to JSON
-	charsJSON, err := json.MarshalIndent(characters, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal characters: %w", err)
+	input := CraftReviewCharactersInput{
+		StorySetup: *a.setup,
+		Outline:    a.getOutlineSummary(),
+		Characters: characters,
+		Iteration:  iteration,
 	}
 
-	// Build prompt data
-	data := map[string]interface{}{
-		"element_type":  "characters",
-		"elements":      string(charsJSON),
-		"story_setup":   prompts.StructToPrompt(a.setup, ""),
-		"outline":       a.getOutlineSummary(),
-		"iteration":     iteration,
-		"language":      a.language,
-		"language_name": prompts.GetLanguageName(a.language),
+	var output CraftReviewCharactersOutput
+	params := InvokeParams{
+		Skills:  []string{"craft-review-characters"},
+		Command: "review characters and provide improvement suggestions",
 	}
 
-	// Build prompts
-	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillCharacterReview, "default", data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build prompt: %w", err)
+	if err := a.base.Execute(ctx, params, input, &output.Result); err != nil {
+		return models.ReviewResult{}, err
 	}
 
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPrompt},
-	}
+	logger.Section("Character Review Result")
+	logger.Info("Overall Score: %.1f/100", output.Result.OverallScore)
+	logger.Info("Suggestions: %d", len(output.Result.Suggestions))
 
-	options := a.config.GetChatOptions(a.projectLLM)
-
-	logger.Info("Sending character review request to AI...")
-	resp, err := a.client.ChatCompletion(messages, options)
-	if err != nil {
-		return nil, fmt.Errorf("AI review request failed: %w", err)
-	}
-
-	// Parse review result
-	review, err := a.parseReviewResult(resp.Content, iteration)
-	if err != nil {
-		logger.Error("Failed to parse review result: %v", err)
-		logger.Debug("Raw response: %s", resp.Content)
-		return nil, fmt.Errorf("failed to parse review result: %w", err)
-	}
-
-	logger.Info("Character Review Score: %.1f/100", review.OverallScore)
-	logger.Info("Suggestions: %d", len(review.Suggestions))
-
-	return review, nil
+	return output.Result, nil
 }
 
 // ReviewLocations reviews locations and returns improvement suggestions
-func (a *CraftIterationAgent) ReviewLocations(locations map[string]*models.Location, iteration int) (*CraftReviewResult, error) {
-	logger.Section("CRAFT ITERATION AGENT - Review Locations")
+func (a *CraftIterationAgent) ReviewLocations(ctx context.Context, locations map[string]models.Location, iteration int) (models.ReviewResult, error) {
+	logger.Section("CRAFT ITERATION AGENT - Location Review")
 	logger.Info("Iteration: %d, Locations: %d", iteration, len(locations))
+	logger.Info("Language: %s", a.base.language)
 
-	// Convert locations to JSON
-	locsJSON, err := json.MarshalIndent(locations, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal locations: %w", err)
+	input := CraftReviewLocationsInput{
+		StorySetup: *a.setup,
+		Outline:    a.getOutlineSummary(),
+		Locations:  locations,
+		Iteration:  iteration,
 	}
 
-	// Build prompt data
-	data := map[string]interface{}{
-		"element_type":  "locations",
-		"elements":      string(locsJSON),
-		"story_setup":   prompts.StructToPrompt(a.setup, ""),
-		"outline":       a.getOutlineSummary(),
-		"iteration":     iteration,
-		"language":      a.language,
-		"language_name": prompts.GetLanguageName(a.language),
+	var output CraftReviewLocationsOutput
+	params := InvokeParams{
+		Skills:  []string{"craft-review-locations"},
+		Command: "review locations and provide improvement suggestions",
 	}
 
-	// Build prompts
-	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillLocationReview, "default", data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build prompt: %w", err)
+	if err := a.base.Execute(ctx, params, input, &output.Result); err != nil {
+		return models.ReviewResult{}, err
 	}
 
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPrompt},
-	}
+	logger.Section("Location Review Result")
+	logger.Info("Overall Score: %.1f/100", output.Result.OverallScore)
+	logger.Info("Suggestions: %d", len(output.Result.Suggestions))
 
-	options := a.config.GetChatOptions(a.projectLLM)
-
-	logger.Info("Sending location review request to AI...")
-	resp, err := a.client.ChatCompletion(messages, options)
-	if err != nil {
-		return nil, fmt.Errorf("AI review request failed: %w", err)
-	}
-
-	// Parse review result
-	review, err := a.parseReviewResult(resp.Content, iteration)
-	if err != nil {
-		logger.Error("Failed to parse review result: %v", err)
-		return nil, fmt.Errorf("failed to parse review result: %w", err)
-	}
-
-	logger.Info("Location Review Score: %.1f/100", review.OverallScore)
-	logger.Info("Suggestions: %d", len(review.Suggestions))
-
-	return review, nil
+	return output.Result, nil
 }
 
 // ReviewItems reviews items and returns improvement suggestions
-func (a *CraftIterationAgent) ReviewItems(items map[string]*models.Item, iteration int) (*CraftReviewResult, error) {
-	logger.Section("CRAFT ITERATION AGENT - Review Items")
+func (a *CraftIterationAgent) ReviewItems(ctx context.Context, items map[string]models.Item, iteration int) (models.ReviewResult, error) {
+	logger.Section("CRAFT ITERATION AGENT - Item Review")
 	logger.Info("Iteration: %d, Items: %d", iteration, len(items))
+	logger.Info("Language: %s", a.base.language)
 
-	// Convert items to JSON
-	itemsJSON, err := json.MarshalIndent(items, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal items: %w", err)
+	input := CraftReviewItemsInput{
+		StorySetup: *a.setup,
+		Outline:    a.getOutlineSummary(),
+		Items:      items,
+		Iteration:  iteration,
 	}
 
-	// Build prompt data
-	data := map[string]interface{}{
-		"element_type":  "items",
-		"elements":      string(itemsJSON),
-		"story_setup":   prompts.StructToPrompt(a.setup, ""),
-		"outline":       a.getOutlineSummary(),
-		"iteration":     iteration,
-		"language":      a.language,
-		"language_name": prompts.GetLanguageName(a.language),
+	var output CraftReviewItemsOutput
+	params := InvokeParams{
+		Skills:  []string{"craft-review-items"},
+		Command: "review items and provide improvement suggestions",
 	}
 
-	// Build prompts
-	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillItemReview, "default", data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build prompt: %w", err)
+	if err := a.base.Execute(ctx, params, input, &output.Result); err != nil {
+		return models.ReviewResult{}, err
 	}
 
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPrompt},
-	}
+	logger.Section("Item Review Result")
+	logger.Info("Overall Score: %.1f/100", output.Result.OverallScore)
+	logger.Info("Suggestions: %d", len(output.Result.Suggestions))
 
-	options := a.config.GetChatOptions(a.projectLLM)
-
-	logger.Info("Sending item review request to AI...")
-	resp, err := a.client.ChatCompletion(messages, options)
-	if err != nil {
-		return nil, fmt.Errorf("AI review request failed: %w", err)
-	}
-
-	// Parse review result
-	review, err := a.parseReviewResult(resp.Content, iteration)
-	if err != nil {
-		logger.Error("Failed to parse review result: %v", err)
-		return nil, fmt.Errorf("failed to parse review result: %w", err)
-	}
-
-	logger.Info("Item Review Score: %.1f/100", review.OverallScore)
-	logger.Info("Suggestions: %d", len(review.Suggestions))
-
-	return review, nil
+	return output.Result, nil
 }
 
 // ImproveCharacters applies improvements to characters based on review
-func (a *CraftIterationAgent) ImproveCharacters(characters map[string]*models.Character, review *CraftReviewResult, customPrompt string) (map[string]*models.Character, error) {
-	logger.Section("CRAFT ITERATION AGENT - Improve Characters")
-	logger.Info("Processing %d suggestions", len(review.Suggestions))
+func (a *CraftIterationAgent) ImproveCharacters(ctx context.Context, characters map[string]models.Character, review models.ReviewResult, customPrompt string) (map[string]models.Character, error) {
+	logger.Section("CRAFT ITERATION AGENT - Character Improvement")
+	logger.Info("Characters: %d, Suggestions: %d", len(characters), len(review.Suggestions))
+	logger.Info("Language: %s", a.base.language)
 
-	// Sort suggestions by priority
-	sortedSuggestions := a.sortSuggestionsByPriority(review.Suggestions)
-
-	// Filter high priority suggestions
-	highPrioritySuggestions := []CraftReviewSuggestion{}
-	for _, s := range sortedSuggestions {
-		if s.Priority == "high" {
-			highPrioritySuggestions = append(highPrioritySuggestions, s)
-		}
+	input := CraftImproveCharactersInput{
+		StorySetup:   *a.setup,
+		Outline:      a.getOutlineSummary(),
+		Characters:   characters,
+		ReviewResult: review,
+		CustomPrompt: customPrompt,
 	}
 
-	if len(highPrioritySuggestions) == 0 {
-		logger.Info("No high priority suggestions to apply")
-		return characters, nil
+	var output CraftImproveCharactersOutput
+	params := InvokeParams{
+		Skills:  []string{"craft-improve-characters"},
+		Command: "improve characters based on review suggestions",
 	}
 
-	logger.Info("Applying %d high priority improvements", len(highPrioritySuggestions))
-
-	// Convert characters to JSON
-	charsJSON, err := json.MarshalIndent(characters, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal characters: %w", err)
+	if err := a.base.Execute(ctx, params, input, &output.Characters); err != nil {
+		return nil, err
 	}
 
-	// Build improvement prompt
-	data := map[string]interface{}{
-		"elements":      string(charsJSON),
-		"suggestions":   highPrioritySuggestions,
-		"story_setup":   prompts.StructToPrompt(a.setup, ""),
-		"outline":       a.getOutlineSummary(),
-		"custom_prompt": customPrompt,
-		"language":      a.language,
-		"language_name": prompts.GetLanguageName(a.language),
-	}
-
-	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillCharacterImprovement, "default", data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build improvement prompt: %w", err)
-	}
-
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPrompt},
-	}
-
-	options := a.config.GetChatOptions(a.projectLLM)
-	if options.MaxTokens < 12000 {
-		options.MaxTokens = 12000
-	}
-
-	logger.Info("Sending character improvement request to AI...")
-	resp, err := a.client.ChatCompletion(messages, options)
-	if err != nil {
-		return nil, fmt.Errorf("AI improvement request failed: %w", err)
-	}
-
-	// Parse improved characters
-	var improved map[string]*models.Character
-	if err := json.Unmarshal([]byte(resp.Content), &improved); err != nil {
-		// Try to extract JSON from markdown
-		jsonStr := extractJSONFromMarkdown(resp.Content)
-		if err := json.Unmarshal([]byte(jsonStr), &improved); err != nil {
-			return nil, fmt.Errorf("failed to parse improved characters: %w", err)
-		}
-	}
-
-	logger.Info("Successfully improved %d characters", len(improved))
-	return improved, nil
+	logger.Info("✓ Improved %d characters", len(output.Characters))
+	return output.Characters, nil
 }
 
 // ImproveLocations applies improvements to locations based on review
-func (a *CraftIterationAgent) ImproveLocations(locations map[string]*models.Location, review *CraftReviewResult, customPrompt string) (map[string]*models.Location, error) {
-	logger.Section("CRAFT ITERATION AGENT - Improve Locations")
-	logger.Info("Processing %d suggestions", len(review.Suggestions))
+func (a *CraftIterationAgent) ImproveLocations(ctx context.Context, locations map[string]models.Location, review models.ReviewResult, customPrompt string) (map[string]models.Location, error) {
+	logger.Section("CRAFT ITERATION AGENT - Location Improvement")
+	logger.Info("Locations: %d, Suggestions: %d", len(locations), len(review.Suggestions))
+	logger.Info("Language: %s", a.base.language)
 
-	// Sort suggestions by priority
-	sortedSuggestions := a.sortSuggestionsByPriority(review.Suggestions)
-
-	// Filter high priority suggestions
-	highPrioritySuggestions := []CraftReviewSuggestion{}
-	for _, s := range sortedSuggestions {
-		if s.Priority == "high" {
-			highPrioritySuggestions = append(highPrioritySuggestions, s)
-		}
+	input := CraftImproveLocationsInput{
+		StorySetup:   *a.setup,
+		Outline:      a.getOutlineSummary(),
+		Locations:    locations,
+		ReviewResult: review,
+		CustomPrompt: customPrompt,
 	}
 
-	if len(highPrioritySuggestions) == 0 {
-		logger.Info("No high priority suggestions to apply")
-		return locations, nil
+	var output CraftImproveLocationsOutput
+	params := InvokeParams{
+		Skills:  []string{"craft-improve-locations"},
+		Command: "improve locations based on review suggestions",
 	}
 
-	logger.Info("Applying %d high priority improvements", len(highPrioritySuggestions))
-
-	// Convert locations to JSON
-	locsJSON, err := json.MarshalIndent(locations, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal locations: %w", err)
+	if err := a.base.Execute(ctx, params, input, &output.Locations); err != nil {
+		return nil, err
 	}
 
-	// Build improvement prompt
-	data := map[string]interface{}{
-		"elements":      string(locsJSON),
-		"suggestions":   highPrioritySuggestions,
-		"story_setup":   prompts.StructToPrompt(a.setup, ""),
-		"outline":       a.getOutlineSummary(),
-		"custom_prompt": customPrompt,
-		"language":      a.language,
-		"language_name": prompts.GetLanguageName(a.language),
-	}
-
-	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillLocationImprovement, "default", data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build improvement prompt: %w", err)
-	}
-
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPrompt},
-	}
-
-	options := a.config.GetChatOptions(a.projectLLM)
-	if options.MaxTokens < 12000 {
-		options.MaxTokens = 12000
-	}
-
-	logger.Info("Sending location improvement request to AI...")
-	resp, err := a.client.ChatCompletion(messages, options)
-	if err != nil {
-		return nil, fmt.Errorf("AI improvement request failed: %w", err)
-	}
-
-	// Parse improved locations
-	var improved map[string]*models.Location
-	if err := json.Unmarshal([]byte(resp.Content), &improved); err != nil {
-		jsonStr := extractJSONFromMarkdown(resp.Content)
-		if err := json.Unmarshal([]byte(jsonStr), &improved); err != nil {
-			return nil, fmt.Errorf("failed to parse improved locations: %w", err)
-		}
-	}
-
-	logger.Info("Successfully improved %d locations", len(improved))
-	return improved, nil
+	logger.Info("✓ Improved %d locations", len(output.Locations))
+	return output.Locations, nil
 }
 
 // ImproveItems applies improvements to items based on review
-func (a *CraftIterationAgent) ImproveItems(items map[string]*models.Item, review *CraftReviewResult, customPrompt string) (map[string]*models.Item, error) {
-	logger.Section("CRAFT ITERATION AGENT - Improve Items")
-	logger.Info("Processing %d suggestions", len(review.Suggestions))
+func (a *CraftIterationAgent) ImproveItems(ctx context.Context, items map[string]models.Item, review models.ReviewResult, customPrompt string) (map[string]models.Item, error) {
+	logger.Section("CRAFT ITERATION AGENT - Item Improvement")
+	logger.Info("Items: %d, Suggestions: %d", len(items), len(review.Suggestions))
+	logger.Info("Language: %s", a.base.language)
 
-	// Sort suggestions by priority
-	sortedSuggestions := a.sortSuggestionsByPriority(review.Suggestions)
-
-	// Filter high priority suggestions
-	highPrioritySuggestions := []CraftReviewSuggestion{}
-	for _, s := range sortedSuggestions {
-		if s.Priority == "high" {
-			highPrioritySuggestions = append(highPrioritySuggestions, s)
-		}
+	input := CraftImproveItemsInput{
+		StorySetup:   *a.setup,
+		Outline:      a.getOutlineSummary(),
+		Items:        items,
+		ReviewResult: review,
+		CustomPrompt: customPrompt,
 	}
 
-	if len(highPrioritySuggestions) == 0 {
-		logger.Info("No high priority suggestions to apply")
-		return items, nil
+	var output CraftImproveItemsOutput
+	params := InvokeParams{
+		Skills:  []string{"craft-improve-items"},
+		Command: "improve items based on review suggestions",
 	}
 
-	logger.Info("Applying %d high priority improvements", len(highPrioritySuggestions))
-
-	// Convert items to JSON
-	itemsJSON, err := json.MarshalIndent(items, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal items: %w", err)
+	if err := a.base.Execute(ctx, params, input, &output.Items); err != nil {
+		return nil, err
 	}
 
-	// Build improvement prompt
-	data := map[string]interface{}{
-		"elements":      string(itemsJSON),
-		"suggestions":   highPrioritySuggestions,
-		"story_setup":   prompts.StructToPrompt(a.setup, ""),
-		"outline":       a.getOutlineSummary(),
-		"custom_prompt": customPrompt,
-		"language":      a.language,
-		"language_name": prompts.GetLanguageName(a.language),
-	}
-
-	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillItemImprovement, "default", data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build improvement prompt: %w", err)
-	}
-
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPrompt},
-	}
-
-	options := a.config.GetChatOptions(a.projectLLM)
-	if options.MaxTokens < 12000 {
-		options.MaxTokens = 12000
-	}
-
-	logger.Info("Sending item improvement request to AI...")
-	resp, err := a.client.ChatCompletion(messages, options)
-	if err != nil {
-		return nil, fmt.Errorf("AI improvement request failed: %w", err)
-	}
-
-	// Parse improved items
-	var improved map[string]*models.Item
-	if err := json.Unmarshal([]byte(resp.Content), &improved); err != nil {
-		jsonStr := extractJSONFromMarkdown(resp.Content)
-		if err := json.Unmarshal([]byte(jsonStr), &improved); err != nil {
-			return nil, fmt.Errorf("failed to parse improved items: %w", err)
-		}
-	}
-
-	logger.Info("Successfully improved %d items", len(improved))
-	return improved, nil
+	logger.Info("✓ Improved %d items", len(output.Items))
+	return output.Items, nil
 }
 
-// parseReviewResult parses the AI response into a CraftReviewResult
-func (a *CraftIterationAgent) parseReviewResult(content string, iteration int) (*CraftReviewResult, error) {
-	// Try to extract JSON from markdown if needed
-	jsonStr := extractJSONFromMarkdown(content)
+// IterateCharacters runs the review-improvement loop for characters
+func (a *CraftIterationAgent) IterateCharacters(ctx context.Context, characters map[string]models.Character, maxIterations int, qualityThreshold float64, customPrompt string) (map[string]models.Character, *models.ReviewResult, error) {
+	logger.Section("CRAFT ITERATION AGENT - Character Iteration Loop")
+	logger.Info("Max iterations: %d", maxIterations)
+	logger.Info("Quality threshold: %.1f", qualityThreshold)
 
-	var result CraftReviewResult
-	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal review result: %w", err)
+	currentChars := characters
+	var finalReview *models.ReviewResult
+
+	for i := 1; i <= maxIterations; i++ {
+		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
+
+		// Review
+		review, err := a.ReviewCharacters(ctx, currentChars, i)
+		if err != nil {
+			return nil, nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
+		}
+		finalReview = &review
+
+		// Check if quality meets threshold
+		if review.OverallScore >= qualityThreshold {
+			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", review.OverallScore, qualityThreshold)
+			break
+		}
+
+		// Check if this is the last iteration
+		if i == maxIterations {
+			logger.Warn("Max iterations reached, stopping iteration loop")
+			break
+		}
+
+		// Check if there are high priority suggestions
+		hasHighPriority := false
+		for _, s := range review.Suggestions {
+			if s.Priority == "high" {
+				hasHighPriority = true
+				break
+			}
+		}
+		if !hasHighPriority {
+			logger.Info("No high priority issues, stopping iteration")
+			break
+		}
+
+		// Improve
+		improved, err := a.ImproveCharacters(ctx, currentChars, review, customPrompt)
+		if err != nil {
+			return nil, nil, fmt.Errorf("improvement failed at iteration %d: %w", i, err)
+		}
+		currentChars = improved
 	}
 
-	result.Iteration = iteration
-	return &result, nil
+	return currentChars, finalReview, nil
 }
 
-// sortSuggestionsByPriority sorts suggestions by priority (high first)
-func (a *CraftIterationAgent) sortSuggestionsByPriority(suggestions []CraftReviewSuggestion) []CraftReviewSuggestion {
-	sorted := make([]CraftReviewSuggestion, len(suggestions))
-	copy(sorted, suggestions)
+// IterateLocations runs the review-improvement loop for locations
+func (a *CraftIterationAgent) IterateLocations(ctx context.Context, locations map[string]models.Location, maxIterations int, qualityThreshold float64, customPrompt string) (map[string]models.Location, *models.ReviewResult, error) {
+	logger.Section("CRAFT ITERATION AGENT - Location Iteration Loop")
+	logger.Info("Max iterations: %d", maxIterations)
+	logger.Info("Quality threshold: %.1f", qualityThreshold)
 
-	sort.Slice(sorted, func(i, j int) bool {
-		priorityOrder := map[string]int{"high": 0, "medium": 1, "low": 2}
-		return priorityOrder[sorted[i].Priority] < priorityOrder[sorted[j].Priority]
-	})
+	currentLocs := locations
+	var finalReview *models.ReviewResult
 
-	return sorted
+	for i := 1; i <= maxIterations; i++ {
+		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
+
+		// Review
+		review, err := a.ReviewLocations(ctx, currentLocs, i)
+		if err != nil {
+			return nil, nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
+		}
+		finalReview = &review
+
+		// Check if quality meets threshold
+		if review.OverallScore >= qualityThreshold {
+			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", review.OverallScore, qualityThreshold)
+			break
+		}
+
+		// Check if this is the last iteration
+		if i == maxIterations {
+			logger.Warn("Max iterations reached, stopping iteration loop")
+			break
+		}
+
+		// Check if there are high priority suggestions
+		hasHighPriority := false
+		for _, s := range review.Suggestions {
+			if s.Priority == "high" {
+				hasHighPriority = true
+				break
+			}
+		}
+		if !hasHighPriority {
+			logger.Info("No high priority issues, stopping iteration")
+			break
+		}
+
+		// Improve
+		improved, err := a.ImproveLocations(ctx, currentLocs, review, customPrompt)
+		if err != nil {
+			return nil, nil, fmt.Errorf("improvement failed at iteration %d: %w", i, err)
+		}
+		currentLocs = improved
+	}
+
+	return currentLocs, finalReview, nil
+}
+
+// IterateItems runs the review-improvement loop for items
+func (a *CraftIterationAgent) IterateItems(ctx context.Context, items map[string]models.Item, maxIterations int, qualityThreshold float64, customPrompt string) (map[string]models.Item, *models.ReviewResult, error) {
+	logger.Section("CRAFT ITERATION AGENT - Item Iteration Loop")
+	logger.Info("Max iterations: %d", maxIterations)
+	logger.Info("Quality threshold: %.1f", qualityThreshold)
+
+	currentItems := items
+	var finalReview *models.ReviewResult
+
+	for i := 1; i <= maxIterations; i++ {
+		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
+
+		// Review
+		review, err := a.ReviewItems(ctx, currentItems, i)
+		if err != nil {
+			return nil, nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
+		}
+		finalReview = &review
+
+		// Check if quality meets threshold
+		if review.OverallScore >= qualityThreshold {
+			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", review.OverallScore, qualityThreshold)
+			break
+		}
+
+		// Check if this is the last iteration
+		if i == maxIterations {
+			logger.Warn("Max iterations reached, stopping iteration loop")
+			break
+		}
+
+		// Check if there are high priority suggestions
+		hasHighPriority := false
+		for _, s := range review.Suggestions {
+			if s.Priority == "high" {
+				hasHighPriority = true
+				break
+			}
+		}
+		if !hasHighPriority {
+			logger.Info("No high priority issues, stopping iteration")
+			break
+		}
+
+		// Improve
+		improved, err := a.ImproveItems(ctx, currentItems, review, customPrompt)
+		if err != nil {
+			return nil, nil, fmt.Errorf("improvement failed at iteration %d: %w", i, err)
+		}
+		currentItems = improved
+	}
+
+	return currentItems, finalReview, nil
 }
 
 // getOutlineSummary returns a summary of the outline for context
@@ -491,34 +482,4 @@ func (a *CraftIterationAgent) getOutlineSummary() string {
 	}
 
 	return sb.String()
-}
-
-// ShouldContinueCraftIteration determines if we should continue iterating
-func ShouldContinueCraftIteration(review *CraftReviewResult, iteration int, maxIterations int) bool {
-	// Stop if we've reached max iterations
-	if iteration >= maxIterations {
-		logger.Info("Reached maximum iterations (%d)", maxIterations)
-		return false
-	}
-
-	// Stop if overall score is good enough (85+)
-	if review.OverallScore >= 85 {
-		logger.Info("Element quality is good (score: %.1f), stopping iteration", review.OverallScore)
-		return false
-	}
-
-	// Stop if no high priority suggestions
-	hasHighPriority := false
-	for _, s := range review.Suggestions {
-		if s.Priority == "high" {
-			hasHighPriority = true
-			break
-		}
-	}
-	if !hasHighPriority {
-		logger.Info("No high priority issues remaining, stopping iteration")
-		return false
-	}
-
-	return true
 }
