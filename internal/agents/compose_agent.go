@@ -59,6 +59,61 @@ type ComposeImproveOutput struct {
 	Outline models.Outline `md:"outline"`
 }
 
+// ComposeSkeletonInput is the input for generating outline skeleton (parts and volumes only)
+type ComposeSkeletonInput struct {
+	Setup     models.StorySetup     `md:"setup"`
+	Structure models.StoryStructure `md:"structure"`
+}
+
+// ComposeSkeletonOutput is the output for outline skeleton generation
+type ComposeSkeletonOutput struct {
+	Parts []models.Part `md:"parts"`
+}
+
+// ComposeChaptersInput is the input for generating chapters for a volume
+type ComposeChaptersInput struct {
+	Setup          models.StorySetup `md:"setup"`
+	Part           models.Part       `md:"part"`
+	Volume         models.Volume     `md:"volume"`
+	VolumeIndex    int               `md:"volume_index"`
+	TotalVolumes   int               `md:"total_volumes"`
+	ChaptersPerVol int               `md:"chapters_per_volume"`
+	PreviousVolume *models.Volume    `md:"previous_volume,omitempty"`
+	OutlineContext string            `md:"outline_context"`
+}
+
+// ComposeChaptersOutput is the output for chapter generation
+type ComposeChaptersOutput struct {
+	Chapters []models.Chapter `md:"chapters"`
+}
+
+// ComposeReviewVolumeInput is the input for reviewing a specific volume
+type ComposeReviewVolumeInput struct {
+	Outline      models.Outline `md:"outline"`
+	Part         models.Part    `md:"part"`
+	Volume       models.Volume  `md:"volume"`
+	VolumeIndex  int            `md:"volume_index"`
+	TotalVolumes int            `md:"total_volumes"`
+}
+
+// ComposeReviewVolumeOutput is the output for volume review
+type ComposeReviewVolumeOutput struct {
+	Result models.ReviewResult `md:"result"`
+}
+
+// ComposeImproveVolumeInput is the input for improving a specific volume
+type ComposeImproveVolumeInput struct {
+	Outline      models.Outline      `md:"outline"`
+	Part         models.Part         `md:"part"`
+	Volume       models.Volume       `md:"volume"`
+	ReviewResult models.ReviewResult `md:"review_result"`
+}
+
+// ComposeImproveVolumeOutput is the output for volume improvement
+type ComposeImproveVolumeOutput struct {
+	Volume models.Volume `md:"volume"`
+}
+
 // ComposeAgent handles AI generation for story outline
 // It wraps BaseAgent to provide type-safe methods
 type ComposeAgent struct {
@@ -303,6 +358,173 @@ func (a *ComposeAgent) BuildPartContext(part *models.Part, outline *models.Outli
 	return context.String()
 }
 
+// ImproveVolume improves a specific volume based on review feedback
+func (a *ComposeAgent) ImproveVolume(ctx context.Context, input ComposeImproveVolumeInput) (ComposeImproveVolumeOutput, error) {
+	logger.Section("COMPOSE AGENT - Volume Improvement")
+	logger.Info("Volume: %s", input.Volume.Title)
+	logger.Info("Language: %s", a.base.language)
+
+	var output ComposeImproveVolumeOutput
+	params := InvokeParams{
+		Skills:  []string{"compose-improve-volume"},
+		Command: "improve the chapters in this volume based on review feedback",
+	}
+
+	if err := a.base.Execute(ctx, params, input, &output.Volume); err != nil {
+		return ComposeImproveVolumeOutput{}, err
+	}
+
+	// Validate the improved volume
+	if len(output.Volume.Chapters) == 0 {
+		return ComposeImproveVolumeOutput{}, fmt.Errorf("improved volume has no chapters")
+	}
+
+	// Validate each chapter
+	for i, chapter := range output.Volume.Chapters {
+		if err := a.validateChapterOutput(&chapter); err != nil {
+			return ComposeImproveVolumeOutput{}, fmt.Errorf("chapter %d invalid: %w", i+1, err)
+		}
+	}
+
+	logger.Info("✓ Volume improved: %s (%d chapters)", output.Volume.Title, len(output.Volume.Chapters))
+
+	return output, nil
+}
+
+// IterateHierarchical runs the hierarchical review-improvement loop
+// 1. Review entire outline
+// 2. Identify volumes that need improvement
+// 3. Improve each volume individually
+func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.Outline, maxIterations int, qualityThreshold float64) (*models.Outline, *models.ReviewResult, error) {
+	logger.Section("COMPOSE AGENT - Hierarchical Iteration Loop")
+	logger.Info("Max iterations: %d", maxIterations)
+	logger.Info("Quality threshold: %.1f", qualityThreshold)
+	logger.Info("This will review the entire outline, then improve volumes individually")
+
+	currentOutline := *outline
+	var finalReview *models.ReviewResult
+
+	for i := 1; i <= maxIterations; i++ {
+		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
+
+		// Step 1: Review entire outline
+		logger.Section("Step 1: Reviewing Entire Outline")
+		reviewInput := ComposeReviewInput{ExistingOutline: currentOutline}
+		reviewOutput, err := a.Review(ctx, reviewInput)
+		if err != nil {
+			return nil, nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
+		}
+
+		finalReview = &reviewOutput.Result
+
+		// Check if quality meets threshold
+		if reviewOutput.Result.OverallScore >= qualityThreshold {
+			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", reviewOutput.Result.OverallScore, qualityThreshold)
+			break
+		}
+
+		// Check if this is the last iteration
+		if i == maxIterations {
+			logger.Warn("Max iterations reached, stopping iteration loop")
+			break
+		}
+
+		// Step 2: Identify volumes that need improvement from suggestions
+		logger.Section("Step 2: Improving Volumes")
+		volumesToImprove := a.identifyVolumesToImprove(&reviewOutput.Result)
+
+		if len(volumesToImprove) == 0 {
+			logger.Info("No specific volumes identified for improvement, improving all volumes")
+			// Improve all volumes
+			for partIdx := range currentOutline.Parts {
+				for volIdx := range currentOutline.Parts[partIdx].Volumes {
+					volumesToImprove = append(volumesToImprove, [2]int{partIdx, volIdx})
+				}
+			}
+		}
+
+		// Step 3: Improve each identified volume
+		for _, indices := range volumesToImprove {
+			partIdx, volIdx := indices[0], indices[1]
+			part := &currentOutline.Parts[partIdx]
+			volume := &part.Volumes[volIdx]
+
+			logger.Info("Improving Volume %d.%d: %s", partIdx+1, volIdx+1, volume.Title)
+
+			// Filter suggestions for this volume
+			volumeReview := a.filterReviewForVolume(&reviewOutput.Result, volume.ID)
+
+			improveInput := ComposeImproveVolumeInput{
+				Outline:      currentOutline,
+				Part:         *part,
+				Volume:       *volume,
+				ReviewResult: volumeReview,
+			}
+
+			improveOutput, err := a.ImproveVolume(ctx, improveInput)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to improve volume %d.%d: %w", partIdx+1, volIdx+1, err)
+			}
+
+			// Update the volume in the outline
+			part.Volumes[volIdx] = improveOutput.Volume
+		}
+
+		logger.Info("✓ All volumes improved, continuing to next iteration")
+	}
+
+	return &currentOutline, finalReview, nil
+}
+
+// identifyVolumesToImprove identifies which volumes need improvement based on suggestions
+func (a *ComposeAgent) identifyVolumesToImprove(review *models.ReviewResult) [][2]int {
+	volumeMap := make(map[string][2]int)
+
+	// Parse suggestion target IDs to identify volumes
+	for _, suggestion := range review.Suggestions {
+		// Target ID format: P1-V1-C1 or P1-V1
+		parts := strings.Split(suggestion.TargetID, "-")
+		if len(parts) >= 2 {
+			// Extract volume ID (e.g., "P1-V1")
+			volumeID := parts[0] + "-" + parts[1]
+			if _, exists := volumeMap[volumeID]; !exists {
+				// Parse part and volume indices from ID
+				var partIdx, volIdx int
+				fmt.Sscanf(volumeID, "P%d-V%d", &partIdx, &volIdx)
+				volumeMap[volumeID] = [2]int{partIdx - 1, volIdx - 1} // Convert to 0-based
+			}
+		}
+	}
+
+	// Convert map to slice
+	var result [][2]int
+	for _, indices := range volumeMap {
+		result = append(result, indices)
+	}
+
+	return result
+}
+
+// filterReviewForVolume filters review results for a specific volume
+func (a *ComposeAgent) filterReviewForVolume(review *models.ReviewResult, volumeID string) models.ReviewResult {
+	filtered := models.ReviewResult{
+		OverallScore: review.OverallScore,
+		Dimensions:   review.Dimensions,
+		Summary:      review.Summary,
+		Strengths:    review.Strengths,
+		Weaknesses:   review.Weaknesses,
+	}
+
+	// Filter suggestions for this volume
+	for _, suggestion := range review.Suggestions {
+		if strings.HasPrefix(suggestion.TargetID, volumeID) {
+			filtered.Suggestions = append(filtered.Suggestions, suggestion)
+		}
+	}
+
+	return filtered
+}
+
 // BuildVolumeContext builds context for volume regeneration
 func (a *ComposeAgent) BuildVolumeContext(volume *models.Volume, outline *models.Outline) string {
 	var context strings.Builder
@@ -483,4 +705,203 @@ func (a *ComposeAgent) validateChapterOutput(chapter *models.Chapter) error {
 		return fmt.Errorf("events are required")
 	}
 	return nil
+}
+
+// GenerateSkeleton generates the outline skeleton (parts and volumes without chapters)
+func (a *ComposeAgent) GenerateSkeleton(ctx context.Context, input ComposeSkeletonInput) (ComposeSkeletonOutput, error) {
+	logger.Section("COMPOSE AGENT - Generating Outline Skeleton")
+	logger.Info("Project: %s", input.Setup.ProjectName)
+	logger.Info("Structure: %d parts × %d volumes",
+		input.Structure.TargetParts, input.Structure.TargetVolumes)
+	logger.Info("Language: %s", a.base.language)
+
+	var output ComposeSkeletonOutput
+	params := InvokeParams{
+		Skills:  []string{"compose-skeleton"},
+		Command: "generate the story outline skeleton with parts and volumes only",
+	}
+
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return ComposeSkeletonOutput{}, err
+	}
+
+	// Validate the skeleton structure
+	if len(output.Parts) != input.Structure.TargetParts {
+		return ComposeSkeletonOutput{}, fmt.Errorf("AI generated %d parts, but %d were requested",
+			len(output.Parts), input.Structure.TargetParts)
+	}
+
+	for i, part := range output.Parts {
+		if len(part.Volumes) != input.Structure.TargetVolumes {
+			return ComposeSkeletonOutput{}, fmt.Errorf("part %d has %d volumes, but %d were requested",
+				i+1, len(part.Volumes), input.Structure.TargetVolumes)
+		}
+	}
+
+	logger.Info("Generated skeleton with %d part(s), %d volume(s) per part",
+		len(output.Parts), input.Structure.TargetVolumes)
+
+	return output, nil
+}
+
+// GenerateChaptersForVolume generates chapters for a specific volume
+func (a *ComposeAgent) GenerateChaptersForVolume(ctx context.Context, input ComposeChaptersInput) (ComposeChaptersOutput, error) {
+	logger.Section("COMPOSE AGENT - Generating Chapters for Volume")
+	logger.Info("Volume: %s (%d/%d)", input.Volume.Title, input.VolumeIndex, input.TotalVolumes)
+	logger.Info("Chapters to generate: %d", input.ChaptersPerVol)
+	logger.Info("Language: %s", a.base.language)
+
+	var output ComposeChaptersOutput
+	params := InvokeParams{
+		Skills:  []string{"compose-chapters"},
+		Command: fmt.Sprintf("generate %d chapters for this volume with proper continuity", input.ChaptersPerVol),
+	}
+
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return ComposeChaptersOutput{}, err
+	}
+
+	// Validate chapter count
+	if len(output.Chapters) != input.ChaptersPerVol {
+		return ComposeChaptersOutput{}, fmt.Errorf("AI generated %d chapters, but %d were requested",
+			len(output.Chapters), input.ChaptersPerVol)
+	}
+
+	// Validate each chapter
+	for i, chapter := range output.Chapters {
+		if err := a.validateChapterOutput(&chapter); err != nil {
+			return ComposeChaptersOutput{}, fmt.Errorf("chapter %d invalid: %w", i+1, err)
+		}
+	}
+
+	logger.Info("Generated %d chapters for volume", len(output.Chapters))
+
+	return output, nil
+}
+
+// GenerateOutlineHierarchical generates a complete outline using hierarchical approach
+// First generates skeleton (parts/volumes), then generates chapters for each volume
+func (a *ComposeAgent) GenerateOutlineHierarchical(ctx context.Context, setup models.StorySetup, structure models.StoryStructure) (*models.Outline, error) {
+	logger.Section("COMPOSE AGENT - Hierarchical Outline Generation")
+	logger.Info("This will generate the outline in two phases:")
+	logger.Info("  Phase 1: Generate skeleton (parts and volumes)")
+	logger.Info("  Phase 2: Generate chapters for each volume")
+
+	// Phase 1: Generate skeleton
+	skeletonInput := ComposeSkeletonInput{
+		Setup:     setup,
+		Structure: structure,
+	}
+	skeletonOutput, err := a.GenerateSkeleton(ctx, skeletonInput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate skeleton: %w", err)
+	}
+
+	// Phase 2: Generate chapters for each volume
+	outline := &models.Outline{
+		Parts: skeletonOutput.Parts,
+	}
+
+	totalVolumes := structure.TargetParts * structure.TargetVolumes
+	volumeCount := 0
+
+	for partIdx := range outline.Parts {
+		for volIdx := range outline.Parts[partIdx].Volumes {
+			volumeCount++
+			volume := &outline.Parts[partIdx].Volumes[volIdx]
+
+			// Build context from previous volume (for continuity)
+			var outlineContext string
+			if partIdx > 0 || volIdx > 0 {
+				outlineContext = a.buildHierarchicalContext(outline, partIdx, volIdx)
+			}
+
+			// Get previous volume for continuity
+			var previousVolume *models.Volume
+			if volIdx > 0 {
+				previousVolume = &outline.Parts[partIdx].Volumes[volIdx-1]
+			} else if partIdx > 0 {
+				prevPart := outline.Parts[partIdx-1]
+				if len(prevPart.Volumes) > 0 {
+					previousVolume = &prevPart.Volumes[len(prevPart.Volumes)-1]
+				}
+			}
+
+			chaptersInput := ComposeChaptersInput{
+				Setup:          setup,
+				Part:           outline.Parts[partIdx],
+				Volume:         *volume,
+				VolumeIndex:    volumeCount,
+				TotalVolumes:   totalVolumes,
+				ChaptersPerVol: structure.TargetChapters,
+				PreviousVolume: previousVolume,
+				OutlineContext: outlineContext,
+			}
+
+			chaptersOutput, err := a.GenerateChaptersForVolume(ctx, chaptersInput)
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate chapters for volume %d.%d: %w",
+					partIdx+1, volIdx+1, err)
+			}
+
+			// Assign chapters to volume
+			volume.Chapters = chaptersOutput.Chapters
+
+			logger.Info("✓ Volume %d.%d: %s - %d chapters generated",
+				partIdx+1, volIdx+1, volume.Title, len(volume.Chapters))
+		}
+	}
+
+	// Assign IDs to all elements
+	idManager := logic.NewIDManager(outline)
+	idManager.AssignIDsToOutline()
+	logger.Info("Assigned IDs to all outline elements")
+
+	totalChapters := structure.TotalChapters()
+	logger.Info("Generated complete outline with %d part(s), %d volume(s), %d chapter(s)",
+		len(outline.Parts), structure.TargetVolumes*structure.TargetParts, totalChapters)
+
+	return outline, nil
+}
+
+// buildHierarchicalContext builds context for hierarchical generation
+func (a *ComposeAgent) buildHierarchicalContext(outline *models.Outline, partIdx, volIdx int) string {
+	var context strings.Builder
+
+	context.WriteString("=== STORY CONTEXT ===\n\n")
+
+	// Add previous volumes summary
+	context.WriteString("Previous Volumes Summary:\n")
+	for p := 0; p <= partIdx; p++ {
+		for v := 0; v < len(outline.Parts[p].Volumes); v++ {
+			if p < partIdx || v < volIdx {
+				vol := outline.Parts[p].Volumes[v]
+				context.WriteString(fmt.Sprintf("- %s: %s\n", vol.Title, vol.Summary))
+				if len(vol.Chapters) > 0 {
+					lastChap := vol.Chapters[len(vol.Chapters)-1]
+					context.WriteString(fmt.Sprintf("  Last chapter: %s - %s\n", lastChap.Title, lastChap.Summary))
+					context.WriteString(fmt.Sprintf("  Closing beat: %s\n", lastChap.ClosingBeat))
+				}
+				context.WriteString("\n")
+			}
+		}
+	}
+
+	// Add current part context
+	currentPart := outline.Parts[partIdx]
+	context.WriteString(fmt.Sprintf("=== CURRENT PART ===\n"))
+	context.WriteString(fmt.Sprintf("Part: %s\n", currentPart.Title))
+	context.WriteString(fmt.Sprintf("Summary: %s\n\n", currentPart.Summary))
+
+	// Add current volume context
+	currentVolume := currentPart.Volumes[volIdx]
+	context.WriteString(fmt.Sprintf("=== CURRENT VOLUME ===\n"))
+	context.WriteString(fmt.Sprintf("Volume: %s\n", currentVolume.Title))
+	context.WriteString(fmt.Sprintf("Summary: %s\n", currentVolume.Summary))
+	context.WriteString("This volume needs chapters that:\n")
+	context.WriteString("1. Follow from the previous volume's ending\n")
+	context.WriteString("2. Build toward this volume's summary\n")
+	context.WriteString("3. Set up for the next volume (if any)\n")
+
+	return context.String()
 }

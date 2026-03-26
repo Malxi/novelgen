@@ -19,10 +19,11 @@ import (
 )
 
 var (
-	composeIDFlag          string
-	composePromptFlag      string
-	composeMaxRoundsFlag   int
-	composeConcurrencyFlag int
+	composeIDFlag           string
+	composePromptFlag       string
+	composeMaxRoundsFlag    int
+	composeConcurrencyFlag  int
+	composeHierarchicalFlag bool
 )
 
 var composeCmd = &cobra.Command{
@@ -56,7 +57,8 @@ This command reads story/setup/story_setup.json and uses AI to generate
 a hierarchical outline structure based on the predefined structure in novel.json.
 
 Examples:
-  novelgen compose gen                      # Generate full outline`,
+  novelgen compose gen                      # Generate full outline (one-shot)
+  novelgen compose gen --hierarchical       # Generate using hierarchical approach (better quality)`,
 	RunE: runComposeGen,
 }
 
@@ -87,8 +89,9 @@ This command loads the current outline and runs multiple rounds of AI self-revie
 to identify weaknesses and improve the story structure, pacing, and coherence.
 
 Examples:
-  novelgen compose improve                  # Improve outline with 1 round
-  novelgen compose improve --max-rounds 3   # Run 3 improvement rounds`,
+  novelgen compose improve                  # Improve outline with 1 round (one-shot)
+  novelgen compose improve --max-rounds 3   # Run 3 improvement rounds (one-shot)
+  novelgen compose improve --hierarchical   # Use hierarchical improvement (better quality)`,
 	RunE: runComposeImprove,
 }
 
@@ -97,9 +100,11 @@ func init() {
 	composeCmd.AddCommand(composeRegenCmd)
 	composeCmd.AddCommand(composeImproveCmd)
 
+	composeGenCmd.Flags().BoolVar(&composeHierarchicalFlag, "hierarchical", false, "Use hierarchical generation (better quality, slower)")
 	composeRegenCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Suggestions for regeneration")
 	composeImproveCmd.Flags().IntVar(&composeMaxRoundsFlag, "max-rounds", 1, "Maximum number of improvement rounds")
 	composeImproveCmd.Flags().IntVar(&composeConcurrencyFlag, "concurrency", 3, "Maximum number of concurrent regeneration tasks")
+	composeImproveCmd.Flags().BoolVar(&composeHierarchicalFlag, "hierarchical", false, "Use hierarchical improvement (better quality, slower)")
 
 	// Register compose command using the new plugin mechanism
 	RegisterCommand(func() *cobra.Command {
@@ -145,7 +150,15 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// AI generation mode
-	outline, err := generateOutlineWithAI(setup, projectConfig)
+	var outline *models.Outline
+
+	if composeHierarchicalFlag {
+		logger.Info("Using hierarchical generation mode (better quality)")
+		outline, err = generateOutlineHierarchical(setup, projectConfig)
+	} else {
+		logger.Info("Using one-shot generation mode (faster)")
+		outline, err = generateOutlineWithAI(setup, projectConfig)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to generate outline with AI: %w", err)
 	}
@@ -280,7 +293,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded existing outline for improvement")
 
 	// Run improvement
-	if err := iterateOutlineImprovement(outline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag); err != nil {
+	if err := iterateOutlineImprovement(outline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, composeHierarchicalFlag); err != nil {
 		logger.Error("Improvement failed: %v", err)
 		return fmt.Errorf("improvement failed: %w", err)
 	}
@@ -343,6 +356,49 @@ func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.Proje
 		return nil, err
 	}
 	return &output.Outline, nil
+}
+
+// generateOutlineHierarchical generates outline using hierarchical approach
+func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models.ProjectConfig) (*models.Outline, error) {
+	// Load LLM config
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load LLM config: %w", err)
+	}
+
+	// Get active provider and model
+	provider, model := cfg.GetActiveModel(&projectConfig.LLM)
+	if provider == nil || model == nil {
+		return nil, fmt.Errorf("failed to get active LLM configuration")
+	}
+
+	fmt.Printf("Using provider: %s, model: %s at %s\n", provider.Name, model.Name, provider.BaseURL)
+	fmt.Printf("Story structure: %d parts × %d volumes × %d chapters = %d total chapters\n",
+		projectConfig.Structure.TargetParts,
+		projectConfig.Structure.TargetVolumes,
+		projectConfig.Structure.TargetChapters,
+		projectConfig.Structure.TotalChapters())
+	fmt.Println()
+	fmt.Println("Using hierarchical generation:")
+	fmt.Println("  Phase 1: Generate skeleton (parts and volumes)")
+	fmt.Printf("  Phase 2: Generate chapters for each of %d volumes\n",
+		projectConfig.Structure.TargetParts*projectConfig.Structure.TargetVolumes)
+	fmt.Println()
+
+	// Create LLM client and agent
+	client := cfg.CreateClient(&projectConfig.LLM)
+	if client == nil {
+		return nil, fmt.Errorf("failed to create LLM client")
+	}
+	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
+	agent.SetLanguage(projectConfig.Language)
+
+	ctx := context.Background()
+	outline, err := agent.GenerateOutlineHierarchical(ctx, *setup, projectConfig.Structure)
+	if err != nil {
+		return nil, err
+	}
+	return outline, nil
 }
 
 func regenerateElement(outline *models.Outline, id string, setup *models.StorySetup, projectConfig *models.ProjectConfig) error {
@@ -516,9 +572,14 @@ func splitLinesAndTrim(s string) []string {
 }
 
 // iterateOutlineImprovement runs the review-improvement loop
-func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, concurrency int) error {
+func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, concurrency int, hierarchical bool) error {
 	logger.Section("Outline Iteration Improvement")
 	logger.Info("Maximum iterations: %d", maxIterations)
+	if hierarchical {
+		logger.Info("Mode: Hierarchical (review entire outline, improve volumes individually)")
+	} else {
+		logger.Info("Mode: One-shot (review and improve entire outline at once)")
+	}
 
 	// Load LLM config
 	cfg, err := llm.LoadOrCreateConfig()
@@ -536,8 +597,17 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 
 	ctx := context.Background()
 
-	// Use agent.Iterate for review-improvement loop
-	improvedOutline, review, err := agent.Iterate(ctx, outline, maxIterations, 80.0)
+	var improvedOutline *models.Outline
+	var review *models.ReviewResult
+
+	if hierarchical {
+		// Use hierarchical iteration
+		improvedOutline, review, err = agent.IterateHierarchical(ctx, outline, maxIterations, 80.0)
+	} else {
+		// Use one-shot iteration
+		improvedOutline, review, err = agent.Iterate(ctx, outline, maxIterations, 80.0)
+	}
+
 	if err != nil {
 		return fmt.Errorf("iteration failed: %w", err)
 	}
