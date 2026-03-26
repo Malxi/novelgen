@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"novelgen/internal/logger"
+	"novelgen/internal/models"
 )
 
 // registerCraftReviewPrompts registers all craft review and improvement prompts
@@ -78,6 +79,7 @@ func registerCraftReviewPrompts(pm *PromptManager) {
 }
 
 // CraftReviewResult is the expected output structure for craft reviews
+// Deprecated: Use models.ReviewResult instead. This is kept for backward compatibility.
 type CraftReviewResult struct {
 	OverallScore     float64                 `json:"overall_score"`
 	ConsistencyScore float64                 `json:"consistency_score"`
@@ -86,12 +88,43 @@ type CraftReviewResult struct {
 	Suggestions      []CraftReviewSuggestion `json:"suggestions"`
 }
 
+// ToModelsResult converts CraftReviewResult to models.ReviewResult
+func (r *CraftReviewResult) ToModelsResult() *models.ReviewResult {
+	dimensions := []models.DimensionScore{
+		{Name: models.DimConsistency, Score: r.ConsistencyScore, Max: 100},
+		{Name: models.DimDepth, Score: r.DepthScore, Max: 100},
+		{Name: models.DimOriginality, Score: r.OriginalityScore, Max: 100},
+	}
+
+	suggestions := make([]models.ReviewSuggestion, len(r.Suggestions))
+	for i, s := range r.Suggestions {
+		suggestions[i] = s.ToModelsSuggestion()
+	}
+
+	return &models.ReviewResult{
+		OverallScore: r.OverallScore,
+		Dimensions:   dimensions,
+		Suggestions:  suggestions,
+	}
+}
+
 // CraftReviewSuggestion represents a single suggestion
+// Deprecated: Use models.ReviewSuggestion instead
 type CraftReviewSuggestion struct {
 	ElementName string `json:"element_name"`
 	Issue       string `json:"issue"`
 	Suggestion  string `json:"suggestion"`
 	Priority    string `json:"priority"`
+}
+
+// ToModelsSuggestion converts CraftReviewSuggestion to models.ReviewSuggestion
+func (s *CraftReviewSuggestion) ToModelsSuggestion() models.ReviewSuggestion {
+	return models.ReviewSuggestion{
+		TargetName: s.ElementName,
+		Issue:      s.Issue,
+		Suggestion: s.Suggestion,
+		Priority:   s.Priority,
+	}
 }
 
 func buildCharacterReviewSystemPrompt() string {

@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"novelgen/internal/models"
 )
 
 // ReviewSuggestion represents a single improvement suggestion
+// Deprecated: Use models.ReviewSuggestion instead
 type ReviewSuggestion struct {
 	Type       string `json:"type"`       // "part", "volume", "chapter"
 	ID         string `json:"id"`         // e.g., "1", "1_1", "1_1_1"
@@ -16,7 +19,20 @@ type ReviewSuggestion struct {
 	Priority   string `json:"priority"`   // "high", "medium", "low"
 }
 
+// ToModelsSuggestion converts prompts.ReviewSuggestion to models.ReviewSuggestion
+func (r *ReviewSuggestion) ToModelsSuggestion() models.ReviewSuggestion {
+	return models.ReviewSuggestion{
+		Category:   r.Type,
+		TargetID:   r.ID,
+		TargetName: r.Title,
+		Issue:      r.Issue,
+		Suggestion: r.Suggestion,
+		Priority:   r.Priority,
+	}
+}
+
 // ReviewResult represents the complete review output
+// Deprecated: Use models.ReviewResult instead. This is kept for backward compatibility.
 type ReviewResult struct {
 	OverallScore    float64            `json:"overall_score"`    // 0-100
 	LogicScore      float64            `json:"logic_score"`      // Plot logic 0-100
@@ -27,6 +43,70 @@ type ReviewResult struct {
 	Strengths       []string           `json:"strengths"`        // What's working well
 	Weaknesses      []string           `json:"weaknesses"`       // Areas needing improvement
 	Suggestions     []ReviewSuggestion `json:"suggestions"`      // Specific suggestions
+}
+
+// ToModelsResult converts prompts.ReviewResult to models.ReviewResult
+func (r *ReviewResult) ToModelsResult() *models.ReviewResult {
+	dimensions := []models.DimensionScore{
+		{Name: models.DimLogic, Score: r.LogicScore, Max: 100},
+		{Name: models.DimEngagement, Score: r.EngagementScore, Max: 100},
+		{Name: models.DimPacing, Score: r.PacingScore, Max: 100},
+		{Name: models.DimCoherence, Score: r.CoherenceScore, Max: 100},
+	}
+
+	suggestions := make([]models.ReviewSuggestion, len(r.Suggestions))
+	for i, s := range r.Suggestions {
+		suggestions[i] = s.ToModelsSuggestion()
+	}
+
+	return &models.ReviewResult{
+		OverallScore: r.OverallScore,
+		Dimensions:   dimensions,
+		Summary:      r.Summary,
+		Strengths:    r.Strengths,
+		Weaknesses:   r.Weaknesses,
+		Suggestions:  suggestions,
+	}
+}
+
+// FromModelsResult creates a prompts.ReviewResult from models.ReviewResult
+// This is useful when working with the new unified model but need backward compatibility
+func FromModelsResult(r *models.ReviewResult) *ReviewResult {
+	result := &ReviewResult{
+		OverallScore: r.OverallScore,
+		Summary:      r.Summary,
+		Strengths:    r.Strengths,
+		Weaknesses:   r.Weaknesses,
+	}
+
+	// Extract dimension scores
+	for _, dim := range r.Dimensions {
+		switch dim.Name {
+		case models.DimLogic:
+			result.LogicScore = dim.Score
+		case models.DimEngagement:
+			result.EngagementScore = dim.Score
+		case models.DimPacing:
+			result.PacingScore = dim.Score
+		case models.DimCoherence:
+			result.CoherenceScore = dim.Score
+		}
+	}
+
+	// Convert suggestions
+	result.Suggestions = make([]ReviewSuggestion, len(r.Suggestions))
+	for i, s := range r.Suggestions {
+		result.Suggestions[i] = ReviewSuggestion{
+			Type:       s.Category,
+			ID:         s.TargetID,
+			Title:      s.TargetName,
+			Issue:      s.Issue,
+			Suggestion: s.Suggestion,
+			Priority:   s.Priority,
+		}
+	}
+
+	return result
 }
 
 // registerOutlineReviewPrompts registers all outline review prompts
@@ -151,21 +231,18 @@ func extractJSONFromMarkdownForReview(content string) string {
 // buildOutlineReviewUserPrompt builds the user prompt for outline review
 func buildOutlineReviewUserPrompt(data map[string]interface{}) string {
 	outline, _ := data["outline"].(string)
+	setup, _ := data["setup"].(string)
 	iteration, _ := data["iteration"].(int)
 
-	var sb strings.Builder
-	sb.WriteString("Please review the following story outline:\n\n")
+	var prompt strings.Builder
+	prompt.WriteString("Please review the following story outline:\n\n")
+	prompt.WriteString("=== STORY SETUP ===\n")
+	prompt.WriteString(setup)
+	prompt.WriteString("\n\n=== OUTLINE ===\n")
+	prompt.WriteString(outline)
+	prompt.WriteString("\n\n=== ITERATION INFO ===\n")
+	prompt.WriteString(fmt.Sprintf("This is iteration %d.\n", iteration))
+	prompt.WriteString("\nPlease provide a detailed review following the criteria in your instructions.")
 
-	if iteration > 0 {
-		sb.WriteString(fmt.Sprintf("This is iteration %d of the improvement process.\n\n", iteration))
-	}
-
-	sb.WriteString("=== OUTLINE ===\n")
-	sb.WriteString(outline)
-	sb.WriteString("\n\n")
-
-	sb.WriteString("Provide a comprehensive review following the specified format. " +
-		"Focus on identifying specific issues with part/volume/chapter IDs and actionable improvements.")
-
-	return sb.String()
+	return prompt.String()
 }

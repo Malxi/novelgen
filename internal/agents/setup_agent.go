@@ -2,6 +2,7 @@ package agents
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"novelgen/internal/llm"
@@ -21,12 +22,23 @@ type SetupGenOutput struct {
 
 // SetupImproveInput is the input for setup improvement
 type SetupImproveInput struct {
-	ExistingSetup models.StorySetup `md:"existing_setup"`
+	ExistingSetup models.StorySetup   `md:"existing_setup"`
+	ReviewResult  models.ReviewResult `md:"review_result,omitempty"` // Optional: for improvement based on review
 }
 
 // SetupImproveOutput is the output for setup improvement
 type SetupImproveOutput struct {
 	Setup models.StorySetup `md:"setup"`
+}
+
+// SetupReviewInput is the input for setup review
+type SetupReviewInput struct {
+	ExistingSetup models.StorySetup `md:"existing_setup"`
+}
+
+// SetupReviewOutput is the output for setup review
+type SetupReviewOutput struct {
+	Result models.ReviewResult `md:"result"`
 }
 
 // SetupAgent handles AI generation for story setup
@@ -101,6 +113,85 @@ func (a *SetupAgent) Improve(ctx context.Context, input SetupImproveInput) (Setu
 	a.normalizeSetup(&output.Setup)
 
 	return output, nil
+}
+
+// Review reviews an existing story setup and provides improvement suggestions
+func (a *SetupAgent) Review(ctx context.Context, input SetupReviewInput) (SetupReviewOutput, error) {
+	logger.Section("SETUP AGENT - Story Setup Review")
+	logger.Info("Project: %s", input.ExistingSetup.ProjectName)
+	logger.Info("Language: %s", a.base.language)
+
+	var output SetupReviewOutput
+	params := InvokeParams{
+		Skills:  []string{"setup-review"},
+		Command: "review the story setup and provide improvement suggestions",
+	}
+	if err := a.base.Execute(ctx, params, input, &output.Result); err != nil {
+		return SetupReviewOutput{}, err
+	}
+
+	// Log result
+	logger.Section("Setup Review Result")
+	logger.Info("Overall Score: %.1f/100", output.Result.OverallScore)
+	for _, dim := range output.Result.Dimensions {
+		logger.Info("%s: %.1f/%.0f", dim.Name, dim.Score, dim.Max)
+	}
+	logger.Info("Summary: %s", output.Result.Summary)
+	logger.Info("Strengths: %d items", len(output.Result.Strengths))
+	logger.Info("Suggestions: %d items", len(output.Result.Suggestions))
+
+	return output, nil
+}
+
+// Iterate runs the review-improvement loop for story setup
+// It directly uses Review and Improve methods
+func (a *SetupAgent) Iterate(ctx context.Context, setup *models.StorySetup, maxIterations int, qualityThreshold float64) (*models.StorySetup, *models.ReviewResult, error) {
+	logger.Section("SETUP AGENT - Iteration Loop")
+	logger.Info("Max iterations: %d", maxIterations)
+	logger.Info("Quality threshold: %.1f", qualityThreshold)
+
+	currentSetup := *setup
+	var finalReview *models.ReviewResult
+
+	for i := 1; i <= maxIterations; i++ {
+		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
+
+		// Review current setup
+		reviewInput := SetupReviewInput{ExistingSetup: currentSetup}
+		reviewOutput, err := a.Review(ctx, reviewInput)
+		if err != nil {
+			return nil, nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
+		}
+
+		finalReview = &reviewOutput.Result
+
+		// Check if quality meets threshold
+		if reviewOutput.Result.OverallScore >= qualityThreshold {
+			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", reviewOutput.Result.OverallScore, qualityThreshold)
+			break
+		}
+
+		// Check if this is the last iteration
+		if i == maxIterations {
+			logger.Warn("Max iterations reached, stopping iteration loop")
+			break
+		}
+
+		// Improve the setup with review feedback
+		improveInput := SetupImproveInput{
+			ExistingSetup: currentSetup,
+			ReviewResult:  reviewOutput.Result,
+		}
+		improveOutput, err := a.Improve(ctx, improveInput)
+		if err != nil {
+			return nil, nil, fmt.Errorf("improvement failed at iteration %d: %w", i, err)
+		}
+
+		currentSetup = improveOutput.Setup
+		logger.Info("✓ Setup improved, continuing to next iteration")
+	}
+
+	return &currentSetup, finalReview, nil
 }
 
 // normalizeSetup normalizes and validates the setup fields

@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	setupRegenPrompt string
-	setupMaxRounds   int
+	setupRegenPrompt   string
+	setupMaxRounds     int
+	setupImprovePrompt string
 )
 
 var setupCmd = &cobra.Command{
@@ -114,6 +115,7 @@ func init() {
 
 	// Improve flags
 	setupImproveCmd.Flags().IntVar(&setupMaxRounds, "max-rounds", 1, "Maximum improvement rounds")
+	setupImproveCmd.Flags().StringVar(&setupImprovePrompt, "prompt", "", "Manual improvement guidance (if provided, uses manual mode)")
 }
 
 func runSetupGen(cmd *cobra.Command, args []string) error {
@@ -271,28 +273,61 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 	agent.SetLanguage(projectConfig.Language)
 
 	// Improve story setup
-	fmt.Printf("\n🔄 Starting setup improvement (max %d rounds)...\n\n", setupMaxRounds)
+	if setupImprovePrompt != "" {
+		// Manual mode: use user's prompt for improvement
+		fmt.Printf("\n📝 Starting manual improvement...\n")
 
-	for round := 1; round <= setupMaxRounds; round++ {
-		logger.Section(fmt.Sprintf("IMPROVEMENT ROUND %d/%d", round, setupMaxRounds))
+		logger.Section("MANUAL IMPROVEMENT")
+		logger.Info("Prompt: %s", setupImprovePrompt)
 
-		improveResult, err := agent.Improve(cmd.Context(), agents.SetupImproveInput{ExistingSetup: *setup})
+		// Create input with user prompt
+		input := agents.SetupImproveInput{
+			ExistingSetup: *setup,
+			ReviewResult: models.ReviewResult{
+				Summary: setupImprovePrompt,
+				Suggestions: []models.ReviewSuggestion{
+					{
+						Category:   "user_guidance",
+						Issue:      "User requested improvement",
+						Suggestion: setupImprovePrompt,
+						Priority:   "high",
+					},
+				},
+			},
+		}
+
+		improveResult, err := agent.Improve(cmd.Context(), input)
 		if err != nil {
 			logger.Error("Failed to improve story setup: %v", err)
 			return fmt.Errorf("failed to improve story setup: %w", err)
 		}
-
 		setup = &improveResult.Setup
 
-		// Save after each round
+		// Save improved setup
 		if err := saveStorySetup(setup); err != nil {
 			return fmt.Errorf("failed to save improved story setup: %w", err)
 		}
 
-		fmt.Printf("\n✓ Round %d completed\n", round)
+		fmt.Printf("\n✓ Story setup improved with manual guidance!\n")
+	} else {
+		// Auto mode: use Iterate for Review → Improve loop
+		fmt.Printf("\n🔄 Starting auto improvement (max %d rounds)...\n\n", setupMaxRounds)
+		improvedSetup, review, err := agent.Iterate(cmd.Context(), setup, setupMaxRounds, 80.0)
+		if err != nil {
+			logger.Error("Failed to improve story setup: %v", err)
+			return fmt.Errorf("failed to improve story setup: %w", err)
+		}
+		setup = improvedSetup
+
+		// Save improved setup
+		if err := saveStorySetup(setup); err != nil {
+			return fmt.Errorf("failed to save improved story setup: %w", err)
+		}
+
+		fmt.Printf("\n✓ Story setup improved successfully!\n")
+		fmt.Printf("📊 Final Review Score: %.1f/100\n", review.OverallScore)
 	}
 
-	fmt.Printf("\n✓ Story setup improved successfully after %d round(s)!\n", setupMaxRounds)
 	fmt.Printf("\n📚 Project: %s\n", setup.ProjectName)
 	fmt.Printf("🎭 Genre(s): %s\n", strings.Join(setup.Genres, ", "))
 	fmt.Printf("📖 Premise: %.100s...\n", setup.Premise)
