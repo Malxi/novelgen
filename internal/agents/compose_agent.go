@@ -28,6 +28,7 @@ type ComposeRegenInput struct {
 	ElementType string         `md:"element_type"` // "part", "volume", "chapter"
 	ElementID   string         `md:"element_id"`
 	Suggestions string         `md:"suggestions"`
+	Context     string         `md:"context,omitempty"` // Surrounding context for continuity
 }
 
 // ComposeRegenOutput is the output for outline regeneration
@@ -35,6 +36,27 @@ type ComposeRegenOutput struct {
 	Part    *models.Part    `md:"part,omitempty"`
 	Volume  *models.Volume  `md:"volume,omitempty"`
 	Chapter *models.Chapter `md:"chapter,omitempty"`
+}
+
+// ComposeReviewInput is the input for outline review
+type ComposeReviewInput struct {
+	ExistingOutline models.Outline `md:"existing_outline"`
+}
+
+// ComposeReviewOutput is the output for outline review
+type ComposeReviewOutput struct {
+	Result models.ReviewResult `md:"result"`
+}
+
+// ComposeImproveInput is the input for outline improvement
+type ComposeImproveInput struct {
+	ExistingOutline models.Outline      `md:"existing_outline"`
+	ReviewResult    models.ReviewResult `md:"review_result,omitempty"` // Optional: for improvement based on review
+}
+
+// ComposeImproveOutput is the output for outline improvement
+type ComposeImproveOutput struct {
+	Outline models.Outline `md:"outline"`
 }
 
 // ComposeAgent handles AI generation for story outline
@@ -61,16 +83,14 @@ func (a *ComposeAgent) SetLanguage(language string) {
 	a.base.SetLanguage(language)
 }
 
-// GenerateOutlineWithStructure generates a story outline with a predefined structure
+// Generate creates a story outline from setup and structure
 // This is the type-safe wrapper around BaseAgent.Execute
-func (a *ComposeAgent) GenerateOutlineWithStructure(ctx context.Context, setup *models.StorySetup, structure models.StoryStructure, language string) (*models.Outline, error) {
+func (a *ComposeAgent) Generate(ctx context.Context, input ComposeGenInput) (ComposeGenOutput, error) {
 	logger.Section("COMPOSE AGENT - Outline Generation")
-	logger.Info("Project: %s", setup.ProjectName)
-	logger.Info("Structure: %d parts × %d volumes × %d chapters", structure.TargetParts, structure.TargetVolumes, structure.TargetChapters)
-	logger.Info("Language: %s", language)
-
-	// Set language
-	a.SetLanguage(language)
+	logger.Info("Project: %s", input.Setup.ProjectName)
+	logger.Info("Structure: %d parts × %d volumes × %d chapters",
+		input.Structure.TargetParts, input.Structure.TargetVolumes, input.Structure.TargetChapters)
+	logger.Info("Language: %s", a.base.language)
 
 	var output ComposeGenOutput
 	params := InvokeParams{
@@ -78,23 +98,18 @@ func (a *ComposeAgent) GenerateOutlineWithStructure(ctx context.Context, setup *
 		Command: "generate a story outline with the specified structure",
 	}
 
-	input := ComposeGenInput{
-		Setup:     *setup,
-		Structure: structure,
-	}
-
 	if err := a.base.Execute(ctx, params, input, &output.Outline); err != nil {
-		return nil, err
+		return ComposeGenOutput{}, err
 	}
 
 	// Validate the outline structure
-	if err := a.validateOutlineStructure(&output.Outline, structure); err != nil {
-		return nil, err
+	if err := a.validateOutlineStructure(&output.Outline, input.Structure); err != nil {
+		return ComposeGenOutput{}, err
 	}
 
 	// Validate chapter anchors and state change mapping
 	if err := a.validateOutlineChapters(&output.Outline); err != nil {
-		return nil, err
+		return ComposeGenOutput{}, err
 	}
 
 	// Assign IDs to all elements using IDManager
@@ -102,165 +117,166 @@ func (a *ComposeAgent) GenerateOutlineWithStructure(ctx context.Context, setup *
 	idManager.AssignIDsToOutline()
 	logger.Info("Assigned IDs to all outline elements")
 
-	totalChapters := structure.TotalChapters()
-	fmt.Printf("✓ Generated outline with %d part(s), %d volume(s) per part, %d chapter(s) per volume\n",
-		len(output.Outline.Parts), structure.TargetVolumes, structure.TargetChapters)
-	fmt.Printf("  Total: %d chapters\n", totalChapters)
-	fmt.Println()
+	totalChapters := input.Structure.TotalChapters()
+	logger.Info("Generated outline with %d part(s), %d volume(s) per part, %d chapter(s) per volume",
+		len(output.Outline.Parts), input.Structure.TargetVolumes, input.Structure.TargetChapters)
+	logger.Info("Total: %d chapters", totalChapters)
 
-	return &output.Outline, nil
+	return output, nil
 }
 
-// RegeneratePart regenerates a single part with user suggestions
-func (a *ComposeAgent) RegeneratePart(ctx context.Context, part *models.Part, outline *models.Outline, setup *models.StorySetup, language, suggestions string) error {
-	fmt.Printf("🤖 Regenerating part with AI...\n")
-
-	// Set language
-	a.SetLanguage(language)
-
-	// Build context from surrounding parts
-	context := a.buildPartContext(part, outline)
+// Regenerate regenerates a story outline element (part, volume, or chapter)
+func (a *ComposeAgent) Regenerate(ctx context.Context, input ComposeRegenInput) (ComposeRegenOutput, error) {
+	logger.Section("COMPOSE AGENT - Outline Regeneration")
+	logger.Info("Element Type: %s", input.ElementType)
+	logger.Info("Element ID: %s", input.ElementID)
+	logger.Info("Language: %s", a.base.language)
 
 	params := InvokeParams{
 		Skills:  []string{"compose-regen"},
-		Command: "regenerate a part while maintaining continuity",
+		Command: fmt.Sprintf("regenerate a %s while maintaining continuity", input.ElementType),
 	}
 
-	input := ComposeRegenInput{
-		Outline:     *outline,
-		ElementType: "part",
-		ElementID:   part.ID,
-		Suggestions: suggestions,
+	var output ComposeRegenOutput
+
+	switch input.ElementType {
+	case "part":
+		var part models.Part
+		if err := a.base.Execute(ctx, params, input, &part); err != nil {
+			return ComposeRegenOutput{}, err
+		}
+		output.Part = &part
+		logger.Info("✓ Part regenerated: %s", part.Title)
+
+	case "volume":
+		var volume models.Volume
+		if err := a.base.Execute(ctx, params, input, &volume); err != nil {
+			return ComposeRegenOutput{}, err
+		}
+		output.Volume = &volume
+		logger.Info("✓ Volume regenerated: %s (%d chapters)", volume.Title, len(volume.Chapters))
+
+	case "chapter":
+		var chapter models.Chapter
+		if err := a.base.Execute(ctx, params, input, &chapter); err != nil {
+			return ComposeRegenOutput{}, err
+		}
+		if err := a.validateChapterOutput(&chapter); err != nil {
+			return ComposeRegenOutput{}, fmt.Errorf("validation failed: %w", err)
+		}
+		output.Chapter = &chapter
+		logger.Info("✓ Chapter regenerated: %s", chapter.Title)
+
+	default:
+		return ComposeRegenOutput{}, fmt.Errorf("invalid element type: %s", input.ElementType)
 	}
 
-	// Add context to the base agent's execution
-	// We need to pass context through the input
-	inputWithContext := struct {
-		ComposeRegenInput
-		Context string `md:"context"`
-	}{
-		ComposeRegenInput: input,
-		Context:           context,
-	}
-
-	var newPart models.Part
-	if err := a.base.Execute(ctx, params, inputWithContext, &newPart); err != nil {
-		return err
-	}
-
-	// Update part
-	part.Title = newPart.Title
-	part.Summary = newPart.Summary
-
-	fmt.Printf("✓ Part regenerated: %s\n", part.Title)
-	return nil
+	return output, nil
 }
 
-// RegenerateVolume regenerates a single volume with user suggestions
-func (a *ComposeAgent) RegenerateVolume(ctx context.Context, volume *models.Volume, outline *models.Outline, setup *models.StorySetup, language, suggestions string) error {
-	fmt.Printf("🤖 Regenerating volume with AI...\n")
+// Review reviews an existing outline and provides improvement suggestions
+func (a *ComposeAgent) Review(ctx context.Context, input ComposeReviewInput) (ComposeReviewOutput, error) {
+	logger.Section("COMPOSE AGENT - Outline Review")
+	logger.Info("Language: %s", a.base.language)
 
-	// Set language
-	a.SetLanguage(language)
-
-	// Build context
-	context := a.buildVolumeContext(volume, outline)
-
+	var output ComposeReviewOutput
 	params := InvokeParams{
-		Skills:  []string{"compose-regen"},
-		Command: "regenerate a volume while maintaining continuity",
+		Skills:  []string{"compose-review"},
+		Command: "review the story outline and provide improvement suggestions",
 	}
 
-	input := ComposeRegenInput{
-		Outline:     *outline,
-		ElementType: "volume",
-		ElementID:   volume.ID,
-		Suggestions: suggestions,
+	if err := a.base.Execute(ctx, params, input, &output.Result); err != nil {
+		return ComposeReviewOutput{}, err
 	}
 
-	// Add context to the base agent's execution
-	inputWithContext := struct {
-		ComposeRegenInput
-		Context string `md:"context"`
-	}{
-		ComposeRegenInput: input,
-		Context:           context,
+	// Log result
+	logger.Section("Outline Review Result")
+	logger.Info("Overall Score: %.1f/100", output.Result.OverallScore)
+	for _, dim := range output.Result.Dimensions {
+		logger.Info("%s: %.1f/%.0f", dim.Name, dim.Score, dim.Max)
 	}
+	logger.Info("Summary: %s", output.Result.Summary)
+	logger.Info("Strengths: %d items", len(output.Result.Strengths))
+	logger.Info("Suggestions: %d items", len(output.Result.Suggestions))
 
-	var newVolume models.Volume
-	if err := a.base.Execute(ctx, params, inputWithContext, &newVolume); err != nil {
-		return err
-	}
-
-	// Update volume (including chapters)
-	volume.Title = newVolume.Title
-	volume.Summary = newVolume.Summary
-	if len(newVolume.Chapters) > 0 {
-		volume.Chapters = newVolume.Chapters
-	}
-
-	fmt.Printf("✓ Volume regenerated: %s (%d chapters)\n", volume.Title, len(volume.Chapters))
-	return nil
+	return output, nil
 }
 
-// RegenerateChapter regenerates a single chapter with user suggestions
-func (a *ComposeAgent) RegenerateChapter(ctx context.Context, chapter *models.Chapter, outline *models.Outline, setup *models.StorySetup, language, suggestions string) error {
-	fmt.Printf("🤖 Regenerating chapter with AI...\n")
+// Improve improves an existing outline
+func (a *ComposeAgent) Improve(ctx context.Context, input ComposeImproveInput) (ComposeImproveOutput, error) {
+	logger.Section("COMPOSE AGENT - Outline Improvement")
+	logger.Info("Language: %s", a.base.language)
 
-	// Set language
-	a.SetLanguage(language)
-
-	// Build context
-	context := a.buildChapterContext(chapter, outline)
-
+	var output ComposeImproveOutput
 	params := InvokeParams{
-		Skills:  []string{"compose-regen"},
-		Command: "regenerate a chapter while maintaining continuity",
+		Skills:  []string{"compose-improve"},
+		Command: "improve the story outline",
 	}
 
-	input := ComposeRegenInput{
-		Outline:     *outline,
-		ElementType: "chapter",
-		ElementID:   chapter.ID,
-		Suggestions: suggestions,
+	if err := a.base.Execute(ctx, params, input, &output.Outline); err != nil {
+		return ComposeImproveOutput{}, err
 	}
 
-	// Add context to the base agent's execution
-	inputWithContext := struct {
-		ComposeRegenInput
-		Context string `md:"context"`
-	}{
-		ComposeRegenInput: input,
-		Context:           context,
+	// Validate the improved outline
+	if err := a.validateOutlineChapters(&output.Outline); err != nil {
+		return ComposeImproveOutput{}, err
 	}
 
-	var newChapter models.Chapter
-	if err := a.base.Execute(ctx, params, inputWithContext, &newChapter); err != nil {
-		return err
-	}
-
-	if err := a.validateChapterOutput(&newChapter); err != nil {
-		return err
-	}
-
-	// Update chapter
-	chapter.Title = newChapter.Title
-	chapter.Summary = newChapter.Summary
-	chapter.Characters = newChapter.Characters
-	chapter.Location = newChapter.Location
-	chapter.Events = newChapter.Events
-	chapter.Beats = newChapter.Beats
-	chapter.OpeningBeat = newChapter.OpeningBeat
-	chapter.ClosingBeat = newChapter.ClosingBeat
-	chapter.Conflict = newChapter.Conflict
-	chapter.Pacing = newChapter.Pacing
-
-	fmt.Printf("✓ Chapter regenerated: %s\n", chapter.Title)
-	return nil
+	return output, nil
 }
 
-// buildPartContext builds context for part regeneration
-func (a *ComposeAgent) buildPartContext(part *models.Part, outline *models.Outline) string {
+// Iterate runs the review-improvement loop for outline
+func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, maxIterations int, qualityThreshold float64) (*models.Outline, *models.ReviewResult, error) {
+	logger.Section("COMPOSE AGENT - Iteration Loop")
+	logger.Info("Max iterations: %d", maxIterations)
+	logger.Info("Quality threshold: %.1f", qualityThreshold)
+
+	currentOutline := *outline
+	var finalReview *models.ReviewResult
+
+	for i := 1; i <= maxIterations; i++ {
+		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
+
+		// Review current outline
+		reviewInput := ComposeReviewInput{ExistingOutline: currentOutline}
+		reviewOutput, err := a.Review(ctx, reviewInput)
+		if err != nil {
+			return nil, nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
+		}
+
+		finalReview = &reviewOutput.Result
+
+		// Check if quality meets threshold
+		if reviewOutput.Result.OverallScore >= qualityThreshold {
+			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", reviewOutput.Result.OverallScore, qualityThreshold)
+			break
+		}
+
+		// Check if this is the last iteration
+		if i == maxIterations {
+			logger.Warn("Max iterations reached, stopping iteration loop")
+			break
+		}
+
+		// Improve the outline with review feedback
+		improveInput := ComposeImproveInput{
+			ExistingOutline: currentOutline,
+			ReviewResult:    reviewOutput.Result,
+		}
+		improveOutput, err := a.Improve(ctx, improveInput)
+		if err != nil {
+			return nil, nil, fmt.Errorf("improvement failed at iteration %d: %w", i, err)
+		}
+
+		currentOutline = improveOutput.Outline
+		logger.Info("✓ Outline improved, continuing to next iteration")
+	}
+
+	return &currentOutline, finalReview, nil
+}
+
+// BuildPartContext builds context for part regeneration
+func (a *ComposeAgent) BuildPartContext(part *models.Part, outline *models.Outline) string {
 	var context strings.Builder
 
 	// Find part index
@@ -287,8 +303,8 @@ func (a *ComposeAgent) buildPartContext(part *models.Part, outline *models.Outli
 	return context.String()
 }
 
-// buildVolumeContext builds context for volume regeneration
-func (a *ComposeAgent) buildVolumeContext(volume *models.Volume, outline *models.Outline) string {
+// BuildVolumeContext builds context for volume regeneration
+func (a *ComposeAgent) BuildVolumeContext(volume *models.Volume, outline *models.Outline) string {
 	var context strings.Builder
 
 	// Find volume in outline
@@ -317,8 +333,8 @@ func (a *ComposeAgent) buildVolumeContext(volume *models.Volume, outline *models
 	return context.String()
 }
 
-// buildChapterContext builds context for chapter regeneration
-func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *models.Outline) string {
+// BuildChapterContext builds context for chapter regeneration
+func (a *ComposeAgent) BuildChapterContext(chapter *models.Chapter, outline *models.Outline) string {
 	var context strings.Builder
 
 	// Find chapter in outline
@@ -327,7 +343,7 @@ func (a *ComposeAgent) buildChapterContext(chapter *models.Chapter, outline *mod
 			for i, chap := range vol.Chapters {
 				if chap.ID == chapter.ID {
 					// Add part and volume context
-					context.WriteString(fmt.Sprintf("=== CURRENT LOCATION IN STORY ===\n"))
+					context.WriteString("=== CURRENT LOCATION IN STORY ===\n")
 					context.WriteString(fmt.Sprintf("Part: %s\nPart Summary: %s\n\n", part.Title, part.Summary))
 					context.WriteString(fmt.Sprintf("Volume: %s\nVolume Summary: %s\n\n", vol.Title, vol.Summary))
 

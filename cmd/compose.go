@@ -331,9 +331,18 @@ func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.Proje
 		return nil, fmt.Errorf("failed to create LLM client")
 	}
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
+	agent.SetLanguage(projectConfig.Language)
 
 	ctx := context.Background()
-	return agent.GenerateOutlineWithStructure(ctx, setup, projectConfig.Structure, projectConfig.Language)
+	input := agents.ComposeGenInput{
+		Setup:     *setup,
+		Structure: projectConfig.Structure,
+	}
+	output, err := agent.Generate(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+	return &output.Outline, nil
 }
 
 func regenerateElement(outline *models.Outline, id string, setup *models.StorySetup, projectConfig *models.ProjectConfig) error {
@@ -360,6 +369,7 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 		return fmt.Errorf("failed to create LLM client")
 	}
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
+	agent.SetLanguage(projectConfig.Language)
 
 	// Create IDManager for ID resolution
 	idManager := logic.NewIDManager(outline)
@@ -376,7 +386,24 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 			return fmt.Errorf("part %s not found", partID)
 		}
 		fmt.Printf("Regenerating part: %s\n", partID)
-		return agent.RegeneratePart(ctx, part, outline, setup, projectConfig.Language, userPrompt)
+
+		context := agent.BuildPartContext(part, outline)
+		input := agents.ComposeRegenInput{
+			Outline:     *outline,
+			ElementType: "part",
+			ElementID:   part.ID,
+			Suggestions: userPrompt,
+			Context:     context,
+		}
+		output, err := agent.Regenerate(ctx, input)
+		if err != nil {
+			return err
+		}
+		if output.Part != nil {
+			part.Title = output.Part.Title
+			part.Summary = output.Part.Summary
+		}
+		return nil
 
 	case 2:
 		// Regenerate a volume
@@ -388,7 +415,27 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 			return fmt.Errorf("volume %s not found", volumeID)
 		}
 		fmt.Printf("Regenerating volume: %s\n", volumeID)
-		return agent.RegenerateVolume(ctx, volume, outline, setup, projectConfig.Language, userPrompt)
+
+		context := agent.BuildVolumeContext(volume, outline)
+		input := agents.ComposeRegenInput{
+			Outline:     *outline,
+			ElementType: "volume",
+			ElementID:   volume.ID,
+			Suggestions: userPrompt,
+			Context:     context,
+		}
+		output, err := agent.Regenerate(ctx, input)
+		if err != nil {
+			return err
+		}
+		if output.Volume != nil {
+			volume.Title = output.Volume.Title
+			volume.Summary = output.Volume.Summary
+			if len(output.Volume.Chapters) > 0 {
+				volume.Chapters = output.Volume.Chapters
+			}
+		}
+		return nil
 
 	case 3:
 		// Regenerate a chapter
@@ -401,7 +448,32 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 			return fmt.Errorf("chapter %s not found", chapterID)
 		}
 		fmt.Printf("Regenerating chapter: %s\n", chapterID)
-		return agent.RegenerateChapter(ctx, chapter, outline, setup, projectConfig.Language, userPrompt)
+
+		context := agent.BuildChapterContext(chapter, outline)
+		input := agents.ComposeRegenInput{
+			Outline:     *outline,
+			ElementType: "chapter",
+			ElementID:   chapter.ID,
+			Suggestions: userPrompt,
+			Context:     context,
+		}
+		output, err := agent.Regenerate(ctx, input)
+		if err != nil {
+			return err
+		}
+		if output.Chapter != nil {
+			chapter.Title = output.Chapter.Title
+			chapter.Summary = output.Chapter.Summary
+			chapter.Characters = output.Chapter.Characters
+			chapter.Location = output.Chapter.Location
+			chapter.Events = output.Chapter.Events
+			chapter.Beats = output.Chapter.Beats
+			chapter.OpeningBeat = output.Chapter.OpeningBeat
+			chapter.ClosingBeat = output.Chapter.ClosingBeat
+			chapter.Conflict = output.Chapter.Conflict
+			chapter.Pacing = output.Chapter.Pacing
+		}
+		return nil
 
 	default:
 		return fmt.Errorf("invalid ID format: %s (expected format: \"1\", \"1_1\", or \"1_1_1\")", id)
@@ -447,7 +519,6 @@ func splitLinesAndTrim(s string) []string {
 func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, concurrency int) error {
 	logger.Section("Outline Iteration Improvement")
 	logger.Info("Maximum iterations: %d", maxIterations)
-	logger.Info("Concurrency: %d", concurrency)
 
 	// Load LLM config
 	cfg, err := llm.LoadOrCreateConfig()
@@ -455,62 +526,34 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 		return fmt.Errorf("failed to load LLM config: %w", err)
 	}
 
-	// Create LLM client
+	// Create LLM client and compose agent
 	client := cfg.CreateClient(&projectConfig.LLM)
 	if client == nil {
 		return fmt.Errorf("failed to create LLM client")
 	}
+	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
+	agent.SetLanguage(projectConfig.Language)
 
-	// Create iteration agent
-	iterationAgent := agents.NewIterationAgent(client, cfg, &projectConfig.LLM)
+	ctx := context.Background()
 
-	currentIteration := 0
-	for currentIteration < maxIterations {
-		currentIteration++
-		logger.Section(fmt.Sprintf("Iteration %d/%d", currentIteration, maxIterations))
+	// Use agent.Iterate for review-improvement loop
+	improvedOutline, review, err := agent.Iterate(ctx, outline, maxIterations, 80.0)
+	if err != nil {
+		return fmt.Errorf("iteration failed: %w", err)
+	}
 
-		// Review the outline
-		review, err := iterationAgent.ReviewOutline(outline, setup, currentIteration)
-		if err != nil {
-			logger.Error("Review failed: %v", err)
-			return err
-		}
+	// Update the outline with improved version
+	*outline = *improvedOutline
 
-		// Apply improvements first (even on last iteration if there are high priority issues)
-		hasHighPriority := false
-		for _, s := range review.Suggestions {
-			if s.Priority == agents.HighPriority {
-				hasHighPriority = true
-				break
-			}
-		}
-
-		if hasHighPriority {
-			logger.Info("Applying improvements for high priority issues...")
-			if err := iterationAgent.ApplyImprovements(outline, review, setup, projectConfig.Language, concurrency); err != nil {
-				logger.Error("Failed to apply improvements: %v", err)
-				// Continue to next iteration even if some improvements fail
-			}
-		} else {
-			logger.Info("No high priority issues to fix")
-		}
-
-		// Save intermediate result
-		outlinePath := filepath.Join("story", "compose", fmt.Sprintf("outline_iter_%d.json", currentIteration))
-		if err := outline.Save(outlinePath); err != nil {
-			logger.Error("Failed to save intermediate outline: %v", err)
-		} else {
-			logger.Info("Saved intermediate outline to %s", outlinePath)
-		}
-
-		// Check if we should continue to next iteration
-		if !agents.ShouldContinueIteration(review, currentIteration, maxIterations) {
-			logger.Info("Stopping iteration - quality threshold met or no critical issues")
-			break
-		}
+	// Save intermediate result
+	outlinePath := filepath.Join("story", "compose", fmt.Sprintf("outline_iter_%d.json", maxIterations))
+	if err := outline.Save(outlinePath); err != nil {
+		logger.Error("Failed to save intermediate outline: %v", err)
+	} else {
+		logger.Info("Saved intermediate outline to %s", outlinePath)
 	}
 
 	logger.Section("Iteration Complete")
-	logger.Info("Completed %d iterations", currentIteration)
+	logger.Info("Final Review Score: %.1f/100", review.OverallScore)
 	return nil
 }

@@ -231,15 +231,29 @@ func (a *IterationAgent) regeneratePart(outline *models.Outline, suggestion prom
 
 	// Create compose agent for regeneration
 	composeAgent := NewComposeAgent(a.client, a.config, a.projectLLM)
+	composeAgent.SetLanguage(language)
 
 	// Build context for regeneration
 	userPrompt := buildReviewContext(outline, suggestion)
+	part := &outline.Parts[partIndex]
+	partContext := composeAgent.BuildPartContext(part, outline)
 
 	// Regenerate the part
 	ctx := context.Background()
-	part := &outline.Parts[partIndex]
-	if err := composeAgent.RegeneratePart(ctx, part, outline, setup, language, userPrompt); err != nil {
+	input := ComposeRegenInput{
+		Outline:     *outline,
+		ElementType: "part",
+		ElementID:   part.ID,
+		Suggestions: userPrompt,
+		Context:     partContext,
+	}
+	output, err := composeAgent.Regenerate(ctx, input)
+	if err != nil {
 		return err
+	}
+	if output.Part != nil {
+		part.Title = output.Part.Title
+		part.Summary = output.Part.Summary
 	}
 
 	return nil
@@ -254,10 +268,27 @@ func (a *IterationAgent) regenerateVolume(outline *models.Outline, suggestion pr
 			if vol.ID == suggestion.ID {
 				// Create compose agent for regeneration
 				composeAgent := NewComposeAgent(a.client, a.config, a.projectLLM)
+				composeAgent.SetLanguage(language)
 
 				userPrompt := buildReviewContext(outline, suggestion)
-				if err := composeAgent.RegenerateVolume(ctx, &vol, outline, setup, language, userPrompt); err != nil {
+				volContext := composeAgent.BuildVolumeContext(&vol, outline)
+				input := ComposeRegenInput{
+					Outline:     *outline,
+					ElementType: "volume",
+					ElementID:   vol.ID,
+					Suggestions: userPrompt,
+					Context:     volContext,
+				}
+				output, err := composeAgent.Regenerate(ctx, input)
+				if err != nil {
 					return err
+				}
+				if output.Volume != nil {
+					vol.Title = output.Volume.Title
+					vol.Summary = output.Volume.Summary
+					if len(output.Volume.Chapters) > 0 {
+						vol.Chapters = output.Volume.Chapters
+					}
 				}
 
 				outline.Parts[i].Volumes[j] = vol
@@ -278,10 +309,32 @@ func (a *IterationAgent) regenerateChapter(outline *models.Outline, suggestion p
 				if ch.ID == suggestion.ID {
 					// Create compose agent for regeneration
 					composeAgent := NewComposeAgent(a.client, a.config, a.projectLLM)
+					composeAgent.SetLanguage(language)
 
 					userPrompt := buildReviewContext(outline, suggestion)
-					if err := composeAgent.RegenerateChapter(ctx, &ch, outline, setup, language, userPrompt); err != nil {
+					chapContext := composeAgent.BuildChapterContext(&ch, outline)
+					input := ComposeRegenInput{
+						Outline:     *outline,
+						ElementType: "chapter",
+						ElementID:   ch.ID,
+						Suggestions: userPrompt,
+						Context:     chapContext,
+					}
+					output, err := composeAgent.Regenerate(ctx, input)
+					if err != nil {
 						return err
+					}
+					if output.Chapter != nil {
+						ch.Title = output.Chapter.Title
+						ch.Summary = output.Chapter.Summary
+						ch.Characters = output.Chapter.Characters
+						ch.Location = output.Chapter.Location
+						ch.Events = output.Chapter.Events
+						ch.Beats = output.Chapter.Beats
+						ch.OpeningBeat = output.Chapter.OpeningBeat
+						ch.ClosingBeat = output.Chapter.ClosingBeat
+						ch.Conflict = output.Chapter.Conflict
+						ch.Pacing = output.Chapter.Pacing
 					}
 
 					outline.Parts[i].Volumes[j].Chapters[k] = ch
@@ -306,14 +359,30 @@ func (a *IterationAgent) regenerateVolumeWithSuggestions(
 
 	// Create compose agent for regeneration
 	composeAgent := NewComposeAgent(a.client, a.config, a.projectLLM)
+	composeAgent.SetLanguage(language)
 
 	// Build context with volume info and all suggestions
 	ctx := context.Background()
 	contextStr := a.buildVolumeContextWithSuggestions(volume, outline, suggestions)
 
 	// Regenerate the volume
-	if err := composeAgent.RegenerateVolume(ctx, volume, outline, setup, language, combinedPrompt+"\n\n"+contextStr); err != nil {
+	input := ComposeRegenInput{
+		Outline:     *outline,
+		ElementType: "volume",
+		ElementID:   volume.ID,
+		Suggestions: combinedPrompt + "\n\n" + contextStr,
+		Context:     contextStr,
+	}
+	output, err := composeAgent.Regenerate(ctx, input)
+	if err != nil {
 		return err
+	}
+	if output.Volume != nil {
+		volume.Title = output.Volume.Title
+		volume.Summary = output.Volume.Summary
+		if len(output.Volume.Chapters) > 0 {
+			volume.Chapters = output.Volume.Chapters
+		}
 	}
 
 	return nil
