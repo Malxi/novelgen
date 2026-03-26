@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -9,47 +10,70 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
-	"novelgen/internal/prompts"
 )
 
-// RecapAgent extracts a canonical recap JSON from chapter text
-type RecapAgent struct {
-	client     llm.Client
-	config     *llm.Config
-	projectLLM *models.ProjectLLM
-	language   string
-	log        logger.LoggerInterface
-	pm         *prompts.PromptManager
+// RecapExtractInput is the input for recap extraction
+type RecapExtractInput struct {
+	ChapterID   string `md:"chapter_id"`
+	Title       string `md:"title"`
+	ChapterText string `md:"chapter_text"`
+	Feedback    string `md:"feedback,omitempty"`
 }
 
-func NewRecapAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM, language string) *RecapAgent {
+// RecapExtractOutput is the output for recap extraction
+type RecapExtractOutput struct {
+	Recap models.ChapterRecap `md:"recap"`
+}
+
+// RecapAgent extracts a canonical recap JSON from chapter text
+// It wraps BaseAgent to provide type-safe methods
+type RecapAgent struct {
+	base *BaseAgent
+}
+
+// NewRecapAgent creates a new RecapAgent
+func NewRecapAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM) *RecapAgent {
+	base := NewBaseAgent(BaseAgentConfig{
+		Name:       "RecapAgent",
+		Client:     client,
+		Config:     config,
+		ProjectLLM: projectLLM,
+		Language:   "zh",
+	})
+
 	return &RecapAgent{
-		client:     client,
-		config:     config,
-		projectLLM: projectLLM,
-		language:   language,
-		log:        logger.GetLogger(),
-		pm:         prompts.NewPromptManager(),
+		base: base,
 	}
 }
 
-func (a *RecapAgent) Extract(chapterID, title string, chapterText string) (*models.ChapterRecap, error) {
-	return a.ExtractWithFeedback(chapterID, title, chapterText, "")
+// SetLanguage sets the output language
+func (a *RecapAgent) SetLanguage(language string) {
+	a.base.SetLanguage(language)
+}
+
+// Extract extracts a recap from chapter text
+func (a *RecapAgent) Extract(ctx context.Context, chapterID, title string, chapterText string) (*models.ChapterRecap, error) {
+	return a.ExtractWithFeedback(ctx, chapterID, title, chapterText, "")
 }
 
 // ExtractWithFeedback extracts a recap and optionally provides structured feedback
 // to force the model to fill missing fields (minimal gate).
-func (a *RecapAgent) ExtractWithFeedback(chapterID, title string, chapterText string, feedback string) (*models.ChapterRecap, error) {
-	data := map[string]interface{}{
-		"chapter_id": chapterID,
-		"title":      title,
-		"text":       chapterText,
-		"language":   a.language,
+func (a *RecapAgent) ExtractWithFeedback(ctx context.Context, chapterID, title string, chapterText string, feedback string) (*models.ChapterRecap, error) {
+	logger.Section("RECAP AGENT - Extract Recap")
+	logger.Info("Chapter: %s - %s", chapterID, title)
+	logger.Info("Language: %s", a.base.language)
+
+	input := RecapExtractInput{
+		ChapterID:   chapterID,
+		Title:       title,
+		ChapterText: chapterText,
+		Feedback:    feedback,
 	}
 
-	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillChapterRecap, "extract", data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build prompt: %w", err)
+	var output RecapExtractOutput
+	params := InvokeParams{
+		Skills:  []string{"recap-extract"},
+		Command: "extract chapter recap",
 	}
 
 	// Up to two passes: first extraction, then an auto-repair pass if the recap
@@ -59,62 +83,48 @@ func (a *RecapAgent) ExtractWithFeedback(chapterID, title string, chapterText st
 		attempts = 2
 	}
 
-	var lastRaw string
-	var out models.ChapterRecap
+	var lastErr error
 	for i := 0; i < attempts; i++ {
 		curFeedback := strings.TrimSpace(feedback)
 		if i == 1 {
 			// Second pass: inject deterministic reasons as "must address" feedback.
-			if ok, reasons := recap.ValidateMinimal(&out); !ok {
+			if ok, reasons := recap.ValidateMinimal(&output.Recap); !ok {
 				curFeedback = strings.Join(reasons, "; ")
-			} else if ok, reasons := recap.ValidateConsistency(&out); !ok {
+				input.Feedback = curFeedback
+			} else if ok, reasons := recap.ValidateConsistency(&output.Recap); !ok {
 				curFeedback = strings.Join(reasons, "; ")
+				input.Feedback = curFeedback
 			}
 		}
 
-		userPrompt = "CHAPTER METADATA:\n" + fmt.Sprintf("ChapterID: %s\nTitle: %s\n\n", chapterID, title)
-		if curFeedback != "" {
-			userPrompt += "RECAP FIX FEEDBACK (MUST ADDRESS):\n" + curFeedback + "\n\n"
-		}
-		userPrompt += "CHAPTER TEXT:\n" + chapterText
-
-		messages := []llm.Message{
-			{Role: "system", Content: systemPrompt},
-			{Role: "user", Content: userPrompt},
-		}
-
-		opts := a.config.GetChatOptions(a.projectLLM)
-		if opts.MaxTokens < 2000 {
-			opts.MaxTokens = 2000
-		}
-
-		resp, err := a.client.ChatCompletion(messages, opts)
-		if err != nil {
-			return nil, err
-		}
-
-		// Try parse JSON
-		content := strings.TrimSpace(resp.Content)
-		// Strip possible fenced code blocks
-		content = strings.TrimPrefix(content, "```json")
-		content = strings.TrimPrefix(content, "```")
-		content = strings.TrimSuffix(content, "```")
-		content = strings.TrimSpace(content)
-
-		lastRaw = resp.Content
-		out = models.ChapterRecap{}
-		if err := json.Unmarshal([]byte(content), &out); err != nil {
-			return nil, fmt.Errorf("failed to parse recap json: %w; raw=%s", err, lastRaw)
+		if err := a.base.Execute(ctx, params, input, &output); err != nil {
+			lastErr = err
+			continue
 		}
 
 		// If it passes minimal continuity gate (and consistency), we're done.
-		if ok, _ := recap.ValidateMinimal(&out); ok {
-			if ok2, _ := recap.ValidateConsistency(&out); ok2 {
-				return &out, nil
+		if ok, _ := recap.ValidateMinimal(&output.Recap); ok {
+			if ok2, _ := recap.ValidateConsistency(&output.Recap); ok2 {
+				logger.Info("✓ Recap extracted successfully")
+				return &output.Recap, nil
 			}
 		}
 	}
 
-	// Return whatever we got from the last pass.
-	return &out, nil
+	// Return whatever we got from the last pass, or the last error
+	if lastErr != nil {
+		return nil, lastErr
+	}
+
+	logger.Info("✓ Recap extracted (with warnings)")
+	return &output.Recap, nil
+}
+
+// ExtractFromJSON extracts a recap from a JSON string (for manual editing)
+func (a *RecapAgent) ExtractFromJSON(jsonStr string) (*models.ChapterRecap, error) {
+	var recap models.ChapterRecap
+	if err := json.Unmarshal([]byte(jsonStr), &recap); err != nil {
+		return nil, fmt.Errorf("failed to parse recap JSON: %w", err)
+	}
+	return &recap, nil
 }

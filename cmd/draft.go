@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -151,6 +152,7 @@ func init() {
 
 func runDraftGen(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
+	ctx := cmd.Context()
 
 	// Load project config
 	config, err := loadProjectConfig()
@@ -183,7 +185,8 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create draft agent
-	agent := agents.NewDraftAgent(client, cfg, &config.LLM, setup, outline, config.Language)
+	agent := agents.NewDraftAgent(client, cfg, &config.LLM, setup, outline)
+	agent.SetLanguage(config.Language)
 
 	// Get project root for state matrix manager
 	root, err := findProjectRoot()
@@ -194,7 +197,8 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 	// Create state matrix manager
 	stateManager := logic.NewStateMatrixManager(root)
 	// Create recap agent + store (auto-persist recaps for continuity)
-	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM, config.Language)
+	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
+	recapAgent.SetLanguage(config.Language)
 	recapStore := recap.NewStore(root)
 
 	// Get list of chapters to generate
@@ -237,7 +241,7 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 				nextChapters := loadNextChapters(outline, chapter, 2)
 
 				// Generate draft
-				draft, err := agent.GenerateDraftWithContext(chapter, stateMatrix, draftWordsFlag, contextText, prevRecap, nextChapters)
+				draft, err := agent.GenerateDraftWithContext(ctx, chapter, stateMatrix, draftWordsFlag, contextText, prevRecap, nextChapters)
 				if err != nil {
 					log.Error("Failed to generate draft for chapter %s: %v", chapter.ID, err)
 					continue
@@ -254,13 +258,13 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 				}
 
 				// Auto-extract + persist recap for this chapter (best-effort)
-				if recapData, err := recapAgent.Extract(chapter.ID, chapter.Title, draft); err == nil {
+				if recapData, err := recapAgent.Extract(ctx, chapter.ID, chapter.Title, draft); err == nil {
 					if ok, reasons := recap.ValidateMinimal(recapData); !ok {
 						log.Warn("[Worker %d] Recap minimal validation failed for %s: %v", workerID, chapter.ID, reasons)
 
 						// One retry with explicit feedback to force required fields.
 						fb := recapGateFeedback(reasons, recapData)
-						if recap2, err2 := recapAgent.ExtractWithFeedback(chapter.ID, chapter.Title, draft, fb); err2 == nil {
+						if recap2, err2 := recapAgent.ExtractWithFeedback(ctx, chapter.ID, chapter.Title, draft, fb); err2 == nil {
 							if okR, reasonsR := recap.ValidateMinimal(recap2); okR {
 								recapData = recap2
 							} else {
@@ -403,6 +407,7 @@ func saveDraft(chapter *models.Chapter, draft string) error {
 // runDraftReview reviews drafts and provides feedback
 func runDraftReview(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
+	ctx := cmd.Context()
 
 	// Load project config
 	config, err := loadProjectConfig()
@@ -440,8 +445,9 @@ func runDraftReview(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create LLM client")
 	}
 
-	// Create review agent
-	agent := agents.NewReviewAgent(client, cfg, &config.LLM, setup, outline, config.Language)
+	// Create draft agent for review
+	agent := agents.NewDraftAgent(client, cfg, &config.LLM, setup, outline)
+	agent.SetLanguage(config.Language)
 
 	// Get volumes to review
 	volumes := getVolumesForDraft(outline, draftVolumeFlag, draftChapterFlag)
@@ -456,7 +462,7 @@ func runDraftReview(cmd *cobra.Command, args []string) error {
 		// Filter drafts for this volume
 		volumeDrafts := filterDraftsForVolume(drafts, volume)
 
-		review, err := agent.ReviewVolume(volume, volumeDrafts)
+		review, err := agent.ReviewVolume(ctx, volume, volumeDrafts)
 		if err != nil {
 			log.Error("Failed to review volume %s: %v", volume.ID, err)
 			continue
@@ -491,6 +497,7 @@ func runDraftReview(cmd *cobra.Command, args []string) error {
 // runDraftImprove improves drafts based on review feedback
 func runDraftImprove(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
+	ctx := cmd.Context()
 
 	// Load project config
 	config, err := loadProjectConfig()
@@ -523,7 +530,8 @@ func runDraftImprove(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create draft agent
-	draftAgent := agents.NewDraftAgent(client, cfg, &config.LLM, setup, outline, config.Language)
+	draftAgent := agents.NewDraftAgent(client, cfg, &config.LLM, setup, outline)
+	draftAgent.SetLanguage(config.Language)
 
 	// Get volumes to improve
 	volumes := getVolumesForDraft(outline, draftVolumeFlag, draftChapterFlag)
@@ -555,7 +563,7 @@ func runDraftImprove(cmd *cobra.Command, args []string) error {
 			log.Info("Volume %s: Improving %d chapters", volume.ID, len(chaptersToImprove))
 
 			// Improve chapters concurrently
-			improved := improveChaptersWithAgent(draftAgent, chaptersToImprove, review.Reviews, outline, draftConcurrencyFlag)
+			improved := improveChaptersWithAgent(ctx, draftAgent, chaptersToImprove, review.Reviews, outline, draftConcurrencyFlag)
 			improvedCount += improved
 		}
 
@@ -707,7 +715,7 @@ func getChaptersNeedingImprovement(review *agents.VolumeReview, outline *models.
 }
 
 // improveChaptersWithAgent improves chapters using the draft agent
-func improveChaptersWithAgent(agent *agents.DraftAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, concurrency int) int {
+func improveChaptersWithAgent(ctx context.Context, agent *agents.DraftAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, concurrency int) int {
 	log := logger.GetLogger()
 
 	// Get project root for state matrix manager
@@ -764,7 +772,7 @@ func improveChaptersWithAgent(agent *agents.DraftAgent, chapters []*models.Chapt
 				nextChapters := loadNextChapters(outline, chapter, 2)
 
 				// Generate improved draft with suggestions
-				draft, err := agent.GenerateDraftWithSuggestions(chapter, stateMatrix, 500, suggestions, contextText, prevRecap, nextChapters)
+				draft, err := agent.GenerateDraftWithSuggestions(ctx, chapter, stateMatrix, 500, suggestions, contextText, prevRecap, nextChapters)
 				if err != nil {
 					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
 					continue
@@ -782,13 +790,13 @@ func improveChaptersWithAgent(agent *agents.DraftAgent, chapters []*models.Chapt
 					draftTeleportFixFlag,
 					draftBridgeRetriesFlag,
 					func(s string) (string, error) {
-						return agent.GenerateDraftWithSuggestions(chapter, stateMatrix, 500, s, contextText, prevRecap, nextChapters)
+						return agent.GenerateDraftWithSuggestions(ctx, chapter, stateMatrix, 500, s, contextText, prevRecap, nextChapters)
 					},
 					draftCharacterFixFlag,
 					draftCharacterPatchRetriesFlag,
 					knownChars,
 					func(s string) (string, error) {
-						return agent.GenerateDraftWithSuggestions(chapter, stateMatrix, 500, s, contextText, prevRecap, nextChapters)
+						return agent.GenerateDraftWithSuggestions(ctx, chapter, stateMatrix, 500, s, contextText, prevRecap, nextChapters)
 					},
 				)
 				draft = fixed

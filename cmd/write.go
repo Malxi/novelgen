@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -130,6 +131,7 @@ func init() {
 
 func runWriteGen(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
+	ctx := cmd.Context()
 
 	// Load project config
 	config, err := loadProjectConfig()
@@ -162,7 +164,8 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create write agent
-	agent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline, config.Language)
+	agent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
+	agent.SetLanguage(config.Language)
 
 	// Get project root for state matrix manager
 	root, err := findProjectRoot()
@@ -173,7 +176,8 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	// Create state matrix manager
 	stateManager := logic.NewStateMatrixManager(root)
 	// Create recap agent + store (auto-persist recaps for continuity)
-	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM, config.Language)
+	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
+	recapAgent.SetLanguage(config.Language)
 	recapStore := recap.NewStore(root)
 
 	// Get list of chapters to generate
@@ -212,7 +216,7 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
 
 				// Generate final content
-				content, err := agent.GenerateChapter(chapter, context, stateMatrix, writeWordsFlag)
+				content, err := agent.GenerateChapter(ctx, chapter, context, stateMatrix, writeWordsFlag)
 				if err != nil {
 					log.Error("Failed to generate content for chapter %s: %v", chapter.ID, err)
 					continue
@@ -225,13 +229,13 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 				}
 
 				// Auto-extract + persist recap for this final chapter (best-effort)
-				if recapData, err := recapAgent.Extract(chapter.ID, chapter.Title, content); err == nil {
+				if recapData, err := recapAgent.Extract(ctx, chapter.ID, chapter.Title, content); err == nil {
 					if ok, reasons := recap.ValidateMinimal(recapData); !ok {
 						log.Warn("[Worker %d] Recap minimal validation failed for %s: %v", workerID, chapter.ID, reasons)
 
 						// One retry with explicit feedback to force required fields.
 						fb := recapGateFeedback(reasons, recapData)
-						if recap2, err2 := recapAgent.ExtractWithFeedback(chapter.ID, chapter.Title, content, fb); err2 == nil {
+						if recap2, err2 := recapAgent.ExtractWithFeedback(ctx, chapter.ID, chapter.Title, content, fb); err2 == nil {
 							if okR, reasonsR := recap.ValidateMinimal(recap2); okR {
 								recapData = recap2
 							} else {
@@ -413,6 +417,7 @@ func saveFinalChapter(chapter *models.Chapter, content string) error {
 // runWriteImprove improves final chapters based on review
 func runWriteImprove(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
+	ctx := cmd.Context()
 
 	// Load project config
 	config, err := loadProjectConfig()
@@ -445,7 +450,8 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create write agent
-	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline, config.Language)
+	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
+	writeAgent.SetLanguage(config.Language)
 
 	// Get project root for state matrix manager
 	root, err := findProjectRoot()
@@ -486,7 +492,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 			log.Info("Volume %s: Improving %d chapters", volume.ID, len(chaptersToImprove))
 
 			// Improve chapters concurrently
-			improved := improveChaptersWithWriteAgent(writeAgent, chaptersToImprove, review.Reviews, outline, stateManager, writeConcurrencyFlag)
+			improved := improveChaptersWithWriteAgent(ctx, writeAgent, chaptersToImprove, review.Reviews, outline, stateManager, writeConcurrencyFlag)
 			improvedCount += improved
 		}
 
@@ -511,7 +517,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 }
 
 // improveChaptersWithWriteAgent improves chapters using the write agent
-func improveChaptersWithWriteAgent(agent *agents.WriteAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, stateManager *logic.StateMatrixManager, concurrency int) int {
+func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, stateManager *logic.StateMatrixManager, concurrency int) int {
 	log := logger.GetLogger()
 
 	// Create review map for quick lookup
@@ -549,7 +555,7 @@ func improveChaptersWithWriteAgent(agent *agents.WriteAgent, chapters []*models.
 				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
 
 				// Generate improved content with suggestions
-				content, err := agent.GenerateChapterWithSuggestions(chapter, context, stateMatrix, writeWordsFlag, suggestions)
+				content, err := agent.GenerateChapterWithSuggestions(ctx, chapter, context, stateMatrix, writeWordsFlag, suggestions)
 				if err != nil {
 					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
 					continue
@@ -567,13 +573,13 @@ func improveChaptersWithWriteAgent(agent *agents.WriteAgent, chapters []*models.
 					writeTeleportFixFlag,
 					writeBridgeRetriesFlag,
 					func(s string) (string, error) {
-						return agent.GenerateChapterWithSuggestions(chapter, context, stateMatrix, writeWordsFlag, s)
+						return agent.GenerateChapterWithSuggestions(ctx, chapter, context, stateMatrix, writeWordsFlag, s)
 					},
 					writeCharacterFixFlag,
 					writeCharacterPatchRetriesFlag,
 					knownChars,
 					func(s string) (string, error) {
-						return agent.GenerateChapterWithSuggestions(chapter, context, stateMatrix, writeWordsFlag, s)
+						return agent.GenerateChapterWithSuggestions(ctx, chapter, context, stateMatrix, writeWordsFlag, s)
 					},
 				)
 				content = fixed

@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,19 +11,53 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
-	"novelgen/internal/prompts"
 )
 
-// WriteAgent generates final chapter content with continuity
-type WriteAgent struct {
-	client     llm.Client
-	config     *llm.Config
-	projectLLM *models.ProjectLLM
-	setup      *models.StorySetup
-	outline    *models.Outline
-	language   string
-	log        logger.LoggerInterface
-	pm         *prompts.PromptManager
+// WriteGenInput is the input for final chapter generation
+type WriteGenInput struct {
+	StorySetup   models.StorySetup `md:"story_setup"`
+	Chapter      models.Chapter    `md:"chapter"`
+	StateMatrix  string            `md:"state_matrix"`
+	TargetWords  int               `md:"target_words"`
+	Context      string            `md:"context,omitempty"`
+	Recap        string            `md:"recap,omitempty"`
+	NextChapters []NextChapterInfo `md:"next_chapters,omitempty"`
+}
+
+// WriteGenOutput is the output for final chapter generation
+type WriteGenOutput struct {
+	Content string `md:"content"`
+}
+
+// WriteImproveInput is the input for chapter improvement
+type WriteImproveInput struct {
+	StorySetup   models.StorySetup `md:"story_setup"`
+	Chapter      models.Chapter    `md:"chapter"`
+	StateMatrix  string            `md:"state_matrix"`
+	TargetWords  int               `md:"target_words"`
+	CurrentDraft string            `md:"current_draft"`
+	Suggestions  string            `md:"suggestions"`
+	Context      string            `md:"context,omitempty"`
+	Recap        string            `md:"recap,omitempty"`
+}
+
+// WriteImproveOutput is the output for chapter improvement
+type WriteImproveOutput struct {
+	Content string `md:"content"`
+}
+
+// WriteReviewInput is the input for chapter review
+type WriteReviewInput struct {
+	StorySetup     models.StorySetup `md:"story_setup"`
+	Chapter        models.Chapter    `md:"chapter"`
+	ChapterContent string            `md:"chapter_content"`
+	TargetWords    int               `md:"target_words"`
+	Iteration      int               `md:"iteration"`
+}
+
+// WriteReviewOutput is the output for chapter review
+type WriteReviewOutput struct {
+	Result models.ReviewResult `md:"review_result"`
 }
 
 // ChapterContext holds surrounding chapter information for continuity
@@ -39,75 +74,209 @@ type ContextChapter struct {
 	Content string
 }
 
-// NewWriteAgent creates a new write agent
-func NewWriteAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM, setup *models.StorySetup, outline *models.Outline, language string) *WriteAgent {
+// WriteAgent generates final chapter content with continuity
+// It wraps BaseAgent to provide type-safe methods
+type WriteAgent struct {
+	base    *BaseAgent
+	setup   *models.StorySetup
+	outline *models.Outline
+}
+
+// NewWriteAgent creates a new WriteAgent
+func NewWriteAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM, setup *models.StorySetup, outline *models.Outline) *WriteAgent {
+	base := NewBaseAgent(BaseAgentConfig{
+		Name:       "WriteAgent",
+		Client:     client,
+		Config:     config,
+		ProjectLLM: projectLLM,
+		Language:   "zh",
+	})
+
 	return &WriteAgent{
-		client:     client,
-		config:     config,
-		projectLLM: projectLLM,
-		setup:      setup,
-		outline:    outline,
-		language:   language,
-		log:        logger.GetLogger(),
-		pm:         prompts.NewPromptManager(),
+		base:    base,
+		setup:   setup,
+		outline: outline,
 	}
+}
+
+// SetLanguage sets the output language
+func (a *WriteAgent) SetLanguage(language string) {
+	a.base.SetLanguage(language)
 }
 
 // GenerateChapter generates final chapter content with continuity
-func (a *WriteAgent) GenerateChapter(chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, targetWords int) (string, error) {
-	a.log.Info("Generating final content for chapter: %s", chapter.ID)
+func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, targetWords int) (string, error) {
+	logger.Section("WRITE AGENT - Final Chapter Generation")
+	logger.Info("Chapter: %s", chapter.ID)
+	logger.Info("Target words: %d", targetWords)
+	logger.Info("Language: %s", a.base.language)
 
-	// Build prompt data
-	data := map[string]interface{}{
-		"story_genre":     strings.Join(a.setup.Genres, ", "),
-		"story_style":     a.setup.Tone,
-		"chapter_id":      chapter.ID,
-		"chapter_summary": chapter.Summary,
-		"chapter_beats":   chapter.Beats,
-		"opening_beat":    chapter.OpeningBeat,
-		"closing_beat":    chapter.ClosingBeat,
-		"pacing":          chapter.Pacing,
-		"characters":      strings.Join(chapter.Characters, ", "),
-		"location":        chapter.Location,
-		"context":         a.formatContext(context),
-		"recap":           context.Recap,
-		"state_matrix":    prompts.FormatStateMatrix(state, chapter),
-		"target_words":    targetWords,
-		"language":        a.language,
-		"language_name":   prompts.GetLanguageName(a.language),
-		"tense":           a.setup.Tense,
-		"pov_style":       a.setup.POVStyle,
+	// Convert next chapters to info
+	var nextInfos []NextChapterInfo
+	for _, nc := range context.Next {
+		nextInfos = append(nextInfos, NextChapterInfo{
+			ID:      nc.Chapter.ID,
+			Title:   nc.Chapter.Title,
+			Summary: nc.Chapter.Summary,
+		})
 	}
 
-	// Build prompts using PromptManager
-	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillChapterWriting, "final", data)
-	if err != nil {
-		return "", fmt.Errorf("failed to build prompt: %w", err)
+	input := WriteGenInput{
+		StorySetup:   *a.setup,
+		Chapter:      *chapter,
+		StateMatrix:  formatStateMatrixForWrite(state, chapter),
+		TargetWords:  targetWords,
+		Context:      formatChapterContext(context),
+		Recap:        context.Recap,
+		NextChapters: nextInfos,
 	}
 
-	// Log context to file for debugging
-	if err := a.logWriteContext(chapter.ID, "final", systemPrompt, userPrompt); err != nil {
-		a.log.Warn("Failed to log write context: %v", err)
+	var output WriteGenOutput
+	params := InvokeParams{
+		Skills:  []string{"write-generate"},
+		Command: "generate final chapter content",
 	}
 
-	// Call LLM
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPrompt},
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return "", err
 	}
 
-	opts := a.config.GetChatOptions(a.projectLLM)
-
-	response, err := a.client.ChatCompletion(messages, opts)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate chapter: %w", err)
+	// Log context for debugging
+	if err := a.logWriteContext(chapter.ID, "final", input, output.Content); err != nil {
+		logger.Warn("Failed to log write context: %v", err)
 	}
 
-	return response.Content, nil
+	logger.Info("✓ Generated final chapter: %d characters", len(output.Content))
+	return output.Content, nil
+}
+
+// GenerateChapterWithSuggestions generates improved chapter content with review suggestions
+func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, targetWords int, suggestions string) (string, error) {
+	logger.Section("WRITE AGENT - Chapter Improvement")
+	logger.Info("Chapter: %s", chapter.ID)
+	logger.Info("Target words: %d", targetWords)
+	logger.Info("Language: %s", a.base.language)
+
+	input := WriteImproveInput{
+		StorySetup:  *a.setup,
+		Chapter:     *chapter,
+		StateMatrix: formatStateMatrixForWrite(state, chapter),
+		TargetWords: targetWords,
+		Suggestions: suggestions,
+		Context:     formatChapterContext(context),
+		Recap:       context.Recap,
+	}
+
+	var output WriteImproveOutput
+	params := InvokeParams{
+		Skills:  []string{"write-improve"},
+		Command: "improve chapter based on suggestions",
+	}
+
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return "", err
+	}
+
+	// Log context for debugging
+	if err := a.logWriteContext(chapter.ID, "improve", input, output.Content); err != nil {
+		logger.Warn("Failed to log write context: %v", err)
+	}
+
+	logger.Info("✓ Generated improved chapter: %d characters", len(output.Content))
+	return output.Content, nil
+}
+
+// ReviewChapter reviews a chapter and provides improvement suggestions
+func (a *WriteAgent) ReviewChapter(ctx context.Context, chapter *models.Chapter, content string, targetWords int, iteration int) (models.ReviewResult, error) {
+	logger.Section("WRITE AGENT - Chapter Review")
+	logger.Info("Chapter: %s", chapter.ID)
+	logger.Info("Iteration: %d", iteration)
+	logger.Info("Language: %s", a.base.language)
+
+	input := WriteReviewInput{
+		StorySetup:     *a.setup,
+		Chapter:        *chapter,
+		ChapterContent: content,
+		TargetWords:    targetWords,
+		Iteration:      iteration,
+	}
+
+	var output WriteReviewOutput
+	params := InvokeParams{
+		Skills:  []string{"write-review"},
+		Command: "review chapter and provide improvement suggestions",
+	}
+
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return models.ReviewResult{}, err
+	}
+
+	logger.Section("Chapter Review Result")
+	logger.Info("Overall Score: %.1f/100", output.Result.OverallScore)
+	logger.Info("Suggestions: %d", len(output.Result.Suggestions))
+
+	return output.Result, nil
+}
+
+// IterateChapter runs the review-improvement loop for a chapter
+func (a *WriteAgent) IterateChapter(ctx context.Context, chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, targetWords int, initialContent string, maxIterations int, qualityThreshold float64) (string, *models.ReviewResult, error) {
+	logger.Section("WRITE AGENT - Chapter Iteration Loop")
+	logger.Info("Chapter: %s", chapter.ID)
+	logger.Info("Max iterations: %d", maxIterations)
+	logger.Info("Quality threshold: %.1f", qualityThreshold)
+
+	currentContent := initialContent
+	var finalReview *models.ReviewResult
+
+	for i := 1; i <= maxIterations; i++ {
+		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
+
+		// Review
+		review, err := a.ReviewChapter(ctx, chapter, currentContent, targetWords, i)
+		if err != nil {
+			return "", nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
+		}
+		finalReview = &review
+
+		// Check if quality meets threshold
+		if review.OverallScore >= qualityThreshold {
+			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", review.OverallScore, qualityThreshold)
+			break
+		}
+
+		// Check if this is the last iteration
+		if i == maxIterations {
+			logger.Warn("Max iterations reached, stopping iteration loop")
+			break
+		}
+
+		// Check if there are high priority suggestions
+		hasHighPriority := false
+		for _, s := range review.Suggestions {
+			if s.Priority == "high" {
+				hasHighPriority = true
+				break
+			}
+		}
+		if !hasHighPriority {
+			logger.Info("No high priority issues, stopping iteration")
+			break
+		}
+
+		// Improve
+		suggestions := formatWriteSuggestions(review.Suggestions)
+		improved, err := a.GenerateChapterWithSuggestions(ctx, chapter, context, state, targetWords, suggestions)
+		if err != nil {
+			return "", nil, fmt.Errorf("improvement failed at iteration %d: %w", i, err)
+		}
+		currentContent = improved
+	}
+
+	return currentContent, finalReview, nil
 }
 
 // logWriteContext logs the write context to a markdown file for debugging
-func (a *WriteAgent) logWriteContext(chapterID, variant, systemPrompt, userPrompt string) error {
+func (a *WriteAgent) logWriteContext(chapterID, variant string, input interface{}, output string) error {
 	debugDir := filepath.Join("logs", "write_contexts")
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		return fmt.Errorf("failed to create debug directory: %w", err)
@@ -120,90 +289,102 @@ func (a *WriteAgent) logWriteContext(chapterID, variant, systemPrompt, userPromp
 	sb.WriteString(fmt.Sprintf("# Write Context: %s (%s)\n\n", chapterID, variant))
 	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().Format("2006-01-02 15:04:05")))
 
-	sb.WriteString("## System Prompt\n\n")
-	sb.WriteString("```\n")
-	sb.WriteString(systemPrompt)
+	sb.WriteString("## Input\n\n")
+	sb.WriteString("```json\n")
+	// Simple representation
+	sb.WriteString(fmt.Sprintf("%+v", input))
 	sb.WriteString("\n```\n\n")
 
-	sb.WriteString("## User Prompt\n\n")
+	sb.WriteString("## Output\n\n")
 	sb.WriteString("```\n")
-	sb.WriteString(userPrompt)
+	sb.WriteString(output)
 	sb.WriteString("\n```\n")
 
 	return os.WriteFile(filename, []byte(sb.String()), 0644)
 }
 
-// GenerateChapterWithSuggestions generates improved chapter content with review suggestions
-func (a *WriteAgent) GenerateChapterWithSuggestions(chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, targetWords int, suggestions string) (string, error) {
-	a.log.Info("Generating improved content for chapter: %s", chapter.ID)
+// formatChapterContext formats the chapter context for the prompt
+func formatChapterContext(context *ChapterContext) string {
+	var sb strings.Builder
 
-	// Build prompt data
-	data := map[string]interface{}{
-		"story_genre":     strings.Join(a.setup.Genres, ", "),
-		"story_style":     a.setup.Tone,
-		"chapter_id":      chapter.ID,
-		"chapter_summary": chapter.Summary,
-		"chapter_beats":   chapter.Beats,
-		"opening_beat":    chapter.OpeningBeat,
-		"closing_beat":    chapter.ClosingBeat,
-		"pacing":          chapter.Pacing,
-		"characters":      strings.Join(chapter.Characters, ", "),
-		"location":        chapter.Location,
-		"context":         a.formatContext(context),
-		"recap":           context.Recap,
-		"state_matrix":    prompts.FormatStateMatrix(state, chapter),
-		"target_words":    targetWords,
-		"suggestions":     suggestions,
-		"language":        a.language,
-		"language_name":   prompts.GetLanguageName(a.language),
-		"tense":           a.setup.Tense,
-		"pov_style":       a.setup.POVStyle,
+	if len(context.Previous) > 0 {
+		sb.WriteString("PREVIOUS CHAPTERS:\n")
+		for _, prev := range context.Previous {
+			sb.WriteString(fmt.Sprintf("\n--- %s: %s ---\n", prev.Chapter.ID, prev.Chapter.Title))
+			if len(prev.Content) > 500 {
+				sb.WriteString(prev.Content[:500])
+				sb.WriteString("...")
+			} else {
+				sb.WriteString(prev.Content)
+			}
+			sb.WriteString("\n")
+		}
 	}
 
-	// Build prompts using PromptManager with improve template
-	systemPrompt, userPrompt, err := a.pm.Build(prompts.SkillChapterWriting, "improve", data)
-	if err != nil {
-		return "", fmt.Errorf("failed to build prompt: %w", err)
+	if len(context.Next) > 0 {
+		sb.WriteString("\nUPCOMING CHAPTERS (for foreshadowing):\n")
+		for _, next := range context.Next {
+			sb.WriteString(fmt.Sprintf("\n--- %s: %s ---\n", next.Chapter.ID, next.Chapter.Title))
+			sb.WriteString(fmt.Sprintf("Summary: %s\n", next.Chapter.Summary))
+		}
 	}
 
-	// Log context to file for debugging
-	if err := a.logWriteContext(chapter.ID, "improve", systemPrompt, userPrompt); err != nil {
-		a.log.Warn("Failed to log write context: %v", err)
-	}
-
-	// Call LLM
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userPrompt},
-	}
-
-	opts := a.config.GetChatOptions(a.projectLLM)
-
-	response, err := a.client.ChatCompletion(messages, opts)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate improved chapter: %w", err)
-	}
-
-	return response.Content, nil
+	return sb.String()
 }
 
-// formatContext formats the chapter context for the prompt
-func (a *WriteAgent) formatContext(context *ChapterContext) string {
-	// Convert ChapterContext to prompts.ContextChapter slices
-	previous := make([]*prompts.ContextChapter, len(context.Previous))
-	for i, p := range context.Previous {
-		previous[i] = &prompts.ContextChapter{
-			Chapter: p.Chapter,
-			Content: p.Content,
+// formatStateMatrixForWrite formats the state matrix for the prompt
+func formatStateMatrixForWrite(state *models.StateMatrix, chapter *models.Chapter) string {
+	if state == nil {
+		return "No state matrix available"
+	}
+
+	var sb strings.Builder
+	sb.WriteString("CURRENT STORY STATE:\n")
+
+	// Character states
+	if len(state.Characters) > 0 {
+		sb.WriteString("\nCharacters:\n")
+		for name, char := range state.Characters {
+			sb.WriteString(fmt.Sprintf("  %s:\n", name))
+			if char.Motivation != "" {
+				sb.WriteString(fmt.Sprintf("    - Motivation: %s\n", char.Motivation))
+			}
+			if char.Personality != nil && len(char.Personality) > 0 {
+				sb.WriteString(fmt.Sprintf("    - Personality: %s\n", strings.Join(char.Personality, ", ")))
+			}
+			if char.Background != "" {
+				sb.WriteString(fmt.Sprintf("    - Background: %s\n", char.Background))
+			}
 		}
 	}
-	next := make([]*prompts.ContextChapter, len(context.Next))
-	for i, n := range context.Next {
-		next[i] = &prompts.ContextChapter{
-			Chapter: n.Chapter,
-			Content: n.Content,
+
+	// Active relationships
+	if len(state.Relationships) > 0 {
+		sb.WriteString("\nActive Relationships:\n")
+		for relKey, relStatus := range state.Relationships {
+			sb.WriteString(fmt.Sprintf("  %s: %s\n", relKey, relStatus))
 		}
 	}
-	// Use 0 to indicate full content (no truncation)
-	return prompts.FormatChapterContext(previous, next, 0)
+
+	// Active storylines
+	if len(state.Storylines) > 0 {
+		sb.WriteString("\nActive Storylines:\n")
+		for _, sl := range state.Storylines {
+			if sl.Status == "active" || sl.Status == "in_progress" {
+				sb.WriteString(fmt.Sprintf("  %s: %s\n", sl.Name, sl.Progress))
+			}
+		}
+	}
+
+	return sb.String()
+}
+
+// formatWriteSuggestions formats review suggestions for the improvement prompt
+func formatWriteSuggestions(suggestions []models.ReviewSuggestion) string {
+	var sb strings.Builder
+	for i, s := range suggestions {
+		sb.WriteString(fmt.Sprintf("%d. [%s] %s\n", i+1, s.Priority, s.Issue))
+		sb.WriteString(fmt.Sprintf("   Suggestion: %s\n\n", s.Suggestion))
+	}
+	return sb.String()
 }

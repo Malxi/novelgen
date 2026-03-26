@@ -63,6 +63,7 @@ func init() {
 
 func runRecapGen(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
+	ctx := cmd.Context()
 
 	// Load project config
 	config, err := loadProjectConfig()
@@ -94,7 +95,8 @@ func runRecapGen(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
 	store := recap.NewStore(root)
-	agent := agents.NewRecapAgent(client, cfg, &config.LLM, config.Language)
+	agent := agents.NewRecapAgent(client, cfg, &config.LLM)
+	agent.SetLanguage(config.Language)
 
 	// Chapters to process
 	chapters, err := getChaptersToGenerate(outline, recapChapterFlag, "", "", recapAllFlag)
@@ -139,7 +141,7 @@ func runRecapGen(cmd *cobra.Command, args []string) error {
 					continue
 				}
 
-				recapData, err := agent.Extract(ch.ID, ch.Title, text)
+				recapData, err := agent.Extract(ctx, ch.ID, ch.Title, text)
 				if err != nil {
 					log.Error("[Worker %d] Failed to extract recap for %s: %v", workerID, ch.ID, err)
 					continue
