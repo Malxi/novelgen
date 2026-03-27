@@ -15,7 +15,7 @@
     "max_words_per_chapter": 5000
   },
   "llm": {
-    "provider": "ollama",
-    "model": "qwen3.5:4b"
+    "provider": "openrouter",
+    "model": "stepfun/step-3.5-flash:free"
   }
 }
