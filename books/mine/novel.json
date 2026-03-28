@@ -6,7 +6,7 @@
   "language": "zh",
   "structure": {
     "target_parts": 1,
-    "target_volumes": 2,
+    "target_volumes": 10,
     "target_chapters": 10
   },
   "chapter_config": {
@@ -15,7 +15,7 @@
     "max_words_per_chapter": 5000
   },
   "llm": {
-    "provider": "openrouter",
-    "model": "stepfun/step-3.5-flash:free"
+    "provider": "gemini",
+    "model": "gemini-2.5-pro"
   }
 }

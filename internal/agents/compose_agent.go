@@ -802,6 +802,12 @@ func (a *ComposeAgent) GenerateOutlineHierarchical(ctx context.Context, setup mo
 		Parts: skeletonOutput.Parts,
 	}
 
+	return a.GenerateChaptersHierarchical(ctx, setup, structure, outline, nil)
+}
+
+// GenerateChaptersHierarchical generates chapters for each volume in hierarchical mode
+// Supports incremental generation with save callback
+func (a *ComposeAgent) GenerateChaptersHierarchical(ctx context.Context, setup models.StorySetup, structure models.StoryStructure, outline *models.Outline, onVolumeComplete func(*models.Outline, int, int, int)) (*models.Outline, error) {
 	totalVolumes := structure.TargetParts * structure.TargetVolumes
 	volumeCount := 0
 
@@ -809,6 +815,16 @@ func (a *ComposeAgent) GenerateOutlineHierarchical(ctx context.Context, setup mo
 		for volIdx := range outline.Parts[partIdx].Volumes {
 			volumeCount++
 			volume := &outline.Parts[partIdx].Volumes[volIdx]
+
+			// Skip if already has chapters (resumed generation)
+			if len(volume.Chapters) > 0 {
+				logger.Info("✓ Volume %d.%d: %s - already has %d chapters (skipping)",
+					partIdx+1, volIdx+1, volume.Title, len(volume.Chapters))
+				continue
+			}
+
+			logger.Info("Generating chapters for Volume %d.%d: %s",
+				partIdx+1, volIdx+1, volume.Title)
 
 			// Build context from previous volume (for continuity)
 			var outlineContext string
@@ -839,16 +855,21 @@ func (a *ComposeAgent) GenerateOutlineHierarchical(ctx context.Context, setup mo
 			}
 
 			chaptersOutput, err := a.GenerateChaptersForVolume(ctx, chaptersInput)
-			if err != nil {
-				return nil, fmt.Errorf("failed to generate chapters for volume %d.%d: %w",
-					partIdx+1, volIdx+1, err)
-			}
+		if err != nil {
+			return outline, fmt.Errorf("failed to generate chapters for volume %d.%d: %w",
+				partIdx+1, volIdx+1, err)
+		}
 
 			// Assign chapters to volume
 			volume.Chapters = chaptersOutput.Chapters
 
 			logger.Info("✓ Volume %d.%d: %s - %d chapters generated",
 				partIdx+1, volIdx+1, volume.Title, len(volume.Chapters))
+
+			// Call save callback if provided
+			if onVolumeComplete != nil {
+				onVolumeComplete(outline, partIdx, volIdx, volumeCount)
+			}
 		}
 	}
 
@@ -857,7 +878,12 @@ func (a *ComposeAgent) GenerateOutlineHierarchical(ctx context.Context, setup mo
 	idManager.AssignIDsToOutline()
 	logger.Info("Assigned IDs to all outline elements")
 
-	totalChapters := structure.TotalChapters()
+	totalChapters := 0
+	for _, part := range outline.Parts {
+		for _, vol := range part.Volumes {
+			totalChapters += len(vol.Chapters)
+		}
+	}
 	logger.Info("Generated complete outline with %d part(s), %d volume(s), %d chapter(s)",
 		len(outline.Parts), structure.TargetVolumes*structure.TargetParts, totalChapters)
 

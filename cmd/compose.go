@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -359,6 +360,7 @@ func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.Proje
 }
 
 // generateOutlineHierarchical generates outline using hierarchical approach
+// Supports incremental save and resume
 func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models.ProjectConfig) (*models.Outline, error) {
 	// Load LLM config
 	cfg, err := llm.LoadOrCreateConfig()
@@ -379,11 +381,26 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 		projectConfig.Structure.TargetChapters,
 		projectConfig.Structure.TotalChapters())
 	fmt.Println()
-	fmt.Println("Using hierarchical generation:")
-	fmt.Println("  Phase 1: Generate skeleton (parts and volumes)")
-	fmt.Printf("  Phase 2: Generate chapters for each of %d volumes\n",
-		projectConfig.Structure.TargetParts*projectConfig.Structure.TargetVolumes)
-	fmt.Println()
+
+	// Check for existing partial outline (for resume)
+	progressPath := filepath.Join("story", "compose", "outline_progress.json")
+
+	var outline *models.Outline
+	var resumeMode bool
+
+	if _, err := os.Stat(progressPath); err == nil {
+		// Found progress file, try to resume
+		fmt.Println("📂 Found existing progress file. Resuming generation...")
+		outline, err = loadPartialOutline(progressPath)
+		if err != nil {
+			fmt.Printf("⚠️  Failed to load progress: %v\n", err)
+			fmt.Println("   Starting fresh generation...")
+		} else {
+			resumeMode = true
+			fmt.Println("✓ Resumed from saved progress")
+			printProgressStatus(outline, projectConfig.Structure)
+		}
+	}
 
 	// Create LLM client and agent
 	client := cfg.CreateClient(&projectConfig.LLM)
@@ -394,11 +411,136 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 	agent.SetLanguage(projectConfig.Language)
 
 	ctx := context.Background()
-	outline, err := agent.GenerateOutlineHierarchical(ctx, *setup, projectConfig.Structure)
-	if err != nil {
-		return nil, err
+
+	// Save callback for incremental saves (used in both fresh and resume modes)
+	onVolumeComplete := func(o *models.Outline, partIdx, volIdx, volumeCount int) {
+		if err := savePartialOutline(o, progressPath); err != nil {
+			logger.GetLogger().Warn("Failed to save progress: %v", err)
+		} else {
+			fmt.Printf("💾 Progress saved (%d volumes completed)\n", volumeCount)
+		}
 	}
+
+	if !resumeMode {
+		// Fresh generation
+		fmt.Println("Using hierarchical generation:")
+		fmt.Println("  Phase 1: Generate skeleton (parts and volumes)")
+		fmt.Printf("  Phase 2: Generate chapters for each of %d volumes\n",
+			projectConfig.Structure.TargetParts*projectConfig.Structure.TargetVolumes)
+		fmt.Println()
+
+		// Generate skeleton first
+		skeletonInput := agents.ComposeSkeletonInput{
+			Setup:     *setup,
+			Structure: projectConfig.Structure,
+		}
+		skeletonOutput, err := agent.GenerateSkeleton(ctx, skeletonInput)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate skeleton: %w", err)
+		}
+
+		outline = &models.Outline{
+			Parts: skeletonOutput.Parts,
+		}
+
+		// Save skeleton as initial progress
+		if err := savePartialOutline(outline, progressPath); err != nil {
+			logger.GetLogger().Warn("Failed to save initial progress: %v", err)
+		}
+		fmt.Println("💾 Skeleton saved")
+
+		// Generate chapters with progress saving
+		outline, err = agent.GenerateChaptersHierarchical(ctx, *setup, projectConfig.Structure, outline, onVolumeComplete)
+		if err != nil {
+			// Save progress even on error
+			if saveErr := savePartialOutline(outline, progressPath); saveErr != nil {
+				logger.GetLogger().Warn("Failed to save progress on error: %v", saveErr)
+			}
+			return nil, err
+		}
+
+		// Remove progress file on successful completion
+		os.Remove(progressPath)
+		fmt.Println("\n✓ Generation complete! Progress file removed.")
+	} else {
+		// Resume generation - continue from where we left off
+		fmt.Println("Continuing chapter generation...")
+		fmt.Println()
+
+		outline, err = agent.GenerateChaptersHierarchical(ctx, *setup, projectConfig.Structure, outline, onVolumeComplete)
+		if err != nil {
+			// Save progress even on error
+			if saveErr := savePartialOutline(outline, progressPath); saveErr != nil {
+				logger.GetLogger().Warn("Failed to save progress on error: %v", saveErr)
+			}
+			return nil, err
+		}
+
+		// Remove progress file on successful completion
+		os.Remove(progressPath)
+		fmt.Println("\n✓ Generation complete! Progress file removed.")
+	}
+
 	return outline, nil
+}
+
+// loadPartialOutline loads a partially generated outline from progress file
+func loadPartialOutline(path string) (*models.Outline, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read progress file: %w", err)
+	}
+
+	var outline models.Outline
+	if err := json.Unmarshal(data, &outline); err != nil {
+		return nil, fmt.Errorf("failed to parse progress file: %w", err)
+	}
+
+	return &outline, nil
+}
+
+// savePartialOutline saves the current progress to a file
+func savePartialOutline(outline *models.Outline, path string) error {
+	if outline == nil {
+		return fmt.Errorf("cannot save nil outline")
+	}
+
+	// Ensure directory exists
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	data, err := json.MarshalIndent(outline, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal outline: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write progress file: %w", err)
+	}
+
+	return nil
+}
+
+// printProgressStatus prints the current generation progress
+func printProgressStatus(outline *models.Outline, structure models.StoryStructure) {
+	totalVolumes := structure.TargetParts * structure.TargetVolumes
+	completedVolumes := 0
+	totalChapters := 0
+
+	for _, part := range outline.Parts {
+		for _, vol := range part.Volumes {
+			if len(vol.Chapters) > 0 {
+				completedVolumes++
+				totalChapters += len(vol.Chapters)
+			}
+		}
+	}
+
+	fmt.Printf("\n📊 Progress: %d/%d volumes completed (%d chapters generated)\n",
+		completedVolumes, totalVolumes, totalChapters)
+	fmt.Println()
 }
 
 func regenerateElement(outline *models.Outline, id string, setup *models.StorySetup, projectConfig *models.ProjectConfig) error {

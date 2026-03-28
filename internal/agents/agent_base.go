@@ -105,6 +105,11 @@ func (a *BaseAgent) Execute(ctx context.Context, params InvokeParams, input inte
 
 	logger.Info("[%s] Received response (%d tokens used)", a.name, resp.Usage.TotalTokens)
 
+	// Save response to file for debugging
+	if err := a.saveResponseToFile(a.name, resp.Content); err != nil {
+		logger.Debug("[%s] Failed to save response to file: %v", a.name, err)
+	}
+
 	// Parse response into output
 	if err := a.parseResponse(resp.Content, output); err != nil {
 		return fmt.Errorf("failed to parse response: %w", err)
@@ -183,17 +188,60 @@ func (a *BaseAgent) savePromptsToFile(agentName, systemPrompt, userPrompt string
 	return nil
 }
 
+// saveResponseToFile saves the AI response to a file for debugging
+func (a *BaseAgent) saveResponseToFile(agentName, response string) error {
+	// Create logs directory if it doesn't exist
+	logsDir := filepath.Join("logs", "responses")
+	if err := os.MkdirAll(logsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create logs directory: %w", err)
+	}
+
+	// Generate filename with timestamp
+	timestamp := time.Now().Format("20060102_150405")
+	filename := fmt.Sprintf("%s_%s.md", agentName, timestamp)
+	filepath := filepath.Join(logsDir, filename)
+
+	// Build content
+	var content strings.Builder
+	content.WriteString(fmt.Sprintf("# Agent: %s\n", agentName))
+	content.WriteString(fmt.Sprintf("# Time: %s\n\n", time.Now().Format("2006-01-02 15:04:05")))
+	content.WriteString("---\n\n")
+	content.WriteString("# AI RESPONSE\n\n")
+	content.WriteString("```\n")
+	content.WriteString(response)
+	content.WriteString("\n```\n")
+
+	// Write to file
+	if err := os.WriteFile(filepath, []byte(content.String()), 0644); err != nil {
+		return fmt.Errorf("failed to write response file: %w", err)
+	}
+
+	logger.Debug("[%s] Saved response to: %s", a.name, filepath)
+	return nil
+}
+
 // parseResponse parses the AI response into the output struct
 func (a *BaseAgent) parseResponse(content string, output interface{}) error {
+	// Check for empty content
+	if strings.TrimSpace(content) == "" {
+		return fmt.Errorf("AI response is empty")
+	}
+
 	// Try to parse as JSON directly
 	if err := json.Unmarshal([]byte(content), output); err != nil {
 		// Try to extract JSON from markdown code block
 		jsonContent := extractJSONFromMarkdown(content)
-		logger.Debug("[%s] Extracted JSON from markdown", a.name)
+		logger.Debug("[%s] Extracted JSON from markdown (length: %d)", a.name, len(jsonContent))
+
+		if strings.TrimSpace(jsonContent) == "" {
+			return fmt.Errorf("extracted JSON content is empty\nOriginal response: %s", content)
+		}
+
 		if err := json.Unmarshal([]byte(jsonContent), output); err != nil {
 			logger.Error("[%s] Failed to parse AI response as JSON: %v", a.name, err)
-			logger.Debug("[%s] Raw response: %s", a.name, content)
-			return fmt.Errorf("failed to parse AI response as JSON: %w\nResponse: %s", err, content)
+			logger.Debug("[%s] Raw response (length: %d): %s", a.name, len(content), content)
+			logger.Debug("[%s] Extracted JSON (length: %d): %s", a.name, len(jsonContent), jsonContent)
+			return fmt.Errorf("failed to parse AI response as JSON: %w\nResponse length: %d", err, len(content))
 		}
 	}
 	return nil
@@ -206,22 +254,50 @@ func extractJSONFromMarkdown(content string) string {
 	if startIdx == -1 {
 		startIdx = strings.Index(content, "```")
 	}
+	if startIdx != -1 {
+		// Find the end of the opening marker
+		codeStart := strings.Index(content[startIdx:], "\n")
+		if codeStart != -1 {
+			codeStart += startIdx + 1
+
+			// Find the closing marker
+			endIdx := strings.Index(content[codeStart:], "```")
+			if endIdx != -1 {
+				return strings.TrimSpace(content[codeStart : codeStart+endIdx])
+			}
+			return strings.TrimSpace(content[codeStart:])
+		}
+	}
+
+	// If no code block found, try to find JSON boundaries
+	// Look for the first '{' and the last '}'
+	startIdx = strings.Index(content, "{")
 	if startIdx == -1 {
 		return content
 	}
 
-	// Find the end of the opening marker
-	codeStart := strings.Index(content[startIdx:], "\n")
-	if codeStart == -1 {
-		return content
+	// Find the matching closing brace
+	braceCount := 0
+	endIdx := -1
+	for i := startIdx; i < len(content); i++ {
+		switch content[i] {
+		case '{':
+			braceCount++
+		case '}':
+			braceCount--
+			if braceCount == 0 {
+				endIdx = i
+				break
+			}
+		}
+		if braceCount == 0 && endIdx != -1 {
+			break
+		}
 	}
-	codeStart += startIdx + 1
 
-	// Find the closing marker
-	endIdx := strings.Index(content[codeStart:], "```")
 	if endIdx == -1 {
-		return content[codeStart:]
+		return content[startIdx:]
 	}
 
-	return strings.TrimSpace(content[codeStart : codeStart+endIdx])
+	return strings.TrimSpace(content[startIdx : endIdx+1])
 }
