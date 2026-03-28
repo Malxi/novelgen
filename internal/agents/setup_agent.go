@@ -12,33 +12,33 @@ import (
 
 // SetupGenInput is the input for setup generation
 type SetupGenInput struct {
-	Idea string `md:"idea"`
+	Idea string `json:"idea" md:"idea" desc:"User's story idea or concept"`
 }
 
 // SetupGenOutput is the output for setup generation
 type SetupGenOutput struct {
-	Setup models.StorySetup `md:"setup"`
+	Setup models.StorySetup `json:"setup" md:"setup" desc:"Generated story setup with premise, genres, themes, rules"`
 }
 
 // SetupImproveInput is the input for setup improvement
 type SetupImproveInput struct {
-	ExistingSetup models.StorySetup   `md:"existing_setup"`
-	ReviewResult  models.ReviewResult `md:"review_result,omitempty"` // Optional: for improvement based on review
+	ExistingSetup models.StorySetup   `json:"existing_setup" md:"existing_setup" desc:"Current story setup to improve"`
+	ReviewResult  models.ReviewResult `json:"review_result,omitempty" md:"review_result,omitempty" desc:"Review result for improvement guidance"`
 }
 
 // SetupImproveOutput is the output for setup improvement
 type SetupImproveOutput struct {
-	Setup models.StorySetup `md:"setup"`
+	Setup models.StorySetup `json:"setup" md:"setup" desc:"Improved story setup"`
 }
 
 // SetupReviewInput is the input for setup review
 type SetupReviewInput struct {
-	ExistingSetup models.StorySetup `md:"existing_setup"`
+	ExistingSetup models.StorySetup `json:"existing_setup" md:"existing_setup" desc:"Story setup to review"`
 }
 
 // SetupReviewOutput is the output for setup review
 type SetupReviewOutput struct {
-	Result models.ReviewResult `md:"result"`
+	Result models.ReviewResult `json:"result" md:"result" desc:"Review result with scores and suggestions"`
 }
 
 // SetupAgent handles AI generation for story setup

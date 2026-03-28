@@ -13,105 +13,105 @@ import (
 
 // ComposeGenInput is the input for outline generation
 type ComposeGenInput struct {
-	Setup     models.StorySetup     `md:"setup"`
-	Structure models.StoryStructure `md:"structure"`
+	Setup     models.StorySetup     `json:"setup" md:"setup" desc:"Story setup including premise, genres, themes, rules"`
+	Structure models.StoryStructure `json:"structure" md:"structure" desc:"Story structure including target chapters and volumes"`
 }
 
 // ComposeGenOutput is the output for outline generation
 type ComposeGenOutput struct {
-	Outline models.Outline `md:"outline"`
+	Outline models.Outline `json:"outline" md:"outline" desc:"Generated complete story outline with parts, volumes, chapters"`
 }
 
 // ComposeRegenInput is the input for outline regeneration
 type ComposeRegenInput struct {
-	Outline     models.Outline `md:"outline"`
-	ElementType string         `md:"element_type"` // "part", "volume", "chapter"
-	ElementID   string         `md:"element_id"`
-	Suggestions string         `md:"suggestions"`
-	Context     string         `md:"context,omitempty"` // Surrounding context for continuity
+	Outline     models.Outline `json:"outline" md:"outline" desc:"Existing outline to regenerate from"`
+	ElementType string         `json:"element_type" md:"element_type" desc:"Type of element to regenerate: part, volume, or chapter"`
+	ElementID   string         `json:"element_id" md:"element_id" desc:"ID of the element to regenerate"`
+	Suggestions string         `json:"suggestions" md:"suggestions" desc:"User suggestions for regeneration"`
+	Context     string         `json:"context,omitempty" md:"context,omitempty" desc:"Surrounding context for continuity"`
 }
 
 // ComposeRegenOutput is the output for outline regeneration
 type ComposeRegenOutput struct {
-	Part    *models.Part    `md:"part,omitempty"`
-	Volume  *models.Volume  `md:"volume,omitempty"`
-	Chapter *models.Chapter `md:"chapter,omitempty"`
+	Part    *models.Part    `json:"part,omitempty" md:"part,omitempty" desc:"Regenerated part (if element_type is part)"`
+	Volume  *models.Volume  `json:"volume,omitempty" md:"volume,omitempty" desc:"Regenerated volume (if element_type is volume)"`
+	Chapter *models.Chapter `json:"chapter,omitempty" md:"chapter,omitempty" desc:"Regenerated chapter (if element_type is chapter)"`
 }
 
 // ComposeReviewInput is the input for outline review
 type ComposeReviewInput struct {
-	ExistingOutline models.Outline `md:"existing_outline"`
+	ExistingOutline models.Outline `json:"existing_outline" md:"existing_outline" desc:"Existing outline to review"`
 }
 
 // ComposeReviewOutput is the output for outline review
 type ComposeReviewOutput struct {
-	Result models.ReviewResult `md:"result"`
+	Result models.ReviewResult `json:"result" md:"result" desc:"Review result with scores and suggestions"`
 }
 
 // ComposeImproveInput is the input for outline improvement
 type ComposeImproveInput struct {
-	ExistingOutline models.Outline      `md:"existing_outline"`
-	ReviewResult    models.ReviewResult `md:"review_result,omitempty"` // Optional: for improvement based on review
+	ExistingOutline models.Outline      `json:"existing_outline" md:"existing_outline" desc:"Existing outline to improve"`
+	ReviewResult    models.ReviewResult `json:"review_result,omitempty" md:"review_result,omitempty" desc:"Review result for improvement guidance"`
 }
 
 // ComposeImproveOutput is the output for outline improvement
 type ComposeImproveOutput struct {
-	Outline models.Outline `md:"outline"`
+	Outline models.Outline `json:"outline" md:"outline" desc:"Improved story outline"`
 }
 
 // ComposeSkeletonInput is the input for generating outline skeleton (parts and volumes only)
 type ComposeSkeletonInput struct {
-	Setup     models.StorySetup     `md:"setup"`
-	Structure models.StoryStructure `md:"structure"`
+	Setup     models.StorySetup     `json:"setup" md:"setup" desc:"Story setup including premise, genres, themes, rules"`
+	Structure models.StoryStructure `json:"structure" md:"structure" desc:"Story structure including target chapters and volumes"`
 }
 
 // ComposeSkeletonOutput is the output for outline skeleton generation
 type ComposeSkeletonOutput struct {
-	Parts []models.Part `md:"parts"`
+	Parts []models.Part `json:"parts" md:"parts" desc:"Generated story parts with volumes"`
 }
 
 // ComposeChaptersInput is the input for generating chapters for a volume
 type ComposeChaptersInput struct {
-	Setup          models.StorySetup `md:"setup"`
-	Part           models.Part       `md:"part"`
-	Volume         models.Volume     `md:"volume"`
-	VolumeIndex    int               `md:"volume_index"`
-	TotalVolumes   int               `md:"total_volumes"`
-	ChaptersPerVol int               `md:"chapters_per_volume"`
-	PreviousVolume *models.Volume    `md:"previous_volume,omitempty"`
-	OutlineContext string            `md:"outline_context"`
+	Setup          models.StorySetup `json:"setup" md:"setup" desc:"Story setup including premise, genres, themes, rules"`
+	Part           models.Part       `json:"part" md:"part" desc:"Current part information"`
+	Volume         models.Volume     `json:"volume" md:"volume" desc:"Current volume information"`
+	VolumeIndex    int               `json:"volume_index" md:"volume_index" desc:"Index of current volume"`
+	TotalVolumes   int               `json:"total_volumes" md:"total_volumes" desc:"Total number of volumes"`
+	ChaptersPerVol int               `json:"chapters_per_volume" md:"chapters_per_volume" desc:"Number of chapters per volume"`
+	PreviousVolume *models.Volume    `json:"previous_volume,omitempty" md:"previous_volume,omitempty" desc:"Previous volume for continuity"`
+	OutlineContext string            `json:"outline_context" md:"outline_context" desc:"Context from previously generated outline"`
 }
 
 // ComposeChaptersOutput is the output for chapter generation
 type ComposeChaptersOutput struct {
-	Chapters []models.Chapter `md:"chapters"`
+	Chapters []models.Chapter `json:"chapters" md:"chapters" desc:"Generated chapters for the volume"`
 }
 
 // ComposeReviewVolumeInput is the input for reviewing a specific volume
 type ComposeReviewVolumeInput struct {
-	Outline      models.Outline `md:"outline"`
-	Part         models.Part    `md:"part"`
-	Volume       models.Volume  `md:"volume"`
-	VolumeIndex  int            `md:"volume_index"`
-	TotalVolumes int            `md:"total_volumes"`
+	Outline      models.Outline `json:"outline" md:"outline" desc:"Complete story outline"`
+	Part         models.Part    `json:"part" md:"part" desc:"Current part information"`
+	Volume       models.Volume  `json:"volume" md:"volume" desc:"Volume to review"`
+	VolumeIndex  int            `json:"volume_index" md:"volume_index" desc:"Index of current volume"`
+	TotalVolumes int            `json:"total_volumes" md:"total_volumes" desc:"Total number of volumes"`
 }
 
 // ComposeReviewVolumeOutput is the output for volume review
 type ComposeReviewVolumeOutput struct {
-	Result models.ReviewResult `md:"result"`
+	Result models.ReviewResult `json:"result" md:"result" desc:"Review result with scores and suggestions"`
 }
 
 // ComposeImproveVolumeInput is the input for improving a specific volume
 type ComposeImproveVolumeInput struct {
-	Outline      models.Outline      `md:"outline"`
-	Part         models.Part         `md:"part"`
-	Volume       models.Volume       `md:"volume"`
-	ReviewResult models.ReviewResult `md:"review_result"`
+	Outline      models.Outline      `json:"outline" md:"outline" desc:"Complete story outline"`
+	Part         models.Part         `json:"part" md:"part" desc:"Current part information"`
+	Volume       models.Volume       `json:"volume" md:"volume" desc:"Volume to improve"`
+	ReviewResult models.ReviewResult `json:"review_result" md:"review_result" desc:"Review result for improvement guidance"`
 }
 
 // ComposeImproveVolumeOutput is the output for volume improvement
 type ComposeImproveVolumeOutput struct {
-	Volume models.Volume `md:"volume"`
+	Volume models.Volume `json:"volume" md:"volume" desc:"Improved volume with chapters"`
 }
 
 // ComposeAgent handles AI generation for story outline
@@ -855,10 +855,10 @@ func (a *ComposeAgent) GenerateChaptersHierarchical(ctx context.Context, setup m
 			}
 
 			chaptersOutput, err := a.GenerateChaptersForVolume(ctx, chaptersInput)
-		if err != nil {
-			return outline, fmt.Errorf("failed to generate chapters for volume %d.%d: %w",
-				partIdx+1, volIdx+1, err)
-		}
+			if err != nil {
+				return outline, fmt.Errorf("failed to generate chapters for volume %d.%d: %w",
+					partIdx+1, volIdx+1, err)
+			}
 
 			// Assign chapters to volume
 			volume.Chapters = chaptersOutput.Chapters

@@ -12,83 +12,83 @@ import (
 
 // CraftReviewCharactersInput is the input for character review
 type CraftReviewCharactersInput struct {
-	StorySetup   models.StorySetup           `md:"story_setup"`
-	Outline      string                      `md:"outline"`
-	Characters   map[string]models.Character `md:"characters"`
-	Iteration    int                         `md:"iteration"`
+	StorySetup models.StorySetup           `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Outline    string                      `json:"outline" md:"outline" desc:"Story outline as string"`
+	Characters map[string]models.Character `json:"characters" md:"characters" desc:"Characters to review"`
+	Iteration  int                         `json:"iteration" md:"iteration" desc:"Current iteration number"`
 }
 
 // CraftReviewCharactersOutput is the output for character review
 type CraftReviewCharactersOutput struct {
-	Result models.ReviewResult `md:"result"`
+	Result models.ReviewResult `json:"result" md:"result" desc:"Review result with scores and suggestions"`
 }
 
 // CraftReviewLocationsInput is the input for location review
 type CraftReviewLocationsInput struct {
-	StorySetup   models.StorySetup          `md:"story_setup"`
-	Outline      string                     `md:"outline"`
-	Locations    map[string]models.Location `md:"locations"`
-	Iteration    int                        `md:"iteration"`
+	StorySetup models.StorySetup          `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Outline    string                     `json:"outline" md:"outline" desc:"Story outline as string"`
+	Locations  map[string]models.Location `json:"locations" md:"locations" desc:"Locations to review"`
+	Iteration  int                        `json:"iteration" md:"iteration" desc:"Current iteration number"`
 }
 
 // CraftReviewLocationsOutput is the output for location review
 type CraftReviewLocationsOutput struct {
-	Result models.ReviewResult `md:"result"`
+	Result models.ReviewResult `json:"result" md:"result" desc:"Review result with scores and suggestions"`
 }
 
 // CraftReviewItemsInput is the input for item review
 type CraftReviewItemsInput struct {
-	StorySetup   models.StorySetup      `md:"story_setup"`
-	Outline      string                 `md:"outline"`
-	Items        map[string]models.Item `md:"items"`
-	Iteration    int                    `md:"iteration"`
+	StorySetup models.StorySetup      `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Outline    string                 `json:"outline" md:"outline" desc:"Story outline as string"`
+	Items      map[string]models.Item `json:"items" md:"items" desc:"Items to review"`
+	Iteration  int                    `json:"iteration" md:"iteration" desc:"Current iteration number"`
 }
 
 // CraftReviewItemsOutput is the output for item review
 type CraftReviewItemsOutput struct {
-	Result models.ReviewResult `md:"result"`
+	Result models.ReviewResult `json:"result" md:"result" desc:"Review result with scores and suggestions"`
 }
 
 // CraftImproveCharactersInput is the input for character improvement
 type CraftImproveCharactersInput struct {
-	StorySetup   models.StorySetup           `md:"story_setup"`
-	Outline      string                      `md:"outline"`
-	Characters   map[string]models.Character `md:"characters"`
-	ReviewResult models.ReviewResult         `md:"review_result"`
-	CustomPrompt string                      `md:"custom_prompt,omitempty"`
+	StorySetup   models.StorySetup           `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Outline      string                      `json:"outline" md:"outline" desc:"Story outline as string"`
+	Characters   map[string]models.Character `json:"characters" md:"characters" desc:"Characters to improve"`
+	ReviewResult models.ReviewResult         `json:"review_result" md:"review_result" desc:"Review result for improvement guidance"`
+	CustomPrompt string                      `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional custom prompt"`
 }
 
 // CraftImproveCharactersOutput is the output for character improvement
 type CraftImproveCharactersOutput struct {
-	Characters map[string]models.Character `md:"characters"`
+	Characters map[string]models.Character `json:"characters" md:"characters" desc:"Improved character profiles"`
 }
 
 // CraftImproveLocationsInput is the input for location improvement
 type CraftImproveLocationsInput struct {
-	StorySetup   models.StorySetup          `md:"story_setup"`
-	Outline      string                     `md:"outline"`
-	Locations    map[string]models.Location `md:"locations"`
-	ReviewResult models.ReviewResult        `md:"review_result"`
-	CustomPrompt string                     `md:"custom_prompt,omitempty"`
+	StorySetup   models.StorySetup          `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Outline      string                     `json:"outline" md:"outline" desc:"Story outline as string"`
+	Locations    map[string]models.Location `json:"locations" md:"locations" desc:"Locations to improve"`
+	ReviewResult models.ReviewResult        `json:"review_result" md:"review_result" desc:"Review result for improvement guidance"`
+	CustomPrompt string                     `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional custom prompt"`
 }
 
 // CraftImproveLocationsOutput is the output for location improvement
 type CraftImproveLocationsOutput struct {
-	Locations map[string]models.Location `md:"locations"`
+	Locations map[string]models.Location `json:"locations" md:"locations" desc:"Improved location descriptions"`
 }
 
 // CraftImproveItemsInput is the input for item improvement
 type CraftImproveItemsInput struct {
-	StorySetup   models.StorySetup      `md:"story_setup"`
-	Outline      string                 `md:"outline"`
-	Items        map[string]models.Item `md:"items"`
-	ReviewResult models.ReviewResult    `md:"review_result"`
-	CustomPrompt string                 `md:"custom_prompt,omitempty"`
+	StorySetup   models.StorySetup      `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Outline      string                 `json:"outline" md:"outline" desc:"Story outline as string"`
+	Items        map[string]models.Item `json:"items" md:"items" desc:"Items to improve"`
+	ReviewResult models.ReviewResult    `json:"review_result" md:"review_result" desc:"Review result for improvement guidance"`
+	CustomPrompt string                 `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional custom prompt"`
 }
 
 // CraftImproveItemsOutput is the output for item improvement
 type CraftImproveItemsOutput struct {
-	Items map[string]models.Item `md:"items"`
+	Items map[string]models.Item `json:"items" md:"items" desc:"Improved item descriptions"`
 }
 
 // CraftIterationAgent handles AI-driven element review and improvement

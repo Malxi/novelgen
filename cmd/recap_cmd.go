@@ -173,10 +173,20 @@ func loadFinalChapterContent(chapter *models.Chapter) string {
 	if err != nil {
 		return ""
 	}
-	path := filepath.Join(root, "mine", "chapters", fmt.Sprintf("chapter-%s.md", chapter.ID))
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return ""
+
+	// Try multiple filename formats
+	// Format 1: chapter-{full_id}.md (e.g., chapter-P1-V1-C1.md)
+	path1 := filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapter.ID))
+	if data, err := os.ReadFile(path1); err == nil {
+		return string(data)
 	}
-	return string(data)
+
+	// Format 2: chapter-{number}.md (e.g., chapter-1.md)
+	chapterNum := extractChapterNumber(chapter.ID)
+	path2 := filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapterNum))
+	if data, err := os.ReadFile(path2); err == nil {
+		return string(data)
+	}
+
+	return ""
 }

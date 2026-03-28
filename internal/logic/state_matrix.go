@@ -307,6 +307,12 @@ func (m *StateMatrixManager) loadElementsIntoState(state *models.StateMatrix) {
 		if err := json.Unmarshal(data, &chars); err == nil {
 			for name, char := range chars {
 				state.Characters[name] = char
+				// Also add aliases to the map for lookup
+				for _, alias := range char.Aliases {
+					if alias != "" && alias != name {
+						state.Characters[alias] = char
+					}
+				}
 			}
 		}
 	}

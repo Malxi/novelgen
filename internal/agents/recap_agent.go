@@ -14,15 +14,15 @@ import (
 
 // RecapExtractInput is the input for recap extraction
 type RecapExtractInput struct {
-	ChapterID   string `md:"chapter_id"`
-	Title       string `md:"title"`
-	ChapterText string `md:"chapter_text"`
-	Feedback    string `md:"feedback,omitempty"`
+	ChapterID   string `json:"chapter_id" md:"chapter_id" desc:"Chapter ID"`
+	Title       string `json:"title" md:"title" desc:"Chapter title"`
+	ChapterText string `json:"chapter_text" md:"chapter_text" desc:"Full chapter text to extract recap from"`
+	Feedback    string `json:"feedback,omitempty" md:"feedback,omitempty" desc:"Optional feedback for recap extraction"`
 }
 
 // RecapExtractOutput is the output for recap extraction
 type RecapExtractOutput struct {
-	Recap models.ChapterRecap `md:"recap"`
+	Recap models.ChapterRecap `json:"recap" md:"recap" desc:"Extracted chapter recap with character states and events"`
 }
 
 // RecapAgent extracts a canonical recap JSON from chapter text

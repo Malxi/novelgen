@@ -1,60 +1,138 @@
-# Write Generate Skill
+# Write Generate Skill | 小说终稿生成技能
+## 【最高优先级】不可突破的核心铁律
+> 以下规则为绝对红线，优先级高于所有其他要求，违反任意一条，生成内容即为无效
+1.  绝对不篡改、不违背、不新增任何输入项中的既定设定：包括但不限于story_setup的核心世界观/类型/主题/POV/时态、chapter的全部情节 beats/核心事件/人物/场景、state_matrix的故事状态、recap的既定剧情、next_chapters的后续走向
+2.  绝对保证剧情连续性零崩坏：无吃书、无前后矛盾、无OOC（人设崩塌）、无视角越界、无时间线/地理/物品设定错误
+3.  100%覆盖并执行chapter中要求的全部情节 beats，不遗漏、不调换顺序、不弱化核心 beats，每个beat都必须有明确的情节落地和情绪落点
+4.  严格遵守target_words的字数要求，允许误差范围不超过±5%，禁止大幅超字或字数不足
+5.  优化仅服务于既定情节与设定：仅对文笔、叙事节奏、细节填充、情绪渲染、语句流畅度进行打磨，绝对不推翻、不修改用户草稿的核心情节、人物动机与故事走向
+6.  轻松幽默文风必须服务于核心剧情与人设，禁止为了搞笑篡改既定情节、违背人物设定、打乱核心节奏、消解关键剧情的情绪张力，幽默不能凌驾于故事核心逻辑之上
 
-## Purpose
-Generate final polished chapter content based on drafts and continuity context.
+## 核心目的
+基于用户提供的故事设定、章节草稿、剧情上下文与连续性信息，生成符合出版级标准、零崩坏、强可读性、严格匹配所有要求的**轻松幽默风格**章节终稿正文。
 
-## Input
-- `story_setup`: The story setup containing premise, genres, themes, tense, POV style, etc.
-- `chapter`: Chapter information including ID, title, summary, beats, opening/closing beats, pacing, characters, location
-- `state_matrix`: Current story state formatted as string
-- `target_words`: Target word count for the chapter
-- `context`: Continuity context including previous chapter content and upcoming chapter summaries
-- `recap`: Canonical recap from previous chapter for continuity
-- `next_chapters`: Array of upcoming chapter info for foreshadowing
+## 必须使用的输入项（强制履约）
+> 生成内容必须100%基于以下所有输入项，禁止忽略任意字段的信息
+- `story_setup`: 故事核心设定，包含核心前提、故事类型、核心主题、叙事时态、POV视角规则、受众定位、整体文风基调
+- `chapter`: 单章核心信息，包含章节ID、章节标题、章节核心摘要、完整情节 beats、开篇/收尾核心节点、节奏要求、出场人物、核心场景、【本章幽默浓度档位】
+- `state_matrix`: 当前故事全局状态，包含人物状态、持有物品、人物关系、地图位置、世界观规则生效状态、已解锁剧情节点等全部既定事实
+- `target_words`: 本章目标字数
+- `context`: 剧情连续性上下文，包含前序章节完整内容、已完结剧情的核心设定
+- `recap`: 上一章官方剧情复盘，用于本章开篇的无缝承接
+- `next_chapters`: 后续章节信息数组，用于本章伏笔铺垫与剧情钩子设计
 
-## Output
-- `content`: The final polished chapter content as a string
+## 强制输出规范
+### 输出格式（绝对强制）
+**必须返回有效的 JSON 格式，不要添加任何 markdown 代码块标记或其他说明文字。**
 
-## Guidelines
+响应必须是纯 JSON，格式如下：
+```json
+{
+  "content": "章节终稿正文内容..."
+}
+```
 
-1. **Produce publication-quality prose** - This is the final version, not a draft
-2. **Polish and refine** - Improve upon draft quality in all aspects
-3. **Maintain perfect continuity** - Seamless transitions, consistent details
-4. **Execute all beats flawlessly** - Each beat should be clear and impactful
-5. **Elevate the writing** - Better word choice, smoother flow, stronger impact
-6. **Follow all style guidelines** - Tense, POV, genre, tone, language
+### 核心输出字段
+- `content`: 章节终稿正文，纯文本无格式、无作者注、无括号备注、无剧情说明，仅保留小说正文内容（含对话、叙事、场景描写）
 
-## Quality Standards
+### 可选辅助输出字段（用于用户校验，按需开启）
+- `beat_execution_summary`: 逐beat说明落地情况，确认所有beat均已完成
+- `continuity_checklist`: 连续性校验清单，确认无设定矛盾、无OOC、无吃书
+- `foreshadowing_notes`: 本章预埋伏笔说明，对应后续章节的具体内容
+- `humor_implementation_note`: 本章幽默内容落地说明，确认符合人设与浓度要求
 
-### Language and Style
-- Vivid, evocative prose
-- Varied sentence structure
-- Appropriate vocabulary for genre and audience
-- Natural, engaging dialogue
+---
 
-### Characterization
-- Distinct character voices
-- Consistent behavior and motivation
-- Meaningful character interactions
-- Growth or revelation where appropriate
+## 【核心新增】轻松幽默文风专属执行规范
+### 一、可调节幽默浓度档位（按chapter字段要求执行）
+> 严格匹配本章指定的浓度档位，禁止跨档位过度发挥
+1.  **轻度幽默（剧情向轻松文适配）**
+    以温和的细节反差、人物微表情/小动作吐槽、旁白轻量调侃为主，幽默为剧情服务，不打断主线叙事节奏，适配需要轻松基调但核心走剧情的章节。
+2.  **中度幽默（轻喜剧网文适配）**
+    对话互怼、人物内心OS吐槽、场景小乌龙、人设反差梗密集输出，搞笑内容与主线剧情并重，每300-500字设置1个自然笑点，适配主打轻松搞笑的核心章节。
+3.  **重度幽默（沙雕搞笑文适配）**
+    无厘头剧情反差、密集笑点输出、强喜剧冲突、脑洞式吐槽贯穿全文，以搞笑为核心叙事主线，适配纯搞笑风格的章节。
 
-### Pacing and Structure
-- Compelling opening hook
-- Building tension through rising action
-- Satisfying climax
-- Resonant resolution with forward momentum
+### 二、人设绑定的幽默核心规则（零OOC红线）
+1.  所有幽默内容必须100%贴合人物原生设定，**每个人物的幽默方式必须与其性格、身份、年龄、经历强绑定**，禁止全员统一变成段子手，禁止出现不符合人设的搞笑行为/台词。
+    - 高冷寡言人设：仅可使用极简冷吐槽、面无表情的反差小行为（如面不改色地偷偷扎破反派的自行车胎），绝对禁止变成话痨段子手
+    - 跳脱话痨人设：可使用密集嘴碎吐槽、和其他角色的互怼、脑洞大开的内心OS
+    - 沉稳靠谱人设：可使用对队友离谱行为的精准补刀、无奈的扶额式吐槽，禁止过度放飞
+    - 反派/严肃人设：仅可使用符合其身份的反差乌龙、一本正经地干蠢事，禁止为了搞笑弱化其核心人设与威胁感
+2.  人物的搞笑行为必须有合理的动机支撑，符合当前故事状态与人物关系，禁止为了制造笑点出现突兀的降智行为。
 
-### World-building
-- Rich sensory details
-- Consistent setting portrayal
-- Atmospheric descriptions
-- Believable environment interactions
+### 三、分模块幽默落地执行细则
+#### 1. 叙事与视角幽默规范
+- 严格遵循POV视角规则，限知视角下，所有吐槽、调侃必须基于当前POV人物的认知，禁止开启上帝视角做剧透式吐槽
+- 第一人称/限知第三人称：核心用**人物内心OS**制造笑点，把人物不敢说出口的吐槽、脑内离谱脑洞、对当前场景的无声吐槽写出来，贴合人物性格
+- 全知第三人称：仅可使用温和的旁白式调侃，聚焦于“人物自以为是的操作和现实的反差”，不剧透后续剧情，不打断人物的情绪节奏
+- 用生活化的具象比喻替代生硬的形容词，制造轻松感，比如用“紧张得像上课传纸条被班主任抓包的小学生”替代“他非常紧张”，比喻必须贴合故事的时代背景与人物认知。
 
-## Chapter Structure
+#### 2. 对话幽默规范
+- 搞笑对话必须同时满足以下至少一个核心作用：推进情节、塑造人物、揭示信息、激化/化解矛盾，禁止为了搞笑写无意义的水对话
+- 对话笑点贴合人物关系：损友用互怼补刀、上下级用温和的阴阳怪气、暧昧对象用打情骂俏式吐槽、对手用精准的扎心调侃，禁止跨关系乱玩梗
+- 对话长短适配笑点节奏：短平快的互怼用短句单独成段，加快节奏；内心吐槽用括号（仅适配第一人称）或单独段落，不打断对话流畅度
+- 禁止全员用同一种搞笑语气说话，不同人物的对话笑点必须有明确的风格区分。
 
-1. **Seamless Opening**: Continue from previous chapter or establish new scene
-2. **Engaging Setup**: Draw reader in with compelling situation
-3. **Rising Tension**: Build stakes and develop conflicts
-4. **Climactic Moment**: Peak emotional/intensity point
-5. **Resolution**: Address immediate conflicts
-6. **Forward Hook**: Compelling reason to read next chapter
+#### 3. 场景与情节幽默规范
+- 用「预期反差」制造笑点：在符合剧情逻辑的前提下，设置“人物预期和现实结果的反差”“严肃场景和离谱小细节的反差”，比如反派放完狠话转身踩滑了香蕉皮、主角精心准备的计划毁在了一杯洒掉的奶茶上，反差细节不能破坏核心剧情的推进
+- 笑点节奏适配章节节奏：开篇、铺垫、过渡段落可密集输出笑点，拉满轻松感；核心高潮、关键剧情转折、情绪沉重的节点，必须收敛幽默，绝对禁止用笑点消解关键剧情的情绪张力
+- 伏笔与钩子可结合幽默设计：用搞笑的小细节预埋后续剧情的伏笔，用“离谱的意外引出更大的危机”设计章节钩子，比如“他好不容易躲过了追杀，却栽在了一碗没煮熟的泡面里——而这碗泡面，即将把他拖进更大的麻烦”
+- 场景描写用轻松的多感官细节，避免冗长沉重的环境堆砌，用小的生活化细节拉满氛围感，比如“房间乱得像被哈士奇拆过家，唯一整齐的是桌上码得整整齐齐的泡面桶”。
+
+### 四、幽默内容绝对禁止事项
+1.  禁止使用脱离故事时代背景、时效性极强的网络热梗，除非该梗完全符合出场人物的人设、年龄与时代背景，且不影响文本的长期可读性
+2.  禁止使用低俗、冒犯性、歧视性的烂梗、谐音梗，禁止用笑点冒犯角色、消解角色的核心成长线
+3.  禁止为了制造笑点篡改既定情节、调换beat顺序、弱化核心冲突，搞笑内容必须嵌套在既定的剧情框架内
+4.  禁止在关键剧情节点（如生死危机、重要伏笔揭露、人物核心成长时刻）硬插无关笑点，打乱叙事节奏
+5.  禁止用大段的吐槽、段子替代剧情推进，所有幽默内容必须为故事服务，不能喧宾夺主
+
+---
+
+## 出版级写作基础质量标准
+### 一、视角与叙事铁则
+1.  严格遵循story_setup中规定的POV视角与叙事时态，全程无偏离
+2.  限知视角下，绝对不出现当前POV人物无法看到、听到、感知到、不知情的信息，禁止擅自开启上帝视角
+3.  多POV切换必须严格符合设定要求，切换时有清晰的场景过渡，无混乱跳脱
+4.  叙事全程保持统一的人称与时态，无中途切换错误
+
+### 二、人物塑造与对话规范
+1.  出场人物全程保持人设统一：语气、口头禅、行为逻辑、思维方式、能力边界、核心动机完全符合既定设定，零OOC
+2.  每一句对话必须满足以下至少一个作用：推进核心情节、塑造人物形象、揭示关键信息、激化/化解矛盾，禁止无意义的水对话
+3.  对话符合人物身份、处境与情绪，不同人物的对话风格有明确区分，无千人一面
+4.  人物行为有合理的动机支撑，符合当前故事状态与人物关系，无突兀的降智/开挂行为
+
+### 三、语言与文笔标准
+1.  用词精准贴合故事类型与受众定位，无不符合文风的口语化冗余、翻译腔、语病
+2.  句式结构丰富多变：紧张情节用短句加快节奏，抒情/铺垫/世界观描写用长句营造氛围，避免全程句式单一
+3.  场景描写覆盖多感官细节：视觉、听觉、触觉、嗅觉、味觉结合，而非单一的视觉堆砌，营造强沉浸感
+4.  情绪渲染贴合情节节奏，用细节动作、环境烘托替代直白的情绪形容词
+5.  段落长短适配节奏：大段描写不超过3行，对话单独成段，提升移动端阅读舒适度
+
+### 四、世界观与连续性规范
+1.  所有场景、物品、规则、设定完全符合story_setup与state_matrix的既定内容，无自相矛盾
+2.  严格遵循故事的时间线、地理逻辑，人物的移动、事件的发生符合时空逻辑
+3.  前序剧情中出现的关键物品、人物关系、事件伏笔，在本章有合理的呼应，无凭空消失的设定
+4.  世界观细节自然融入叙事，无生硬的说明文式科普，通过人物行为、对话、场景互动自然展现
+
+### 五、节奏与情节把控
+1.  严格遵循chapter中规定的章节节奏要求，张弛有度，无全程平铺直叙或全程高强度无喘息
+2.  情节推进有明确的因果逻辑，每个事件的发生都有铺垫，结果符合逻辑，无突兀的剧情跳转
+3.  冲突与 stakes（利害关系/赌注）逐级提升，让读者持续保持阅读期待
+4.  基于next_chapters的内容，在本章预埋3-5处草蛇灰线的伏笔，伏笔自然融入当前情节，不剧透、不突兀，为后续剧情做铺垫
+
+## 强制章节结构与字数分配规则
+> 结构必须严格对应chapter中的情节beats，同时适配以下叙事逻辑，字数按target_words精准分配
+1.  无缝开篇（占比10%-15%）：严格承接recap的上一章结尾剧情，无断层，快速建立本章核心场景与核心矛盾，用轻松的笑点第一时间抓住读者注意力
+2.  情节铺垫与上升动作（占比40%-50%）：落地本章核心铺垫 beats，逐步提升冲突强度，完善人物动机，交代必要信息，按指定浓度密集输出笑点，推动情节向高潮发展
+3.  本章高潮节点（占比15%-20%）：落地本章核心高潮beat，为本章情绪与冲突的峰值，严格控制笑点输出，不消解核心高潮的张力
+4.  即时冲突收尾（占比10%-15%）：解决本章的即时核心冲突，完成本章核心叙事闭环，可加入轻量笑点做情绪缓冲
+5.  下章钩子（占比5%-10%）：基于next_chapters的内容，留下有强吸引力的悬念/危机/新线索，可结合幽默反差设计，给读者明确的继续阅读的理由，禁止无意义的断章
+
+## 全局绝对禁止事项
+1.  禁止添加任何正文以外的内容，包括但不限于作者注、剧情说明、括号备注、章节总结、写作思路
+2.  禁止出现与本章核心情节、核心人物无关的水内容、支线剧情，所有内容必须服务于本章核心叙事
+3.  禁止擅自新增、修改、删除输入项中的任何既定设定与情节 beats
+4.  禁止出现不符合POV视角的上帝视角内容、不符合人设的OOC内容、不符合前序剧情的吃书内容
+5.  禁止使用不符合故事类型与文风的用词、句式、梗，禁止低俗、冗余、语病内容
+6.  禁止在高潮前泄底，禁止在钩子中直接剧透后续章节的完整剧情

@@ -227,6 +227,13 @@ func (a *BaseAgent) parseResponse(content string, output interface{}) error {
 		return fmt.Errorf("AI response is empty")
 	}
 
+	// Check for common error patterns in AI response
+	contentPreview := content
+	if len(contentPreview) > 200 {
+		contentPreview = contentPreview[:200] + "..."
+	}
+	logger.Debug("[%s] Parsing response (length: %d), preview: %s", a.name, len(content), contentPreview)
+
 	// Try to parse as JSON directly
 	if err := json.Unmarshal([]byte(content), output); err != nil {
 		// Try to extract JSON from markdown code block
@@ -234,14 +241,20 @@ func (a *BaseAgent) parseResponse(content string, output interface{}) error {
 		logger.Debug("[%s] Extracted JSON from markdown (length: %d)", a.name, len(jsonContent))
 
 		if strings.TrimSpace(jsonContent) == "" {
-			return fmt.Errorf("extracted JSON content is empty\nOriginal response: %s", content)
+			// Log the problematic response for debugging
+			logger.Error("[%s] Extracted JSON content is empty. Raw response preview: %s", a.name, contentPreview)
+			return fmt.Errorf("extracted JSON content is empty - AI may have returned non-JSON content\nOriginal response length: %d", len(content))
 		}
 
 		if err := json.Unmarshal([]byte(jsonContent), output); err != nil {
 			logger.Error("[%s] Failed to parse AI response as JSON: %v", a.name, err)
-			logger.Debug("[%s] Raw response (length: %d): %s", a.name, len(content), content)
-			logger.Debug("[%s] Extracted JSON (length: %d): %s", a.name, len(jsonContent), jsonContent)
-			return fmt.Errorf("failed to parse AI response as JSON: %w\nResponse length: %d", err, len(content))
+			// Log more context about the error
+			errorPreview := jsonContent
+			if len(errorPreview) > 500 {
+				errorPreview = errorPreview[:500] + "..."
+			}
+			logger.Error("[%s] JSON content that failed to parse: %s", a.name, errorPreview)
+			return fmt.Errorf("failed to parse AI response as JSON: %w\nResponse length: %d, JSON extraction length: %d", err, len(content), len(jsonContent))
 		}
 	}
 	return nil

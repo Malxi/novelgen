@@ -100,9 +100,56 @@ Examples:
 	RunE: runWriteImprove,
 }
 
+var writeReviewCmd = &cobra.Command{
+	Use:   "review",
+	Short: "Review final chapter content",
+	Long: `Review final chapter content and generate review reports.
+
+This command will:
+1. Load existing final chapters
+2. Review each chapter for quality
+3. Save review results to story/reviews/
+
+Examples:
+  # Review chapter 1
+  novelgen write review --chapter 1
+
+  # Review all chapters in volume 1
+  novelgen write review --volume 1
+
+  # Review all chapters
+  novelgen write review --all`,
+	RunE: runWriteReview,
+}
+
+var writePipelineCmd = &cobra.Command{
+	Use:   "pipeline",
+	Short: "Run complete writing pipeline: gen -> review -> improve -> recap",
+	Long: `Run the complete writing pipeline for a chapter or volume.
+
+This command will:
+1. Generate final chapter content (if not exists)
+2. Review the generated content
+3. Improve content based on review (iterative)
+4. Generate recap for continuity
+
+Examples:
+  # Run pipeline for chapter 1
+  novelgen write pipeline --chapter 1
+
+  # Run pipeline for volume 1 with 3 improvement rounds
+  novelgen write pipeline --volume 1 --max-rounds 3
+
+  # Run pipeline with custom target words
+  novelgen write pipeline --chapter 1 --words 3000`,
+	RunE: runWritePipeline,
+}
+
 func init() {
 	writeCmd.AddCommand(writeGenCmd)
 	writeCmd.AddCommand(writeImproveCmd)
+	writeCmd.AddCommand(writeReviewCmd)
+	writeCmd.AddCommand(writePipelineCmd)
 
 	writeGenCmd.Flags().StringVar(&writeChapterFlag, "chapter", "", "Chapter number(s) to generate (e.g., '1', '1-5', or 'P1-V1-C1')")
 	writeGenCmd.Flags().StringVar(&writeVolumeFlag, "volume", "", "Volume number for context (e.g., '1', 'P1-V1')")
@@ -122,6 +169,25 @@ func init() {
 	writeImproveCmd.Flags().BoolVar(&writeTeleportFixFlag, "enable-teleport-auto-fix", true, "Enable automatic teleport transition fixes")
 	writeImproveCmd.Flags().IntVar(&writeCharacterPatchRetriesFlag, "character-patch-retries", 1, "Max retries for character presence patch")
 	writeImproveCmd.Flags().BoolVar(&writeCharacterFixFlag, "enable-character-presence-auto-fix", true, "Enable automatic character presence fixes")
+
+	writeReviewCmd.Flags().StringVar(&writeChapterFlag, "chapter", "", "Chapter to review (e.g., '1' or 'P1-V1-C1')")
+	writeReviewCmd.Flags().StringVar(&writeVolumeFlag, "volume", "", "Volume to review (e.g., '1', 'P1-V1')")
+	writeReviewCmd.Flags().StringVar(&writePartFlag, "part", "", "Part to review (e.g., '1', 'P1')")
+	writeReviewCmd.Flags().BoolVar(&writeAllFlag, "all", false, "Review all chapters")
+	writeReviewCmd.Flags().IntVar(&writeConcurrencyFlag, "concurrency", 1, "Number of concurrent reviews")
+
+	writePipelineCmd.Flags().StringVar(&writeChapterFlag, "chapter", "", "Chapter to process (e.g., '1' or 'P1-V1-C1')")
+	writePipelineCmd.Flags().StringVar(&writeVolumeFlag, "volume", "", "Volume to process (e.g., '1', 'P1-V1')")
+	writePipelineCmd.Flags().StringVar(&writePartFlag, "part", "", "Part to process (e.g., '1', 'P1')")
+	writePipelineCmd.Flags().IntVar(&writeWordsFlag, "words", 2000, "Target word count for the chapter")
+	writePipelineCmd.Flags().IntVar(&writeMaxRoundsFlag, "max-rounds", 2, "Maximum improvement rounds")
+	writePipelineCmd.Flags().IntVar(&writeMinScoreFlag, "min-score", 7, "Minimum acceptable score (1-10)")
+	writePipelineCmd.Flags().IntVar(&writeContextFlag, "context", 1, "Number of surrounding chapters to include as context")
+	writePipelineCmd.Flags().IntVar(&writeConcurrencyFlag, "concurrency", 1, "Number of concurrent operations")
+	writePipelineCmd.Flags().BoolVar(&writeTeleportFixFlag, "enable-teleport-auto-fix", true, "Enable automatic teleport transition fixes")
+	writePipelineCmd.Flags().IntVar(&writeBridgeRetriesFlag, "bridge-retries", 1, "Max retries for teleport transition bridge patch")
+	writePipelineCmd.Flags().BoolVar(&writeCharacterFixFlag, "enable-character-presence-auto-fix", true, "Enable automatic character presence fixes")
+	writePipelineCmd.Flags().IntVar(&writeCharacterPatchRetriesFlag, "character-patch-retries", 1, "Max retries for character presence patch")
 
 	// Register write command using the new plugin mechanism
 	RegisterCommand(func() *cobra.Command {
@@ -161,6 +227,12 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	client := cfg.CreateClient(&config.LLM)
 	if client == nil {
 		return fmt.Errorf("failed to create LLM client")
+	}
+
+	// Use config target words if flag is default (2000)
+	targetWords := writeWordsFlag
+	if targetWords == 2000 && config.ChapterConfig.TargetWordsPerChapter > 0 {
+		targetWords = config.ChapterConfig.TargetWordsPerChapter
 	}
 
 	// Create write agent
@@ -216,7 +288,7 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
 
 				// Generate final content
-				content, err := agent.GenerateChapter(ctx, chapter, context, stateMatrix, writeWordsFlag)
+				content, err := agent.GenerateChapter(ctx, chapter, context, stateMatrix, targetWords)
 				if err != nil {
 					log.Error("Failed to generate content for chapter %s: %v", chapter.ID, err)
 					continue
@@ -449,6 +521,12 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create LLM client")
 	}
 
+	// Use config target words if flag is default (2000)
+	targetWords := writeWordsFlag
+	if targetWords == 2000 && config.ChapterConfig.TargetWordsPerChapter > 0 {
+		targetWords = config.ChapterConfig.TargetWordsPerChapter
+	}
+
 	// Create write agent
 	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	writeAgent.SetLanguage(config.Language)
@@ -466,6 +544,36 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 	volumes := getVolumesForDraft(outline, writeVolumeFlag, writeChapterFlag)
 	if len(volumes) == 0 {
 		return fmt.Errorf("no volumes found to improve")
+	}
+
+	// Auto-review flag - set to true if any volume needs review
+	autoReviewNeeded := false
+
+	// Check if reviews exist for all volumes
+	for _, volume := range volumes {
+		_, err := loadVolumeReview(volume.ID)
+		if err != nil {
+			log.Info("No review found for volume %s, will auto-review", volume.ID)
+			autoReviewNeeded = true
+		}
+	}
+
+	// Auto-review if needed
+	if autoReviewNeeded {
+		log.Info("=== Auto-Review Phase ===")
+		log.Info("Some volumes don't have reviews, running auto-review first...")
+
+		// Run review for volumes that need it
+		for _, volume := range volumes {
+			_, err := loadVolumeReview(volume.ID)
+			if err != nil {
+				log.Info("Auto-reviewing volume: %s", volume.ID)
+				if err := reviewVolumeWithWriteAgent(ctx, writeAgent, volume, outline, targetWords, writeConcurrencyFlag); err != nil {
+					log.Error("Failed to auto-review volume %s: %v", volume.ID, err)
+				}
+			}
+		}
+		log.Info("Auto-review phase complete")
 	}
 
 	// Run improvement rounds
@@ -492,7 +600,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 			log.Info("Volume %s: Improving %d chapters", volume.ID, len(chaptersToImprove))
 
 			// Improve chapters concurrently
-			improved := improveChaptersWithWriteAgent(ctx, writeAgent, chaptersToImprove, review.Reviews, outline, stateManager, writeConcurrencyFlag)
+			improved := improveChaptersWithWriteAgent(ctx, writeAgent, chaptersToImprove, review.Reviews, outline, stateManager, writeConcurrencyFlag, targetWords)
 			improvedCount += improved
 		}
 
@@ -506,7 +614,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 		// Re-review after improvement (if not last round)
 		if round < writeMaxRoundsFlag {
 			log.Info("Re-reviewing after improvements...")
-			if err := runDraftReview(cmd, args); err != nil {
+			if err := runWriteReview(cmd, args); err != nil {
 				log.Error("Re-review failed: %v", err)
 			}
 		}
@@ -517,7 +625,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 }
 
 // improveChaptersWithWriteAgent improves chapters using the write agent
-func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, stateManager *logic.StateMatrixManager, concurrency int) int {
+func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, stateManager *logic.StateMatrixManager, concurrency int, targetWords int) int {
 	log := logger.GetLogger()
 
 	// Create review map for quick lookup
@@ -555,7 +663,7 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
 
 				// Generate improved content with suggestions
-				content, err := agent.GenerateChapterWithSuggestions(ctx, chapter, context, stateMatrix, writeWordsFlag, suggestions)
+				content, err := agent.GenerateChapterWithSuggestions(ctx, chapter, context, stateMatrix, targetWords, suggestions)
 				if err != nil {
 					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
 					continue
@@ -573,13 +681,13 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 					writeTeleportFixFlag,
 					writeBridgeRetriesFlag,
 					func(s string) (string, error) {
-						return agent.GenerateChapterWithSuggestions(ctx, chapter, context, stateMatrix, writeWordsFlag, s)
+						return agent.GenerateChapterWithSuggestions(ctx, chapter, context, stateMatrix, targetWords, s)
 					},
 					writeCharacterFixFlag,
 					writeCharacterPatchRetriesFlag,
 					knownChars,
 					func(s string) (string, error) {
-						return agent.GenerateChapterWithSuggestions(ctx, chapter, context, stateMatrix, writeWordsFlag, s)
+						return agent.GenerateChapterWithSuggestions(ctx, chapter, context, stateMatrix, targetWords, s)
 					},
 				)
 				content = fixed
@@ -610,4 +718,508 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 	wg.Wait()
 
 	return improvedCount
+}
+
+// runWriteReview reviews final chapters and saves review results
+func runWriteReview(cmd *cobra.Command, args []string) error {
+	log := logger.GetLogger()
+	ctx := cmd.Context()
+
+	// Load project config
+	config, err := loadProjectConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load project config: %w", err)
+	}
+
+	// Load story setup
+	setup, err := loadStorySetup()
+	if err != nil {
+		return fmt.Errorf("failed to load story setup: %w", err)
+	}
+
+	// Load outline
+	outline, err := loadOutline()
+	if err != nil {
+		return fmt.Errorf("failed to load outline: %w", err)
+	}
+
+	// Load LLM config
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load LLM config: %w", err)
+	}
+
+	// Create LLM client
+	client := cfg.CreateClient(&config.LLM)
+	if client == nil {
+		return fmt.Errorf("failed to create LLM client")
+	}
+
+	// Use config target words if flag is default (2000)
+	targetWords := writeWordsFlag
+	if targetWords == 2000 && config.ChapterConfig.TargetWordsPerChapter > 0 {
+		targetWords = config.ChapterConfig.TargetWordsPerChapter
+	}
+
+	// Create write agent
+	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
+	writeAgent.SetLanguage(config.Language)
+
+	// Get chapters to review based on flags
+	chaptersToReview := getChaptersToReview(outline, writeChapterFlag, writeVolumeFlag, writePartFlag, writeAllFlag)
+	if len(chaptersToReview) == 0 {
+		return fmt.Errorf("no chapters found to review")
+	}
+
+	log.Info("Reviewing %d chapter(s)", len(chaptersToReview))
+
+	// Group chapters by volume for saving reviews
+	volumeReviews := make(map[string]*agents.VolumeReview)
+
+	// Review chapters concurrently
+	chapterChan := make(chan *models.Chapter, len(chaptersToReview))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	concurrency := writeConcurrencyFlag
+	if concurrency <= 0 {
+		concurrency = 1
+	}
+	if concurrency > len(chaptersToReview) {
+		concurrency = len(chaptersToReview)
+	}
+
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			for chapter := range chapterChan {
+				log.Info("[Worker %d] Reviewing chapter: %s - %s", workerID, chapter.ID, chapter.Title)
+
+				// Load final chapter content
+				content := loadFinalChapterContent(chapter)
+				if content == "" {
+					log.Warn("[Worker %d] No final content found for chapter %s, skipping", workerID, chapter.ID)
+					continue
+				}
+
+				// Review chapter
+				reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, content, targetWords, 1)
+				if err != nil {
+					log.Error("[Worker %d] Failed to review chapter %s: %v", workerID, chapter.ID, err)
+					continue
+				}
+
+				// Convert suggestions to strings
+				var suggestionStrings []string
+				for _, s := range reviewResult.Suggestions {
+					suggestionStrings = append(suggestionStrings, fmt.Sprintf("[%s] %s: %s", s.Priority, s.Category, s.Suggestion))
+				}
+
+				// Convert to DraftReview
+				draftReview := agents.DraftReview{
+					ChapterID:     chapter.ID,
+					ChapterTitle:  chapter.Title,
+					OverallScore:  int(reviewResult.OverallScore / 10), // Convert 0-100 to 0-10
+					NeedsRevision: reviewResult.OverallScore < 70,
+					Suggestions:   suggestionStrings,
+				}
+
+				// Get volume ID for this chapter
+				volumeID := getVolumeIDFromChapter(chapter.ID)
+				volume := outline.GetVolumeByID(volumeID)
+
+				mu.Lock()
+				// Create volume review if not exists
+				if _, exists := volumeReviews[volumeID]; !exists {
+					volumeTitle := ""
+					if volume != nil {
+						volumeTitle = volume.Title
+					}
+					volumeReviews[volumeID] = &agents.VolumeReview{
+						VolumeID:    volumeID,
+						VolumeTitle: volumeTitle,
+						Reviews:     make([]agents.DraftReview, 0),
+					}
+				}
+				volumeReviews[volumeID].Reviews = append(volumeReviews[volumeID].Reviews, draftReview)
+				mu.Unlock()
+
+				log.Info("[Worker %d] Reviewed chapter %s: score %.1f", workerID, chapter.ID, reviewResult.OverallScore)
+			}
+		}(i)
+	}
+
+	// Send chapters to workers
+	for _, chapter := range chaptersToReview {
+		chapterChan <- chapter
+	}
+	close(chapterChan)
+
+	// Wait for all workers to complete
+	wg.Wait()
+
+	// Save all volume reviews
+	for volumeID, review := range volumeReviews {
+		if err := saveVolumeReview(review); err != nil {
+			log.Error("Failed to save review for volume %s: %v", volumeID, err)
+			continue
+		}
+		log.Info("Review saved for volume %s: %d chapters reviewed", volumeID, len(review.Reviews))
+	}
+
+	log.Info("Review process complete")
+	return nil
+}
+
+// getChaptersToReview returns chapters to review based on flags
+func getChaptersToReview(outline *models.Outline, chapterFlag, volumeFlag, partFlag string, allFlag bool) []*models.Chapter {
+	// If --all flag, return all chapters
+	if allFlag {
+		return getAllChapters(outline)
+	}
+
+	// If chapter flag specified, return specific chapter(s)
+	if chapterFlag != "" {
+		chapters, err := getChaptersToGenerate(outline, chapterFlag, volumeFlag, partFlag, false)
+		if err == nil {
+			return chapters
+		}
+	}
+
+	// If volume flag specified, return all chapters in volume
+	if volumeFlag != "" {
+		var chapters []*models.Chapter
+		volumeID := resolveVolumeID(outline, volumeFlag, partFlag)
+		for _, ch := range getAllChapters(outline) {
+			if strings.HasPrefix(ch.ID, volumeID) {
+				chapters = append(chapters, ch)
+			}
+		}
+		return chapters
+	}
+
+	// Default: return all chapters
+	return getAllChapters(outline)
+}
+
+// getVolumeIDFromChapter extracts volume ID from chapter ID
+// e.g., "P1-V1-C1" -> "P1-V1"
+func getVolumeIDFromChapter(chapterID string) string {
+	parts := strings.Split(chapterID, "-")
+	if len(parts) >= 2 {
+		return strings.Join(parts[:2], "-")
+	}
+	return ""
+}
+
+// resolveVolumeID resolves volume flag to full volume ID
+func resolveVolumeID(outline *models.Outline, volumeFlag, partFlag string) string {
+	// If already full ID, return as is
+	if strings.Contains(volumeFlag, "-") {
+		return volumeFlag
+	}
+
+	// Try to resolve with part flag
+	partID := partFlag
+	if partID == "" {
+		partID = "P1" // Default to first part
+	}
+	if !strings.HasPrefix(partID, "P") {
+		partID = "P" + partID
+	}
+
+	volumeID := volumeFlag
+	if !strings.HasPrefix(volumeID, "V") {
+		volumeID = "V" + volumeID
+	}
+
+	return partID + "-" + volumeID
+}
+
+// reviewVolumeWithWriteAgent reviews all chapters in a volume using the write agent
+func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAgent, volume *models.Volume, outline *models.Outline, targetWords int, concurrency int) error {
+	log := logger.GetLogger()
+
+	// Get all chapters in this volume
+	var chapters []*models.Chapter
+	for _, ch := range getAllChapters(outline) {
+		if strings.HasPrefix(ch.ID, volume.ID) {
+			chapters = append(chapters, ch)
+		}
+	}
+
+	if len(chapters) == 0 {
+		return fmt.Errorf("no chapters found in volume %s", volume.ID)
+	}
+
+	// Create volume review
+	volumeReview := &agents.VolumeReview{
+		VolumeID:    volume.ID,
+		VolumeTitle: volume.Title,
+		Reviews:     make([]agents.DraftReview, 0),
+	}
+
+	// Review chapters concurrently
+	chapterChan := make(chan *models.Chapter, len(chapters))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	if concurrency <= 0 {
+		concurrency = 1
+	}
+	if concurrency > len(chapters) {
+		concurrency = len(chapters)
+	}
+
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			for chapter := range chapterChan {
+				log.Info("[Worker %d] Reviewing chapter: %s - %s", workerID, chapter.ID, chapter.Title)
+
+				// Load final chapter content
+				content := loadFinalChapterContent(chapter)
+				if content == "" {
+					log.Warn("[Worker %d] No final content found for chapter %s, skipping", workerID, chapter.ID)
+					continue
+				}
+
+				// Review chapter
+				reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, content, targetWords, 1)
+				if err != nil {
+					log.Error("[Worker %d] Failed to review chapter %s: %v", workerID, chapter.ID, err)
+					continue
+				}
+
+				// Convert suggestions to strings
+				var suggestionStrings []string
+				for _, s := range reviewResult.Suggestions {
+					suggestionStrings = append(suggestionStrings, fmt.Sprintf("[%s] %s: %s", s.Priority, s.Category, s.Suggestion))
+				}
+
+				// Convert to DraftReview
+				draftReview := agents.DraftReview{
+					ChapterID:     chapter.ID,
+					ChapterTitle:  chapter.Title,
+					OverallScore:  int(reviewResult.OverallScore / 10), // Convert 0-100 to 0-10
+					NeedsRevision: reviewResult.OverallScore < 70,
+					Suggestions:   suggestionStrings,
+				}
+
+				mu.Lock()
+				volumeReview.Reviews = append(volumeReview.Reviews, draftReview)
+				mu.Unlock()
+
+				log.Info("[Worker %d] Reviewed chapter %s: score %.1f", workerID, chapter.ID, reviewResult.OverallScore)
+			}
+		}(i)
+	}
+
+	// Send chapters to workers
+	for _, chapter := range chapters {
+		chapterChan <- chapter
+	}
+	close(chapterChan)
+
+	// Wait for all workers to complete
+	wg.Wait()
+
+	// Save volume review
+	if err := saveVolumeReview(volumeReview); err != nil {
+		return fmt.Errorf("failed to save review for volume %s: %w", volume.ID, err)
+	}
+
+	log.Info("Review saved for volume %s: %d chapters reviewed", volume.ID, len(volumeReview.Reviews))
+	return nil
+}
+
+// runWritePipeline runs the complete writing pipeline: gen -> review -> improve -> recap
+func runWritePipeline(cmd *cobra.Command, args []string) error {
+	log := logger.GetLogger()
+	ctx := cmd.Context()
+
+	// Load project config
+	config, err := loadProjectConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load project config: %w", err)
+	}
+
+	// Load story setup
+	setup, err := loadStorySetup()
+	if err != nil {
+		return fmt.Errorf("failed to load story setup: %w", err)
+	}
+
+	// Load outline
+	outline, err := loadOutline()
+	if err != nil {
+		return fmt.Errorf("failed to load outline: %w", err)
+	}
+
+	// Load LLM config
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load LLM config: %w", err)
+	}
+
+	// Create LLM client
+	client := cfg.CreateClient(&config.LLM)
+	if client == nil {
+		return fmt.Errorf("failed to create LLM client")
+	}
+
+	// Use config target words if flag is default (2000)
+	targetWords := writeWordsFlag
+	if targetWords == 2000 && config.ChapterConfig.TargetWordsPerChapter > 0 {
+		targetWords = config.ChapterConfig.TargetWordsPerChapter
+	}
+
+	// Create write agent
+	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
+	writeAgent.SetLanguage(config.Language)
+
+	// Get project root for state matrix manager
+	root, err := findProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to find project root: %w", err)
+	}
+
+	// Create state matrix manager
+	stateManager := logic.NewStateMatrixManager(root)
+
+	// Get chapters to process
+	chaptersToProcess := getChaptersToReview(outline, writeChapterFlag, writeVolumeFlag, writePartFlag, writeAllFlag)
+	if len(chaptersToProcess) == 0 {
+		return fmt.Errorf("no chapters found to process")
+	}
+
+	log.Info("=== WRITE PIPELINE ===")
+	log.Info("Processing %d chapter(s)", len(chaptersToProcess))
+
+	// Phase 1: Generate chapters (if not exists)
+	log.Info("\n[Phase 1/4] Generating chapters...")
+	for _, chapter := range chaptersToProcess {
+		content := loadFinalChapterContent(chapter)
+		if content == "" {
+			log.Info("Generating chapter: %s - %s", chapter.ID, chapter.Title)
+			// Load context
+			chapterContext := loadChapterContext(outline, chapter, writeContextFlag)
+			// Calculate state matrix
+			stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
+			// Generate chapter
+			generatedContent, err := writeAgent.GenerateChapter(ctx, chapter, chapterContext, stateMatrix, targetWords)
+			if err != nil {
+				log.Error("Failed to generate chapter %s: %v", chapter.ID, err)
+				continue
+			}
+			// Save chapter
+			if err := saveFinalChapter(chapter, generatedContent); err != nil {
+				log.Error("Failed to save chapter %s: %v", chapter.ID, err)
+				continue
+			}
+			log.Info("✓ Generated and saved chapter: %s", chapter.ID)
+		} else {
+			log.Info("Chapter %s already exists, skipping generation", chapter.ID)
+		}
+	}
+
+	// Phase 2: Review chapters
+	log.Info("\n[Phase 2/4] Reviewing chapters...")
+	volumeMap := make(map[string]*models.Volume)
+	for _, chapter := range chaptersToProcess {
+		volumeID := getVolumeIDFromChapter(chapter.ID)
+		if _, exists := volumeMap[volumeID]; !exists {
+			volume := outline.GetVolumeByID(volumeID)
+			if volume != nil {
+				volumeMap[volumeID] = volume
+			}
+		}
+	}
+
+	for _, volume := range volumeMap {
+		log.Info("Reviewing volume: %s", volume.ID)
+		if err := reviewVolumeWithWriteAgent(ctx, writeAgent, volume, outline, targetWords, writeConcurrencyFlag); err != nil {
+			log.Error("Failed to review volume %s: %v", volume.ID, err)
+		}
+	}
+
+	// Phase 3: Improve chapters (iterative)
+	log.Info("\n[Phase 3/4] Improving chapters...")
+	for round := 1; round <= writeMaxRoundsFlag; round++ {
+		log.Info("--- Improvement Round %d/%d ---", round, writeMaxRoundsFlag)
+		improvedCount := 0
+
+		for _, volume := range volumeMap {
+			// Load review for this volume
+			review, err := loadVolumeReview(volume.ID)
+			if err != nil {
+				log.Warn("No review found for volume %s, skipping", volume.ID)
+				continue
+			}
+
+			// Get chapters that need improvement
+			chaptersToImprove := getChaptersNeedingImprovement(review, outline, writeMinScoreFlag)
+			if len(chaptersToImprove) == 0 {
+				log.Info("Volume %s: All chapters meet quality threshold", volume.ID)
+				continue
+			}
+
+			log.Info("Volume %s: Improving %d chapters", volume.ID, len(chaptersToImprove))
+
+			// Improve chapters
+			improved := improveChaptersWithWriteAgent(ctx, writeAgent, chaptersToImprove, review.Reviews, outline, stateManager, writeConcurrencyFlag, targetWords)
+			improvedCount += improved
+
+			// Re-review after improvement (if not last round)
+			if round < writeMaxRoundsFlag && improved > 0 {
+				log.Info("Re-reviewing volume %s after improvements...", volume.ID)
+				if err := reviewVolumeWithWriteAgent(ctx, writeAgent, volume, outline, targetWords, writeConcurrencyFlag); err != nil {
+					log.Error("Failed to re-review volume %s: %v", volume.ID, err)
+				}
+			}
+		}
+
+		log.Info("Round %d complete: %d chapters improved", round, improvedCount)
+		if improvedCount == 0 {
+			log.Info("No more chapters need improvement")
+			break
+		}
+	}
+
+	// Phase 4: Generate recaps
+	log.Info("\n[Phase 4/4] Generating recaps...")
+	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
+	recapAgent.SetLanguage(config.Language)
+
+	for _, chapter := range chaptersToProcess {
+		content := loadFinalChapterContent(chapter)
+		if content == "" {
+			log.Warn("No content found for chapter %s, skipping recap", chapter.ID)
+			continue
+		}
+
+		log.Info("Generating recap for chapter: %s", chapter.ID)
+
+		// Generate recap
+		chapterRecap, err := recapAgent.Extract(ctx, chapter.ID, chapter.Title, content)
+		if err != nil {
+			log.Error("Failed to generate recap for chapter %s: %v", chapter.ID, err)
+			continue
+		}
+
+		// Save recap using recap.Store for consistency
+		recapStore := recap.NewStore(root)
+		if err := recapStore.Save(chapterRecap); err != nil {
+			log.Error("Failed to save recap for chapter %s: %v", chapter.ID, err)
+			continue
+		}
+
+		log.Info("✓ Generated and saved recap for chapter: %s", chapter.ID)
+	}
+
+	log.Info("\n=== PIPELINE COMPLETE ===")
+	log.Info("All phases completed successfully!")
+	return nil
 }

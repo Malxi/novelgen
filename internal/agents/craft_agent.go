@@ -10,46 +10,83 @@ import (
 	"novelgen/internal/models"
 )
 
+// CraftStorySetupSummary is a lightweight version of StorySetup for craft generation
+type CraftStorySetupSummary struct {
+	ProjectName string   `json:"project_name" md:"project_name" desc:"Name of the novel project"`
+	Genres      []string `json:"genres" md:"genres" desc:"List of story genres"`
+	Premise     string   `json:"premise" md:"premise" desc:"Story premise and core concept"`
+	Theme       string   `json:"theme" md:"theme" desc:"Central theme of the story"`
+	Rules       []string `json:"rules" md:"rules" desc:"Story world rules and constraints"`
+}
+
+// CraftOutlineSummary is a lightweight version of Outline for craft generation
+type CraftOutlineSummary struct {
+	Parts []CraftPartSummary `json:"parts" md:"parts" desc:"Story parts containing volumes"`
+}
+
+// CraftPartSummary is a lightweight part summary
+type CraftPartSummary struct {
+	Title   string               `json:"title" md:"title" desc:"Part title"`
+	Summary string               `json:"summary" md:"summary" desc:"Part summary"`
+	Volumes []CraftVolumeSummary `json:"volumes" md:"volumes" desc:"Volumes in this part"`
+}
+
+// CraftVolumeSummary is a lightweight volume summary
+type CraftVolumeSummary struct {
+	Title    string                `json:"title" md:"title" desc:"Volume title"`
+	Summary  string                `json:"summary" md:"summary" desc:"Volume summary"`
+	Chapters []CraftChapterSummary `json:"chapters" md:"chapters" desc:"Chapters in this volume"`
+}
+
+// CraftChapterSummary is a lightweight chapter summary
+type CraftChapterSummary struct {
+	ID         string   `json:"id" md:"id" desc:"Chapter ID"`
+	Title      string   `json:"title" md:"title" desc:"Chapter title"`
+	Summary    string   `json:"summary" md:"summary" desc:"Chapter summary"`
+	Characters []string `json:"characters" md:"characters" desc:"Characters appearing in this chapter"`
+	Location   string   `json:"location" md:"location" desc:"Primary location of this chapter"`
+}
+
 // CraftGenCharactersInput is the input for character generation
 type CraftGenCharactersInput struct {
-	StorySetup       models.StorySetup `md:"story_setup"`
-	Outline          models.Outline    `md:"outline"`
-	RelevantChapters []string          `md:"relevant_chapters"`
-	Characters       []string          `md:"characters"`
-	CustomPrompt     string            `md:"custom_prompt,omitempty"`
+	StorySetup       CraftStorySetupSummary `json:"story_setup" md:"story_setup" desc:"Story setup summary with premise, genres, theme, rules"`
+	Outline          CraftOutlineSummary    `json:"outline" md:"outline" desc:"Outline summary with parts, volumes, chapters"`
+	RelevantChapters []string               `json:"relevant_chapters" md:"relevant_chapters" desc:"Chapters where these characters appear"`
+	Characters       []string               `json:"characters" md:"characters" desc:"List of character names to generate"`
+	CustomPrompt     string                 `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional custom prompt for generation"`
 }
 
 // CraftGenCharactersOutput is the output for character generation
 type CraftGenCharactersOutput struct {
-	Characters map[string]models.Character `md:"characters"`
+	Characters map[string]models.Character `json:"characters" md:"characters" desc:"Generated character profiles keyed by name"`
 }
 
 // CraftGenLocationsInput is the input for location generation
 type CraftGenLocationsInput struct {
-	StorySetup       models.StorySetup `md:"story_setup"`
-	Outline          models.Outline    `md:"outline"`
-	RelevantChapters []string          `md:"relevant_chapters"`
-	Locations        []string          `md:"locations"`
-	CustomPrompt     string            `md:"custom_prompt,omitempty"`
+	StorySetup       CraftStorySetupSummary `json:"story_setup" md:"story_setup" desc:"Story setup summary with premise, genres, theme, rules"`
+	Outline          CraftOutlineSummary    `json:"outline" md:"outline" desc:"Outline summary with parts, volumes, chapters"`
+	RelevantChapters []string               `json:"relevant_chapters" md:"relevant_chapters" desc:"Chapters where these locations appear"`
+	Locations        []string               `json:"locations" md:"locations" desc:"List of location names to generate"`
+	CustomPrompt     string                 `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional custom prompt for generation"`
 }
 
 // CraftGenLocationsOutput is the output for location generation
 type CraftGenLocationsOutput struct {
-	Locations map[string]models.Location `md:"locations"`
+	Locations map[string]models.Location `json:"locations" md:"locations" desc:"Generated location descriptions keyed by name"`
 }
 
 // CraftGenItemsInput is the input for item generation
 type CraftGenItemsInput struct {
-	StorySetup       models.StorySetup `md:"story_setup"`
-	Outline          models.Outline    `md:"outline"`
-	RelevantChapters []string          `md:"relevant_chapters"`
-	Items            []string          `md:"items"`
-	CustomPrompt     string            `md:"custom_prompt,omitempty"`
+	StorySetup       CraftStorySetupSummary `json:"story_setup" md:"story_setup" desc:"Story setup summary with premise, genres, theme, rules"`
+	Outline          CraftOutlineSummary    `json:"outline" md:"outline" desc:"Outline summary with parts, volumes, chapters"`
+	RelevantChapters []string               `json:"relevant_chapters" md:"relevant_chapters" desc:"Chapters where these items appear"`
+	Items            []string               `json:"items" md:"items" desc:"List of item names to generate"`
+	CustomPrompt     string                 `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional custom prompt for generation"`
 }
 
 // CraftGenItemsOutput is the output for item generation
 type CraftGenItemsOutput struct {
-	Items map[string]models.Item `md:"items"`
+	Items map[string]models.Item `json:"items" md:"items" desc:"Generated item descriptions keyed by name"`
 }
 
 // CraftAgent generates detailed story elements (characters, locations, items)
@@ -82,6 +119,47 @@ func (a *CraftAgent) SetLanguage(language string) {
 	a.base.SetLanguage(language)
 }
 
+// buildStorySetupSummary creates a lightweight summary of StorySetup
+func (a *CraftAgent) buildStorySetupSummary() CraftStorySetupSummary {
+	return CraftStorySetupSummary{
+		ProjectName: a.setup.ProjectName,
+		Genres:      a.setup.Genres,
+		Premise:     a.setup.Premise,
+		Theme:       a.setup.Theme,
+		Rules:       a.setup.Rules,
+	}
+}
+
+// buildOutlineSummary creates a lightweight summary of Outline
+func (a *CraftAgent) buildOutlineSummary() CraftOutlineSummary {
+	var parts []CraftPartSummary
+	for _, part := range a.outline.Parts {
+		partSummary := CraftPartSummary{
+			Title:   part.Title,
+			Summary: part.Summary,
+		}
+		for _, vol := range part.Volumes {
+			volSummary := CraftVolumeSummary{
+				Title:   vol.Title,
+				Summary: vol.Summary,
+			}
+			for _, ch := range vol.Chapters {
+				chSummary := CraftChapterSummary{
+					ID:         ch.ID,
+					Title:      ch.Title,
+					Summary:    ch.Summary,
+					Characters: ch.Characters,
+					Location:   ch.Location,
+				}
+				volSummary.Chapters = append(volSummary.Chapters, chSummary)
+			}
+			partSummary.Volumes = append(partSummary.Volumes, volSummary)
+		}
+		parts = append(parts, partSummary)
+	}
+	return CraftOutlineSummary{Parts: parts}
+}
+
 // GenerateCharacters generates detailed character profiles
 func (a *CraftAgent) GenerateCharacters(ctx context.Context, names []string, customPrompt string) (map[string]models.Character, error) {
 	logger.Section("CRAFT AGENT - Character Generation")
@@ -93,8 +171,8 @@ func (a *CraftAgent) GenerateCharacters(ctx context.Context, names []string, cus
 	logger.Info("Found %d relevant chapters for these characters", len(relevantChapters))
 
 	input := CraftGenCharactersInput{
-		StorySetup:       *a.setup,
-		Outline:          *a.outline,
+		StorySetup:       a.buildStorySetupSummary(),
+		Outline:          a.buildOutlineSummary(),
 		RelevantChapters: relevantChapters,
 		Characters:       names,
 		CustomPrompt:     customPrompt,
@@ -133,8 +211,8 @@ func (a *CraftAgent) GenerateLocations(ctx context.Context, names []string, cust
 	logger.Info("Found %d relevant chapters for these locations", len(relevantChapters))
 
 	input := CraftGenLocationsInput{
-		StorySetup:       *a.setup,
-		Outline:          *a.outline,
+		StorySetup:       a.buildStorySetupSummary(),
+		Outline:          a.buildOutlineSummary(),
 		RelevantChapters: relevantChapters,
 		Locations:        names,
 		CustomPrompt:     customPrompt,
@@ -173,8 +251,8 @@ func (a *CraftAgent) GenerateItems(ctx context.Context, names []string, customPr
 	logger.Info("Found %d relevant chapters for these items", len(relevantChapters))
 
 	input := CraftGenItemsInput{
-		StorySetup:       *a.setup,
-		Outline:          *a.outline,
+		StorySetup:       a.buildStorySetupSummary(),
+		Outline:          a.buildOutlineSummary(),
 		RelevantChapters: relevantChapters,
 		Items:            names,
 		CustomPrompt:     customPrompt,

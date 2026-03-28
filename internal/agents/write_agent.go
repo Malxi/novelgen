@@ -15,49 +15,49 @@ import (
 
 // WriteGenInput is the input for final chapter generation
 type WriteGenInput struct {
-	StorySetup   models.StorySetup `md:"story_setup"`
-	Chapter      models.Chapter    `md:"chapter"`
-	StateMatrix  string            `md:"state_matrix"`
-	TargetWords  int               `md:"target_words"`
-	Context      string            `md:"context,omitempty"`
-	Recap        string            `md:"recap,omitempty"`
-	NextChapters []NextChapterInfo `md:"next_chapters,omitempty"`
+	StorySetup   models.StorySetup `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Chapter      models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
+	StateMatrix  string            `json:"state_matrix" md:"state_matrix" desc:"Current story state including character statuses, relationships, goals"`
+	TargetWords  int               `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
+	Context      string            `json:"context,omitempty" md:"context,omitempty" desc:"Continuity context from previous chapters"`
+	Recap        string            `json:"recap,omitempty" md:"recap,omitempty" desc:"Canonical recap from previous chapter"`
+	NextChapters []NextChapterInfo `json:"next_chapters,omitempty" md:"next_chapters,omitempty" desc:"Information about upcoming chapters for foreshadowing"`
 }
 
 // WriteGenOutput is the output for final chapter generation
 type WriteGenOutput struct {
-	Content string `md:"content"`
+	Content string `json:"content" md:"content" desc:"The final polished chapter content"`
 }
 
 // WriteImproveInput is the input for chapter improvement
 type WriteImproveInput struct {
-	StorySetup   models.StorySetup `md:"story_setup"`
-	Chapter      models.Chapter    `md:"chapter"`
-	StateMatrix  string            `md:"state_matrix"`
-	TargetWords  int               `md:"target_words"`
-	CurrentDraft string            `md:"current_draft"`
-	Suggestions  string            `md:"suggestions"`
-	Context      string            `md:"context,omitempty"`
-	Recap        string            `md:"recap,omitempty"`
+	StorySetup   models.StorySetup `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Chapter      models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
+	StateMatrix  string            `json:"state_matrix" md:"state_matrix" desc:"Current story state including character statuses, relationships, goals"`
+	TargetWords  int               `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
+	CurrentDraft string            `json:"current_draft" md:"current_draft" desc:"The current draft content to be improved"`
+	Suggestions  string            `json:"suggestions" md:"suggestions" desc:"Review suggestions for improvement"`
+	Context      string            `json:"context,omitempty" md:"context,omitempty" desc:"Continuity context from previous chapters"`
+	Recap        string            `json:"recap,omitempty" md:"recap,omitempty" desc:"Canonical recap from previous chapter"`
 }
 
 // WriteImproveOutput is the output for chapter improvement
 type WriteImproveOutput struct {
-	Content string `md:"content"`
+	Content string `json:"content" md:"content" desc:"The improved chapter content"`
 }
 
 // WriteReviewInput is the input for chapter review
 type WriteReviewInput struct {
-	StorySetup     models.StorySetup `md:"story_setup"`
-	Chapter        models.Chapter    `md:"chapter"`
-	ChapterContent string            `md:"chapter_content"`
-	TargetWords    int               `md:"target_words"`
-	Iteration      int               `md:"iteration"`
+	StorySetup     models.StorySetup `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Chapter        models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
+	ChapterContent string            `json:"chapter_content" md:"chapter_content" desc:"The chapter content to be reviewed"`
+	TargetWords    int               `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
+	Iteration      int               `json:"iteration" md:"iteration" desc:"Current iteration number"`
 }
 
 // WriteReviewOutput is the output for chapter review
 type WriteReviewOutput struct {
-	Result models.ReviewResult `md:"review_result"`
+	Result models.ReviewResult `json:"review_result" md:"review_result" desc:"Review result including scores and improvement suggestions"`
 }
 
 // ChapterContext holds surrounding chapter information for continuity
@@ -141,6 +141,11 @@ func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapte
 		return "", err
 	}
 
+	// Validate output content is not empty
+	if strings.TrimSpace(output.Content) == "" {
+		return "", fmt.Errorf("AI returned empty content for chapter %s", chapter.ID)
+	}
+
 	// Log context for debugging
 	if err := a.logWriteContext(chapter.ID, "final", input, output.Content); err != nil {
 		logger.Warn("Failed to log write context: %v", err)
@@ -175,6 +180,11 @@ func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter
 
 	if err := a.base.Execute(ctx, params, input, &output); err != nil {
 		return "", err
+	}
+
+	// Validate output content is not empty
+	if strings.TrimSpace(output.Content) == "" {
+		return "", fmt.Errorf("AI returned empty content for chapter %s improvement", chapter.ID)
 	}
 
 	// Log context for debugging

@@ -1,0 +1,101 @@
+{
+  "volume_id": "P1-V1",
+  "volume_title": "卷一：矿场死囚",
+  "reviews": [
+    {
+      "chapter_id": "P1-V1-C1",
+      "chapter_title": "楔子：血色苏醒",
+      "overall_score": 6,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 情节执行与节点覆盖: 必须将内容扩充至接近3000字。这不仅仅是加字，而是要围绕四个核心beat，填充足够的过程细节、环境描写、心理活动和感官体验，让故事“慢下来”，让情绪有时间发酵。",
+        "[高优先级] 情绪感染力与读者粘性: 详细描写林砚被砸中瞬间的感官体验（如骨骼碎裂声、意识沉入黑暗的过程），以及复活时意识如何从混沌中恢复、感官如何逐一回归（如先听到什么，再闻到什么，最后才睁眼看到什么），形成强烈的死亡/重生对比。",
+        "[高优先级] 人物塑造与声线一致性: 增加主角检查身体时的内心独白和动作细节。例如，他可以先是震惊地触摸本应存在的伤口，发现只有疤痕；然后试图调动灵力，感受到的却是混乱与空虚；这个过程中可以穿插闪回的死亡记忆，最终在巨大的矛盾和恐惧中提出“这是幻觉吗”的疑问。",
+        "[打磨优先级] 文笔质量与风格贴合度: 增加多感官描写。例如，空气中除了血腥和尘土，是否还有岩石燃烧的焦糊味？微光下，能否看到岩壁上扭曲的影子，或者尸体上凝固的惊恐表情？声音上，除了死寂，是否能听到远处细微的滴水声或自己粗重的呼吸心跳声，以静衬动，加剧恐怖氛围。"
+      ],
+      "needs_revision": true
+    },
+    {
+      "chapter_id": "P1-V1-C2",
+      "chapter_title": "代价的刻度",
+      "overall_score": 6,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 情节执行与节点覆盖: 请大幅扩写林砚在废墟中第一次探索的过程。例如，他可以尝试搬开小块岩石，结果发现是徒劳；或者根据微弱的风向/光线判断方向，但最终发现是死路；可以加入更多对其他矿工尸体的观察，通过他们的惨状来侧面烘托矿难的恐怖，并强化他“死过一次”的实感。",
+        "[高优先级] 情绪感染力与读者粘性: 增加主角二次复活后更详细的内心活动。他可以先是庆幸，然后通过内视丹田、感受身体，才逐渐发现修为跌落的事实。这个发现的过程应该是充满震惊和不敢置信的。他可以尝试调动灵力失败，或者回忆起练气一层时的饱满感，通过对比来突出“失去”的痛苦，而非直接得出结论。",
+        "[打磨优先级] 文笔质量与风格贴合度: 请在描写中加入更多五感细节。例如，黑暗不是一片虚无，而是“伸手不见五指，只有岩石的冰冷触感和远处滴水声”；血腥味可以是“铁锈和腐烂混合的甜腻气息”；虚弱感可以具体到“每走一步，膝盖都像针扎一样疼，肺部如同破风箱”。通过细节构建氛围，而非直接描述氛围。",
+        "[高优先级] 情节执行与节点覆盖: 在主角跪坐下来后，增加一段内心独白或回忆。他可以回想起自己作为网络作者时笔下的角色，那些角色也曾陷入绝境，他是如何安排他们破局的？将过去的“创作者”身份与如今“剧中人”的无力处境进行对比，这种强烈的荒谬感和讽刺感，能让最后的狂笑更有层次和感染力。"
+      ],
+      "needs_revision": true
+    }
+  ],
+  "summary": ""
+}

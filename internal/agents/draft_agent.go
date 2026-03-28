@@ -15,59 +15,59 @@ import (
 
 // DraftGenInput is the input for draft generation
 type DraftGenInput struct {
-	StorySetup   models.StorySetup `md:"story_setup"`
-	Chapter      models.Chapter    `md:"chapter"`
-	StateMatrix  string            `md:"state_matrix"`
-	TargetWords  int               `md:"target_words"`
-	Context      string            `md:"context,omitempty"`
-	Recap        string            `md:"recap,omitempty"`
-	NextChapters []NextChapterInfo `md:"next_chapters,omitempty"`
-	CustomPrompt string            `md:"custom_prompt,omitempty"`
+	StorySetup   models.StorySetup `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Chapter      models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
+	StateMatrix  string            `json:"state_matrix" md:"state_matrix" desc:"Current story state including character statuses, relationships, goals"`
+	TargetWords  int               `json:"target_words" md:"target_words" desc:"Target word count for the draft"`
+	Context      string            `json:"context,omitempty" md:"context,omitempty" desc:"Continuity context from previous chapters"`
+	Recap        string            `json:"recap,omitempty" md:"recap,omitempty" desc:"Canonical recap from previous chapter"`
+	NextChapters []NextChapterInfo `json:"next_chapters,omitempty" md:"next_chapters,omitempty" desc:"Information about upcoming chapters for foreshadowing"`
+	CustomPrompt string            `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional custom prompt for generation"`
 }
 
 // NextChapterInfo holds info about upcoming chapters for foreshadowing
 type NextChapterInfo struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	Summary string `json:"summary"`
+	ID      string `json:"id" desc:"Chapter ID"`
+	Title   string `json:"title" desc:"Chapter title"`
+	Summary string `json:"summary" desc:"Chapter summary"`
 }
 
 // DraftGenOutput is the output for draft generation
 type DraftGenOutput struct {
-	Content string `md:"content"`
+	Content string `json:"content" md:"content" desc:"Generated draft content"`
 }
 
 // DraftImproveInput is the input for draft improvement
 type DraftImproveInput struct {
-	StorySetup   models.StorySetup `md:"story_setup"`
-	Chapter      models.Chapter    `md:"chapter"`
-	StateMatrix  string            `md:"state_matrix"`
-	TargetWords  int               `md:"target_words"`
-	CurrentDraft string            `md:"current_draft"`
-	Suggestions  string            `md:"suggestions"`
-	Context      string            `md:"context,omitempty"`
-	Recap        string            `md:"recap,omitempty"`
-	NextChapters []NextChapterInfo `md:"next_chapters,omitempty"`
-	CustomPrompt string            `md:"custom_prompt,omitempty"`
+	StorySetup   models.StorySetup `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Chapter      models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
+	StateMatrix  string            `json:"state_matrix" md:"state_matrix" desc:"Current story state including character statuses, relationships, goals"`
+	TargetWords  int               `json:"target_words" md:"target_words" desc:"Target word count for the draft"`
+	CurrentDraft string            `json:"current_draft" md:"current_draft" desc:"The current draft content to be improved"`
+	Suggestions  string            `json:"suggestions" md:"suggestions" desc:"Review suggestions for improvement"`
+	Context      string            `json:"context,omitempty" md:"context,omitempty" desc:"Continuity context from previous chapters"`
+	Recap        string            `json:"recap,omitempty" md:"recap,omitempty" desc:"Canonical recap from previous chapter"`
+	NextChapters []NextChapterInfo `json:"next_chapters,omitempty" md:"next_chapters,omitempty" desc:"Information about upcoming chapters for foreshadowing"`
+	CustomPrompt string            `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional custom prompt for improvement"`
 }
 
 // DraftImproveOutput is the output for draft improvement
 type DraftImproveOutput struct {
-	Content string `md:"content"`
+	Content string `json:"content" md:"content" desc:"Improved draft content"`
 }
 
 // DraftReviewInput is the input for draft review
 type DraftReviewInput struct {
-	StorySetup   models.StorySetup `md:"story_setup"`
-	Chapter      models.Chapter    `md:"chapter"`
-	DraftContent string            `md:"draft_content"`
-	TargetWords  int               `md:"target_words"`
-	Iteration    int               `md:"iteration"`
+	StorySetup   models.StorySetup `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Chapter      models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
+	DraftContent string            `json:"draft_content" md:"draft_content" desc:"The draft content to be reviewed"`
+	TargetWords  int               `json:"target_words" md:"target_words" desc:"Target word count for the draft"`
+	Iteration    int               `json:"iteration" md:"iteration" desc:"Current iteration number"`
 }
 
 // DraftReviewOutput is the output for draft review
 type DraftReviewOutput struct {
-	Result models.ReviewResult `md:"review_result"`
+	Result models.ReviewResult `json:"review_result" md:"review_result" desc:"Review result including scores and improvement suggestions"`
 }
 
 // DraftReview contains review results for a single draft (for backward compatibility)
