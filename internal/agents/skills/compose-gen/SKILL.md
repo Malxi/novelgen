@@ -45,14 +45,82 @@
 10. **pacing**：节奏（slow/normal/fast）
 
 ### 事件类型（用于 Events 字段）
-1. **relationship**：角色关系变化
-2. **goal**：角色目标更新
-3. **item**：物品获取/失去
-4. **premise**：能力/系统升级
-5. **storyline**：故事线进展
-6. **gate**：障碍/代价引入
-7. **status**：角色状态变化
-8. **memory**：信息/知识获取
+
+#### Event 结构
+```yaml
+- type: 事件类型
+  characters: [涉及的角色列表]
+  subject: 目标对象（角色/物品/故事线名称）
+  change: 变化状态（必须填写，见下表）
+  details: 详细描述
+```
+
+#### 各类型事件的 Change 值规范
+
+1. **relationship** - 角色关系变化
+   - `established` - 建立关系
+   - `improved` - 关系改善
+   - `deteriorated` - 关系恶化
+   - `broken` - 关系破裂
+
+2. **goal** - 角色目标更新
+   - `set` - 设定目标
+   - `progressed` - 目标有进展
+   - `abandoned` - 放弃目标
+   - `achieved` - 达成目标
+
+3. **item** - 物品获取/失去
+   - `acquired` - 获得物品
+   - `lost` - 失去物品
+   - `used` - 使用物品
+   - `upgraded` - 物品升级
+
+4. **premise** - 能力/系统升级
+   - `awakened` - 初次觉醒
+   - `upgraded` - 能力升级
+   - `mastered` - 掌握能力
+   - `degraded` - 能力退化
+
+5. **storyline** - 故事线进展（⚠️ 重要：必须填写 change）
+   - `started` - 故事线开始
+   - `progressed` - 故事线推进
+   - `escalated` - 冲突升级
+   - `climax` - 高潮阶段
+   - `completed` - 故事线完成
+   - `twisted` - 意外转折
+
+6. **gate** - 障碍/代价引入
+   - `introduced` - 引入障碍
+   - `escalated` - 障碍升级
+   - `overcome` - 克服障碍
+
+7. **status** - 角色状态变化
+   - `afflicted` - 受到状态影响
+   - `worsened` - 状态恶化
+   - `improved` - 状态好转
+   - `resolved` - 状态解除
+
+8. **memory** - 信息/知识获取
+   - `learned` - 获得信息
+   - `forgotten` - 遗忘信息
+   - `shared` - 分享信息
+
+#### 示例
+```yaml
+# storyline 事件示例（正确格式）
+- type: storyline
+  characters: [林砚, 缉厄司]
+  subject: "矿场死循环"
+  change: "started"  # 必须填写！
+  details: "矿场的人为压迫成为林砚生存的直接威胁..."
+
+# premise 事件示例
+- type: premise
+  characters: [林砚]
+  subject: "附矿场复活"
+  change: "upgraded"
+  details: "累计死亡五次后，复活能力达到Lv2"
+```
 
 ---
 
@@ -102,6 +170,10 @@
 - [ ] opening_beat == beats[0]
 - [ ] closing_beat == beats[last]
 - [ ] 章节之间有明确的连续性
+- [ ] **所有 Events 都有有效的 `change` 字段（⚠️ 关键！）**
+  - storyline 事件必须有 change: started/progressed/completed 等
+  - premise 事件必须有 change: awakened/upgraded/mastered 等
+  - relationship 事件必须有 change: established/improved/deteriorated 等
 - [ ] 事件追踪完整
 - [ ] 角色行为一致
 - [ ] 所有内容使用指定语言

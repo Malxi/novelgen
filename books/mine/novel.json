@@ -15,7 +15,7 @@
     "max_words_per_chapter": 5000
   },
   "llm": {
-    "provider": "nvidia",
-    "model": "moonshotai/kimi-k2.5"
+    "provider": "vol",
+    "model": "doubao-seed-2.0-pro"
   }
 }
