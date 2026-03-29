@@ -15,7 +15,7 @@
     "max_words_per_chapter": 5000
   },
   "llm": {
-    "provider": "gemini",
-    "model": "gemini-2.5-pro"
+    "provider": "nvidia",
+    "model": "moonshotai/kimi-k2.5"
   }
 }

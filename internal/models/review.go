@@ -18,16 +18,27 @@ type DimensionScore struct {
 	Max   float64 `json:"max"`   // Maximum possible score
 }
 
+// ContinuityIssue represents a continuity or abrupt plot issue found during review
+type ContinuityIssue struct {
+	Type        string `json:"type"`         // "abrupt_plot", "timeline", "space", "character_state", "relationship"
+	Location    string `json:"location"`     // Specific location in text (paragraph/sentence)
+	Description string `json:"description"`  // Description of the issue
+	Reason      string `json:"reason"`       // Why it's an issue (lack of setup, logic jump, etc.)
+	Suggestion  string `json:"suggestion"`   // How to fix it
+	Severity    string `json:"severity"`     // "fatal", "serious", "minor"
+}
+
 // ReviewResult represents a universal review result structure
 // It can be used for setup review, outline review, chapter review, etc.
 type ReviewResult struct {
-	OverallScore float64            `json:"overall_score"` // 0-100
-	Dimensions   []DimensionScore   `json:"dimensions"`    // Detailed scores by dimension
-	Summary      string             `json:"summary"`       // Overall assessment
-	Strengths    []string           `json:"strengths"`     // What's working well
-	Weaknesses   []string           `json:"weaknesses"`    // Areas needing improvement (optional)
-	Suggestions  []ReviewSuggestion `json:"suggestions"`   // Specific improvement suggestions
-	Iteration    int                `json:"iteration"`     // Iteration number (for tracking)
+	OverallScore     float64            `json:"overall_score"`      // 0-100
+	Dimensions       []DimensionScore   `json:"dimensions"`         // Detailed scores by dimension
+	Summary          string             `json:"summary"`            // Overall assessment
+	Strengths        []string           `json:"strengths"`          // What's working well
+	Weaknesses       []string           `json:"weaknesses"`         // Areas needing improvement (optional)
+	Suggestions      []ReviewSuggestion `json:"suggestions"`        // Specific improvement suggestions
+	Iteration        int                `json:"iteration"`          // Iteration number (for tracking)
+	ContinuityIssues []ContinuityIssue  `json:"continuity_issues"`  // Abrupt plot and continuity issues
 }
 
 // GetDimensionScore gets the score for a specific dimension by name

@@ -13,9 +13,34 @@ import (
 	"novelgen/internal/models"
 )
 
+// CompactStorySetup is a minimal version of StorySetup for chapter generation
+// Only includes essential fields needed for writing
+type CompactStorySetup struct {
+	Genres   []string `json:"genres" md:"genres" desc:"Story genres (2-4 specific genres)"`
+	Premise  string   `json:"premise" md:"premise" desc:"Core story premise (2-4 sentences)"`
+	Theme    string   `json:"theme" md:"theme" desc:"Story theme (clear statement)"`
+	Rules    []string `json:"rules" md:"rules" desc:"World rules (3-7 enforceable rules)"`
+	Tone     string   `json:"tone" md:"tone" desc:"Writing tone (2-4 adjectives, comma-separated)"`
+	Tense    string   `json:"tense" md:"tense" desc:"Narrative tense (past or present)"`
+	POVStyle string   `json:"pov_style" md:"pov_style" desc:"POV style (first person, third person limited, or third person omniscient)"`
+}
+
+// ToCompact converts a full StorySetup to CompactStorySetup
+func ToCompact(setup *models.StorySetup) CompactStorySetup {
+	return CompactStorySetup{
+		Genres:   setup.Genres,
+		Premise:  setup.Premise,
+		Theme:    setup.Theme,
+		Rules:    setup.Rules,
+		Tone:     setup.Tone,
+		Tense:    setup.Tense,
+		POVStyle: setup.POVStyle,
+	}
+}
+
 // WriteGenInput is the input for final chapter generation
 type WriteGenInput struct {
-	StorySetup   models.StorySetup `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	StorySetup   CompactStorySetup `json:"story_setup" md:"story_setup" desc:"Core story setup including premise, genres, themes, rules"`
 	Chapter      models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
 	StateMatrix  string            `json:"state_matrix" md:"state_matrix" desc:"Current story state including character statuses, relationships, goals"`
 	TargetWords  int               `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
@@ -31,7 +56,7 @@ type WriteGenOutput struct {
 
 // WriteImproveInput is the input for chapter improvement
 type WriteImproveInput struct {
-	StorySetup   models.StorySetup `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	StorySetup   CompactStorySetup `json:"story_setup" md:"story_setup" desc:"Core story setup including premise, genres, themes, rules"`
 	Chapter      models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
 	StateMatrix  string            `json:"state_matrix" md:"state_matrix" desc:"Current story state including character statuses, relationships, goals"`
 	TargetWords  int               `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
@@ -48,11 +73,12 @@ type WriteImproveOutput struct {
 
 // WriteReviewInput is the input for chapter review
 type WriteReviewInput struct {
-	StorySetup     models.StorySetup `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
-	Chapter        models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
-	ChapterContent string            `json:"chapter_content" md:"chapter_content" desc:"The chapter content to be reviewed"`
-	TargetWords    int               `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
-	Iteration      int               `json:"iteration" md:"iteration" desc:"Current iteration number"`
+	StorySetup     CompactStorySetup   `json:"story_setup" md:"story_setup" desc:"Core story setup including premise, genres, themes, rules"`
+	StateMatrix    *models.StateMatrix `json:"state_matrix" md:"state_matrix" desc:"Current story state matrix for continuity checking"`
+	Chapter        models.Chapter      `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
+	ChapterContent string              `json:"chapter_content" md:"chapter_content" desc:"The chapter content to be reviewed"`
+	TargetWords    int                 `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
+	Iteration      int                 `json:"iteration" md:"iteration" desc:"Current iteration number"`
 }
 
 // WriteReviewOutput is the output for chapter review
@@ -122,7 +148,7 @@ func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapte
 	}
 
 	input := WriteGenInput{
-		StorySetup:   *a.setup,
+		StorySetup:   ToCompact(a.setup),
 		Chapter:      *chapter,
 		StateMatrix:  formatStateMatrixForWrite(state, chapter),
 		TargetWords:  targetWords,
@@ -163,7 +189,7 @@ func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter
 	logger.Info("Language: %s", a.base.language)
 
 	input := WriteImproveInput{
-		StorySetup:  *a.setup,
+		StorySetup:  ToCompact(a.setup),
 		Chapter:     *chapter,
 		StateMatrix: formatStateMatrixForWrite(state, chapter),
 		TargetWords: targetWords,
@@ -197,14 +223,15 @@ func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter
 }
 
 // ReviewChapter reviews a chapter and provides improvement suggestions
-func (a *WriteAgent) ReviewChapter(ctx context.Context, chapter *models.Chapter, content string, targetWords int, iteration int) (models.ReviewResult, error) {
+func (a *WriteAgent) ReviewChapter(ctx context.Context, chapter *models.Chapter, state *models.StateMatrix, content string, targetWords int, iteration int) (models.ReviewResult, error) {
 	logger.Section("WRITE AGENT - Chapter Review")
 	logger.Info("Chapter: %s", chapter.ID)
 	logger.Info("Iteration: %d", iteration)
 	logger.Info("Language: %s", a.base.language)
 
 	input := WriteReviewInput{
-		StorySetup:     *a.setup,
+		StorySetup:     ToCompact(a.setup),
+		StateMatrix:    state,
 		Chapter:        *chapter,
 		ChapterContent: content,
 		TargetWords:    targetWords,
@@ -242,7 +269,7 @@ func (a *WriteAgent) IterateChapter(ctx context.Context, chapter *models.Chapter
 		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
 
 		// Review
-		review, err := a.ReviewChapter(ctx, chapter, currentContent, targetWords, i)
+		review, err := a.ReviewChapter(ctx, chapter, state, currentContent, targetWords, i)
 		if err != nil {
 			return "", nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
 		}
@@ -343,6 +370,7 @@ func formatChapterContext(context *ChapterContext) string {
 }
 
 // formatStateMatrixForWrite formats the state matrix for the prompt
+// Only includes characters, relationships, and storylines relevant to the current chapter
 func formatStateMatrixForWrite(state *models.StateMatrix, chapter *models.Chapter) string {
 	if state == nil {
 		return "No state matrix available"
@@ -351,10 +379,27 @@ func formatStateMatrixForWrite(state *models.StateMatrix, chapter *models.Chapte
 	var sb strings.Builder
 	sb.WriteString("CURRENT STORY STATE:\n")
 
-	// Character states
+	// Build set of relevant characters for this chapter
+	relevantChars := make(map[string]bool)
+	// Add characters explicitly listed in the chapter
+	for _, charName := range chapter.Characters {
+		relevantChars[charName] = true
+	}
+	// Add characters mentioned in chapter events
+	for _, event := range chapter.Events {
+		for _, charName := range event.Characters {
+			relevantChars[charName] = true
+		}
+	}
+
+	// Character states - only show relevant characters
 	if len(state.Characters) > 0 {
 		sb.WriteString("\nCharacters:\n")
 		for name, char := range state.Characters {
+			// Skip if not relevant to this chapter
+			if !relevantChars[name] {
+				continue
+			}
 			sb.WriteString(fmt.Sprintf("  %s:\n", name))
 			if char.Motivation != "" {
 				sb.WriteString(fmt.Sprintf("    - Motivation: %s\n", char.Motivation))
@@ -368,21 +413,150 @@ func formatStateMatrixForWrite(state *models.StateMatrix, chapter *models.Chapte
 		}
 	}
 
-	// Active relationships
+	// Active relationships - only show relationships between relevant characters
 	if len(state.Relationships) > 0 {
 		sb.WriteString("\nActive Relationships:\n")
 		for relKey, relStatus := range state.Relationships {
-			sb.WriteString(fmt.Sprintf("  %s: %s\n", relKey, relStatus))
+			// Check if this relationship involves relevant characters
+			parts := strings.Split(relKey, "_")
+			if len(parts) >= 2 {
+				char1, char2 := parts[0], parts[1]
+				if relevantChars[char1] || relevantChars[char2] {
+					sb.WriteString(fmt.Sprintf("  %s: %s\n", relKey, relStatus))
+				}
+			}
 		}
 	}
 
-	// Active storylines
+	// Active storylines - only show storylines relevant to chapter events
 	if len(state.Storylines) > 0 {
 		sb.WriteString("\nActive Storylines:\n")
 		for _, sl := range state.Storylines {
 			if sl.Status == "active" || sl.Status == "in_progress" {
-				sb.WriteString(fmt.Sprintf("  %s: %s\n", sl.Name, sl.Progress))
+				// Check if this storyline is mentioned in chapter events
+				isRelevant := false
+				for _, event := range chapter.Events {
+					if event.Type == "storyline" && event.Subject == sl.Name {
+						isRelevant = true
+						break
+					}
+				}
+				if isRelevant {
+					sb.WriteString(fmt.Sprintf("  %s: %s\n", sl.Name, sl.Progress))
+				}
 			}
+		}
+	}
+
+	// Character Goals - only show for relevant characters
+	if len(state.Goals) > 0 {
+		hasGoals := false
+		var goalsBuilder strings.Builder
+		goalsBuilder.WriteString("\nCharacter Goals:\n")
+		for charName, goals := range state.Goals {
+			if relevantChars[charName] && len(goals) > 0 {
+				hasGoals = true
+				goalsBuilder.WriteString(fmt.Sprintf("  %s:\n", charName))
+				for _, goal := range goals {
+					goalsBuilder.WriteString(fmt.Sprintf("    - %s\n", goal))
+				}
+			}
+		}
+		if hasGoals {
+			sb.WriteString(goalsBuilder.String())
+		}
+	}
+
+	// Character Status - only show for relevant characters
+	if len(state.Status) > 0 {
+		hasStatus := false
+		var statusBuilder strings.Builder
+		statusBuilder.WriteString("\nCharacter Status:\n")
+		for statusKey, status := range state.Status {
+			// statusKey format: "character_name_status_type"
+			parts := strings.Split(statusKey, "_")
+			if len(parts) >= 1 {
+				charName := parts[0]
+				if relevantChars[charName] {
+					hasStatus = true
+					statusBuilder.WriteString(fmt.Sprintf("  %s: %s", charName, status.Type))
+					if status.State != "" {
+						statusBuilder.WriteString(fmt.Sprintf(" (%s)", status.State))
+					}
+					if status.Severity != "" {
+						statusBuilder.WriteString(fmt.Sprintf(" [%s]", status.Severity))
+					}
+					if status.Details != "" {
+						statusBuilder.WriteString(fmt.Sprintf(" - %s", status.Details))
+					}
+					statusBuilder.WriteString("\n")
+				}
+			}
+		}
+		if hasStatus {
+			sb.WriteString(statusBuilder.String())
+		}
+	}
+
+	// Items - only show items owned by relevant characters or unowned items
+	if len(state.Items) > 0 {
+		hasItems := false
+		var itemsBuilder strings.Builder
+		itemsBuilder.WriteString("\nItems:\n")
+		for itemName, item := range state.Items {
+			// Show if item is owned by a relevant character or has no owner (available in scene)
+			if item.Owner == "" || relevantChars[item.Owner] {
+				hasItems = true
+				itemsBuilder.WriteString(fmt.Sprintf("  %s", itemName))
+				if item.Owner != "" {
+					itemsBuilder.WriteString(fmt.Sprintf(" (held by: %s)", item.Owner))
+				} else {
+					itemsBuilder.WriteString(" (available)")
+				}
+				if item.Description != "" {
+					itemsBuilder.WriteString(fmt.Sprintf(" - %s", item.Description))
+				}
+				itemsBuilder.WriteString("\n")
+			}
+		}
+		if hasItems {
+			sb.WriteString(itemsBuilder.String())
+		}
+	}
+
+	// Character Progression/Premises - show character levels/ranks
+	if len(state.Premises) > 0 {
+		hasPremises := false
+		var premisesBuilder strings.Builder
+		premisesBuilder.WriteString("\nCharacter Progression:\n")
+
+		// Group premises by character
+		charPremises := make(map[string]map[string]string) // charName -> premiseName -> value
+		for key, value := range state.Premises {
+			// key format: "characterName_premiseName"
+			parts := strings.SplitN(key, "_", 2)
+			if len(parts) == 2 {
+				charName, premiseName := parts[0], parts[1]
+				if relevantChars[charName] {
+					if charPremises[charName] == nil {
+						charPremises[charName] = make(map[string]string)
+					}
+					charPremises[charName][premiseName] = value
+				}
+			}
+		}
+
+		// Output grouped by character
+		for charName, premises := range charPremises {
+			hasPremises = true
+			premisesBuilder.WriteString(fmt.Sprintf("  %s:\n", charName))
+			for premiseName, value := range premises {
+				premisesBuilder.WriteString(fmt.Sprintf("    - %s: %s\n", premiseName, value))
+			}
+		}
+
+		if hasPremises {
+			sb.WriteString(premisesBuilder.String())
 		}
 	}
 
