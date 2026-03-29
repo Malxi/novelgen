@@ -22,8 +22,8 @@ type SetupGenOutput struct {
 
 // SetupImproveInput is the input for setup improvement
 type SetupImproveInput struct {
-	ExistingSetup models.StorySetup   `json:"existing_setup" md:"existing_setup" desc:"Current story setup to improve"`
 	ReviewResult  models.ReviewResult `json:"review_result,omitempty" md:"review_result,omitempty" desc:"Review result for improvement guidance"`
+	ExistingSetup models.StorySetup   `json:"existing_setup" md:"existing_setup" desc:"Current story setup to improve"`
 }
 
 // SetupImproveOutput is the output for setup improvement

@@ -7,41 +7,41 @@ import (
 
 // StorySetup represents the story configuration
 type StorySetup struct {
-	ProjectName    string      `json:"project_name" prompt:"Project Name" desc:"2-6 words, evocative, <= 60 characters"`
-	Genres         []string    `json:"genres" prompt:"Genres" desc:"2-4 specific genres"`
-	Premise        string      `json:"premise" prompt:"Premise" desc:"2-4 sentences, no lists"`
-	Theme          string      `json:"theme" prompt:"Theme" desc:"Clear statement, not a single word"`
-	Rules          []string    `json:"rules" prompt:"Rules" desc:"3-7 enforceable rules"`
-	TargetAudience string      `json:"target_audience" prompt:"Target Audience" desc:"Include age range and readership type"`
-	Tone           string      `json:"tone" prompt:"Tone" desc:"A sentence, 2-4 adjectives, comma-separated"`
-	Tense          string      `json:"tense" prompt:"Tense" desc:"past or present"`
-	POVStyle       string      `json:"pov_style" prompt:"POV Style" desc:"first person, third person limited, or third person omniscient"`
-	Storylines     []Storyline `json:"storylines,omitempty" prompt:"Storylines" desc:"3-5 items; include at least one main and one subplot or character_arc"`
-	Premises       []Premise   `json:"premises,omitempty" prompt:"Premises" desc:"1-3 items tied to setting or power system"`
+	ProjectName    string      `json:"project_name" prompt:"小说名称" desc:"2-6个字，有吸引力，不超过60个字符"`
+	Genres         []string    `json:"genres" prompt:"类型" desc:"2-4个具体小说类型"`
+	Premise        string      `json:"premise" prompt:"核心设定" desc:"核心设定，2-4句话，不要列表"`
+	Theme          string      `json:"theme" prompt:"主题" desc:"主题，清晰的陈述，不要单个词"`
+	Rules          []string    `json:"rules" prompt:"规则" desc:"小说设定的规则"`
+	TargetAudience string      `json:"target_audience" prompt:"目标读者" desc:"包含年龄段和读者类型"`
+	Tone           string      `json:"tone" prompt:"基调" desc:"小说基调，一句话，2-4个形容词，逗号分隔"`
+	Tense          string      `json:"tense" prompt:"时态" desc:"过去时或现在时"`
+	POVStyle       string      `json:"pov_style" prompt:"视角" desc:"第一人称、第三人称有限视角或第三人称全知视角"`
+	Storylines     []Storyline `json:"storylines,omitempty" prompt:"故事线" desc:"故事线"`
+	Premises       []Premise   `json:"premises,omitempty" prompt:"设定体系" desc:"设定升级体系"`
 }
 
 // Storyline represents a story arc or plot line
 type Storyline struct {
-	Name        string `json:"name" prompt:"Name" desc:"Short, specific"`
-	Description string `json:"description" prompt:"Description" desc:"2-4 sentences"`
-	Type        string `json:"type" prompt:"Type" desc:"main, subplot, or character_arc"`     // main, subplot, character_arc, etc.
-	Importance  int    `json:"importance" prompt:"Importance" desc:"1-10, 10 most important"` // 1-10, 10 being most important
+	Name        string `json:"name" prompt:"Name" desc:"故事线名称"`
+	Description string `json:"description" prompt:"Description" desc:"故事线描述，2-4句话"`
+	Type        string `json:"type" prompt:"Type" desc:"故事线类型"`                   // main, subplot, character_arc, etc.
+	Importance  int    `json:"importance" prompt:"Importance" desc:"故事线重要性，1-10"` // 1-10, 10 being most important
 }
 
 // Premise represents a story premise/setting element with progression system
 type Premise struct {
-	Name        string             `json:"name" prompt:"Name" desc:"Specific and setting-tied"`
-	Description string             `json:"description" prompt:"Description" desc:"2-4 sentences"`
-	Category    string             `json:"category" prompt:"Category" desc:"e.g., mecha, gene, ship, magic"` // 机甲, 基因, 飞船, 魔法, etc.
-	Progression []ProgressionStage `json:"progression" prompt:"Progression" desc:"3-5 stages minimum"`       // 升级体系
+	Name        string             `json:"name" prompt:"Name" desc:"设定体系名称"`
+	Description string             `json:"description" prompt:"Description" desc:"设定体系描述，2-4句话"`
+	Category    string             `json:"category" prompt:"Category" desc:"设定体系类型"`         // 机甲, 基因, 飞船, 魔法, etc.
+	Progression []ProgressionStage `json:"progression" prompt:"Progression" desc:"设定体系升级体系"` // 升级体系
 }
 
 // ProgressionStage represents a single stage in the progression system
 type ProgressionStage struct {
-	Level        int    `json:"level" prompt:"Level" desc:"Start at 1, increment by 1"`
-	Name         string `json:"name" prompt:"Name" desc:"Distinct stage title"`
-	Description  string `json:"description" prompt:"Description" desc:"What changes at this stage"`
-	Requirements string `json:"requirements,omitempty" prompt:"Requirements" desc:"Conditions to advance"`
+	Level        int    `json:"level" prompt:"Level" desc:"设定体系升级体系等级"`
+	Name         string `json:"name" prompt:"Name" desc:"设定体系升级体系名称"`
+	Description  string `json:"description" prompt:"Description" desc:"设定体系升级体系描述"`
+	Requirements string `json:"requirements,omitempty" prompt:"Requirements" desc:"设定体系升级体系要求"`
 }
 
 // Save writes the story setup to a file
