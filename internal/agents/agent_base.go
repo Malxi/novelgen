@@ -74,7 +74,7 @@ func (a *BaseAgent) Execute(ctx context.Context, params InvokeParams, input inte
 	}
 
 	// Build user prompt from input
-	userPrompt := fmt.Sprintf("Follow skill to %s based on the input %s\n",
+	userPrompt := fmt.Sprintf("Follow skill to %s for the input:\n %s",
 		params.Command, prompts.StructToMarkdown(input, 0))
 
 	// Add output requirements

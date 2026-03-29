@@ -145,10 +145,13 @@ func (a *SetupAgent) Review(ctx context.Context, input SetupReviewInput) (SetupR
 
 // Iterate runs the review-improvement loop for story setup
 // It directly uses Review and Improve methods
-func (a *SetupAgent) Iterate(ctx context.Context, setup *models.StorySetup, maxIterations int, qualityThreshold float64) (*models.StorySetup, *models.ReviewResult, error) {
+func (a *SetupAgent) Iterate(ctx context.Context, setup *models.StorySetup, maxIterations int, qualityThreshold float64, forceImprove bool) (*models.StorySetup, *models.ReviewResult, error) {
 	logger.Section("SETUP AGENT - Iteration Loop")
 	logger.Info("Max iterations: %d", maxIterations)
 	logger.Info("Quality threshold: %.1f", qualityThreshold)
+	if forceImprove {
+		logger.Info("Force improve enabled: will improve based on suggestions even if score meets threshold")
+	}
 
 	currentSetup := *setup
 	var finalReview *models.ReviewResult
@@ -166,8 +169,14 @@ func (a *SetupAgent) Iterate(ctx context.Context, setup *models.StorySetup, maxI
 		finalReview = &reviewOutput.Result
 
 		// Check if quality meets threshold
-		if reviewOutput.Result.OverallScore >= qualityThreshold {
+		scoreMeetsThreshold := reviewOutput.Result.OverallScore >= qualityThreshold
+		if scoreMeetsThreshold {
 			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", reviewOutput.Result.OverallScore, qualityThreshold)
+		}
+
+		// Determine if we should improve
+		shouldImprove := !scoreMeetsThreshold || forceImprove
+		if !shouldImprove {
 			break
 		}
 
@@ -188,7 +197,7 @@ func (a *SetupAgent) Iterate(ctx context.Context, setup *models.StorySetup, maxI
 		}
 
 		currentSetup = improveOutput.Setup
-		logger.Info("✓ Setup improved, continuing to next iteration")
+		logger.Info("✓ Setup improved based on review suggestions")
 	}
 
 	return &currentSetup, finalReview, nil

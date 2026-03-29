@@ -20,6 +20,7 @@ var (
 	setupRegenPrompt   string
 	setupMaxRounds     int
 	setupImprovePrompt string
+	setupForceImprove  bool
 )
 
 var setupCmd = &cobra.Command{
@@ -116,6 +117,7 @@ func init() {
 	// Improve flags
 	setupImproveCmd.Flags().IntVar(&setupMaxRounds, "max-rounds", 1, "Maximum improvement rounds")
 	setupImproveCmd.Flags().StringVar(&setupImprovePrompt, "prompt", "", "Manual improvement guidance (if provided, uses manual mode)")
+	setupImproveCmd.Flags().BoolVar(&setupForceImprove, "force", false, "Force improvement based on suggestions even if score meets threshold")
 }
 
 func runSetupGen(cmd *cobra.Command, args []string) error {
@@ -312,7 +314,10 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 	} else {
 		// Auto mode: use Iterate for Review → Improve loop
 		fmt.Printf("\n🔄 Starting auto improvement (max %d rounds)...\n\n", setupMaxRounds)
-		improvedSetup, review, err := agent.Iterate(cmd.Context(), setup, setupMaxRounds, 80.0)
+		if setupForceImprove {
+			fmt.Println("⚡ Force improve enabled: will improve based on suggestions even if score meets threshold")
+		}
+		improvedSetup, review, err := agent.Iterate(cmd.Context(), setup, setupMaxRounds, 80.0, setupForceImprove)
 		if err != nil {
 			logger.Error("Failed to improve story setup: %v", err)
 			return fmt.Errorf("failed to improve story setup: %w", err)
