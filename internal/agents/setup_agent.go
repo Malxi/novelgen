@@ -210,21 +210,45 @@ func (a *SetupAgent) normalizeSetup(setup *models.StorySetup) {
 	setup.Theme = strings.TrimSpace(setup.Theme)
 	setup.TargetAudience = strings.TrimSpace(setup.TargetAudience)
 	setup.Tone = strings.TrimSpace(setup.Tone)
-	setup.Tense = strings.TrimSpace(strings.ToLower(setup.Tense))
-	setup.POVStyle = strings.TrimSpace(strings.ToLower(setup.POVStyle))
+	setup.Tense = strings.TrimSpace(setup.Tense)
+	setup.POVStyle = strings.TrimSpace(setup.POVStyle)
 
 	if setup.ProjectName == "" {
 		logger.Warn("AI did not generate project name, using default")
 		setup.ProjectName = "Untitled Novel"
 	}
 
-	if setup.Tense != "" && setup.Tense != "past" && setup.Tense != "present" {
+	// Validate tense (support both English and Chinese)
+	validTenses := []string{
+		"past", "过去", "过去时",
+		"present", "现在", "现在时",
+	}
+	tenseValid := false
+	for _, valid := range validTenses {
+		if setup.Tense == valid {
+			tenseValid = true
+			break
+		}
+	}
+	if setup.Tense != "" && !tenseValid {
 		logger.Warn("Invalid tense value '%s', clearing", setup.Tense)
 		setup.Tense = ""
 	}
 
-	if setup.POVStyle != "" && setup.POVStyle != "first person" &&
-		setup.POVStyle != "third person limited" && setup.POVStyle != "third person omniscient" {
+	// Validate POV style (support both English and Chinese)
+	validPOVStyles := []string{
+		"first person", "第一人称",
+		"third person limited", "第三人称有限", "第三人称限制", "第三人称有限视角",
+		"third person omniscient", "第三人称全知", "第三人称上帝视角", "第三人称全知视角",
+	}
+	povValid := false
+	for _, valid := range validPOVStyles {
+		if setup.POVStyle == valid {
+			povValid = true
+			break
+		}
+	}
+	if setup.POVStyle != "" && !povValid {
 		logger.Warn("Invalid POV style value '%s', clearing", setup.POVStyle)
 		setup.POVStyle = ""
 	}
