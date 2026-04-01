@@ -25,6 +25,7 @@ var (
 	composeMaxRoundsFlag    int
 	composeConcurrencyFlag  int
 	composeHierarchicalFlag bool
+	composeForceImproveFlag bool
 )
 
 var composeCmd = &cobra.Command{
@@ -106,6 +107,7 @@ func init() {
 	composeImproveCmd.Flags().IntVar(&composeMaxRoundsFlag, "max-rounds", 1, "Maximum number of improvement rounds")
 	composeImproveCmd.Flags().IntVar(&composeConcurrencyFlag, "concurrency", 3, "Maximum number of concurrent regeneration tasks")
 	composeImproveCmd.Flags().BoolVar(&composeHierarchicalFlag, "hierarchical", false, "Use hierarchical improvement (better quality, slower)")
+	composeImproveCmd.Flags().BoolVar(&composeForceImproveFlag, "force", false, "Force improvement based on suggestions even if score meets threshold")
 
 	// Register compose command using the new plugin mechanism
 	RegisterCommand(func() *cobra.Command {
@@ -294,7 +296,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded existing outline for improvement")
 
 	// Run improvement
-	if err := iterateOutlineImprovement(outline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, composeHierarchicalFlag); err != nil {
+	if err := iterateOutlineImprovement(outline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, composeHierarchicalFlag, composeForceImproveFlag); err != nil {
 		logger.Error("Improvement failed: %v", err)
 		return fmt.Errorf("improvement failed: %w", err)
 	}
@@ -714,13 +716,16 @@ func splitLinesAndTrim(s string) []string {
 }
 
 // iterateOutlineImprovement runs the review-improvement loop
-func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, concurrency int, hierarchical bool) error {
+func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, concurrency int, hierarchical bool, forceImprove bool) error {
 	logger.Section("Outline Iteration Improvement")
 	logger.Info("Maximum iterations: %d", maxIterations)
 	if hierarchical {
 		logger.Info("Mode: Hierarchical (review entire outline, improve volumes individually)")
 	} else {
 		logger.Info("Mode: One-shot (review and improve entire outline at once)")
+	}
+	if forceImprove {
+		logger.Info("Force improve enabled: will improve based on suggestions even if score meets threshold")
 	}
 
 	// Load LLM config
@@ -744,10 +749,10 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 
 	if hierarchical {
 		// Use hierarchical iteration
-		improvedOutline, review, err = agent.IterateHierarchical(ctx, outline, maxIterations, 80.0)
+		improvedOutline, review, err = agent.IterateHierarchical(ctx, outline, maxIterations, 80.0, forceImprove)
 	} else {
 		// Use one-shot iteration
-		improvedOutline, review, err = agent.Iterate(ctx, outline, maxIterations, 80.0)
+		improvedOutline, review, err = agent.Iterate(ctx, outline, maxIterations, 80.0, forceImprove)
 	}
 
 	if err != nil {

@@ -2,7 +2,10 @@ package agents
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"novelgen/internal/llm"
@@ -112,6 +115,17 @@ type ComposeImproveVolumeInput struct {
 // ComposeImproveVolumeOutput is the output for volume improvement
 type ComposeImproveVolumeOutput struct {
 	Volume models.Volume `json:"volume" md:"volume" desc:"Improved volume with chapters"`
+}
+
+// ImproveProgress tracks the progress of hierarchical improvement
+type ImproveProgress struct {
+	Iteration        int                 `json:"iteration"`          // Current iteration number
+	TotalIterations  int                 `json:"total_iterations"`   // Total iterations planned
+	CurrentVolumeIdx int                 `json:"current_volume_idx"` // Index of next volume to improve (0-based)
+	TotalVolumes     int                 `json:"total_volumes"`      // Total volumes to improve
+	CompletedVolumes []string            `json:"completed_volumes"`  // List of completed volume IDs
+	Outline          models.Outline      `json:"outline"`            // Current state of outline
+	ReviewResult     models.ReviewResult `json:"review_result"`      // Review result for current iteration
 }
 
 // ComposeAgent handles AI generation for story outline
@@ -281,10 +295,13 @@ func (a *ComposeAgent) Improve(ctx context.Context, input ComposeImproveInput) (
 }
 
 // Iterate runs the review-improvement loop for outline
-func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, maxIterations int, qualityThreshold float64) (*models.Outline, *models.ReviewResult, error) {
+func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, maxIterations int, qualityThreshold float64, forceImprove bool) (*models.Outline, *models.ReviewResult, error) {
 	logger.Section("COMPOSE AGENT - Iteration Loop")
 	logger.Info("Max iterations: %d", maxIterations)
 	logger.Info("Quality threshold: %.1f", qualityThreshold)
+	if forceImprove {
+		logger.Info("Force improve enabled: will improve based on suggestions even if score meets threshold")
+	}
 
 	currentOutline := *outline
 	var finalReview *models.ReviewResult
@@ -302,14 +319,14 @@ func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, max
 		finalReview = &reviewOutput.Result
 
 		// Check if quality meets threshold
-		if reviewOutput.Result.OverallScore >= qualityThreshold {
+		scoreMeetsThreshold := reviewOutput.Result.OverallScore >= qualityThreshold
+		if scoreMeetsThreshold {
 			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", reviewOutput.Result.OverallScore, qualityThreshold)
-			break
 		}
 
-		// Check if this is the last iteration
-		if i == maxIterations {
-			logger.Warn("Max iterations reached, stopping iteration loop")
+		// Determine if we should improve
+		shouldImprove := !scoreMeetsThreshold || forceImprove
+		if !shouldImprove {
 			break
 		}
 
@@ -324,7 +341,13 @@ func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, max
 		}
 
 		currentOutline = improveOutput.Outline
-		logger.Info("✓ Outline improved, continuing to next iteration")
+		logger.Info("✓ Outline improved based on review suggestions")
+
+		// Check if this is the last iteration
+		if i == maxIterations {
+			logger.Warn("Max iterations reached, stopping iteration loop")
+			break
+		}
 	}
 
 	return &currentOutline, finalReview, nil
@@ -391,14 +414,18 @@ func (a *ComposeAgent) ImproveVolume(ctx context.Context, input ComposeImproveVo
 	return output, nil
 }
 
-// IterateHierarchical runs the hierarchical review-improvement loop
+// IterateHierarchical runs the hierarchical review-improvement loop with checkpoint support
 // 1. Review entire outline
 // 2. Identify volumes that need improvement
 // 3. Improve each volume individually
-func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.Outline, maxIterations int, qualityThreshold float64) (*models.Outline, *models.ReviewResult, error) {
+// Supports resuming from checkpoint if interrupted
+func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.Outline, maxIterations int, qualityThreshold float64, forceImprove bool) (*models.Outline, *models.ReviewResult, error) {
 	logger.Section("COMPOSE AGENT - Hierarchical Iteration Loop")
 	logger.Info("Max iterations: %d", maxIterations)
 	logger.Info("Quality threshold: %.1f", qualityThreshold)
+	if forceImprove {
+		logger.Info("Force improve enabled: will improve based on suggestions even if score meets threshold")
+	}
 	logger.Info("This will review the entire outline, then improve volumes individually")
 
 	currentOutline := *outline
@@ -418,14 +445,14 @@ func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.
 		finalReview = &reviewOutput.Result
 
 		// Check if quality meets threshold
-		if reviewOutput.Result.OverallScore >= qualityThreshold {
+		scoreMeetsThreshold := reviewOutput.Result.OverallScore >= qualityThreshold
+		if scoreMeetsThreshold {
 			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", reviewOutput.Result.OverallScore, qualityThreshold)
-			break
 		}
 
-		// Check if this is the last iteration
-		if i == maxIterations {
-			logger.Warn("Max iterations reached, stopping iteration loop")
+		// Determine if we should improve
+		shouldImprove := !scoreMeetsThreshold || forceImprove
+		if !shouldImprove {
 			break
 		}
 
@@ -443,37 +470,154 @@ func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.
 			}
 		}
 
-		// Step 3: Improve each identified volume
-		for _, indices := range volumesToImprove {
-			partIdx, volIdx := indices[0], indices[1]
-			part := &currentOutline.Parts[partIdx]
-			volume := &part.Volumes[volIdx]
-
-			logger.Info("Improving Volume %d.%d: %s", partIdx+1, volIdx+1, volume.Title)
-
-			// Filter suggestions for this volume
-			volumeReview := a.filterReviewForVolume(&reviewOutput.Result, volume.ID)
-
-			improveInput := ComposeImproveVolumeInput{
-				Outline:      currentOutline,
-				Part:         *part,
-				Volume:       *volume,
-				ReviewResult: volumeReview,
-			}
-
-			improveOutput, err := a.ImproveVolume(ctx, improveInput)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to improve volume %d.%d: %w", partIdx+1, volIdx+1, err)
-			}
-
-			// Update the volume in the outline
-			part.Volumes[volIdx] = improveOutput.Volume
+		// Step 3: Improve each identified volume with checkpoint support
+		improvedOutline, err := a.improveVolumesWithCheckpoint(ctx, &currentOutline, volumesToImprove, &reviewOutput.Result, i, maxIterations)
+		if err != nil {
+			return nil, nil, fmt.Errorf("iteration %d failed: %w", i, err)
 		}
+		currentOutline = *improvedOutline
 
 		logger.Info("✓ All volumes improved, continuing to next iteration")
+
+		// Check if this is the last iteration
+		if i == maxIterations {
+			logger.Warn("Max iterations reached, stopping iteration loop")
+			break
+		}
 	}
 
 	return &currentOutline, finalReview, nil
+}
+
+// improveVolumesWithCheckpoint improves volumes with checkpoint/resume support
+func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int) (*models.Outline, error) {
+	currentOutline := *outline
+	progressPath := "story/compose/outline_improve_progress.json"
+
+	// Try to load existing progress
+	var progress *ImproveProgress
+	if _, err := os.Stat(progressPath); err == nil {
+		loadedProgress, err := a.loadImproveProgress(progressPath)
+		if err == nil && loadedProgress.Iteration == currentIteration {
+			logger.Info("📂 Found existing progress for iteration %d, resuming...", currentIteration)
+			progress = loadedProgress
+			currentOutline = progress.Outline
+			logger.Info("✓ Resumed from checkpoint: %d/%d volumes completed", len(progress.CompletedVolumes), progress.TotalVolumes)
+		}
+	}
+
+	// Initialize progress if not resuming
+	if progress == nil {
+		progress = &ImproveProgress{
+			Iteration:        currentIteration,
+			TotalIterations:  totalIterations,
+			CurrentVolumeIdx: 0,
+			TotalVolumes:     len(volumesToImprove),
+			CompletedVolumes: []string{},
+			Outline:          currentOutline,
+			ReviewResult:     *reviewResult,
+		}
+		// Save initial progress
+		if err := a.saveImproveProgress(progress, progressPath); err != nil {
+			logger.Warn("Failed to save initial progress: %v", err)
+		}
+	}
+
+	// Improve remaining volumes
+	for idx := progress.CurrentVolumeIdx; idx < len(volumesToImprove); idx++ {
+		indices := volumesToImprove[idx]
+		partIdx, volIdx := indices[0], indices[1]
+		part := &currentOutline.Parts[partIdx]
+		volume := &part.Volumes[volIdx]
+
+		logger.Info("Improving Volume %d.%d: %s (%d/%d)", partIdx+1, volIdx+1, volume.Title, idx+1, len(volumesToImprove))
+
+		// Filter suggestions for this volume
+		volumeReview := a.filterReviewForVolume(reviewResult, volume.ID)
+
+		improveInput := ComposeImproveVolumeInput{
+			Outline:      currentOutline,
+			Part:         *part,
+			Volume:       *volume,
+			ReviewResult: volumeReview,
+		}
+
+		improveOutput, err := a.ImproveVolume(ctx, improveInput)
+		if err != nil {
+			// Save progress before returning error
+			progress.CurrentVolumeIdx = idx
+			progress.Outline = currentOutline
+			if saveErr := a.saveImproveProgress(progress, progressPath); saveErr != nil {
+				logger.Warn("Failed to save progress on error: %v", saveErr)
+			}
+			return nil, fmt.Errorf("failed to improve volume %d.%d: %w", partIdx+1, volIdx+1, err)
+		}
+
+		// Update the volume in the outline
+		part.Volumes[volIdx] = improveOutput.Volume
+		progress.CompletedVolumes = append(progress.CompletedVolumes, volume.ID)
+		progress.CurrentVolumeIdx = idx + 1
+		progress.Outline = currentOutline
+
+		// Save progress after each volume
+		if err := a.saveImproveProgress(progress, progressPath); err != nil {
+			logger.Warn("Failed to save progress: %v", err)
+		} else {
+			logger.Info("💾 Progress saved (%d/%d volumes completed)", len(progress.CompletedVolumes), progress.TotalVolumes)
+		}
+	}
+
+	// Remove progress file on successful completion of this iteration
+	os.Remove(progressPath)
+	logger.Info("✓ Iteration %d complete! Progress file removed.", currentIteration)
+
+	return &currentOutline, nil
+}
+
+// loadImproveProgress loads improvement progress from file
+func (a *ComposeAgent) loadImproveProgress(path string) (*ImproveProgress, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read progress file: %w", err)
+	}
+
+	var progress ImproveProgress
+	if err := json.Unmarshal(data, &progress); err != nil {
+		return nil, fmt.Errorf("failed to parse progress file: %w", err)
+	}
+
+	return &progress, nil
+}
+
+// saveImproveProgress saves improvement progress to file
+func (a *ComposeAgent) saveImproveProgress(progress *ImproveProgress, path string) error {
+	if progress == nil {
+		return fmt.Errorf("cannot save nil progress")
+	}
+
+	// Ensure directory exists
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// Marshal with indentation for readability
+	data, err := json.MarshalIndent(progress, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal progress: %w", err)
+	}
+
+	// Write to temporary file first, then rename for atomic operation
+	tempPath := path + ".tmp"
+	if err := os.WriteFile(tempPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write progress file: %w", err)
+	}
+
+	if err := os.Rename(tempPath, path); err != nil {
+		return fmt.Errorf("failed to rename progress file: %w", err)
+	}
+
+	return nil
 }
 
 // identifyVolumesToImprove identifies which volumes need improvement based on suggestions
