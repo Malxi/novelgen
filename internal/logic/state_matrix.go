@@ -61,25 +61,18 @@ func (m *StateMatrixManager) CalculateStateMatrix(outline *models.Outline, targe
 	// Load all generated elements
 	m.loadElementsIntoState(state)
 
-	// Apply events from all chapters up to target
+	// Apply events from all chapters up to and including target
 	for _, part := range outline.Parts {
 		for _, vol := range part.Volumes {
 			for _, ch := range vol.Chapters {
-				// Stop when we reach target chapter
-				if ch.ID == targetChapter.ID {
-					// Process storyline events from target chapter to get descriptions
-					// but mark them as "starting" rather than "started"
-					for _, event := range ch.Events {
-						if event.Type == "storyline" && event.Subject != "" {
-							m.applyStorylineEventWithDescription(state, event, ch.ID)
-						}
-					}
-					return state
-				}
-
 				// Apply events from this chapter
 				for _, event := range ch.Events {
 					m.applyEvent(state, event, ch.ID)
+				}
+
+				// Stop when we reach target chapter (after processing it)
+				if ch.ID == targetChapter.ID {
+					return state
 				}
 			}
 		}
@@ -139,11 +132,18 @@ func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.
 		if len(event.Characters) > 0 && event.Subject != "" {
 			charName := event.Characters[0]
 			itemName := event.Subject
-			if event.Change == "get" {
-				if item, exists := state.Items[itemName]; exists {
-					item.Owner = charName
+			if event.Change == "get" || event.Change == "acquired" || event.Change == "obtained" {
+				// Create item if not exists
+				if _, exists := state.Items[itemName]; !exists {
+					state.Items[itemName] = &models.Item{
+						Name:        itemName,
+						Description: event.Details,
+						Owner:       charName,
+					}
+				} else {
+					state.Items[itemName].Owner = charName
 				}
-			} else if event.Change == "lost" {
+			} else if event.Change == "lost" || event.Change == "used" || event.Change == "consumed" {
 				if item, exists := state.Items[itemName]; exists {
 					item.Owner = ""
 				}
@@ -151,7 +151,7 @@ func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.
 		}
 	case "premise":
 		// Character premise/progression update
-		if len(event.Characters) > 0 {
+		if len(event.Characters) > 0 && event.Subject != "" {
 			key := event.Characters[0] + "_" + event.Subject
 			state.Premises[key] = event.Change
 		}
