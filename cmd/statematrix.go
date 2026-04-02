@@ -157,8 +157,28 @@ func displayCumulativeState(state *models.StateMatrix) {
 
 	if len(state.Status) > 0 {
 		fmt.Println("  Statuses:")
-		for key, status := range state.Status {
-			fmt.Printf("    - %s: %s\n", key, status.State)
+		var keys []string
+		for key := range state.Status {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			status := state.Status[key]
+			// Try to extract character and status type from key
+			// Key format: either "char_statusType" or "statusDescription"
+			if idx := strings.Index(key, "_"); idx > 0 {
+				charName := key[:idx]
+				statusType := key[idx+1:]
+				if statusType == charName {
+					// If statusType is same as charName, just show charName
+					fmt.Printf("    - %s: %s\n", charName, status.State)
+				} else {
+					fmt.Printf("    - %s (%s): %s\n", charName, statusType, status.State)
+				}
+			} else {
+				// No underscore, show as is
+				fmt.Printf("    - %s: %s\n", key, status.State)
+			}
 		}
 	}
 

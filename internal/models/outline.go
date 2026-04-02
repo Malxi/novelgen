@@ -32,10 +32,10 @@ type Volume struct {
 type Chapter struct {
 	ID          string   `json:"id" md:"-"` // ID not shown in markdown
 	Title       string   `json:"title" md:"title"`
-	Summary     string   `json:"summary" md:"heading"`                                         // 格式: 角色 在 什么地方 发生了 什么事
-	Characters  []string `json:"characters" md:"characters"`                                   // 本章出现的角色名列表
-	Location    string   `json:"location" md:"location"`                                       // 事情发生的地点
-	Events      []Event  `json:"events" md:"events"`                                           // 本章发生的事件
+	Summary     string   `json:"summary" md:"heading"`       // 格式: 角色 在 什么地方 发生了 什么事
+	Characters  []string `json:"characters" md:"characters"` // 本章出现的角色名列表
+	Location    string   `json:"location" md:"location"`     // 事情发生的地点
+	Events      []Event  `json:"events" md:"events"`         // 本章发生的事件
 	Beats       []string `json:"beats" md:"beats"`
 	OpeningBeat string   `json:"opening_beat,omitempty" desc:"First beat that continues the previous chapter"`
 	ClosingBeat string   `json:"closing_beat,omitempty" desc:"Final beat/hook that must lead into next chapter"`
@@ -46,11 +46,11 @@ type Chapter struct {
 
 // Event represents a story event that changes state
 type Event struct {
-	Type       string   `json:"type" md:"type"`                 // relationship, goal, item, premise, storyline
-	Characters []string `json:"characters" md:"characters"`     // 涉及的角色
-	Subject    string   `json:"subject" md:"subject"`           // 目标角色/物品/体系/故事线
-	Change     string   `json:"change" md:"change"`             // 变化描述 (started, progressed, completed, etc.)
-	Details    string   `json:"details,omitempty" md:"details"` // 额外详情，用于 storyline 进度描述等
+	Type       string   `json:"type" md:"type" desc:"Event type: relationship (角色关系变化), goal (角色目标更新), item (角色物品更新), premise (角色体系更新), storyline (故事线更新), gate (章节障碍/代价记录), status (角色状态变化 - subject应为状态类型如修为/伤势/身份)"`
+	Characters []string `json:"characters" md:"characters" desc:"涉及的角色列表"`
+	Subject    string   `json:"subject" md:"subject" desc:"目标角色/物品/体系/故事线/状态类型。对于status类型，subject应为状态类型（如修为、伤势、身份），而非角色名"`
+	Change     string   `json:"change" md:"change" desc:"变化描述 (started, progressed, completed, get, lost, resolved等)"`
+	Details    string   `json:"details,omitempty" md:"details" desc:"额外详情，用于 storyline 进度描述等"`
 }
 
 // Event type constants
@@ -61,6 +61,7 @@ const (
 	EventTypePremise      = "premise"      // (premise, character, change) 角色体系更新
 	EventTypeStoryline    = "storyline"    // (storyline, change) 故事线更新
 	EventTypeGate         = "gate"         // (gate, character, change) 章节障碍/代价记录
+	EventTypeStatus       = "status"       // (status, character, statusType, change) 角色状态变化，subject 应为状态类型（如"修为"、"伤势"、"身份"）
 )
 
 // Save writes the outline to a file

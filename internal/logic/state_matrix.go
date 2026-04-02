@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"novelgen/internal/models"
 )
@@ -221,7 +222,17 @@ func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.
 		// Character physical/mental status change
 		if len(event.Characters) > 0 && event.Subject != "" {
 			charName := event.Characters[0]
-			statusKey := charName + "_" + event.Subject
+			statusType := event.Subject
+
+			// Smart status key generation:
+			// If subject already contains charName, use subject directly
+			// Otherwise, use charName_subject format
+			var statusKey string
+			if strings.Contains(statusType, charName) {
+				statusKey = statusType
+			} else {
+				statusKey = charName + "_" + statusType
+			}
 
 			// If status is resolved/recovered, remove it
 			if event.Change == "resolved" || event.Change == "recovered" || event.Change == "healed" {
@@ -229,7 +240,7 @@ func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.
 			} else {
 				// Store or update status
 				state.Status[statusKey] = &models.StatusState{
-					Type:      event.Subject,
+					Type:      statusType,
 					State:     event.Change,
 					ChapterID: chapterID,
 					Details:   event.Details,
