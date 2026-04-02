@@ -5,6 +5,8 @@ Review a story outline and provide comprehensive feedback on its structure, paci
 
 ## Input
 - `existing_outline`: The current story outline with parts, volumes, and chapters
+- `setup` (optional): Story setup including premise, genres, themes, rules, storylines, and premises
+- `user_prompt` (optional): Additional user suggestions for review focus. **If provided, prioritize the user's specific concerns when generating suggestions**
 
 ## Output
 - `result`: ReviewResult containing:

@@ -43,7 +43,9 @@ type ComposeRegenOutput struct {
 
 // ComposeReviewInput is the input for outline review
 type ComposeReviewInput struct {
-	ExistingOutline models.Outline `json:"existing_outline" md:"existing_outline" desc:"Existing outline to review"`
+	ExistingOutline models.Outline    `json:"existing_outline" md:"existing_outline" desc:"Existing outline to review"`
+	Setup           models.StorySetup `json:"setup,omitempty" md:"setup" desc:"Story setup including premise, genres, themes, rules"`
+	UserPrompt      string            `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for review focus"`
 }
 
 // ComposeReviewOutput is the output for outline review
@@ -55,6 +57,8 @@ type ComposeReviewOutput struct {
 type ComposeImproveInput struct {
 	ExistingOutline models.Outline      `json:"existing_outline" md:"existing_outline" desc:"Existing outline to improve"`
 	ReviewResult    models.ReviewResult `json:"review_result,omitempty" md:"review_result,omitempty" desc:"Review result for improvement guidance"`
+	UserPrompt      string              `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for improvement"`
+	Setup           models.StorySetup   `json:"setup,omitempty" md:"setup" desc:"Story setup including premise, genres, themes, rules"`
 }
 
 // ComposeImproveOutput is the output for outline improvement
@@ -110,6 +114,8 @@ type ComposeImproveVolumeInput struct {
 	Part         models.Part         `json:"part" md:"part" desc:"Current part information"`
 	Volume       models.Volume       `json:"volume" md:"volume" desc:"Volume to improve"`
 	ReviewResult models.ReviewResult `json:"review_result" md:"review_result" desc:"Review result for improvement guidance"`
+	UserPrompt   string              `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for improvement"`
+	Setup        models.StorySetup   `json:"setup,omitempty" md:"setup" desc:"Story setup including premise, genres, themes, rules"`
 }
 
 // ComposeImproveVolumeOutput is the output for volume improvement
@@ -295,7 +301,7 @@ func (a *ComposeAgent) Improve(ctx context.Context, input ComposeImproveInput) (
 }
 
 // Iterate runs the review-improvement loop for outline
-func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, maxIterations int, qualityThreshold float64, forceImprove bool) (*models.Outline, *models.ReviewResult, error) {
+func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, maxIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup) (*models.Outline, *models.ReviewResult, error) {
 	logger.Section("COMPOSE AGENT - Iteration Loop")
 	logger.Info("Max iterations: %d", maxIterations)
 	logger.Info("Quality threshold: %.1f", qualityThreshold)
@@ -311,6 +317,9 @@ func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, max
 
 		// Review current outline
 		reviewInput := ComposeReviewInput{ExistingOutline: currentOutline}
+		if setup != nil {
+			reviewInput.Setup = *setup
+		}
 		reviewOutput, err := a.Review(ctx, reviewInput)
 		if err != nil {
 			return nil, nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
@@ -334,6 +343,10 @@ func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, max
 		improveInput := ComposeImproveInput{
 			ExistingOutline: currentOutline,
 			ReviewResult:    reviewOutput.Result,
+			UserPrompt:      userPrompt,
+		}
+		if setup != nil {
+			improveInput.Setup = *setup
 		}
 		improveOutput, err := a.Improve(ctx, improveInput)
 		if err != nil {
@@ -409,6 +422,17 @@ func (a *ComposeAgent) ImproveVolume(ctx context.Context, input ComposeImproveVo
 		}
 	}
 
+	// Preserve original volume ID and chapter IDs to maintain consistency
+	originalVolumeID := input.Volume.ID
+	output.Volume.ID = originalVolumeID
+
+	// Preserve original chapter IDs
+	for i := range output.Volume.Chapters {
+		if i < len(input.Volume.Chapters) {
+			output.Volume.Chapters[i].ID = input.Volume.Chapters[i].ID
+		}
+	}
+
 	logger.Info("✓ Volume improved: %s (%d chapters)", output.Volume.Title, len(output.Volume.Chapters))
 
 	return output, nil
@@ -419,7 +443,7 @@ func (a *ComposeAgent) ImproveVolume(ctx context.Context, input ComposeImproveVo
 // 2. Identify volumes that need improvement
 // 3. Improve each volume individually
 // Supports resuming from checkpoint if interrupted
-func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.Outline, maxIterations int, qualityThreshold float64, forceImprove bool) (*models.Outline, *models.ReviewResult, error) {
+func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.Outline, maxIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup) (*models.Outline, *models.ReviewResult, error) {
 	logger.Section("COMPOSE AGENT - Hierarchical Iteration Loop")
 	logger.Info("Max iterations: %d", maxIterations)
 	logger.Info("Quality threshold: %.1f", qualityThreshold)
@@ -436,7 +460,13 @@ func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.
 
 		// Step 1: Review entire outline
 		logger.Section("Step 1: Reviewing Entire Outline")
-		reviewInput := ComposeReviewInput{ExistingOutline: currentOutline}
+		reviewInput := ComposeReviewInput{
+			ExistingOutline: currentOutline,
+			UserPrompt:      userPrompt,
+		}
+		if setup != nil {
+			reviewInput.Setup = *setup
+		}
 		reviewOutput, err := a.Review(ctx, reviewInput)
 		if err != nil {
 			return nil, nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
@@ -471,7 +501,8 @@ func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.
 		}
 
 		// Step 3: Improve each identified volume with checkpoint support
-		improvedOutline, err := a.improveVolumesWithCheckpoint(ctx, &currentOutline, volumesToImprove, &reviewOutput.Result, i, maxIterations)
+		// Note: userPrompt is passed to review, not to improve (review generates suggestions based on userPrompt)
+		improvedOutline, err := a.improveVolumesWithCheckpoint(ctx, &currentOutline, volumesToImprove, &reviewOutput.Result, i, maxIterations, setup)
 		if err != nil {
 			return nil, nil, fmt.Errorf("iteration %d failed: %w", i, err)
 		}
@@ -490,7 +521,7 @@ func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.
 }
 
 // improveVolumesWithCheckpoint improves volumes with checkpoint/resume support
-func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int) (*models.Outline, error) {
+func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int, setup *models.StorySetup) (*models.Outline, error) {
 	currentOutline := *outline
 	progressPath := "story/compose/outline_improve_progress.json"
 
@@ -540,6 +571,10 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 			Part:         *part,
 			Volume:       *volume,
 			ReviewResult: volumeReview,
+			// Note: UserPrompt is not passed here - it's used in review to generate suggestions
+		}
+		if setup != nil {
+			improveInput.Setup = *setup
 		}
 
 		improveOutput, err := a.ImproveVolume(ctx, improveInput)
@@ -634,7 +669,16 @@ func (a *ComposeAgent) identifyVolumesToImprove(review *models.ReviewResult) [][
 			if _, exists := volumeMap[volumeID]; !exists {
 				// Parse part and volume indices from ID
 				var partIdx, volIdx int
-				fmt.Sscanf(volumeID, "P%d-V%d", &partIdx, &volIdx)
+				n, err := fmt.Sscanf(volumeID, "P%d-V%d", &partIdx, &volIdx)
+				if err != nil || n != 2 {
+					logger.Warn("Failed to parse volume ID '%s', skipping", volumeID)
+					continue
+				}
+				// Validate indices are positive
+				if partIdx <= 0 || volIdx <= 0 {
+					logger.Warn("Invalid volume ID '%s' (part=%d, vol=%d), skipping", volumeID, partIdx, volIdx)
+					continue
+				}
 				volumeMap[volumeID] = [2]int{partIdx - 1, volIdx - 1} // Convert to 0-based
 			}
 		}

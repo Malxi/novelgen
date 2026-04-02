@@ -8,9 +8,17 @@ Improve the chapters in a specific volume based on review feedback, while mainta
 - `part`: The current Part information
 - `volume`: The Volume to improve (with current chapters)
 - `review_result`: Review feedback specific to this volume
+- `user_prompt` (optional): Additional user suggestions for improvement
+- `setup` (optional): Story setup including premise, genres, themes, rules, storylines, and premises
 
 ## Output
 - `volume`: The improved Volume with updated chapters
+
+**⚠️ CRITICAL: Return ONLY the Volume object, NOT the Part object**
+- DO NOT return a `parts` array
+- DO NOT return a `volumes` array  
+- Return ONLY the single Volume with its `chapters` array
+- The output must be a Volume, not a Part or Outline
 
 ## Improvement Focus
 
@@ -90,3 +98,4 @@ Improve the chapters in a specific volume based on review feedback, while mainta
 3. **Beat Continuity**: Ensure each chapter's closing beat leads to the next chapter's opening
 4. **Volume Arc**: All chapters should build toward the volume's summary
 5. **Context Awareness**: Consider the full outline context when making changes
+6. **User Suggestions**: If `user_prompt` is provided, prioritize the user's specific requests alongside review feedback

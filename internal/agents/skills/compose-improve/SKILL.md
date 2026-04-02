@@ -6,6 +6,8 @@ Improve a story outline based on review feedback or user guidance.
 ## Input
 - `existing_outline`: The current story outline
 - `review_result` (optional): ReviewResult with improvement suggestions
+- `user_prompt` (optional): Additional user suggestions for improvement
+- `setup` (optional): Story setup including premise, genres, themes, rules, storylines, and premises
 
 ## Output
 - `outline`: The improved story outline
@@ -44,6 +46,7 @@ Improve a story outline based on review feedback or user guidance.
 3. Ensure all chapters maintain required fields
 4. Keep character and location references consistent
 5. Maintain continuity with previous and following chapters
+6. If `user_prompt` is provided, prioritize the user's specific requests alongside review feedback
 
 ## Output Requirements
 
