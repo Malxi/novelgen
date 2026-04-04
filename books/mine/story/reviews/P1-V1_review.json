@@ -1,56 +1,10 @@
 {
   "volume_id": "P1-V1",
-  "volume_title": "卷一：矿场死囚",
+  "volume_title": "卷一：死而复生的矿奴",
   "reviews": [
     {
       "chapter_id": "P1-V1-C1",
-      "chapter_title": "楔子：血色苏醒",
-      "overall_score": 9,
-      "plot_coherence": {
-        "score": 0,
-        "issues": null,
-        "suggestions": null
-      },
-      "plot_rationality": {
-        "score": 0,
-        "logic_flaws": null,
-        "suggestions": null
-      },
-      "character_consistency": {
-        "score": 0,
-        "inconsistencies": null,
-        "suggestions": null
-      },
-      "pacing_review": {
-        "score": 0,
-        "issues": null,
-        "suggestions": null
-      },
-      "scene_continuity": {
-        "score": 0,
-        "issues": null,
-        "suggestions": null
-      },
-      "character_presence": {
-        "score": 0,
-        "issues": null,
-        "suggestions": null
-      },
-      "recap_quality": {
-        "score": 0,
-        "issues": null,
-        "suggestions": null
-      },
-      "suggestions": [
-        "[高优先级] 情节节奏优化: 将该段压缩至150字以内，仅保留「悬疑作者完本前意外穿越、成为黑石矿场矿奴三月、未觉醒金手指」三个核心信息，其余细节可放在后续章节插叙",
-        "[高优先级] 人物塑造优化: 给老矿工增加1个专属细节特征，如「左手缺了半根小拇指」「脖子上挂着磨得发亮的木牌」，强化读者记忆点，提升其死亡的悲剧感",
-        "[打磨优先级] 文笔打磨: 合并重复的感官描写，删除冗余表述，让叙事更紧凑"
-      ],
-      "needs_revision": false
-    },
-    {
-      "chapter_id": "P1-V1-C2",
-      "chapter_title": "代价的刻度",
+      "chapter_title": "寒矿醒转，首死触发复生",
       "overall_score": 8,
       "plot_coherence": {
         "score": 0,
@@ -88,56 +42,10 @@
         "suggestions": null
       },
       "suggestions": [
-        "[高优先级] 人物设定修正: 将「王二」替换为状态矩阵中已有的矿奴角色「张三（三愣子）」，保持设定一致性",
-        "[打磨优先级] 字数调整: 删除「甚至为了剧情逻辑的合理性查过半个月的闭环设定资料」这句非核心表述，即可压缩30字左右，符合±5%的字数要求",
-        "[打磨优先级] 设定细节补充: 在「那几根断成两截的朽木还好好地撑在岩壁上」后补充一句「刚才我被砸死的位置空荡荡的，连半片血迹都没留下」，强化设定合规性",
-        "[打磨优先级] 时态优化: 修改为「他写了十几年悬疑，设计过无数次循环求生的桥段」，弱化时态违和感，符合要求的现在时叙事规则"
-      ],
-      "needs_revision": false
-    },
-    {
-      "chapter_id": "P1-V1-C3",
-      "chapter_title": "求生的实验",
-      "overall_score": 7,
-      "plot_coherence": {
-        "score": 0,
-        "issues": null,
-        "suggestions": null
-      },
-      "plot_rationality": {
-        "score": 0,
-        "logic_flaws": null,
-        "suggestions": null
-      },
-      "character_consistency": {
-        "score": 0,
-        "inconsistencies": null,
-        "suggestions": null
-      },
-      "pacing_review": {
-        "score": 0,
-        "issues": null,
-        "suggestions": null
-      },
-      "scene_continuity": {
-        "score": 0,
-        "issues": null,
-        "suggestions": null
-      },
-      "character_presence": {
-        "score": 0,
-        "issues": null,
-        "suggestions": null
-      },
-      "recap_quality": {
-        "score": 0,
-        "issues": null,
-        "suggestions": null
-      },
-      "suggestions": [
-        "[致命优先级] 字数合规: 删除第16-18段非指定内容，精简第2段前两次复活的回忆内容，合并重复的细节描写，将总字数控制在2850-3150字范围内",
-        "[高优先级] 情节优化: 直接删除该部分内容，在林砚梳理完复活规则、得出核心结论后直接收尾，符合本章指定的closing beat要求",
-        "[打磨优先级] 细节打磨: 将前两次复活的细节合并为凝练的表述，简化规则梳理内容，使其与收尾结论句自然呼应，避免重复"
+        "[高优先级] 情节优化: 精简林砚复活后关于“写了五年矿场开局没有活不下去的局”的重复表述，删减100字左右的冗余内容，将总字数控制在3000±5%的范围内",
+        "[高优先级] 文笔打磨: 将“猛地喘了一口气，猛地坐了起来”修改为“冰凉的触感再次从后背传来的时候，林砚喘着粗气猛地坐了起来”，避免重复表述",
+        "[打磨优先级] 人物优化: 将“升起点荒诞的笑意”修改为“喉间滚过一丝极淡的、近乎自嘲的弧度”，更贴合林砚不外露的性格",
+        "[打磨优先级] 情节优化: 要么在清理碎石段落给老矿奴加一个偷瞥林砚的细节，埋下后续书友会线的伏笔，要么删掉老矿奴的台词，避免无意义的支线内容"
       ],
       "needs_revision": false
     }

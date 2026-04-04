@@ -340,11 +340,14 @@ func (m *StateMatrixManager) loadElementsIntoState(state *models.StateMatrix) {
 	}
 
 	// Load items
+	// Note: Items from craft are loaded without owners. Ownership is tracked via Events.
 	itemPath := filepath.Join(m.projectRoot, "story", "craft", "items.json")
 	if data, err := os.ReadFile(itemPath); err == nil {
 		var items map[string]*models.Item
 		if err := json.Unmarshal(data, &items); err == nil {
 			for name, item := range items {
+				// Clear owner from craft definition - ownership is determined by Events
+				item.Owner = ""
 				state.Items[name] = item
 			}
 		}

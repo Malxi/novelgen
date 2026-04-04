@@ -73,12 +73,13 @@ type WriteImproveOutput struct {
 
 // WriteReviewInput is the input for chapter review
 type WriteReviewInput struct {
-	StorySetup     CompactStorySetup   `json:"story_setup" md:"story_setup" desc:"Core story setup including premise, genres, themes, rules"`
-	StateMatrix    *models.StateMatrix `json:"state_matrix" md:"state_matrix" desc:"Current story state matrix for continuity checking"`
-	Chapter        models.Chapter      `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
-	ChapterContent string              `json:"chapter_content" md:"chapter_content" desc:"The chapter content to be reviewed"`
-	TargetWords    int                 `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
-	Iteration      int                 `json:"iteration" md:"iteration" desc:"Current iteration number"`
+	StorySetup     CompactStorySetup `json:"story_setup" md:"story_setup" desc:"Core story setup including premise, genres, themes, rules"`
+	StateMatrix    string            `json:"state_matrix" md:"state_matrix" desc:"Current story state including character statuses, relationships, goals"`
+	Chapter        models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
+	ChapterContent string            `json:"chapter_content" md:"chapter_content" desc:"The chapter content to be reviewed"`
+	TargetWords    int               `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
+	Iteration      int               `json:"iteration" md:"iteration" desc:"Current iteration number"`
+	Recap          string            `json:"recap,omitempty" md:"recap,omitempty" desc:"Canonical recap from previous chapter for continuity checking"`
 }
 
 // WriteReviewOutput is the output for chapter review
@@ -182,20 +183,21 @@ func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapte
 }
 
 // GenerateChapterWithSuggestions generates improved chapter content with review suggestions
-func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, targetWords int, suggestions string) (string, error) {
+func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, targetWords int, currentDraft string, suggestions string) (string, error) {
 	logger.Section("WRITE AGENT - Chapter Improvement")
 	logger.Info("Chapter: %s", chapter.ID)
 	logger.Info("Target words: %d", targetWords)
 	logger.Info("Language: %s", a.base.language)
 
 	input := WriteImproveInput{
-		StorySetup:  ToCompact(a.setup),
-		Chapter:     *chapter,
-		StateMatrix: formatStateMatrixForWrite(state, chapter),
-		TargetWords: targetWords,
-		Suggestions: suggestions,
-		Context:     formatChapterContext(context),
-		Recap:       context.Recap,
+		StorySetup:   ToCompact(a.setup),
+		Chapter:      *chapter,
+		StateMatrix:  formatStateMatrixForWrite(state, chapter),
+		TargetWords:  targetWords,
+		CurrentDraft: currentDraft,
+		Suggestions:  suggestions,
+		Context:      formatChapterContext(context),
+		Recap:        context.Recap,
 	}
 
 	var output WriteImproveOutput
@@ -223,19 +225,25 @@ func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter
 }
 
 // ReviewChapter reviews a chapter and provides improvement suggestions
-func (a *WriteAgent) ReviewChapter(ctx context.Context, chapter *models.Chapter, state *models.StateMatrix, content string, targetWords int, iteration int) (models.ReviewResult, error) {
+func (a *WriteAgent) ReviewChapter(ctx context.Context, chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, content string, targetWords int, iteration int) (models.ReviewResult, error) {
 	logger.Section("WRITE AGENT - Chapter Review")
 	logger.Info("Chapter: %s", chapter.ID)
 	logger.Info("Iteration: %d", iteration)
 	logger.Info("Language: %s", a.base.language)
 
+	recap := ""
+	if context != nil {
+		recap = context.Recap
+	}
+
 	input := WriteReviewInput{
 		StorySetup:     ToCompact(a.setup),
-		StateMatrix:    state,
+		StateMatrix:    formatStateMatrixForWrite(state, chapter),
 		Chapter:        *chapter,
 		ChapterContent: content,
 		TargetWords:    targetWords,
 		Iteration:      iteration,
+		Recap:          recap,
 	}
 
 	var output WriteReviewOutput
@@ -269,7 +277,7 @@ func (a *WriteAgent) IterateChapter(ctx context.Context, chapter *models.Chapter
 		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
 
 		// Review
-		review, err := a.ReviewChapter(ctx, chapter, state, currentContent, targetWords, i)
+		review, err := a.ReviewChapter(ctx, chapter, context, state, currentContent, targetWords, i)
 		if err != nil {
 			return "", nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
 		}
@@ -302,7 +310,7 @@ func (a *WriteAgent) IterateChapter(ctx context.Context, chapter *models.Chapter
 
 		// Improve
 		suggestions := formatWriteSuggestions(review.Suggestions)
-		improved, err := a.GenerateChapterWithSuggestions(ctx, chapter, context, state, targetWords, suggestions)
+		improved, err := a.GenerateChapterWithSuggestions(ctx, chapter, context, state, targetWords, currentContent, suggestions)
 		if err != nil {
 			return "", nil, fmt.Errorf("improvement failed at iteration %d: %w", i, err)
 		}
@@ -401,9 +409,6 @@ func formatStateMatrixForWrite(state *models.StateMatrix, chapter *models.Chapte
 				continue
 			}
 			sb.WriteString(fmt.Sprintf("  %s:\n", name))
-			if char.Motivation != "" {
-				sb.WriteString(fmt.Sprintf("    - Motivation: %s\n", char.Motivation))
-			}
 			if char.Personality != nil && len(char.Personality) > 0 {
 				sb.WriteString(fmt.Sprintf("    - Personality: %s\n", strings.Join(char.Personality, ", ")))
 			}
@@ -498,21 +503,18 @@ func formatStateMatrixForWrite(state *models.StateMatrix, chapter *models.Chapte
 		}
 	}
 
-	// Items - only show items owned by relevant characters or unowned items
+	// Items - only show items owned by relevant characters
 	if len(state.Items) > 0 {
 		hasItems := false
 		var itemsBuilder strings.Builder
 		itemsBuilder.WriteString("\nItems:\n")
 		for itemName, item := range state.Items {
-			// Show if item is owned by a relevant character or has no owner (available in scene)
-			if item.Owner == "" || relevantChars[item.Owner] {
+			// Only show if item is owned by a relevant character
+			// Items without owner should not be shown (they are from craft definition, not acquired yet)
+			if item.Owner != "" && relevantChars[item.Owner] {
 				hasItems = true
 				itemsBuilder.WriteString(fmt.Sprintf("  %s", itemName))
-				if item.Owner != "" {
-					itemsBuilder.WriteString(fmt.Sprintf(" (held by: %s)", item.Owner))
-				} else {
-					itemsBuilder.WriteString(" (available)")
-				}
+				itemsBuilder.WriteString(fmt.Sprintf(" (held by: %s)", item.Owner))
 				if item.Description != "" {
 					itemsBuilder.WriteString(fmt.Sprintf(" - %s", item.Description))
 				}

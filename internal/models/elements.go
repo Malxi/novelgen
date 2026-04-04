@@ -3,21 +3,21 @@ package models
 // Character represents a detailed character profile
 // Note: Dynamic fields like relationships, goals, character_arc are managed by StateMatrix
 type Character struct {
-	Name         string   `json:"name"`
-	Aliases      []string `json:"aliases,omitempty"`
-	Age          string   `json:"age,omitempty"`
-	Gender       string   `json:"gender,omitempty"`
-	Race         string   `json:"race,omitempty"`
-	Appearance   string   `json:"appearance"`
-	Personality  []string `json:"personality"`
-	Background   string   `json:"background"`
-	Motivation   string   `json:"motivation"`
-	Skills       []string `json:"skills,omitempty"`
-	Abilities    []string `json:"abilities,omitempty"`
-	Affiliations []string `json:"affiliations,omitempty"`
-	RoleInStory  string   `json:"role_in_story"`
-	Voice        string   `json:"voice,omitempty"`
-	Notes        string   `json:"notes,omitempty"`
+	Name         string   `json:"name" desc:"Character name"`
+	Aliases      []string `json:"aliases,omitempty" desc:"Alternative names or titles (array of strings)"`
+	Age          string   `json:"age,omitempty" desc:"Character age or age range"`
+	Gender       string   `json:"gender,omitempty" desc:"Character gender"`
+	Race         string   `json:"race,omitempty" desc:"Character race/species"`
+	Appearance   string   `json:"appearance" desc:"Physical appearance description"`
+	Personality  []string `json:"personality" desc:"Personality traits (array of strings)"`
+	Background   string   `json:"background" desc:"Character backstory"`
+	Motivation   string   `json:"motivation" desc:"Character's core motivation"`
+	Skills       []string `json:"skills,omitempty" desc:"Skills and abilities (array of strings)"`
+	Abilities    []string `json:"abilities,omitempty" desc:"Special powers or abilities (array of strings)"`
+	Affiliations []string `json:"affiliations,omitempty" desc:"Organizations the character belongs to (array of strings)"`
+	RoleInStory  string   `json:"role_in_story" desc:"Character's role in the story (protagonist/antagonist/supporting/etc)"`
+	Voice        string   `json:"voice,omitempty" desc:"Speaking style and mannerisms"`
+	Notes        string   `json:"notes,omitempty" desc:"Additional notes for writers (string, NOT array)"`
 }
 
 // Location represents a detailed location description
@@ -47,20 +47,20 @@ type SensoryDetails struct {
 
 // Item represents a detailed item description
 type Item struct {
-	Name         string     `json:"name"`
-	Type         string     `json:"type"`
-	Description  string     `json:"description"`
-	Appearance   string     `json:"appearance"`
-	Function     string     `json:"function"`
-	Origin       string     `json:"origin,omitempty"`
-	History      string     `json:"history,omitempty"`
-	Powers       []string   `json:"powers,omitempty"`
-	Limitations  []string   `json:"limitations,omitempty"`
-	Owner        string     `json:"owner,omitempty"`
-	Significance string     `json:"significance"`
-	RelatedItems []string   `json:"related_items,omitempty"`
-	Secrets      StringList `json:"secrets,omitempty"`
-	Notes        string     `json:"notes,omitempty"`
+	Name         string     `json:"name" desc:"Item name"`
+	Type         string     `json:"type" desc:"Item type/category"`
+	Description  string     `json:"description" desc:"Item description"`
+	Appearance   string     `json:"appearance" desc:"Physical appearance"`
+	Function     string     `json:"function" desc:"What the item does"`
+	Origin       string     `json:"origin,omitempty" desc:"Where the item comes from"`
+	History      string     `json:"history,omitempty" desc:"Item's history/background"`
+	Powers       []string   `json:"powers,omitempty" desc:"Special powers (array of strings)"`
+	Limitations  []string   `json:"limitations,omitempty" desc:"Limitations or drawbacks (array of strings)"`
+	Owner        string     `json:"owner,omitempty" desc:"Current owner"`
+	Significance string     `json:"significance" desc:"Story significance"`
+	RelatedItems []string   `json:"related_items,omitempty" desc:"Related items (array of strings)"`
+	Secrets      StringList `json:"secrets,omitempty" desc:"Secrets about the item (array of strings)"`
+	Notes        string     `json:"notes,omitempty" desc:"Additional notes (string, NOT array)"`
 }
 
 // Organization represents a faction, guild, or organization in the story

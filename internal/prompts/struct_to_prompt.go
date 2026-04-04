@@ -575,6 +575,23 @@ func structToMarkdown(val reflect.Value, level int) string {
 		case reflect.Struct:
 			result.WriteString(structToMarkdown(field, level))
 
+		case reflect.Map:
+			// Handle map types by showing key-value pairs
+			if field.Len() == 0 {
+				continue
+			}
+			result.WriteString(fmt.Sprintf("**%s:**\n", displayName))
+			for _, key := range field.MapKeys() {
+				val := field.MapIndex(key)
+				keyStr := fmt.Sprintf("%v", key.Interface())
+				valStr := StructToMarkdown(val.Interface(), level+1)
+				if valStr == "" {
+					valStr = fmt.Sprintf("%v", val.Interface())
+				}
+				result.WriteString(fmt.Sprintf("- %s: %s\n", keyStr, strings.TrimSpace(valStr)))
+			}
+			result.WriteString("\n")
+
 		default:
 			result.WriteString(fmt.Sprintf("**%s:** %v\n\n", displayName, field.Interface()))
 		}
