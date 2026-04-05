@@ -481,6 +481,15 @@ func saveFinalChapter(chapter *models.Chapter, content string) error {
 	chapterNum := extractChapterNumber(chapter.ID)
 	filename := filepath.Join(chaptersDir, fmt.Sprintf("chapter-%s.md", chapterNum))
 
+	// Check if content already starts with the chapter title (markdown h1)
+	// Avoid adding duplicate title
+	trimmedContent := strings.TrimSpace(content)
+	titlePrefix := fmt.Sprintf("# %s", chapter.Title)
+	if strings.HasPrefix(trimmedContent, titlePrefix) {
+		// Content already has the title, save as-is
+		return os.WriteFile(filename, []byte(content), 0644)
+	}
+
 	// Build content with header
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", chapter.Title))

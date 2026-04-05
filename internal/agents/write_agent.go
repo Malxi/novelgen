@@ -101,6 +101,81 @@ type ContextChapter struct {
 	Content string
 }
 
+// VolumeReviewChapterInput represents a chapter in volume review
+type VolumeReviewChapterInput struct {
+	ChapterID    string   `json:"chapter_id" md:"chapter_id"`
+	ChapterTitle string   `json:"chapter_title" md:"chapter_title"`
+	Summary      string   `json:"summary" md:"summary"`
+	Content      string   `json:"content" md:"content"`
+	Beats        []string `json:"beats" md:"beats"`
+}
+
+// VolumeReviewInput is the input for volume-level review
+type VolumeReviewInput struct {
+	StorySetup            CompactStorySetup          `json:"story_setup" md:"story_setup"`
+	VolumeID              string                     `json:"volume_id" md:"volume_id"`
+	VolumeTitle           string                     `json:"volume_title" md:"volume_title"`
+	VolumeSummary         string                     `json:"volume_summary" md:"volume_summary"`
+	Chapters              []VolumeReviewChapterInput `json:"chapters" md:"chapters"`
+	TargetWordsPerChapter int                        `json:"target_words_per_chapter" md:"target_words_per_chapter"`
+}
+
+// VolumeChapterReview represents review result for a single chapter in volume review
+type VolumeChapterReview struct {
+	ChapterID          string   `json:"chapter_id" md:"chapter_id" desc:"Chapter ID"`
+	ChapterScore       float64  `json:"chapter_score" md:"chapter_score" desc:"Chapter score 0-10, can be decimal like 8.5"`
+	ChapterRole        string   `json:"chapter_role" md:"chapter_role" desc:"Chapter role in volume: setup/development/turning_point/climax/resolution"`
+	ContinuityWithPrev string   `json:"continuity_with_previous" md:"continuity_with_previous" desc:"Continuity evaluation with previous chapter"`
+	ContinuityWithNext string   `json:"continuity_with_next" md:"continuity_with_next" desc:"Continuity evaluation with next chapter"`
+	Issues             []string `json:"issues" md:"issues" desc:"List of issues found in this chapter"`
+	Suggestions        []string `json:"suggestions" md:"suggestions" desc:"List of improvement suggestions for this chapter"`
+}
+
+// VolumeStructureAnalysis represents the volume structure analysis
+type VolumeStructureAnalysis struct {
+	OpeningHook  string `json:"opening_hook" md:"opening_hook" desc:"Evaluation of the opening hook"`
+	RisingAction string `json:"rising_action" md:"rising_action" desc:"Evaluation of rising action distribution"`
+	Climax       string `json:"climax" md:"climax" desc:"Evaluation of the climax"`
+	Resolution   string `json:"resolution" md:"resolution" desc:"Evaluation of the resolution"`
+}
+
+// PlotBug represents a plot bug found in the volume
+type PlotBug struct {
+	BugType     string `json:"bug_type" md:"bug_type" desc:"Type of plot bug: plot_contradiction/setting_conflict/character_break"`
+	Severity    string `json:"severity" md:"severity" desc:"Severity: critical/major/minor"`
+	Location    string `json:"location" md:"location" desc:"Chapter ID where bug is found"`
+	Description string `json:"description" md:"description" desc:"Bug description"`
+	Expected    string `json:"expected" md:"expected" desc:"What it should be"`
+	Actual      string `json:"actual" md:"actual" desc:"What was actually written"`
+}
+
+// LogicBug represents a logic bug found in the volume
+type LogicBug struct {
+	BugType     string `json:"bug_type" md:"bug_type" desc:"Type of logic bug: timeline/space/numeric/information"`
+	Severity    string `json:"severity" md:"severity" desc:"Severity: critical/major/minor"`
+	Location    string `json:"location" md:"location" desc:"Chapter ID where bug is found"`
+	Description string `json:"description" md:"description" desc:"Bug description"`
+	Explanation string `json:"explanation" md:"explanation" desc:"Explanation of the logic error"`
+}
+
+// VolumeReviewResult represents the result of volume-level review
+type VolumeReviewResult struct {
+	OverallScore            int                     `json:"overall_score" md:"overall_score" desc:"Overall volume quality score 0-100"`
+	VolumeStructureAnalysis VolumeStructureAnalysis `json:"volume_structure_analysis" md:"volume_structure_analysis" desc:"Analysis of volume structure: opening, rising action, climax, resolution"`
+	ChapterReviews          []VolumeChapterReview   `json:"chapter_reviews" md:"chapter_reviews" desc:"Review results for each chapter"`
+	VolumeLevelIssues       []string                `json:"volume_level_issues" md:"volume_level_issues" desc:"Issues that affect the entire volume"`
+	VolumeLevelSuggestions  []string                `json:"volume_level_suggestions" md:"volume_level_suggestions" desc:"Suggestions for improving the entire volume"`
+	PlotBugs                []PlotBug               `json:"plot_bugs" md:"plot_bugs" desc:"List of plot bugs found in the volume"`
+	LogicBugs               []LogicBug              `json:"logic_bugs" md:"logic_bugs" desc:"List of logic bugs found in the volume"`
+	PlotFixSuggestions      []string                `json:"plot_fix_suggestions" md:"plot_fix_suggestions" desc:"Suggestions for fixing plot bugs"`
+	LogicFixSuggestions     []string                `json:"logic_fix_suggestions" md:"logic_fix_suggestions" desc:"Suggestions for fixing logic bugs"`
+}
+
+// VolumeReviewOutput is the output for volume review
+type VolumeReviewOutput struct {
+	Result VolumeReviewResult `json:"volume_review_result" md:"volume_review_result"`
+}
+
 // WriteAgent generates final chapter content with continuity
 // It wraps BaseAgent to provide type-safe methods
 type WriteAgent struct {
@@ -259,6 +334,66 @@ func (a *WriteAgent) ReviewChapter(ctx context.Context, chapter *models.Chapter,
 	logger.Section("Chapter Review Result")
 	logger.Info("Overall Score: %.1f/100", output.Result.OverallScore)
 	logger.Info("Suggestions: %d", len(output.Result.Suggestions))
+
+	return output.Result, nil
+}
+
+// ReviewVolume performs a holistic review of all chapters in a volume
+func (a *WriteAgent) ReviewVolume(ctx context.Context, volume *models.Volume, chapters []*models.Chapter, chapterContents map[string]string, targetWords int) (VolumeReviewResult, error) {
+	logger.Section("WRITE AGENT - Volume Review")
+	logger.Info("Volume: %s - %s", volume.ID, volume.Title)
+	logger.Info("Chapters: %d", len(chapters))
+	logger.Info("Language: %s", a.base.language)
+
+	// Build chapter inputs
+	var chapterInputs []VolumeReviewChapterInput
+	for _, chapter := range chapters {
+		content := chapterContents[chapter.ID]
+		if content == "" {
+			logger.Warn("No content for chapter %s, skipping in volume review", chapter.ID)
+			continue
+		}
+
+		// Beats are already strings
+		beats := chapter.Beats
+
+		chapterInputs = append(chapterInputs, VolumeReviewChapterInput{
+			ChapterID:    chapter.ID,
+			ChapterTitle: chapter.Title,
+			Summary:      chapter.Summary,
+			Content:      content,
+			Beats:        beats,
+		})
+	}
+
+	if len(chapterInputs) == 0 {
+		return VolumeReviewResult{}, fmt.Errorf("no chapters with content to review")
+	}
+
+	input := VolumeReviewInput{
+		StorySetup:            ToCompact(a.setup),
+		VolumeID:              volume.ID,
+		VolumeTitle:           volume.Title,
+		VolumeSummary:         volume.Summary,
+		Chapters:              chapterInputs,
+		TargetWordsPerChapter: targetWords,
+	}
+
+	var output VolumeReviewOutput
+	params := InvokeParams{
+		Skills:  []string{"volume-review"},
+		Command: "review entire volume holistically and provide chapter-level suggestions",
+	}
+
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return VolumeReviewResult{}, err
+	}
+
+	logger.Section("Volume Review Result")
+	logger.Info("Overall Volume Score: %d/100", output.Result.OverallScore)
+	logger.Info("Chapters Reviewed: %d", len(output.Result.ChapterReviews))
+	logger.Info("Volume Level Issues: %d", len(output.Result.VolumeLevelIssues))
+	logger.Info("Volume Level Suggestions: %d", len(output.Result.VolumeLevelSuggestions))
 
 	return output.Result, nil
 }
