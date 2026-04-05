@@ -5,6 +5,100 @@
     {
       "chapter_id": "P1-V1-C1",
       "chapter_title": "寒矿醒转，首死触发复生",
+      "overall_score": 7,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 内容删减: 重点删减三部分内容：①禁灵阵的直白说明部分，保留「矿道壁嵌着淡灰色阵石，老矿奴看死人的眼神」即可，不用详细解释阵石的落雷效果；②复活后重复的心理活动，删除「他写过无数种金手指设定」「地狱难度的开局又怎么样」等冗余表述；③删除老矿奴的暗记描写、周虎查产量的多余情节，把总字数压缩到3150字以内",
+        "[高优先级] 逻辑补全: 在林砚看到碎石里的衣角后补充一句「他低头扫了眼自己的衣襟，下摆果然缺了一块，撕口还带着新鲜的毛边」，既强化复活的真实性，也补全逻辑闭环",
+        "[高优先级] 节奏调整: 把收尾落在「他把半块下品灵石塞进怀里，抬眼看向矿道深处的黑暗，指尖因为用力泛白」的节点即可，删除后续混进挖矿队伍的多余描写，让收尾更干脆，悬念感更强",
+        "[打磨优先级] 文风打磨: 调整为「写了五年矿场开局修仙文，到头来自己成了开局的矿奴」，更贴合整体调性"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C2",
+      "chapter_title": "二度殒命，始知复生有耗",
+      "overall_score": 7,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 情节调整: 删掉从「一个疯狂的念头在他脑子里冒了出来」到章节结尾的全部内容，收尾停在林砚确认修为跌至练气一层、强行压下恐慌开始思考如何应对挖矿定额的节点，同时删掉回忆上古遗迹的冗余段落，将总字数压缩至2850-3150的合规范围内",
+        "[致命优先级] 人设调整: 将最终心理活动调整为林砚复盘两次复活的规律后，优先思考如何利用自己熟知矿场设定的优势完成三斤灵石的定额，规避被喂噬骨鼠的风险，贴合其人设逻辑",
+        "[高优先级] 节奏优化: 精简第二次复活后关于读者会冲评论区的吐槽内容，保留1-2句即可，让整体节奏更紧凑",
+        "[打磨优先级] 文笔打磨: 将「后脑勺残存的钝痛像粘在脑膜上的胶」简化为「后脑勺的钝痛像粘在脑膜上的胶」，更贴合冷峻简洁的文风"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C3",
+      "chapter_title": "以身试死，探明寿命折损",
       "overall_score": 8,
       "plot_coherence": {
         "score": 0,
@@ -42,10 +136,340 @@
         "suggestions": null
       },
       "suggestions": [
-        "[高优先级] 情节优化: 精简林砚复活后关于“写了五年矿场开局没有活不下去的局”的重复表述，删减100字左右的冗余内容，将总字数控制在3000±5%的范围内",
-        "[高优先级] 文笔打磨: 将“猛地喘了一口气，猛地坐了起来”修改为“冰凉的触感再次从后背传来的时候，林砚喘着粗气猛地坐了起来”，避免重复表述",
-        "[打磨优先级] 人物优化: 将“升起点荒诞的笑意”修改为“喉间滚过一丝极淡的、近乎自嘲的弧度”，更贴合林砚不外露的性格",
-        "[打磨优先级] 情节优化: 要么在清理碎石段落给老矿奴加一个偷瞥林砚的细节，埋下后续书友会线的伏笔，要么删掉老矿奴的台词，避免无意义的支线内容"
+        "[致命优先级] 设定合规: 将该段内容调整为「这些布局、这些人名、甚至连墙根那个藏灵石的小坑，都和他五年前开的那本矿场开局修仙文的开篇设定高度重合」，仅保留悬念不做实穿书结论，待后续官方设定补充后再落地",
+        "[高优先级] 格式合规: 删减不必要的过去时态助词，比如将「就听见身后传来周虎呼喝着巡查矿道的脚步声」改为「身后传来周虎呼喝巡查矿道的脚步声」，强化叙事即时感即可，无需大幅修改内容",
+        "[高优先级] 字数合规: 删减林砚复活后观察大通铺布局时的非核心细节，比如「左边第三个铺位的屋顶漏雨，铺位的主人是上个月因为偷藏灵石被周虎砍了手指的王大柱，右边最里面的铺位住的是个会点粗浅医术的老矿奴陈老头，铺位旁边还堆着半捆晒干的止血草」可简化为「大通铺三十个铺位的布局、住客的身份特征，甚至连墙根那个藏灵石的小坑，都和他记忆里的小说设定高度重合」，压缩字数即可",
+        "[打磨优先级] 连续性优化: 在林砚捡窝头的段落补充一句心理活动「刚好等下可以找相熟的矿奴借把闲置镐头，明天凑够四斤定额不难」，补全逻辑即可"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C4",
+      "chapter_title": "矿洞识踪，竟入自著仙途",
+      "overall_score": 9,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 连续性优化: 在「已经开始盘算三天后那场搜身该怎么避开」前补充一句：「顺带琢磨着等会老郑睡熟了，问问他能不能把闲置的旧镐头借我用两天，明天四斤的定额可不是磨洋工能凑出来的」",
+        "[高优先级] 情节合理性优化: 将嗅觉感知的时机调整到周虎俯身踹林砚的时候，改为「周虎踹过来的时候俯身凑到他跟前骂，戒指转动带起的风飘到林砚鼻尖，居然真的嗅到了一丝若有若无的卤猪油星子味儿」",
+        "[打磨优先级] 文笔打磨: 删除「他甚至还能记起自己当时写这段的时候，因为卡文喝了三罐红牛，敲键盘敲得手指都疼」这句话，精简叙事节奏",
+        "[打磨优先级] 人物状态优化: 在「膝盖磕在碎石上，磨出一片血痕」后补充一句：「折损十年阳寿的酸软感瞬间涌上来，他眼前黑了两秒才缓过劲」"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C5",
+      "chapter_title": "先知优势，巧藏灵石避搜",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 剧情连续性: 在周虎开篇的喝骂内容中增加「昨个说的丙字三号塌了小方，今天临时改去丙字七号！」的表述，既补全逻辑，也符合周虎行事无常的人设",
+        "[高优先级] 时间线连续性: 在林砚回忆原主被搜身害死的情节时，增加一句心理活动「这是丙字矿道出矿日的常规搜身，不是原定三天后的全矿大搜」，衔接前章的未解决线索",
+        "[高优先级] 人物细节: 在林砚挖完份额准备藏自己的灵石前，增加一句「眼角余光瞥见老郑趁旁边监工转头吐痰的功夫，飞快把一块鸽蛋大的青灵石塞进了鞋底缝」的细节，为后续搜出中品灵石做铺垫",
+        "[打磨优先级] 字数合规: 将原段落「有个才十五六岁的小矿奴吓得把藏在嘴里的半块碎灵石咽了下去，被周虎瞥见了，直接让两个监工把他按倒，拿装着污水的皮袋往他嘴里灌，灌得他吐得满地都是，直到把那块碎灵石吐出来才停」精简为「有个半大的小矿奴吓得把藏在嘴里的碎灵石咽了，周虎瞥见直接让人按倒灌污水，逼得他吐得满地都是才把灵石抠出来」，压缩约30字，将总字数控制在3150字以内的合规范围",
+        "[打磨优先级] 人物心理强化: 在林砚找到岩缝藏灵石时，增加一句「这是他当初写设定时随手给炮灰林砚留的藏东西的小彩蛋，没想到反倒成了自己的第一张保命牌」的心理活动，强化穿越作者的身份设定"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C6",
+      "chapter_title": "灰衣现踪，溢出设定的变数",
+      "overall_score": 7,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 核心优化: 删除第18段中「原剧情里，老郑明天就会因为藏在鞋底的中品灵石被周虎搜出来，当场被鞭子抽碎了天灵盖死在矿道口，他之前还动过念头，要不要趁着没人的时候偷偷提醒老郑一句」的冗余表述，仅保留「他连提醒旁人的念头都彻底掐灭了」即可，压缩篇幅至3150字以内",
+        "[高优先级] 逻辑优化: 将开篇第一句改为「从矿道溜回大通铺的后半夜，凉气顺着破草席往骨头缝里钻的时候，林砚睁着眼数了第三百七十二次顶板上的霉斑」，明确承接上一章结尾，消除歧义",
+        "[打磨优先级] 细节优化: 在描写铜牌的段落补充一句「这铜牌他设计的是双面刻字，昨夜瞥见的是朝向隐脉那面的「厄」，此刻对外亮着的是正面的「缉」」，补全设定逻辑",
+        "[打磨优先级] 细节优化: 将「差八两凑二十三斤」改为「差八两够二十三斤的奖惩线，下次再磨洋工，你的窝头就喂狗」，强化底层生存的残酷感"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C7",
+      "chapter_title": "冷眼观亡，斩断作者幻梦",
+      "overall_score": 9,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 剧情连续性优化: 将「纠结一整夜好几次伸手想拍老郑」调整为「躺了一整夜，耳边全是老郑之前给他塞窝头时的粗喘声，指尖动了无数次，最终还是死死攥紧了怀里的三块下品灵石，没发出一点声音」，既保留其良心不安的道德冲突，又不违背前序已经做好的自保决策",
+        "[打磨优先级] 文笔打磨: 删掉「打得他那点可笑的作者优越感碎得连渣都不剩」一句，将情绪落点落在老郑留下的血痕上，更克制也更有冲击力",
+        "[打磨优先级] 人物塑造优化: 在求饶台词里增加「我攒了十年啊周爷！我就想凑够钱回去给我婆娘孩子上个坟啊！」的内容，呼应老郑的背景设定，强化角色悲剧感",
+        "[打磨优先级] 情绪打磨: 删掉「他不再是写《矿脉仙途》的作者林砚了……再也不会醒过来了」的直白表述，换成「他指尖蹭过裤脚边已经干透的血痂，把衣襟夹层里的矿脉分布图按得更紧了」的动作细节，用动作体现心态转变，更符合整体基调"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C8",
+      "chapter_title": "暗积粮秣，潜备逃遁之资",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 文笔优化: 调整其中两处表述，比如反跟踪那段改为“换做他以前写爽文，肯定要给主角安排更酷炫的反跟踪手段，现在才知道半块发霉窝窝头就够用”，攒物资那段改为“他以前给笔下主角写的开局半个月就能摸到筑基门槛，轮到自己半个月攒的家当还不够换半瓶聚气散，说出去都要被读者吐槽主角太废”，避免句式重复",
+        "[高优先级] 人物情绪优化: 在林砚第一次躲过监工抽查、藏好灵石的段落，加一句短心理活动：“要是老郑也知道这条矿道的秘密，说不定不用落得个喂妖兽的下场”，既呼应前章剧情，又强化其底线明确的人设，不破坏整体冷峻风格",
+        "[高优先级] 伏笔强化: 在林砚定下求生原则的段落，将“在这个缉厄司满世界抓穿越者、监工随手就能砸死矿奴的地方”修改为“在这个缉厄司提前三个月就盯上了黑风矿、满世界抓穿越者、监工随手就能砸死矿奴的地方”，呼应前章悬念，强化当前危机氛围",
+        "[打磨优先级] 细节优化: 在清点物资的段落加一句“他早跟相熟的老矿奴打听清楚了，一张出矿场的临时通行证只要十五块下品灵石”，让逻辑更闭环，体现其布局缜密的人设"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C9",
+      "chapter_title": "复生被窥，灵石换得缄默",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 设定修正: 将「他摸了摸自己的胸口，修为还是练气二层，还好这次复活没掉级」修改为「他摸了摸自己的胸口，修为已经掉到了练气一层，还好没到折损寿命的地步」，完全契合世界观规则",
+        "[高优先级] 连续性修正: 在开篇第一段前补充「三天后，林砚像往常一样避开监工视线，往丁字八号废弃矿道走」，同时加一句短暂心理活动「前半个月的安稳让他几乎忘了矿场的危险」，承接前章的放松心境",
+        "[高优先级] 情节补全: 在小石头开口前补充1句背景说明「小石头刚偷了周监工掉的半块窝头，躲追打才钻到了废弃矿道里」，让其出场逻辑自洽",
+        "[打磨优先级] 情绪打磨: 在进入矿道前加半句话「他本来还觉得再撑十天就能逃出去，日子终于有了盼头」，和后续的坍塌危机形成强烈反差，增强情绪冲击力"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C10",
+      "chapter_title": "借矿难势，暗定逃出生天",
+      "overall_score": 7,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 字数合规: 删掉老矿奴挨鞭子的无效情节，合并重复的心理活动，将四条逃离计划的逐条罗列精简为1-2句快速思考的内容，压缩总字数至2850-3150区间内",
+        "[高优先级] 剧情逻辑: 在提到要挖被埋灵石的内容时，补充一句「丁字八号矿道刚塌过，得先找小石头确认矿道稳定了再进去」的心理活动，补全逻辑闭环",
+        "[高优先级] 人物塑造: 将逐条罗列改为碎片化的快速心理活动，比如「挖灵石、拿地图、藏物资、躲排查」几个关键词式的闪过，更符合林砚当下的状态",
+        "[打磨优先级] 文笔打磨: 将「他绝对死无全尸」这类直白表述改为「下场只会比隔壁矿那三个被烧成灰的妖邪更惨」，更贴合剧情氛围"
       ],
       "needs_revision": false
     }

@@ -594,12 +594,16 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 			}
 
 			// Get chapters that need improvement
-			// If user prompt is provided, force improvement on specified chapters regardless of score
+			// If user prompt is provided or specific chapter is specified, force improvement regardless of score
 			var chaptersToImprove []*models.Chapter
-			if writePromptFlag != "" {
+			if writePromptFlag != "" || writeChapterFlag != "" {
 				// Force improvement: get chapters specified by flags
 				chaptersToImprove = getChaptersToReview(outline, writeChapterFlag, writeVolumeFlag, writePartFlag, false)
-				log.Info("Volume %s: Force improving %d chapters (user prompt provided)", volume.ID, len(chaptersToImprove))
+				if writePromptFlag != "" {
+					log.Info("Volume %s: Force improving %d chapters (user prompt provided)", volume.ID, len(chaptersToImprove))
+				} else {
+					log.Info("Volume %s: Force improving %d chapters (chapter specified)", volume.ID, len(chaptersToImprove))
+				}
 			} else {
 				chaptersToImprove = getChaptersNeedingImprovement(review, outline, writeMinScoreFlag)
 				if len(chaptersToImprove) == 0 {
