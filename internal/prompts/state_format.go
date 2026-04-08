@@ -12,27 +12,59 @@ import (
 func FormatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) string {
 	var sb strings.Builder
 
-	sb.WriteString("=== CURRENT STORY STATE ===\n\n")
+	sb.WriteString("CURRENT STORY STATE:\n")
+
+	// Build set of relevant characters for this chapter
+	// Include both explicitly listed characters and those mentioned in events
+	relevantChars := make(map[string]bool)
+	for _, charName := range chapter.Characters {
+		relevantChars[charName] = true
+	}
+	for _, event := range chapter.Events {
+		for _, charName := range event.Characters {
+			relevantChars[charName] = true
+		}
+	}
 
 	// Characters present in this chapter
-	sb.WriteString("Characters in this chapter:\n")
-	for _, charName := range chapter.Characters {
+	sb.WriteString("\nCharacters:\n")
+	for charName := range relevantChars {
 		if char, exists := state.Characters[charName]; exists {
-			sb.WriteString(fmt.Sprintf("- %s: %s\n", char.Name, char.RoleInStory))
+			sb.WriteString(fmt.Sprintf("  %s:\n", char.Name))
 			if char.Age != "" {
-				sb.WriteString(fmt.Sprintf("  Age: %s\n", char.Age))
+				sb.WriteString(fmt.Sprintf("    - Age: %s\n", char.Age))
+			}
+			if char.Gender != "" {
+				sb.WriteString(fmt.Sprintf("    - Gender: %s\n", char.Gender))
+			}
+			if char.Race != "" {
+				sb.WriteString(fmt.Sprintf("    - Race: %s\n", char.Race))
+			}
+			if len(char.Aliases) > 0 {
+				sb.WriteString(fmt.Sprintf("    - Aliases: %s\n", strings.Join(char.Aliases, ", ")))
+			}
+			if char.Appearance != "" {
+				sb.WriteString(fmt.Sprintf("    - Appearance: %s\n", char.Appearance))
 			}
 			if len(char.Personality) > 0 {
-				sb.WriteString(fmt.Sprintf("  Personality: %s\n", strings.Join(char.Personality, ", ")))
+				sb.WriteString(fmt.Sprintf("    - Personality: %s\n", strings.Join(char.Personality, ", ")))
 			}
-			if char.Motivation != "" {
-				sb.WriteString(fmt.Sprintf("  Motivation: %s\n", char.Motivation))
+			if char.Background != "" {
+				sb.WriteString(fmt.Sprintf("    - Background: %s\n", char.Background))
+			}
+			if len(char.Skills) > 0 {
+				sb.WriteString(fmt.Sprintf("    - Skills: %s\n", strings.Join(char.Skills, ", ")))
+			}
+			if char.Voice != "" {
+				sb.WriteString(fmt.Sprintf("    - Voice: %s\n", char.Voice))
+			}
+			if char.Notes != "" {
+				sb.WriteString(fmt.Sprintf("    - Notes: %s\n", char.Notes))
 			}
 			// Goals are stored in state matrix dynamically
 			if goals, exists := state.Goals[charName]; exists && len(goals) > 0 {
-				sb.WriteString(fmt.Sprintf("  Current Goals: %s\n", strings.Join(goals, ", ")))
+				sb.WriteString(fmt.Sprintf("    - Current Goals: %s\n", strings.Join(goals, ", ")))
 			}
-			sb.WriteString("\n")
 		}
 	}
 

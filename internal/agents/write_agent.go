@@ -11,6 +11,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/prompts"
 )
 
 // CompactStorySetup is a minimal version of StorySetup for chapter generation
@@ -139,25 +140,6 @@ type VolumeStructureAnalysis struct {
 	Resolution   string `json:"resolution" md:"resolution" desc:"Evaluation of the resolution"`
 }
 
-// PlotBug represents a plot bug found in the volume
-type PlotBug struct {
-	BugType     string `json:"bug_type" md:"bug_type" desc:"Type of plot bug: plot_contradiction/setting_conflict/character_break"`
-	Severity    string `json:"severity" md:"severity" desc:"Severity: critical/major/minor"`
-	Location    string `json:"location" md:"location" desc:"Chapter ID where bug is found"`
-	Description string `json:"description" md:"description" desc:"Bug description"`
-	Expected    string `json:"expected" md:"expected" desc:"What it should be"`
-	Actual      string `json:"actual" md:"actual" desc:"What was actually written"`
-}
-
-// LogicBug represents a logic bug found in the volume
-type LogicBug struct {
-	BugType     string `json:"bug_type" md:"bug_type" desc:"Type of logic bug: timeline/space/numeric/information"`
-	Severity    string `json:"severity" md:"severity" desc:"Severity: critical/major/minor"`
-	Location    string `json:"location" md:"location" desc:"Chapter ID where bug is found"`
-	Description string `json:"description" md:"description" desc:"Bug description"`
-	Explanation string `json:"explanation" md:"explanation" desc:"Explanation of the logic error"`
-}
-
 // VolumeReviewResult represents the result of volume-level review
 type VolumeReviewResult struct {
 	OverallScore            int                     `json:"overall_score" md:"overall_score" desc:"Overall volume quality score 0-100"`
@@ -165,10 +147,6 @@ type VolumeReviewResult struct {
 	ChapterReviews          []VolumeChapterReview   `json:"chapter_reviews" md:"chapter_reviews" desc:"Review results for each chapter"`
 	VolumeLevelIssues       []string                `json:"volume_level_issues" md:"volume_level_issues" desc:"Issues that affect the entire volume"`
 	VolumeLevelSuggestions  []string                `json:"volume_level_suggestions" md:"volume_level_suggestions" desc:"Suggestions for improving the entire volume"`
-	PlotBugs                []PlotBug               `json:"plot_bugs" md:"plot_bugs" desc:"List of plot bugs found in the volume"`
-	LogicBugs               []LogicBug              `json:"logic_bugs" md:"logic_bugs" desc:"List of logic bugs found in the volume"`
-	PlotFixSuggestions      []string                `json:"plot_fix_suggestions" md:"plot_fix_suggestions" desc:"Suggestions for fixing plot bugs"`
-	LogicFixSuggestions     []string                `json:"logic_fix_suggestions" md:"logic_fix_suggestions" desc:"Suggestions for fixing logic bugs"`
 }
 
 // VolumeReviewOutput is the output for volume review
@@ -491,12 +469,7 @@ func formatChapterContext(context *ChapterContext) string {
 		sb.WriteString("PREVIOUS CHAPTERS:\n")
 		for _, prev := range context.Previous {
 			sb.WriteString(fmt.Sprintf("\n--- %s: %s ---\n", prev.Chapter.ID, prev.Chapter.Title))
-			if len(prev.Content) > 500 {
-				sb.WriteString(prev.Content[:500])
-				sb.WriteString("...")
-			} else {
-				sb.WriteString(prev.Content)
-			}
+			sb.WriteString(prev.Content)
 			sb.WriteString("\n")
 		}
 	}
@@ -513,191 +486,9 @@ func formatChapterContext(context *ChapterContext) string {
 }
 
 // formatStateMatrixForWrite formats the state matrix for the prompt
-// Only includes characters, relationships, and storylines relevant to the current chapter
+// Delegates to prompts.FormatStateMatrix for consistency
 func formatStateMatrixForWrite(state *models.StateMatrix, chapter *models.Chapter) string {
-	if state == nil {
-		return "No state matrix available"
-	}
-
-	var sb strings.Builder
-	sb.WriteString("CURRENT STORY STATE:\n")
-
-	// Build set of relevant characters for this chapter
-	relevantChars := make(map[string]bool)
-	// Add characters explicitly listed in the chapter
-	for _, charName := range chapter.Characters {
-		relevantChars[charName] = true
-	}
-	// Add characters mentioned in chapter events
-	for _, event := range chapter.Events {
-		for _, charName := range event.Characters {
-			relevantChars[charName] = true
-		}
-	}
-
-	// Character states - only show relevant characters
-	if len(state.Characters) > 0 {
-		sb.WriteString("\nCharacters:\n")
-		for name, char := range state.Characters {
-			// Skip if not relevant to this chapter
-			if !relevantChars[name] {
-				continue
-			}
-			sb.WriteString(fmt.Sprintf("  %s:\n", name))
-			if char.Personality != nil && len(char.Personality) > 0 {
-				sb.WriteString(fmt.Sprintf("    - Personality: %s\n", strings.Join(char.Personality, ", ")))
-			}
-			if char.Background != "" {
-				sb.WriteString(fmt.Sprintf("    - Background: %s\n", char.Background))
-			}
-		}
-	}
-
-	// Active relationships - only show relationships between relevant characters
-	if len(state.Relationships) > 0 {
-		sb.WriteString("\nActive Relationships:\n")
-		for relKey, relStatus := range state.Relationships {
-			// Check if this relationship involves relevant characters
-			parts := strings.Split(relKey, "_")
-			if len(parts) >= 2 {
-				char1, char2 := parts[0], parts[1]
-				if relevantChars[char1] || relevantChars[char2] {
-					sb.WriteString(fmt.Sprintf("  %s: %s\n", relKey, relStatus))
-				}
-			}
-		}
-	}
-
-	// Active storylines - only show storylines relevant to chapter events
-	if len(state.Storylines) > 0 {
-		sb.WriteString("\nActive Storylines:\n")
-		for _, sl := range state.Storylines {
-			if sl.Status == "active" || sl.Status == "in_progress" {
-				// Check if this storyline is mentioned in chapter events
-				isRelevant := false
-				for _, event := range chapter.Events {
-					if event.Type == "storyline" && event.Subject == sl.Name {
-						isRelevant = true
-						break
-					}
-				}
-				if isRelevant {
-					sb.WriteString(fmt.Sprintf("  %s: %s\n", sl.Name, sl.Progress))
-				}
-			}
-		}
-	}
-
-	// Character Goals - only show for relevant characters
-	if len(state.Goals) > 0 {
-		hasGoals := false
-		var goalsBuilder strings.Builder
-		goalsBuilder.WriteString("\nCharacter Goals:\n")
-		for charName, goals := range state.Goals {
-			if relevantChars[charName] && len(goals) > 0 {
-				hasGoals = true
-				goalsBuilder.WriteString(fmt.Sprintf("  %s:\n", charName))
-				for _, goal := range goals {
-					goalsBuilder.WriteString(fmt.Sprintf("    - %s\n", goal))
-				}
-			}
-		}
-		if hasGoals {
-			sb.WriteString(goalsBuilder.String())
-		}
-	}
-
-	// Character Status - only show for relevant characters
-	if len(state.Status) > 0 {
-		hasStatus := false
-		var statusBuilder strings.Builder
-		statusBuilder.WriteString("\nCharacter Status:\n")
-		for statusKey, status := range state.Status {
-			// statusKey format: "character_name_status_type"
-			parts := strings.Split(statusKey, "_")
-			if len(parts) >= 1 {
-				charName := parts[0]
-				if relevantChars[charName] {
-					hasStatus = true
-					statusBuilder.WriteString(fmt.Sprintf("  %s: %s", charName, status.Type))
-					if status.State != "" {
-						statusBuilder.WriteString(fmt.Sprintf(" (%s)", status.State))
-					}
-					if status.Severity != "" {
-						statusBuilder.WriteString(fmt.Sprintf(" [%s]", status.Severity))
-					}
-					if status.Details != "" {
-						statusBuilder.WriteString(fmt.Sprintf(" - %s", status.Details))
-					}
-					statusBuilder.WriteString("\n")
-				}
-			}
-		}
-		if hasStatus {
-			sb.WriteString(statusBuilder.String())
-		}
-	}
-
-	// Items - only show items owned by relevant characters
-	if len(state.Items) > 0 {
-		hasItems := false
-		var itemsBuilder strings.Builder
-		itemsBuilder.WriteString("\nItems:\n")
-		for itemName, item := range state.Items {
-			// Only show if item is owned by a relevant character
-			// Items without owner should not be shown (they are from craft definition, not acquired yet)
-			if item.Owner != "" && relevantChars[item.Owner] {
-				hasItems = true
-				itemsBuilder.WriteString(fmt.Sprintf("  %s", itemName))
-				itemsBuilder.WriteString(fmt.Sprintf(" (held by: %s)", item.Owner))
-				if item.Description != "" {
-					itemsBuilder.WriteString(fmt.Sprintf(" - %s", item.Description))
-				}
-				itemsBuilder.WriteString("\n")
-			}
-		}
-		if hasItems {
-			sb.WriteString(itemsBuilder.String())
-		}
-	}
-
-	// Character Progression/Premises - show character levels/ranks
-	if len(state.Premises) > 0 {
-		hasPremises := false
-		var premisesBuilder strings.Builder
-		premisesBuilder.WriteString("\nCharacter Progression:\n")
-
-		// Group premises by character
-		charPremises := make(map[string]map[string]string) // charName -> premiseName -> value
-		for key, value := range state.Premises {
-			// key format: "characterName_premiseName"
-			parts := strings.SplitN(key, "_", 2)
-			if len(parts) == 2 {
-				charName, premiseName := parts[0], parts[1]
-				if relevantChars[charName] {
-					if charPremises[charName] == nil {
-						charPremises[charName] = make(map[string]string)
-					}
-					charPremises[charName][premiseName] = value
-				}
-			}
-		}
-
-		// Output grouped by character
-		for charName, premises := range charPremises {
-			hasPremises = true
-			premisesBuilder.WriteString(fmt.Sprintf("  %s:\n", charName))
-			for premiseName, value := range premises {
-				premisesBuilder.WriteString(fmt.Sprintf("    - %s: %s\n", premiseName, value))
-			}
-		}
-
-		if hasPremises {
-			sb.WriteString(premisesBuilder.String())
-		}
-	}
-
-	return sb.String()
+	return prompts.FormatStateMatrix(state, chapter)
 }
 
 // formatWriteSuggestions formats review suggestions for the improvement prompt

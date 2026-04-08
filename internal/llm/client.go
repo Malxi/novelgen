@@ -22,11 +22,21 @@ type Message struct {
 	Content string `json:"content"`
 }
 
+// ThinkingMode represents the thinking mode for the model
+type ThinkingMode string
+
+const (
+	ThinkingEnabled  ThinkingMode = "enabled"  // 强制开启深度思考
+	ThinkingDisabled ThinkingMode = "disabled" // 强制关闭深度思考
+	ThinkingAuto     ThinkingMode = "auto"     // 模型自行判断是否深度思考
+)
+
 // ChatOptions contains optional parameters for chat completion
 type ChatOptions struct {
-	Temperature float64 `json:"temperature,omitempty"`
-	MaxTokens   int     `json:"max_tokens,omitempty"`
-	Model       string  `json:"model,omitempty"`
+	Temperature float64      `json:"temperature,omitempty"`
+	MaxTokens   int          `json:"max_tokens,omitempty"`
+	Model       string       `json:"model,omitempty"`
+	Thinking    ThinkingMode `json:"thinking,omitempty"` // enabled/disabled/auto
 }
 
 // ChatResponse represents the response from the LLM
@@ -86,12 +96,18 @@ func NewOpenAIClient(config *OpenAIConfig) *OpenAIClient {
 	}
 }
 
+// thinkingConfig represents the thinking configuration for the model
+type thinkingConfig struct {
+	Type string `json:"type"` // enabled/disabled/auto
+}
+
 // openAIRequest represents the request body for OpenAI API
 type openAIRequest struct {
-	Model       string    `json:"model"`
-	Messages    []Message `json:"messages"`
-	Temperature float64   `json:"temperature,omitempty"`
-	MaxTokens   int       `json:"max_tokens,omitempty"`
+	Model       string          `json:"model"`
+	Messages    []Message       `json:"messages"`
+	Temperature float64         `json:"temperature,omitempty"`
+	MaxTokens   int             `json:"max_tokens,omitempty"`
+	Thinking    *thinkingConfig `json:"thinking,omitempty"`
 }
 
 // openAIResponse represents the response from OpenAI API
@@ -116,6 +132,7 @@ func (c *OpenAIClient) ChatCompletion(messages []Message, options *ChatOptions) 
 	model := c.model
 	temperature := 0.7
 	maxTokens := 2000
+	var thinking *thinkingConfig
 
 	if options != nil {
 		if options.Model != "" {
@@ -127,16 +144,23 @@ func (c *OpenAIClient) ChatCompletion(messages []Message, options *ChatOptions) 
 		if options.MaxTokens != 0 {
 			maxTokens = options.MaxTokens
 		}
+		if options.Thinking != "" {
+			thinking = &thinkingConfig{Type: string(options.Thinking)}
+		}
 	}
 
 	logger.Debug("Temperature: %.2f", temperature)
 	logger.Debug("Base URL: %s", c.baseURL)
+	if thinking != nil {
+		logger.Debug("Thinking mode: %s", thinking.Type)
+	}
 
 	reqBody := openAIRequest{
 		Model:       model,
 		Messages:    messages,
 		Temperature: temperature,
 		MaxTokens:   maxTokens,
+		Thinking:    thinking,
 	}
 
 	jsonData, err := json.Marshal(reqBody)

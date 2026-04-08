@@ -1,0 +1,477 @@
+{
+  "volume_id": "P1-V2",
+  "volume_title": "卷二：地下遗迹的秘辛",
+  "reviews": [
+    {
+      "chapter_id": "P1-V2-C1",
+      "chapter_title": "监工鞭落，死矿催命",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 剧情连续性: 在开篇补充100字左右的过渡内容：林砚先去找管工报备发现西坡零散矿脉，路上撞见巡查的灰衣暗卫，立刻低头伪装成畏缩矿奴蒙混过关，管工嫌麻烦懒得核实直接同意他去西坡挖矿，自然衔接后续留暗号、前往废弃矿道的情节",
+        "[高优先级] 设定合规性: 在开篇林砚收拾东西的情节中补充1句话，交代他已将窝头的炭痕刮掉掰碎混在了自己的口粮里，避免留下隐患",
+        "[打磨优先级] 人物逻辑: 将周虎「要是天黑之前没挖够三块，你今晚就别想出来吃饭」的台词调整为「天黑之前先把今天的头三块交上来，剩下的两块明天凑齐给我，少半块都打断你的腿」，消除逻辑矛盾",
+        "[打磨优先级] 字数合规: 简化林砚划联络暗号后拍手心、余光扫衣角的冗余细节，将总字数压缩至3150字以内，符合要求"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V2-C2",
+      "chapter_title": "血纹无载，越界天规",
+      "overall_score": 7,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 核心合规: 压缩全文内容至2850-3150字范围，优先删除非核心冗余内容：合并四具尸骨的细节为“沿途撞见三具死状各异的矿奴尸骨，印证了周虎的说法”，删除半张草纸的额外情节，合并重复的心理活动",
+        "[致命优先级] 核心合规: 补充“他掏出上章捡到的那块带血纹碎石比对，纹路和岩壁上的符文完全一致”的细节，强化前后章连续性",
+        "[高优先级] 情节优化: 将机关触发的情节移至下一章开篇，本章收尾停在指定closing beat“林砚意识到这个矿洞的存在完全超出了他的剧情设定，必然藏着未知的秘密”即可",
+        "[高优先级] 情节优化: 将刻记号、捡灵石等非核心细节一笔带过，把篇幅留给符文相关的核心情节",
+        "[打磨优先级] 文笔打磨: 修改为“就像他笔下的世界自行衍生出了从未写入设定的全新内容”，更贴合仙侠背景调性"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V2-C3",
+      "chapter_title": "机关暗启，异息牵魂",
+      "overall_score": 9,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[打磨优先级] 连续性修复: 在第二段「举着两个火折子凑到符文石壁前」之前补充一句「他把装着灵石碎块的矿篓靠在脚边的岩壁旁」，补全细节",
+        "[打磨优先级] 节奏优化: 删除冗余的摸符文温度的细节描写，保留「穷病是最好的护身符」的核心吐槽，将该段压缩至250字左右",
+        "[打磨优先级] 设定强化: 在「那里面带着他写了五年小说的墨香味」之后补充一句「连字里行间埋过的伏笔都带着熟悉的震颤感」，强化设定关联性"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V2-C4",
+      "chapter_title": "灰影巡洞，缉字铜牌",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 细节逻辑修正: 将「连铜锈的位置都差不离」修改为「连刻字的凹凸纹路都和记忆里的完全一致」，符合远距离观察的设定",
+        "[高优先级] 人物反应补全: 在该句对应的林砚心理活动部分添加一句「书友会？他之前听其他矿奴私下提过这个穿越者互助组织，没想到居然真的藏在黑风矿场里」，补全人物反应",
+        "[打磨优先级] 设定细节呼应: 在「林砚的后背瞬间冒出一层冷汗」之前添加一句「兜里的温热碎石突然轻轻跳了一下，和暗卫甲指尖的灵力波动撞出一丝微不可察的震颤」，呼应金手指共振设定",
+        "[打磨优先级] 文笔精简: 修改为「他本来就是写了五年矿场开局修仙文的作者」，精简语句提升流畅度"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V2-C5",
+      "chapter_title": "禁名「夺魄」，千魂血祭",
+      "overall_score": 9,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 核心合规调整: 精简林砚过长的自嘲段落、重复的环境描写，删除非必要的修饰内容，将总字数控制在2850-3150字范围内",
+        "[打磨优先级] 细节打磨: 将部分「凉」的表述替换为其他感官描写，比如把「凉得他骨头缝都疼」改为「鞭伤的痛感顺着脊柱往四肢百骸窜」，避免用词重复",
+        "[打磨优先级] 节奏调整: 将该段精简20-30字，保留核心吐槽内容即可，加快叙事节奏",
+        "[打磨优先级] 连续性优化: 在林砚攥紧矿镐的段落，增加一句「袖袋里揣着的半块下品灵石硌得肋部发疼」的细节，呼应前章内容",
+        "[打磨优先级] 情节合理性优化: 在暗卫甲贴完追踪符转身离开的段落，增加一句「他临走前扫了一眼岩柱的方向，眼底闪过一丝疑色」的细节，为后续折返做铺垫"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V2-C6",
+      "chapter_title": "石落声起，刃穿魂归",
+      "overall_score": 7,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 情节与字数合规: 删除从「他活动了一下僵硬的手脚，脑子里转得飞快」开始的所有超出本章情节范围的内容，仅保留到林砚确认暗卫走远、暂时安全的部分，将总字数压缩至2850-3150的要求区间内",
+        "[高优先级] 节奏优化: 适当压缩死亡前重复吐槽的内容，保留1-2个核心笑点即可，进一步加快剧情推进速度",
+        "[打磨优先级] 剧情预留: 将删除的内容调整至下一章开篇，既保证剧情连续性，又符合单章情节边界要求"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V2-C7",
+      "chapter_title": "残纹半玉，契合金源",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 连续性优化: 在撕布情节补充一句「他特意避开了胸口被灵气刃划破的破洞，从衣服下摆内侧撕下一块完整的粗布」，既呼应前章设定，又符合林砚谨慎的性格",
+        "[高优先级] 人物逻辑优化: 在第11段梳理线索的部分增加一句「之前遗落的矿镐说不定已经被暗卫捡到，明日全矿排查的力度只会比预想的更大」，既补全伏笔，又强化后续危机感",
+        "[打磨优先级] 节奏打磨: 删掉最后一段完全重复的确认内容，将收尾改为「他抬手按了按胸口的玉佩，转身快速没入矿道的黑暗里」，留足后续悬念",
+        "[打磨优先级] 字数补全: 在第5段检查遗迹外围的部分增加两句细节描写：「符文边缘还留着干涸的暗褐色血迹，明显是近期有人触碰过机关留下的痕迹」，既补全字数，又增加悬念感"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V2-C8",
+      "chapter_title": "落石封门，秘藏禁踪",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 剧情连续性优化: 在开篇前补充100字以内的过渡内容：「林砚贴着潮湿的岩壁疾走了几十步，脚下的碎石被他踩得没有发出半点声响，沿途随手扫掉自己留在泥地上的脚印，很快就回到了遗迹入口的石壁旁。」既补全动作逻辑，也呼应上章的设定",
+        "[高优先级] 合规性优化: 删除第1段结尾「跳动的频率和他的心跳完全同步」、第12段「他甚至能感觉到残玉里传来的微弱共鸣，像是有什么东西在和他的神魂慢慢绑定」两处重复的共鸣描写，再将第4段回忆书友会档案的内容压缩30字左右，即可将字数控制在合规范围内",
+        "[高优先级] 情绪感染力优化: 在最后一段末尾补充一句：「远处的矿道深处隐约传来暗卫甲胄碰撞的脆响，比他预判的巡逻时间早了整整一刻钟」，既呼应前序伏笔，也拉满下章的冲突期待感",
+        "[打磨优先级] 人物细节优化: 将「比他以前算每个月的稿费税点的时候还仔细」修改为「比他以前写文算矿难坍塌范围的时候还仔细」，更贴合其穿越前的作者身份，避免脱离当前背景"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V2-C9",
+      "chapter_title": "岩崩尘散，凶迹全消",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 字数合规调整: 1. 删除第9段中「他刚才还在想万一暗卫过来了，他就说自己是过来挖灵石碰到坍塌，刚好躲在岔口，反正他身上带着挖好的灵石，也能圆过去，现在倒是省了麻烦」的冗余预判内容；2. 压缩第10段中吐槽小说主角灵石多的内容，仅保留1-2句核心吐槽即可；3. 精简砸石段落的重复动作描写，合并部分零散短句，最终将字数控制在2850-3150的合规区间内",
+        "[高优先级] 设定呼应优化: 在第7段「连一点痕迹都没剩下」之后补充1句：「他又快速用衣角蹭掉岩壁上沾了血的玄铁刮痕，确认没有留下任何人为操作的痕迹」，呼应前章的细节设定",
+        "[打磨优先级] 人物声线优化: 将周虎的台词修改为更贴合其人设的粗野表达，比如改为「算你狗命大，今天配额凑够了，多的这两块孝敬爷，下次再敢往废矿道钻，老子直接把你扔进去喂石头」"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V2-C10",
+      "chapter_title": "归帐谋遁，期改一月",
+      "overall_score": 9,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 人物塑造: 在林砚回到大通铺的段落增加1-2句互动：比如小石头趁没人注意偷偷塞给林砚半块晒干的薯干，既呼应前序救过林砚的设定，也为后续拉他入伙做铺垫",
+        "[高优先级] 情节优化: 在拆解计划的部分增加1句话：“头三天先找矿里的老油条打听缉厄司往年排查的规律，摸清楚他们的探测法器范围”，完善逻辑闭环",
+        "[高优先级] 文笔打磨: 删除第12段的吐槽内容，仅保留第3段的吐槽即可，既维持人设又不拖沓",
+        "[打磨优先级] 情节优化: 删掉“三天后摸暗卫换班空档、下周转移物资”等非核心节点的细节描写，仅保留核心时间节点即可，将总字数压缩到3150字以内",
+        "[打磨优先级] 人物塑造: 给小石头增加1个特征细节：比如“右手食指因为常年挖矿已经变形”，强化人物记忆点"
+      ],
+      "needs_revision": false
+    }
+  ],
+  "summary": ""
+}

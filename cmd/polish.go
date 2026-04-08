@@ -344,6 +344,7 @@ func improveChaptersWithVolumeReview(ctx context.Context, writeAgent *agents.Wri
 				suggestions.WriteString(fmt.Sprintf("与前章衔接: %s\n", review.ContinuityWithPrev))
 				suggestions.WriteString(fmt.Sprintf("与后章衔接: %s\n", review.ContinuityWithNext))
 
+				// Add chapter-specific issues and suggestions
 				if len(review.Issues) > 0 {
 					suggestions.WriteString("\n### 本章问题\n")
 					for _, issue := range review.Issues {
@@ -359,19 +360,19 @@ func improveChaptersWithVolumeReview(ctx context.Context, writeAgent *agents.Wri
 				}
 
 				// Add volume-level issues and suggestions
-				if len(volumeReview.VolumeLevelIssues) > 0 {
-					suggestions.WriteString("\n### 卷级整体问题\n")
-					for _, issue := range volumeReview.VolumeLevelIssues {
-						suggestions.WriteString(fmt.Sprintf("- %s\n", issue))
-					}
+			if len(volumeReview.VolumeLevelIssues) > 0 {
+				suggestions.WriteString("\n### 卷级整体问题（请检查本章是否涉及以下问题，如涉及则必须修正）\n")
+				for _, issue := range volumeReview.VolumeLevelIssues {
+					suggestions.WriteString(fmt.Sprintf("- %s\n", issue))
 				}
+			}
 
-				if len(volumeReview.VolumeLevelSuggestions) > 0 {
-					suggestions.WriteString("\n### 卷级整体建议\n")
-					for _, s := range volumeReview.VolumeLevelSuggestions {
-						suggestions.WriteString(fmt.Sprintf("- %s\n", s))
-					}
+			if len(volumeReview.VolumeLevelSuggestions) > 0 {
+				suggestions.WriteString("\n### 卷级整体建议（请检查本章是否涉及以下内容，如涉及则按建议修正）\n")
+				for _, s := range volumeReview.VolumeLevelSuggestions {
+					suggestions.WriteString(fmt.Sprintf("- %s\n", s))
 				}
+			}
 
 				// Add user prompt if provided
 				if polishPromptFlag != "" {
