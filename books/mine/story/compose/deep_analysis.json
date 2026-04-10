@@ -1,0 +1,1270 @@
+{
+  "critical_issues": [
+    {
+      "type": "resurrection_count",
+      "location": "全局",
+      "description": "林砚在剧情中复活 22 次，每次折损10年寿命，总计折损220年寿命",
+      "impact": "需要确认主角剩余寿命是否足以支撑后续剧情",
+      "severity": "critical"
+    },
+    {
+      "type": "cultivation_instability",
+      "location": "全局",
+      "description": "林砚修为变化过于频繁(20次)，可能导致读者困惑",
+      "impact": "战力体系可能崩坏，读者难以建立稳定预期",
+      "severity": "major"
+    },
+    {
+      "type": "missing_key_item",
+      "location": "全局",
+      "description": "关键道具'云纹腰牌'在大纲中未出现",
+      "impact": "可能导致后续剧情缺乏必要的道具支撑",
+      "severity": "major"
+    }
+  ],
+  "logic_holes": [
+    {
+      "location": "全局",
+      "description": "「三哥」作为重要反派线索出现多次，需要确认最终是否有合理的揭示",
+      "questions": [
+        "三哥的真实身份是否在剧情后期揭示？",
+        "三哥与苏晚的关系是否有充分展开？",
+        "三哥的动机和目的是否清晰？"
+      ]
+    },
+    {
+      "location": "全局",
+      "description": "林砚的复活能力被以下角色目击: [小石头在P1-V1-C9 缉厄司暗卫乙在P1-V3-C2 陈默在P1-V5-C4 缉厄司暗哨在P1-V9-C8 顾衍在P1-V9-C8]",
+      "questions": [
+        "这些目击者是否都处理了保密问题？",
+        "是否有目击者后来成为威胁？",
+        "复活能力的保密性是否得到维持？"
+      ]
+    },
+    {
+      "location": "全局",
+      "description": "缉厄司作为官方组织，其行动范围和权限需要确认",
+      "questions": [
+        "缉厄司为什么只在矿场活动而不直接控制整个区域？",
+        "缉厄司与矿场管理者的关系是什么？",
+        "缉厄司为何没有更早发现林砚的异常？"
+      ]
+    }
+  ],
+  "timeline_issues": [],
+  "character_arcs": [
+    {
+      "character": "白晓",
+      "appearances": [
+        "p1-v10-c3",
+        "p1-v10-c4",
+        "p1-v10-c5",
+        "p1-v10-c6",
+        "p1-v10-c7",
+        "p1-v10-c8",
+        "p1-v10-c9",
+        "p1-v10-c10"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "赵大",
+      "appearances": [
+        "P1-V3-C4"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "苏晚",
+      "appearances": [
+        "P1-V4-C1",
+        "P1-V4-C2",
+        "P1-V6-C1",
+        "P1-V6-C2",
+        "P1-V6-C3",
+        "P1-V6-C4",
+        "P1-V6-C6",
+        "P1-V6-C7",
+        "P1-V6-C8",
+        "P1-V6-C10",
+        "P1-V7-C3",
+        "P1-V7-C5",
+        "P1-V7-C9",
+        "P1-V7-C10",
+        "P1-V8-C1",
+        "P1-V8-C2",
+        "P1-V8-C3",
+        "P1-V8-C4",
+        "P1-V8-C5",
+        "P1-V8-C8",
+        "P1-V9-C3",
+        "p1-v10-c7"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "缉厄司联络人",
+      "appearances": [
+        "P1-V7-C7"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "缉厄司小队",
+      "appearances": [
+        "P1-V8-C1"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "顾衍（三哥）",
+      "appearances": [
+        "P1-V9-C2"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "赵峰",
+      "appearances": [
+        "P1-V9-C3",
+        "P1-V9-C4",
+        "P1-V9-C5",
+        "P1-V9-C6",
+        "P1-V9-C7",
+        "P1-V9-C8",
+        "P1-V9-C10",
+        "p1-v10-c1",
+        "p1-v10-c2",
+        "p1-v10-c3",
+        "p1-v10-c4",
+        "p1-v10-c5",
+        "p1-v10-c6",
+        "p1-v10-c7",
+        "p1-v10-c8",
+        "p1-v10-c9",
+        "p1-v10-c10"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "城防军小队长",
+      "appearances": [
+        "P1-V4-C1"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "矿奴老郑",
+      "appearances": [
+        "P1-V1-C4",
+        "P1-V1-C5",
+        "P1-V1-C7"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "缉厄司暗卫",
+      "appearances": [
+        "P1-V1-C6",
+        "P1-V1-C10"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "缉厄司暗卫乙",
+      "appearances": [
+        "P1-V2-C4",
+        "P1-V2-C5",
+        "P1-V2-C6",
+        "P1-V3-C2",
+        "P1-V3-C7",
+        "P1-V3-C8"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "陈默",
+      "appearances": [
+        "P1-V4-C1",
+        "P1-V4-C7",
+        "P1-V5-C2",
+        "P1-V5-C4",
+        "P1-V5-C7",
+        "P1-V5-C8",
+        "P1-V5-C9",
+        "P1-V6-C1",
+        "P1-V6-C2",
+        "P1-V6-C4",
+        "P1-V6-C5",
+        "P1-V6-C6",
+        "P1-V6-C7",
+        "P1-V6-C8",
+        "P1-V6-C9",
+        "P1-V7-C1",
+        "P1-V7-C3",
+        "P1-V7-C5",
+        "P1-V7-C9",
+        "P1-V7-C10",
+        "P1-V8-C1",
+        "P1-V8-C2",
+        "P1-V8-C3",
+        "P1-V8-C4",
+        "P1-V8-C5",
+        "P1-V8-C7",
+        "P1-V8-C8",
+        "P1-V9-C1",
+        "P1-V9-C2",
+        "P1-V9-C3",
+        "P1-V9-C4",
+        "P1-V9-C5",
+        "P1-V9-C6",
+        "P1-V9-C7",
+        "P1-V9-C8",
+        "P1-V9-C10",
+        "p1-v10-c1",
+        "p1-v10-c2",
+        "p1-v10-c3",
+        "p1-v10-c4",
+        "p1-v10-c5",
+        "p1-v10-c6",
+        "p1-v10-c7",
+        "p1-v10-c8",
+        "p1-v10-c9",
+        "p1-v10-c10"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "灵草铺王掌柜",
+      "appearances": [
+        "P1-V4-C2"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "王伯",
+      "appearances": [
+        "P1-V6-C1",
+        "P1-V9-C3"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "林砚",
+      "appearances": [
+        "P1-V1-C1",
+        "P1-V1-C2",
+        "P1-V1-C3",
+        "P1-V1-C4",
+        "P1-V1-C5",
+        "P1-V1-C6",
+        "P1-V1-C7",
+        "P1-V1-C8",
+        "P1-V1-C9",
+        "P1-V1-C10",
+        "P1-V2-C1",
+        "P1-V2-C2",
+        "P1-V2-C3",
+        "P1-V2-C4",
+        "P1-V2-C5",
+        "P1-V2-C6",
+        "P1-V2-C7",
+        "P1-V2-C8",
+        "P1-V2-C9",
+        "P1-V2-C10",
+        "P1-V3-C1",
+        "P1-V3-C2",
+        "P1-V3-C3",
+        "P1-V3-C4",
+        "P1-V3-C5",
+        "P1-V3-C6",
+        "P1-V3-C7",
+        "P1-V3-C8",
+        "P1-V3-C9",
+        "P1-V3-C10",
+        "P1-V4-C1",
+        "P1-V4-C2",
+        "P1-V4-C3",
+        "P1-V4-C4",
+        "P1-V4-C5",
+        "P1-V4-C6",
+        "P1-V4-C7",
+        "P1-V5-C1",
+        "P1-V5-C2",
+        "P1-V5-C3",
+        "P1-V5-C4",
+        "P1-V5-C5",
+        "P1-V5-C6",
+        "P1-V5-C7",
+        "P1-V5-C8",
+        "P1-V5-C9",
+        "P1-V5-C10",
+        "P1-V6-C1",
+        "P1-V6-C2",
+        "P1-V6-C3",
+        "P1-V6-C4",
+        "P1-V6-C5",
+        "P1-V6-C6",
+        "P1-V6-C7",
+        "P1-V6-C8",
+        "P1-V6-C9",
+        "P1-V6-C10",
+        "P1-V7-C1",
+        "P1-V7-C2",
+        "P1-V7-C3",
+        "P1-V7-C4",
+        "P1-V7-C5",
+        "P1-V7-C6",
+        "P1-V7-C7",
+        "P1-V7-C8",
+        "P1-V7-C9",
+        "P1-V7-C10",
+        "P1-V8-C1",
+        "P1-V8-C2",
+        "P1-V8-C3",
+        "P1-V8-C4",
+        "P1-V8-C5",
+        "P1-V8-C6",
+        "P1-V8-C7",
+        "P1-V8-C8",
+        "P1-V9-C1",
+        "P1-V9-C2",
+        "P1-V9-C3",
+        "P1-V9-C4",
+        "P1-V9-C5",
+        "P1-V9-C6",
+        "P1-V9-C7",
+        "P1-V9-C8",
+        "P1-V9-C9",
+        "P1-V9-C10",
+        "p1-v10-c1",
+        "p1-v10-c2",
+        "p1-v10-c3",
+        "p1-v10-c4",
+        "p1-v10-c5",
+        "p1-v10-c6",
+        "p1-v10-c7",
+        "p1-v10-c8",
+        "p1-v10-c9",
+        "p1-v10-c10"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "小石头",
+      "appearances": [
+        "P1-V1-C9",
+        "P1-V3-C1",
+        "P1-V3-C9",
+        "P1-V3-C10",
+        "P1-V4-C1",
+        "P1-V4-C2",
+        "P1-V5-C1",
+        "P1-V5-C5",
+        "P1-V5-C10",
+        "P1-V6-C1",
+        "P1-V6-C3",
+        "P1-V6-C10",
+        "P1-V9-C3"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "通铺掌柜",
+      "appearances": [
+        "P1-V4-C1"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "书友会暗线成员陈默",
+      "appearances": [
+        "P1-V5-C2"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "杂货铺王伯",
+      "appearances": [
+        "P1-V6-C1"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "沈明",
+      "appearances": [
+        "P1-V6-C2",
+        "P1-V6-C3",
+        "P1-V6-C4",
+        "P1-V6-C6",
+        "P1-V6-C7",
+        "P1-V6-C10",
+        "P1-V7-C2",
+        "P1-V7-C3",
+        "P1-V7-C4",
+        "P1-V7-C5",
+        "P1-V7-C7",
+        "P1-V7-C8",
+        "P1-V7-C10",
+        "P1-V8-C1",
+        "P1-V8-C7",
+        "P1-V9-C2",
+        "P1-V9-C3",
+        "P1-V9-C4",
+        "P1-V9-C5",
+        "P1-V9-C6",
+        "P1-V9-C8",
+        "P1-V9-C10",
+        "p1-v10-c1",
+        "p1-v10-c2",
+        "p1-v10-c3",
+        "p1-v10-c4",
+        "p1-v10-c5",
+        "p1-v10-c6",
+        "p1-v10-c9"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "缉厄司精英小队",
+      "appearances": [
+        "P1-V8-C7"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "缉厄司俘虏",
+      "appearances": [
+        "P1-V8-C8"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "矿监周虎",
+      "appearances": [
+        "P1-V1-C1",
+        "P1-V1-C2",
+        "P1-V1-C3",
+        "P1-V1-C4",
+        "P1-V1-C5",
+        "P1-V1-C7",
+        "P1-V2-C1",
+        "P1-V2-C9"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "小监工",
+      "appearances": [
+        "P1-V3-C3"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "张凯",
+      "appearances": [
+        "P1-V6-C4"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "陆天",
+      "appearances": [
+        "P1-V8-C1",
+        "P1-V8-C2",
+        "P1-V8-C3",
+        "P1-V8-C4",
+        "P1-V8-C5",
+        "P1-V8-C6",
+        "P1-V8-C8",
+        "P1-V9-C3",
+        "P1-V9-C4",
+        "P1-V9-C5",
+        "P1-V9-C6",
+        "P1-V9-C8",
+        "P1-V9-C10",
+        "p1-v10-c1",
+        "p1-v10-c2",
+        "p1-v10-c3",
+        "p1-v10-c4",
+        "p1-v10-c5",
+        "p1-v10-c6",
+        "p1-v10-c7",
+        "p1-v10-c8",
+        "p1-v10-c9",
+        "p1-v10-c10"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "顾衍",
+      "appearances": [
+        "P1-V9-C2",
+        "P1-V9-C5",
+        "P1-V9-C7",
+        "P1-V9-C8"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "地痞头目",
+      "appearances": [
+        "P1-V4-C4"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "材料摊老板",
+      "appearances": [
+        "P1-V4-C5"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "灵石摊老板",
+      "appearances": [
+        "P1-V5-C2"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "江迟",
+      "appearances": [
+        "P1-V6-C1",
+        "P1-V6-C2",
+        "P1-V6-C4",
+        "P1-V6-C6",
+        "P1-V6-C7",
+        "P1-V7-C3",
+        "P1-V7-C5",
+        "P1-V7-C9",
+        "P1-V7-C10",
+        "P1-V8-C1",
+        "P1-V8-C2",
+        "P1-V8-C3",
+        "P1-V8-C4",
+        "P1-V8-C5",
+        "P1-V8-C8",
+        "P1-V9-C2",
+        "P1-V9-C3",
+        "P1-V9-C4",
+        "P1-V9-C5",
+        "P1-V9-C6",
+        "P1-V9-C8",
+        "P1-V9-C9",
+        "P1-V9-C10",
+        "p1-v10-c1",
+        "p1-v10-c2",
+        "p1-v10-c3",
+        "p1-v10-c4",
+        "p1-v10-c5",
+        "p1-v10-c6",
+        "p1-v10-c7",
+        "p1-v10-c8",
+        "p1-v10-c9",
+        "p1-v10-c10"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "书友会全体",
+      "appearances": [
+        "P1-V6-C4",
+        "P1-V6-C7",
+        "P1-V7-C5"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "李源",
+      "appearances": [
+        "P1-V9-C3",
+        "P1-V9-C4",
+        "P1-V9-C5",
+        "P1-V9-C6",
+        "P1-V9-C7",
+        "P1-V9-C8",
+        "P1-V9-C9",
+        "P1-V9-C10",
+        "p1-v10-c1",
+        "p1-v10-c2",
+        "p1-v10-c3",
+        "p1-v10-c4",
+        "p1-v10-c5",
+        "p1-v10-c6",
+        "p1-v10-c7",
+        "p1-v10-c8",
+        "p1-v10-c9",
+        "p1-v10-c10"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "矿奴小石头",
+      "appearances": [
+        "P1-V1-C9",
+        "P1-V2-C10"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "矿奴群体",
+      "appearances": [
+        "P1-V3-C5"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "缉厄司捕快乙",
+      "appearances": [
+        "P1-V5-C3",
+        "P1-V5-C4"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "城防军士兵",
+      "appearances": [
+        "P1-V6-C3"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "张瑾",
+      "appearances": [
+        "P1-V9-C1"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "缉厄司暗哨",
+      "appearances": [
+        "P1-V9-C8"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "缉厄司先遣捕快",
+      "appearances": [
+        "p1-v10-c1"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "周玄",
+      "appearances": [
+        "p1-v10-c4",
+        "p1-v10-c5",
+        "p1-v10-c8",
+        "p1-v10-c9"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "缉厄司暗卫甲",
+      "appearances": [
+        "P1-V2-C4",
+        "P1-V2-C5",
+        "P1-V2-C6",
+        "P1-V3-C7",
+        "P1-V3-C8"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "监工群体",
+      "appearances": [
+        "P1-V3-C5"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "围观百姓",
+      "appearances": [
+        "P1-V6-C3"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "赵磊",
+      "appearances": [
+        "P1-V6-C6"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "缉厄司小队成员",
+      "appearances": [
+        "P1-V6-C9"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "缉厄司伏兵",
+      "appearances": [
+        "P1-V7-C4",
+        "P1-V8-C3",
+        "P1-V8-C4",
+        "P1-V8-C5"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "周虎",
+      "appearances": [
+        "P1-V3-C3",
+        "P1-V3-C4",
+        "P1-V3-C6"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "功法阁掌柜",
+      "appearances": [
+        "P1-V4-C3"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "王掌柜",
+      "appearances": [
+        "P1-V4-C5"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "缉厄司捕快甲",
+      "appearances": [
+        "P1-V5-C3",
+        "P1-V5-C4"
+      ],
+      "arc_status": "active",
+      "issues": []
+    },
+    {
+      "character": "缉厄司搜捕队",
+      "appearances": [
+        "P1-V5-C9"
+      ],
+      "arc_status": "underdeveloped",
+      "issues": [
+        "角色仅出场一次，可能是工具人"
+      ]
+    },
+    {
+      "character": "探险队全体",
+      "appearances": [
+        "P1-V9-C4",
+        "P1-V9-C5",
+        "P1-V9-C6",
+        "P1-V9-C8",
+        "P1-V9-C9",
+        "P1-V9-C10"
+      ],
+      "arc_status": "active",
+      "issues": []
+    }
+  ],
+  "plot_contradictions": [],
+  "missing_connections": [
+    {
+      "from": "P1-V1-C2",
+      "to": "P1-V1-C3",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿丙字三号矿道' 变为 '黑风灵石矿矿道入口广场' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V1-C3",
+      "to": "P1-V1-C4",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿矿道入口广场' 变为 '黑风灵石矿矿奴大通铺' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V1-C4",
+      "to": "P1-V1-C5",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿矿奴大通铺' 变为 '黑风灵石矿丙字七号矿道' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V1-C5",
+      "to": "P1-V1-C6",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿丙字七号矿道' 变为 '黑风灵石矿主矿道入口' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V1-C6",
+      "to": "P1-V1-C7",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿主矿道入口' 变为 '黑风灵石矿矿场广场' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V1-C7",
+      "to": "P1-V1-C8",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿矿场广场' 变为 '黑风灵石矿废弃矿道' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V1-C8",
+      "to": "P1-V1-C9",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿废弃矿道' 变为 '黑风灵石矿丁字八号废弃矿道' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V1-C9",
+      "to": "P1-V1-C10",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿丁字八号废弃矿道' 变为 '黑风灵石矿矿奴大通铺' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V2-C1",
+      "to": "P1-V2-C2",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿废弃矿道入口' 变为 '黑风灵石矿最深废弃矿洞中段' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V2-C2",
+      "to": "P1-V2-C3",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿最深废弃矿洞中段' 变为 '黑风灵石矿地下遗迹入口' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V2-C3",
+      "to": "P1-V2-C4",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿地下遗迹入口' 变为 '黑风灵石矿地下遗迹入口外侧矿道' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V2-C8",
+      "to": "P1-V2-C9",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿地下遗迹入口外侧矿道' 变为 '黑风灵石矿最深废弃矿洞入口' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V2-C10",
+      "to": "P1-V3-C1",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿矿奴大通铺' 变为 '黑风灵石矿废弃矿道隐藏岩洞' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V3-C1",
+      "to": "P1-V3-C2",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿废弃矿道隐藏岩洞' 变为 '黑风灵石矿各主矿道' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V3-C2",
+      "to": "P1-V3-C3",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿各主矿道' 变为 '黑风灵石矿矿道入口广场' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V3-C3",
+      "to": "P1-V3-C4",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿矿道入口广场' 变为 '黑风灵石矿矿奴大通铺、主矿道' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V3-C4",
+      "to": "P1-V3-C5",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿矿奴大通铺、主矿道' 变为 '黑风灵石矿主矿道' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V3-C5",
+      "to": "P1-V3-C6",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿主矿道' 变为 '黑风灵石矿支矿道' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V3-C6",
+      "to": "P1-V3-C7",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿支矿道' 变为 '黑风灵石矿废弃矿道附近' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V3-C7",
+      "to": "P1-V3-C8",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿废弃矿道附近' 变为 '黑风灵石矿地下遗迹入口附近矿道' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V3-C8",
+      "to": "P1-V3-C9",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿地下遗迹入口附近矿道' 变为 '黑风灵石矿废弃矿道隐藏岩洞' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V3-C9",
+      "to": "P1-V3-C10",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿废弃矿道隐藏岩洞' 变为 '黑风灵石矿外围山林' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V3-C10",
+      "to": "P1-V4-C1",
+      "type": "location_transition",
+      "description": "地点从 '黑风灵石矿外围山林' 变为 '青牛镇城门入口、便民通铺' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V4-C1",
+      "to": "P1-V4-C2",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇城门入口、便民通铺' 变为 '青牛镇坊市百草堂' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V4-C2",
+      "to": "P1-V4-C3",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇坊市百草堂' 变为 '青牛镇坊市功法阁、便民通铺、黑风矿废弃矿道' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V4-C3",
+      "to": "P1-V4-C4",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇坊市功法阁、便民通铺、黑风矿废弃矿道' 变为 '便民通铺后小巷' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V4-C4",
+      "to": "P1-V4-C5",
+      "type": "location_transition",
+      "description": "地点从 '便民通铺后小巷' 变为 '青牛镇城外低阶灵草区、坊市修炼室' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V4-C5",
+      "to": "P1-V4-C6",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇城外低阶灵草区、坊市修炼室' 变为 '青牛镇坊市修炼室' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V4-C6",
+      "to": "P1-V4-C7",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇坊市修炼室' 变为 '青牛镇坊市出口拐角' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V5-C2",
+      "to": "P1-V5-C3",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇坊市灵石交易区' 变为 '青牛镇坊市出口' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V5-C5",
+      "to": "P1-V5-C6",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇便民通铺' 变为 '青牛镇坊市后破庙周边' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V6-C3",
+      "to": "P1-V6-C4",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇城门入口' 变为 '陈记杂货铺地下密室' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V6-C4",
+      "to": "P1-V6-C5",
+      "type": "location_transition",
+      "description": "地点从 '陈记杂货铺地下密室' 变为 '青牛镇外三十里山林' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V6-C5",
+      "to": "P1-V6-C6",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇外三十里山林' 变为 '陈记杂货铺地下密室' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V6-C7",
+      "to": "P1-V6-C8",
+      "type": "location_transition",
+      "description": "地点从 '陈记杂货铺地下密室' 变为 '陈记杂货铺后院' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V6-C8",
+      "to": "P1-V6-C9",
+      "type": "location_transition",
+      "description": "地点从 '陈记杂货铺后院' 变为 '黑风矿西入口外围山林' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V6-C9",
+      "to": "P1-V6-C10",
+      "type": "location_transition",
+      "description": "地点从 '黑风矿西入口外围山林' 变为 '青牛镇陈记杂货铺后院' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V6-C10",
+      "to": "P1-V7-C1",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇陈记杂货铺后院' 变为 '陈记杂货铺后院密室' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V7-C1",
+      "to": "P1-V7-C2",
+      "type": "location_transition",
+      "description": "地点从 '陈记杂货铺后院密室' 变为 '陈记杂货铺前店' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V7-C2",
+      "to": "P1-V7-C3",
+      "type": "location_transition",
+      "description": "地点从 '陈记杂货铺前店' 变为 '陈记杂货铺地下密室' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V7-C3",
+      "to": "P1-V7-C4",
+      "type": "location_transition",
+      "description": "地点从 '陈记杂货铺地下密室' 变为 '青牛镇东门官道断崖处' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V7-C4",
+      "to": "P1-V7-C5",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇东门官道断崖处' 变为 '陈记杂货铺地下密室' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V7-C5",
+      "to": "P1-V7-C6",
+      "type": "location_transition",
+      "description": "地点从 '陈记杂货铺地下密室' 变为 '青牛镇城西小巷' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V7-C7",
+      "to": "P1-V7-C8",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇城西小巷' 变为 '陈记杂货铺后门' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V7-C8",
+      "to": "P1-V7-C9",
+      "type": "location_transition",
+      "description": "地点从 '陈记杂货铺后门' 变为 '陈记杂货铺地下密室' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V7-C10",
+      "to": "P1-V8-C1",
+      "type": "location_transition",
+      "description": "地点从 '陈记杂货铺地下密室' 变为 '黑风矿西入口外围山林' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V8-C2",
+      "to": "P1-V8-C3",
+      "type": "location_transition",
+      "description": "地点从 '陈记杂货铺门口' 变为 '青牛镇城西山林灵草坡' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V8-C3",
+      "to": "P1-V8-C4",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇城西山林灵草坡' 变为 '青牛镇后山废弃破庙、南山谷传承洞' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V8-C4",
+      "to": "P1-V8-C5",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇后山废弃破庙、南山谷传承洞' 变为 '青牛镇东郊山坡' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V8-C5",
+      "to": "P1-V8-C6",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇东郊山坡' 变为 '陈记杂货铺修炼室' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V8-C6",
+      "to": "P1-V8-C7",
+      "type": "location_transition",
+      "description": "地点从 '陈记杂货铺修炼室' 变为 '黑风矿外围山林' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V9-C2",
+      "to": "P1-V9-C3",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇城西小巷秘密接头点' 变为 '书友会据点地下密室' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V9-C3",
+      "to": "P1-V9-C4",
+      "type": "location_transition",
+      "description": "地点从 '书友会据点地下密室' 变为 '书友会据点后院' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V9-C4",
+      "to": "P1-V9-C5",
+      "type": "location_transition",
+      "description": "地点从 '书友会据点后院' 变为 '青牛镇通往黑风矿的官道沿线' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V9-C5",
+      "to": "P1-V9-C6",
+      "type": "location_transition",
+      "description": "地点从 '青牛镇通往黑风矿的官道沿线' 变为 '黑风矿外围山林高处' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V9-C6",
+      "to": "P1-V9-C7",
+      "type": "location_transition",
+      "description": "地点从 '黑风矿外围山林高处' 变为 '黑风矿西侧悬崖废弃矿道入口' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V9-C7",
+      "to": "P1-V9-C8",
+      "type": "location_transition",
+      "description": "地点从 '黑风矿西侧悬崖废弃矿道入口' 变为 '黑风矿废弃矿道内部' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V9-C8",
+      "to": "P1-V9-C9",
+      "type": "location_transition",
+      "description": "地点从 '黑风矿废弃矿道内部' 变为 '黑风矿废弃矿道中段遗迹入口前' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V9-C9",
+      "to": "P1-V9-C10",
+      "type": "location_transition",
+      "description": "地点从 '黑风矿废弃矿道中段遗迹入口前' 变为 '黑风矿地下遗迹入口石壁前' 缺乏过渡说明"
+    },
+    {
+      "from": "P1-V9-C10",
+      "to": "p1-v10-c1",
+      "type": "location_transition",
+      "description": "地点从 '黑风矿地下遗迹入口石壁前' 变为 '黑风矿地下遗迹入口甬道' 缺乏过渡说明"
+    },
+    {
+      "from": "p1-v10-c1",
+      "to": "p1-v10-c2",
+      "type": "location_transition",
+      "description": "地点从 '黑风矿地下遗迹入口甬道' 变为 '黑风矿地下遗迹甬道中段' 缺乏过渡说明"
+    },
+    {
+      "from": "p1-v10-c6",
+      "to": "p1-v10-c7",
+      "type": "location_transition",
+      "description": "地点从 '黑风矿地下遗迹甬道中段' 变为 '黑风矿地下遗迹核心区域前密道' 缺乏过渡说明"
+    },
+    {
+      "from": "p1-v10-c7",
+      "to": "p1-v10-c8",
+      "type": "location_transition",
+      "description": "地点从 '黑风矿地下遗迹核心区域前密道' 变为 '黑风矿地下遗迹核心区域前密道出口' 缺乏过渡说明"
+    },
+    {
+      "from": "p1-v10-c8",
+      "to": "p1-v10-c9",
+      "type": "location_transition",
+      "description": "地点从 '黑风矿地下遗迹核心区域前密道出口' 变为 '黑风矿地下遗迹核心区域入口前' 缺乏过渡说明"
+    },
+    {
+      "from": "p1-v10-c9",
+      "to": "p1-v10-c10",
+      "type": "location_transition",
+      "description": "地点从 '黑风矿地下遗迹核心区域入口前' 变为 '黑风矿地下遗迹核心区域' 缺乏过渡说明"
+    }
+  ],
+  "summary": {
+    "total_chapters": 95,
+    "total_characters": 53,
+    "critical_issues_count": 3,
+    "logic_holes_count": 3,
+    "timeline_issues_count": 0,
+    "contradictions_count": 0,
+    "risk_level": "极高风险 - 需要重大修改"
+  }
+}

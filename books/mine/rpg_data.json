@@ -1,0 +1,10 @@
+{
+  "project_summary": {
+    "book_name": "mine",
+    "characters": 63,
+    "items": 7,
+    "locations": 73,
+    "parts": 1
+  },
+  "world_data": "{\n  \"current_map\": \"\",\n  \"day_night\": 12,\n  \"game_time\": 0,\n  \"player\": {\n    \"id\": \"char_1775657757225433100_208\",\n    \"template_id\": \"template_林砚\",\n    \"name\": \"林砚\",\n    \"type\": \"player\",\n    \"level\": 1,\n    \"exp\": 0,\n    \"exp_to_next\": 100,\n    \"base_stats\": {\n      \"hp\": 100,\n      \"mp\": 50,\n      \"attack\": 12,\n      \"defense\": 10,\n      \"magic\": 8,\n      \"resistance\": 8,\n      \"speed\": 10,\n      \"luck\": 10\n    },\n    \"current_stats\": {\n      \"hp\": 100,\n      \"mp\": 50,\n      \"attack\": 12,\n      \"defense\": 10,\n      \"magic\": 8,\n      \"resistance\": 8,\n      \"speed\": 10,\n      \"luck\": 10\n    },\n    \"growth_stats\": {\n      \"hp_growth\": 10,\n      \"mp_growth\": 5,\n      \"attack_growth\": 2,\n      \"defense_growth\": 1.5,\n      \"magic_growth\": 1.5,\n      \"resistance_growth\": 1.5,\n      \"speed_growth\": 2,\n      \"luck_growth\": 1\n    },\n    \"state\": \"normal\",\n    \"equipment\": {},\n    \"skills\": null,\n    \"items\": [],\n    \"position\": {\n      \"map_id\": \"map_黑风灵石矿丙字三号矿道\",\n      \"x\": 5,\n      \"y\": 5\n    },\n    \"created_at\": \"1775657757\",\n    \"updated_at\": \"1775657757\"\n  },\n  \"quest_log\": {\n    \"active_quests\": [],\n    \"completed_quests\": [],\n    \"failed_quests\": [],\n    \"quest_instances\": {}\n  },\n  \"weather\": \"clear\",\n  \"world_flags\": {}\n}"
+}

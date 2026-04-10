@@ -1,0 +1,122 @@
+{
+  "name": "自定义小说分析器示例",
+  "description": "展示如何自定义分析规则的示例配置",
+  "rules": [
+    {
+      "id": "character_consistency",
+      "name": "角色列表一致性",
+      "type": "consistency",
+      "target": "character_list",
+      "severity": "warning",
+      "message": "角色出场逻辑不一致",
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "id": "location_transition",
+      "name": "地点转换过渡",
+      "type": "consistency",
+      "target": "location_transition",
+      "severity": "info",
+      "message": "地点转换缺乏过渡描述",
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "id": "character_frequency_low",
+      "name": "角色出场频率过低",
+      "type": "frequency",
+      "target": "character_appearances",
+      "condition": {
+        "operator": "lte",
+        "value": 1
+      },
+      "severity": "info",
+      "message": "角色仅出场一次，可能是工具人",
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "id": "death_count_check",
+      "name": "主角死亡次数检查",
+      "type": "frequency",
+      "target": "events",
+      "condition": {
+        "pattern": "死亡|复活|重生",
+        "operator": "gt",
+        "value": 5
+      },
+      "severity": "critical",
+      "message": "主角死亡/复活次数过多",
+      "suggestion": "限制死亡次数或增加死亡代价"
+    },
+    {
+      "id": "power_system_check",
+      "name": "战力体系检查",
+      "type": "frequency",
+      "target": "events",
+      "condition": {
+        "pattern": "修为|境界|等级|战力",
+        "operator": "gt",
+        "value": 15
+      },
+      "severity": "warning",
+      "message": "战力变化过于频繁",
+      "suggestion": "建立稳定的战力体系，减少频繁变化"
+    },
+    {
+      "id": "romance_pattern_check",
+      "name": "感情线检查",
+      "type": "pattern",
+      "target": "events",
+      "condition": {
+        "pattern": "喜欢|爱慕|表白|亲吻",
+        "operator": "exists"
+      },
+      "severity": "info",
+      "message": "检测到感情线相关事件",
+      "suggestion": "确保感情线发展合理，避免突兀"
+    },
+    {
+      "id": "chapter_length_check",
+      "name": "章节长度检查",
+      "type": "threshold",
+      "target": "chapter",
+      "condition": {
+        "field": "events_per_chapter",
+        "operator": "lt",
+        "value": 1
+      },
+      "severity": "warning",
+      "message": "章节事件过少",
+      "suggestion": "增加章节内的事件推动剧情"
+    },
+    {
+      "id": "mc_screen_time",
+      "name": "主角出场时间",
+      "type": "frequency",
+      "target": "character_appearances",
+      "condition": {
+        "operator": "lt",
+        "value": 10
+      },
+      "severity": "warning",
+      "message": "主角出场次数过少",
+      "suggestion": "增加主角戏份"
+    }
+  ],
+  "patterns": {
+    "death_keywords": "死亡|被杀|陨落|陨灭",
+    "resurrection_keywords": "复活|重生|苏醒|醒来",
+    "power_keywords": "修为|境界|等级|战力|突破",
+    "romance_keywords": "喜欢|爱慕|表白|亲吻|拥抱|心动"
+  },
+  "thresholds": {
+    "fatal_score": 100,
+    "critical_score": 70,
+    "warning_score": 40
+  },
+  "custom_data": {
+    "mc_name": "主角",
+    "max_deaths": 3,
+    "max_power_changes": 10,
+    "min_mc_appearances": 20
+  }
+}
