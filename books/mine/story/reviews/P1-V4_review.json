@@ -1,0 +1,344 @@
+{
+  "volume_id": "P1-V4",
+  "volume_title": "卷四：本土修仙的入门",
+  "reviews": [
+    {
+      "chapter_id": "P1-V4-C1",
+      "chapter_title": "采药乔装入青牛，檐底松烟暗递踪",
+      "overall_score": 7,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 视角合规性: 删除陈默的内心独白与苏晚的上帝视角描写，仅保留林砚能感知到的内容：比如只写林砚察觉到茶摊灰衣男子的注视、对方字条的松烟味、后来瞥见素衣女子到通铺和掌柜交谈的背影，陈默的身份与苏晚的动机留到后续剧情再揭露，保持限知视角的悬疑感",
+        "[高优先级] 剧情连续性: 1. 将林砚对城防军说的「进山采药的表兄弟」改为「进山采药的爷孙俩」，承接前章决策；2. 林砚入城后内心闪过一句「此前收到的书友会联络信号来源还没找到，得慢慢来」；3. 加1句小石头啃包子时偶尔走神，手指无意识摩挲领口的半块玉佩（呼应前章他藏着见过神秘人的秘密），符合其隐忍的人设",
+        "[打磨优先级] 人物细节: 在「递给小石头一个」后面加一句「刚咬开热油就顺着指缝往下流，正好兑现了之前路上的承诺」，既呼应前章细节，又体现林砚重诺的性格",
+        "[打磨优先级] 收尾钩子优化: 将最后一段精简为「他写了五年矿场开局文，最懂新手村杀机四伏的套路，指尖还残留着刚才灰衣男子字条飘过来的松烟味，青牛镇这潭水，远比预想的要深得多」，强化危机感，收紧收尾钩子"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V4-C2",
+      "chapter_title": "百草辨株得短工，隔墙有耳问行踪",
+      "overall_score": 5,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 红线规则修正: 将全文所有叙事、动作动词统一调整为现在时，严格符合时态规则",
+        "[致命优先级] 红线规则修正: 删掉不属于本章情节节点的「盘算回矿挖灵石」「和小石头分饼」等冗余内容，压缩总字数到2850-3150区间",
+        "[致命优先级] 设定修正: 将「之前兜里的二十五块灵石交完房租就剩十三块」修改为「之前兜里剩下的二十五块下品灵石省吃俭用也撑不了多久」，匹配前章既定状态",
+        "[高优先级] 情节优化: 增加1-2句其他应聘修士质疑林砚能力、要求王掌柜再考核的内容，突出竞争的激烈性，强化林砚脱颖而出的爽感",
+        "[高优先级] 情节优化: 补充林砚意识到身体素质下降后的心理活动，比如闪过「再死一次就要折十年寿，现在连十斤灵草都扛不动，真遇危险根本跑不掉」的想法，强化核心生存焦虑",
+        "[高优先级] 伏笔呼应: 在林砚摸封印玉佩的情节前，加一句「他指尖碰到怀里发烫的联络石，顿了顿又摸向温温的半块封印玉佩」，呼应前章设定",
+        "[打磨优先级] 细节打磨: 将淡灰色痕迹改为「沾着点黑灰色的矿尘痕迹」，暗示她刚去过黑风矿附近，强化身份暗示"
+      ],
+      "needs_revision": true
+    },
+    {
+      "chapter_id": "P1-V4-C3",
+      "chapter_title": "算尽余寿涉旧矿，坊市购诀触灵基",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 剧情优化: 补充100字左右的过渡内容，交代林砚回到通铺后避开缉厄司盘查、摆脱素衣女子盯梢的操作，再用「半个月平安无事过去」的过渡句跳转至攒钱买功法的情节，保证连续性",
+        "[致命优先级] 逻辑修正: 在开篇补充说明「小石头这半个月也在百草堂帮忙晾晒灵草，每天赚1块下品灵石，半个月赚了17块，加起来刚好凑了70块」，使数值逻辑自洽",
+        "[高优先级] 情节调整: 删除该段内容，收尾落在林砚摸到练气二层门槛、暗自庆幸没有浪费寿命，同时想起「三哥」的线索心生警惕的节点，符合给定的closing beat要求",
+        "[高优先级] 细节修正: 将「玻璃柜」修改为「水晶陈列柜」或「嵌着灵云母的木格展示柜」，消除违和感",
+        "[打磨优先级] 人物优化: 在描写小石头睡觉的段落补充「枕头底下压着他这半个月赚的十几块碎灵石，是攒着想买糖吃的」这类细节，符合其懂事的人设，呼应前章带他打零工的设定"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V4-C4",
+      "chapter_title": "假死巷口明损耗，痞言失口露凶名",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 红线合规调整: 删减末尾不必要的计划描写、重复表述，将总字数压缩至2850-3150字区间内",
+        "[高优先级] 情节节奏优化: 删除关于「找采药委托、租修炼室」的冗余计划内容，收尾重点落在林砚意识到三哥势力无处不在、必须尽快突破修为的危机感上，强化追更欲望",
+        "[打磨优先级] 人物刻画优化: 给两个小弟增加差异化细节，比如一个吓得腿软直接坐在烂菜叶子上，另一个攥着木棍连话都不敢说，丰富人物层次",
+        "[打磨优先级] 文笔精简优化: 删除其中一处重复表述，精简语句"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V4-C5",
+      "chapter_title": "山外采药斩赤兔，冲关忽闻探信人",
+      "overall_score": 5,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 红线合规: 将所有叙事动词调整为现在时表述，比如将「林砚就避开」改为「林砚避开」，「王掌柜正踮着脚」改为「王掌柜踮着脚」，确保全文时态统一符合规则要求。",
+        "[致命优先级] 红线合规: 删除冗余内容，比如合并重复清点灵石的段落、删减过于细碎的修炼室场景描写，将总字数压缩到3000±150字范围内。",
+        "[高优先级] 情节优化: 将这段内容调整到林砚采完黄叶草回百草堂交任务的时候表述，符合指定的情节节点顺序。",
+        "[高优先级] 内容精简: 合并清点灵石的内容，只保留租完修炼室后清点剩余灵石的段落即可，删除进修炼室之前的清点内容。",
+        "[打磨优先级] 风格优化: 将「这点活对他来说比写大纲还简单」改为「这点活对他来说毫无难度」，将「合着现实里的赤毛兔比他前世楼下抢猫粮的流浪猫还蠢」改为「赤毛兔的动作在他眼里慢得离谱」，保持黑色幽默的克制感。",
+        "[打磨优先级] 细节优化: 将「和他之前在黑风矿销毁的缉厄司铜牌纹路一模一样」改为「铜牌上的淡蓝色云纹他再熟悉不过」，保持悬念感，不用直白点破。"
+      ],
+      "needs_revision": true
+    },
+    {
+      "chapter_id": "P1-V4-C6",
+      "chapter_title": "三月苦修登三层，试复生还闻主亲临",
+      "overall_score": 7,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 合规性修改: 删除非核心冗余细节，压缩全文至2850-3150字区间",
+        "[高优先级] 连续性修改: 开篇补充1-2句话说明粉裙小姑娘上门被林砚找借口打发的情节，既呼应前章悬念，也能解释他为何能安心闭关一个半月",
+        "[高优先级] 节奏优化: 删除该部分内容，仅保留「清点这段时间采药赚的灵石，续了两个半月修炼租期」的核心动作即可",
+        "[打磨优先级] 细节打磨: 微调路人对话，增加「上周邻镇有个揣着购物金手指的穿越者，刚露面半个时辰就被三哥逮了，魂飞魄散连轮回都入不了」的细节，强化危机感"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V4-C7",
+      "chapter_title": "坊角留笺邀旧友，烟痕如昔引疑踪",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 剧情连续性: 在该段添加细节：「他特意留意了身后有没有穿粉裙的身影，上周找上门的那个女人来路不明，他不敢掉以轻心」",
+        "[高优先级] 人物塑造: 在描写男子外貌时添加细节：「指尖上有常年握笔磨出来的薄茧」，既符合其作者身份，也给林砚后续判断对方身份提供细节支撑",
+        "[高优先级] 情节张力: 在该段添加细节：「他指尖猛地收紧，薄脆的麻纸边缘被捏出深深的褶皱，丹田处运转的灵气都晃了晃」，强化情绪冲击力",
+        "[打磨优先级] 文笔优化: 将「黄色风险等级」改为「中危」，既保留林砚做台账标记的习惯，也符合修仙界的叙事语境",
+        "[打磨优先级] 读者粘性优化: 在末尾添加细节：「风里还裹着一丝极淡的、和字条上一模一样的松烟味，他抬眼扫过巷口的人群，只瞥见半角素色裙角晃了晃，转眼就没了踪影」，强化悬念感",
+        "[打磨优先级] 文笔优化: 删除「比修炼室里冷硬的松香味鲜活得多」这句，精简环境描写，加快叙事节奏"
+      ],
+      "needs_revision": false
+    }
+  ],
+  "summary": ""
+}
