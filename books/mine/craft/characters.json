@@ -1,0 +1,971 @@
+{
+  "书友会全体": {
+    "name": "书友会全体",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "书友会暗线成员陈默": {
+    "name": "书友会暗线成员陈默",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "刘巧": {
+    "name": "刘巧",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "出身西南毒术世家，全族被穿越者的金手指波及灭门，侥幸逃生后加入缉厄司，是小队专属的斥候与陷阱布置者，曾靠下毒活捉过五名穿越者。",
+    "motivation": "",
+    "skills": [
+      "匿踪追踪",
+      "毒术配置",
+      "陷阱布置",
+      "轻身功夫"
+    ],
+    "role_in_story": "反派",
+    "notes": "RPG Stats: HP:100/100 MP:70/70 ATK:10 DEF:10"
+  },
+  "刘棠": {
+    "name": "刘棠",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "幼时误食山野毒草导致双目失明，意外觉醒了远超常人的灵觉感知能力，被缉厄司收养后专门接受追踪训练，是缉厄司青牛镇分部最精准的追踪人员。",
+    "motivation": "",
+    "skills": [
+      "灵觉追踪",
+      "听声辨位",
+      "符文刻录",
+      "地形预判"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "功法阁掌柜": {
+    "name": "功法阁掌柜",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "青牛镇本地散修，年轻时在外闯荡偶然得到一批低阶功法传承，回到镇上开功法阁营生已有四十余年，跟缉厄司、城防军都有常年打点，多年来靠着左右逢源在各方势力的夹缝中安稳立足，私下会偷偷收售来历不明的功法玉简赚取高额差价，从来只认灵石不认人",
+    "motivation": "",
+    "skills": [
+      "功法辨伪",
+      "低阶功法玉简修复",
+      "察言观色",
+      "人脉打点"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:90/90 ATK:10 DEF:10"
+  },
+  "周玄": {
+    "name": "周玄",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "自幼父母死于穿越者引发的灵气灾变，被缉厄司收养长大，从小接受猎杀穿越者的专项训练，参与过三次大型穿越者清剿行动，累计斩杀穿越者四十七名，因战功卓著被提拔为直属精英小队队长，是缉厄司底层战力中的标杆人物",
+    "motivation": "",
+    "skills": [
+      "筑基期剑道修炼",
+      "穿越者特征识别",
+      "战术布局",
+      "大范围灵力感知"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:70/70 ATK:15 DEF:10"
+  },
+  "周虎": {
+    "name": "周虎",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "围观百姓": {
+    "name": "围观百姓",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "世居青牛镇的普通民众，日常以农耕、打零工、经营小本生意为生，常年受城防军与缉厄司管辖，对修仙人士既敬畏又好奇，平日缺乏娱乐，官府张贴告示、当街拿人是他们最爱的消遣项目，听过不少穿越者被缉拿的街头传闻。",
+    "motivation": "",
+    "skills": [
+      "快速扎堆",
+      "传八卦速度远超寻常消息",
+      "见势不对一哄而散"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "地痞头目": {
+    "name": "地痞头目",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "土生土长的青牛镇本地人，年少时曾追随流窜的邪修混过三年，因争抢财物被仇家砍伤面部留下疤痕，邪修被缉厄司清剿后逃回青牛镇，拉拢了三四名闲汉组成地痞团伙，靠收摊位保护费、敲诈过往路人谋生，暗中与城防军小吏、缉厄司外围眼线有勾结，靠传递镇子上的陌生面孔信息换灵石好处，因此知晓缉厄司高层「三哥」的存在",
+    "motivation": "",
+    "skills": [
+      "街头斗殴",
+      "市井消息打探",
+      "低阶灵草基础辨认",
+      "敲诈勒索"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "城防军士兵": {
+    "name": "城防军士兵",
+    "race": "人族",
+    "appearance": "",
+    "personality": [],
+    "background": "青牛镇本地农户出身，祖上三代都是靠种灵田为生的普通凡人，二十岁时家里凑了半袋下品灵石托关系把他送进青牛镇城防营当差，修仙天赋极差，修行十年依旧停留在练气一层，日常职责就是在城门口盘查过往行人、核对通行文书，偶尔会收小商贩的好处违规放行无证件的人员，从未参与过缉厄司的相关行动，也不知道穿越者的存在",
+    "motivation": "",
+    "skills": [
+      "基础军中刀法",
+      "城防盘查流程",
+      "辨认青牛镇本地居民",
+      "快速清点低阶灵石数量"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:15 DEF:15"
+  },
+  "城防军小队长": {
+    "name": "城防军小队长",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "孙巧": {
+    "name": "孙巧",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "原是青玄宗外门弟子，因灵根资质太差被逐出师门，走投无路之下加入缉厄司，擅长追踪术和情报收集，是贺锋小队的专属情报人员，靠追踪穿越者获得的天道碎片赏赐，硬生生把劣等灵根提升到中等资质，目前修为练气八层。",
+    "motivation": "",
+    "skills": [
+      "跨区域追踪术",
+      "机关陷阱布置",
+      "易容伪装",
+      "情报收集与加密传递"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:70/70 ATK:10 DEF:10"
+  },
+  "孙成": {
+    "name": "孙成",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "出身猎户家庭，从小跟着父亲进山打猎，练得一手追踪、潜伏的本事，二十岁时因追踪能力出众被缉厄司征召入队，专职负责外围斥候探查工作。",
+    "motivation": "",
+    "skills": [
+      "追踪术",
+      "潜伏伪装",
+      "信号传递",
+      "基础机关布设"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:70/70 ATK:10 DEF:10"
+  },
+  "孙茂": {
+    "name": "孙茂",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "缉厄司从小培养的密探，七岁就被派往各地潜伏，专门负责排查穿越者踪迹，曾伪装成店小二、货郎、矿奴等身份，协助清剿过五个穿越者聚集据点，是缉厄司最顶尖的底层密探之一",
+    "motivation": "",
+    "skills": [
+      "神魂术法修炼",
+      "伪装术",
+      "情报搜集",
+      "轻身术"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:110/110 ATK:10 DEF:10"
+  },
+  "孙莽": {
+    "name": "孙莽",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "出身黑风矿周边的猎户村落，小时候爹娘被妖兽所杀，靠吃百家饭长大，三年前被赵奎看中招进缉厄司小队，是小队里的战力担当",
+    "motivation": "",
+    "skills": [
+      "飞斧投掷",
+      "野外生存",
+      "蛮力破防"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:15"
+  },
+  "小监工": {
+    "name": "小监工",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "小石头": {
+    "name": "小石头",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "土生土长的黑风灵石矿矿奴，父母均为底层矿奴，在他七岁那年双双死于大型矿难，无亲无故独自在矿场求生，靠给年长矿奴跑腿、分拣碎灵石换得少量食物维生，自懂事起就整日在矿道摸爬滚打，对黑风矿所有明暗道、隐蔽角落的熟悉程度远超监工与资深矿奴，见过无数矿奴被监工打杀、死于矿难的场景，自幼便学会藏锋避祸，从不主动招惹是非。",
+    "motivation": "",
+    "skills": [
+      "熟稔黑风矿所有矿道结构",
+      "可通过石壁苔藓岩石纹路判断矿道坍塌风险",
+      "奔跑速度极快擅长躲藏",
+      "能精准分辨低阶灵石品类与常见灵草",
+      "藏物技巧高超难以被搜出"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "张凯": {
+    "name": "张凯",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "张奎": {
+    "name": "张奎",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "原是青牛镇本地地痞，因天生对灵气波动敏感度远超常人被缉厄司招募，做事不择手段，多次靠出卖同僚消息、抢夺同伴功劳获得上级赏识。",
+    "motivation": "",
+    "skills": [
+      "禁制布置",
+      "下毒",
+      "短途轻功",
+      "尸体痕迹清理"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "张瑾": {
+    "name": "张瑾",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "穿越前是顶尖大学历史系博士，同时是小有名气的历史考据类修仙文作者，因所有小说设定全部有史料、文物佐证，被粉丝称为「零bug作者」。穿越后觉醒与创作风格绑定的金手指，因能力特殊性被书友会吸纳，专门负责管理古籍库、鉴别古物真伪、破译古文字、核实情报真实性，此前曾多次帮书友会甄别出缉厄司伪造的假情报，避免了多次埋伏损失",
+    "motivation": "",
+    "skills": [
+      "古文字破译",
+      "古籍修复",
+      "文物鉴别",
+      "逻辑推演",
+      "过目不忘",
+      "史料整理"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "张莽": {
+    "name": "张莽",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "原本是青牛镇的地痞头目，当街打死过人被官府通缉，被魏烈招揽加入缉厄司，靠猎杀穿越者抵消罪责，至今已亲手处死三名穿越者。",
+    "motivation": "",
+    "skills": [
+      "近身格斗",
+      "锁链捆缚术",
+      "蛮力破防"
+    ],
+    "role_in_story": "反派",
+    "notes": "RPG Stats: HP:100/100 MP:70/70 ATK:15 DEF:15"
+  },
+  "探险队全体": {
+    "name": "探险队全体",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "杂货铺王伯": {
+    "name": "杂货铺王伯",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "李桐": {
+    "name": "李桐",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "战乱孤儿，从小被缉厄司收养训练为死士，从未接触过外界正常生活，所有认知都来自缉厄司的极端灌输，至今已执行过三十三次暗杀任务，从未失手",
+    "motivation": "",
+    "skills": [
+      "风系术法修炼",
+      "暗杀术",
+      "毒术",
+      "轻身术"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:130/130 ATK:10 DEF:10"
+  },
+  "李源": {
+    "name": "李源",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "穿越前是地球硬核科幻网文作者，深耕星际机械改造、古墓机关解密类题材十年，作品逻辑严密考据扎实，受众小众但忠诚度极高，因连续三个月爆肝赶稿猝死穿越。穿越后成为青牛镇铁匠铺学徒，偶然暴露机关解析能力被书友会吸纳为核心技术成员，此前从未对外透露过穿越者身份。",
+    "motivation": "",
+    "skills": [
+      "机关解构",
+      "爆破设计",
+      "结构力学计算",
+      "机械改造",
+      "冷兵器锻造",
+      "野外生存"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "材料摊老板": {
+    "name": "材料摊老板",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "土生土长的青牛镇本地人，年少时测出四灵根资质，耗尽家中积蓄修仙也只卡在练气一层再无进境，二十岁起在青牛镇坊市摆材料摊，专收低阶灵草、妖兽皮毛等零散材料，做了三十余年生意从未出过假货，在底层修士和采药山民中口碑不错，独子在青牛镇城防军任小队长，因此摆摊极少被地痞骚扰",
+    "motivation": "",
+    "skills": [
+      "低阶灵草药效鉴定",
+      "妖兽材料初步加工",
+      "材料真伪鉴别",
+      "讨价还价"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "林砚": {
+    "name": "林砚",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "前世为地球华夏的网络小说作者，深耕矿场开局类修仙题材创作五年，作品设定严谨逻辑自洽，坐拥百万读者，因连续熬夜赶稿猝死穿越至修仙界，成为黑风灵石矿的底层矿奴，刚穿越时修为为练气二层。",
+    "motivation": "",
+    "skills": [
+      "矿脉结构辨识",
+      "灵草识别",
+      "基础修仙功法修炼",
+      "陷阱布置",
+      "网文创作"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:150/150 MP:70/70 ATK:10 DEF:10"
+  },
+  "江迟": {
+    "name": "江迟",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "沈明": {
+    "name": "沈明",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "灵石摊老板": {
+    "name": "灵石摊老板",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "灵草铺王掌柜": {
+    "name": "灵草铺王掌柜",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "王伯": {
+    "name": "王伯",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "王掌柜": {
+    "name": "王掌柜",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "青牛镇本地出身，年轻时做过游走四方的采药散修，二十年前入山采高阶灵草时遭遇妖兽，摔断左腿断送了修仙路，靠着多年攒下的积蓄在青牛镇坊市开了百草堂，经营灵草生意三十余年，见惯了坊市的人情冷暖与修仙者的生杀予夺，多年前曾受过不知名过路修士的恩惠，对处境艰难的底层修士总会多留几分情面。",
+    "motivation": "",
+    "skills": [
+      "高阶灵草鉴别",
+      "低阶疗伤丹药炼制",
+      "账目核算",
+      "基础防身术"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:15"
+  },
+  "王福顺": {
+    "name": "王福顺",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "青牛镇本土散修出身，年轻时全家被缉厄司误判为穿越者灭口，他侥幸重伤逃生后被书友会初代成员所救，为报恩也为报仇主动申请驻守青牛镇据点，以杂货铺掌柜的身份做掩护经营陈记杂货铺已有四十二年，期间从未暴露过据点踪迹，见过无数穿越者被缉厄司猎杀，将所有来据点落脚的穿越者都视作晚辈照看",
+    "motivation": "",
+    "skills": [
+      "易容伪装",
+      "机关布设",
+      "灵药矿石辨伪",
+      "市井情报收集"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "白晓": {
+    "name": "白晓",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "监工群体": {
+    "name": "监工群体",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "矿奴小石头": {
+    "name": "矿奴小石头",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "矿奴群体": {
+    "name": "矿奴群体",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "矿奴老郑": {
+    "name": "矿奴老郑",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "矿监周虎": {
+    "name": "矿监周虎",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "反派",
+    "notes": "RPG Stats: HP:80/80 MP:20/20 ATK:15 DEF:8"
+  },
+  "缉厄司伏兵": {
+    "name": "缉厄司伏兵",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "缉厄司俘虏": {
+    "name": "缉厄司俘虏",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "出身青牛镇下辖张家村的贫苦农户，十二岁时山贼洗劫村庄，父母双亡，左脸被砍留下永久疤痕，此后流浪街头乞讨过活，十五岁时恰逢缉厄司招募杂役捕快，为求温饱报名加入，六年来一直是最低阶的戊字队捕快，常年负责跑腿放哨、布置陷阱等杂活，从未接触过缉厄司核心机密，熟悉青牛镇到黑风矿沿线的地形，上个月刚被抽调到黑风矿外围执行埋伏穿越者的外围任务",
+    "motivation": "",
+    "skills": [
+      "长途赶路",
+      "低阶陷阱布置",
+      "识别练气期修士气息",
+      "基础刀法"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:15 DEF:10"
+  },
+  "缉厄司先遣捕快": {
+    "name": "缉厄司先遣捕快",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "缉厄司小队": {
+    "name": "缉厄司小队",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "缉厄司小队成员": {
+    "name": "缉厄司小队成员",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "缉厄司捕快乙": {
+    "name": "缉厄司捕快乙",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "缉厄司捕快甲": {
+    "name": "缉厄司捕快甲",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "原是青牛镇本地地痞，早年因打架斗殴被人砍伤左眉留下疤痕，五年前凑了五十块下品灵石走关系进入缉厄司青牛镇分舵成为外围捕快，一直未得晋升，常年负责全城排查、盯梢可疑人员等杂活，多次借着排查的名义敲诈本地商户与散修，曾冤杀三名被误判为穿越者的低阶修士，抢了对方的储物袋中饱私囊。",
+    "motivation": "",
+    "skills": [
+      "基础刀法",
+      "低阶灵气刃使用",
+      "基础追踪术",
+      "简易神魂波动探查"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:70/70 ATK:15 DEF:10"
+  },
+  "缉厄司搜捕队": {
+    "name": "缉厄司搜捕队",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "缉厄司暗卫": {
+    "name": "缉厄司暗卫",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "缉厄司暗卫乙": {
+    "name": "缉厄司暗卫乙",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "出身青牛镇周边的散修家族，十七岁时家族因卷入修仙界纷争被灭门，濒死时被缉厄司人员救下，后被招入缉厄司青牛镇分舵成为底层暗卫，已有十年执行任务经验，长期负责偏远区域的穿越者排查、猎杀工作，熟悉各类低阶穿越者的能力特征，对高层指令从不质疑，仅靠任务赏钱积攒修炼资源。",
+    "motivation": "",
+    "skills": [
+      "隐踪潜行",
+      "低阶灵气刃操控",
+      "野外地形勘察",
+      "基础痕迹追踪"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "缉厄司暗卫甲": {
+    "name": "缉厄司暗卫甲",
+    "race": "本土人类修士",
+    "appearance": "",
+    "personality": [],
+    "background": "西境边境孤儿，十岁时因家乡被失控的穿越者金手指波及家破人亡，被缉厄司选中入营训练十六年，累计执行十七次穿越者猎杀任务无一失手，获授「缉字七十三号」专属编号，三个月前被直属上级顾衍（缉厄司高层内鬼「三哥」）派驻黑风灵石矿，负责排查矿场穿越者踪迹、搜寻地下封印遗迹入口。",
+    "motivation": "",
+    "skills": [
+      "灵气刃操控",
+      "潜行追踪",
+      "反侦察",
+      "矿道地形勘测",
+      "酷刑拷问"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "缉厄司暗哨": {
+    "name": "缉厄司暗哨",
+    "race": "人族",
+    "appearance": "",
+    "personality": [],
+    "background": "原是大燕王朝边军逃兵，因屠杀同袍获死罪，被缉厄司网罗吸纳后接受三年暗哨特训，抹去原有身份，编号「灰鸦十七」，派驻黑风灵石矿负责废弃矿道区域巡逻已有两年，亲手处决过十三名疑似穿越者的可疑人员，从未出现任务纰漏，是缉厄司底层暗哨中评价最高的成员之一，家人一直被缉厄司扣押作为人质",
+    "motivation": "",
+    "skills": [
+      "潜伏匿踪",
+      "短刃搏杀",
+      "痕迹辨认",
+      "哨语密传"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "缉厄司精英小队": {
+    "name": "缉厄司精英小队",
+    "race": "人族",
+    "appearance": "",
+    "personality": [],
+    "background": "该小队为缉厄司青牛镇分处抽调的王牌外勤作战单位，全员均有三年以上穿越者猎杀经验，半数成员参与过三年前针对持有「死后夺取」禁术穿越者的清剿行动，累计猎杀穿越者超过30名，曾多次立下一等功，是缉厄司专门用来处置持有特殊金手指的高阶穿越者的尖刀队伍，队长魏锋的亲弟弟在三年前的清剿行动中被禁术持有者夺取性命，因此对所有穿越者抱有极深的私仇",
+    "motivation": "",
+    "skills": [
+      "集体战术配合",
+      "穿越者特征识别",
+      "隐蔽陷阱布置",
+      "灵气弩精准射击",
+      "气息隐匿",
+      "野外追踪"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:150/150 MP:70/70 ATK:10 DEF:10"
+  },
+  "缉厄司精英小队（灰鹰小队）": {
+    "name": "缉厄司精英小队（灰鹰小队）",
+    "race": "本土人类修仙者",
+    "appearance": "",
+    "personality": [],
+    "background": "全员为缉厄司自幼收养的孤儿，经十五年残酷淘汰训练筛选而出，过往执行三十余起穿越者猎杀任务零失手，手上沾染过百名穿越者的鲜血，被高层内鬼「三哥」亲自调到黑风矿据点，专属负责突破丹诱饵猎杀计划、以及重要人犯的押送任务，全员皆被洗脑认定穿越者是天道破损、灾厄频发的元凶，猎杀时毫无心理负担",
+    "motivation": "",
+    "skills": [
+      "团队协同作战",
+      "灵气合击术",
+      "踪迹隐匿",
+      "反侦察",
+      "穿越者特征识别",
+      "禁制布设"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:70/70 ATK:10 DEF:10"
+  },
+  "缉厄司联络人": {
+    "name": "缉厄司联络人",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "缉厄司黑风矿埋伏小队": {
+    "name": "缉厄司黑风矿埋伏小队",
+    "race": "全员为本土人类修仙者，无穿越者",
+    "appearance": "",
+    "personality": [],
+    "background": "全员均是从小被缉厄司收养的本土孤儿，经十年残酷淘汰式训练后入选外勤猎杀小队，系统学习过针对各类穿越者金手指的针对性反制战术，入队五年间累计参与十七次穿越者猎杀行动，手上沾染超过三十名穿越者的鲜血，常年驻守青牛镇辖区，是缉厄司青牛镇分司战力排名前三的外勤小队",
+    "motivation": "",
+    "skills": [
+      "穿越者特征识别",
+      "团体配合作战",
+      "符咒操控",
+      "追踪反追踪",
+      "各类金手指效果反制"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:70/70 ATK:10 DEF:10"
+  },
+  "苏晚": {
+    "name": "苏晚",
+    "race": "人类（穿越者）",
+    "appearance": "",
+    "personality": [],
+    "background": "穿越前是国内知名虐恋言情网文作者，深耕虐文赛道十年，擅长塑造白莲花反派与背叛剧情，人气极高。穿越后不久就被缉厄司高层顾衍（代号三哥）招揽，对方许诺只要她为缉厄司效力，就能免除被抽取天道碎片的死局，还能获得海量修炼资源。为表忠心她先后出卖三个小型穿越者互助据点，手上沾染数十名穿越者的鲜血，两年前潜伏进入青牛镇书友会，逐步爬到核心成员的位置。",
+    "motivation": "",
+    "skills": [
+      "顶级演技",
+      "情报加密与传递",
+      "灵草辨识",
+      "低阶毒药配置",
+      "基础修仙功法掌握"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:70/70 ATK:10 DEF:10"
+  },
+  "贺锋": {
+    "name": "贺锋",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "出身本土低阶修仙世家，十六岁加入缉厄司，先后参与三次大型穿越者清剿行动，多次立下一等功。十年前清剿持有「死后夺取」禁术的悬疑类穿越者时，全家被对方灭门，自此对所有穿越者恨之入骨，靠猎杀穿越者获得的天道碎片赏赐修炼至筑基初期，是缉厄司内部有名的亡命悍将。",
+    "motivation": "",
+    "skills": [
+      "玄铁重刀刀法",
+      "跨区域追踪术",
+      "猎杀陷阱布置",
+      "精英小队指挥"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:70/70 ATK:15 DEF:10"
+  },
+  "赵大": {
+    "name": "赵大",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "原是黑风山脚下的农户，因欠地主高利贷被卖入黑风灵石矿为奴，已在矿场做工八年，家中亲人早已病饿离世，无牵无挂，平时靠拍监工马屁、欺负新入矿的弱小程序取好处，曾抢过刚入矿的林砚半块下品灵石，二人因此结怨",
+    "motivation": "",
+    "skills": [
+      "熟练挖矿",
+      "察言观色",
+      "溜须拍马"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "赵奎": {
+    "name": "赵奎",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "原本是青牛镇周边的山匪头领，十年前打劫过往商队时遭遇穿越者的火系金手指袭击，匪帮全灭，自己也被烧成重伤，被缉厄司救下后归顺，专职负责陷阱布置与地形勘察，参与过十七次穿越者猎杀任务，无一失手",
+    "motivation": "",
+    "skills": [
+      "土系术法修炼",
+      "陷阱机关布置",
+      "地形勘察",
+      "近身搏杀"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:70/70 ATK:10 DEF:10"
+  },
+  "赵峰": {
+    "name": "赵峰",
+    "race": "人类（穿越者）",
+    "appearance": "",
+    "personality": [],
+    "background": "前世为蓝星全职无限流网文作者，深耕无限流题材九年，笔下副本以机关精妙、逻辑闭环著称，常年日均更新一万字，因连续通宵赶稿猝死，穿越到修仙界一名刚被杀害的低阶散修身上，觉醒与创作题材绑定的金手指后独自求生半年，后被书友会发掘吸纳成为核心技术成员。",
+    "motivation": "",
+    "skills": [
+      "机关结构解析",
+      "逻辑推演",
+      "阵盘制作",
+      "野外生存",
+      "空间快速建模"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "赵磊": {
+    "name": "赵磊",
+    "appearance": "",
+    "personality": [],
+    "background": "",
+    "motivation": "",
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:50/50 MP:30/30 ATK:8 DEF:6"
+  },
+  "赵铁牛": {
+    "name": "赵铁牛",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "青牛镇本地土生土长的孤儿，十六岁应征加入城防军，混了十二年仍是底层小兵，早年跟随城防队剿匪时被山匪砍伤脸、削掉半根小拇指，见过修仙者移山填海的手段，深知仙凡之别，从不敢主动招惹修仙者，平日里靠收入城百姓的小额孝敬混日子，偶尔会帮缉厄司暗卫传递城门口的人员动向、张贴通缉告示，换些碎银补贴生计。",
+    "motivation": "",
+    "skills": [
+      "基础制式刀法",
+      "过目不忘认人",
+      "摸鱼混岗",
+      "快速辨别路人身份"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:15 DEF:10"
+  },
+  "通铺掌柜": {
+    "name": "通铺掌柜",
+    "race": "凡人",
+    "appearance": "",
+    "personality": [],
+    "background": "青牛镇土生土长的本地人，年轻时做过走货脚夫，摔断左腿后落下跛脚的毛病，凑钱开了便民通铺做行脚商、底层修士的生意，在镇上经营三十余年，认得三教九流各色人等，清楚镇上的规矩和不能惹的人物，从不主动惹事，收够银钱就愿意帮住客遮掩行踪，守口如瓶",
+    "motivation": "",
+    "skills": [
+      "识人眼光精准",
+      "能辨认常见低阶灵草普通矿石",
+      "会简单的跌打损伤治疗",
+      "镇上各类市井消息灵通"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "钱海": {
+    "name": "钱海",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "原是青牛镇城防军什长，因醉酒打伤上司被贬入缉厄司外围小队，负责正面攻坚、扛伤开路的工作。",
+    "motivation": "",
+    "skills": [
+      "基础锤法",
+      "近身搏杀",
+      "负重扛伤"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:70/70 ATK:10 DEF:10"
+  },
+  "陆天": {
+    "name": "陆天",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "原是蓝星刚毕业的全职网文作者，专职创作龙傲天类爽文，三年写了四本同题材作品累计超千万字，对各类机缘套路、废柴逆袭设定烂熟于心，因连续熬夜爆更猝死穿越至修仙界，觉醒与创作题材绑定的金手指，刚穿越不久就因多次触发机缘暴露穿越者身份，遭到缉厄司追杀，被林砚带领的书友会小队救下。",
+    "motivation": "",
+    "skills": [
+      "熟记各类爽文机缘套路",
+      "野外生存能力强",
+      "速算能力出众",
+      "短跑速度极快"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "陈默": {
+    "name": "陈默",
+    "race": "人类（穿越者）",
+    "appearance": "",
+    "personality": [],
+    "background": "生前是专攻谍战题材的网络小说作者，有十年以上谍战文创作经验，三年前意外穿越到修仙界，刚落地就遭遇缉厄司搜捕，被书友会前会长救下后加入组织，凭借与创作题材绑定的金手指成为青牛镇据点的专属暗线，负责排查新出现的穿越者、传递机密情报，三年间成功接应了二十余名落单穿越者加入组织，从未暴露过身份。",
+    "motivation": "",
+    "skills": [
+      "反侦察",
+      "暗码编写与破译",
+      "基础易容",
+      "情报传递",
+      "低阶修仙者身份甄别"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  },
+  "顾衍": {
+    "name": "顾衍",
+    "race": "人族穿越者",
+    "appearance": "",
+    "personality": [],
+    "background": "原是蓝星知名悬疑推理网文作者，127年前穿越至修仙界，刚站稳脚跟就遭遇当时的书友会核心成员背叛，妻女被缉厄司抓捕后当着他的面击杀，自身也被天道锁链重伤，濒死之际假意投靠缉厄司，凭借出众的布局能力很快升至高层执事。多年来他一直以代号「三哥」的身份暗中活动，安插苏晚等多名暗线渗透进各地书友会，刻意挑起双方势力互相消耗，所有布局都围绕夺取禁术展开。",
+    "motivation": "",
+    "skills": [
+      "刑侦推理",
+      "情报布局",
+      "身份伪装",
+      "修仙功法推演",
+      "陷阱设计"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:70/70 ATK:10 DEF:10"
+  },
+  "顾衍（三哥）": {
+    "name": "顾衍（三哥）",
+    "race": "人族（先天道体）",
+    "appearance": "",
+    "personality": [],
+    "background": "千年前为旧天道麾下的执法灵官，天道崩碎后失去神位，隐入凡间加入刚成立的缉厄司，凭借极强的推演能力和办事手腕一路升至缉厄司核心高层，因不满缉厄司仅将天道碎片用于修补破损天道的保守方案，已暗中筹谋千年，布局渗透穿越者互助组织「书友会」",
+    "motivation": "",
+    "skills": [
+      "高阶情报伪装",
+      "局势推演布局",
+      "记忆修改",
+      "高阶易容术",
+      "金丹期全系修仙功法"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:90/90 ATK:10 DEF:10"
+  },
+  "魏峥": {
+    "name": "魏峥",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "出身边境散修家族，年少时家族被邪修灭门，被缉厄司高层出手救下，经过二十年严苛训练成为缉厄司基层小队长，前后参与三十七次穿越者猎杀任务，从未失手。",
+    "motivation": "",
+    "skills": [
+      "高阶基础刀法",
+      "跨区域追踪术",
+      "低阶搜魂术",
+      "陷阱机关布置"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:90/90 ATK:15 DEF:10"
+  },
+  "魏烈": {
+    "name": "魏烈",
+    "race": "人类",
+    "appearance": "",
+    "personality": [],
+    "background": "出身边境苦寒村落，年少时家乡被失控的穿越者金手指波及，全村仅他一人幸存，被缉厄司高层路过救下后加入组织，历经十五年拼杀从底层小兵升至小队队长，亲手猎杀过十七名穿越者，是缉厄司青牛镇分舵的骨干战力。",
+    "motivation": "",
+    "skills": [
+      "玄铁重刀刀法",
+      "穿越者特征辨识",
+      "埋伏设伏",
+      "荒野追踪"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:15 DEF:10"
+  },
+  "黑风灵石矿监工群体": {
+    "name": "黑风灵石矿监工群体",
+    "race": "本土人类低阶修士",
+    "appearance": "",
+    "personality": [],
+    "background": "多为在修仙界犯了忌讳走投无路的低阶散修，或是被宗门逐出门墙的不肖弟子，被黑风矿矿主以丰厚的灵石报酬招揽成为监工，无需下矿劳作，仅负责监督矿奴挖矿、盘剥矿奴的上缴灵石份额、惩罚违规矿奴，多数人手底都沾着至少数十条矿奴的人命，常年靠克扣灵石、收受矿奴贿赂中饱私囊。",
+    "motivation": "",
+    "skills": [
+      "低阶拳脚功夫",
+      "基础灵气运用",
+      "矿道地形识别",
+      "刑讯逼供",
+      "贴身搜身排查"
+    ],
+    "role_in_story": "配角",
+    "notes": "RPG Stats: HP:100/100 MP:50/50 ATK:10 DEF:10"
+  }
+}

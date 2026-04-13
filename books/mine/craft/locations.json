@@ -1,0 +1,907 @@
+{
+  "书友会据点后院": {
+    "name": "书友会据点后院",
+    "type": "野外",
+    "description": "书友会据点后院",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "书友会据点地下密室": {
+    "name": "书友会据点地下密室",
+    "type": "野外",
+    "description": "书友会据点地下密室",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "便民通铺": {
+    "name": "便民通铺",
+    "type": "野外",
+    "description": "青牛镇价格最低的通铺住宿点，专门接待付不起高价房费的外来山民、低阶散修、流动小商贩，人员混杂，鱼龙混杂，是各方势力暗线潜伏的绝佳场所",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇城门入口",
+      "青牛镇坊市",
+      "通铺后偏僻小巷"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "便民通铺后小巷": {
+    "name": "便民通铺后小巷",
+    "type": "野外",
+    "description": "青牛镇便民通铺后方的废弃死巷，因后门被封常年无人通行，是镇内地痞流氓的固定打劫据点，也是林砚逃出黑风灵石矿后，首次在非矿场区域测试复活能力的关键场所",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇便民通铺",
+      "青牛镇坊市后街",
+      "青牛镇城西贫民区"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "南山谷传承洞": {
+    "name": "南山谷传承洞",
+    "type": "洞穴",
+    "description": "隐藏在南山谷峭壁上的天然岩洞，传说是上古散修青云子的坐化之地，被缉厄司发现后改造成连环陷阱的核心区域，实则真的筑基功法传承碎片仍然藏在洞的深处",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇后山废弃破庙",
+      "南山谷",
+      "黑风灵石矿外围山林"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "坊市修炼室": {
+    "name": "坊市修炼室",
+    "type": "野外",
+    "description": "位于青牛镇坊市核心区域的公共修炼空间，按时辰收取灵石费用，内置低阶聚灵阵，灵气浓度是外界的两倍，是没有私人洞府的底层修士修炼、突破的首选场所",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇坊市百草堂",
+      "坊市功法阁",
+      "坊市灵石交易区"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "坊市后破庙外围": {
+    "name": "坊市后破庙外围",
+    "type": "野外",
+    "description": "青牛镇坊市后方荒地上废弃山神庙的外围区域，荒草丛生、人迹罕至，因传言闹鬼极少有人靠近，是书友会选择的首次接头地点的外围缓冲带，林砚赴约前曾在此处勘探环境、布置逃生路线。",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇坊市",
+      "坊市后偏僻小巷",
+      "废弃破庙内部",
+      "青牛镇城外山林小路"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "陈记杂货铺修炼室": {
+    "name": "陈记杂货铺修炼室",
+    "type": "野外",
+    "description": "穿越者互助组织「书友会」青牛镇据点专属的私密修炼场地，位于陈记杂货铺地下二层，仅对核心成员开放，是成员闭关突破、测试金手指能力的安全场所，也是林砚验证新解锁「剧情修正」能力的核心场景",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "陈记杂货铺地下密室",
+      "陈记杂货铺地下古籍库",
+      "陈记杂货铺后院"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "陈记杂货铺前店": {
+    "name": "陈记杂货铺前店",
+    "type": "野外",
+    "description": "坐落于青牛镇坊市最偏僻边缘的普通杂货铺，表面做着低阶修士与寻常百姓的日用品生意，实则是书友会青牛镇据点的对外掩护，所有进入地下密室的成员都需先通过前店的身份核验，是据点对外联络、掩饰身份的第一道屏障。",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "陈记杂货铺后院",
+      "陈记杂货铺地下密室",
+      "青牛镇坊市",
+      "青牛镇城门入口"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "陈记杂货铺后门": {
+    "name": "陈记杂货铺后门",
+    "type": "野外",
+    "description": "陈记杂货铺后门",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "陈记杂货铺后院": {
+    "name": "陈记杂货铺后院",
+    "type": "野外",
+    "description": "陈记杂货铺后院",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "陈记杂货铺后院密室": {
+    "name": "陈记杂货铺后院密室",
+    "type": "野外",
+    "description": "陈记杂货铺后院密室",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "陈记杂货铺地下修炼室": {
+    "name": "陈记杂货铺地下修炼室",
+    "type": "野外",
+    "description": "穿越者互助组织「书友会」青牛镇据点内置的专属秘密修炼场所，仅供核心成员闭关突破、藏匿敏感物品使用，是前期林砚等人避开缉厄司排查、悄悄提升实力的核心安全区",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "陈记杂货铺后院",
+      "陈记杂货铺地下密室",
+      "青牛镇后山树林"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "陈记杂货铺地下密室": {
+    "name": "陈记杂货铺地下密室",
+    "type": "野外",
+    "description": "陈记杂货铺地下密室",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "陈记杂货铺门口": {
+    "name": "陈记杂货铺门口",
+    "type": "野外",
+    "description": "穿越者互助组织「书友会」青牛镇据点的对外伪装入口，表面是售卖日常杂货的普通商铺出入口，实则是组织暗设的第一道警戒防线，同时也是缉厄司投放修炼资源诱饵、试探穿越者踪迹的关键点位",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇坊市",
+      "陈记杂货铺内部",
+      "陈记杂货铺地下密室",
+      "青牛镇便民通铺"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇东郊山坡": {
+    "name": "青牛镇东郊山坡",
+    "type": "城镇",
+    "description": "青牛镇东郊山坡",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇东门官道断崖处": {
+    "name": "青牛镇东门官道断崖处",
+    "type": "城镇",
+    "description": "位于青牛镇东门通往周边宗门、矿场的偏僻支线上，是一段临着百丈黑水河的悬崖路段，因地势险峻少有人走，常年被官府划为易发生意外的高危路段，是设伏偷袭的绝佳地点",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇东门",
+      "黑水河下游",
+      "青牛镇城西山林灵草坡"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇书友会据点地下古籍库": {
+    "name": "青牛镇书友会据点地下古籍库",
+    "type": "城镇",
+    "description": "青牛镇书友会据点地下古籍库",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇便民通铺": {
+    "name": "青牛镇便民通铺",
+    "type": "城镇",
+    "description": "青牛镇便民通铺",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇便民通铺、坊市后破庙外围": {
+    "name": "青牛镇便民通铺、坊市后破庙外围",
+    "type": "城镇",
+    "description": "青牛镇便民通铺、坊市后破庙外围",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇后山废弃破庙": {
+    "name": "青牛镇后山废弃破庙",
+    "type": "城镇",
+    "description": "位于青牛镇后山深处的荒废山神庙，早已断了香火，平日只有过路猎户偶尔在此避雨，实则被缉厄司改造成针对穿越者幸运光环的诱饵陷阱所在地",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇后山山道",
+      "南山谷传承洞",
+      "青牛镇西城门"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇后山废弃破庙、南山谷传承洞": {
+    "name": "青牛镇后山废弃破庙、南山谷传承洞",
+    "type": "洞穴",
+    "description": "青牛镇后山废弃破庙、南山谷传承洞",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇坊市修炼室": {
+    "name": "青牛镇坊市修炼室",
+    "type": "城镇",
+    "description": "青牛镇坊市面向低阶练气散修开放的付费静修场所，以隔绝外界干扰、提供稳定灵气浓度的封闭空间为卖点，是底层散修攒够灵石后优先选择的修炼场地，价格高昂且常年供不应求",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇坊市功法阁",
+      "青牛镇坊市灵石交易区",
+      "青牛镇便民通铺"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇坊市出口": {
+    "name": "青牛镇坊市出口",
+    "type": "城镇",
+    "description": "青牛镇坊市出口",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇坊市出口拐角": {
+    "name": "青牛镇坊市出口拐角",
+    "type": "城镇",
+    "description": "青牛镇坊市出口拐角",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇坊市功法阁": {
+    "name": "青牛镇坊市功法阁",
+    "type": "城镇",
+    "description": "青牛镇坊市内专门售卖低阶修仙功法、术法玉简的老牌店铺，面向练气期散修、普通修仙家族子弟开放，货品普通但价格公道，是低阶修士踏入修仙路的常去场所",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇坊市灵石交易区",
+      "青牛镇百草堂",
+      "青牛镇坊市出口"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇坊市功法阁、便民通铺、黑风矿废弃矿道": {
+    "name": "青牛镇坊市功法阁、便民通铺、黑风矿废弃矿道",
+    "type": "洞穴",
+    "description": "青牛镇坊市功法阁、便民通铺、黑风矿废弃矿道",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇坊市后偏僻小巷": {
+    "name": "青牛镇坊市后偏僻小巷",
+    "type": "城镇",
+    "description": "青牛镇坊市后偏僻小巷",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇坊市后废弃破庙": {
+    "name": "青牛镇坊市后废弃破庙",
+    "type": "城镇",
+    "description": "青牛镇坊市后废弃破庙",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇坊市后破庙周边": {
+    "name": "青牛镇坊市后破庙周边",
+    "type": "城镇",
+    "description": "位于青牛镇东坊市外侧三里处的荒坡上，是官府不管、百姓避走的三不管地带，原本的土地庙荒废后成为地下势力秘密接头的常用选址，也是书友会选定与林砚接头的外围缓冲区域",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇坊市",
+      "青牛镇城西乱葬岗",
+      "青牛镇后山低阶灵草区",
+      "坊市后偏僻小巷"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇坊市灵石交易区": {
+    "name": "青牛镇坊市灵石交易区",
+    "type": "城镇",
+    "description": "青牛镇坊市灵石交易区",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇坊市百草堂": {
+    "name": "青牛镇坊市百草堂",
+    "type": "城镇",
+    "description": "青牛镇坊市运营超过三十年的老牌灵草店，主打收售练气期修士常用的普通灵草、疗伤草药，同时承接灵草分拣、晾晒的零散活计，是林砚逃离黑风灵石矿后找到第一份稳定生计的落脚处，也是各方势力首次暗中留意到林砚踪迹的关键场所。",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇坊市灵石交易区",
+      "青牛镇坊市功法阁",
+      "青牛镇便民通铺",
+      "青牛镇城门入口"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇城外低阶灵草区": {
+    "name": "青牛镇城外低阶灵草区",
+    "type": "城镇",
+    "description": "位于青牛镇外围三十里的浅山缓坡地带，仅生长十年份以内的低阶灵草，是镇上底层散修、杂役赚取灵石的常见采药点，因无高阶资源也无官方管制，鱼龙混杂且常有低阶妖兽出没",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇城门",
+      "青牛镇坊市",
+      "黑风矿外围山林"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇城外低阶灵草区、坊市修炼室": {
+    "name": "青牛镇城外低阶灵草区、坊市修炼室",
+    "type": "城镇",
+    "description": "青牛镇城外低阶灵草区、坊市修炼室",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇城西小巷": {
+    "name": "青牛镇城西小巷",
+    "type": "城镇",
+    "description": "青牛镇城西小巷",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇城西小巷秘密接头点": {
+    "name": "青牛镇城西小巷秘密接头点",
+    "type": "城镇",
+    "description": "位于青牛镇城西贫民区最深处的废弃死巷，是书友会核心成员专属的敏感情报传递点，刻意避开缉厄司的常规巡查路线，只有极少数核心成员知晓其存在，隐蔽性极强",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "青牛镇城西贫民区",
+      "陈记杂货铺书友会据点",
+      "青牛镇城西城门哨卡"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇城西山林灵草坡": {
+    "name": "青牛镇城西山林灵草坡",
+    "type": "城镇",
+    "description": "青牛镇城西山林灵草坡",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇城门入口": {
+    "name": "青牛镇城门入口",
+    "type": "城镇",
+    "description": "黑风灵石矿周边最近的混居小镇青牛镇的唯一官方出入口，是连接矿场荒郊与本土修仙界的第一道关卡，常年有城防军驻守盘查，三教九流混杂，是各类消息、眼线聚集的核心节点",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风灵石矿外围山林",
+      "青牛镇坊市",
+      "便民通铺"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇城门入口、便民通铺": {
+    "name": "青牛镇城门入口、便民通铺",
+    "type": "城镇",
+    "description": "青牛镇城门入口、便民通铺",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇外三十里山林": {
+    "name": "青牛镇外三十里山林",
+    "type": "城镇",
+    "description": "青牛镇外三十里山林",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇通往黑风矿的官道沿线": {
+    "name": "青牛镇通往黑风矿的官道沿线",
+    "type": "洞穴",
+    "description": "青牛镇通往黑风矿的官道沿线",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇陈记杂货铺": {
+    "name": "青牛镇陈记杂货铺",
+    "type": "城镇",
+    "description": "青牛镇陈记杂货铺",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "青牛镇陈记杂货铺后院": {
+    "name": "青牛镇陈记杂货铺后院",
+    "type": "城镇",
+    "description": "穿越者互助组织「书友会」青牛镇据点的私密活动区，对外伪装成普通杂货铺堆放杂物的闲置区域，实则是核心成员私下接头、商议机密、传递敏感信息的隐蔽场所，是林砚排查内鬼线索的核心场景之一。",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "陈记杂货铺前店",
+      "陈记杂货铺地下密室",
+      "青牛镇城西小巷",
+      "青牛镇便民通铺"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿丁字八号废弃矿道": {
+    "name": "黑风灵石矿丁字八号废弃矿道",
+    "type": "洞穴",
+    "description": "黑风灵石矿丁字八号废弃矿道",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿丙字七号矿道": {
+    "name": "黑风灵石矿丙字七号矿道",
+    "type": "洞穴",
+    "description": "黑风灵石矿外层低阶矿道之一，属于产出低、矿脉零散的丙级作业区，分配给最底层的新矿奴开采，因监工巡查频率极低，成为矿奴私下藏匿私挖灵石的首选区域，也是林砚穿越后首次利用剧情先知优势积累第一笔生存资本的地点。",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风灵石矿矿道入口广场",
+      "黑风灵石矿丙字三号矿道",
+      "黑风灵石矿丁字八号废弃矿道"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿丙字三号矿道": {
+    "name": "黑风灵石矿丙字三号矿道",
+    "type": "洞穴",
+    "description": "黑风灵石矿底层的低优先级开采矿道，因矿顶结构不稳定常年被矿监发配给最底层的矿奴开挖零散灵石碎料，是主角林砚穿越后首次死亡、触发专属复活金手指的核心场景，也是他摸清复活能力副作用的开端之地。",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风灵石矿矿道入口广场",
+      "黑风灵石矿丙字七号矿道",
+      "黑风灵石矿废弃矿道区域"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿主矿道": {
+    "name": "黑风灵石矿主矿道",
+    "type": "洞穴",
+    "description": "黑风灵石矿主矿道",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿主矿道入口": {
+    "name": "黑风灵石矿主矿道入口",
+    "type": "洞穴",
+    "description": "黑风灵石矿连通地面矿场与地下所有矿道的唯一主枢纽，是监工管控矿奴出入、清点每日挖矿产量、搜缴私藏灵石的核心关卡，也是矿场警戒等级最高的区域之一",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风灵石矿矿道入口广场",
+      "黑风灵石矿丙字丁字分支矿道",
+      "黑风灵石矿最深废弃矿洞",
+      "黑风灵石矿地下遗迹"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿各主矿道": {
+    "name": "黑风灵石矿各主矿道",
+    "type": "洞穴",
+    "description": "黑风灵石矿的核心开采区域，共分甲、乙、丙三条主矿道，蜿蜒深入黑风山山体数百丈，是矿奴日常开采灵石的核心活动区，也是林砚策划大型矿难、实现逃离计划的核心布置点位",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风灵石矿丙字三号矿道",
+      "黑风灵石矿废弃矿道",
+      "黑风灵石矿矿道入口广场",
+      "黑风灵石矿地下遗迹入口"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿地下遗迹入口": {
+    "name": "黑风灵石矿地下遗迹入口",
+    "type": "洞穴",
+    "description": "黑风灵石矿地下遗迹入口",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿地下遗迹入口外侧矿道": {
+    "name": "黑风灵石矿地下遗迹入口外侧矿道",
+    "type": "洞穴",
+    "description": "黑风灵石矿地下遗迹入口外侧矿道",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿地下遗迹入口附近矿道": {
+    "name": "黑风灵石矿地下遗迹入口附近矿道",
+    "type": "洞穴",
+    "description": "黑风灵石矿地下遗迹入口附近矿道",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿地下遗迹外围": {
+    "name": "黑风灵石矿地下遗迹外围",
+    "type": "洞穴",
+    "description": "黑风灵石矿地下遗迹外围",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿外围山林": {
+    "name": "黑风灵石矿外围山林",
+    "type": "洞穴",
+    "description": "黑风灵石矿外围山林",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿废弃矿道": {
+    "name": "黑风灵石矿废弃矿道",
+    "type": "洞穴",
+    "description": "黑风灵石矿早年开采枯竭后被官方封禁的老旧矿道分支，因坍塌风险高、表层灵石开采殆尽被矿场列为禁区，实则是底层矿奴躲避监工盘剥、私藏物资的秘密地带，也是通往封印禁术「死后夺取」的地下遗迹的唯一隐蔽路径。",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风灵石矿丙字七号矿道",
+      "黑风灵石矿丁字八号废弃矿道",
+      "黑风灵石矿地下遗迹入口",
+      "黑风灵石矿矿奴大通铺"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿废弃矿道入口": {
+    "name": "黑风灵石矿废弃矿道入口",
+    "type": "洞穴",
+    "description": "黑风灵石矿废弃矿道入口",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿废弃矿道附近": {
+    "name": "黑风灵石矿废弃矿道附近",
+    "type": "洞穴",
+    "description": "黑风灵石矿外围连接废弃矿道的废矿渣堆放区，是矿场最人迹罕至的区域之一，历来是逃奴、私藏灵石的矿奴的隐秘通道，也是缉厄司暗卫蹲守排查穿越者的潜伏点",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风灵石矿废弃矿道",
+      "黑风灵石矿地下遗迹入口附近矿道",
+      "黑风灵石矿支矿道",
+      "黑风灵石矿外围山林"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿废弃矿道隐藏岩洞": {
+    "name": "黑风灵石矿废弃矿道隐藏岩洞",
+    "type": "洞穴",
+    "description": "位于黑风灵石矿最偏僻的丁字八号废弃矿道尽头的天然岩洞，被早年逃亡失败的老矿奴改造为秘密藏身处，后被林砚凭借自己原著剧情记忆发现，成为他筹备逃亡计划的核心隐秘据点",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风灵石矿丁字八号废弃矿道",
+      "黑风灵石矿地下遗迹外围通风道",
+      "黑风灵石矿西侧悬崖逃生小路"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿支矿道": {
+    "name": "黑风灵石矿支矿道",
+    "type": "洞穴",
+    "description": "黑风灵石矿支矿道",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿最深废弃矿洞中段": {
+    "name": "黑风灵石矿最深废弃矿洞中段",
+    "type": "洞穴",
+    "description": "黑风灵石矿最深废弃矿洞中段",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿最深废弃矿洞入口": {
+    "name": "黑风灵石矿最深废弃矿洞入口",
+    "type": "洞穴",
+    "description": "黑风灵石矿最深处被封禁百年的废弃主矿道唯一入口，是连通普通矿道与地下禁术遗迹的咽喉节点，被矿场列为最高等级禁地，严禁所有矿奴、监工靠近，后期也是林砚带领探险队潜入遗迹的核心入口",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风灵石矿废弃矿道中段",
+      "黑风灵石矿地下遗迹入口"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿矿场广场": {
+    "name": "黑风灵石矿矿场广场",
+    "type": "洞穴",
+    "description": "黑风灵石矿地面区域的核心公共场地，是矿奴每日出工收工点名、监工公开训话处罚犯事人员的核心场所，被所有矿奴视为噩梦般的存在",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风灵石矿各主矿道入口",
+      "矿奴大通铺",
+      "监工石屋",
+      "矿场后山乱葬岗"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿矿奴大通铺": {
+    "name": "黑风灵石矿矿奴大通铺",
+    "type": "洞穴",
+    "description": "黑风灵石矿矿奴大通铺",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿矿奴大通铺、主矿道": {
+    "name": "黑风灵石矿矿奴大通铺、主矿道",
+    "type": "洞穴",
+    "description": "黑风灵石矿矿奴大通铺、主矿道",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风灵石矿矿道入口广场": {
+    "name": "黑风灵石矿矿道入口广场",
+    "type": "洞穴",
+    "description": "黑风灵石矿矿道入口广场",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿地下遗迹入口甬道": {
+    "name": "黑风矿地下遗迹入口甬道",
+    "type": "洞穴",
+    "description": "黑风矿地下遗迹入口甬道",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿地下遗迹入口石壁前": {
+    "name": "黑风矿地下遗迹入口石壁前",
+    "type": "洞穴",
+    "description": "位于黑风矿最深废弃矿道的尽头，是通往封印禁术「死后夺取」的核心区域的唯一入口，此前曾被林砚制造的小规模矿难落石掩盖，近期被缉厄司人员挖开表层碎石，重新露出了封印封门，是书友会探险队、缉厄司、高层内鬼「三哥」三方势力的首个交锋点。",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风矿最深废弃矿道中段",
+      "黑风矿地下遗迹核心区域",
+      "黑风矿西侧悬崖废弃矿道入口"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿地下遗迹核心区域": {
+    "name": "黑风矿地下遗迹核心区域",
+    "type": "洞穴",
+    "description": "深藏于黑风灵石矿最底部的天然溶洞改造封印空间，是缉厄司封印引发过穿越者大屠杀的禁术「死后夺取」的核心所在，也是林砚第一部分剧情线的最终落点与天道阴谋揭开的开端",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风矿最深废弃矿洞",
+      "黑风矿地下遗迹入口甬道",
+      "黑风矿地下遗迹密道"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿地下遗迹核心区域入口前": {
+    "name": "黑风矿地下遗迹核心区域入口前",
+    "type": "洞穴",
+    "description": "位于黑风矿深层废弃矿道的最尽头，是连接外侧战斗甬道与禁术「死后夺取」封印核心的缓冲空间，也是缉厄司当年封印禁术时特意修建的最后一道防御节点，如今是书友会探险队与缉厄司搏杀的关键战场",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风矿地下遗迹甬道中段",
+      "黑风矿地下遗迹核心区域",
+      "陆天发现的逃生密道"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿地下遗迹核心区域前密道": {
+    "name": "黑风矿地下遗迹核心区域前密道",
+    "type": "洞穴",
+    "description": "黑风矿地下遗迹核心区域前密道",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿地下遗迹核心区域前密道出口": {
+    "name": "黑风矿地下遗迹核心区域前密道出口",
+    "type": "洞穴",
+    "description": "黑风矿地下遗迹核心区域前密道出口",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿地下遗迹甬道中段": {
+    "name": "黑风矿地下遗迹甬道中段",
+    "type": "洞穴",
+    "description": "黑风矿地下遗迹甬道中段",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿外围山林": {
+    "name": "黑风矿外围山林",
+    "type": "洞穴",
+    "description": "黑风矿外围山林",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿外围山林高处": {
+    "name": "黑风矿外围山林高处",
+    "type": "洞穴",
+    "description": "环绕黑风灵石矿西侧的次生针叶林制高点，是俯瞰整个矿场布防的绝佳位置，植被茂密、地形隐蔽，历来是逃矿矿奴摸查岗哨规律的首选藏身点",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风灵石矿主入口",
+      "西侧悬崖废弃矿道",
+      "青牛镇通往黑风矿官道",
+      "黑风矿外围山林"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿废弃矿道": {
+    "name": "黑风矿废弃矿道",
+    "type": "洞穴",
+    "description": "黑风灵石矿场内因挖空矿脉、坍塌风险过高而被矿场封禁的老旧矿道，少有人迹，残留着不少未被清理的零散高品灵石，深处连通着封印禁术「死后夺取」的地下遗迹，是缉厄司暗中封锁的核心区域",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风矿主矿道",
+      "黑风矿地下遗迹入口",
+      "黑风矿外围山林"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿废弃矿道中段遗迹入口前": {
+    "name": "黑风矿废弃矿道中段遗迹入口前",
+    "type": "洞穴",
+    "description": "位于黑风灵石矿最深废弃矿道的中段位置，是连通外界矿道与封印禁术「死后夺取」的地下遗迹的唯一过渡区域，曾被林砚制造的小规模坍塌落石掩盖，近期被缉厄司人员撬动清理，是前期核心副本冲突的核心交汇点，三方势力的博弈从此处正式拉开序幕。",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风矿最深废弃矿洞中段",
+      "黑风矿地下遗迹核心区域",
+      "黑风矿西侧悬崖废弃矿道入口",
+      "黑风矿主矿道"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿废弃矿道内部": {
+    "name": "黑风矿废弃矿道内部",
+    "type": "洞穴",
+    "description": "黑风矿废弃矿道内部",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿西侧悬崖废弃矿道入口": {
+    "name": "黑风矿西侧悬崖废弃矿道入口",
+    "type": "洞穴",
+    "description": "位于黑风灵石矿西侧百丈悬崖的中段，是开矿初期挖掘的临崖通风出口，因早年崖崩事故被矿方封死废弃，鲜少有人知晓其存在，是林砚带领的遗迹探险队避开缉厄司正面封锁潜入矿场的唯一隐蔽路径",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风矿废弃矿道内部",
+      "黑风矿外围山林",
+      "黑风矿地下遗迹入口",
+      "西侧百丈深渊谷底"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  },
+  "黑风矿西入口外围山林": {
+    "name": "黑风矿西入口外围山林",
+    "type": "洞穴",
+    "description": "黑风灵石矿西侧的天然屏障，是矿奴逃遁、各方势力埋伏的绝佳隐蔽地带，因常年被矿尘笼罩、横死之人众多，当地人又称其为「阴松林」，是书友会与缉厄司前期多次交锋的核心战场。",
+    "appearance": "",
+    "atmosphere": "",
+    "significance": "RPG游戏地图",
+    "connected_locations": [
+      "黑风灵石矿西入口",
+      "青牛镇荒僻官道",
+      "黑风矿南侧山林",
+      "黑风矿西侧废弃矿道出口"
+    ],
+    "notes": "RPG Map Size: 20x15"
+  }
+}

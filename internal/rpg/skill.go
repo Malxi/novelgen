@@ -386,6 +386,13 @@ func (s *Skill) ToJSON() string {
 	return string(data)
 }
 
+// ExportToMap 导出为map
+func (sm *SkillManager) ExportToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"skills": sm.skills,
+	}
+}
+
 func max(a, b int) int {
 	if a > b {
 		return a

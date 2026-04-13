@@ -346,3 +346,12 @@ func (es *EquipmentSet) ToJSON() string {
 	data, _ := json.MarshalIndent(es, "", "  ")
 	return string(data)
 }
+
+// ExportToMap 导出为map
+func (em *EquipmentManager) ExportToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"equipments": em.equipments,
+		"weapons":    em.weapons,
+		"sets":       em.sets,
+	}
+}

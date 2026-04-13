@@ -209,6 +209,13 @@ func (i *Item) ToJSON() string {
 	return string(data)
 }
 
+// ExportToMap 导出为map
+func (im *ItemManager) ExportToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"items": im.items,
+	}
+}
+
 // 生成随机掉落
 func GenerateDrop(dropItems []DropItem, itemMgr *ItemManager) []ItemInstance {
 	result := make([]ItemInstance, 0)

@@ -1,0 +1,64 @@
+{
+  "data": {
+    "characters": 0,
+    "events": 0,
+    "items": 2260,
+    "locations": 332,
+    "skills": 2,
+    "timeline": 216
+  },
+  "generated_time": "2026-04-12 22:53:59",
+  "recommendations": [],
+  "summary": {
+    "total_events": 0,
+    "characters_involved": 0,
+    "issues_found": 0,
+    "critical_issues": 0,
+    "overall_score": 100,
+    "grade": "S"
+  },
+  "validation_results": [
+    {
+      "category": "character_consistency",
+      "passed": true,
+      "score": 100,
+      "issues": [],
+      "suggestions": []
+    },
+    {
+      "category": "power_system",
+      "passed": true,
+      "score": 100,
+      "issues": [],
+      "suggestions": []
+    },
+    {
+      "category": "economy_system",
+      "passed": true,
+      "score": 100,
+      "issues": [],
+      "suggestions": []
+    },
+    {
+      "category": "combat_balance",
+      "passed": true,
+      "score": 100,
+      "issues": [],
+      "suggestions": []
+    },
+    {
+      "category": "plot_logic",
+      "passed": true,
+      "score": 100,
+      "issues": [],
+      "suggestions": []
+    },
+    {
+      "category": "pacing",
+      "passed": true,
+      "score": 100,
+      "issues": [],
+      "suggestions": []
+    }
+  ]
+}

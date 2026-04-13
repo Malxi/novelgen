@@ -520,3 +520,11 @@ func (ql *QuestLog) ToJSON() string {
 	data, _ := json.MarshalIndent(ql, "", "  ")
 	return string(data)
 }
+
+// ExportToMap 导出为map
+func (qm *QuestManager) ExportToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"quests":    qm.quests,
+		"instances": qm.instances,
+	}
+}

@@ -73,6 +73,21 @@ func main() {
 		}
 	}
 
+	// 生成可视化报告
+	fmt.Println("\n🎨 正在生成可视化报告...")
+	vizDir := filepath.Join(filepath.Dir(*outputPath), "visualization")
+	if err := os.MkdirAll(vizDir, 0755); err == nil {
+		files, err := rpg.GenerateAllReports(data, report, vizDir)
+		if err != nil {
+			fmt.Printf("⚠️  生成可视化报告失败: %v\n", err)
+		} else {
+			fmt.Printf("✅ 可视化报告已生成:\n")
+			for _, file := range files {
+				fmt.Printf("   - %s\n", file)
+			}
+		}
+	}
+
 	// 显示验证问题
 	if len(data.ValidationIssues) > 0 {
 		printValidationIssues(data.ValidationIssues)

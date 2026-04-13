@@ -532,3 +532,11 @@ func (ce *CommonEvent) ToJSON() string {
 	data, _ := json.MarshalIndent(ce, "", "  ")
 	return string(data)
 }
+
+// ExportToMap 导出为map
+func (em *EventManager) ExportToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"events":        em.events,
+		"common_events": em.commonEvents,
+	}
+}

@@ -73,6 +73,8 @@ type NovelgenLocation struct {
 }
 
 // LoadNovelgenProject 加载novelgen项目
+// projectPath: 项目根目录（包含books文件夹的目录）
+// bookName: 书籍名称（books文件夹下的子目录名）
 func LoadNovelgenProject(projectPath, bookName string) (*NovelgenProject, error) {
 	project := &NovelgenProject{
 		ProjectPath: projectPath,
@@ -450,9 +452,25 @@ func (np *NovelgenProject) ExportRPGData(outputPath string) error {
 		return err
 	}
 
+	// Parse world JSON string to map
+	var worldData map[string]interface{}
+	worldJSON := world.SaveToJSON()
+	if err := json.Unmarshal([]byte(worldJSON), &worldData); err != nil {
+		worldData = map[string]interface{}{"raw": worldJSON}
+	}
+
+	// Build complete RPG data
 	data := map[string]interface{}{
 		"project_summary": np.GetProjectSummary(),
-		"world_data":      world.SaveToJSON(),
+		"world_data":      worldData,
+		"characters":      world.Characters.ExportToMap(),
+		"items":           world.Items.ExportToMap(),
+		"maps":            world.Maps.ExportToMap(),
+		"quests":          world.Quests.ExportToMap(),
+		"skills":          world.Skills.ExportToMap(),
+		"classes":         world.Classes.ExportToMap(),
+		"equipments":      world.Equipments.ExportToMap(),
+		"events":          world.Events.ExportToMap(),
 	}
 
 	jsonData, err := json.MarshalIndent(data, "", "  ")

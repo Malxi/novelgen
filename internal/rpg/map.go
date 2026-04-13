@@ -362,3 +362,10 @@ func (m *Map) ToJSON() string {
 	data, _ := json.MarshalIndent(m, "", "  ")
 	return string(data)
 }
+
+// ExportToMap 导出为map
+func (mm *MapManager) ExportToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"maps": mm.maps,
+	}
+}

@@ -390,3 +390,11 @@ func (cm *CharacterManager) GetAllCharacters() []*Character {
 	}
 	return result
 }
+
+// ExportToMap 导出为map
+func (cm *CharacterManager) ExportToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"templates": cm.templates,
+		"instances": cm.instances,
+	}
+}

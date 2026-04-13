@@ -139,10 +139,41 @@ func (te *TextExtractor) extractCharacter(matches []string, line string, lineNum
 		return nil
 	}
 
-	// 过滤常见非人名词
-	filterWords := []string{"因此", "然后", "因此他", "然后他", "自己", "众人", "对方", "什么", "这个", "那个", "这里", "那里", "现在", "当时", "只见", "忽然", "突然", "原来", "虽然", "尽管", "因为", "所以", "于是", "但是", "然而", "不过", "只是", "只有", "只要", "如果", "假如", "即使", "哪怕", "无论", "不管", "不论", "不仅", "不但", "而且", "并且", "或者", "还是", "要么", "与其", "宁可", "宁愿", "除了", "除去", "除非", "关于", "对于", "由于", "根据", "按照", "依照", "通过", "经过", "随着", "为了", "为着"}
+	// 过滤常见非人名词和错误提取
+	filterWords := []string{
+		// 连接词
+		"因此", "然后", "因此他", "于是他", "自己", "众人", "对方", "什么", "这个", "那个",
+		"这里", "那里", "现在", "当时", "只见", "忽然", "突然", "原来", "虽然", "尽管",
+		"因为", "所以", "于是", "但是", "然而", "不过", "只是", "只有", "只要", "如果",
+		"假如", "即使", "哪怕", "无论", "不管", "不论", "不仅", "不但", "而且", "并且",
+		"或者", "还是", "要么", "与其", "宁可", "宁愿", "除了", "除去", "除非", "关于",
+		"对于", "由于", "根据", "按照", "依照", "通过", "经过", "随着", "为了", "为着",
+		// 副词
+		"可以", "能够", "应该", "需要", "必须", "一定", "也许", "大概", "可能", "似乎",
+		"好像", "仿佛", "简直", "根本", "绝对", "完全", "实在", "确实", "的确", "真的",
+		"太", "很", "非常", "特别", "十分", "相当", "比较", "稍微", "有点", "一些",
+		// 错误提取的常见词
+		"暗中观", "因此林", "然后林", "于是林", "自己笔", "正在连", "拥有对",
+		"正在采", "正在修", "正在凝", "正在酝", "正在酝", "正在酝",
+	}
 	for _, word := range filterWords {
-		if name == word {
+		if name == word || strings.HasPrefix(name, word) {
+			return nil
+		}
+	}
+
+	// 过滤包含特定动词的名字（通常是错误提取）
+	invalidPatterns := []string{"正在", "拥有", "自己", "笔下", "连载", "观", "对", "意识", "发现", "决定", "开始", "准备", "想要"}
+	for _, pattern := range invalidPatterns {
+		if strings.Contains(name, pattern) {
+			return nil
+		}
+	}
+
+	// 过滤以特定词开头的名字
+	invalidPrefixes := []string{"因此", "然后", "于是", "但是", "所以", "自己", "正在", "拥有"}
+	for _, prefix := range invalidPrefixes {
+		if strings.HasPrefix(name, prefix) {
 			return nil
 		}
 	}
@@ -390,6 +421,52 @@ func (te *TextExtractor) extractLocation(matches []string, line string, lineNum 
 	}
 
 	name := matches[1]
+
+	// 过滤过长或过短的地点名
+	if len(name) < 2 || len(name) > 15 {
+		return nil
+	}
+
+	// 过滤包含动词或错误模式的地点名
+	invalidPatterns := []string{"正在", "拥有", "自己", "对", "中", "了", "的", "着", "将", "发现", "意识到", "快步", "逃离", "地下", "隐藏", "凶", "下", "原", "瞥见", "当场", "知道", "调虎", "离山", "崩天", "大半个", "推断", "回望", "应付", "锁定", "仅用", "看到", "应付过", "入城", "当天", "遇到", "遭遇", "偶然", "听到", "讹到", "被", "吓得", "委托", "他去", "坐镇", "和之前", "小石头", "专门留给"}
+	for _, pattern := range invalidPatterns {
+		if strings.Contains(name, pattern) {
+			return nil
+		}
+	}
+
+	// 过滤以动词开头的地点名
+	verbPrefixes := []string{"将", "发现", "意识到", "快步", "逃离", "前往", "来到", "进入", "瞥见", "知道"}
+	for _, prefix := range verbPrefixes {
+		if strings.HasPrefix(name, prefix) {
+			return nil
+		}
+	}
+
+	// 过滤纯动词或常见错误提取
+	invalidNames := []string{"知道", "认为", "觉得", "看到", "听到", "想到", "发现", "决定", "开始", "准备", "想要", "可以", "能够", "推断", "回望", "应付", "锁定", "仅用", "入城", "当天", "第一天", "第二天", "第三天", "次", "地", "城"}
+	for _, invalidName := range invalidNames {
+		if name == invalidName || strings.HasPrefix(name, invalidName) {
+			return nil
+		}
+	}
+
+	// 过滤包含数字或量词的地名
+	if matched, _ := regexp.MatchString(`[\d三四五六七八九十半]`, name); matched {
+		// 但保留合理的地名如"三天门"
+		if strings.Contains(name, "三天") || strings.Contains(name, "五天") {
+			return nil
+		}
+	}
+
+	// 过滤纯虚词组合
+	virtualWords := []string{"因此", "然后", "于是", "但是", "所以", "因为", "虽然", "尽管"}
+	for _, word := range virtualWords {
+		if strings.HasPrefix(name, word) {
+			return nil
+		}
+	}
+
 	locType := "area"
 
 	if strings.Contains(name, "矿道") || strings.Contains(name, "矿洞") {

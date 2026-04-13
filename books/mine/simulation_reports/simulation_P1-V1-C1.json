@@ -1,0 +1,84 @@
+{
+  "chapter_id": "P1-V1-C1",
+  "chapter_name": "寒矿醒转，首死触发复生",
+  "steps": [
+    {
+      "step_number": 1,
+      "type": "event",
+      "description": "穿越为黑风灵石矿场练气二层矿奴，绑定专属金手指「附矿场复活」",
+      "characters": null,
+      "location": "",
+      "actions": null,
+      "results": null,
+      "state_changes": {},
+      "timestamp": 1776088765
+    },
+    {
+      "step_number": 2,
+      "type": "event",
+      "description": "首次触发复活能力，于矿道另一处安全区域复生",
+      "characters": null,
+      "location": "",
+      "actions": null,
+      "results": null,
+      "state_changes": {},
+      "timestamp": 1776088765
+    }
+  ],
+  "success": true,
+  "start_time": 1776088765,
+  "end_time": 1776088765,
+  "player_stats": {
+    "initial": {
+      "level": 1,
+      "hp": 100,
+      "max_hp": 100,
+      "mp": 50,
+      "max_mp": 50,
+      "attack": 12,
+      "defense": 10,
+      "exp": 0
+    },
+    "final": {
+      "level": 1,
+      "hp": 100,
+      "max_hp": 100,
+      "mp": 50,
+      "max_mp": 50,
+      "attack": 12,
+      "defense": 10,
+      "exp": 0
+    }
+  },
+  "rewards": [],
+  "full_log": [
+    {
+      "timestamp": 1776088765,
+      "type": "info",
+      "message": "开始模拟章节: 寒矿醒转，首死触发复生",
+      "details": {
+        "chapter_id": "P1-V1-C1",
+        "quest_id": "quest_P1-V1-C1"
+      }
+    },
+    {
+      "timestamp": 1776088765,
+      "type": "info",
+      "message": "接取任务: 寒矿醒转，首死触发复生"
+    },
+    {
+      "timestamp": 1776088765,
+      "type": "info",
+      "message": "开始模拟章节: 寒矿醒转，首死触发复生",
+      "details": {
+        "chapter_id": "P1-V1-C1",
+        "quest_id": "quest_P1-V1-C1"
+      }
+    },
+    {
+      "timestamp": 1776088765,
+      "type": "info",
+      "message": "接取任务: 寒矿醒转，首死触发复生"
+    }
+  ]
+}

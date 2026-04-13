@@ -360,3 +360,10 @@ func (ci *ClassInstance) ToJSON() string {
 	data, _ := json.MarshalIndent(ci, "", "  ")
 	return string(data)
 }
+
+// ExportToMap 导出为map
+func (cm *ClassManager) ExportToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"classes": cm.classes,
+	}
+}

@@ -1,0 +1,84 @@
+{
+  "chapter_id": "P1-V2-C1",
+  "chapter_name": "监工鞭落，死矿催命",
+  "steps": [
+    {
+      "step_number": 1,
+      "type": "event",
+      "description": "将废弃矿道列为逃离计划的核心探路目标",
+      "characters": null,
+      "location": "",
+      "actions": null,
+      "results": null,
+      "state_changes": {},
+      "timestamp": 1776087704
+    },
+    {
+      "step_number": 2,
+      "type": "event",
+      "description": "被周虎强制指派进入禁止入内的最深废弃矿洞，每日需上交5块下品灵石，否则直接处死",
+      "characters": null,
+      "location": "",
+      "actions": null,
+      "results": null,
+      "state_changes": {},
+      "timestamp": 1776087704
+    }
+  ],
+  "success": true,
+  "start_time": 1776087704,
+  "end_time": 1776087704,
+  "player_stats": {
+    "initial": {
+      "level": 1,
+      "hp": 100,
+      "max_hp": 100,
+      "mp": 50,
+      "max_mp": 50,
+      "attack": 12,
+      "defense": 10,
+      "exp": 0
+    },
+    "final": {
+      "level": 1,
+      "hp": 100,
+      "max_hp": 100,
+      "mp": 50,
+      "max_mp": 50,
+      "attack": 12,
+      "defense": 10,
+      "exp": 0
+    }
+  },
+  "rewards": [],
+  "full_log": [
+    {
+      "timestamp": 1776087704,
+      "type": "info",
+      "message": "开始模拟章节: 监工鞭落，死矿催命",
+      "details": {
+        "chapter_id": "P1-V2-C1",
+        "quest_id": "quest_P1-V2-C1"
+      }
+    },
+    {
+      "timestamp": 1776087704,
+      "type": "info",
+      "message": "接取任务: 监工鞭落，死矿催命"
+    },
+    {
+      "timestamp": 1776087704,
+      "type": "info",
+      "message": "开始模拟章节: 监工鞭落，死矿催命",
+      "details": {
+        "chapter_id": "P1-V2-C1",
+        "quest_id": "quest_P1-V2-C1"
+      }
+    },
+    {
+      "timestamp": 1776087704,
+      "type": "info",
+      "message": "接取任务: 监工鞭落，死矿催命"
+    }
+  ]
+}
