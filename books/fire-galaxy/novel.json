@@ -1,12 +1,13 @@
 {
   "name": "逐星",
   "version": "1.0.0",
+  "created_at": "2026-03-19T20:46:14.0542268+08:00",
+  "updated_at": "2026-03-19T20:46:14.0651551+08:00",
   "language": "zh",
-  "created_at": "2026-03-17T22:32:15.4517308+08:00",
   "structure": {
-    "target_parts": 3,
-    "target_volumes": 2,
-    "target_chapters": 3
+    "target_parts": 1,
+    "target_volumes": 1,
+    "target_chapters": 10
   },
   "chapter_config": {
     "target_words_per_chapter": 3000,
@@ -14,7 +15,7 @@
     "max_words_per_chapter": 5000
   },
   "llm": {
-    "provider": "ollama",
-    "model": "qwen3.5:4b"
+    "provider": "vol",
+    "model": "doubao-seed-2.0-pro"
   }
 }
