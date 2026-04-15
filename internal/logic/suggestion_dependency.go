@@ -4,14 +4,13 @@ import (
 	"strings"
 
 	"novelgen/internal/models"
-	"novelgen/internal/prompts"
 )
 
 // SuggestionNode represents a suggestion in the dependency tree
 type SuggestionNode struct {
 	ID           string
 	Type         string // "part", "volume", "chapter"
-	Suggestion   prompts.ReviewSuggestion
+	Suggestion   models.ReviewSuggestion
 	Dependencies []string // IDs of suggestions this depends on
 	Level        int      // Tree level: 0=part, 1=volume, 2=chapter
 }
@@ -35,21 +34,21 @@ func NewSuggestionDependencyAnalyzer(outline *models.Outline) *SuggestionDepende
 // 1. Part suggestions have no dependencies (they are roots)
 // 2. Volume suggestions depend on their parent Part
 // 3. Chapter suggestions depend on their parent Volume AND previous Chapter (for continuity)
-func (a *SuggestionDependencyAnalyzer) BuildDependencyTree(suggestions []prompts.ReviewSuggestion) []*SuggestionNode {
+func (a *SuggestionDependencyAnalyzer) BuildDependencyTree(suggestions []models.ReviewSuggestion) []*SuggestionNode {
 	// First, categorize all suggestions by type
-	partSugs := make(map[string][]prompts.ReviewSuggestion)
-	volumeSugs := make(map[string][]prompts.ReviewSuggestion)
-	chapterSugs := make(map[string][]prompts.ReviewSuggestion)
+	partSugs := make(map[string][]models.ReviewSuggestion)
+	volumeSugs := make(map[string][]models.ReviewSuggestion)
+	chapterSugs := make(map[string][]models.ReviewSuggestion)
 
 	for _, s := range suggestions {
-		targetType := a.determineTargetType(s.ID)
+		targetType := a.determineTargetType(s.TargetID)
 		switch targetType {
 		case "part":
-			partSugs[s.ID] = append(partSugs[s.ID], s)
+			partSugs[s.TargetID] = append(partSugs[s.TargetID], s)
 		case "volume":
-			volumeSugs[s.ID] = append(volumeSugs[s.ID], s)
+			volumeSugs[s.TargetID] = append(volumeSugs[s.TargetID], s)
 		case "chapter":
-			chapterSugs[s.ID] = append(chapterSugs[s.ID], s)
+			chapterSugs[s.TargetID] = append(chapterSugs[s.TargetID], s)
 		}
 	}
 
@@ -159,9 +158,9 @@ func (a *SuggestionDependencyAnalyzer) determineTargetType(id string) string {
 }
 
 // makeNodeID creates a unique node ID from suggestion
-func (a *SuggestionDependencyAnalyzer) makeNodeID(targetID string, s prompts.ReviewSuggestion) string {
-	// Include suggestion type and target ID to make it unique
-	return targetID + "_" + s.Type + "_" + hashString(s.Suggestion)[:8]
+func (a *SuggestionDependencyAnalyzer) makeNodeID(targetID string, s models.ReviewSuggestion) string {
+	// Include suggestion category and target ID to make it unique
+	return targetID + "_" + s.Category + "_" + hashString(s.Suggestion)[:8]
 }
 
 // hashString creates a simple hash for string

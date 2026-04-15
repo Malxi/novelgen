@@ -9,7 +9,6 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
-	"novelgen/internal/prompts"
 
 	"github.com/spf13/cobra"
 )
@@ -71,7 +70,7 @@ func runStatematrix(cmd *cobra.Command, args []string) error {
 		state := manager.CalculateStateMatrix(outline, &info.Chapter)
 
 		// Generate the same format used by write command
-		stateText := prompts.FormatStateMatrix(state, &info.Chapter)
+		stateText := logic.FormatStateMatrix(state, &info.Chapter)
 
 		output.WriteString(fmt.Sprintf("\n%s %s %s\n", strings.Repeat("=", 40), info.Chapter.ID, strings.Repeat("=", 40)))
 		output.WriteString(fmt.Sprintf("Title: %s\n", info.Chapter.Title))

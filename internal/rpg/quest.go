@@ -222,11 +222,6 @@ func (qm *QuestManager) CanAcceptQuest(questID string, character *Character, que
 		return false, "任务已完成"
 	}
 	
-	// 检查等级
-	if character.Level < quest.LevelRequired {
-		return false, "等级不足"
-	}
-	
 	// 检查前置任务
 	for _, preQuestID := range quest.Prerequisites.Quests {
 		preInstance := qm.instances[preQuestID]

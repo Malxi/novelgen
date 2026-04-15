@@ -1,0 +1,109 @@
+{
+  "chapter_id": "P1-V1-C10",
+  "chapter_name": "逐星征途的开端",
+  "steps": [
+    {
+      "step_number": 1,
+      "type": "event",
+      "description": "updated",
+      "characters": null,
+      "location": "",
+      "actions": null,
+      "results": null,
+      "state_changes": {},
+      "timestamp": 1776177894
+    },
+    {
+      "step_number": 2,
+      "type": "event",
+      "description": "updated",
+      "characters": null,
+      "location": "",
+      "actions": null,
+      "results": null,
+      "state_changes": {},
+      "timestamp": 1776177894
+    },
+    {
+      "step_number": 3,
+      "type": "event",
+      "description": "started",
+      "characters": null,
+      "location": "",
+      "actions": null,
+      "results": null,
+      "state_changes": {},
+      "timestamp": 1776177894
+    }
+  ],
+  "success": true,
+  "start_time": 1776177894,
+  "end_time": 1776177894,
+  "player_stats": {
+    "initial": {
+      "level": 1,
+      "hp": 100,
+      "max_hp": 100,
+      "mp": 50,
+      "max_mp": 50,
+      "attack": 10,
+      "defense": 10,
+      "exp": 0
+    },
+    "final": {
+      "level": 1,
+      "hp": 100,
+      "max_hp": 100,
+      "mp": 50,
+      "max_mp": 50,
+      "attack": 10,
+      "defense": 10,
+      "exp": 0
+    }
+  },
+  "rewards": [],
+  "full_log": [
+    {
+      "timestamp": 1776177894,
+      "type": "info",
+      "message": "开始模拟章节: 逐星征途的开端",
+      "details": {
+        "chapter_id": "P1-V1-C10",
+        "quest_id": "quest_P1-V1-C10"
+      }
+    },
+    {
+      "timestamp": 1776177894,
+      "type": "info",
+      "message": "接取任务: 逐星征途的开端"
+    },
+    {
+      "timestamp": 1776177894,
+      "type": "info",
+      "message": "开始模拟章节: 逐星征途的开端",
+      "details": {
+        "chapter_id": "P1-V1-C10",
+        "quest_id": "quest_P1-V1-C10"
+      }
+    },
+    {
+      "timestamp": 1776177894,
+      "type": "info",
+      "message": "接取任务: 逐星征途的开端"
+    },
+    {
+      "timestamp": 1776177894,
+      "type": "info",
+      "message": "开始模拟章节: 逐星征途的开端",
+      "details": {
+        "chapter_id": "P1-V1-C10",
+        "quest_id": "quest_P1-V1-C10"
+      }
+    },
+    {
+      "timestamp": 1776177894,
+      "type": "info",
+      "message": "接取任务: 逐星征途的开端"
+    }
+  ]
+}

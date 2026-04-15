@@ -13,7 +13,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
-	"novelgen/internal/prompts"
+	"novelgen/internal/utils"
 )
 
 // BaseAgent is the base struct for all agents.
@@ -75,7 +75,7 @@ func (a *BaseAgent) Execute(ctx context.Context, params InvokeParams, input inte
 
 	// Build user prompt from input
 	userPrompt := fmt.Sprintf("Follow skill to %s for the input:\n %s",
-		params.Command, prompts.StructToMarkdown(input, 0))
+		params.Command, utils.StructToMarkdown(input, 0))
 
 	// Add output requirements
 	outputRequirements := a.buildOutputRequirements(output)
@@ -122,7 +122,7 @@ func (a *BaseAgent) Execute(ctx context.Context, params InvokeParams, input inte
 // All skills are wrapped with skill markers
 func (a *BaseAgent) loadSystemPromptWithSkills(skills []string) (string, error) {
 	vars := map[string]string{
-		"language": prompts.GetLanguageName(a.language),
+		"language": utils.GetLanguageName(a.language),
 	}
 
 	var result strings.Builder
@@ -152,7 +152,7 @@ Format: json
 Language: All content MUST be in %s
 Structure:
 %s
-=== END REQUIREMENTS ===`, prompts.GetLanguageName(a.language), prompts.StructToJSONSchema(output, "  "))
+=== END REQUIREMENTS ===`, utils.GetLanguageName(a.language), utils.StructToJSONSchema(output, "  "))
 }
 
 // savePromptsToFile saves the prompts to a file for debugging

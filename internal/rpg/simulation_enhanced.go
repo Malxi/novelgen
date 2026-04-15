@@ -125,12 +125,6 @@ func (ese *EnhancedSimulationEngine) SimulateChapterEnhanced(chapterID string) (
 		"quest_id":   quest.ID,
 	})
 
-	// 检查等级要求
-	if ese.World.Player.Level < quest.LevelRequired {
-		return nil, fmt.Errorf("等级不足，需要等级 %d，当前等级 %d",
-			quest.LevelRequired, ese.World.Player.Level)
-	}
-
 	// 接取任务
 	if !ese.World.AcceptQuest(quest.ID) {
 		return nil, fmt.Errorf("无法接取任务 %s", quest.ID)

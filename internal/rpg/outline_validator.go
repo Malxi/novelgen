@@ -51,6 +51,21 @@ type ValidationResult struct {
 	Summary      string              `json:"summary"`
 }
 
+// ValidationReport 验证报告 (用于 compose_bridge.go 兼容)
+type ValidationReport struct {
+	Result      RPGCheckResult `json:"result"`
+	Suggestions []Suggestion   `json:"suggestions"`
+}
+
+// Suggestion 建议项 (用于 compose_bridge.go 兼容)
+type Suggestion struct {
+	Type     string `json:"type"`     // error, warning, info
+	Category string `json:"category"` // system, plot, character, etc.
+	Message  string `json:"message"`
+	Action   string `json:"action"`
+	Priority int    `json:"priority"` // 1-10
+}
+
 // NewOutlineValidator 创建验证器
 func NewOutlineValidator(outline *StoryOutline) *OutlineValidator {
 	return &OutlineValidator{

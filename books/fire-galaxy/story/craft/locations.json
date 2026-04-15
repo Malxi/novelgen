@@ -1,0 +1,36 @@
+{
+  "wasteland": {
+    "name": "废土世界",
+    "description": "危机四伏的未来世界，充满虫族和废墟",
+    "appearance": "满目疮痍的大地，废弃的城市遗迹，辐射尘弥漫的天空",
+    "atmosphere": "压抑、危险、充满未知的恐惧",
+    "history": "曾经是人类繁荣的文明世界，因某种灾难变成了废土",
+    "inhabitants": ["虫族", "变异生物", "幸存者"],
+    "connected_locations": ["cryo_facility"],
+    "events": ["主角醒来", "首次遭遇虫族"],
+    "secrets": "这个世界毁灭的真相隐藏在某个地方",
+    "notes": "主角必须学会在这个世界生存",
+    "sensory_details": {
+      "visual": ["灰蒙蒙的天空", "破败的建筑", "奇异的植物"],
+      "auditory": ["风的呼啸", "远处虫族的嘶鸣"],
+      "olfactory": ["尘土味", "金属锈蚀味"]
+    }
+  },
+  "cryo_facility": {
+    "name": "休眠仓设施",
+    "description": "主角醒来的地方，废弃的冬眠设施",
+    "appearance": "半埋在地下的圆形建筑，外表布满锈迹和藤蔓",
+    "atmosphere": "神秘、寂静、时间凝固的感觉",
+    "history": "建于灾难前，用于保存人类火种",
+    "inhabitants": [],
+    "connected_locations": ["wasteland"],
+    "events": ["主角从冬眠中醒来"],
+    "secrets": "设施内可能还有其他冬眠者或重要资料",
+    "notes": "故事的起点",
+    "sensory_details": {
+      "visual": ["闪烁的应急灯", "结冰的管道", "古老的设备"],
+      "auditory": ["设备运转的嗡嗡声", "水滴声"],
+      "olfactory": ["冷冻液的气味", "霉味"]
+    }
+  }
+}

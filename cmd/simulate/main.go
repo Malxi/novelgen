@@ -46,12 +46,10 @@ func main() {
 	// 创建推演引擎
 	engine := rpg.NewSimulationEngine(storyWorld.GameWorld)
 
-	var result *rpg.SimulationResult
-
 	// 推演单个章节或全部章节
 	if *chapterID != "" {
 		fmt.Printf("\n正在推演章节: %s\n", *chapterID)
-		result, err = engine.SimulateChapter(*chapterID)
+		_, err = engine.SimulateChapter(*chapterID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "错误: 章节推演出错: %v\n", err)
 			os.Exit(1)

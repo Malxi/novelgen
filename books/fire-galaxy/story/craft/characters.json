@@ -1,0 +1,19 @@
+{
+  "protagonist": {
+    "name": "主角",
+    "aliases": ["穿越者"],
+    "age": "25",
+    "gender": "男",
+    "race": "人类",
+    "appearance": "普通青年，穿着破损的冬眠服",
+    "background": "来自21世纪的普通人，因意外进入休眠仓穿越到未来",
+    "personality": ["坚韧", "好奇", "求生欲强"],
+    "motivation": "在这个危险的世界生存下去，找到回到过去的方法",
+    "skills": ["快速学习", "适应环境"],
+    "abilities": ["冬眠者体质（对辐射有一定抗性）"],
+    "affiliations": [],
+    "role_in_story": "主角",
+    "voice": "理性但偶尔会感到迷茫",
+    "notes": "拥有来自21世纪的知识，但在这个未来世界大部分都已过时"
+  }
+}

@@ -1,4 +1,4 @@
-package prompts
+package logic
 
 import (
 	"fmt"
@@ -340,50 +340,4 @@ func formatItems(sb *strings.Builder, state *models.StateMatrix, chapter *models
 		}
 		sb.WriteString("\n")
 	}
-}
-
-// FormatChapterContext formats the surrounding chapter context for prompts.
-// previous: previous chapters with content snippets
-// next: next chapters (summaries only, for foreshadowing)
-// maxSnippetLen: maximum length of content snippet for previous chapters
-func FormatChapterContext(previous []*ContextChapter, next []*ContextChapter, maxSnippetLen int) string {
-	var sb strings.Builder
-
-	sb.WriteString("=== CHAPTER CONTEXT ===\n\n")
-
-	// Previous chapters
-	if len(previous) > 0 {
-		sb.WriteString("PREVIOUS CHAPTERS:\n")
-		for _, prev := range previous {
-			sb.WriteString(fmt.Sprintf("\n--- %s: %s ---\n", prev.Chapter.ID, prev.Chapter.Title))
-			sb.WriteString(fmt.Sprintf("Summary: %s\n", prev.Chapter.Summary))
-			// Include a snippet of the content (or full content if maxSnippetLen is 0)
-			content := prev.Content
-			if maxSnippetLen > 0 && len(content) > maxSnippetLen {
-				content = content[:maxSnippetLen] + "..."
-			}
-			sb.WriteString(fmt.Sprintf("Content:\n%s\n", content))
-		}
-		sb.WriteString("\n")
-	}
-
-	// Next chapters (for foreshadowing)
-	if len(next) > 0 {
-		sb.WriteString("UPCOMING CHAPTERS (for foreshadowing):\n")
-		for _, n := range next {
-			sb.WriteString(fmt.Sprintf("\n--- %s: %s ---\n", n.Chapter.ID, n.Chapter.Title))
-			sb.WriteString(fmt.Sprintf("Summary: %s\n", n.Chapter.Summary))
-		}
-		sb.WriteString("\n")
-	}
-
-	sb.WriteString("=== END CONTEXT ===\n")
-
-	return sb.String()
-}
-
-// ContextChapter represents a chapter with its content for context formatting
-type ContextChapter struct {
-	Chapter *models.Chapter
-	Content string
 }

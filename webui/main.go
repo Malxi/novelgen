@@ -110,6 +110,10 @@ func main() {
 		api.GET("/rpg/events", getRPGEvents)
 		api.GET("/rpg/quests", getRPGQuests)
 
+		// Simulation reports
+		api.GET("/simulations", listSimulationReports)
+		api.GET("/simulations/:id", getSimulationReport)
+
 		// File operations
 		api.GET("/files/*path", getFile)
 		api.POST("/files/*path", saveFile)
@@ -376,11 +380,17 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 		cmdArgs = append(cmdArgs, subcommand)
 	}
 
+	// Handle positional arguments (for commands like 'rpg simulate <chapter_id>')
+	if positional, ok := args["_positional"].(string); ok && positional != "" {
+		cmdArgs = append(cmdArgs, positional)
+	}
+
 	// Add args based on command type
 	for key, value := range args {
 		// Skip project_dir as it's used for directory switching, not command arg
 		// Skip subcommand as it's already handled above
-		if key == "project_dir" || key == "subcommand" {
+		// Skip _positional as it's already handled above
+		if key == "project_dir" || key == "subcommand" || key == "_positional" {
 			continue
 		}
 		switch v := value.(type) {
@@ -426,7 +436,7 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 
 	// Build command with working directory
 	cmd := exec.Command("novelgen", cmdArgs...)
-	
+
 	// Set working directory if project path is provided
 	if projectPath != "" {
 		// Convert to absolute path if relative
@@ -437,7 +447,7 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 		cmd.Dir = projectPath
 		debugInfo.WriteString(fmt.Sprintf("Final project path (absolute): %s\n", projectPath))
 		debugInfo.WriteString(fmt.Sprintf("Command working directory: %s\n", cmd.Dir))
-		
+
 		// Check if story_setup.json exists
 		setupPath := filepath.Join(projectPath, "story", "setup", "story_setup.json")
 		if _, err := os.Stat(setupPath); err != nil {
@@ -445,7 +455,7 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 		} else {
 			debugInfo.WriteString(fmt.Sprintf("story_setup.json found at: %s\n", setupPath))
 		}
-		
+
 		// Check if novel.json exists
 		novelPath := filepath.Join(projectPath, "novel.json")
 		if _, err := os.Stat(novelPath); err != nil {
@@ -454,7 +464,7 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 			debugInfo.WriteString(fmt.Sprintf("novel.json found at: %s\n", novelPath))
 		}
 	}
-	
+
 	debugInfo.WriteString(fmt.Sprintf("Command: novelgen %s\n", strings.Join(cmdArgs, " ")))
 	debugInfo.WriteString("==================\n\n")
 
@@ -1159,4 +1169,104 @@ func getRPGQuests(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, APIResponse{Success: true, Data: map[string]interface{}{"quests": questsList}})
+}
+
+func listSimulationReports(c *gin.Context) {
+	projectPath := c.Query("project")
+	if projectPath == "" {
+		projectPath = "."
+	}
+
+	reportsDir := filepath.Join(projectPath, "simulation_reports")
+	reports := []map[string]interface{}{}
+
+	entries, err := os.ReadDir(reportsDir)
+	if err != nil {
+		// Directory doesn't exist, return empty list
+		c.JSON(http.StatusOK, APIResponse{Success: true, Data: reports})
+		return
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
+			filePath := filepath.Join(reportsDir, entry.Name())
+			data, err := os.ReadFile(filePath)
+			if err != nil {
+				continue
+			}
+
+			var report map[string]interface{}
+			if err := json.Unmarshal(data, &report); err != nil {
+				continue
+			}
+
+			// Extract basic info
+			reportInfo := map[string]interface{}{
+				"filename": entry.Name(),
+			}
+			if chapterID, ok := report["chapter_id"].(string); ok {
+				reportInfo["chapter_id"] = chapterID
+			}
+			if chapterName, ok := report["chapter_name"].(string); ok {
+				reportInfo["chapter_name"] = chapterName
+			}
+			if success, ok := report["success"].(bool); ok {
+				reportInfo["success"] = success
+			}
+
+			reports = append(reports, reportInfo)
+		}
+	}
+
+	c.JSON(http.StatusOK, APIResponse{Success: true, Data: reports})
+}
+
+func getSimulationReport(c *gin.Context) {
+	projectPath := c.Query("project")
+	if projectPath == "" {
+		projectPath = "."
+	}
+
+	reportID := c.Param("id")
+	if reportID == "" {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Report ID required"})
+		return
+	}
+
+	// Sanitize reportID to prevent directory traversal
+	reportID = strings.ReplaceAll(reportID, "..", "")
+	reportID = strings.ReplaceAll(reportID, "/", "")
+	reportID = strings.ReplaceAll(reportID, "\\", "")
+
+	// Try different filename patterns
+	possibleNames := []string{
+		reportID,
+		"simulation_" + reportID + ".json",
+		reportID + ".json",
+	}
+
+	reportsDir := filepath.Join(projectPath, "simulation_reports")
+	var reportData []byte
+	var err error
+
+	for _, name := range possibleNames {
+		filePath := filepath.Join(reportsDir, name)
+		reportData, err = os.ReadFile(filePath)
+		if err == nil {
+			break
+		}
+	}
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "Report not found"})
+		return
+	}
+
+	var report interface{}
+	if err := json.Unmarshal(reportData, &report); err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, APIResponse{Success: true, Data: report})
 }

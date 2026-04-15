@@ -732,4 +732,3 @@ func (orc *OutlineRPGChecker) collectChapters() []StoryChapter {
 	return chapters
 }
 
-

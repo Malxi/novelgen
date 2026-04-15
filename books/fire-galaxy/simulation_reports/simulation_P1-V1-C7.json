@@ -1,0 +1,84 @@
+{
+  "chapter_id": "P1-V1-C7",
+  "chapter_name": "潜入研究所废墟",
+  "steps": [
+    {
+      "step_number": 1,
+      "type": "event",
+      "description": "progressed",
+      "characters": null,
+      "location": "",
+      "actions": null,
+      "results": null,
+      "state_changes": {},
+      "timestamp": 1776177888
+    },
+    {
+      "step_number": 2,
+      "type": "event",
+      "description": "sustained",
+      "characters": null,
+      "location": "",
+      "actions": null,
+      "results": null,
+      "state_changes": {},
+      "timestamp": 1776177888
+    }
+  ],
+  "success": true,
+  "start_time": 1776177888,
+  "end_time": 1776177888,
+  "player_stats": {
+    "initial": {
+      "level": 1,
+      "hp": 100,
+      "max_hp": 100,
+      "mp": 50,
+      "max_mp": 50,
+      "attack": 10,
+      "defense": 10,
+      "exp": 0
+    },
+    "final": {
+      "level": 1,
+      "hp": 100,
+      "max_hp": 100,
+      "mp": 50,
+      "max_mp": 50,
+      "attack": 10,
+      "defense": 10,
+      "exp": 0
+    }
+  },
+  "rewards": [],
+  "full_log": [
+    {
+      "timestamp": 1776177888,
+      "type": "info",
+      "message": "开始模拟章节: 潜入研究所废墟",
+      "details": {
+        "chapter_id": "P1-V1-C7",
+        "quest_id": "quest_P1-V1-C7"
+      }
+    },
+    {
+      "timestamp": 1776177888,
+      "type": "info",
+      "message": "接取任务: 潜入研究所废墟"
+    },
+    {
+      "timestamp": 1776177888,
+      "type": "info",
+      "message": "开始模拟章节: 潜入研究所废墟",
+      "details": {
+        "chapter_id": "P1-V1-C7",
+        "quest_id": "quest_P1-V1-C7"
+      }
+    },
+    {
+      "timestamp": 1776177888,
+      "type": "info",
+      "message": "接取任务: 潜入研究所废墟"
+    }
+  ]
+}

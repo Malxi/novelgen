@@ -105,6 +105,15 @@ export const getRPGEvents = (project?: string) =>
 export const getRPGQuests = (project?: string) =>
   fetchAPI<{ quests: unknown[] }>(`/rpg/quests${project ? `?project=${encodeURIComponent(project)}` : ''}`);
 
+// Simulation Reports
+export const listSimulationReports = (project?: string) =>
+  fetchAPI<Array<{ filename: string; chapter_id: string; chapter_name: string; success: boolean }>>(
+    `/simulations${project ? `?project=${encodeURIComponent(project)}` : ''}`
+  );
+
+export const getSimulationReport = (id: string, project?: string) =>
+  fetchAPI<unknown>(`/simulations/${id}${project ? `?project=${encodeURIComponent(project)}` : ''}`);
+
 // Files
 export const getFile = (path: string, project?: string) =>
   fetchAPI<unknown>(`/files/${path}${project ? `?project=${encodeURIComponent(project)}` : ''}`);

@@ -8,7 +8,6 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
-	"novelgen/internal/prompts"
 
 	"github.com/spf13/cobra"
 )
@@ -110,15 +109,8 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 	// Perform translation
 	logger.Info("Translating from %s to %s...", translateSourceLang, translateTargetLang)
 
-	pm := prompts.NewPromptManager()
-	systemPrompt, userPrompt, err := pm.Build(
-		prompts.SkillTranslation,
-		"default",
-		prompts.BuildTranslationData(string(content), translateSourceLang, translateTargetLang),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to build translation prompt: %w", err)
-	}
+	systemPrompt := buildTranslationSystemPrompt()
+	userPrompt := buildTranslationUserPrompt(string(content), translateSourceLang, translateTargetLang)
 
 	translated, err := agent.Translate(systemPrompt, userPrompt)
 	if err != nil {
@@ -139,4 +131,36 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 
 	logger.Info("Translation completed!")
 	return nil
+}
+
+// buildTranslationSystemPrompt returns the system prompt for translation
+func buildTranslationSystemPrompt() string {
+	return `You are a professional literary translator specializing in novel translation.
+
+Your task is to translate text while preserving:
+- Narrative flow and pacing
+- Character voice and dialogue style
+- Descriptive richness and atmosphere
+- Cultural nuances and idioms (adapt appropriately)
+- Tone and emotional impact
+
+Translate naturally - don't translate word-for-word. Make the text feel like it was originally written in the target language.
+
+Output only the translated text without explanations, notes, or formatting markers.`
+}
+
+// buildTranslationUserPrompt builds the user prompt for translation
+func buildTranslationUserPrompt(content, sourceLang, targetLang string) string {
+	return fmt.Sprintf(`Please translate the following text from %s to %s.
+
+IMPORTANT TRANSLATION GUIDELINES:
+1. Preserve the narrative style, tone, and voice of the original
+2. Maintain character names, place names, and proper nouns appropriately
+3. Keep paragraph structure and formatting intact
+4. Ensure natural flow in the target language
+5. Preserve dialogue style and character voice
+6. Maintain cultural context where appropriate
+
+SOURCE TEXT (%s):
+%s`, sourceLang, targetLang, sourceLang, content)
 }

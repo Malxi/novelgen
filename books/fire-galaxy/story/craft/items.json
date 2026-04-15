@@ -1,0 +1,34 @@
+{
+  "cryo_pod": {
+    "name": "休眠仓",
+    "description": "让主角穿越到未来的冬眠设备",
+    "appearance": "圆柱形的金属舱，带有透明的观察窗和控制面板",
+    "function": "让人类进入长期冬眠状态，跨越时间",
+    "origin": "21世纪的科技产物",
+    "history": "原本用于星际航行，后被改造成时间胶囊",
+    "owner": "主角",
+    "type": "科技设备",
+    "powers": ["时间跨越", "生命维持"],
+    "limitations": ["只能使用一次", "需要外部能源"],
+    "related_items": [],
+    "secrets": ["可能记录了灾难发生前的关键信息"],
+    "significance": "连接过去和未来的关键道具",
+    "notes": "主角醒来后已经损坏无法再次使用"
+  },
+  "survival_kit": {
+    "name": "求生装备",
+    "description": "基础的生存工具包",
+    "appearance": "磨损的背包，里面装有各种工具",
+    "function": "帮助主角在废土世界生存",
+    "origin": "从休眠仓设施中找到的应急物资",
+    "history": "灾难前为人类幸存者准备的",
+    "owner": "主角",
+    "type": "工具套装",
+    "powers": [],
+    "limitations": ["资源有限", "部分工具已损坏"],
+    "related_items": ["cryo_pod"],
+    "secrets": [],
+    "significance": "主角初期生存的重要物资",
+    "notes": "包含水过滤器、简易医疗包、多功能工具等"
+  }
+}

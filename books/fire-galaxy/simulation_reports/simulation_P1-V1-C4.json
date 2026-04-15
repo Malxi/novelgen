@@ -1,0 +1,84 @@
+{
+  "chapter_id": "P1-V1-C4",
+  "chapter_name": "地面的废土世界",
+  "steps": [
+    {
+      "step_number": 1,
+      "type": "event",
+      "description": "completed",
+      "characters": null,
+      "location": "",
+      "actions": null,
+      "results": null,
+      "state_changes": {},
+      "timestamp": 1776177882
+    },
+    {
+      "step_number": 2,
+      "type": "event",
+      "description": "progressed",
+      "characters": null,
+      "location": "",
+      "actions": null,
+      "results": null,
+      "state_changes": {},
+      "timestamp": 1776177882
+    }
+  ],
+  "success": true,
+  "start_time": 1776177882,
+  "end_time": 1776177882,
+  "player_stats": {
+    "initial": {
+      "level": 1,
+      "hp": 100,
+      "max_hp": 100,
+      "mp": 50,
+      "max_mp": 50,
+      "attack": 10,
+      "defense": 10,
+      "exp": 0
+    },
+    "final": {
+      "level": 1,
+      "hp": 100,
+      "max_hp": 100,
+      "mp": 50,
+      "max_mp": 50,
+      "attack": 10,
+      "defense": 10,
+      "exp": 0
+    }
+  },
+  "rewards": [],
+  "full_log": [
+    {
+      "timestamp": 1776177882,
+      "type": "info",
+      "message": "开始模拟章节: 地面的废土世界",
+      "details": {
+        "chapter_id": "P1-V1-C4",
+        "quest_id": "quest_P1-V1-C4"
+      }
+    },
+    {
+      "timestamp": 1776177882,
+      "type": "info",
+      "message": "接取任务: 地面的废土世界"
+    },
+    {
+      "timestamp": 1776177882,
+      "type": "info",
+      "message": "开始模拟章节: 地面的废土世界",
+      "details": {
+        "chapter_id": "P1-V1-C4",
+        "quest_id": "quest_P1-V1-C4"
+      }
+    },
+    {
+      "timestamp": 1776177882,
+      "type": "info",
+      "message": "接取任务: 地面的废土世界"
+    }
+  ]
+}

@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"novelgen/internal/logic"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
-	"novelgen/internal/prompts"
 )
 
 // CompactStorySetup is a minimal version of StorySetup for chapter generation
@@ -486,9 +486,9 @@ func formatChapterContext(context *ChapterContext) string {
 }
 
 // formatStateMatrixForWrite formats the state matrix for the prompt
-// Delegates to prompts.FormatStateMatrix for consistency
+// Delegates to logic.FormatStateMatrix for consistency
 func formatStateMatrixForWrite(state *models.StateMatrix, chapter *models.Chapter) string {
-	return prompts.FormatStateMatrix(state, chapter)
+	return logic.FormatStateMatrix(state, chapter)
 }
 
 // formatWriteSuggestions formats review suggestions for the improvement prompt
