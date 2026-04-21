@@ -1,0 +1,82 @@
+# Fire-Galaxy Systems DSL
+# Phase 3: Advanced systems including attributes and power formula
+
+metadata {
+  title = "fire-galaxy"
+  phase = "systems"
+}
+
+systems {
+  # 自定义属性系统 - 科幻设定
+  attribute_system "生物能量体系" {
+    id = "sci-fi-bio-energy"
+    description = "基于生物能量和科技的属性体系"
+    
+    attribute "灵能" {
+      id = "psi"
+      name = "灵能"
+      description = "精神念力强度，影响特殊能力"
+      type = "resource"
+      base_value = 10
+      min_value = 0
+      max_value = 100
+      is_resource = true
+    }
+    
+    attribute "辐射抗性" {
+      id = "radiation_resistance"
+      name = "辐射抗性"
+      description = "对辐射的抵抗能力"
+      type = "special"
+      base_value = 5
+      is_resource = false
+    }
+    
+    attribute "科技亲和" {
+      id = "tech_affinity"
+      name = "科技亲和"
+      description = "理解和使用科技的能力"
+      type = "stat"
+      base_value = 8
+      is_resource = false
+    }
+  }
+  
+  # 战力计算公式
+  power_formula "综合战力评估" {
+    id = "combat_power"
+    name = "综合战力"
+    description = "基于属性和灵能的战斗能力评估"
+    base_power = 10
+    
+    factor "力量" {
+      attribute = "str"
+      weight = 1.5
+    }
+    
+    factor "敏捷" {
+      attribute = "agi"
+      weight = 1.2
+    }
+    
+    factor "智力" {
+      attribute = "int"
+      weight = 1.8
+    }
+    
+    factor "灵能" {
+      attribute = "psi"
+      weight = 2.5
+    }
+    
+    factor "科技亲和" {
+      attribute = "tech_affinity"
+      weight = 1.0
+    }
+    
+    factor "生命值" {
+      attribute = "hp"
+      weight = 0.05
+    }
+  }
+}

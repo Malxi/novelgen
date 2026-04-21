@@ -1,0 +1,3149 @@
+{
+  "characters": {
+    "instances": {
+      "char_1776615648493390000_12": {
+        "id": "char_1776615648493390000_12",
+        "template_id": "protagonist",
+        "name": "protagonist",
+        "description": "来自21世纪的普通人，因意外进入休眠仓穿越到未来",
+        "type": "player",
+        "race": "人类",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 100,
+          "mp": 50,
+          "attack": 10,
+          "defense": 10,
+          "magic": 10,
+          "resistance": 10,
+          "speed": 15,
+          "luck": 10
+        },
+        "current_stats": {
+          "hp": 100,
+          "mp": 50,
+          "attack": 10,
+          "defense": 10,
+          "magic": 10,
+          "resistance": 10,
+          "speed": 15,
+          "luck": 10
+        },
+        "growth_stats": {
+          "hp_growth": 12,
+          "mp_growth": 8,
+          "attack_growth": 3,
+          "defense_growth": 2,
+          "magic_growth": 3,
+          "resistance_growth": 2,
+          "speed_growth": 2,
+          "luck_growth": 1
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": [
+          "快速学习",
+          "适应环境"
+        ],
+        "items": [],
+        "position": {
+          "map_id": "",
+          "x": 0,
+          "y": 0
+        },
+        "created_at": "1776615648",
+        "updated_at": "1776615648"
+      },
+      "char_1776615648493390000_13": {
+        "id": "char_1776615648493390000_13",
+        "template_id": "template_陆星眠",
+        "name": "陆星眠",
+        "type": "npc",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "current_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": null,
+        "items": [],
+        "position": {
+          "map_id": "map_华国西南废弃地下休眠基地A3区",
+          "x": 5,
+          "y": 5
+        },
+        "created_at": "1776615648",
+        "updated_at": "1776615648"
+      },
+      "char_1776615648493390000_14": {
+        "id": "char_1776615648493390000_14",
+        "template_id": "template_陈野拾荒队长",
+        "name": "陈野（拾荒队长）",
+        "type": "npc",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "current_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": null,
+        "items": [],
+        "position": {
+          "map_id": "map_华国西南废弃地下休眠基地A3区",
+          "x": 5,
+          "y": 5
+        },
+        "created_at": "1776615648",
+        "updated_at": "1776615648"
+      },
+      "char_1776615648493390000_15": {
+        "id": "char_1776615648493390000_15",
+        "template_id": "template_陈野",
+        "name": "陈野",
+        "type": "npc",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "current_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": null,
+        "items": [],
+        "position": {
+          "map_id": "map_华国西南废弃地下休眠基地A3区",
+          "x": 5,
+          "y": 5
+        },
+        "created_at": "1776615648",
+        "updated_at": "1776615648"
+      },
+      "char_1776615648493390000_16": {
+        "id": "char_1776615648493390000_16",
+        "template_id": "template_苏晓",
+        "name": "苏晓",
+        "type": "npc",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "current_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": null,
+        "items": [],
+        "position": {
+          "map_id": "map_华国西南废弃地下休眠基地A3区",
+          "x": 5,
+          "y": 5
+        },
+        "created_at": "1776615648",
+        "updated_at": "1776615648"
+      },
+      "char_1776615648493390000_17": {
+        "id": "char_1776615648493390000_17",
+        "template_id": "template_老周据点管理员",
+        "name": "老周（据点管理员）",
+        "type": "npc",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "current_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": null,
+        "items": [],
+        "position": {
+          "map_id": "map_华国西南废弃地下休眠基地A3区",
+          "x": 5,
+          "y": 5
+        },
+        "created_at": "1776615648",
+        "updated_at": "1776615648"
+      },
+      "char_1776615648493390000_18": {
+        "id": "char_1776615648493390000_18",
+        "template_id": "template_所有据点居民",
+        "name": "所有据点居民",
+        "type": "npc",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "current_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": null,
+        "items": [],
+        "position": {
+          "map_id": "map_华国西南废弃地下休眠基地A3区",
+          "x": 5,
+          "y": 5
+        },
+        "created_at": "1776615648",
+        "updated_at": "1776615648"
+      },
+      "char_1776615648493390000_19": {
+        "id": "char_1776615648493390000_19",
+        "template_id": "template_阿零机甲AI",
+        "name": "阿零（机甲AI）",
+        "type": "npc",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "current_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": null,
+        "items": [],
+        "position": {
+          "map_id": "map_华国西南废弃地下休眠基地A3区",
+          "x": 5,
+          "y": 5
+        },
+        "created_at": "1776615648",
+        "updated_at": "1776615648"
+      },
+      "char_1776615648493390000_20": {
+        "id": "char_1776615648493390000_20",
+        "template_id": "template_苏晓队医",
+        "name": "苏晓（队医）",
+        "type": "npc",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "current_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": null,
+        "items": [],
+        "position": {
+          "map_id": "map_华国西南废弃地下休眠基地A3区",
+          "x": 5,
+          "y": 5
+        },
+        "created_at": "1776615648",
+        "updated_at": "1776615648"
+      },
+      "char_1776615648493390000_21": {
+        "id": "char_1776615648493390000_21",
+        "template_id": "template_据点守卫",
+        "name": "据点守卫",
+        "type": "npc",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "current_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": null,
+        "items": [],
+        "position": {
+          "map_id": "map_华国西南废弃地下休眠基地A3区",
+          "x": 5,
+          "y": 5
+        },
+        "created_at": "1776615648",
+        "updated_at": "1776615648"
+      },
+      "char_1776615648493390000_22": {
+        "id": "char_1776615648493390000_22",
+        "template_id": "template_阿零",
+        "name": "阿零",
+        "type": "npc",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "current_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": null,
+        "items": [],
+        "position": {
+          "map_id": "map_华国西南废弃地下休眠基地A3区",
+          "x": 5,
+          "y": 5
+        },
+        "created_at": "1776615648",
+        "updated_at": "1776615648"
+      },
+      "char_三只高阶刺虫虫群指挥虫": {
+        "id": "char_三只高阶刺虫虫群指挥虫",
+        "template_id": "template_三只高阶刺虫虫群指挥虫",
+        "name": "三只高阶刺虫、虫群指挥虫",
+        "type": "enemy",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 60,
+          "mp": 10,
+          "attack": 15,
+          "defense": 5,
+          "magic": 2,
+          "resistance": 3,
+          "speed": 12,
+          "luck": 3
+        },
+        "current_stats": {
+          "hp": 60,
+          "mp": 10,
+          "attack": 15,
+          "defense": 5,
+          "magic": 2,
+          "resistance": 3,
+          "speed": 12,
+          "luck": 3
+        },
+        "growth_stats": {
+          "hp_growth": 8,
+          "mp_growth": 1,
+          "attack_growth": 2,
+          "defense_growth": 0.5,
+          "magic_growth": 0.3,
+          "resistance_growth": 0.3,
+          "speed_growth": 1.5,
+          "luck_growth": 0.2
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": [
+          "skill_insect_claw",
+          "skill_acid_spray"
+        ],
+        "items": null,
+        "position": {
+          "map_id": "wasteland",
+          "x": 10,
+          "y": 10
+        },
+        "created_at": "",
+        "updated_at": ""
+      },
+      "char_五只镰虫": {
+        "id": "char_五只镰虫",
+        "template_id": "template_五只镰虫",
+        "name": "五只镰虫",
+        "type": "enemy",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 60,
+          "mp": 10,
+          "attack": 15,
+          "defense": 5,
+          "magic": 2,
+          "resistance": 3,
+          "speed": 12,
+          "luck": 3
+        },
+        "current_stats": {
+          "hp": 60,
+          "mp": 10,
+          "attack": 15,
+          "defense": 5,
+          "magic": 2,
+          "resistance": 3,
+          "speed": 12,
+          "luck": 3
+        },
+        "growth_stats": {
+          "hp_growth": 8,
+          "mp_growth": 1,
+          "attack_growth": 2,
+          "defense_growth": 0.5,
+          "magic_growth": 0.3,
+          "resistance_growth": 0.3,
+          "speed_growth": 1.5,
+          "luck_growth": 0.2
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": [
+          "skill_insect_claw",
+          "skill_acid_spray"
+        ],
+        "items": null,
+        "position": {
+          "map_id": "map_锈墙据点地下车库",
+          "x": 10,
+          "y": 10
+        },
+        "created_at": "",
+        "updated_at": ""
+      },
+      "char_低阶镰虫": {
+        "id": "char_低阶镰虫",
+        "template_id": "template_低阶镰虫",
+        "name": "低阶镰虫",
+        "type": "enemy",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 60,
+          "mp": 10,
+          "attack": 15,
+          "defense": 5,
+          "magic": 2,
+          "resistance": 3,
+          "speed": 12,
+          "luck": 3
+        },
+        "current_stats": {
+          "hp": 60,
+          "mp": 10,
+          "attack": 15,
+          "defense": 5,
+          "magic": 2,
+          "resistance": 3,
+          "speed": 12,
+          "luck": 3
+        },
+        "growth_stats": {
+          "hp_growth": 8,
+          "mp_growth": 1,
+          "attack_growth": 2,
+          "defense_growth": 0.5,
+          "magic_growth": 0.3,
+          "resistance_growth": 0.3,
+          "speed_growth": 1.5,
+          "luck_growth": 0.2
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": [
+          "skill_insect_claw",
+          "skill_acid_spray"
+        ],
+        "items": null,
+        "position": {
+          "map_id": "wasteland",
+          "x": 10,
+          "y": 10
+        },
+        "created_at": "",
+        "updated_at": ""
+      },
+      "char_八只镰虫一只高阶刺虫": {
+        "id": "char_八只镰虫一只高阶刺虫",
+        "template_id": "template_八只镰虫一只高阶刺虫",
+        "name": "八只镰虫、一只高阶刺虫",
+        "type": "enemy",
+        "level": 1,
+        "exp": 0,
+        "exp_to_next": 100,
+        "breakthrough_order": 0,
+        "base_stats_for_breakthrough": {
+          "hp": 0,
+          "mp": 0,
+          "attack": 0,
+          "defense": 0,
+          "magic": 0,
+          "resistance": 0,
+          "speed": 0,
+          "luck": 0
+        },
+        "base_stats": {
+          "hp": 60,
+          "mp": 10,
+          "attack": 15,
+          "defense": 5,
+          "magic": 2,
+          "resistance": 3,
+          "speed": 12,
+          "luck": 3
+        },
+        "current_stats": {
+          "hp": 60,
+          "mp": 10,
+          "attack": 15,
+          "defense": 5,
+          "magic": 2,
+          "resistance": 3,
+          "speed": 12,
+          "luck": 3
+        },
+        "growth_stats": {
+          "hp_growth": 8,
+          "mp_growth": 1,
+          "attack_growth": 2,
+          "defense_growth": 0.5,
+          "magic_growth": 0.3,
+          "resistance_growth": 0.3,
+          "speed_growth": 1.5,
+          "luck_growth": 0.2
+        },
+        "state": "normal",
+        "equipment": {},
+        "skills": [
+          "skill_insect_claw",
+          "skill_acid_spray"
+        ],
+        "items": null,
+        "position": {
+          "map_id": "map_地下休眠基地A3区主通道",
+          "x": 10,
+          "y": 10
+        },
+        "created_at": "",
+        "updated_at": ""
+      }
+    },
+    "templates": {
+      "protagonist": {
+        "id": "protagonist",
+        "name": "protagonist",
+        "description": "来自21世纪的普通人，因意外进入休眠仓穿越到未来",
+        "type": "player",
+        "race": "人类",
+        "base_stats": {
+          "hp": 100,
+          "mp": 50,
+          "attack": 10,
+          "defense": 10,
+          "magic": 10,
+          "resistance": 10,
+          "speed": 15,
+          "luck": 10
+        },
+        "growth_stats": {
+          "hp_growth": 12,
+          "mp_growth": 8,
+          "attack_growth": 3,
+          "defense_growth": 2,
+          "magic_growth": 3,
+          "resistance_growth": 2,
+          "speed_growth": 2,
+          "luck_growth": 1
+        },
+        "rarity": "legendary",
+        "default_skills": [
+          "快速学习",
+          "适应环境"
+        ]
+      },
+      "template_三只高阶刺虫虫群指挥虫": {
+        "id": "template_三只高阶刺虫虫群指挥虫",
+        "name": "三只高阶刺虫、虫群指挥虫",
+        "type": "enemy",
+        "base_stats": {
+          "hp": 60,
+          "mp": 10,
+          "attack": 15,
+          "defense": 5,
+          "magic": 2,
+          "resistance": 3,
+          "speed": 12,
+          "luck": 3
+        },
+        "growth_stats": {
+          "hp_growth": 8,
+          "mp_growth": 1,
+          "attack_growth": 2,
+          "defense_growth": 0.5,
+          "magic_growth": 0.3,
+          "resistance_growth": 0.3,
+          "speed_growth": 1.5,
+          "luck_growth": 0.2
+        },
+        "rarity": "common"
+      },
+      "template_五只镰虫": {
+        "id": "template_五只镰虫",
+        "name": "五只镰虫",
+        "type": "enemy",
+        "base_stats": {
+          "hp": 60,
+          "mp": 10,
+          "attack": 15,
+          "defense": 5,
+          "magic": 2,
+          "resistance": 3,
+          "speed": 12,
+          "luck": 3
+        },
+        "growth_stats": {
+          "hp_growth": 8,
+          "mp_growth": 1,
+          "attack_growth": 2,
+          "defense_growth": 0.5,
+          "magic_growth": 0.3,
+          "resistance_growth": 0.3,
+          "speed_growth": 1.5,
+          "luck_growth": 0.2
+        },
+        "rarity": "common"
+      },
+      "template_低阶镰虫": {
+        "id": "template_低阶镰虫",
+        "name": "低阶镰虫",
+        "type": "enemy",
+        "base_stats": {
+          "hp": 60,
+          "mp": 10,
+          "attack": 15,
+          "defense": 5,
+          "magic": 2,
+          "resistance": 3,
+          "speed": 12,
+          "luck": 3
+        },
+        "growth_stats": {
+          "hp_growth": 8,
+          "mp_growth": 1,
+          "attack_growth": 2,
+          "defense_growth": 0.5,
+          "magic_growth": 0.3,
+          "resistance_growth": 0.3,
+          "speed_growth": 1.5,
+          "luck_growth": 0.2
+        },
+        "rarity": "common"
+      },
+      "template_八只镰虫一只高阶刺虫": {
+        "id": "template_八只镰虫一只高阶刺虫",
+        "name": "八只镰虫、一只高阶刺虫",
+        "type": "enemy",
+        "base_stats": {
+          "hp": 60,
+          "mp": 10,
+          "attack": 15,
+          "defense": 5,
+          "magic": 2,
+          "resistance": 3,
+          "speed": 12,
+          "luck": 3
+        },
+        "growth_stats": {
+          "hp_growth": 8,
+          "mp_growth": 1,
+          "attack_growth": 2,
+          "defense_growth": 0.5,
+          "magic_growth": 0.3,
+          "resistance_growth": 0.3,
+          "speed_growth": 1.5,
+          "luck_growth": 0.2
+        },
+        "rarity": "common"
+      },
+      "template_所有据点居民": {
+        "id": "template_所有据点居民",
+        "name": "所有据点居民",
+        "type": "npc",
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "rarity": "common"
+      },
+      "template_据点守卫": {
+        "id": "template_据点守卫",
+        "name": "据点守卫",
+        "type": "npc",
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "rarity": "common"
+      },
+      "template_老周据点管理员": {
+        "id": "template_老周据点管理员",
+        "name": "老周（据点管理员）",
+        "type": "npc",
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "rarity": "common"
+      },
+      "template_苏晓": {
+        "id": "template_苏晓",
+        "name": "苏晓",
+        "type": "npc",
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "rarity": "common"
+      },
+      "template_苏晓队医": {
+        "id": "template_苏晓队医",
+        "name": "苏晓（队医）",
+        "type": "npc",
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "rarity": "common"
+      },
+      "template_阿零": {
+        "id": "template_阿零",
+        "name": "阿零",
+        "type": "npc",
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "rarity": "common"
+      },
+      "template_阿零机甲AI": {
+        "id": "template_阿零机甲AI",
+        "name": "阿零（机甲AI）",
+        "type": "npc",
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "rarity": "common"
+      },
+      "template_陆星眠": {
+        "id": "template_陆星眠",
+        "name": "陆星眠",
+        "type": "npc",
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "rarity": "common"
+      },
+      "template_陈野": {
+        "id": "template_陈野",
+        "name": "陈野",
+        "type": "npc",
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "rarity": "common"
+      },
+      "template_陈野拾荒队长": {
+        "id": "template_陈野拾荒队长",
+        "name": "陈野（拾荒队长）",
+        "type": "npc",
+        "base_stats": {
+          "hp": 50,
+          "mp": 30,
+          "attack": 8,
+          "defense": 6,
+          "magic": 6,
+          "resistance": 6,
+          "speed": 7,
+          "luck": 5
+        },
+        "growth_stats": {
+          "hp_growth": 5,
+          "mp_growth": 2,
+          "attack_growth": 1,
+          "defense_growth": 0.8,
+          "magic_growth": 0.8,
+          "resistance_growth": 0.8,
+          "speed_growth": 1,
+          "luck_growth": 0.5
+        },
+        "rarity": "common"
+      }
+    }
+  },
+  "classes": {
+    "classes": {}
+  },
+  "equipments": {
+    "equipments": {},
+    "sets": {},
+    "weapons": {}
+  },
+  "events": {
+    "common_events": {},
+    "events": {
+      "event_P1-V1-C1": {
+        "id": "event_P1-V1-C1",
+        "name": "冷舱梦醒",
+        "x": 10,
+        "y": 10,
+        "pages": [
+          {
+            "id": 0,
+            "conditions": {
+              "switch1_valid": false,
+              "switch2_valid": false,
+              "variable_valid": false,
+              "self_switch_valid": false,
+              "item_valid": false,
+              "actor_valid": false,
+              "timer_valid": false
+            },
+            "graphic": {
+              "character_name": "",
+              "character_index": 0,
+              "direction": 0,
+              "pattern": 0
+            },
+            "move_type": 0,
+            "move_speed": 0,
+            "move_freq": 0,
+            "walk_anime": false,
+            "step_anime": false,
+            "direction": false,
+            "through": false,
+            "priority": 0,
+            "trigger": "action",
+            "list": [
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陆星眠在零下三度的休眠仓中睁开眼，身边的显示屏跳转到3024年的日期"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "他摸到手边的智能手环，激活后得知虫族入侵、人类文明濒临崩溃的真相"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "他走到休眠基地大门处，发现厚重的合金门被黏腻的虫族腐蚀液封死，还能听见门外低阶虫族的嘶鸣"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "他翻遍休眠舱周边的储物格，只找到半瓶能量水和一把生锈的多功能军刀"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "event_P1-V1-C10": {
+        "id": "event_P1-V1-C10",
+        "name": "逐星之誓",
+        "x": 10,
+        "y": 10,
+        "pages": [
+          {
+            "id": 0,
+            "conditions": {
+              "switch1_valid": false,
+              "switch2_valid": false,
+              "variable_valid": false,
+              "self_switch_valid": false,
+              "item_valid": false,
+              "actor_valid": false,
+              "timer_valid": false
+            },
+            "graphic": {
+              "character_name": "",
+              "character_index": 0,
+              "direction": 0,
+              "pattern": 0
+            },
+            "move_type": 0,
+            "move_speed": 0,
+            "move_freq": 0,
+            "walk_anime": false,
+            "step_anime": false,
+            "direction": false,
+            "through": false,
+            "priority": 0,
+            "trigger": "action",
+            "list": [
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陆星眠思考了一整夜，告诉陈野和苏晓自己决定加入远征军"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陈野和苏晓也决定跟着他一起去，三人收拾好行李前往据点外的临时太空港"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陆星眠站在运输舰的舷窗边，看着越来越小的蓝色星球，摸着胸口的镰虫晶核发誓要夺回人类的家园"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "运输舰点火升空，进入跃迁航道，舷窗外突然出现虫族的星际巡逻舰的影子"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "event_P1-V1-C2": {
+        "id": "event_P1-V1-C2",
+        "name": "蚀液破局",
+        "x": 10,
+        "y": 10,
+        "pages": [
+          {
+            "id": 0,
+            "conditions": {
+              "switch1_valid": false,
+              "switch2_valid": false,
+              "variable_valid": false,
+              "self_switch_valid": false,
+              "item_valid": false,
+              "actor_valid": false,
+              "timer_valid": false
+            },
+            "graphic": {
+              "character_name": "",
+              "character_index": 0,
+              "direction": 0,
+              "pattern": 0
+            },
+            "move_type": 0,
+            "move_speed": 0,
+            "move_freq": 0,
+            "walk_anime": false,
+            "step_anime": false,
+            "direction": false,
+            "through": false,
+            "priority": 0,
+            "trigger": "action",
+            "list": [
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陆星眠握紧军刀尝试撬动大门缝隙，不小心被滴落的腐蚀液溅到手背"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "预想中的灼烧感没有出现，他惊讶地发现腐蚀液碰到他的皮肤就失去了活性"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "他用手直接扒开封堵的分泌物，不到十分钟就清出了足够一人通行的缺口"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "他刚探出头，就看见一只半人高的镰虫正背对着他啃食废弃机器人的残骸"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "event_P1-V1-C3": {
+        "id": "event_P1-V1-C3",
+        "name": "初斩异虫",
+        "x": 10,
+        "y": 10,
+        "pages": [
+          {
+            "id": 0,
+            "conditions": {
+              "switch1_valid": false,
+              "switch2_valid": false,
+              "variable_valid": false,
+              "self_switch_valid": false,
+              "item_valid": false,
+              "actor_valid": false,
+              "timer_valid": false
+            },
+            "graphic": {
+              "character_name": "",
+              "character_index": 0,
+              "direction": 0,
+              "pattern": 0
+            },
+            "move_type": 0,
+            "move_speed": 0,
+            "move_freq": 0,
+            "walk_anime": false,
+            "step_anime": false,
+            "direction": false,
+            "through": false,
+            "priority": 0,
+            "trigger": "action",
+            "list": [
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "镰虫感知到动静，挥着镰刀状的前肢朝陆星眠扑过来"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陆星眠侧身躲避，军刀砍在镰虫外壳上只留下一道白痕"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "他故意把腐蚀液抹在军刀上，趁镰虫攻击的间隙刺入它眼窝处的软肉"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "镰虫倒地死亡，他从虫脑里掏出一枚泛着蓝光的晶核，手环突然提示西北方向三公里有人类信号"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "event_P1-V1-C4": {
+        "id": "event_P1-V1-C4",
+        "name": "拾荒小队",
+        "x": 10,
+        "y": 10,
+        "pages": [
+          {
+            "id": 0,
+            "conditions": {
+              "switch1_valid": false,
+              "switch2_valid": false,
+              "variable_valid": false,
+              "self_switch_valid": false,
+              "item_valid": false,
+              "actor_valid": false,
+              "timer_valid": false
+            },
+            "graphic": {
+              "character_name": "",
+              "character_index": 0,
+              "direction": 0,
+              "pattern": 0
+            },
+            "move_type": 0,
+            "move_speed": 0,
+            "move_freq": 0,
+            "walk_anime": false,
+            "step_anime": false,
+            "direction": false,
+            "through": false,
+            "priority": 0,
+            "trigger": "action",
+            "list": [
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陆星眠循着信号跑了三公里，看见废弃加油站里三个穿防护服的人被五只镰虫围堵"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "他从侧面偷袭砍死一只镰虫，吸引了另外两只的注意力"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "拾荒队长陈野趁机用改装脉冲枪打爆剩下三只镰虫的头"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "队医苏晓给陆星眠处理手上的轻微划伤，陈野邀请他一起回临时据点"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "event_P1-V1-C5": {
+        "id": "event_P1-V1-C5",
+        "name": "锈墙据点",
+        "x": 10,
+        "y": 10,
+        "pages": [
+          {
+            "id": 0,
+            "conditions": {
+              "switch1_valid": false,
+              "switch2_valid": false,
+              "variable_valid": false,
+              "self_switch_valid": false,
+              "item_valid": false,
+              "actor_valid": false,
+              "timer_valid": false
+            },
+            "graphic": {
+              "character_name": "",
+              "character_index": 0,
+              "direction": 0,
+              "pattern": 0
+            },
+            "move_type": 0,
+            "move_speed": 0,
+            "move_freq": 0,
+            "walk_anime": false,
+            "step_anime": false,
+            "direction": false,
+            "through": false,
+            "priority": 0,
+            "trigger": "action",
+            "list": [
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陆星眠跟着陈野穿过两道带高压电的锈铁闸门，进入被高墙围起来的锈墙据点"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "管理员老周登记他的身份，对他的抗蚀能力表现出极大的惊讶"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陈野给他安排了临时住所，给他讲了三百年间虫族入侵、人类败退到火星的历史"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陆星眠刚把晶核换成据点积分，就听见据点警报响起，大量虫族正在朝据点方向移动"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "event_P1-V1-C6": {
+        "id": "event_P1-V1-C6",
+        "name": "虫潮压境",
+        "x": 10,
+        "y": 10,
+        "pages": [
+          {
+            "id": 0,
+            "conditions": {
+              "switch1_valid": false,
+              "switch2_valid": false,
+              "variable_valid": false,
+              "self_switch_valid": false,
+              "item_valid": false,
+              "actor_valid": false,
+              "timer_valid": false
+            },
+            "graphic": {
+              "character_name": "",
+              "character_index": 0,
+              "direction": 0,
+              "pattern": 0
+            },
+            "move_type": 0,
+            "move_speed": 0,
+            "move_freq": 0,
+            "walk_anime": false,
+            "step_anime": false,
+            "direction": false,
+            "through": false,
+            "priority": 0,
+            "trigger": "action",
+            "list": [
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "刺耳的警报声响遍整个据点，所有居民都被要求要么参与防守要么撤离到地下防空洞"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陆星眠跟着陈野守在西南角城墙，看见密密麻麻的低阶虫族像潮水一样涌过来"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "连续斩杀十几只镰虫后，他发现自己的速度和力量都比之前强了不少，腐蚀液溅到身上完全没有感觉"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "一只高阶刺虫突破防线，射出的尖刺击穿了城墙的能源核心，外墙防御罩直接失效"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "event_P1-V1-C7": {
+        "id": "event_P1-V1-C7",
+        "name": "机甲残骸",
+        "x": 10,
+        "y": 10,
+        "pages": [
+          {
+            "id": 0,
+            "conditions": {
+              "switch1_valid": false,
+              "switch2_valid": false,
+              "variable_valid": false,
+              "self_switch_valid": false,
+              "item_valid": false,
+              "actor_valid": false,
+              "timer_valid": false
+            },
+            "graphic": {
+              "character_name": "",
+              "character_index": 0,
+              "direction": 0,
+              "pattern": 0
+            },
+            "move_type": 0,
+            "move_speed": 0,
+            "move_freq": 0,
+            "walk_anime": false,
+            "step_anime": false,
+            "direction": false,
+            "through": false,
+            "priority": 0,
+            "trigger": "action",
+            "list": [
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陈野把取备用能源的任务交给陆星眠，苏晓跟着他一起往地下车库跑"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "他们在车库最里面的防护罩后面，发现了被帆布盖着的、十几米高的银灰色机甲残骸"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陆星眠的手碰到机甲外壳的瞬间，机甲胸口的指示灯突然亮起，一个电子音提示基因匹配度100%"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "智能系统阿零告诉他，星尘号还剩30%的能源，可以启动基础战斗模式，这时车库入口传来虫族的嘶鸣"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "event_P1-V1-C8": {
+        "id": "event_P1-V1-C8",
+        "name": "星尘初启",
+        "x": 10,
+        "y": 10,
+        "pages": [
+          {
+            "id": 0,
+            "conditions": {
+              "switch1_valid": false,
+              "switch2_valid": false,
+              "variable_valid": false,
+              "self_switch_valid": false,
+              "item_valid": false,
+              "actor_valid": false,
+              "timer_valid": false
+            },
+            "graphic": {
+              "character_name": "",
+              "character_index": 0,
+              "direction": 0,
+              "pattern": 0
+            },
+            "move_type": 0,
+            "move_speed": 0,
+            "move_freq": 0,
+            "walk_anime": false,
+            "step_anime": false,
+            "direction": false,
+            "through": false,
+            "priority": 0,
+            "trigger": "action",
+            "list": [
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陆星眠按照阿零的提示爬进驾驶舱，戴上神经连接头盔"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "机甲启动的震动传遍整个车库，十几米高的星尘号缓缓站起身"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "他操控机甲握紧腰间的合金战刀，一刀就把冲在最前面的刺虫劈成两半"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陆星眠让苏晓拿好备用能源，操控机甲破开车库天花板直接跳到地面防线"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "event_P1-V1-C9": {
+        "id": "event_P1-V1-C9",
+        "name": "退敌守家",
+        "x": 10,
+        "y": 10,
+        "pages": [
+          {
+            "id": 0,
+            "conditions": {
+              "switch1_valid": false,
+              "switch2_valid": false,
+              "variable_valid": false,
+              "self_switch_valid": false,
+              "item_valid": false,
+              "actor_valid": false,
+              "timer_valid": false
+            },
+            "graphic": {
+              "character_name": "",
+              "character_index": 0,
+              "direction": 0,
+              "pattern": 0
+            },
+            "move_type": 0,
+            "move_speed": 0,
+            "move_freq": 0,
+            "walk_anime": false,
+            "step_anime": false,
+            "direction": false,
+            "through": false,
+            "priority": 0,
+            "trigger": "action",
+            "list": [
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "星尘号落在防线前的瞬间，所有防守的居民都发出了惊呼"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陆星眠操控机甲接连斩杀三只高阶刺虫，虫潮的攻势瞬间就弱了下来"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "陈野趁机换上备用能源重启防御罩，剩下的虫族见攻不进去纷纷撤退"
+                ]
+              },
+              {
+                "code": "show_text",
+                "indent": 0,
+                "parameters": [
+                  "战后的庆祝会上，陈野拿出刚刚收到的火星联邦通讯，说要征召有基因进化能力的人去火星参加远征军"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "items": {
+    "items": {
+      "cryo_pod": {
+        "id": "cryo_pod",
+        "name": "cryo_pod",
+        "description": "让主角穿越到未来的冬眠设备",
+        "type": "misc",
+        "rarity": "legendary",
+        "weight": 0.1,
+        "max_stack": 99,
+        "value": 300,
+        "effects": [
+          {
+            "type": "buff",
+            "target": "self"
+          },
+          {
+            "type": "buff",
+            "target": "self"
+          }
+        ],
+        "is_usable": true,
+        "is_droppable": true,
+        "is_sellable": true
+      },
+      "survival_kit": {
+        "id": "survival_kit",
+        "name": "survival_kit",
+        "description": "基础的生存工具包",
+        "type": "misc",
+        "rarity": "epic",
+        "weight": 0.1,
+        "max_stack": 99,
+        "value": 1000,
+        "is_usable": false,
+        "is_droppable": true,
+        "is_sellable": true
+      }
+    }
+  },
+  "maps": {
+    "maps": {
+      "cryo_facility": {
+        "id": "cryo_facility",
+        "name": "cryo_facility",
+        "description": "主角醒来的地方，废弃的冬眠设施",
+        "type": "field",
+        "width": 20,
+        "height": 15,
+        "tile_size": 32,
+        "entities": [],
+        "teleports": [],
+        "light_level": 100,
+        "is_indoor": false,
+        "connections": [
+          {
+            "direction": "unknown",
+            "map_id": "wasteland"
+          }
+        ]
+      },
+      "map_休眠基地外废弃公路": {
+        "id": "map_休眠基地外废弃公路",
+        "name": "休眠基地外废弃公路",
+        "description": "休眠基地外废弃公路",
+        "type": "field",
+        "width": 20,
+        "height": 15,
+        "tile_size": 32,
+        "entities": [
+          {
+            "id": "entity_event_P1-V1-C3",
+            "type": "event",
+            "entity_id": "event_P1-V1-C3",
+            "name": "初斩异虫",
+            "x": 10,
+            "y": 10,
+            "is_visible": true,
+            "is_active": true
+          }
+        ],
+        "teleports": [],
+        "light_level": 100,
+        "is_indoor": false
+      },
+      "map_华国西南废弃地下休眠基地A3区": {
+        "id": "map_华国西南废弃地下休眠基地A3区",
+        "name": "华国西南废弃地下休眠基地A3区",
+        "description": "华国西南废弃地下休眠基地A3区",
+        "type": "field",
+        "width": 20,
+        "height": 15,
+        "tile_size": 32,
+        "entities": [
+          {
+            "id": "entity_event_P1-V1-C1",
+            "type": "event",
+            "entity_id": "event_P1-V1-C1",
+            "name": "冷舱梦醒",
+            "x": 10,
+            "y": 10,
+            "is_visible": true,
+            "is_active": true
+          }
+        ],
+        "teleports": [],
+        "light_level": 100,
+        "is_indoor": false
+      },
+      "map_地下休眠基地A3区主通道": {
+        "id": "map_地下休眠基地A3区主通道",
+        "name": "地下休眠基地A3区主通道",
+        "description": "地下休眠基地A3区主通道",
+        "type": "field",
+        "width": 20,
+        "height": 15,
+        "tile_size": 32,
+        "entities": [
+          {
+            "id": "entity_event_P1-V1-C2",
+            "type": "event",
+            "entity_id": "event_P1-V1-C2",
+            "name": "蚀液破局",
+            "x": 10,
+            "y": 10,
+            "is_visible": true,
+            "is_active": true
+          }
+        ],
+        "teleports": [],
+        "light_level": 100,
+        "is_indoor": false
+      },
+      "map_废弃加油站": {
+        "id": "map_废弃加油站",
+        "name": "废弃加油站",
+        "description": "废弃加油站",
+        "type": "field",
+        "width": 20,
+        "height": 15,
+        "tile_size": 32,
+        "entities": [
+          {
+            "id": "entity_event_P1-V1-C4",
+            "type": "event",
+            "entity_id": "event_P1-V1-C4",
+            "name": "拾荒小队",
+            "x": 10,
+            "y": 10,
+            "is_visible": true,
+            "is_active": true
+          }
+        ],
+        "teleports": [],
+        "light_level": 100,
+        "is_indoor": false
+      },
+      "map_锈墙幸存者据点": {
+        "id": "map_锈墙幸存者据点",
+        "name": "锈墙幸存者据点",
+        "description": "锈墙幸存者据点",
+        "type": "field",
+        "width": 20,
+        "height": 15,
+        "tile_size": 32,
+        "entities": [
+          {
+            "id": "entity_event_P1-V1-C5",
+            "type": "event",
+            "entity_id": "event_P1-V1-C5",
+            "name": "锈墙据点",
+            "x": 10,
+            "y": 10,
+            "is_visible": true,
+            "is_active": true
+          }
+        ],
+        "teleports": [],
+        "light_level": 100,
+        "is_indoor": false
+      },
+      "map_锈墙据点地下车库": {
+        "id": "map_锈墙据点地下车库",
+        "name": "锈墙据点地下车库",
+        "description": "锈墙据点地下车库",
+        "type": "field",
+        "width": 20,
+        "height": 15,
+        "tile_size": 32,
+        "entities": [
+          {
+            "id": "entity_event_P1-V1-C7",
+            "type": "event",
+            "entity_id": "event_P1-V1-C7",
+            "name": "机甲残骸",
+            "x": 10,
+            "y": 10,
+            "is_visible": true,
+            "is_active": true
+          }
+        ],
+        "teleports": [],
+        "light_level": 100,
+        "is_indoor": false
+      },
+      "map_锈墙据点地下车库外墙防线": {
+        "id": "map_锈墙据点地下车库外墙防线",
+        "name": "锈墙据点地下车库、外墙防线",
+        "description": "锈墙据点地下车库、外墙防线",
+        "type": "field",
+        "width": 20,
+        "height": 15,
+        "tile_size": 32,
+        "entities": [
+          {
+            "id": "entity_event_P1-V1-C8",
+            "type": "event",
+            "entity_id": "event_P1-V1-C8",
+            "name": "星尘初启",
+            "x": 10,
+            "y": 10,
+            "is_visible": true,
+            "is_active": true
+          }
+        ],
+        "teleports": [],
+        "light_level": 100,
+        "is_indoor": false
+      },
+      "map_锈墙据点外临时太空港": {
+        "id": "map_锈墙据点外临时太空港",
+        "name": "锈墙据点外临时太空港",
+        "description": "锈墙据点外临时太空港",
+        "type": "field",
+        "width": 20,
+        "height": 15,
+        "tile_size": 32,
+        "entities": [
+          {
+            "id": "entity_event_P1-V1-C10",
+            "type": "event",
+            "entity_id": "event_P1-V1-C10",
+            "name": "逐星之誓",
+            "x": 10,
+            "y": 10,
+            "is_visible": true,
+            "is_active": true
+          }
+        ],
+        "teleports": [],
+        "light_level": 100,
+        "is_indoor": false
+      },
+      "map_锈墙据点外墙": {
+        "id": "map_锈墙据点外墙",
+        "name": "锈墙据点外墙",
+        "description": "锈墙据点外墙",
+        "type": "field",
+        "width": 20,
+        "height": 15,
+        "tile_size": 32,
+        "entities": [
+          {
+            "id": "entity_event_P1-V1-C6",
+            "type": "event",
+            "entity_id": "event_P1-V1-C6",
+            "name": "虫潮压境",
+            "x": 10,
+            "y": 10,
+            "is_visible": true,
+            "is_active": true
+          },
+          {
+            "id": "entity_event_P1-V1-C9",
+            "type": "event",
+            "entity_id": "event_P1-V1-C9",
+            "name": "退敌守家",
+            "x": 10,
+            "y": 10,
+            "is_visible": true,
+            "is_active": true
+          }
+        ],
+        "teleports": [],
+        "light_level": 100,
+        "is_indoor": false
+      },
+      "wasteland": {
+        "id": "wasteland",
+        "name": "wasteland",
+        "description": "危机四伏的未来世界，充满虫族和废墟",
+        "type": "field",
+        "width": 20,
+        "height": 15,
+        "tile_size": 32,
+        "entities": [],
+        "teleports": [],
+        "light_level": 100,
+        "is_indoor": false,
+        "connections": [
+          {
+            "direction": "unknown",
+            "map_id": "cryo_facility"
+          }
+        ]
+      }
+    }
+  },
+  "project_summary": {
+    "book_name": "fire-galaxy",
+    "characters": 1,
+    "items": 2,
+    "locations": 2,
+    "parts": 1
+  },
+  "quests": {
+    "instances": {},
+    "quests": {
+      "quest_P1-V1-C1": {
+        "id": "quest_P1-V1-C1",
+        "name": "冷舱梦醒",
+        "description": "陆星眠在废弃地下休眠基地的休眠仓中苏醒，发现自己身处三百年后的虫族入侵时代",
+        "type": "main",
+        "level_required": 1,
+        "prerequisites": {},
+        "objectives": [
+          {
+            "id": "P1-V1-C1_obj_0",
+            "type": "reach",
+            "description": "陆星眠完成时间穿越，当前日期为3024年",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_华国西南废弃地下休眠基地A3区"
+          },
+          {
+            "id": "P1-V1-C1_obj_1",
+            "type": "collect",
+            "description": "手环内置三百年间人类文明历史、虫族基础信息数据库",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_华国西南废弃地下休眠基地A3区"
+          },
+          {
+            "id": "P1-V1-C1_obj_2",
+            "type": "collect",
+            "description": "陆星眠被困在基地内，门外传来低阶虫族的嘶鸣声",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_华国西南废弃地下休眠基地A3区"
+          }
+        ],
+        "rewards": {
+          "exp": 50,
+          "money": 20,
+          "items": [
+            {
+              "item_id": "item_health_potion",
+              "count": 1
+            }
+          ]
+        },
+        "is_repeatable": false
+      },
+      "quest_P1-V1-C10": {
+        "id": "quest_P1-V1-C10",
+        "name": "逐星之誓",
+        "description": "陆星眠决定加入火星联邦的远征军，和陈野、苏晓一起踏上前往太空的飞船，正式开启逐星远征的旅程",
+        "type": "main",
+        "level_required": 10,
+        "prerequisites": {},
+        "objectives": [
+          {
+            "id": "P1-V1-C10_obj_0",
+            "type": "event",
+            "description": "正式决定加入火星远征军",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点外临时太空港"
+          },
+          {
+            "id": "P1-V1-C10_obj_1",
+            "type": "event",
+            "description": "获得登上前往火星运输舰的资格",
+            "target_id": "",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点外临时太空港"
+          },
+          {
+            "id": "P1-V1-C10_obj_2",
+            "type": "reach",
+            "description": "运输舰进入跃迁航道，舷窗外出现虫族星际巡逻舰的影子",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点外临时太空港"
+          }
+        ],
+        "rewards": {
+          "exp": 500,
+          "money": 200,
+          "items": [
+            {
+              "item_id": "item_health_potion",
+              "count": 10
+            }
+          ]
+        },
+        "is_repeatable": false
+      },
+      "quest_P1-V1-C2": {
+        "id": "quest_P1-V1-C2",
+        "name": "蚀液破局",
+        "description": "陆星眠尝试破解被虫族分泌物封堵的基地出口，意外发现自己对虫族腐蚀液免疫",
+        "type": "main",
+        "level_required": 2,
+        "prerequisites": {},
+        "objectives": [
+          {
+            "id": "P1-V1-C2_obj_0",
+            "type": "event",
+            "description": "确认自身携带休眠仓改造的特殊基因，对虫族腐蚀液免疫",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_地下休眠基地A3区主通道"
+          },
+          {
+            "id": "P1-V1-C2_obj_1",
+            "type": "event",
+            "description": "成功清理出一人宽的通行缺口",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_地下休眠基地A3区主通道"
+          },
+          {
+            "id": "P1-V1-C2_obj_2",
+            "type": "reach",
+            "description": "进入被虫族污染的废弃公路区域",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_地下休眠基地A3区主通道"
+          }
+        ],
+        "rewards": {
+          "exp": 100,
+          "money": 40,
+          "items": [
+            {
+              "item_id": "item_health_potion",
+              "count": 2
+            }
+          ]
+        },
+        "is_repeatable": false
+      },
+      "quest_P1-V1-C3": {
+        "id": "quest_P1-V1-C3",
+        "name": "初斩异虫",
+        "description": "陆星眠首次对战低阶镰虫，凭借基因抗蚀能力险胜，获得第一份虫族素材",
+        "type": "main",
+        "level_required": 3,
+        "prerequisites": {},
+        "objectives": [
+          {
+            "id": "P1-V1-C3_obj_0",
+            "type": "defeat",
+            "description": "成功击杀人生中第一只虫族",
+            "target_id": "char_低阶镰虫",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_休眠基地外废弃公路"
+          },
+          {
+            "id": "P1-V1-C3_obj_1",
+            "type": "collect",
+            "description": "获得可以兑换物资的硬通货",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_休眠基地外废弃公路"
+          },
+          {
+            "id": "P1-V1-C3_obj_2",
+            "type": "event",
+            "description": "智能手环检测到西北方向3公里有人类活动信号",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_休眠基地外废弃公路"
+          }
+        ],
+        "rewards": {
+          "exp": 150,
+          "money": 60,
+          "items": [
+            {
+              "item_id": "item_health_potion",
+              "count": 3
+            }
+          ]
+        },
+        "is_repeatable": false
+      },
+      "quest_P1-V1-C4": {
+        "id": "quest_P1-V1-C4",
+        "name": "拾荒小队",
+        "description": "陆星眠循着信号找到正在被镰虫群围攻的拾荒小队，出手相助获得对方信任",
+        "type": "main",
+        "level_required": 4,
+        "prerequisites": {},
+        "objectives": [
+          {
+            "id": "P1-V1-C4_obj_0",
+            "type": "talk",
+            "description": "陆星眠吸引两只镰虫的注意力，缓解小队压力",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_废弃加油站"
+          },
+          {
+            "id": "P1-V1-C4_obj_1",
+            "type": "defeat",
+            "description": "成功解除小队的危机",
+            "target_id": "char_五只镰虫",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_废弃加油站"
+          },
+          {
+            "id": "P1-V1-C4_obj_2",
+            "type": "event",
+            "description": "陆星眠同意同行，暂时加入拾荒小队",
+            "target_id": "char_陈野",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_废弃加油站"
+          }
+        ],
+        "rewards": {
+          "exp": 200,
+          "money": 80,
+          "items": [
+            {
+              "item_id": "item_health_potion",
+              "count": 4
+            }
+          ]
+        },
+        "is_repeatable": false
+      },
+      "quest_P1-V1-C5": {
+        "id": "quest_P1-V1-C5",
+        "name": "锈墙据点",
+        "description": "陆星眠跟随拾荒小队回到小型幸存者据点，了解当前人类的生存现状，登记成为临时居民",
+        "type": "main",
+        "level_required": 5,
+        "prerequisites": {},
+        "objectives": [
+          {
+            "id": "P1-V1-C5_obj_0",
+            "type": "reach",
+            "description": "成功进入有基础防御的安全区域",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙幸存者据点"
+          },
+          {
+            "id": "P1-V1-C5_obj_1",
+            "type": "event",
+            "description": "陆星眠完整掌握当前世界的势力格局",
+            "target_id": "char_陈野",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙幸存者据点"
+          },
+          {
+            "id": "P1-V1-C5_obj_2",
+            "type": "event",
+            "description": "陆星眠获得在据点居住、交易、参与任务的权限",
+            "target_id": "",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙幸存者据点"
+          }
+        ],
+        "rewards": {
+          "exp": 250,
+          "money": 100,
+          "items": [
+            {
+              "item_id": "item_health_potion",
+              "count": 5
+            }
+          ]
+        },
+        "is_repeatable": false
+      },
+      "quest_P1-V1-C6": {
+        "id": "quest_P1-V1-C6",
+        "name": "虫潮压境",
+        "description": "锈墙据点遭遇大规模虫潮袭击，防御阵线濒临崩溃，陆星眠加入防守队伍参战",
+        "type": "main",
+        "level_required": 6,
+        "prerequisites": {},
+        "objectives": [
+          {
+            "id": "P1-V1-C6_obj_0",
+            "type": "event",
+            "description": "所有成年居民被分配到防守岗位",
+            "target_id": "",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点外墙"
+          },
+          {
+            "id": "P1-V1-C6_obj_1",
+            "type": "event",
+            "description": "速度、力量提升30%，完全免疫低阶虫族腐蚀液",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点外墙"
+          },
+          {
+            "id": "P1-V1-C6_obj_2",
+            "type": "event",
+            "description": "据点失去最大防御屏障，虫族即将冲进内部",
+            "target_id": "",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点外墙"
+          }
+        ],
+        "rewards": {
+          "exp": 300,
+          "money": 120,
+          "items": [
+            {
+              "item_id": "item_health_potion",
+              "count": 6
+            }
+          ]
+        },
+        "is_repeatable": false
+      },
+      "quest_P1-V1-C7": {
+        "id": "quest_P1-V1-C7",
+        "name": "机甲残骸",
+        "description": "防御罩失效后陆星眠奉命去据点地下车库取备用能源，意外发现尘封的初代机甲「星尘号」的残骸",
+        "type": "main",
+        "level_required": 7,
+        "prerequisites": {},
+        "objectives": [
+          {
+            "id": "P1-V1-C7_obj_0",
+            "type": "reach",
+            "description": "进入存放备用能源的封闭区域",
+            "target_id": "",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点地下车库"
+          },
+          {
+            "id": "P1-V1-C7_obj_1",
+            "type": "collect",
+            "description": "发现被尘封的银灰色初代机甲残骸",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点地下车库"
+          },
+          {
+            "id": "P1-V1-C7_obj_2",
+            "type": "event",
+            "description": "AI阿零告知机甲剩余30%能源，可启动基础战斗模式",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点地下车库"
+          }
+        ],
+        "rewards": {
+          "exp": 350,
+          "money": 140,
+          "items": [
+            {
+              "item_id": "item_health_potion",
+              "count": 7
+            }
+          ]
+        },
+        "is_repeatable": false
+      },
+      "quest_P1-V1-C8": {
+        "id": "quest_P1-V1-C8",
+        "name": "星尘初启",
+        "description": "陆星眠启动初代机甲星尘号，斩杀冲进车库的虫族，返回地面支援防线",
+        "type": "main",
+        "level_required": 8,
+        "prerequisites": {},
+        "objectives": [
+          {
+            "id": "P1-V1-C8_obj_0",
+            "type": "event",
+            "description": "可以独立操控机甲完成移动、攻击等基础动作",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点地下车库外墙防线"
+          },
+          {
+            "id": "P1-V1-C8_obj_1",
+            "type": "defeat",
+            "description": "完全清除车库内的虫族威胁",
+            "target_id": "char_八只镰虫一只高阶刺虫",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点地下车库外墙防线"
+          },
+          {
+            "id": "P1-V1-C8_obj_2",
+            "type": "reach",
+            "description": "机甲破开天花板直接落到地面防线前",
+            "target_id": "char_陆星眠",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点地下车库外墙防线"
+          }
+        ],
+        "rewards": {
+          "exp": 400,
+          "money": 160,
+          "items": [
+            {
+              "item_id": "item_health_potion",
+              "count": 8
+            }
+          ]
+        },
+        "is_repeatable": false
+      },
+      "quest_P1-V1-C9": {
+        "id": "quest_P1-V1-C9",
+        "name": "退敌守家",
+        "description": "陆星眠驾驶星尘号击退虫潮，守住锈墙据点，成为据点的英雄，得知火星联邦的征召信息",
+        "type": "main",
+        "level_required": 9,
+        "prerequisites": {},
+        "objectives": [
+          {
+            "id": "P1-V1-C9_obj_0",
+            "type": "defeat",
+            "description": "虫潮失去指挥开始溃散",
+            "target_id": "char_三只高阶刺虫虫群指挥虫",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点外墙"
+          },
+          {
+            "id": "P1-V1-C9_obj_1",
+            "type": "event",
+            "description": "据点无一平民伤亡，防守取得完全胜利",
+            "target_id": "",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点外墙"
+          },
+          {
+            "id": "P1-V1-C9_obj_2",
+            "type": "event",
+            "description": "陆星眠获得离开地球、前往人类主阵营的官方途径",
+            "target_id": "char_陈野",
+            "target_count": 1,
+            "current_count": 0,
+            "is_optional": false,
+            "is_completed": false,
+            "location_id": "map_锈墙据点外墙"
+          }
+        ],
+        "rewards": {
+          "exp": 450,
+          "money": 180,
+          "items": [
+            {
+              "item_id": "item_health_potion",
+              "count": 9
+            }
+          ]
+        },
+        "is_repeatable": false
+      }
+    }
+  },
+  "skills": {
+    "skills": {
+      "skill_acid_spray": {
+        "id": "skill_acid_spray",
+        "name": "酸液喷射",
+        "description": "喷射腐蚀性酸液，造成魔法伤害",
+        "type": "active",
+        "level_required": 1,
+        "cost": {
+          "mp": 10
+        },
+        "cooldown": 3,
+        "target": "single",
+        "damage": {
+          "type": "magic",
+          "power": 12,
+          "scaling_stat": "magic",
+          "scaling_factor": 1.5,
+          "is_fixed": false
+        },
+        "max_level": 3
+      },
+      "skill_area_attack": {
+        "id": "skill_area_attack",
+        "name": "范围攻击",
+        "description": "对全体敌人造成伤害",
+        "type": "active",
+        "level_required": 1,
+        "cost": {
+          "mp": 25
+        },
+        "cooldown": 4,
+        "target": "all",
+        "damage": {
+          "type": "physical",
+          "power": 10,
+          "scaling_stat": "attack",
+          "scaling_factor": 1.2,
+          "is_fixed": false
+        },
+        "max_level": 3
+      },
+      "skill_basic_attack": {
+        "id": "skill_basic_attack",
+        "name": "基础攻击",
+        "description": "基础攻击技能",
+        "type": "active",
+        "level_required": 1,
+        "cost": {},
+        "cooldown": 1,
+        "target": "single",
+        "damage": {
+          "type": "physical",
+          "power": 5,
+          "scaling_stat": "attack",
+          "scaling_factor": 1,
+          "is_fixed": false
+        },
+        "max_level": 1
+      },
+      "skill_beast_bite": {
+        "id": "skill_beast_bite",
+        "name": "野兽撕咬",
+        "description": "用锋利的牙齿撕咬敌人",
+        "type": "active",
+        "level_required": 1,
+        "cost": {},
+        "cooldown": 1,
+        "target": "single",
+        "damage": {
+          "type": "physical",
+          "power": 10,
+          "scaling_stat": "attack",
+          "scaling_factor": 1.1,
+          "is_fixed": false
+        },
+        "max_level": 3
+      },
+      "skill_ferocious_charge": {
+        "id": "skill_ferocious_charge",
+        "name": "凶猛冲锋",
+        "description": "凶猛地向敌人冲锋，造成伤害并有一定概率击退",
+        "type": "active",
+        "level_required": 1,
+        "cost": {
+          "mp": 5
+        },
+        "cooldown": 2,
+        "target": "single",
+        "damage": {
+          "type": "physical",
+          "power": 8,
+          "scaling_stat": "attack",
+          "scaling_factor": 1.3,
+          "is_fixed": false
+        },
+        "effects": [
+          {
+            "type": "debuff",
+            "chance": 0.2,
+            "duration": 1,
+            "value": {
+              "stat": "speed",
+              "value": -5
+            }
+          }
+        ],
+        "max_level": 3
+      },
+      "skill_insect_claw": {
+        "id": "skill_insect_claw",
+        "name": "虫族利爪",
+        "description": "用锋利的虫族利爪攻击敌人",
+        "type": "active",
+        "level_required": 1,
+        "cost": {},
+        "cooldown": 1,
+        "target": "single",
+        "damage": {
+          "type": "physical",
+          "power": 8,
+          "scaling_stat": "attack",
+          "scaling_factor": 1,
+          "is_fixed": false
+        },
+        "max_level": 3
+      },
+      "skill_power_strike": {
+        "id": "skill_power_strike",
+        "name": "强力打击",
+        "description": "强力攻击敌人，造成1.8倍攻击力的伤害",
+        "type": "active",
+        "level_required": 2,
+        "cost": {
+          "mp": 15
+        },
+        "cooldown": 3,
+        "target": "single",
+        "damage": {
+          "type": "physical",
+          "power": 10,
+          "scaling_stat": "attack",
+          "scaling_factor": 1.8,
+          "is_fixed": false
+        },
+        "max_level": 5
+      },
+      "skill_powerful_strike": {
+        "id": "skill_powerful_strike",
+        "name": "强力攻击",
+        "description": "Boss级的强力攻击",
+        "type": "active",
+        "level_required": 1,
+        "cost": {},
+        "cooldown": 1,
+        "target": "single",
+        "damage": {
+          "type": "physical",
+          "power": 15,
+          "scaling_stat": "attack",
+          "scaling_factor": 1.5,
+          "is_fixed": false
+        },
+        "max_level": 5
+      },
+      "skill_quick_strike": {
+        "id": "skill_quick_strike",
+        "name": "快速打击",
+        "description": "快速攻击敌人，造成1.2倍攻击力的伤害",
+        "type": "active",
+        "level_required": 1,
+        "cost": {
+          "mp": 5
+        },
+        "cooldown": 2,
+        "target": "single",
+        "damage": {
+          "type": "physical",
+          "power": 5,
+          "scaling_stat": "attack",
+          "scaling_factor": 1.2,
+          "is_fixed": false
+        },
+        "max_level": 5
+      },
+      "skill_rage": {
+        "id": "skill_rage",
+        "name": "狂暴",
+        "description": "进入狂暴状态，提升攻击力",
+        "type": "active",
+        "level_required": 1,
+        "cost": {
+          "mp": 20
+        },
+        "cooldown": 4,
+        "target": "self",
+        "effects": [
+          {
+            "type": "buff",
+            "chance": 1,
+            "duration": 3,
+            "value": {
+              "stat": "attack",
+              "value": 10
+            }
+          }
+        ],
+        "max_level": 3
+      }
+    }
+  },
+  "world_data": {
+    "current_map": "",
+    "day_night": 12,
+    "game_time": 0,
+    "player": {
+      "base_stats": {
+        "attack": 10,
+        "defense": 10,
+        "hp": 100,
+        "luck": 10,
+        "magic": 10,
+        "mp": 50,
+        "resistance": 10,
+        "speed": 15
+      },
+      "base_stats_for_breakthrough": {
+        "attack": 0,
+        "defense": 0,
+        "hp": 0,
+        "luck": 0,
+        "magic": 0,
+        "mp": 0,
+        "resistance": 0,
+        "speed": 0
+      },
+      "breakthrough_order": 0,
+      "created_at": "1776615648",
+      "current_stats": {
+        "attack": 10,
+        "defense": 10,
+        "hp": 100,
+        "luck": 10,
+        "magic": 10,
+        "mp": 50,
+        "resistance": 10,
+        "speed": 15
+      },
+      "description": "来自21世纪的普通人，因意外进入休眠仓穿越到未来",
+      "equipment": {},
+      "exp": 0,
+      "exp_to_next": 100,
+      "growth_stats": {
+        "attack_growth": 3,
+        "defense_growth": 2,
+        "hp_growth": 12,
+        "luck_growth": 1,
+        "magic_growth": 3,
+        "mp_growth": 8,
+        "resistance_growth": 2,
+        "speed_growth": 2
+      },
+      "id": "char_1776615648493390000_12",
+      "items": [],
+      "level": 1,
+      "name": "protagonist",
+      "position": {
+        "map_id": "",
+        "x": 0,
+        "y": 0
+      },
+      "race": "人类",
+      "skills": [
+        "快速学习",
+        "适应环境"
+      ],
+      "state": "normal",
+      "template_id": "protagonist",
+      "type": "player",
+      "updated_at": "1776615648"
+    },
+    "quest_log": {
+      "active_quests": [],
+      "completed_quests": [],
+      "failed_quests": [],
+      "quest_instances": {}
+    },
+    "weather": "clear",
+    "world_flags": {}
+  }
+}

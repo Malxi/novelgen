@@ -13,43 +13,157 @@ type StoryOutline struct {
 
 // StoryPart 故事部分
 type StoryPart struct {
-	ID       string        `json:"id"`
-	Title    string        `json:"title"`
-	Summary  string        `json:"summary"`
-	Volumes  []StoryVolume `json:"volumes"`
+	ID      string        `json:"id"`
+	Title   string        `json:"title"`
+	Summary string        `json:"summary"`
+	Volumes []StoryVolume `json:"volumes"`
 }
 
 // StoryVolume 故事卷
 type StoryVolume struct {
-	ID        string         `json:"id"`
-	Title     string         `json:"title"`
-	Summary   string         `json:"summary"`
-	Chapters  []StoryChapter `json:"chapters"`
+	ID       string         `json:"id"`
+	Title    string         `json:"title"`
+	Summary  string         `json:"summary"`
+	Chapters []StoryChapter `json:"chapters"`
 }
 
 // StoryChapter 故事章节
 type StoryChapter struct {
-	ID           string         `json:"id"`
-	Title        string         `json:"title"`
-	Summary      string         `json:"summary"`
-	Characters   []string       `json:"characters"`
-	Location     string         `json:"location"`
-	Events       []StoryEvent   `json:"events"`
-	Beats        []string       `json:"beats"`
-	OpeningBeat  string         `json:"opening_beat"`
-	ClosingBeat  string         `json:"closing_beat"`
-	StateChange  string         `json:"state_change"`
-	Conflict     string         `json:"conflict"`
-	Pacing       string         `json:"pacing"`
+	ID          string       `json:"id"`
+	Title       string       `json:"title"`
+	Summary     string       `json:"summary"`
+	Characters  []string     `json:"characters"`
+	Location    string       `json:"location"`
+	Events      []StoryEvent `json:"events"`
+	Beats       []string     `json:"beats"`
+	OpeningBeat string       `json:"opening_beat"`
+	ClosingBeat string       `json:"closing_beat"`
+	StateChange string       `json:"state_change"`
+	Conflict    string       `json:"conflict"`
+	Pacing      string       `json:"pacing"`
 }
 
 // StoryEvent 故事事件
 type StoryEvent struct {
+	// 旧字段（向后兼容）
 	Type       string   `json:"type"`
 	Characters []string `json:"characters"`
 	Subject    string   `json:"subject"`
 	Change     string   `json:"change"`
 	Details    string   `json:"details"`
+
+	// 新字段（推荐，语义更清晰）
+	Actor      string `json:"actor,omitempty"`
+	Action     string `json:"action,omitempty"`
+	Target     string `json:"target,omitempty"`
+	TargetType string `json:"target_type,omitempty"`
+	Context    string `json:"context,omitempty"`
+	Result     string `json:"result,omitempty"`
+
+	// 战斗事件特殊格式
+	Enemies []EnemyInfo `json:"enemies,omitempty"`
+	Allies  []string    `json:"allies,omitempty"`
+}
+
+// EnemyInfo 敌人信息（用于战斗事件）
+type EnemyInfo struct {
+	Name   string `json:"name"`
+	Count  int    `json:"count"`
+	Level  int    `json:"level"`
+	IsBoss bool   `json:"is_boss,omitempty"`
+}
+
+// GetActor 获取执行者（优先新格式，回退旧格式）
+func (e *StoryEvent) GetActor() string {
+	if e.Actor != "" {
+		return e.Actor
+	}
+	if len(e.Characters) > 0 {
+		return e.Characters[0]
+	}
+	return ""
+}
+
+// GetAction 获取动作（优先新格式，回退旧格式）
+func (e *StoryEvent) GetAction() string {
+	if e.Action != "" {
+		return e.Action
+	}
+	// 从旧格式推断
+	return inferActionFromOldFormat(e.Type, e.Change)
+}
+
+// GetTarget 获取目标（优先新格式，回退旧格式）
+func (e *StoryEvent) GetTarget() string {
+	if e.Target != "" {
+		return e.Target
+	}
+	return e.Subject
+}
+
+// GetTargetType 获取目标类型（优先新格式，回退旧格式）
+func (e *StoryEvent) GetTargetType() string {
+	if e.TargetType != "" {
+		return e.TargetType
+	}
+	return inferTargetTypeFromOldFormat(e.Type)
+}
+
+// inferActionFromOldFormat 从旧格式推断动作
+func inferActionFromOldFormat(eventType, change string) string {
+	switch change {
+	case "acquired", "get", "获得":
+		return "acquire"
+	case "lost", "失去":
+		return "lose"
+	case "used", "使用":
+		return "use"
+	case "discovered", "发现":
+		return "discover"
+	case "awakened", "awaken", "觉醒":
+		return "awaken"
+	case "upgraded", "升级":
+		return "upgrade"
+	case "completed", "完成":
+		return "achieve"
+	case "started", "开始":
+		return "set"
+	case "progressed", "推进":
+		return "progress"
+	default:
+		switch eventType {
+		case "item":
+			return "acquire"
+		case "status":
+			return "transform"
+		case "premise":
+			return "awaken"
+		case "combat":
+			return "combat"
+		default:
+			return "discover"
+		}
+	}
+}
+
+// inferTargetTypeFromOldFormat 从旧格式推断目标类型
+func inferTargetTypeFromOldFormat(eventType string) string {
+	switch eventType {
+	case "item":
+		return "item"
+	case "status":
+		return "status"
+	case "relationship":
+		return "relationship"
+	case "goal":
+		return "goal"
+	case "premise":
+		return "premise"
+	case "storyline":
+		return "storyline"
+	default:
+		return ""
+	}
 }
 
 // StoryWorld 故事世界 - 将小说大纲转换为RPG数据
@@ -95,6 +209,9 @@ func NewStoryWorld(outlinePath string) (*StoryWorld, error) {
 
 // ConvertOutlineToRPG 将大纲转换为RPG数据
 func (sw *StoryWorld) ConvertOutlineToRPG() {
+	// 0. 初始化技能
+	InitDefaultSkills(sw.GameWorld.Skills)
+
 	// 1. 转换地点
 	sw.convertLocations()
 
@@ -169,6 +286,7 @@ func (sw *StoryWorld) inferMapType(location string) MapType {
 // convertCharacters 转换角色
 func (sw *StoryWorld) convertCharacters() {
 	characterSet := make(map[string]bool)
+	enemySet := make(map[string]bool)
 
 	// 收集所有角色
 	for _, part := range sw.Outline.Parts {
@@ -180,6 +298,19 @@ func (sw *StoryWorld) convertCharacters() {
 				for _, event := range chapter.Events {
 					for _, char := range event.Characters {
 						characterSet[char] = true
+					}
+					// 收集战斗目标（敌人）- 优先使用新格式
+					action := event.GetAction()
+					if action == "combat" || action == "defeat" || action == "kill" {
+						// 新格式：使用 enemies 字段
+						if len(event.Enemies) > 0 {
+							for _, enemy := range event.Enemies {
+								enemySet[enemy.Name] = true
+							}
+						} else if event.Target != "" && event.TargetType == "character" {
+							// 旧格式：使用 target 字段
+							enemySet[event.Target] = true
+						}
 					}
 				}
 			}
@@ -211,7 +342,7 @@ func (sw *StoryWorld) convertCharacters() {
 		if character != nil {
 			// 设置初始位置
 			if len(sw.Outline.Parts) > 0 && len(sw.Outline.Parts[0].Volumes) > 0 &&
-			   len(sw.Outline.Parts[0].Volumes[0].Chapters) > 0 {
+				len(sw.Outline.Parts[0].Volumes[0].Chapters) > 0 {
 				firstChapter := sw.Outline.Parts[0].Volumes[0].Chapters[0]
 				if firstChapter.Location != "" {
 					if mapID, ok := sw.LocationMap[firstChapter.Location]; ok {
@@ -222,18 +353,73 @@ func (sw *StoryWorld) convertCharacters() {
 				}
 			}
 
-			// 如果是主角，设置为玩家
-			if charName == "林砚" {
+			// 如果是主角，设置为玩家并添加技能
+			if charName == "林砚" || charName == "林跃" {
 				sw.GameWorld.SetPlayer(character)
+				// 给主角添加基础技能
+				character.Skills = []string{"skill_quick_strike", "skill_power_strike"}
 			}
 		}
+	}
+
+	// 为敌人创建角色
+	for enemyName := range enemySet {
+		// 跳过已存在的角色
+		if _, exists := sw.CharacterMap[enemyName]; exists {
+			continue
+		}
+
+		templateID := sw.generateCharacterTemplateID(enemyName)
+		charID := sw.generateCharacterID(enemyName)
+		sw.CharacterMap[enemyName] = charID
+
+		// 敌人类型和属性
+		charType, baseStats := sw.inferEnemyStats(enemyName)
+
+		template := &CharacterTemplate{
+			ID:          templateID,
+			Name:        enemyName,
+			Type:        charType,
+			BaseStats:   baseStats,
+			GrowthStats: sw.inferEnemyGrowthStats(enemyName),
+			Rarity:      sw.inferRarity(enemyName),
+		}
+
+		sw.GameWorld.Characters.AddTemplate(template)
+
+		// 手动创建角色实例，使用我们指定的ID
+		character := &Character{
+			ID:           charID,
+			TemplateID:   templateID,
+			Name:         enemyName,
+			Type:         charType,
+			Level:        1,
+			Exp:          0,
+			ExpToNext:    100,
+			BaseStats:    baseStats,
+			CurrentStats: baseStats,
+			GrowthStats:  sw.inferEnemyGrowthStats(enemyName),
+			State:        CharacterStateNormal,
+			Skills:       sw.getEnemySkills(enemyName),
+			Flags:        make(map[string]interface{}),
+		}
+
+		// 设置初始位置（随机地图）
+		allMaps := sw.GameWorld.Maps.GetAllMaps()
+		if len(allMaps) > 0 {
+			character.Position.MapID = allMaps[0].ID
+			character.Position.X = 10
+			character.Position.Y = 10
+		}
+
+		sw.GameWorld.Characters.AddCharacterInstance(character)
 	}
 }
 
 // inferCharacterStats 推断角色属性
 func (sw *StoryWorld) inferCharacterStats(name string) (CharacterType, BaseStats) {
 	switch name {
-	case "林砚":
+	case "林砚", "林跃":
 		// 主角 - 平衡型
 		return CharacterTypePlayer, BaseStats{
 			HP: 100, MP: 50, Attack: 12, Defense: 10,
@@ -257,7 +443,7 @@ func (sw *StoryWorld) inferCharacterStats(name string) (CharacterType, BaseStats
 // inferGrowthStats 推断成长属性
 func (sw *StoryWorld) inferGrowthStats(name string) GrowthStats {
 	switch name {
-	case "林砚":
+	case "林砚", "林跃":
 		return GrowthStats{
 			HP: 10, MP: 5, Attack: 2, Defense: 1.5,
 			Magic: 1.5, Resistance: 1.5, Speed: 2, Luck: 1,
@@ -270,10 +456,56 @@ func (sw *StoryWorld) inferGrowthStats(name string) GrowthStats {
 	}
 }
 
+// inferEnemyStats 推断敌人属性
+func (sw *StoryWorld) inferEnemyStats(name string) (CharacterType, BaseStats) {
+	// 根据敌人名称推断属性
+	switch {
+	case stringContainsAny(name, []string{"虫族", "虫", "蜂", "兽"}):
+		// 虫族/野兽 - 高攻击低防御
+		return CharacterTypeEnemy, BaseStats{
+			HP: 60, MP: 10, Attack: 15, Defense: 5,
+			Magic: 2, Resistance: 3, Speed: 12, Luck: 3,
+		}
+	case stringContainsAny(name, []string{"首领", "王", "将", "帅"}):
+		// Boss级敌人 - 高属性
+		return CharacterTypeEnemy, BaseStats{
+			HP: 150, MP: 50, Attack: 20, Defense: 15,
+			Magic: 12, Resistance: 10, Speed: 8, Luck: 5,
+		}
+	default:
+		// 普通敌人
+		return CharacterTypeEnemy, BaseStats{
+			HP: 40, MP: 15, Attack: 10, Defense: 8,
+			Magic: 5, Resistance: 5, Speed: 7, Luck: 4,
+		}
+	}
+}
+
+// inferEnemyGrowthStats 推断敌人成长属性
+func (sw *StoryWorld) inferEnemyGrowthStats(name string) GrowthStats {
+	switch {
+	case stringContainsAny(name, []string{"虫族", "虫", "蜂", "兽"}):
+		return GrowthStats{
+			HP: 8, MP: 1, Attack: 2, Defense: 0.5,
+			Magic: 0.3, Resistance: 0.3, Speed: 1.5, Luck: 0.2,
+		}
+	case stringContainsAny(name, []string{"首领", "王", "将", "帅"}):
+		return GrowthStats{
+			HP: 15, MP: 5, Attack: 3, Defense: 2,
+			Magic: 1.5, Resistance: 1.2, Speed: 1, Luck: 0.5,
+		}
+	default:
+		return GrowthStats{
+			HP: 5, MP: 1.5, Attack: 1.2, Defense: 0.8,
+			Magic: 0.5, Resistance: 0.5, Speed: 0.8, Luck: 0.3,
+		}
+	}
+}
+
 // inferRarity 推断稀有度
 func (sw *StoryWorld) inferRarity(name string) Rarity {
 	switch name {
-	case "林砚":
+	case "林砚", "林跃":
 		return RarityLegendary
 	case "矿监周虎":
 		return RarityCommon
@@ -294,13 +526,13 @@ func (sw *StoryWorld) convertQuests() {
 				objectives := sw.inferQuestObjectives(chapter)
 
 				quest := &Quest{
-					ID:          questID,
-					Name:        chapter.Title,
-					Description: chapter.Summary,
-					Type:        sw.inferQuestType(chapter),
+					ID:            questID,
+					Name:          chapter.Title,
+					Description:   chapter.Summary,
+					Type:          sw.inferQuestType(chapter),
 					LevelRequired: sw.inferQuestLevel(chapter),
-					Objectives:  objectives,
-					Rewards:     sw.inferQuestRewards(chapter),
+					Objectives:    objectives,
+					Rewards:       sw.inferQuestRewards(chapter),
 				}
 
 				sw.GameWorld.Quests.AddQuest(quest)
@@ -313,29 +545,157 @@ func (sw *StoryWorld) convertQuests() {
 func (sw *StoryWorld) inferQuestObjectives(chapter StoryChapter) []QuestObjective {
 	objectives := make([]QuestObjective, 0)
 
-	for i, event := range chapter.Events {
-		objType := sw.inferObjectiveType(event.Type)
-		targetID := ""
+	// 获取章节位置信息
+	locationID := ""
+	if chapter.Location != "" {
+		if mapID, ok := sw.LocationMap[chapter.Location]; ok {
+			locationID = mapID
+		}
+	}
 
-		// 尝试找到对应的角色ID
-		if len(event.Characters) > 0 {
-			if charID, ok := sw.CharacterMap[event.Characters[0]]; ok {
-				targetID = charID
+	for i, event := range chapter.Events {
+		// 优先使用新格式（action），回退到旧格式（type）
+		objType := sw.inferObjectiveTypeFromEvent(event)
+		targetID := ""
+		targetCount := 1
+
+		// 对于战斗/击败类型的事件，优先使用 Enemies 字段
+		if objType == ObjectiveDefeat || objType == ObjectiveKill {
+			// 新格式：使用 enemies 字段，选择 Boss 或第一个敌人
+			if len(event.Enemies) > 0 {
+				// 优先选择 Boss 敌人
+				bossEnemy := ""
+				firstEnemy := ""
+				totalCount := 0
+				for _, enemy := range event.Enemies {
+					totalCount += enemy.Count
+					if firstEnemy == "" {
+						firstEnemy = enemy.Name
+					}
+					if enemy.IsBoss {
+						bossEnemy = enemy.Name
+					}
+				}
+
+				// 使用 Boss 或第一个敌人作为主要目标
+				enemyName := bossEnemy
+				if enemyName == "" {
+					enemyName = firstEnemy
+				}
+
+				if charID, ok := sw.CharacterMap[enemyName]; ok {
+					targetID = charID
+				}
+				targetCount = totalCount
+			} else if event.Target != "" {
+				// 旧格式：使用 target 字段
+				if charID, ok := sw.CharacterMap[event.Target]; ok {
+					targetID = charID
+				}
+			}
+		}
+
+		// 如果没有找到目标，尝试使用 Actor 或 Characters[0]
+		if targetID == "" {
+			actor := event.GetActor()
+			if actor != "" {
+				if charID, ok := sw.CharacterMap[actor]; ok {
+					targetID = charID
+				}
+			} else if len(event.Characters) > 0 {
+				if charID, ok := sw.CharacterMap[event.Characters[0]]; ok {
+					targetID = charID
+				}
+			}
+		}
+
+		// 获取描述（优先使用 Result，回退到 Details/Change）
+		description := event.Result
+		if description == "" {
+			description = event.Details
+		}
+		if description == "" {
+			// 如果只有 change，构建更丰富的描述
+			description = sw.buildDescriptionFromEvent(event)
+		}
+
+		// 获取事件上下文位置
+		eventLocation := locationID
+		if event.Context != "" {
+			if ctxMapID, ok := sw.LocationMap[event.Context]; ok {
+				eventLocation = ctxMapID
 			}
 		}
 
 		objective := QuestObjective{
 			ID:          fmt.Sprintf("%s_obj_%d", chapter.ID, i),
 			Type:        objType,
-			Description: event.Change,
+			Description: description,
 			TargetID:    targetID,
-			TargetCount: 1,
+			TargetCount: targetCount,
+			LocationID:  eventLocation,
 		}
 
 		objectives = append(objectives, objective)
 	}
 
 	return objectives
+}
+
+// buildDescriptionFromEvent 从事件构建描述
+func (sw *StoryWorld) buildDescriptionFromEvent(event StoryEvent) string {
+	// 优先使用新格式构建描述
+	actor := event.GetActor()
+	action := event.GetAction()
+	target := event.GetTarget()
+	context := event.Context
+
+	if actor != "" && action != "" {
+		// 构建动作描述
+		desc := fmt.Sprintf("%s %s", actor, action)
+		if target != "" {
+			desc += fmt.Sprintf(" %s", target)
+		}
+		if context != "" {
+			desc += fmt.Sprintf(" (在 %s)", context)
+		}
+		return desc
+	}
+
+	// 回退到旧格式
+	if event.Subject != "" && event.Change != "" {
+		return fmt.Sprintf("%s: %s", event.Subject, event.Change)
+	}
+
+	// 最后回退
+	return event.Change
+}
+
+// inferObjectiveTypeFromEvent 从事件推断目标类型（支持新旧格式）
+func (sw *StoryWorld) inferObjectiveTypeFromEvent(event StoryEvent) QuestObjectiveType {
+	// 优先使用新格式的 action 字段
+	action := event.GetAction()
+	if action != "" {
+		switch action {
+		case "combat", "defeat", "escape", "defend":
+			return ObjectiveDefeat
+		case "acquire", "discover", "reveal", "craft":
+			return ObjectiveCollect
+		case "meet", "befriend", "betray", "reconcile":
+			return ObjectiveTalk
+		case "move", "enter", "leave", "teleport":
+			return ObjectiveReach
+		case "learn", "awaken", "upgrade", "master":
+			return ObjectiveEvent // 能力觉醒/升级
+		case "use", "lose", "transform", "recover", "afflict":
+			return ObjectiveEvent // 状态变化
+		case "set", "progress", "achieve", "abandon":
+			return ObjectiveEvent // 目标变化
+		}
+	}
+
+	// 回退到旧格式的 type 字段
+	return sw.inferObjectiveType(event.Type)
 }
 
 // inferObjectiveType 推断目标类型
@@ -526,23 +886,23 @@ func stringContainsAny(s string, substrs []string) bool {
 // GetStorySummary 获取故事摘要
 func (sw *StoryWorld) GetStorySummary() map[string]interface{} {
 	return map[string]interface{}{
-		"title":           sw.Outline.Parts[0].Title,
-		"parts_count":     len(sw.Outline.Parts),
-		"characters":      len(sw.CharacterMap),
-		"locations":       len(sw.LocationMap),
-		"quests":          len(sw.QuestMap),
-		"events":          len(sw.EventMap),
-		"player_name":     sw.GameWorld.Player.Name,
-		"player_level":    sw.GameWorld.Player.Level,
-		"current_map":     sw.GameWorld.Context.CurrentMap,
+		"title":        sw.Outline.Parts[0].Title,
+		"parts_count":  len(sw.Outline.Parts),
+		"characters":   len(sw.CharacterMap),
+		"locations":    len(sw.LocationMap),
+		"quests":       len(sw.QuestMap),
+		"events":       len(sw.EventMap),
+		"player_name":  sw.GameWorld.Player.Name,
+		"player_level": sw.GameWorld.Player.Level,
+		"current_map":  sw.GameWorld.Context.CurrentMap,
 	}
 }
 
 // ExportToJSON 导出为JSON
 func (sw *StoryWorld) ExportToJSON() string {
 	data := map[string]interface{}{
-		"summary":   sw.GetStorySummary(),
-		"world":     sw.GameWorld.SaveToJSON(),
+		"summary": sw.GetStorySummary(),
+		"world":   sw.GameWorld.SaveToJSON(),
 		"mappings": map[string]interface{}{
 			"characters": sw.CharacterMap,
 			"locations":  sw.LocationMap,
@@ -553,4 +913,37 @@ func (sw *StoryWorld) ExportToJSON() string {
 
 	jsonData, _ := json.MarshalIndent(data, "", "  ")
 	return string(jsonData)
+}
+
+// getEnemySkills 根据敌人名称获取技能
+func (sw *StoryWorld) getEnemySkills(enemyName string) []string {
+	// 根据敌人类型返回不同技能
+	switch {
+	case containsAny(enemyName, []string{"虫族", "虫", "蜂"}):
+		// 虫族技能
+		return []string{"skill_insect_claw", "skill_acid_spray"}
+	case containsAny(enemyName, []string{"野兽", "狼", "熊"}):
+		// 野兽技能
+		return []string{"skill_beast_bite", "skill_ferocious_charge"}
+	case containsAny(enemyName, []string{"统领", "高阶", "boss"}):
+		// Boss级敌人
+		return []string{"skill_powerful_strike", "skill_rage", "skill_area_attack"}
+	default:
+		// 默认敌人技能
+		return []string{"skill_basic_attack"}
+	}
+}
+
+// containsAny 检查字符串是否包含任意一个子串
+func containsAny(s string, substrs []string) bool {
+	for _, substr := range substrs {
+		if len(s) >= len(substr) {
+			for i := 0; i <= len(s)-len(substr); i++ {
+				if s[i:i+len(substr)] == substr {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

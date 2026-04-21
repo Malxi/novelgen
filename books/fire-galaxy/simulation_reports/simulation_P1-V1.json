@@ -1,0 +1,101 @@
+{
+  "volume_id": "P1-V1",
+  "chapter_ids": [
+    "P1-V1-C1",
+    "P1-V1-C2",
+    "P1-V1-C3",
+    "P1-V1-C4",
+    "P1-V1-C5",
+    "P1-V1-C6",
+    "P1-V1-C7",
+    "P1-V1-C8",
+    "P1-V1-C9",
+    "P1-V1-C10"
+  ],
+  "total_steps": 30,
+  "total_battles": 4,
+  "total_exp": 2750,
+  "final_level": 8,
+  "chapters": [
+    {
+      "chapter_id": "P1-V1-C1",
+      "chapter_name": "冷舱梦醒",
+      "steps": 3,
+      "battles": 0,
+      "exp_gained": 50,
+      "success": true
+    },
+    {
+      "chapter_id": "P1-V1-C2",
+      "chapter_name": "蚀液破局",
+      "steps": 3,
+      "battles": 0,
+      "exp_gained": 100,
+      "success": true
+    },
+    {
+      "chapter_id": "P1-V1-C3",
+      "chapter_name": "初斩异虫",
+      "steps": 3,
+      "battles": 1,
+      "exp_gained": 150,
+      "success": true
+    },
+    {
+      "chapter_id": "P1-V1-C4",
+      "chapter_name": "拾荒小队",
+      "steps": 3,
+      "battles": 1,
+      "exp_gained": 200,
+      "success": true
+    },
+    {
+      "chapter_id": "P1-V1-C5",
+      "chapter_name": "锈墙据点",
+      "steps": 3,
+      "battles": 0,
+      "exp_gained": 250,
+      "success": true
+    },
+    {
+      "chapter_id": "P1-V1-C6",
+      "chapter_name": "虫潮压境",
+      "steps": 3,
+      "battles": 0,
+      "exp_gained": 300,
+      "success": true
+    },
+    {
+      "chapter_id": "P1-V1-C7",
+      "chapter_name": "机甲残骸",
+      "steps": 3,
+      "battles": 0,
+      "exp_gained": 350,
+      "success": true
+    },
+    {
+      "chapter_id": "P1-V1-C8",
+      "chapter_name": "星尘初启",
+      "steps": 3,
+      "battles": 1,
+      "exp_gained": 400,
+      "success": true
+    },
+    {
+      "chapter_id": "P1-V1-C9",
+      "chapter_name": "退敌守家",
+      "steps": 3,
+      "battles": 1,
+      "exp_gained": 450,
+      "success": true
+    },
+    {
+      "chapter_id": "P1-V1-C10",
+      "chapter_name": "逐星之誓",
+      "steps": 3,
+      "battles": 0,
+      "exp_gained": 500,
+      "success": true
+    }
+  ]
+}

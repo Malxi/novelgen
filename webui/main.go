@@ -29,6 +29,36 @@ var (
 	clients = make(map[string]*websocket.Conn)
 )
 
+// getNovelGenPath returns the path to novelgen executable
+// Priority: 1. webui directory, 2. PATH
+func getNovelGenPath() string {
+	// Check if novelgen.exe exists in webui directory
+	exePath := "novelgen.exe"
+	if runtime.GOOS != "windows" {
+		exePath = "novelgen"
+	}
+
+	// Get the directory of the current executable (webui)
+	if execPath, err := os.Executable(); err == nil {
+		webuiDir := filepath.Dir(execPath)
+		localPath := filepath.Join(webuiDir, exePath)
+		if _, err := os.Stat(localPath); err == nil {
+			return localPath
+		}
+	}
+
+	// Check current working directory (for go run)
+	if cwd, err := os.Getwd(); err == nil {
+		localPath := filepath.Join(cwd, exePath)
+		if _, err := os.Stat(localPath); err == nil {
+			return localPath
+		}
+	}
+
+	// Fallback to PATH
+	return "novelgen"
+}
+
 type Task struct {
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`
@@ -90,6 +120,8 @@ func main() {
 
 		// Content management
 		api.GET("/content/outline", getOutline)
+		api.GET("/content/outline/versions", listOutlineVersions)
+		api.POST("/content/outline/restore", restoreOutlineVersion)
 		api.GET("/content/setup", getStorySetup)
 		api.GET("/content/characters", getCharacters)
 		api.GET("/content/locations", getLocations)
@@ -288,7 +320,7 @@ func createProject(c *gin.Context) {
 	os.MkdirAll(projectPath, 0755)
 	os.Chdir(projectPath)
 
-	cmd := exec.Command("novelgen", args...)
+	cmd := exec.Command(getNovelGenPath(), args...)
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -372,6 +404,47 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 	task.UpdatedAt = time.Now()
 	broadcastTaskUpdate(task)
 
+	// Find project directory first (needed for backup)
+	projectPath := ""
+	if projectDir, ok := args["project_dir"].(string); ok && projectDir != "" {
+		projectPath = projectDir
+	}
+
+	if projectPath == "" {
+		// Try to find project in books directory
+		booksDir := "../books"
+		entries, _ := os.ReadDir(booksDir)
+		for _, entry := range entries {
+			if entry.IsDir() {
+				possiblePath := filepath.Join(booksDir, entry.Name())
+				if _, err := os.Stat(filepath.Join(possiblePath, "novel.json")); err == nil {
+					projectPath = possiblePath
+					break
+				}
+			}
+		}
+	}
+
+	// Auto-backup outline before compose gen/regen
+	if command == "compose" {
+		if subcommand, ok := args["subcommand"].(string); ok {
+			if subcommand == "gen" || subcommand == "regen" {
+				if projectPath != "" {
+					task.Message = "Backing up existing outline..."
+					broadcastTaskUpdate(task)
+					
+					if backupName, err := backupOutline(projectPath); err != nil {
+						task.Message = "Warning: Failed to backup outline: " + err.Error()
+						broadcastTaskUpdate(task)
+					} else if backupName != "" {
+						task.Message = "Outline backed up: " + backupName
+						broadcastTaskUpdate(task)
+					}
+				}
+			}
+		}
+	}
+
 	// Build command arguments
 	cmdArgs := []string{command}
 
@@ -383,6 +456,13 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 	// Handle positional arguments (for commands like 'rpg simulate <chapter_id>')
 	if positional, ok := args["_positional"].(string); ok && positional != "" {
 		cmdArgs = append(cmdArgs, positional)
+	}
+
+	// Auto-add --force for compose gen to allow regeneration with backup
+	if command == "compose" {
+		if subcommand, ok := args["subcommand"].(string); ok && subcommand == "gen" {
+			cmdArgs = append(cmdArgs, "--force")
+		}
 	}
 
 	// Add args based on command type
@@ -411,11 +491,11 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 	var debugInfo strings.Builder
 	debugInfo.WriteString("=== DEBUG INFO ===\n")
 
-	// Find project directory
-	projectPath := ""
-	if projectDir, ok := args["project_dir"].(string); ok && projectDir != "" {
-		projectPath = projectDir
-		debugInfo.WriteString(fmt.Sprintf("Project path from args: %s\n", projectPath))
+	// Re-find project directory (it was already found earlier for backup)
+	if projectPath == "" {
+		if projectDir, ok := args["project_dir"].(string); ok && projectDir != "" {
+			projectPath = projectDir
+		}
 	}
 
 	if projectPath == "" {
@@ -427,15 +507,18 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 				possiblePath := filepath.Join(booksDir, entry.Name())
 				if _, err := os.Stat(filepath.Join(possiblePath, "novel.json")); err == nil {
 					projectPath = possiblePath
-					debugInfo.WriteString(fmt.Sprintf("Found project path: %s\n", projectPath))
 					break
 				}
 			}
 		}
 	}
 
+	if projectPath != "" {
+		debugInfo.WriteString(fmt.Sprintf("Project path: %s\n", projectPath))
+	}
+
 	// Build command with working directory
-	cmd := exec.Command("novelgen", cmdArgs...)
+	cmd := exec.Command(getNovelGenPath(), cmdArgs...)
 
 	// Set working directory if project path is provided
 	if projectPath != "" {
@@ -531,6 +614,143 @@ func getOutline(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, APIResponse{Success: true, Data: outline})
+}
+
+// backupOutline creates a backup of the current outline with timestamp
+func backupOutline(projectPath string) (string, error) {
+	outlinePath := filepath.Join(projectPath, "story", "compose", "outline.json")
+	
+	// Check if outline exists
+	if _, err := os.Stat(outlinePath); os.IsNotExist(err) {
+		return "", nil // No outline to backup
+	}
+
+	// Create backups directory
+	backupsDir := filepath.Join(projectPath, "story", "compose", "backups")
+	if err := os.MkdirAll(backupsDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create backups directory: %w", err)
+	}
+
+	// Generate backup filename with timestamp
+	timestamp := time.Now().Format("20060102_150405")
+	backupFilename := fmt.Sprintf("outline_%s.json", timestamp)
+	backupPath := filepath.Join(backupsDir, backupFilename)
+
+	// Read current outline
+	data, err := os.ReadFile(outlinePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read outline: %w", err)
+	}
+
+	// Write backup
+	if err := os.WriteFile(backupPath, data, 0644); err != nil {
+		return "", fmt.Errorf("failed to write backup: %w", err)
+	}
+
+	return backupFilename, nil
+}
+
+func listOutlineVersions(c *gin.Context) {
+	projectPath := c.Query("project")
+	if projectPath == "" {
+		projectPath = "."
+	}
+
+	backupsDir := filepath.Join(projectPath, "story", "compose", "backups")
+	
+	// Check if backups directory exists
+	if _, err := os.Stat(backupsDir); os.IsNotExist(err) {
+		c.JSON(http.StatusOK, APIResponse{Success: true, Data: []map[string]interface{}{}})
+		return
+	}
+
+	entries, err := os.ReadDir(backupsDir)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	versions := []map[string]interface{}{}
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasPrefix(entry.Name(), "outline_") && strings.HasSuffix(entry.Name(), ".json") {
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+
+			// Parse timestamp from filename
+			filename := entry.Name()
+			var createdAt string
+			if len(filename) > 14 {
+				// Extract timestamp: outline_20060102_150405.json
+				timestampStr := filename[8 : len(filename)-5]
+				if t, err := time.Parse("20060102_150405", timestampStr); err == nil {
+					createdAt = t.Format("2006-01-02 15:04:05")
+				}
+			}
+
+			versions = append(versions, map[string]interface{}{
+				"filename":   filename,
+				"created_at": createdAt,
+				"size":       info.Size(),
+			})
+		}
+	}
+
+	c.JSON(http.StatusOK, APIResponse{Success: true, Data: versions})
+}
+
+func restoreOutlineVersion(c *gin.Context) {
+	projectPath := c.Query("project")
+	if projectPath == "" {
+		projectPath = "."
+	}
+
+	var req struct {
+		Filename string `json:"filename"`
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	// Security: prevent directory traversal
+	if strings.Contains(req.Filename, "..") || strings.Contains(req.Filename, "/") || strings.Contains(req.Filename, "\\") {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Invalid filename"})
+		return
+	}
+
+	backupPath := filepath.Join(projectPath, "story", "compose", "backups", req.Filename)
+	outlinePath := filepath.Join(projectPath, "story", "compose", "outline.json")
+
+	// Check if backup exists
+	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "Backup not found"})
+		return
+	}
+
+	// Backup current outline first (if exists)
+	if _, err := os.Stat(outlinePath); err == nil {
+		if _, err := backupOutline(projectPath); err != nil {
+			c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: "Failed to backup current outline: " + err.Error()})
+			return
+		}
+	}
+
+	// Copy backup to outline
+	data, err := os.ReadFile(backupPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	if err := os.WriteFile(outlinePath, data, 0644); err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, APIResponse{Success: true, Data: map[string]string{"message": "Outline restored successfully"}})
 }
 
 func getStorySetup(c *gin.Context) {

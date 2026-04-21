@@ -10,10 +10,10 @@ import (
 type SkillType string
 
 const (
-	SkillTypeActive    SkillType = "active"    // 主动技能
-	SkillTypePassive   SkillType = "passive"   // 被动技能
-	SkillTypeReaction  SkillType = "reaction"  // 反应技能（反击等）
-	SkillTypeUltimate  SkillType = "ultimate"  // 终极技能
+	SkillTypeActive   SkillType = "active"   // 主动技能
+	SkillTypePassive  SkillType = "passive"  // 被动技能
+	SkillTypeReaction SkillType = "reaction" // 反应技能（反击等）
+	SkillTypeUltimate SkillType = "ultimate" // 终极技能
 )
 
 // 技能目标类型
@@ -49,59 +49,59 @@ type SkillCost struct {
 
 // 技能伤害/治疗计算
 type SkillDamage struct {
-	Type          DamageType `json:"type"`
-	Power         int        `json:"power"`          // 基础威力
-	ScalingStat   string     `json:"scaling_stat"`   // 基于哪个属性计算: attack, magic, etc
-	ScalingFactor float64    `json:"scaling_factor"` // 属性加成系数
+	Type          DamageType  `json:"type"`
+	Power         int         `json:"power"`          // 基础威力
+	ScalingStat   string      `json:"scaling_stat"`   // 基于哪个属性计算: attack, magic, etc
+	ScalingFactor float64     `json:"scaling_factor"` // 属性加成系数
 	Element       ElementType `json:"element,omitempty"`
-	IsFixed       bool       `json:"is_fixed"`       // 是否固定伤害
+	IsFixed       bool        `json:"is_fixed"` // 是否固定伤害
 }
 
 // 技能效果
 type SkillEffect struct {
-	Type       EffectType  `json:"type"`
-	Chance     float64     `json:"chance"`     // 触发概率
-	Duration   int         `json:"duration"`   // 持续回合
-	Value      interface{} `json:"value"`      // 效果值
+	Type     EffectType  `json:"type"`
+	Chance   float64     `json:"chance"`   // 触发概率
+	Duration int         `json:"duration"` // 持续回合
+	Value    interface{} `json:"value"`    // 效果值
 }
 
 // 技能升级信息
 type SkillLevelInfo struct {
-	Level       int        `json:"level"`
-	PowerBonus  int        `json:"power_bonus"`  // 威力加成
-	CostReduce  int        `json:"cost_reduce"`  // 消耗减少
-	EffectBonus float64    `json:"effect_bonus"` // 效果加成
+	Level       int     `json:"level"`
+	PowerBonus  int     `json:"power_bonus"`  // 威力加成
+	CostReduce  int     `json:"cost_reduce"`  // 消耗减少
+	EffectBonus float64 `json:"effect_bonus"` // 效果加成
 }
 
 // 技能定义
 type Skill struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Description string         `json:"description,omitempty"`
-	Type        SkillType      `json:"type"`
-	
-	Icon        string         `json:"icon,omitempty"`
-	Element     ElementType    `json:"element,omitempty"`
-	
-	LevelRequired int          `json:"level_required"`   // 学习等级
-	ClassRequired []string     `json:"class_required,omitempty"` // 职业限制
-	SkillRequired []string     `json:"skill_required,omitempty"` // 前置技能
-	
-	Cost        SkillCost      `json:"cost"`
-	Cooldown    int            `json:"cooldown"`         // 冷却回合
-	Target      SkillTarget    `json:"target"`
-	Range       int            `json:"range,omitempty"`  // 射程
-	
-	Damage      *SkillDamage   `json:"damage,omitempty"` // 伤害/治疗信息
-	Effects     []SkillEffect  `json:"effects,omitempty"` // 附加效果
-	
-	MaxLevel    int            `json:"max_level"`        // 最高等级
-	LevelInfo   []SkillLevelInfo `json:"level_info,omitempty"` // 每级信息
-	
-	Animation   string         `json:"animation,omitempty"` // 动画ID
-	Sound       string         `json:"sound,omitempty"`     // 音效ID
-	
-	Tags        []string       `json:"tags,omitempty"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description,omitempty"`
+	Type        SkillType `json:"type"`
+
+	Icon    string      `json:"icon,omitempty"`
+	Element ElementType `json:"element,omitempty"`
+
+	LevelRequired int      `json:"level_required"`           // 学习等级
+	ClassRequired []string `json:"class_required,omitempty"` // 职业限制
+	SkillRequired []string `json:"skill_required,omitempty"` // 前置技能
+
+	Cost     SkillCost   `json:"cost"`
+	Cooldown int         `json:"cooldown"` // 冷却回合
+	Target   SkillTarget `json:"target"`
+	Range    int         `json:"range,omitempty"` // 射程
+
+	Damage  *SkillDamage  `json:"damage,omitempty"`  // 伤害/治疗信息
+	Effects []SkillEffect `json:"effects,omitempty"` // 附加效果
+
+	MaxLevel  int              `json:"max_level"`            // 最高等级
+	LevelInfo []SkillLevelInfo `json:"level_info,omitempty"` // 每级信息
+
+	Animation string `json:"animation,omitempty"` // 动画ID
+	Sound     string `json:"sound,omitempty"`     // 音效ID
+
+	Tags []string `json:"tags,omitempty"`
 }
 
 // 技能实例（角色已学习的技能）
@@ -164,12 +164,12 @@ func (sm *SkillManager) CanUseSkill(skillID string, caster *Character) (bool, st
 	if skill == nil {
 		return false, "技能不存在"
 	}
-	
+
 	// 检查等级
 	if caster.Level < skill.LevelRequired {
 		return false, "等级不足"
 	}
-	
+
 	// 检查职业
 	if len(skill.ClassRequired) > 0 {
 		hasClass := false
@@ -183,7 +183,7 @@ func (sm *SkillManager) CanUseSkill(skillID string, caster *Character) (bool, st
 			return false, "职业不符"
 		}
 	}
-	
+
 	// 检查消耗
 	if caster.CurrentStats.MP < skill.Cost.MP {
 		return false, "魔法值不足"
@@ -191,7 +191,7 @@ func (sm *SkillManager) CanUseSkill(skillID string, caster *Character) (bool, st
 	if caster.CurrentStats.HP <= skill.Cost.HP {
 		return false, "生命值不足"
 	}
-	
+
 	return true, ""
 }
 
@@ -201,11 +201,11 @@ func (sm *SkillManager) UseSkill(skillID string, caster *Character, targets []*C
 	if skill == nil {
 		return nil
 	}
-	
+
 	// 扣除消耗
 	caster.CurrentStats.MP -= skill.Cost.MP
 	caster.CurrentStats.HP -= skill.Cost.HP
-	
+
 	result := &SkillResult{
 		SkillID:    skillID,
 		CasterID:   caster.ID,
@@ -215,21 +215,21 @@ func (sm *SkillManager) UseSkill(skillID string, caster *Character, targets []*C
 		IsCritical: false,
 		IsMiss:     false,
 	}
-	
+
 	// 计算命中率
 	hitChance := sm.calculateHitChance(caster, targets[0])
 	if rand.Float64() > hitChance {
 		result.IsMiss = true
 		return result
 	}
-	
+
 	// 计算伤害/治疗
 	if skill.Damage != nil {
 		for _, target := range targets {
 			damage := sm.calculateDamage(skill, caster, target)
 			result.TargetIDs = append(result.TargetIDs, target.ID)
 			result.Damage[target.ID] = damage
-			
+
 			// 应用伤害
 			if skill.Damage.Type == DamageTypeHeal {
 				target.CurrentStats.HP = min(target.CurrentStats.HP+damage, target.BaseStats.HP)
@@ -242,7 +242,7 @@ func (sm *SkillManager) UseSkill(skillID string, caster *Character, targets []*C
 			}
 		}
 	}
-	
+
 	// 应用附加效果
 	for _, effect := range skill.Effects {
 		if rand.Float64() <= effect.Chance {
@@ -256,7 +256,7 @@ func (sm *SkillManager) UseSkill(skillID string, caster *Character, targets []*C
 			}
 		}
 	}
-	
+
 	return result
 }
 
@@ -264,22 +264,22 @@ func (sm *SkillManager) UseSkill(skillID string, caster *Character, targets []*C
 func (sm *SkillManager) calculateHitChance(caster, target *Character) float64 {
 	baseChance := 0.95
 	levelDiff := caster.Level - target.Level
-	
+
 	// 等级差影响
 	if levelDiff > 0 {
 		baseChance += float64(levelDiff) * 0.02
 	} else {
 		baseChance += float64(levelDiff) * 0.03
 	}
-	
+
 	// 速度差影响
 	speedDiff := caster.CurrentStats.Speed - target.CurrentStats.Speed
 	baseChance += float64(speedDiff) * 0.001
-	
+
 	// 幸运影响
 	luckBonus := float64(caster.CurrentStats.Luck) * 0.002
 	baseChance += luckBonus
-	
+
 	return math.Max(0.1, math.Min(1.0, baseChance))
 }
 
@@ -288,9 +288,9 @@ func (sm *SkillManager) calculateDamage(skill *Skill, caster, target *Character)
 	if skill.Damage == nil {
 		return 0
 	}
-	
+
 	damage := skill.Damage.Power
-	
+
 	// 属性加成
 	var statValue int
 	switch skill.Damage.ScalingStat {
@@ -303,9 +303,9 @@ func (sm *SkillManager) calculateDamage(skill *Skill, caster, target *Character)
 	default:
 		statValue = caster.CurrentStats.Attack
 	}
-	
+
 	damage += int(float64(statValue) * skill.Damage.ScalingFactor)
-	
+
 	// 防御减免
 	if skill.Damage.Type == DamageTypePhysical {
 		reduction := float64(target.CurrentStats.Defense) / (float64(target.CurrentStats.Defense) + 100)
@@ -314,21 +314,21 @@ func (sm *SkillManager) calculateDamage(skill *Skill, caster, target *Character)
 		reduction := float64(target.CurrentStats.Resistance) / (float64(target.CurrentStats.Resistance) + 100)
 		damage = int(float64(damage) * (1 - reduction))
 	}
-	
+
 	// 元素克制（简化版）
 	elementBonus := sm.getElementBonus(skill.Element, target.Element)
 	damage = int(float64(damage) * elementBonus)
-	
+
 	// 随机波动 (90% - 110%)
 	variance := 0.9 + rand.Float64()*0.2
 	damage = int(float64(damage) * variance)
-	
+
 	// 暴击判定
 	critChance := 0.05 + float64(caster.CurrentStats.Luck)*0.002
 	if rand.Float64() <= critChance {
 		damage = int(float64(damage) * 1.5)
 	}
-	
+
 	return max(1, damage)
 }
 
@@ -344,11 +344,11 @@ func (sm *SkillManager) getElementBonus(skillElement, targetElement ElementType)
 		ElementLight:   {ElementDark},
 		ElementDark:    {ElementLight},
 	}
-	
+
 	if skillElement == ElementNone || targetElement == ElementNone {
 		return 1.0
 	}
-	
+
 	if advs, ok := advantages[skillElement]; ok {
 		for _, adv := range advs {
 			if adv == targetElement {
@@ -356,7 +356,7 @@ func (sm *SkillManager) getElementBonus(skillElement, targetElement ElementType)
 			}
 		}
 	}
-	
+
 	// 被克制
 	if advs, ok := advantages[targetElement]; ok {
 		for _, adv := range advs {
@@ -365,7 +365,7 @@ func (sm *SkillManager) getElementBonus(skillElement, targetElement ElementType)
 			}
 		}
 	}
-	
+
 	return 1.0
 }
 
@@ -398,4 +398,192 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// InitDefaultSkills 初始化默认技能
+func InitDefaultSkills(sm *SkillManager) {
+	// 主角技能
+	sm.AddSkill(&Skill{
+		ID:            "skill_quick_strike",
+		Name:          "快速打击",
+		Description:   "快速攻击敌人，造成1.2倍攻击力的伤害",
+		Type:          SkillTypeActive,
+		LevelRequired: 1,
+		Cost:          SkillCost{MP: 5},
+		Cooldown:      2,
+		Target:        SkillTargetSingle,
+		Damage: &SkillDamage{
+			Type:          DamageTypePhysical,
+			Power:         5,
+			ScalingStat:   "attack",
+			ScalingFactor: 1.2,
+		},
+		MaxLevel: 5,
+	})
+
+	sm.AddSkill(&Skill{
+		ID:            "skill_power_strike",
+		Name:          "强力打击",
+		Description:   "强力攻击敌人，造成1.8倍攻击力的伤害",
+		Type:          SkillTypeActive,
+		LevelRequired: 2,
+		Cost:          SkillCost{MP: 15},
+		Cooldown:      3,
+		Target:        SkillTargetSingle,
+		Damage: &SkillDamage{
+			Type:          DamageTypePhysical,
+			Power:         10,
+			ScalingStat:   "attack",
+			ScalingFactor: 1.8,
+		},
+		MaxLevel: 5,
+	})
+
+	// 虫族技能
+	sm.AddSkill(&Skill{
+		ID:            "skill_insect_claw",
+		Name:          "虫族利爪",
+		Description:   "用锋利的虫族利爪攻击敌人",
+		Type:          SkillTypeActive,
+		LevelRequired: 1,
+		Cost:          SkillCost{MP: 0},
+		Cooldown:      1,
+		Target:        SkillTargetSingle,
+		Damage: &SkillDamage{
+			Type:          DamageTypePhysical,
+			Power:         8,
+			ScalingStat:   "attack",
+			ScalingFactor: 1.0,
+		},
+		MaxLevel: 3,
+	})
+
+	sm.AddSkill(&Skill{
+		ID:            "skill_acid_spray",
+		Name:          "酸液喷射",
+		Description:   "喷射腐蚀性酸液，造成魔法伤害",
+		Type:          SkillTypeActive,
+		LevelRequired: 1,
+		Cost:          SkillCost{MP: 10},
+		Cooldown:      3,
+		Target:        SkillTargetSingle,
+		Damage: &SkillDamage{
+			Type:          DamageTypeMagic,
+			Power:         12,
+			ScalingStat:   "magic",
+			ScalingFactor: 1.5,
+		},
+		MaxLevel: 3,
+	})
+
+	// 野兽技能
+	sm.AddSkill(&Skill{
+		ID:            "skill_beast_bite",
+		Name:          "野兽撕咬",
+		Description:   "用锋利的牙齿撕咬敌人",
+		Type:          SkillTypeActive,
+		LevelRequired: 1,
+		Cost:          SkillCost{MP: 0},
+		Cooldown:      1,
+		Target:        SkillTargetSingle,
+		Damage: &SkillDamage{
+			Type:          DamageTypePhysical,
+			Power:         10,
+			ScalingStat:   "attack",
+			ScalingFactor: 1.1,
+		},
+		MaxLevel: 3,
+	})
+
+	sm.AddSkill(&Skill{
+		ID:            "skill_ferocious_charge",
+		Name:          "凶猛冲锋",
+		Description:   "凶猛地向敌人冲锋，造成伤害并有一定概率击退",
+		Type:          SkillTypeActive,
+		LevelRequired: 1,
+		Cost:          SkillCost{MP: 5},
+		Cooldown:      2,
+		Target:        SkillTargetSingle,
+		Damage: &SkillDamage{
+			Type:          DamageTypePhysical,
+			Power:         8,
+			ScalingStat:   "attack",
+			ScalingFactor: 1.3,
+		},
+		Effects: []SkillEffect{
+			{Type: EffectDebuff, Chance: 0.2, Duration: 1, Value: map[string]interface{}{"stat": "speed", "value": -5}},
+		},
+		MaxLevel: 3,
+	})
+
+	// Boss级敌人技能
+	sm.AddSkill(&Skill{
+		ID:            "skill_powerful_strike",
+		Name:          "强力攻击",
+		Description:   "Boss级的强力攻击",
+		Type:          SkillTypeActive,
+		LevelRequired: 1,
+		Cost:          SkillCost{MP: 0},
+		Cooldown:      1,
+		Target:        SkillTargetSingle,
+		Damage: &SkillDamage{
+			Type:          DamageTypePhysical,
+			Power:         15,
+			ScalingStat:   "attack",
+			ScalingFactor: 1.5,
+		},
+		MaxLevel: 5,
+	})
+
+	sm.AddSkill(&Skill{
+		ID:            "skill_rage",
+		Name:          "狂暴",
+		Description:   "进入狂暴状态，提升攻击力",
+		Type:          SkillTypeActive,
+		LevelRequired: 1,
+		Cost:          SkillCost{MP: 20},
+		Cooldown:      4,
+		Target:        SkillTargetSelf,
+		Effects: []SkillEffect{
+			{Type: EffectBuff, Chance: 1.0, Duration: 3, Value: map[string]interface{}{"stat": "attack", "value": 10}},
+		},
+		MaxLevel: 3,
+	})
+
+	sm.AddSkill(&Skill{
+		ID:            "skill_area_attack",
+		Name:          "范围攻击",
+		Description:   "对全体敌人造成伤害",
+		Type:          SkillTypeActive,
+		LevelRequired: 1,
+		Cost:          SkillCost{MP: 25},
+		Cooldown:      4,
+		Target:        SkillTargetAll,
+		Damage: &SkillDamage{
+			Type:          DamageTypePhysical,
+			Power:         10,
+			ScalingStat:   "attack",
+			ScalingFactor: 1.2,
+		},
+		MaxLevel: 3,
+	})
+
+	// 默认敌人技能
+	sm.AddSkill(&Skill{
+		ID:            "skill_basic_attack",
+		Name:          "基础攻击",
+		Description:   "基础攻击技能",
+		Type:          SkillTypeActive,
+		LevelRequired: 1,
+		Cost:          SkillCost{MP: 0},
+		Cooldown:      1,
+		Target:        SkillTargetSingle,
+		Damage: &SkillDamage{
+			Type:          DamageTypePhysical,
+			Power:         5,
+			ScalingStat:   "attack",
+			ScalingFactor: 1.0,
+		},
+		MaxLevel: 1,
+	})
 }

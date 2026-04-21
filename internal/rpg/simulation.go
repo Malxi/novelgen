@@ -13,7 +13,7 @@ type SimulationEngine struct {
 	History     []SimulationStep
 	CurrentStep int
 	Random      *rand.Rand
-	
+
 	// 推演配置
 	Config SimulationConfig
 }
@@ -28,45 +28,45 @@ type SimulationConfig struct {
 
 // SimulationStep 推演步骤
 type SimulationStep struct {
-	StepNumber    int                    `json:"step_number"`
-	Type          string                 `json:"type"` // event, combat, dialogue, quest
-	Description   string                 `json:"description"`
-	Characters    []string               `json:"characters"`
-	Location      string                 `json:"location"`
-	Actions       []Action               `json:"actions"`
-	Results       []ActionResult         `json:"results"`
-	StateChanges  map[string]interface{} `json:"state_changes"`
-	Timestamp     int64                  `json:"timestamp"`
+	StepNumber   int                    `json:"step_number"`
+	Type         string                 `json:"type"` // event, combat, dialogue, quest
+	Description  string                 `json:"description"`
+	Characters   []string               `json:"characters"`
+	Location     string                 `json:"location"`
+	Actions      []Action               `json:"actions"`
+	Results      []ActionResult         `json:"results"`
+	StateChanges map[string]interface{} `json:"state_changes"`
+	Timestamp    int64                  `json:"timestamp"`
 }
 
 // Action 行动
 type Action struct {
-	Actor       string      `json:"actor"`
-	ActionType  string      `json:"action_type"` // attack, use_skill, use_item, move, talk
-	Target      string      `json:"target,omitempty"`
-	SkillID     string      `json:"skill_id,omitempty"`
-	ItemID      string      `json:"item_id,omitempty"`
-	Parameters  interface{} `json:"parameters,omitempty"`
+	Actor      string      `json:"actor"`
+	ActionType string      `json:"action_type"` // attack, use_skill, use_item, move, talk
+	Target     string      `json:"target,omitempty"`
+	SkillID    string      `json:"skill_id,omitempty"`
+	ItemID     string      `json:"item_id,omitempty"`
+	Parameters interface{} `json:"parameters,omitempty"`
 }
 
 // ActionResult 行动结果
 type ActionResult struct {
-	Success     bool        `json:"success"`
-	Action      Action      `json:"action"`
-	Effects     []Effect    `json:"effects"`
-	Damage      int         `json:"damage,omitempty"`
-	Message     string      `json:"message"`
+	Success bool     `json:"success"`
+	Action  Action   `json:"action"`
+	Effects []Effect `json:"effects"`
+	Damage  int      `json:"damage,omitempty"`
+	Message string   `json:"message"`
 }
 
 // StoryScenario 剧情场景
 type StoryScenario struct {
-	ID          string   `json:"id"`
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Characters  []string `json:"characters"` // 参与角色ID
-	Location    string   `json:"location"`   // 场景地点
-	Events      []string `json:"events"`     // 触发的事件ID
-	Quests      []string `json:"quests"`     // 相关任务ID
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Characters  []string    `json:"characters"` // 参与角色ID
+	Location    string      `json:"location"`   // 场景地点
+	Events      []string    `json:"events"`     // 触发的事件ID
+	Quests      []string    `json:"quests"`     // 相关任务ID
 	Conditions  []Condition `json:"conditions"` // 触发条件
 }
 
@@ -203,8 +203,15 @@ func (se *SimulationEngine) simulateCombatObjective(step SimulationStep, objecti
 
 	// 记录战斗结果
 	if battle.Winner == "player" {
+		expReward := enemy.Level * 20
+		leveledUp, _ := se.World.Player.GainExp(expReward)
 		step.StateChanges["enemy_defeated"] = enemy.ID
-		step.StateChanges["exp_gained"] = enemy.Level * 20
+		step.StateChanges["exp_gained"] = expReward
+		if leveledUp {
+			step.StateChanges["level_up"] = se.World.Player.Level
+		}
+		step.StateChanges["player_level"] = se.World.Player.Level
+		step.StateChanges["player_exp"] = se.World.Player.Exp
 		step.Description = fmt.Sprintf("战斗胜利！击败了 %s", enemy.Name)
 	} else {
 		step.Description = fmt.Sprintf("战斗失败，被 %s 击败", enemy.Name)
@@ -215,6 +222,10 @@ func (se *SimulationEngine) simulateCombatObjective(step SimulationStep, objecti
 
 // simulateCollectObjective 推演收集目标
 func (se *SimulationEngine) simulateCollectObjective(step SimulationStep, objective QuestObjective) SimulationStep {
+	// 添加玩家到角色列表
+	step.Characters = append(step.Characters, se.World.Player.ID)
+	step.Location = se.World.Player.Position.MapID
+
 	// 模拟收集物品
 	item := se.World.Items.GetItem(objective.TargetID)
 	if item != nil {
@@ -224,11 +235,25 @@ func (se *SimulationEngine) simulateCollectObjective(step SimulationStep, object
 		step.Description = fmt.Sprintf("收集了 %s x%d", item.Name, objective.TargetCount)
 	}
 
+	// 添加经验值奖励
+	expReward := 5 + se.Random.Intn(15)
+	leveledUp, _ := se.World.Player.GainExp(expReward)
+	step.StateChanges["exp_gained"] = expReward
+	if leveledUp {
+		step.StateChanges["level_up"] = se.World.Player.Level
+	}
+	step.StateChanges["player_level"] = se.World.Player.Level
+	step.StateChanges["player_exp"] = se.World.Player.Exp
+
 	return step
 }
 
 // simulateTalkObjective 推演对话目标
 func (se *SimulationEngine) simulateTalkObjective(step SimulationStep, objective QuestObjective) SimulationStep {
+	// 添加玩家到角色列表
+	step.Characters = append(step.Characters, se.World.Player.ID)
+	step.Location = se.World.Player.Position.MapID
+
 	// 获取NPC
 	npc := se.World.Characters.GetCharacter(objective.TargetID)
 	if npc != nil {
@@ -248,15 +273,29 @@ func (se *SimulationEngine) simulateTalkObjective(step SimulationStep, objective
 			Message: fmt.Sprintf("与 %s 对话", npc.Name),
 		})
 
+		step.Characters = append(step.Characters, npc.ID)
 		step.StateChanges["npc_talked"] = npc.ID
 		step.Description = fmt.Sprintf("与 %s 进行了对话", npc.Name)
 	}
+
+	// 添加经验值奖励
+	expReward := 5 + se.Random.Intn(10)
+	leveledUp, _ := se.World.Player.GainExp(expReward)
+	step.StateChanges["exp_gained"] = expReward
+	if leveledUp {
+		step.StateChanges["level_up"] = se.World.Player.Level
+	}
+	step.StateChanges["player_level"] = se.World.Player.Level
+	step.StateChanges["player_exp"] = se.World.Player.Exp
 
 	return step
 }
 
 // simulateMoveObjective 推演移动目标
 func (se *SimulationEngine) simulateMoveObjective(step SimulationStep, objective QuestObjective) SimulationStep {
+	// 添加玩家到角色列表
+	step.Characters = append(step.Characters, se.World.Player.ID)
+
 	// 移动到目标地点
 	gameMap := se.World.Maps.GetMap(objective.TargetID)
 	if gameMap != nil {
@@ -273,27 +312,72 @@ func (se *SimulationEngine) simulateMoveObjective(step SimulationStep, objective
 		}
 
 		step.Actions = append(step.Actions, action)
+		step.Location = objective.TargetID
 		step.StateChanges["location_changed"] = objective.TargetID
 		step.Description = fmt.Sprintf("移动到了 %s", gameMap.Name)
 	}
+
+	// 添加经验值奖励
+	expReward := 3 + se.Random.Intn(8)
+	leveledUp, _ := se.World.Player.GainExp(expReward)
+	step.StateChanges["exp_gained"] = expReward
+	if leveledUp {
+		step.StateChanges["level_up"] = se.World.Player.Level
+	}
+	step.StateChanges["player_level"] = se.World.Player.Level
+	step.StateChanges["player_exp"] = se.World.Player.Exp
 
 	return step
 }
 
 // simulateEventObjective 推演事件目标
 func (se *SimulationEngine) simulateEventObjective(step SimulationStep, objective QuestObjective) SimulationStep {
+	// 添加玩家到角色列表
+	step.Characters = append(step.Characters, se.World.Player.ID)
+
+	// 添加当前位置信息
+	step.Location = se.World.Player.Position.MapID
+
 	// 触发事件
 	event := se.World.Events.GetEvent(objective.TargetID)
 	if event != nil {
 		result := se.World.Events.TriggerEvent(event.ID, 0)
 
 		step.StateChanges["event_triggered"] = event.ID
-		step.Description = fmt.Sprintf("触发了事件: %s", event.Name)
 
 		if result != nil {
 			step.StateChanges["commands_executed"] = len(result.Commands)
 		}
 	}
+
+	// 如果 objective 有描述信息，使用它
+	if objective.Description != "" {
+		step.Description = objective.Description
+	}
+
+	// 如果有目标ID，尝试获取角色信息
+	if objective.TargetID != "" {
+		char := se.World.Characters.GetCharacter(objective.TargetID)
+		if char != nil {
+			step.Characters = append(step.Characters, char.ID)
+		}
+	}
+
+	// 添加经验值奖励
+	expReward := 10 + se.Random.Intn(20)
+	leveledUp, _ := se.World.Player.GainExp(expReward)
+	step.StateChanges["exp_gained"] = expReward
+
+	// 检查是否升级
+	if leveledUp {
+		step.StateChanges["level_up"] = se.World.Player.Level
+	}
+
+	// 记录状态变化
+	step.StateChanges["player_hp"] = se.World.Player.BaseStats.HP
+	step.StateChanges["player_mp"] = se.World.Player.BaseStats.MP
+	step.StateChanges["player_level"] = se.World.Player.Level
+	step.StateChanges["player_exp"] = se.World.Player.Exp
 
 	return step
 }
@@ -302,13 +386,24 @@ func (se *SimulationEngine) simulateEventObjective(step SimulationStep, objectiv
 func (se *SimulationEngine) decidePlayerAction(enemy *Character) Action {
 	// 简单的AI：优先使用技能，其次普通攻击
 	if len(se.World.Player.Skills) > 0 && se.Random.Float64() > 0.3 {
-		// 使用技能
-		skillID := se.World.Player.Skills[se.Random.Intn(len(se.World.Player.Skills))]
-		return Action{
-			Actor:      se.World.Player.ID,
-			ActionType: "use_skill",
-			Target:     enemy.ID,
-			SkillID:    skillID,
+		// 筛选出可以使用的技能
+		usableSkills := make([]string, 0)
+		for _, skillID := range se.World.Player.Skills {
+			canUse, _ := se.World.Skills.CanUseSkill(skillID, se.World.Player)
+			if canUse {
+				usableSkills = append(usableSkills, skillID)
+			}
+		}
+		
+		// 如果有可用技能，随机选择一个
+		if len(usableSkills) > 0 {
+			skillID := usableSkills[se.Random.Intn(len(usableSkills))]
+			return Action{
+				Actor:      se.World.Player.ID,
+				ActionType: "use_skill",
+				Target:     enemy.ID,
+				SkillID:    skillID,
+			}
 		}
 	}
 
@@ -381,10 +476,28 @@ func (se *SimulationEngine) executeAttack(action Action, battle *BattleScene) Ac
 		}
 	}
 
-	// 计算伤害
+	// 闪避判定（基于速度和幸运）
+	dodgeChance := target.CurrentStats.Speed*2 + target.CurrentStats.Luck
+	if se.Random.Intn(100) < dodgeChance {
+		return ActionResult{
+			Success: true,
+			Action:  action,
+			Damage:  0,
+			Message: fmt.Sprintf("%s 攻击了 %s，但 %s 闪避了攻击", actor.Name, target.Name, target.Name),
+		}
+	}
+
+	// 计算基础伤害
 	damage := actor.CurrentStats.Attack - target.CurrentStats.Defense/2
 	if damage < 1 {
 		damage = 1
+	}
+
+	// 暴击判定（基于幸运）
+	critChance := actor.CurrentStats.Luck
+	isCrit := se.Random.Intn(100) < critChance
+	if isCrit {
+		damage = int(float64(damage) * 1.5)
 	}
 
 	// 应用伤害
@@ -394,11 +507,16 @@ func (se *SimulationEngine) executeAttack(action Action, battle *BattleScene) Ac
 		target.State = CharacterStateDead
 	}
 
+	message := fmt.Sprintf("%s 攻击了 %s，造成 %d 点伤害", actor.Name, target.Name, damage)
+	if isCrit {
+		message = fmt.Sprintf("%s 暴击攻击了 %s，造成 %d 点伤害！", actor.Name, target.Name, damage)
+	}
+
 	return ActionResult{
 		Success: true,
 		Action:  action,
 		Damage:  damage,
-		Message: fmt.Sprintf("%s 攻击了 %s，造成 %d 点伤害", actor.Name, target.Name, damage),
+		Message: message,
 	}
 }
 
@@ -471,8 +589,8 @@ func (se *SimulationEngine) executeItem(action Action, battle *BattleScene) Acti
 // SimulateStory 推演整个故事
 func (se *SimulationEngine) SimulateStory(questIDs []string) *StorySimulationResult {
 	result := &StorySimulationResult{
-		StartTime: time.Now().Unix(),
-		Chapters:  make([]ChapterSimulationResult, 0),
+		StartTime:  time.Now().Unix(),
+		Chapters:   make([]ChapterSimulationResult, 0),
 		FinalState: make(map[string]interface{}),
 	}
 
@@ -529,9 +647,9 @@ func (se *SimulationEngine) GetSimulationReport() string {
 // ExportSimulation 导出推演数据
 func (se *SimulationEngine) ExportSimulation() string {
 	data := map[string]interface{}{
-		"history":    se.History,
+		"history":     se.History,
 		"final_state": se.World.SaveToJSON(),
-		"config":     se.Config,
+		"config":      se.Config,
 	}
 
 	jsonData, _ := json.MarshalIndent(data, "", "  ")
@@ -550,12 +668,12 @@ type SimulationResult struct {
 
 // StorySimulationResult 故事推演结果
 type StorySimulationResult struct {
-	Chapters    []ChapterSimulationResult `json:"chapters"`
-	TotalSteps  int                       `json:"total_steps"`
-	StartTime   int64                     `json:"start_time"`
-	EndTime     int64                     `json:"end_time"`
-	FinalState  map[string]interface{}    `json:"final_state"`
-	Errors      []string                  `json:"errors,omitempty"`
+	Chapters   []ChapterSimulationResult `json:"chapters"`
+	TotalSteps int                       `json:"total_steps"`
+	StartTime  int64                     `json:"start_time"`
+	EndTime    int64                     `json:"end_time"`
+	FinalState map[string]interface{}    `json:"final_state"`
+	Errors     []string                  `json:"errors,omitempty"`
 }
 
 // ChapterSimulationResult 章节推演结果

@@ -1,33 +1,240 @@
 {
   "chapter_id": "P1-V1-C2",
-  "chapter_name": "虫影逼近",
+  "chapter_name": "冰原上的黑色虫影",
   "steps": [
     {
       "step_number": 1,
-      "type": "event",
-      "description": "get",
-      "characters": null,
-      "location": "",
+      "type": "collect",
+      "description": "获得基础生存能力，可短时间在地表低温环境活动",
+      "characters": [
+        "char_1776614991427932100_2"
+      ],
+      "location": "map_天山深空观测站地表冰原",
       "actions": null,
       "results": null,
-      "state_changes": {},
-      "timestamp": 1776177878
+      "state_changes": {
+        "exp_gained": 16,
+        "location_changed": "map_天山深空观测站地表冰原",
+        "player_attack": 12,
+        "player_defense": 10,
+        "player_exp": 16,
+        "player_hp": 100,
+        "player_level": 1,
+        "player_mp": 50
+      },
+      "timestamp": 1776614991
     },
     {
       "step_number": 2,
-      "type": "event",
-      "description": "revealed",
-      "characters": null,
-      "location": "",
-      "actions": null,
-      "results": null,
-      "state_changes": {},
-      "timestamp": 1776177878
+      "type": "defeat",
+      "description": "战斗胜利！击败了 低阶工蜂虫族 (用时 6 回合)",
+      "characters": [
+        "char_1776614991427932100_2",
+        "char_低阶工蜂虫族"
+      ],
+      "location": "map_天山深空观测站地表冰原",
+      "actions": [
+        {
+          "actor": "char_1776614991427932100_2",
+          "action_type": "attack",
+          "target": "char_低阶工蜂虫族"
+        },
+        {
+          "actor": "char_低阶工蜂虫族",
+          "action_type": "attack",
+          "target": "char_1776614991427932100_2"
+        },
+        {
+          "actor": "char_1776614991427932100_2",
+          "action_type": "use_skill",
+          "target": "char_低阶工蜂虫族",
+          "skill_id": "skill_quick_strike"
+        },
+        {
+          "actor": "char_低阶工蜂虫族",
+          "action_type": "attack",
+          "target": "char_1776614991427932100_2"
+        },
+        {
+          "actor": "char_1776614991427932100_2",
+          "action_type": "attack",
+          "target": "char_低阶工蜂虫族"
+        },
+        {
+          "actor": "char_低阶工蜂虫族",
+          "action_type": "use_skill",
+          "target": "char_1776614991427932100_2",
+          "skill_id": "skill_insect_claw"
+        },
+        {
+          "actor": "char_1776614991427932100_2",
+          "action_type": "attack",
+          "target": "char_低阶工蜂虫族"
+        },
+        {
+          "actor": "char_低阶工蜂虫族",
+          "action_type": "attack",
+          "target": "char_1776614991427932100_2"
+        },
+        {
+          "actor": "char_1776614991427932100_2",
+          "action_type": "use_skill",
+          "target": "char_低阶工蜂虫族",
+          "skill_id": "skill_quick_strike"
+        },
+        {
+          "actor": "char_低阶工蜂虫族",
+          "action_type": "use_skill",
+          "target": "char_1776614991427932100_2",
+          "skill_id": "skill_insect_claw"
+        },
+        {
+          "actor": "char_1776614991427932100_2",
+          "action_type": "attack",
+          "target": "char_低阶工蜂虫族"
+        }
+      ],
+      "results": [
+        {
+          "success": true,
+          "action": {
+            "actor": "char_1776614991427932100_2",
+            "action_type": "attack",
+            "target": "char_低阶工蜂虫族"
+          },
+          "effects": null,
+          "damage": 10,
+          "message": "林跃 攻击了 低阶工蜂虫族，造成 10 点伤害"
+        },
+        {
+          "success": true,
+          "action": {
+            "actor": "char_低阶工蜂虫族",
+            "action_type": "attack",
+            "target": "char_1776614991427932100_2"
+          },
+          "effects": null,
+          "message": "低阶工蜂虫族 攻击了 林跃，但 林跃 闪避了攻击"
+        },
+        {
+          "success": true,
+          "action": {
+            "actor": "char_1776614991427932100_2",
+            "action_type": "use_skill",
+            "target": "char_低阶工蜂虫族",
+            "skill_id": "skill_quick_strike"
+          },
+          "effects": [],
+          "damage": 16,
+          "message": "林跃 对 低阶工蜂虫族 使用了 skill_quick_strike"
+        },
+        {
+          "success": true,
+          "action": {
+            "actor": "char_低阶工蜂虫族",
+            "action_type": "attack",
+            "target": "char_1776614991427932100_2"
+          },
+          "effects": null,
+          "damage": 10,
+          "message": "低阶工蜂虫族 攻击了 林跃，造成 10 点伤害"
+        },
+        {
+          "success": true,
+          "action": {
+            "actor": "char_1776614991427932100_2",
+            "action_type": "attack",
+            "target": "char_低阶工蜂虫族"
+          },
+          "effects": null,
+          "message": "林跃 攻击了 低阶工蜂虫族，但 低阶工蜂虫族 闪避了攻击"
+        },
+        {
+          "success": true,
+          "action": {
+            "actor": "char_低阶工蜂虫族",
+            "action_type": "use_skill",
+            "target": "char_1776614991427932100_2",
+            "skill_id": "skill_insect_claw"
+          },
+          "effects": [],
+          "damage": 18,
+          "message": "低阶工蜂虫族 对 林跃 使用了 skill_insect_claw"
+        },
+        {
+          "success": true,
+          "action": {
+            "actor": "char_1776614991427932100_2",
+            "action_type": "attack",
+            "target": "char_低阶工蜂虫族"
+          },
+          "effects": null,
+          "damage": 10,
+          "message": "林跃 攻击了 低阶工蜂虫族，造成 10 点伤害"
+        },
+        {
+          "success": true,
+          "action": {
+            "actor": "char_低阶工蜂虫族",
+            "action_type": "attack",
+            "target": "char_1776614991427932100_2"
+          },
+          "effects": null,
+          "damage": 10,
+          "message": "低阶工蜂虫族 攻击了 林跃，造成 10 点伤害"
+        },
+        {
+          "success": true,
+          "action": {
+            "actor": "char_1776614991427932100_2",
+            "action_type": "use_skill",
+            "target": "char_低阶工蜂虫族",
+            "skill_id": "skill_quick_strike"
+          },
+          "effects": [],
+          "damage": 18,
+          "message": "林跃 对 低阶工蜂虫族 使用了 skill_quick_strike"
+        },
+        {
+          "success": true,
+          "action": {
+            "actor": "char_低阶工蜂虫族",
+            "action_type": "use_skill",
+            "target": "char_1776614991427932100_2",
+            "skill_id": "skill_insect_claw"
+          },
+          "effects": [],
+          "damage": 16,
+          "message": "低阶工蜂虫族 对 林跃 使用了 skill_insect_claw"
+        },
+        {
+          "success": true,
+          "action": {
+            "actor": "char_1776614991427932100_2",
+            "action_type": "attack",
+            "target": "char_低阶工蜂虫族"
+          },
+          "effects": null,
+          "damage": 10,
+          "message": "林跃 攻击了 低阶工蜂虫族，造成 10 点伤害"
+        }
+      ],
+      "state_changes": {
+        "enemy_defeated": "char_低阶工蜂虫族",
+        "exp_gained": 20,
+        "player_attack": 12,
+        "player_defense": 10,
+        "player_exp": 36,
+        "player_hp": 100,
+        "player_level": 1,
+        "player_mp": 50
+      },
+      "timestamp": 1776614991
     }
   ],
   "success": true,
-  "start_time": 1776177878,
-  "end_time": 1776177878,
+  "start_time": 1776614991,
+  "end_time": 1776614991,
   "player_stats": {
     "initial": {
       "level": 1,
@@ -35,50 +242,245 @@
       "max_hp": 100,
       "mp": 50,
       "max_mp": 50,
-      "attack": 10,
+      "attack": 12,
       "defense": 10,
       "exp": 0
     },
     "final": {
-      "level": 1,
-      "hp": 100,
-      "max_hp": 100,
-      "mp": 50,
-      "max_mp": 50,
-      "attack": 10,
-      "defense": 10,
-      "exp": 0
+      "level": 2,
+      "hp": 46,
+      "max_hp": 110,
+      "mp": 40,
+      "max_mp": 55,
+      "attack": 14,
+      "defense": 11,
+      "exp": 36
     }
   },
-  "rewards": [],
+  "battle_reports": [
+    {
+      "enemy_name": "低阶工蜂虫族",
+      "enemy_level": 1,
+      "turns": 6,
+      "victory": true,
+      "damage_dealt": 64,
+      "damage_taken": 54,
+      "turn_log": [
+        {
+          "turn_number": 1,
+          "actor": "林跃",
+          "action": "attack",
+          "target": "低阶工蜂虫族",
+          "damage": 10,
+          "player_hp": 100,
+          "enemy_hp": 50
+        },
+        {
+          "turn_number": 1,
+          "actor": "低阶工蜂虫族",
+          "action": "attack",
+          "target": "林跃",
+          "damage": 0,
+          "player_hp": 100,
+          "enemy_hp": 50
+        },
+        {
+          "turn_number": 2,
+          "actor": "林跃",
+          "action": "use_skill",
+          "target": "低阶工蜂虫族",
+          "damage": 16,
+          "skill_used": "skill_quick_strike",
+          "player_hp": 100,
+          "enemy_hp": 34
+        },
+        {
+          "turn_number": 2,
+          "actor": "低阶工蜂虫族",
+          "action": "attack",
+          "target": "林跃",
+          "damage": 10,
+          "player_hp": 90,
+          "enemy_hp": 34
+        },
+        {
+          "turn_number": 3,
+          "actor": "林跃",
+          "action": "attack",
+          "target": "低阶工蜂虫族",
+          "damage": 0,
+          "player_hp": 90,
+          "enemy_hp": 34
+        },
+        {
+          "turn_number": 3,
+          "actor": "低阶工蜂虫族",
+          "action": "use_skill",
+          "target": "林跃",
+          "damage": 18,
+          "skill_used": "skill_insect_claw",
+          "player_hp": 72,
+          "enemy_hp": 34
+        },
+        {
+          "turn_number": 4,
+          "actor": "林跃",
+          "action": "attack",
+          "target": "低阶工蜂虫族",
+          "damage": 10,
+          "player_hp": 72,
+          "enemy_hp": 24
+        },
+        {
+          "turn_number": 4,
+          "actor": "低阶工蜂虫族",
+          "action": "attack",
+          "target": "林跃",
+          "damage": 10,
+          "player_hp": 62,
+          "enemy_hp": 24
+        },
+        {
+          "turn_number": 5,
+          "actor": "林跃",
+          "action": "use_skill",
+          "target": "低阶工蜂虫族",
+          "damage": 18,
+          "skill_used": "skill_quick_strike",
+          "player_hp": 62,
+          "enemy_hp": 6
+        },
+        {
+          "turn_number": 5,
+          "actor": "低阶工蜂虫族",
+          "action": "use_skill",
+          "target": "林跃",
+          "damage": 16,
+          "skill_used": "skill_insect_claw",
+          "player_hp": 46,
+          "enemy_hp": 6
+        },
+        {
+          "turn_number": 6,
+          "actor": "林跃",
+          "action": "attack",
+          "target": "低阶工蜂虫族",
+          "damage": 10,
+          "player_hp": 46,
+          "enemy_hp": 0
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "exp",
+      "amount": 100,
+      "reason": "完成任务"
+    }
+  ],
   "full_log": [
     {
-      "timestamp": 1776177878,
+      "timestamp": 1776614991,
       "type": "info",
-      "message": "开始模拟章节: 虫影逼近",
+      "message": "开始模拟章节: 冰原上的黑色虫影",
       "details": {
         "chapter_id": "P1-V1-C2",
         "quest_id": "quest_P1-V1-C2"
       }
     },
     {
-      "timestamp": 1776177878,
+      "timestamp": 1776614991,
       "type": "info",
-      "message": "接取任务: 虫影逼近"
+      "message": "接取任务: 冰原上的黑色虫影"
     },
     {
-      "timestamp": 1776177878,
-      "type": "info",
-      "message": "开始模拟章节: 虫影逼近",
+      "timestamp": 1776614991,
+      "type": "event",
+      "message": "移动: map_旧时代天山深空观测站地下休眠区 → 天山深空观测站地表冰原"
+    },
+    {
+      "timestamp": 1776614991,
+      "type": "combat",
+      "message": "战斗开始: 林跃 vs 低阶工蜂虫族",
       "details": {
-        "chapter_id": "P1-V1-C2",
-        "quest_id": "quest_P1-V1-C2"
+        "enemy_atk": 15,
+        "enemy_hp": 60,
+        "player_atk": 12,
+        "player_hp": 100
       }
     },
     {
-      "timestamp": 1776177878,
+      "timestamp": 1776614991,
+      "type": "combat",
+      "message": "[回合1] 林跃 攻击 低阶工蜂虫族，造成 10 伤害"
+    },
+    {
+      "timestamp": 1776614991,
+      "type": "combat",
+      "message": "[回合1] 低阶工蜂虫族 攻击 林跃，造成 0 伤害"
+    },
+    {
+      "timestamp": 1776614991,
+      "type": "combat",
+      "message": "[回合2] 林跃 攻击 低阶工蜂虫族，造成 16 伤害"
+    },
+    {
+      "timestamp": 1776614991,
+      "type": "combat",
+      "message": "[回合2] 低阶工蜂虫族 攻击 林跃，造成 10 伤害"
+    },
+    {
+      "timestamp": 1776614991,
+      "type": "combat",
+      "message": "[回合3] 林跃 攻击 低阶工蜂虫族，造成 0 伤害"
+    },
+    {
+      "timestamp": 1776614991,
+      "type": "combat",
+      "message": "[回合3] 低阶工蜂虫族 攻击 林跃，造成 18 伤害"
+    },
+    {
+      "timestamp": 1776614991,
+      "type": "combat",
+      "message": "[回合4] 林跃 攻击 低阶工蜂虫族，造成 10 伤害"
+    },
+    {
+      "timestamp": 1776614991,
+      "type": "combat",
+      "message": "[回合4] 低阶工蜂虫族 攻击 林跃，造成 10 伤害"
+    },
+    {
+      "timestamp": 1776614991,
+      "type": "combat",
+      "message": "[回合5] 林跃 攻击 低阶工蜂虫族，造成 18 伤害"
+    },
+    {
+      "timestamp": 1776614991,
+      "type": "combat",
+      "message": "[回合5] 低阶工蜂虫族 攻击 林跃，造成 16 伤害"
+    },
+    {
+      "timestamp": 1776614991,
+      "type": "combat",
+      "message": "[回合6] 林跃 攻击 低阶工蜂虫族，造成 10 伤害"
+    },
+    {
+      "timestamp": 1776614991,
+      "type": "reward",
+      "message": "战斗胜利！获得经验 20"
+    },
+    {
+      "timestamp": 1776614991,
       "type": "info",
-      "message": "接取任务: 虫影逼近"
+      "message": "章节模拟完成: 冰原上的黑色虫影",
+      "details": {
+        "exp_gained": 100,
+        "steps_count": 2,
+        "success": true
+      }
     }
-  ]
+  ],
+  "total_exp_gained": 100,
+  "final_level": 2
 }

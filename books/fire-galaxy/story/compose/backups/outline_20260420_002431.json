@@ -1,0 +1,705 @@
+{
+  "parts": [
+    {
+      "id": "P1",
+      "title": "荒土苏醒",
+      "summary": "现代青年陆星眠意外进入休眠仓穿越到三百年后虫族入侵后的废土地球，在危机四伏的地表艰难求生，初步觉醒基因能力、结识幸存者、获得初代机甲，开启逐星远征的第一步",
+      "volumes": [
+        {
+          "id": "P1-V1",
+          "title": "地表残响",
+          "summary": "陆星眠从休眠仓苏醒后，在被虫族污染的华国西南废土区域求生，先后遭遇低阶虫族、拾荒小队、废弃机甲基地，完成从普通人到进化者的身份转变，获得立足废土的基本能力与伙伴，确认远征目标",
+          "chapters": [
+            {
+              "id": "P1-V1-C1",
+              "title": "冷舱梦醒",
+              "summary": "陆星眠在废弃地下休眠基地的休眠仓中苏醒，发现自己身处三百年后的虫族入侵时代",
+              "characters": [
+                "陆星眠"
+              ],
+              "location": "华国西南废弃地下休眠基地A3区",
+              "events": [
+                {
+                  "type": "storyline",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "逐星主线",
+                  "change": "started",
+                  "details": "陆星眠从休眠中苏醒，正式进入三百年后的废土世界",
+                  "actor": "陆星眠",
+                  "action": "enter",
+                  "target": "废土时代",
+                  "target_type": "status",
+                  "context": "地下休眠基地A3区",
+                  "result": "陆星眠完成时间穿越，当前日期为3024年"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "旧时代智能手环",
+                  "change": "acquired",
+                  "details": "陆星眠在休眠仓旁找到未损坏的智能手环",
+                  "actor": "陆星眠",
+                  "action": "acquire",
+                  "target": "旧时代智能手环",
+                  "target_type": "item",
+                  "context": "休眠仓储物格",
+                  "result": "手环内置三百年间人类文明历史、虫族基础信息数据库"
+                },
+                {
+                  "type": "gate",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "休眠基地出口封堵",
+                  "change": "introduced",
+                  "details": "陆星眠发现基地出口被虫族分泌物完全封堵",
+                  "actor": "陆星眠",
+                  "action": "discover",
+                  "target": "基地出口封堵",
+                  "target_type": "location",
+                  "context": "休眠基地主通道",
+                  "result": "陆星眠被困在基地内，门外传来低阶虫族的嘶鸣声"
+                }
+              ],
+              "beats": [
+                "陆星眠在零下三度的休眠仓中睁开眼，身边的显示屏跳转到3024年的日期",
+                "他摸到手边的智能手环，激活后得知虫族入侵、人类文明濒临崩溃的真相",
+                "他走到休眠基地大门处，发现厚重的合金门被黏腻的虫族腐蚀液封死，还能听见门外低阶虫族的嘶鸣",
+                "他翻遍休眠舱周边的储物格，只找到半瓶能量水和一把生锈的多功能军刀"
+              ],
+              "opening_beat": "陆星眠在零下三度的休眠仓中睁开眼，身边的显示屏跳转到3024年的日期",
+              "closing_beat": "他翻遍休眠舱周边的储物格，只找到半瓶能量水和一把生锈的多功能军刀",
+              "conflict": "刚苏醒的陆星眠被困在陌生的休眠基地，门外有虫族威胁，物资极度匮乏",
+              "pacing": "normal"
+            },
+            {
+              "id": "P1-V1-C2",
+              "title": "蚀液破局",
+              "summary": "陆星眠尝试破解被虫族分泌物封堵的基地出口，意外发现自己对虫族腐蚀液免疫",
+              "characters": [
+                "陆星眠"
+              ],
+              "location": "地下休眠基地A3区主通道",
+              "events": [
+                {
+                  "type": "status",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "基因抗性",
+                  "change": "awakened",
+                  "details": "陆星眠发现自己的皮肤接触虫族腐蚀液没有受伤",
+                  "actor": "陆星眠",
+                  "action": "awaken",
+                  "target": "初级基因抗蚀能力",
+                  "target_type": "skill",
+                  "context": "基地主通道",
+                  "result": "确认自身携带休眠仓改造的特殊基因，对虫族腐蚀液免疫"
+                },
+                {
+                  "type": "gate",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "休眠基地出口封堵",
+                  "change": "overcome",
+                  "details": "陆星眠徒手清理出口处的虫族分泌物",
+                  "actor": "陆星眠",
+                  "action": "clear",
+                  "target": "出口封堵物",
+                  "target_type": "item",
+                  "context": "基地主通道出口",
+                  "result": "成功清理出一人宽的通行缺口"
+                },
+                {
+                  "type": "storyline",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "地表求生线",
+                  "change": "started",
+                  "details": "陆星眠走出休眠基地，正式进入地表废土世界",
+                  "actor": "陆星眠",
+                  "action": "leave",
+                  "target": "休眠基地",
+                  "target_type": "location",
+                  "context": "基地出口外",
+                  "result": "进入被虫族污染的废弃公路区域"
+                }
+              ],
+              "beats": [
+                "陆星眠握紧军刀尝试撬动大门缝隙，不小心被滴落的腐蚀液溅到手背",
+                "预想中的灼烧感没有出现，他惊讶地发现腐蚀液碰到他的皮肤就失去了活性",
+                "他用手直接扒开封堵的分泌物，不到十分钟就清出了足够一人通行的缺口",
+                "他刚探出头，就看见一只半人高的镰虫正背对着他啃食废弃机器人的残骸"
+              ],
+              "opening_beat": "陆星眠握紧军刀尝试撬动大门缝隙，不小心被滴落的腐蚀液溅到手背",
+              "closing_beat": "他刚探出头，就看见一只半人高的镰虫正背对着他啃食废弃机器人的残骸",
+              "conflict": "刚逃出休眠基地的陆星眠正面遭遇第一只低阶虫族，没有任何战斗经验",
+              "pacing": "fast"
+            },
+            {
+              "id": "P1-V1-C3",
+              "title": "初斩异虫",
+              "summary": "陆星眠首次对战低阶镰虫，凭借基因抗蚀能力险胜，获得第一份虫族素材",
+              "characters": [
+                "陆星眠"
+              ],
+              "location": "休眠基地外废弃公路",
+              "events": [
+                {
+                  "type": "combat",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "低阶镰虫",
+                  "change": "defeated",
+                  "details": "陆星眠利用抗蚀能力设计击杀镰虫",
+                  "actor": "陆星眠",
+                  "action": "defeat",
+                  "target": "低阶镰虫",
+                  "target_type": "character",
+                  "context": "废弃公路",
+                  "result": "成功击杀人生中第一只虫族"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "镰虫晶核",
+                  "change": "acquired",
+                  "details": "陆星眠从镰虫脑中取出能量晶核",
+                  "actor": "陆星眠",
+                  "action": "acquire",
+                  "target": "镰虫晶核",
+                  "target_type": "item",
+                  "context": "废弃公路",
+                  "result": "获得可以兑换物资的硬通货"
+                },
+                {
+                  "type": "goal",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "求生目标",
+                  "change": "set",
+                  "details": "陆星眠决定寻找附近的人类幸存者据点",
+                  "actor": "陆星眠",
+                  "action": "set",
+                  "target": "寻找幸存者据点",
+                  "target_type": "goal",
+                  "context": "废弃公路",
+                  "result": "智能手环检测到西北方向3公里有人类活动信号"
+                }
+              ],
+              "beats": [
+                "镰虫感知到动静，挥着镰刀状的前肢朝陆星眠扑过来",
+                "陆星眠侧身躲避，军刀砍在镰虫外壳上只留下一道白痕",
+                "他故意把腐蚀液抹在军刀上，趁镰虫攻击的间隙刺入它眼窝处的软肉",
+                "镰虫倒地死亡，他从虫脑里掏出一枚泛着蓝光的晶核，手环突然提示西北方向三公里有人类信号"
+              ],
+              "opening_beat": "镰虫感知到动静，挥着镰刀状的前肢朝陆星眠扑过来",
+              "closing_beat": "镰虫倒地死亡，他从虫脑里掏出一枚泛着蓝光的晶核，手环突然提示西北方向三公里有人类信号",
+              "conflict": "没有战斗经验的普通人对战攻击性极强的低阶虫族，力量差距悬殊",
+              "pacing": "fast"
+            },
+            {
+              "id": "P1-V1-C4",
+              "title": "拾荒小队",
+              "summary": "陆星眠循着信号找到正在被镰虫群围攻的拾荒小队，出手相助获得对方信任",
+              "characters": [
+                "陆星眠",
+                "陈野（拾荒队长）",
+                "苏晓（队医）"
+              ],
+              "location": "废弃加油站",
+              "events": [
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "陆星眠",
+                    "陈野",
+                    "苏晓"
+                  ],
+                  "subject": "拾荒小队关系",
+                  "change": "established",
+                  "details": "陆星眠出手帮助被围攻的拾荒小队",
+                  "actor": "陆星眠",
+                  "action": "meet",
+                  "target": "拾荒小队",
+                  "target_type": "character",
+                  "context": "废弃加油站",
+                  "result": "陆星眠吸引两只镰虫的注意力，缓解小队压力"
+                },
+                {
+                  "type": "combat",
+                  "characters": [
+                    "陆星眠",
+                    "陈野"
+                  ],
+                  "subject": "镰虫群",
+                  "change": "defeated",
+                  "details": "两人配合击杀全部五只镰虫",
+                  "actor": "陆星眠、陈野",
+                  "action": "defeat",
+                  "target": "五只镰虫",
+                  "target_type": "character",
+                  "context": "废弃加油站",
+                  "result": "成功解除小队的危机"
+                },
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "陆星眠",
+                    "陈野",
+                    "苏晓"
+                  ],
+                  "subject": "同行关系",
+                  "change": "established",
+                  "details": "陈野邀请陆星眠一起返回临时据点",
+                  "actor": "陈野",
+                  "action": "invite",
+                  "target": "陆星眠",
+                  "target_type": "character",
+                  "context": "废弃加油站",
+                  "result": "陆星眠同意同行，暂时加入拾荒小队"
+                }
+              ],
+              "beats": [
+                "陆星眠循着信号跑了三公里，看见废弃加油站里三个穿防护服的人被五只镰虫围堵",
+                "他从侧面偷袭砍死一只镰虫，吸引了另外两只的注意力",
+                "拾荒队长陈野趁机用改装脉冲枪打爆剩下三只镰虫的头",
+                "队医苏晓给陆星眠处理手上的轻微划伤，陈野邀请他一起回临时据点"
+              ],
+              "opening_beat": "陆星眠循着信号跑了三公里，看见废弃加油站里三个穿防护服的人被五只镰虫围堵",
+              "closing_beat": "队医苏晓给陆星眠处理手上的轻微划伤，陈野邀请他一起回临时据点",
+              "conflict": "陆星眠需要获得幸存者的信任，同时要应对围堵小队的虫族群",
+              "pacing": "normal"
+            },
+            {
+              "id": "P1-V1-C5",
+              "title": "锈墙据点",
+              "summary": "陆星眠跟随拾荒小队回到小型幸存者据点，了解当前人类的生存现状，登记成为临时居民",
+              "characters": [
+                "陆星眠",
+                "陈野",
+                "苏晓",
+                "老周（据点管理员）"
+              ],
+              "location": "锈墙幸存者据点",
+              "events": [
+                {
+                  "type": "location",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "锈墙据点",
+                  "change": "entered",
+                  "details": "陆星眠跟随小队进入人类幸存者聚居地",
+                  "actor": "陆星眠",
+                  "action": "enter",
+                  "target": "锈墙据点",
+                  "target_type": "location",
+                  "context": "据点正门",
+                  "result": "成功进入有基础防御的安全区域"
+                },
+                {
+                  "type": "knowledge",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "世界格局",
+                  "change": "learned",
+                  "details": "陆星眠得知人类联邦退守火星、地球沦为虫族养殖场的现状",
+                  "actor": "陈野",
+                  "action": "share",
+                  "target": "人类文明现状信息",
+                  "target_type": "knowledge",
+                  "context": "据点临时住所",
+                  "result": "陆星眠完整掌握当前世界的势力格局"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "临时居民身份卡",
+                  "change": "acquired",
+                  "details": "陆星眠登记身份获得据点居住权限",
+                  "actor": "老周",
+                  "action": "issue",
+                  "target": "临时居民身份卡",
+                  "target_type": "item",
+                  "context": "据点管理处",
+                  "result": "陆星眠获得在据点居住、交易、参与任务的权限"
+                }
+              ],
+              "beats": [
+                "陆星眠跟着陈野穿过两道带高压电的锈铁闸门，进入被高墙围起来的锈墙据点",
+                "管理员老周登记他的身份，对他的抗蚀能力表现出极大的惊讶",
+                "陈野给他安排了临时住所，给他讲了三百年间虫族入侵、人类败退到火星的历史",
+                "陆星眠刚把晶核换成据点积分，就听见据点警报响起，大量虫族正在朝据点方向移动"
+              ],
+              "opening_beat": "陆星眠跟着陈野穿过两道带高压电的锈铁闸门，进入被高墙围起来的锈墙据点",
+              "closing_beat": "陆星眠刚把晶核换成据点积分，就听见据点警报响起，大量虫族正在朝据点方向移动",
+              "conflict": "陆星眠刚在据点安顿下来，就遭遇虫族大规模袭击的危机",
+              "pacing": "fast"
+            },
+            {
+              "id": "P1-V1-C6",
+              "title": "虫潮压境",
+              "summary": "锈墙据点遭遇大规模虫潮袭击，防御阵线濒临崩溃，陆星眠加入防守队伍参战",
+              "characters": [
+                "陆星眠",
+                "陈野",
+                "苏晓",
+                "据点守卫"
+              ],
+              "location": "锈墙据点外墙",
+              "events": [
+                {
+                  "type": "storyline",
+                  "characters": [
+                    "陆星眠",
+                    "所有据点居民"
+                  ],
+                  "subject": "虫潮袭击事件",
+                  "change": "started",
+                  "details": "据点触发一级战备警报，全员进入防守状态",
+                  "actor": "据点管理系统",
+                  "action": "trigger",
+                  "target": "一级战备警报",
+                  "target_type": "status",
+                  "context": "锈墙据点全域",
+                  "result": "所有成年居民被分配到防守岗位"
+                },
+                {
+                  "type": "status",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "基因抗蚀能力",
+                  "change": "upgraded",
+                  "details": "陆星眠在连续战斗中能力进一步觉醒",
+                  "actor": "陆星眠",
+                  "action": "upgrade",
+                  "target": "基因抗蚀能力",
+                  "target_type": "skill",
+                  "context": "西南角防线",
+                  "result": "速度、力量提升30%，完全免疫低阶虫族腐蚀液"
+                },
+                {
+                  "type": "gate",
+                  "characters": [
+                    "所有据点居民"
+                  ],
+                  "subject": "外墙防御罩失效",
+                  "change": "introduced",
+                  "details": "高阶刺虫击穿能源核心，防御罩完全失效",
+                  "actor": "高阶刺虫",
+                  "action": "destroy",
+                  "target": "外墙能源核心",
+                  "target_type": "item",
+                  "context": "西南角外墙",
+                  "result": "据点失去最大防御屏障，虫族即将冲进内部"
+                }
+              ],
+              "beats": [
+                "刺耳的警报声响遍整个据点，所有居民都被要求要么参与防守要么撤离到地下防空洞",
+                "陆星眠跟着陈野守在西南角城墙，看见密密麻麻的低阶虫族像潮水一样涌过来",
+                "连续斩杀十几只镰虫后，他发现自己的速度和力量都比之前强了不少，腐蚀液溅到身上完全没有感觉",
+                "一只高阶刺虫突破防线，射出的尖刺击穿了城墙的能源核心，外墙防御罩直接失效"
+              ],
+              "opening_beat": "刺耳的警报声响遍整个据点，所有居民都被要求要么参与防守要么撤离到地下防空洞",
+              "closing_beat": "一只高阶刺虫突破防线，射出的尖刺击穿了城墙的能源核心，外墙防御罩直接失效",
+              "conflict": "小规模幸存者据点面对远超防御能力的虫潮，防线随时会被突破",
+              "pacing": "fast"
+            },
+            {
+              "id": "P1-V1-C7",
+              "title": "机甲残骸",
+              "summary": "防御罩失效后陆星眠奉命去据点地下车库取备用能源，意外发现尘封的初代机甲「星尘号」的残骸",
+              "characters": [
+                "陆星眠",
+                "苏晓"
+              ],
+              "location": "锈墙据点地下车库",
+              "events": [
+                {
+                  "type": "location",
+                  "characters": [
+                    "陆星眠",
+                    "苏晓"
+                  ],
+                  "subject": "地下车库",
+                  "change": "entered",
+                  "details": "两人奉命前往地下车库取备用能源核心",
+                  "actor": "陆星眠、苏晓",
+                  "action": "enter",
+                  "target": "地下车库",
+                  "target_type": "location",
+                  "context": "据点地下一层",
+                  "result": "进入存放备用能源的封闭区域"
+                },
+                {
+                  "type": "discovery",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "星尘号机甲",
+                  "change": "discovered",
+                  "details": "陆星眠在车库深处发现三百年前的实验型初代机甲",
+                  "actor": "陆星眠",
+                  "action": "discover",
+                  "target": "初代机甲星尘号",
+                  "target_type": "item",
+                  "context": "地下车库最深处",
+                  "result": "发现被尘封的银灰色初代机甲残骸"
+                },
+                {
+                  "type": "premise",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "星尘号智能系统",
+                  "change": "activated",
+                  "details": "陆星眠的基因与机甲系统匹配度100%，成功激活AI",
+                  "actor": "陆星眠",
+                  "action": "activate",
+                  "target": "机甲智能系统阿零",
+                  "target_type": "skill",
+                  "context": "机甲外壳旁",
+                  "result": "AI阿零告知机甲剩余30%能源，可启动基础战斗模式"
+                }
+              ],
+              "beats": [
+                "陈野把取备用能源的任务交给陆星眠，苏晓跟着他一起往地下车库跑",
+                "他们在车库最里面的防护罩后面，发现了被帆布盖着的、十几米高的银灰色机甲残骸",
+                "陆星眠的手碰到机甲外壳的瞬间，机甲胸口的指示灯突然亮起，一个电子音提示基因匹配度100%",
+                "智能系统阿零告诉他，星尘号还剩30%的能源，可以启动基础战斗模式，这时车库入口传来虫族的嘶鸣"
+              ],
+              "opening_beat": "陈野把取备用能源的任务交给陆星眠，苏晓跟着他一起往地下车库跑",
+              "closing_beat": "智能系统阿零告诉他，星尘号还剩30%的能源，可以启动基础战斗模式，这时车库入口传来虫族的嘶鸣",
+              "conflict": "陆星眠找到初代机甲，但虫族已经冲进地下车库，需要尽快启动机甲应对",
+              "pacing": "fast"
+            },
+            {
+              "id": "P1-V1-C8",
+              "title": "星尘初启",
+              "summary": "陆星眠启动初代机甲星尘号，斩杀冲进车库的虫族，返回地面支援防线",
+              "characters": [
+                "陆星眠",
+                "苏晓",
+                "阿零（机甲AI）"
+              ],
+              "location": "锈墙据点地下车库、外墙防线",
+              "events": [
+                {
+                  "type": "premise",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "机甲驾驶能力",
+                  "change": "mastered",
+                  "details": "陆星眠在阿零辅助下快速掌握基础操作",
+                  "actor": "陆星眠",
+                  "action": "learn",
+                  "target": "机甲基础操作",
+                  "target_type": "skill",
+                  "context": "星尘号驾驶舱",
+                  "result": "可以独立操控机甲完成移动、攻击等基础动作"
+                },
+                {
+                  "type": "combat",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "地下车库虫族",
+                  "change": "defeated",
+                  "details": "陆星眠操控机甲击杀冲进车库的所有虫族",
+                  "actor": "陆星眠",
+                  "action": "defeat",
+                  "target": "八只镰虫、一只高阶刺虫",
+                  "target_type": "character",
+                  "context": "地下车库",
+                  "result": "完全清除车库内的虫族威胁"
+                },
+                {
+                  "type": "location",
+                  "characters": [
+                    "陆星眠",
+                    "苏晓"
+                  ],
+                  "subject": "外墙防线",
+                  "change": "entered",
+                  "details": "陆星眠操控机甲带着苏晓返回地面支援",
+                  "actor": "陆星眠",
+                  "action": "move",
+                  "target": "外墙防线",
+                  "target_type": "location",
+                  "context": "地下车库顶部",
+                  "result": "机甲破开天花板直接落到地面防线前"
+                }
+              ],
+              "beats": [
+                "陆星眠按照阿零的提示爬进驾驶舱，戴上神经连接头盔",
+                "机甲启动的震动传遍整个车库，十几米高的星尘号缓缓站起身",
+                "他操控机甲握紧腰间的合金战刀，一刀就把冲在最前面的刺虫劈成两半",
+                "陆星眠让苏晓拿好备用能源，操控机甲破开车库天花板直接跳到地面防线"
+              ],
+              "opening_beat": "陆星眠按照阿零的提示爬进驾驶舱，戴上神经连接头盔",
+              "closing_beat": "陆星眠让苏晓拿好备用能源，操控机甲破开车库天花板直接跳到地面防线",
+              "conflict": "首次驾驶机甲的陆星眠需要快速掌握操作，解决冲进车库的虫族威胁",
+              "pacing": "fast"
+            },
+            {
+              "id": "P1-V1-C9",
+              "title": "退敌守家",
+              "summary": "陆星眠驾驶星尘号击退虫潮，守住锈墙据点，成为据点的英雄，得知火星联邦的征召信息",
+              "characters": [
+                "陆星眠",
+                "陈野",
+                "阿零",
+                "所有据点居民"
+              ],
+              "location": "锈墙据点外墙",
+              "events": [
+                {
+                  "type": "combat",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "虫潮主力",
+                  "change": "defeated",
+                  "details": "陆星眠操控机甲击杀虫潮指挥型高阶虫族",
+                  "actor": "陆星眠",
+                  "action": "defeat",
+                  "target": "三只高阶刺虫、虫群指挥虫",
+                  "target_type": "character",
+                  "context": "外墙防线前",
+                  "result": "虫潮失去指挥开始溃散"
+                },
+                {
+                  "type": "storyline",
+                  "characters": [
+                    "所有据点居民"
+                  ],
+                  "subject": "虫潮袭击事件",
+                  "change": "completed",
+                  "details": "虫潮完全撤退，据点防守成功",
+                  "actor": "据点管理系统",
+                  "action": "end",
+                  "target": "一级战备状态",
+                  "target_type": "status",
+                  "context": "锈墙据点全域",
+                  "result": "据点无一平民伤亡，防守取得完全胜利"
+                },
+                {
+                  "type": "knowledge",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "火星远征军征召信息",
+                  "change": "learned",
+                  "details": "陆星眠得知火星联邦征召地球进化者加入远征军对抗虫族",
+                  "actor": "陈野",
+                  "action": "share",
+                  "target": "远征军征召通知",
+                  "target_type": "knowledge",
+                  "context": "据点庆祝会",
+                  "result": "陆星眠获得离开地球、前往人类主阵营的官方途径"
+                }
+              ],
+              "beats": [
+                "星尘号落在防线前的瞬间，所有防守的居民都发出了惊呼",
+                "陆星眠操控机甲接连斩杀三只高阶刺虫，虫潮的攻势瞬间就弱了下来",
+                "陈野趁机换上备用能源重启防御罩，剩下的虫族见攻不进去纷纷撤退",
+                "战后的庆祝会上，陈野拿出刚刚收到的火星联邦通讯，说要征召有基因进化能力的人去火星参加远征军"
+              ],
+              "opening_beat": "星尘号落在防线前的瞬间，所有防守的居民都发出了惊呼",
+              "closing_beat": "战后的庆祝会上，陈野拿出刚刚收到的火星联邦通讯，说要征召有基因进化能力的人去火星参加远征军",
+              "conflict": "陆星眠要在留在安全的据点和前往火星参加远征、收复地球的选择中做决定",
+              "pacing": "normal"
+            },
+            {
+              "id": "P1-V1-C10",
+              "title": "逐星之誓",
+              "summary": "陆星眠决定加入火星联邦的远征军，和陈野、苏晓一起踏上前往太空的飞船，正式开启逐星远征的旅程",
+              "characters": [
+                "陆星眠",
+                "陈野",
+                "苏晓",
+                "阿零"
+              ],
+              "location": "锈墙据点外临时太空港",
+              "events": [
+                {
+                  "type": "goal",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "终极目标",
+                  "change": "set",
+                  "details": "陆星眠确定目标：消灭虫族、收复地球、统一人类文明",
+                  "actor": "陆星眠",
+                  "action": "set",
+                  "target": "逐星远征目标",
+                  "target_type": "goal",
+                  "context": "临时住所",
+                  "result": "正式决定加入火星远征军"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "陆星眠",
+                    "陈野",
+                    "苏晓"
+                  ],
+                  "subject": "远征军准入资格",
+                  "change": "acquired",
+                  "details": "三人通过基因检测获得登船权限",
+                  "actor": "联邦征兵官",
+                  "action": "issue",
+                  "target": "远征军准入证明",
+                  "target_type": "item",
+                  "context": "临时太空港",
+                  "result": "获得登上前往火星运输舰的资格"
+                },
+                {
+                  "type": "storyline",
+                  "characters": [
+                    "陆星眠"
+                  ],
+                  "subject": "宇宙远征线",
+                  "change": "started",
+                  "details": "运输舰升空进入跃迁航道，陆星眠正式踏上逐星旅程",
+                  "actor": "陆星眠",
+                  "action": "enter",
+                  "target": "火星运输舰",
+                  "target_type": "location",
+                  "context": "临时太空港",
+                  "result": "运输舰进入跃迁航道，舷窗外出现虫族星际巡逻舰的影子"
+                }
+              ],
+              "beats": [
+                "陆星眠思考了一整夜，告诉陈野和苏晓自己决定加入远征军",
+                "陈野和苏晓也决定跟着他一起去，三人收拾好行李前往据点外的临时太空港",
+                "陆星眠站在运输舰的舷窗边，看着越来越小的蓝色星球，摸着胸口的镰虫晶核发誓要夺回人类的家园",
+                "运输舰点火升空，进入跃迁航道，舷窗外突然出现虫族的星际巡逻舰的影子"
+              ],
+              "opening_beat": "陆星眠思考了一整夜，告诉陈野和苏晓自己决定加入远征军",
+              "closing_beat": "运输舰点火升空，进入跃迁航道，舷窗外突然出现虫族的星际巡逻舰的影子",
+              "conflict": "陆星眠选择放弃安稳的生活踏上未知的远征路，刚进入太空就遭遇虫族的星际部队",
+              "pacing": "normal"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

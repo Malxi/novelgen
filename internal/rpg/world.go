@@ -403,7 +403,7 @@ func (w *GameWorld) GivePlayerExp(amount int) bool {
 		return false
 	}
 	
-	leveledUp := w.Player.GainExp(amount)
+	leveledUp, _ := w.Player.GainExp(amount)
 	if leveledUp {
 		// 重新计算属性
 		w.Player.CalculateCurrentStats(w.Equipments)

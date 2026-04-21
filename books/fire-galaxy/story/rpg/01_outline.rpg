@@ -1,0 +1,355 @@
+
+metadata {
+  title = "fire-galaxy"
+  dsl_version = "0.2.0"
+  phase = "outline"
+}
+
+characters {
+  npc "protagonist" {
+    id = "protagonist"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+}
+
+world {
+  location "wasteland" {
+    id = "wasteland"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "cryo_facility" {
+    id = "cryo_facility"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+}
+
+storyline {
+  chapter "休眠仓的冷光" {
+    id = "P1-V1-C1"
+    arc = "P1-V1"
+    objective "休眠仓的冷光" {
+      id = "obj_P1-V1-C1"
+      type = "sequence"
+      step 1 {
+        description = "陆沉从持续3000年的意外休眠中苏醒"
+        event {
+          type = "status"
+        }
+      }
+      step 2 {
+        description = "陆沉确认休眠中心已被废弃百年，所有工作人员不知所踪"
+        event {
+          type = "storyline"
+        }
+      }
+      step 3 {
+        description = "陆沉获得可联网的智能手环，得知当前时间为星元327年"
+        event {
+          type = "acquire"
+        }
+      }
+    }
+  }
+  chapter "第一头虫影" {
+    id = "P1-V1-C2"
+    arc = "P1-V1"
+    objective "第一头虫影" {
+      id = "obj_P1-V1-C2"
+      type = "sequence"
+      step 1 {
+        description = "陆沉首次遭遇入侵地球的外星虫族，对方主动发起攻击"
+        event {
+          type = "relationship"
+        }
+      }
+      step 2 {
+        description = "陆沉用生锈钢管与工蜂缠斗，小臂被腐蚀液擦中受伤"
+        event {
+          type = "combat"
+          enemies = []
+        }
+      }
+      step 3 {
+        description = "陆沉砸爆工蜂的复眼将其击杀，手环自动扫描虫族尸体给出基础数据"
+        event {
+          type = "combat"
+          enemies = []
+        }
+      }
+      step 4 {
+        description = "陆沉发现被腐蚀液灼伤的小臂以肉眼可见的速度结痂愈合"
+        event {
+          type = "status"
+        }
+      }
+    }
+  }
+  chapter "基因觉醒" {
+    id = "P1-V1-C3"
+    arc = "P1-V1"
+    objective "基因觉醒" {
+      id = "obj_P1-V1-C3"
+      type = "sequence"
+      step 1 {
+        description = "陆沉获得了能支持7天生存的基础物资"
+        event {
+          type = "acquire"
+        }
+      }
+      step 2 {
+        description = "手环检测到陆沉的基因活性是普通人的300%，属于罕见的S级进化体质"
+        event {
+          type = "premise"
+        }
+      }
+      step 3 {
+        description = "陆沉从旧广播中接收到断断续续的求救信号，来自发射场外围的幸存者据点"
+        event {
+          type = "knowledge"
+        }
+      }
+      step 4 {
+        description = "陆沉决定前往求救信号来源地，寻找其他人类同伴"
+        event {
+          type = "goal"
+        }
+      }
+    }
+  }
+  chapter "黄沙中的求救" {
+    id = "P1-V1-C4"
+    arc = "P1-V1"
+    objective "黄沙中的求救" {
+      id = "obj_P1-V1-C4"
+      type = "sequence"
+      step 1 {
+        description = "陆沉离开休眠中心，沿着求救信号的方向前进"
+        event {
+          type = "location"
+        }
+      }
+      step 2 {
+        description = "陆沉发现小队被三只工蜂虫围堵，队长林野腿部受伤"
+        event {
+          type = "relationship"
+        }
+      }
+      step 3 {
+        description = "陆沉从后方偷袭砍杀一只工蜂，配合林野的枪、阿柚的电击棒解决剩余虫族"
+        event {
+          type = "combat"
+          enemies = []
+        }
+      }
+      step 4 {
+        description = "林野感激陆沉的救命之恩，主动邀请他前往小队的地下据点暂避"
+        event {
+          type = "relationship"
+        }
+      }
+    }
+  }
+  chapter "地下据点的秘密" {
+    id = "P1-V1-C5"
+    arc = "P1-V1"
+    objective "地下据点的秘密" {
+      id = "obj_P1-V1-C5"
+      type = "sequence"
+      step 1 {
+        description = "众人在虫族追来前关上了厚达半米的合金门，成功躲进据点"
+        event {
+          type = "location"
+        }
+      }
+      step 2 {
+        description = "陆沉得知泽格虫族100年前入侵地球，人类联邦主力撤往半人马座阿尔法星，留下的幸存者不仅要防虫族，还要对抗反叛AI集群[智网]的猎杀"
+        event {
+          type = "knowledge"
+        }
+      }
+      step 3 {
+        description = "老周展示半年前挖出的初代民用机甲，只要修好能源核心就能启动"
+        event {
+          type = "acquire"
+        }
+      }
+      step 4 {
+        description = "作为前航天工程师的陆沉一眼看出机甲的故障是能源线路问题，主动提出帮忙修复"
+        event {
+          type = "goal"
+        }
+      }
+    }
+  }
+  chapter "核电站的魅影" {
+    id = "P1-V1-C6"
+    arc = "P1-V1"
+    objective "核电站的魅影" {
+      id = "obj_P1-V1-C6"
+      type = "sequence"
+      step 1 {
+        description = "三人准备好武器和防护装备，趁着天刚亮虫族活跃度最低的时候出发"
+        event {
+          type = "goal"
+        }
+      }
+      step 2 {
+        description = "三人摸到核电站外围，发现周围遍地都是人类和虫族的尸体，布满虫族黏液痕迹"
+        event {
+          type = "location"
+        }
+      }
+      step 3 {
+        description = "阿柚的探测器检测到核电站核心机房存在高能量反应，符合氚晶体的特征，同时检测到大量虫族生命信号"
+        event {
+          type = "knowledge"
+        }
+      }
+      step 4 {
+        description = "一只两米高的虫族哨兵从废墟后跳出来，拦住了三人的去路"
+        event {
+          type = "combat"
+          enemies = []
+        }
+      }
+    }
+  }
+  chapter "孵化巢的核心" {
+    id = "P1-V1-C7"
+    arc = "P1-V1"
+    objective "孵化巢的核心" {
+      id = "obj_P1-V1-C7"
+      type = "sequence"
+      step 1 {
+        description = "陆沉正面吸引哨兵注意力，林野瞄准复眼射击，阿柚释放电磁脉冲瘫痪哨兵动作，三人配合顺利将其击杀"
+        event {
+          type = "combat"
+          enemies = []
+        }
+      }
+      step 2 {
+        description = "三人顺着通风管道潜入核心机房，避开了外围巡逻的虫族"
+        event {
+          type = "location"
+        }
+      }
+      step 3 {
+        description = "陆沉顺利取下控制台上的氚晶体，装入密封背包"
+        event {
+          type = "acquire"
+        }
+      }
+      step 4 {
+        description = "陆沉发现角落里有一台被虫族撕毁的智网战斗机器人残骸，显示智网也在搜寻氚晶体"
+        event {
+          type = "knowledge"
+        }
+      }
+    }
+  }
+  chapter "死里逃生" {
+    id = "P1-V1-C8"
+    arc = "P1-V1"
+    objective "死里逃生" {
+      id = "obj_P1-V1-C8"
+      type = "sequence"
+      step 1 {
+        description = "危急关头陆沉的基因能力再次升级，力量、速度提升5倍，获得短暂的外骨骼生成能力"
+        event {
+          type = "premise"
+        }
+      }
+      step 2 {
+        description = "陆沉留在后面断后，徒手撕碎了十多只冲进来的工蜂虫，扛住了炸塌的通道缺口"
+        event {
+          type = "combat"
+          enemies = []
+        }
+      }
+      step 3 {
+        description = "三人顺利逃出核电站，林野引爆事先埋好的炸药，封死了追出来的虫族"
+        event {
+          type = "location"
+        }
+      }
+      step 4 {
+        description = "三人确认氚晶体完好无损，成功完成任务"
+        event {
+          type = "goal"
+        }
+      }
+    }
+  }
+  chapter "灰雀的轰鸣" {
+    id = "P1-V1-C9"
+    arc = "P1-V1"
+    objective "灰雀的轰鸣" {
+      id = "obj_P1-V1-C9"
+      type = "sequence"
+      step 1 {
+        description = "陆沉昏迷一天一夜后苏醒，基因能力稳定在一阶进化者水平，身体素质进一步提升"
+        event {
+          type = "status"
+        }
+      }
+      step 2 {
+        description = "陆沉花了三个小时修好机甲的能源线路，插入氚晶体后机甲成功启动"
+        event {
+          type = "acquire"
+        }
+      }
+      step 3 {
+        description = "陆沉坐进驾驶舱测试机甲的移动、武器系统，一切功能正常，可投入实战"
+        event {
+          type = "acquire"
+        }
+      }
+      step 4 {
+        description = "据点警报突然响起，10台智网战斗机器人攻破了外门，正在往内部突进"
+        event {
+          type = "combat"
+          enemies = []
+        }
+      }
+    }
+  }
+  chapter "逐星的第一步" {
+    id = "P1-V1-C10"
+    arc = "P1-V1"
+    objective "逐星的第一步" {
+      id = "obj_P1-V1-C10"
+      type = "sequence"
+      step 1 {
+        description = "陆沉驾驶机甲灵活作战，不到十分钟就拆解了所有入侵的机器人，据点零伤亡"
+        event {
+          type = "combat"
+          enemies = []
+        }
+      }
+      step 2 {
+        description = "所有幸存者推举陆沉为领袖，愿意跟随他离开废土，寻找人类联邦的大部队"
+        event {
+          type = "relationship"
+        }
+      }
+      step 3 {
+        description = "陆沉宣布下一个目标是前往南海发射场，找到人类遗留的远征星舰，航向半人马座阿尔法星，统一人类势力对抗虫族和智网"
+        event {
+          type = "goal"
+        }
+      }
+      step 4 {
+        description = "陆沉驾驶机甲走在最前面，带领所有幸存者走出地下据点，朝着南海的方向前进"
+        event {
+          type = "storyline"
+        }
+      }
+    }
+  }
+}
+
+systems {
+}

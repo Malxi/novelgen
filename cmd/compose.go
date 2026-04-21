@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"novelgen/internal/agents"
 	"novelgen/internal/llm"
@@ -26,6 +27,7 @@ var (
 	composeConcurrencyFlag  int
 	composeHierarchicalFlag bool
 	composeForceImproveFlag bool
+	composeForceGenFlag     bool
 )
 
 var composeCmd = &cobra.Command{
@@ -103,6 +105,7 @@ func init() {
 	composeCmd.AddCommand(composeImproveCmd)
 
 	composeGenCmd.Flags().BoolVar(&composeHierarchicalFlag, "hierarchical", false, "Use hierarchical generation (better quality, slower)")
+	composeGenCmd.Flags().BoolVar(&composeForceGenFlag, "force", false, "Force regeneration even if outline exists (old outline will be backed up)")
 	composeRegenCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Suggestions for regeneration")
 	composeImproveCmd.Flags().IntVar(&composeMaxRoundsFlag, "max-rounds", 1, "Maximum number of improvement rounds")
 	composeImproveCmd.Flags().IntVar(&composeConcurrencyFlag, "concurrency", 3, "Maximum number of concurrent regeneration tasks")
@@ -150,7 +153,41 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 	// Check if outline already exists
 	outlinePath := filepath.Join("story", "compose", "outline.json")
 	if _, err := os.Stat(outlinePath); err == nil {
-		return fmt.Errorf("outline already exists at %s. Use 'novelgen compose regen' to regenerate or 'novelgen compose improve' to improve", outlinePath)
+		if !composeForceGenFlag {
+			return fmt.Errorf("outline already exists at %s. Use 'novelgen compose regen' to regenerate, 'novelgen compose improve' to improve, or add --force to regenerate with backup", outlinePath)
+		}
+
+		// Backup existing outline
+		logger.Info("Outline exists, creating backup...")
+		backupDir := filepath.Join("story", "compose", "backups")
+		if err := os.MkdirAll(backupDir, 0755); err != nil {
+			return fmt.Errorf("failed to create backup directory: %w", err)
+		}
+
+		// Generate backup filename with timestamp
+		timestamp := time.Now().Format("20060102_150405")
+		backupPath := filepath.Join(backupDir, fmt.Sprintf("outline_%s.json", timestamp))
+
+		// Read and backup current outline
+		outlineData, err := os.ReadFile(outlinePath)
+		if err != nil {
+			return fmt.Errorf("failed to read existing outline for backup: %w", err)
+		}
+
+		if err := os.WriteFile(backupPath, outlineData, 0644); err != nil {
+			return fmt.Errorf("failed to backup outline: %w", err)
+		}
+
+		// Also backup markdown if exists
+		mdPath := filepath.Join("story", "compose", "outline.md")
+		if _, err := os.Stat(mdPath); err == nil {
+			mdData, _ := os.ReadFile(mdPath)
+			mdBackupPath := filepath.Join(backupDir, fmt.Sprintf("outline_%s.md", timestamp))
+			os.WriteFile(mdBackupPath, mdData, 0644)
+		}
+
+		logger.Info("Outline backed up to: %s", backupPath)
+		fmt.Printf("\n📦 Existing outline backed up to: %s\n\n", backupPath)
 	}
 
 	// AI generation mode

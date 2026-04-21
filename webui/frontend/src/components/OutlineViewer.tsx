@@ -16,7 +16,7 @@ import {
   Gamepad2,
   BarChart3,
 } from 'lucide-react';
-import { getOutline, createTask, getTask, listSimulationReports, getSimulationReport } from '../api';
+import { getOutline, createTask, getTask, listSimulationReports, getSimulationReport, listOutlineVersions, restoreOutlineVersion } from '../api';
 import type { Outline, Chapter, Task } from '../types';
 
 interface TreeNodeProps {
@@ -309,7 +309,7 @@ function GenerateDialog({ isOpen, onClose, onGenerate, outlineExists }: Generate
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-[var(--primary)]" />
-            生成大纲
+            {outlineExists ? '重新生成大纲' : '生成大纲'}
           </h3>
           <button onClick={onClose} className="p-2 hover:bg-[var(--surface-light)] rounded-lg">
             <X className="w-5 h-5" />
@@ -318,13 +318,10 @@ function GenerateDialog({ isOpen, onClose, onGenerate, outlineExists }: Generate
 
         <div className="space-y-4">
           {outlineExists && (
-            <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm">
-              <p className="text-yellow-400 font-medium">⚠️ 大纲已存在</p>
+            <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-sm">
+              <p className="text-blue-400 font-medium">ℹ️ 将自动备份</p>
               <p className="text-[var(--text-muted)] mt-1">
-                当前项目已有大纲文件。如需重新生成，请先删除或备份 <code className="bg-[var(--surface)] px-1 rounded">story/compose/outline.json</code> 后再生成。
-              </p>
-              <p className="text-[var(--text-muted)] mt-2">
-                或者使用"改进大纲"功能来优化现有大纲。
+                当前项目已有大纲文件。重新生成前会自动备份现有大纲到 <code className="bg-[var(--surface)] px-1 rounded">story/compose/backups/</code> 目录。
               </p>
             </div>
           )}
@@ -342,11 +339,9 @@ function GenerateDialog({ isOpen, onClose, onGenerate, outlineExists }: Generate
             </label>
           </div>
 
-          {!outlineExists && (
-            <div className="p-3 bg-[var(--surface-light)] rounded-lg text-sm text-[var(--text-muted)]">
-              <p>提示：生成大纲需要先在"故事设定"中创建 story_setup.json。</p>
-            </div>
-          )}
+          <div className="p-3 bg-[var(--surface-light)] rounded-lg text-sm text-[var(--text-muted)]">
+            <p>提示：生成大纲需要先在"故事设定"中创建 story_setup.json。</p>
+          </div>
         </div>
 
         <div className="mt-6 flex gap-2">
@@ -358,11 +353,10 @@ function GenerateDialog({ isOpen, onClose, onGenerate, outlineExists }: Generate
               onGenerate(options);
               onClose();
             }}
-            disabled={outlineExists}
-            className={`btn flex-1 ${outlineExists ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary'}`}
+            className="btn btn-primary flex-1"
           >
             <Play className="w-4 h-4" />
-            {outlineExists ? '大纲已存在' : '开始生成'}
+            {outlineExists ? '重新生成' : '开始生成'}
           </button>
         </div>
       </div>
@@ -771,6 +765,11 @@ export function OutlineViewer({ projectPath }: { projectPath: string }) {
   const [showImproveDialog, setShowImproveDialog] = useState(false);
   const [showRPGSimDialog, setShowRPGSimDialog] = useState(false);
 
+  // Version management
+  const [outlineVersions, setOutlineVersions] = useState<Array<{ filename: string; created_at: string; size: number }>>([]);
+  const [showVersionsDialog, setShowVersionsDialog] = useState(false);
+  const [restoringVersion, setRestoringVersion] = useState(false);
+
   useEffect(() => {
     loadOutline();
     loadSimulationReports();
@@ -800,6 +799,34 @@ export function OutlineViewer({ projectPath }: { projectPath: string }) {
       setSimulationReports(reports);
     } catch (err) {
       console.error('Failed to load simulation reports:', err);
+    }
+  }
+
+  async function loadOutlineVersions() {
+    try {
+      const versions = await listOutlineVersions(projectPath);
+      setOutlineVersions(versions);
+    } catch (err) {
+      console.error('Failed to load outline versions:', err);
+    }
+  }
+
+  async function handleRestoreVersion(filename: string) {
+    if (!confirm(`确定要恢复到版本 ${filename} 吗？当前大纲将被自动备份。`)) {
+      return;
+    }
+
+    try {
+      setRestoringVersion(true);
+      await restoreOutlineVersion(filename, projectPath);
+      await loadOutline();
+      setShowVersionsDialog(false);
+      alert('版本恢复成功！');
+    } catch (err) {
+      console.error('Failed to restore version:', err);
+      alert('版本恢复失败：' + (err as Error).message);
+    } finally {
+      setRestoringVersion(false);
     }
   }
 
@@ -1059,6 +1086,16 @@ export function OutlineViewer({ projectPath }: { projectPath: string }) {
             <Wand2 className="w-4 h-4" />
             改进大纲
           </button>
+          <button
+            onClick={() => {
+              loadOutlineVersions();
+              setShowVersionsDialog(true);
+            }}
+            className="btn btn-secondary"
+          >
+            <FileText className="w-4 h-4" />
+            版本历史
+          </button>
         </div>
       </div>
 
@@ -1177,6 +1214,77 @@ export function OutlineViewer({ projectPath }: { projectPath: string }) {
         onSimulate={runRPGSimulation}
         outline={outline}
       />
+
+      {/* Versions History Dialog */}
+      {showVersionsDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="glass rounded-xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[var(--primary)]" />
+                大纲版本历史
+              </h3>
+              <button onClick={() => setShowVersionsDialog(false)} className="p-2 hover:bg-[var(--surface-light)] rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto">
+              {outlineVersions.length === 0 ? (
+                <div className="text-center py-8 text-[var(--text-muted)]">
+                  <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>暂无备份版本</p>
+                  <p className="text-sm mt-2">每次重新生成大纲时会自动创建备份</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {outlineVersions.map((version, index) => (
+                    <div
+                      key={version.filename}
+                      className="p-4 bg-[var(--surface-light)] rounded-lg flex items-center justify-between hover:bg-[var(--surface)] transition-colors"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[var(--text)]">
+                            版本 {outlineVersions.length - index}
+                          </span>
+                          {index === 0 && (
+                            <span className="px-2 py-0.5 bg-[var(--primary)]/20 text-[var(--primary)] rounded text-xs">
+                              最新
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-[var(--text-muted)] mt-1">
+                          备份时间: {version.created_at || '未知'}
+                        </p>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          文件大小: {(version.size / 1024).toFixed(2)} KB
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleRestoreVersion(version.filename)}
+                        disabled={restoringVersion}
+                        className="btn btn-secondary text-sm"
+                      >
+                        {restoringVersion ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4" />
+                        )}
+                        恢复
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-[var(--border)] text-sm text-[var(--text-muted)]">
+              <p>💡 提示：恢复版本前，当前大纲会自动备份。恢复后请刷新页面查看更新。</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Simulation Reports Dialog */}
       {showReportsDialog && (

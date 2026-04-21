@@ -1,0 +1,175 @@
+# Fire-Galaxy Craft DSL
+# Phase 2: Generated from craft/*.json
+# Fills placeholder details from outline
+
+metadata {
+  title = "fire-galaxy"
+  phase = "craft"
+}
+
+characters {
+  player "陆星眠" {
+    id                = "char_luxingmian"
+    name              = "陆星眠"
+    __placeholder__   = false
+    
+    description       = "来自21世纪的航天工程师，因实验事故意外进入休眠仓，穿越到3024年的虫族肆虐时代"
+    age               = 28
+    gender            = "男"
+    race              = "人类"
+    background        = "华国西昌航天发射场的年轻工程师，在一次休眠实验中发生意外，沉睡了近1000年。醒来后发现世界已经被虫族入侵，人类退守据点。拥有21世纪的知识和思维方式，在这个废土世界显得格格不入但又有独特优势。"
+    personality       = ["理性", "好奇", "坚韧", "适应力强", "偶尔迷茫"]
+    motivation        = "在这个危险的世界生存下去，寻找其他幸存者，找到回到过去或改变未来的方法"
+    abilities         = ["冬眠者体质（对辐射有一定抗性）", "快速学习能力", "工程学知识"]
+    role_in_story     = "主角"
+    voice             = "理性但偶尔会感到迷茫，说话简洁直接"
+    
+    class             = "adaptable_survivor"
+    
+    str = 12
+    agi = 15
+    int = 16
+    vit = 10
+    hp  = 100
+    mp  = 50
+    
+    skills = ["工程学", "快速学习", "适应环境", "基础格斗"]
+  }
+  
+  enemy "虫族工蜂" {
+    id                = "enemy_insect_worker"
+    name              = "虫族工蜂"
+    __placeholder__   = false
+    
+    description       = "虫族最基础的单位，负责采集资源和建造巢穴。虽然个体弱小，但数量庞大"
+    type              = "insect"
+    level             = 1
+    appearance        = "半人高的昆虫，黄褐色外壳，两对膜翅，口器发达"
+    abilities         = ["酸性唾液", "群体攻击", "快速繁殖"]
+    
+    str = 8
+    agi = 12
+    vit = 6
+    hp  = 40
+    mp  = 10
+    
+    spawn_locations = ["loc_cryo_center", "loc_cryo_entrance", "loc_launch_ruins"]
+  }
+  
+  enemy "低阶镰虫" {
+    id                = "enemy_insect_scythe"
+    name              = "低阶镰虫"
+    __placeholder__   = false
+    
+    description       = "虫族基础战斗单位，拥有镰刀状锋利前肢，攻击性强"
+    type              = "insect"
+    level             = 2
+    appearance        = "约1.5米高的虫族，暗绿色甲壳，一对巨大的镰刀状前肢，后腿发达"
+    abilities         = ["镰刀斩击", "跳跃攻击", "甲壳防御"]
+    
+    str = 14
+    agi = 10
+    vit = 8
+    hp  = 60
+    mp  = 15
+    
+    spawn_locations = ["loc_launch_ruins"]
+  }
+  
+  npc "陈野" {
+    id                = "npc_chenye"
+    name              = "陈野"
+    __placeholder__   = false
+    
+    description       = "锈墙据点的拾荒队长，三十多岁的壮汉，性格豪爽，带领小队在废墟中搜集资源"
+    age               = 35
+    gender            = "男"
+    role              = "scavenger_captain"
+    appearance        = "身高一米八的壮汉，短发，脸上有一道疤痕，穿着改装过的防护服"
+    background        = "废土土著，从小在据点长大，靠拾荒为生。经历了多次据点危机，经验丰富"
+    personality       = ["豪爽", "务实", "保护欲强", "有时候过于谨慎"]
+    affiliations      = ["锈墙据点", "拾荒者公会"]
+    
+    default_location  = "loc_rustwall"
+  }
+  
+  npc "苏晓" {
+    id                = "npc_suxiao"
+    name              = "苏晓"
+    __placeholder__   = false
+    
+    description       = "锈墙据点的年轻队医，二十多岁，性格温柔细心"
+    age               = 24
+    gender            = "女"
+    role              = "medic"
+    appearance        = "清秀的年轻女性，长发扎成马尾，穿着整洁的医护服，总是带着医疗包"
+    background        = "自学成才的医者，在废土中学会了用各种植物和虫族材料制药"
+    personality       = ["温柔", "细心", "坚韧", "善良"]
+    affiliations      = ["锈墙据点", "医疗站"]
+    
+    default_location  = "loc_rustwall"
+  }
+}
+
+world {
+  location "西昌航天发射场地下休眠中心" {
+    id                = "loc_cryo_center"
+    name              = "西昌航天发射场地下休眠中心"
+    __placeholder__   = false
+    
+    type              = "dungeon"
+    description       = "位于西昌航天发射场地下300米的休眠设施，建于2247年，曾是深空探索计划的组成部分"
+    appearance        = "巨大的圆形大厅，中央排列着数十个休眠仓，大部分已经损坏"
+    atmosphere        = "阴暗潮湿，布满灰尘，设备大多已损坏，空气中弥漫着霉味和金属锈蚀的味道"
+    history           = "建于2247年，用于深空探索人员的长期休眠实验。在虫族入侵前夕被紧急封闭，但随后被遗忘"
+    
+    inhabitants = ["虫族工蜂"]
+  }
+  
+  location "锈墙据点" {
+    id                = "loc_rustwall"
+    name              = "锈墙幸存者据点"
+    __placeholder__   = false
+    
+    type              = "city"
+    description       = "人类在废墟中建立的临时避难所，用废弃车辆和高墙围成，有近千名幸存者居住"
+    appearance        = "由废弃车辆、集装箱和铁板围成的圆形堡垒，中央有几栋保存较好的建筑"
+    atmosphere        = "拥挤但充满生机，人们忙碌地 trading 和工作，孩子们在��些区域玩耍"
+    history           = "建于虫族入侵后第50年，由一批幸存者建立，经过多次扩建和加固"
+    
+    inhabitants = ["陈野", "苏晓", "数百名幸存者"]
+  }
+}
+
+storyline {
+  chapter "苏醒" {
+    id = "chap_awakening"
+    
+    objective "逃离休眠中心" {
+      step 1 {
+        description = "陆星眠从休眠仓中醒来，发现设施已被虫族占领"
+        event {
+          type = "status"
+        }
+      }
+      step 2 {
+        description = "在中心寻找可用的装备和补给"
+        event {
+          type = "acquire"
+        }
+      }
+      step 3 {
+        description = "击败阻挡道路的虫族工蜂，逃出发射场"
+        event {
+          type = "combat"
+        }
+      }
+      step 4 {
+        description = "遇到陈野的拾荒队，被带回锈墙据点"
+        event {
+          type = "location"
+        }
+      }
+    }
+  }
+}

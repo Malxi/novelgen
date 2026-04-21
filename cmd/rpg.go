@@ -58,8 +58,8 @@ Examples:
 
 var rpgSimulateCmd = &cobra.Command{
 	Use:   "simulate",
-	Short: "Simulate RPG gameplay for a chapter",
-	Long: `Simulate RPG gameplay for a specific chapter.
+	Short: "Simulate RPG gameplay for a chapter or volume",
+	Long: `Simulate RPG gameplay for a specific chapter or volume.
 
 This command runs a simulation of the RPG gameplay based on the chapter's
 story events, showing how the game mechanics would play out.
@@ -67,6 +67,9 @@ story events, showing how the game mechanics would play out.
 Examples:
   # Simulate chapter P1-V1-C1
   novelgen rpg simulate P1-V1-C1
+
+  # Simulate volume P1-V1
+  novelgen rpg simulate P1-V1
 
   # Simulate without detailed report
   novelgen rpg simulate P1-V1-C1 --report=false`,
@@ -253,7 +256,7 @@ func runRPGGen(cmd *cobra.Command, args []string) error {
 func runRPGSimulate(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 
-	chapterID := args[0]
+	targetID := args[0]
 
 	// Load project config
 	config, err := loadProjectConfig()
@@ -320,9 +323,34 @@ func runRPGSimulate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Run enhanced simulation
-	fmt.Printf("\n========== Simulating Chapter: %s ==========\n", chapterID)
+	// 判断是章节还是卷
 	engine := rpg.NewEnhancedSimulationEngine(world)
+
+	if isVolumeID(targetID) {
+		// 模拟整个卷
+		return simulateVolume(engine, targetID, bookDir)
+	}
+
+	// 模拟单个章节
+	return simulateChapter(engine, targetID, bookDir)
+}
+
+func isVolumeID(id string) bool {
+	// 卷ID格式: P1-V1 (不包含 -C)
+	return len(id) > 0 && !containsChapter(id)
+}
+
+func containsChapter(id string) bool {
+	for i := 0; i < len(id)-1; i++ {
+		if id[i] == '-' && id[i+1] == 'C' {
+			return true
+		}
+	}
+	return false
+}
+
+func simulateChapter(engine *rpg.EnhancedSimulationEngine, chapterID string, bookDir string) error {
+	fmt.Printf("\n========== Simulating Chapter: %s ==========\n", chapterID)
 	result, err := engine.SimulateChapterEnhanced(chapterID)
 	if err != nil {
 		return fmt.Errorf("simulation failed: %w", err)
@@ -342,9 +370,108 @@ func runRPGSimulate(cmd *cobra.Command, args []string) error {
 	// 保存报告到文件
 	reportPath := filepath.Join(bookDir, "simulation_reports", fmt.Sprintf("simulation_%s.json", chapterID))
 	if err := engine.ExportEnhancedReport(result, reportPath); err != nil {
-		log.Warn("Failed to save report: %v", err)
+		fmt.Printf("Warning: Failed to save report: %v\n", err)
 	} else {
 		fmt.Printf("\n📄 详细报告已保存到: %s\n", reportPath)
+	}
+
+	return nil
+}
+
+func simulateVolume(engine *rpg.EnhancedSimulationEngine, volumeID string, bookDir string) error {
+	fmt.Printf("\n========== Simulating Volume: %s ==========\n", volumeID)
+
+	// 获取该卷下的所有章节
+	chapterIDs, err := engine.GetChaptersInVolume(volumeID)
+	if err != nil {
+		return fmt.Errorf("failed to get chapters in volume: %w", err)
+	}
+
+	if len(chapterIDs) == 0 {
+		return fmt.Errorf("volume %s has no chapters", volumeID)
+	}
+
+	fmt.Printf("Found %d chapters in volume\n\n", len(chapterIDs))
+
+	// 累计统计
+	totalSteps := 0
+	totalBattles := 0
+	totalDamageDealt := 0
+	totalDamageTaken := 0
+	totalExpGained := 0
+	finalLevel := 1
+
+	// 收集章节摘要
+	chapterSummaries := make([]rpg.ChapterSummary, 0, len(chapterIDs))
+
+	// 模拟每个章节
+	for i, chapterID := range chapterIDs {
+		fmt.Printf("\n--- Chapter %d/%d: %s ---\n", i+1, len(chapterIDs), chapterID)
+
+		result, err := engine.SimulateChapterEnhanced(chapterID)
+		if err != nil {
+			fmt.Printf("  ⚠️ Failed to simulate %s: %v\n", chapterID, err)
+			continue
+		}
+
+		// 累计统计
+		totalSteps += len(result.Steps)
+		totalBattles += len(result.BattleReports)
+		totalExpGained += result.TotalExpGained
+		finalLevel = result.FinalLevel
+
+		for _, battle := range result.BattleReports {
+			totalDamageDealt += battle.DamageDealt
+			totalDamageTaken += battle.DamageTaken
+		}
+
+		// 收集章节摘要
+		chapterSummaries = append(chapterSummaries, rpg.ChapterSummary{
+			ChapterID:   chapterID,
+			ChapterName: result.ChapterName,
+			Steps:       len(result.Steps),
+			Battles:     len(result.BattleReports),
+			ExpGained:   result.TotalExpGained,
+			Success:     result.Success,
+		})
+
+		// 显示简要结果
+		fmt.Printf("  ✅ %s | 步骤: %d | 战斗: %d | 经验: +%d\n",
+			result.ChapterName, len(result.Steps), len(result.BattleReports), result.TotalExpGained)
+	}
+
+	// 显示卷总结
+	fmt.Printf("\n╔══════════════════════════════════════════════════════════════╗\n")
+	fmt.Printf("║                    卷模拟总结                                  ║\n")
+	fmt.Printf("╚══════════════════════════════════════════════════════════════╝\n\n")
+
+	fmt.Printf("📖 卷: %s\n", volumeID)
+	fmt.Printf("📊 章节数: %d\n", len(chapterIDs))
+	fmt.Printf("📦 总步骤: %d\n", totalSteps)
+	fmt.Printf("⚔️ 总战斗: %d\n", totalBattles)
+	fmt.Printf("✨ 总经验: +%d\n", totalExpGained)
+	fmt.Printf("📈 最终等级: %d\n", finalLevel)
+
+	if totalBattles > 0 {
+		fmt.Printf("💥 总伤害输出: %d\n", totalDamageDealt)
+		fmt.Printf("🛡️ 总承受伤害: %d\n", totalDamageTaken)
+	}
+
+	// 保存卷报告
+	reportPath := filepath.Join(bookDir, "simulation_reports", fmt.Sprintf("simulation_%s.json", volumeID))
+	volumeReport := &rpg.VolumeSimulationReport{
+		VolumeID:     volumeID,
+		ChapterIDs:   chapterIDs,
+		TotalSteps:   totalSteps,
+		TotalBattles: totalBattles,
+		TotalExp:     totalExpGained,
+		FinalLevel:   finalLevel,
+		Chapters:     chapterSummaries,
+	}
+	if err := engine.ExportVolumeReport(volumeReport, reportPath); err != nil {
+		fmt.Printf("Warning: Failed to save volume report: %v\n", err)
+	} else {
+		fmt.Printf("\n📄 卷详细报告已保存到: %s\n", reportPath)
 	}
 
 	return nil

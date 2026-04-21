@@ -37,7 +37,7 @@
 2. **summary**：一句话摘要，格式：人物 在 地点 发生了 事件
 3. **characters**：出场角色列表（summary 中的角色必须在此列出）
 4. **location**：发生地点（必须与 summary 中的地点匹配）
-5. **events**：状态变化事件列表
+5. **events**：状态变化事件列表（⚠️ 每章 3-5 个事件，覆盖章节的主要情节变化）
 6. **beats**：3-5 个关键情节点
 7. **opening_beat**：开场情节点（必须等于 beats[0]）
 8. **closing_beat**：结尾情节点（必须等于 beats[last]）
@@ -46,7 +46,110 @@
 
 ### 事件类型（用于 Events 字段）
 
-#### Event 结构
+#### ⚠️ 推荐：新 Event 结构（语义更清晰，推荐优先使用）
+
+新结构使用 **Actor → Action → Target** 的主谓宾格式，语义更明确：
+
+```yaml
+- actor: 执行动作的角色（主语）
+  action: 动作类型（谓语）
+  target: 动作目标（宾语）
+  target_type: 目标类型
+  context: 动作发生的上下文/地点（可选）
+  result: 动作结果的描述（可选，用于AI理解）
+  
+  # 旧字段（向后兼容，可选填）
+  type: 事件类型
+  characters: [涉及的角色列表]
+  subject: 目标对象
+  change: 变化状态
+  details: 详细描述
+```
+
+##### Action 动作类型（谓语）
+
+**物品相关：**
+- `acquire` - 获得物品（例：林跃 acquire 生存刀）
+- `use` - 使用物品
+- `lose` - 失去物品
+- `craft` - 制造/合成物品
+
+**移动相关：**
+- `move` - 移动位置
+- `enter` - 进入地点
+- `leave` - 离开地点
+- `teleport` - 传送/跃迁
+
+**战斗相关：**
+- `combat` - 进入战斗
+- `defeat` - 击败目标
+- `escape` - 逃离战斗
+
+**能力相关：**
+- `learn` - 学习技能/知识
+- `awaken` - 觉醒能力
+- `upgrade` - 升级能力
+- `master` - 掌握能力
+
+**发现相关：**
+- `discover` - 发现/探索
+- `reveal` - 揭示/揭露
+
+**关系相关：**
+- `meet` - 遇见角色
+- `befriend` - 建立友谊
+
+**状态相关：**
+- `transform` - 转变/变身
+- `recover` - 恢复
+
+**目标相关：**
+- `set` - 设定目标
+- `progress` - 推进目标
+- `achieve` - 达成目标
+
+##### TargetType 目标类型
+- `item` - 物品
+- `character` - 角色
+- `location` - 地点
+- `skill` - 技能
+- `status` - 状态
+- `relationship` - 关系
+- `knowledge` - 知识
+
+##### 新格式示例
+```yaml
+# 获得物品
+- actor: "林跃"
+  action: "acquire"
+  target: "生存刀"
+  target_type: "item"
+  context: "低温设施地下三层"
+  result: "林跃从杂物间找到生锈的生存刀"
+
+# 觉醒能力
+- actor: "林跃"
+  action: "awaken"
+  target: "基因进化能力"
+  target_type: "premise"
+  context: "废弃动力室"
+  result: "林跃发现自己的身体对虫族腐蚀液免疫"
+
+# 遇见角色
+- actor: "林跃"
+  action: "meet"
+  target: "拾荒者小队"
+  target_type: "character"
+  context: "废土地表"
+  result: "林跃遇到正在搜寻物资的幸存者"
+```
+
+---
+
+#### 旧 Event 结构（向后兼容）
+
+如果无法确定新格式的字段，可以使用旧格式：
+
 ```yaml
 - type: 事件类型
   characters: [涉及的角色列表]
@@ -55,7 +158,7 @@
   details: 详细描述
 ```
 
-#### 各类型事件的 Change 值规范
+##### 各类型事件的 Change 值规范
 
 1. **relationship** - 角色关系变化
    - `established` - 建立关系
@@ -105,7 +208,7 @@
    - `forgotten` - 遗忘信息
    - `shared` - 分享信息
 
-#### 示例
+##### 旧格式示例
 ```yaml
 # storyline 事件示例（正确格式）
 - type: storyline
@@ -170,6 +273,10 @@
 - [ ] opening_beat == beats[0]
 - [ ] closing_beat == beats[last]
 - [ ] 章节之间有明确的连续性
+- [ ] **⚠️ 每章必须有 3-5 个 events（硬性要求！）**
+  - 不要将整章内容压缩为单个事件
+  - 每个 event 应该代表一个清晰的动作或状态变化
+  - 事件流程建议：进入/遇见 → 发现/学习 → 战斗/达成
 - [ ] **所有 Events 都有有效的 `change` 字段（⚠️ 关键！）**
   - storyline 事件必须有 change: started/progressed/completed 等
   - premise 事件必须有 change: awakened/upgraded/mastered 等

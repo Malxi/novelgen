@@ -53,6 +53,17 @@ export const deleteTask = (id: string) => fetchAPI<void>(`/tasks/${id}`, { metho
 export const getOutline = (project?: string) =>
   fetchAPI<Outline>(`/content/outline${project ? `?project=${encodeURIComponent(project)}` : ''}`);
 
+export const listOutlineVersions = (project?: string) =>
+  fetchAPI<Array<{ filename: string; created_at: string; size: number }>>(
+    `/content/outline/versions${project ? `?project=${encodeURIComponent(project)}` : ''}`
+  );
+
+export const restoreOutlineVersion = (filename: string, project?: string) =>
+  fetchAPI<{ message: string }>(`/content/outline/restore${project ? `?project=${encodeURIComponent(project)}` : ''}`, {
+    method: 'POST',
+    body: JSON.stringify({ filename }),
+  });
+
 export const getStorySetup = (project?: string) =>
   fetchAPI<StorySetup>(`/content/setup${project ? `?project=${encodeURIComponent(project)}` : ''}`);
 

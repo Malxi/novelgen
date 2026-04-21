@@ -46,12 +46,89 @@ type Chapter struct {
 
 // Event represents a story event that changes state
 type Event struct {
+	// === 旧字段（向后兼容）===
 	Type       string   `json:"type" md:"type" desc:"Event type: relationship (角色关系变化), goal (角色目标更新), item (角色物品更新), premise (角色体系更新), storyline (故事线更新), gate (章节障碍/代价记录), status (角色状态变化 - subject应为状态类型如修为/伤势/身份)"`
 	Characters []string `json:"characters" md:"characters" desc:"涉及的角色列表"`
 	Subject    string   `json:"subject" md:"subject" desc:"目标角色/物品/体系/故事线/状态类型。对于status类型，subject应为状态类型（如修为、伤势、身份），而非角色名"`
 	Change     string   `json:"change" md:"change" desc:"变化描述 (started, progressed, completed, get, lost, resolved等)"`
 	Details    string   `json:"details,omitempty" md:"details" desc:"额外详情，用于 storyline 进度描述等"`
+
+	// === 新字段（推荐，语义更清晰）===
+	// Actor 动作执行者（主语）
+	Actor string `json:"actor,omitempty" md:"actor" desc:"执行动作的角色（主语），如：林跃"`
+	// Action 动作类型（谓语）
+	Action string `json:"action,omitempty" md:"action" desc:"动作类型（谓语）：acquire(获得)/use(使用)/lose(失去)/move(移动)/combat(战斗)/learn(学习)/discover(发现)/transform(转变)/meet(遇见)/establish(建立)"`
+	// Target 动作目标（宾语）
+	Target string `json:"target,omitempty" md:"target" desc:"动作的目标对象（宾语），如：生存刀、星芒机甲"`
+	// TargetType 目标类型
+	TargetType string `json:"target_type,omitempty" md:"target_type" desc:"目标类型：item(物品)/character(角色)/location(地点)/skill(技能)/status(状态)/relationship(关系)/knowledge(知识)"`
+	// Context 上下文（可选）
+	Context string `json:"context,omitempty" md:"context" desc:"动作发生的上下文，如：低温设施、废土地表"`
+	// Result 结果描述（自然语言，可选）
+	Result string `json:"result,omitempty" md:"result" desc:"动作结果的描述，用于 AI 理解"`
 }
+
+// Action type constants for the new Event structure
+const (
+	// 物品相关
+	ActionAcquire = "acquire" // 获得物品
+	ActionUse     = "use"     // 使用物品
+	ActionLose    = "lose"    // 失去物品
+	ActionCraft   = "craft"   // 制造/合成物品
+
+	// 移动相关
+	ActionMove     = "move"     // 移动位置
+	ActionEnter    = "enter"    // 进入地点
+	ActionLeave    = "leave"    // 离开地点
+	ActionTeleport = "teleport" // 传送/跃迁
+
+	// 战斗相关
+	ActionCombat = "combat" // 进入战斗
+	ActionDefeat = "defeat" // 击败目标
+	ActionEscape = "escape" // 逃离战斗
+	ActionDefend = "defend" // 防御
+
+	// 能力相关
+	ActionLearn   = "learn"   // 学习技能/知识
+	ActionAwaken  = "awaken"  // 觉醒能力
+	ActionUpgrade = "upgrade" // 升级能力
+	ActionMaster  = "master"  // 掌握能力
+
+	// 发现相关
+	ActionDiscover = "discover" // 发现/探索
+	ActionReveal   = "reveal"   // 揭示/揭露
+
+	// 关系相关
+	ActionMeet      = "meet"      // 遇见角色
+	ActionBefriend  = "befriend"  // 建立友谊
+	ActionBetray    = "betray"    // 背叛
+	ActionReconcile = "reconcile" // 和解
+
+	// 状态相关
+	ActionTransform = "transform" // 转变/变身
+	ActionRecover   = "recover"   // 恢复
+	ActionAfflict   = "afflict"   // 受到负面状态
+
+	// 目标相关
+	ActionSet      = "set"      // 设定目标
+	ActionProgress = "progress" // 推进目标
+	ActionAchieve  = "achieve"  // 达成目标
+	ActionAbandon  = "abandon"  // 放弃目标
+)
+
+// Target type constants
+const (
+	TargetTypeItem         = "item"         // 物品
+	TargetTypeCharacter    = "character"    // 角色
+	TargetTypeLocation     = "location"     // 地点
+	TargetTypeSkill        = "skill"        // 技能
+	TargetTypeStatus       = "status"       // 状态
+	TargetTypeRelationship = "relationship" // 关系
+	TargetTypeKnowledge    = "knowledge"    // 知识
+	TargetTypeGoal         = "goal"         // 目标
+	TargetTypePremise      = "premise"      // 能力/体系
+	TargetTypeStoryline    = "storyline"    // 故事线
+)
 
 // Event type constants
 const (
@@ -225,25 +302,145 @@ func (c *Chapter) ToMarkdown() string {
 // ToMarkdown converts event to markdown
 func (e *Event) ToMarkdown() string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("- **%s**", e.Type))
 
-	if len(e.Characters) > 0 {
-		sb.WriteString(fmt.Sprintf(" (%s)", strings.Join(e.Characters, ", ")))
-	}
+	// 优先使用新格式（如果 Actor 和 Action 都有值）
+	if e.Actor != "" && e.Action != "" {
+		sb.WriteString(fmt.Sprintf("- **%s** → %s", e.Actor, e.Action))
 
-	if e.Subject != "" {
-		sb.WriteString(fmt.Sprintf(" [%s]", e.Subject))
-	}
+		if e.Target != "" {
+			sb.WriteString(fmt.Sprintf(" → %s", e.Target))
+			if e.TargetType != "" {
+				sb.WriteString(fmt.Sprintf(" (%s)", e.TargetType))
+			}
+		}
 
-	if e.Change != "" {
-		sb.WriteString(fmt.Sprintf(": %s", e.Change))
-	}
+		if e.Context != "" {
+			sb.WriteString(fmt.Sprintf(" @ %s", e.Context))
+		}
 
-	if e.Details != "" {
-		sb.WriteString(fmt.Sprintf(" - %s", e.Details))
+		if e.Result != "" {
+			sb.WriteString(fmt.Sprintf(" | %s", e.Result))
+		}
+	} else {
+		// 使用旧格式
+		sb.WriteString(fmt.Sprintf("- **%s**", e.Type))
+
+		if len(e.Characters) > 0 {
+			sb.WriteString(fmt.Sprintf(" (%s)", strings.Join(e.Characters, ", ")))
+		}
+
+		if e.Subject != "" {
+			sb.WriteString(fmt.Sprintf(" [%s]", e.Subject))
+		}
+
+		if e.Change != "" {
+			sb.WriteString(fmt.Sprintf(": %s", e.Change))
+		}
+
+		if e.Details != "" {
+			sb.WriteString(fmt.Sprintf(" - %s", e.Details))
+		}
 	}
 
 	sb.WriteString("\n")
 
 	return sb.String()
+}
+
+// HasNewFormat checks if this event uses the new format (Actor + Action)
+func (e *Event) HasNewFormat() bool {
+	return e.Actor != "" && e.Action != ""
+}
+
+// GetActor returns the actor (prefer new format, fallback to old)
+func (e *Event) GetActor() string {
+	if e.Actor != "" {
+		return e.Actor
+	}
+	if len(e.Characters) > 0 {
+		return e.Characters[0]
+	}
+	return ""
+}
+
+// GetAction returns the action (prefer new format, fallback to old)
+func (e *Event) GetAction() string {
+	if e.Action != "" {
+		return e.Action
+	}
+	// 从旧格式推断
+	return inferActionFromOldFormat(e.Type, e.Change)
+}
+
+// GetTarget returns the target (prefer new format, fallback to old)
+func (e *Event) GetTarget() string {
+	if e.Target != "" {
+		return e.Target
+	}
+	return e.Subject
+}
+
+// GetTargetType returns the target type (prefer new format, fallback to old)
+func (e *Event) GetTargetType() string {
+	if e.TargetType != "" {
+		return e.TargetType
+	}
+	// 从旧格式推断
+	return inferTargetTypeFromOldFormat(e.Type)
+}
+
+// inferActionFromOldFormat infers action from old event format
+func inferActionFromOldFormat(eventType, change string) string {
+	switch change {
+	case "acquired", "get", "获得":
+		return ActionAcquire
+	case "lost", "失去":
+		return ActionLose
+	case "used", "使用":
+		return ActionUse
+	case "discovered", "发现":
+		return ActionDiscover
+	case "awakened", "awaken", "觉醒":
+		return ActionAwaken
+	case "upgraded", "升级":
+		return ActionUpgrade
+	case "completed", "完成":
+		return ActionAchieve
+	case "started", "开始":
+		return ActionSet
+	case "progressed", "推进":
+		return ActionProgress
+	default:
+		// 根据 eventType 推断
+		switch eventType {
+		case EventTypeItem:
+			return ActionAcquire
+		case EventTypeStatus:
+			return ActionTransform
+		case EventTypePremise:
+			return ActionAwaken
+		default:
+			return ActionDiscover
+		}
+	}
+}
+
+// inferTargetTypeFromOldFormat infers target type from old event format
+func inferTargetTypeFromOldFormat(eventType string) string {
+	switch eventType {
+	case EventTypeItem:
+		return TargetTypeItem
+	case EventTypeStatus:
+		return TargetTypeStatus
+	case EventTypeRelationship:
+		return TargetTypeRelationship
+	case EventTypeGoal:
+		return TargetTypeGoal
+	case EventTypePremise:
+		return TargetTypePremise
+	case EventTypeStoryline:
+		return TargetTypeStoryline
+	default:
+		return ""
+	}
 }
