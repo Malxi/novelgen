@@ -7,6 +7,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"novelgen/internal/agents"
+	"novelgen/internal/llm"
+	"novelgen/internal/models"
 	"novelgen/internal/rpg"
 	"novelgen/internal/rpg/dsl"
 )
@@ -79,6 +82,26 @@ var simulateCmd = &cobra.Command{
 	RunE: runSimulate,
 }
 
+// convertChaptersCmd converts novelgen chapter JSONs to DSL using LLM
+var convertChaptersCmd = &cobra.Command{
+	Use:   "convert-chapters -b <book_name>",
+	Short: "使用 AI 转换章节为 DSL",
+	Long: `将 novelgen 项目的章节 JSON 文件通过 LLM Agent 转换为 DSL-RPG 格式。
+
+流程: chapters -> AI -> rpg -> simulate -> 问题
+
+此命令会:
+1. 读取项目的 recaps/ 目录下的章节 JSON 文件
+2. 使用 LLM 分析章节内容并生成 DSL 格式
+3. 保存到 rpg/ 目录
+4. 运行模拟检测剧情问题`,
+	Example: `  novelgen rpg-dsl convert-chapters -b mine
+  novelgen rpg-dsl convert-chapters -b mine --volume 1
+  novelgen rpg-dsl convert-chapters -b mine --chapters P1-V1-C1,P1-V1-C2
+  novelgen rpg-dsl convert-chapters -b mine --all-volumes`,
+	RunE: runConvertChapters,
+}
+
 var (
 	bookName       string
 	outputFile     string
@@ -88,6 +111,12 @@ var (
 	simulateAll    bool
 	verbose        bool
 	generatePrompt bool
+
+	// convert-chapters flags
+	volumeFlag      int
+	chaptersFlag    string
+	allVolumesFlag  bool
+	simulateAfterFlag bool
 )
 
 func init() {
@@ -98,9 +127,10 @@ func init() {
 	rpgDSLCmd.AddCommand(dslExportCmd)
 	rpgDSLCmd.AddCommand(checkCmd)
 	rpgDSLCmd.AddCommand(simulateCmd)
+	rpgDSLCmd.AddCommand(convertChaptersCmd)
 
 	// Common flags
-	for _, cmd := range []*cobra.Command{validateCmd, mergeCmd, convertCmd, dslExportCmd, checkCmd, simulateCmd} {
+	for _, cmd := range []*cobra.Command{validateCmd, mergeCmd, convertCmd, dslExportCmd, checkCmd, simulateCmd, convertChaptersCmd} {
 		cmd.Flags().StringVarP(&bookName, "book", "b", "", "项目名称 (必填)")
 		cmd.MarkFlagRequired("book")
 	}
@@ -120,6 +150,12 @@ func init() {
 	// Other flags
 	validateCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "显示详细信息")
 	checkCmd.Flags().BoolVar(&generatePrompt, "generate-prompt", false, "生成 AI Prompt")
+
+	// convert-chapters flags
+	convertChaptersCmd.Flags().IntVar(&volumeFlag, "volume", 0, "指定卷数 (0=所有卷)")
+	convertChaptersCmd.Flags().StringVar(&chaptersFlag, "chapters", "", "指定章节ID (逗号分隔)")
+	convertChaptersCmd.Flags().BoolVar(&allVolumesFlag, "all-volumes", false, "转换所有卷")
+	convertChaptersCmd.Flags().BoolVar(&simulateAfterFlag, "simulate", true, "转换后运行模拟")
 }
 
 func runValidate(cmd *cobra.Command, args []string) error {
@@ -441,6 +477,127 @@ func runSimulate(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func runConvertChapters(cmd *cobra.Command, args []string) error {
+	fmt.Printf("🔄 转换章节为 DSL: %s\n\n", bookName)
+
+	// 1. 加载项目数据
+	fmt.Println("📂 加载项目数据...")
+	adapter, err := agents.LoadNovelgenProject(bookName)
+	if err != nil {
+		return fmt.Errorf("加载项目失败: %w", err)
+	}
+
+	// 2. 查找章节文件
+	chapterFiles, err := adapter.FindChapterRecaps()
+	if err != nil {
+		return fmt.Errorf("查找章节文件失败: %w", err)
+	}
+
+	// 应用过滤
+	chapterFiles = filterChapters(chapterFiles, volumeFlag, chaptersFlag, allVolumesFlag)
+
+	if len(chapterFiles) == 0 {
+		return fmt.Errorf("未找到符合条件的章节文件")
+	}
+
+	fmt.Printf("📚 找到 %d 个章节文件\n", len(chapterFiles))
+
+	// 3. 创建 RPG 目录
+	rpgDir := getBookRPGDir(bookName)
+	if err := os.MkdirAll(rpgDir, 0755); err != nil {
+		return fmt.Errorf("创建 RPG 目录失败: %w", err)
+	}
+
+	// 4. 使用 AI Agent 转换所有章节到一个 DSL 文件
+	fmt.Println("\n🤖 使用 AI Agent 转换章节...")
+
+	// 加载全局 LLM 配置
+	llmConfig, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		fmt.Printf("⚠️  加载 LLM 配置失败: %v\n", err)
+		fmt.Println("   将使用规则转换（无 AI）")
+		llmConfig = nil
+	}
+
+	// 加载项目级配置 (novel.json)
+	projectConfigPath := filepath.Join("books", bookName, "novel.json")
+	projectConfig, err := models.LoadProjectConfig(projectConfigPath)
+	if err != nil {
+		fmt.Printf("⚠️  加载项目配置失败: %v\n", err)
+		fmt.Println("   将使用全局 LLM 配置")
+	} else {
+		fmt.Printf("✅ 加载项目配置: %s\n", projectConfig.Name)
+		fmt.Printf("   项目级 LLM: %s / %s\n", projectConfig.LLM.Provider, projectConfig.LLM.Model)
+	}
+
+	// 创建 LLM 客户端
+	var llmClient llm.Client
+	var projectLLM *models.ProjectLLM
+
+	if llmConfig != nil && len(llmConfig.Providers) > 0 {
+		// 优先使用项目级配置，如果没有则使用全局默认配置
+		if projectConfig != nil && projectConfig.LLM.Provider != "" && projectConfig.LLM.Model != "" {
+			projectLLM = &projectConfig.LLM
+			fmt.Printf("✅ 使用项目级 LLM 配置: %s / %s\n", projectLLM.Provider, projectLLM.Model)
+		} else {
+			projectLLM = &models.ProjectLLM{
+				Provider: llmConfig.DefaultProvider,
+				Model:    llmConfig.DefaultModel,
+			}
+			fmt.Printf("✅ 使用全局 LLM 配置: %s / %s\n", projectLLM.Provider, projectLLM.Model)
+		}
+
+		llmClient = llmConfig.CreateClient(projectLLM)
+		if llmClient == nil {
+			fmt.Println("⚠️  创建 LLM 客户端失败，将使用规则转换")
+		} else {
+			fmt.Println("✅ LLM 客户端创建成功，将使用 AI 转换")
+		}
+	} else {
+		fmt.Println("⚠️  未找到有效的 LLM 配置，将使用规则转换")
+	}
+
+	// 创建 Agent
+	agent := agents.NewChapterToDSLAgent(
+		llmClient,
+		llmConfig,
+		projectLLM,
+		adapter.GetStorySetup(),
+	)
+	agent.SetLanguage("zh")
+
+	// 执行转换
+	dslContent, err := agent.ConvertChapters(
+		cmd.Context(),
+		bookName,
+		adapter.GetCharacters(),
+		adapter.GetLocations(),
+		chapterFiles,
+	)
+	if err != nil {
+		return fmt.Errorf("AI 转换失败: %w", err)
+	}
+
+	// 5. 保存合并的 DSL 文件
+	outlineFile := filepath.Join(rpgDir, "01_outline.rpg")
+	if err := os.WriteFile(outlineFile, []byte(dslContent), 0644); err != nil {
+		return fmt.Errorf("保存 DSL 文件失败: %w", err)
+	}
+
+	fmt.Printf("\n✅ 转换完成，已保存: %s\n", outlineFile)
+	fmt.Printf("   DSL 内容长度: %d 字符\n", len(dslContent))
+
+	// 6. 运行模拟（如果启用）
+	if simulateAfterFlag {
+		fmt.Println("\n🎮 运行模拟检测...")
+		if err := runSimulationForOutline(bookName); err != nil {
+			fmt.Printf("⚠️  模拟运行失败: %v\n", err)
+		}
+	}
+
+	return nil
+}
+
 // Helper functions
 
 func getBookRPGDir(bookName string) string {
@@ -561,4 +718,92 @@ func exportToJSON(dslData *dsl.DSL, path string) error {
 func exportToYAML(dslData *dsl.DSL, path string) error {
 	// TODO: Implement YAML export
 	return fmt.Errorf("YAML export not yet implemented")
+}
+
+// filterChapters 过滤章节文件
+func filterChapters(files []string, volume int, chapters string, allVolumes bool) []string {
+	// 如果指定了具体章节
+	if chapters != "" {
+		var filtered []string
+		chapterSet := make(map[string]bool)
+		for _, ch := range strings.Split(chapters, ",") {
+			chapterSet[strings.TrimSpace(ch)] = true
+		}
+		for _, file := range files {
+			base := filepath.Base(file)
+			chapterID := strings.TrimSuffix(base, ".json")
+			if chapterSet[chapterID] {
+				filtered = append(filtered, file)
+			}
+		}
+		return filtered
+	}
+
+	// 按卷过滤
+	if volume > 0 && !allVolumes {
+		var filtered []string
+		volumePrefix := fmt.Sprintf("P1-V%d-", volume)
+		for _, file := range files {
+			if strings.Contains(filepath.Base(file), volumePrefix) {
+				filtered = append(filtered, file)
+			}
+		}
+		return filtered
+	}
+
+	return files
+}
+
+// convertChapterToDSL 使用 LLM Agent 转换章节为 DSL
+// runSimulationForOutline 为 outline.rpg 运行模拟
+func runSimulationForOutline(bookName string) error {
+	rpgDir := getBookRPGDir(bookName)
+	outlineFile := filepath.Join(rpgDir, "01_outline.rpg")
+
+	content, err := os.ReadFile(outlineFile)
+	if err != nil {
+		return fmt.Errorf("读取 outline.rpg 失败: %w", err)
+	}
+
+	parser := dsl.NewParser(string(content))
+	dslData, err := parser.Parse()
+	if err != nil {
+		return fmt.Errorf("解析 DSL 失败: %w", err)
+	}
+
+	// 运行模拟
+	simulator := dsl.NewSimulator(dslData)
+	issues := simulator.SimulateAll()
+
+	fmt.Printf("\n📊 模拟结果:\n")
+	fmt.Printf("   总问题数: %d\n", len(issues))
+
+	if len(issues) == 0 {
+		fmt.Println("   ✅ 未发现明显问题")
+		return nil
+	}
+
+	// 显示问题
+	criticalCount := len(simulator.GetIssuesBySeverity(dsl.SeverityCritical))
+	warningCount := len(simulator.GetIssuesBySeverity(dsl.SeverityWarning))
+	infoCount := len(simulator.GetIssuesBySeverity(dsl.SeverityInfo))
+
+	fmt.Printf("   🔴 严重: %d\n", criticalCount)
+	fmt.Printf("   🟡 警告: %d\n", warningCount)
+	fmt.Printf("   🔵 信息: %d\n", infoCount)
+
+	fmt.Println("\n📝 问题列表:")
+	fmt.Println(strings.Repeat("-", 60))
+
+	for _, issue := range simulator.GetIssuesBySeverity(dsl.SeverityCritical) {
+		fmt.Println(dsl.FormatIssue(issue))
+		fmt.Println()
+	}
+
+	for _, issue := range simulator.GetIssuesBySeverity(dsl.SeverityWarning) {
+		fmt.Println(dsl.FormatIssue(issue))
+		fmt.Println()
+	}
+
+	return nil
 }

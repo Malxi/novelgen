@@ -1,0 +1,40 @@
+# Chapter P1-V1-C5: 先知优势，巧藏灵石避搜
+
+storyline {
+  chapter "先知优势，巧藏灵石避搜" {
+    id = "P1-V1-C5"
+
+    objective "主要剧情" {
+      step 1 {
+        description = "天刚亮周虎喝骂所有矿奴前往丙字七号矿道挖矿，规定20斤下品灵石碎矿的硬定额，私藏灵石会被缉厄司灰衣人带走严惩"
+        event {
+          type = "status"
+        }
+      }
+      step 2 {
+        description = "林砚仗着自己是原世界作者的先知优势，清楚当日收工将有搜身环节，先挖够定额碎矿伪装成普通孱弱矿奴，趁监工打盹偷挖得三块完整下品灵石"
+        event {
+          type = "status"
+        }
+      }
+      step 3 {
+        description = "林砚将灵石藏到自己当初写设定时预留的隐蔽岩缝内，摸到岩缝有类似云纹的刻痕，未细究便掩盖痕迹返回挖矿点"
+        event {
+          type = "status"
+        }
+      }
+      step 4 {
+        description = "收工时周虎果然带监工进矿道搜身，老郑藏在草鞋鞋底的半块灵石被搜出，遭到周虎殴打致重伤、掉落三颗牙齿"
+        event {
+          type = "status"
+        }
+      }
+      step 5 {
+        description = "林砚伪装成懦弱怕事的模样，全程顺从配合搜身，未被查出藏过灵石的痕迹，顺利过关"
+        event {
+          type = "status"
+        }
+      }
+    }
+  }
+}
