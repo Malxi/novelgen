@@ -8,6 +8,7 @@ import (
 
 	"novelgen/internal/logger"
 	"novelgen/internal/rpg"
+	"novelgen/internal/rpg/benchmark"
 
 	"github.com/spf13/cobra"
 )
@@ -95,10 +96,31 @@ Examples:
 	RunE: runRPGExport,
 }
 
+var rpgBenchCmd = &cobra.Command{
+	Use:   "bench",
+	Short: "Run RPG system benchmark evaluation",
+	Long: `Run benchmark evaluation of the RPG constraint detection and simulation system.
+
+This command runs a set of test cases with known issues and measures
+how well the system detects them, producing metrics like recall,
+precision, and false positive rate.
+
+Examples:
+  # Run full benchmark
+  novelgen rpg bench
+
+  # Run specific test cases
+  novelgen rpg bench --only power_collapse_frequent_breakthrough,resurrection_abuse_no_cost`,
+	RunE: runRPGBench,
+}
+
+var benchOnly string
+
 func init() {
 	rpgCmd.AddCommand(rpgGenCmd)
 	rpgCmd.AddCommand(rpgSimulateCmd)
 	rpgCmd.AddCommand(rpgExportCmd)
+	rpgCmd.AddCommand(rpgBenchCmd)
 
 	rpgGenCmd.Flags().StringVarP(&rpgOutputPath, "output", "o", "", "Output file path (default: books/<book_name>/rpg_data.json)")
 	rpgGenCmd.Flags().StringVarP(&rpgSimulate, "simulate", "s", "", "Chapter ID to simulate after generation (e.g., P1-V1-C1)")
@@ -108,10 +130,66 @@ func init() {
 
 	rpgExportCmd.Flags().StringVarP(&rpgOutputPath, "output", "o", "", "Output directory (default: books/<book_name>/craft/)")
 
+	rpgBenchCmd.Flags().StringVar(&benchOnly, "only", "", "Comma-separated list of test case names to run")
+
 	// Register rpg command
 	RegisterCommand(func() *cobra.Command {
 		return rpgCmd
 	})
+}
+
+func runRPGBench(cmd *cobra.Command, args []string) error {
+	runner := benchmark.NewBenchmarkRunner()
+
+	if benchOnly != "" {
+		names := splitCommaList(benchOnly)
+		runner.RunOnly(names)
+	} else {
+		runner.Run()
+	}
+
+	fmt.Println(runner.GenerateReport())
+	return nil
+}
+
+func splitCommaList(s string) []string {
+	if s == "" {
+		return nil
+	}
+	result := make([]string, 0)
+	for _, item := range splitString(s, ",") {
+		trimmed := trimSpaces(item)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
+}
+
+func splitString(s, sep string) []string {
+	result := make([]string, 0)
+	start := 0
+	for i := 0; i <= len(s)-len(sep); i++ {
+		if s[i:i+len(sep)] == sep {
+			result = append(result, s[start:i])
+			start = i + len(sep)
+			i += len(sep) - 1
+		}
+	}
+	result = append(result, s[start:])
+	return result
+}
+
+func trimSpaces(s string) string {
+	start := 0
+	for start < len(s) && (s[start] == ' ' || s[start] == '\t') {
+		start++
+	}
+	end := len(s)
+	for end > start && (s[end-1] == ' ' || s[end-1] == '\t') {
+		end--
+	}
+	return s[start:end]
 }
 
 func runRPGGen(cmd *cobra.Command, args []string) error {

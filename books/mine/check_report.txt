@@ -1,0 +1,348 @@
+╔══════════════════════════════════════════════════════════╗
+║              小说章节 RPG 问题检测报告                      ║
+╚══════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────┐
+│                      统计概览                            │
+├─────────────────────────────────────────────────────────┤
+│ 检测章节数:      37                                    │
+│ 发现问题总数:    97                                    │
+│   - Critical:    79                                    │
+│   - Error:        0                                    │
+│   - Warning:     18                                    │
+│ 跨章问题数:       8                                    │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│                    章节详细问题                          │
+└─────────────────────────────────────────────────────────┘
+
+【P1-V1-C1】寒矿醒转，首死触发复生
+  文件: books\mine\chapters\chapter-P1-V1-C1.md
+  字数: 11692, 检测耗时: 5.1171ms
+  问题列表:
+    - [critical/power] (战力系统) 一章内战力变化过于频繁: 1次
+    - [critical/resurrection] (未知角色) 复活次数超限: 5次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+
+【P1-V1-C10】借矿难势，暗定逃出生天
+  文件: books\mine\chapters\chapter-P1-V1-C10.md
+  字数: 10110, 检测耗时: 4.766ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 4次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+
+【P1-V1-C2】二度殒命，始知复生有耗
+  文件: books\mine\chapters\chapter-P1-V1-C2.md
+  字数: 9880, 检测耗时: 5.1778ms
+  问题列表:
+    - [critical/power] (战力系统) 一章内战力变化过于频繁: 2次
+    - [critical/resurrection] (未知角色) 复活次数超限: 13次 (最大允许0次)
+    - [warning/power] 章节内检测到 9 次修为/境界变化
+
+【P1-V1-C3】以身试死，探明寿命折损
+  文件: books\mine\chapters\chapter-P1-V1-C3.md
+  字数: 11462, 检测耗时: 5.6607ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 11次 (最大允许0次)
+    - [warning/power] 章节内检测到 6 次修为/境界变化
+
+【P1-V1-C4】矿洞识踪，竟入自著仙途
+  文件: books\mine\chapters\chapter-P1-V1-C4.md
+  字数: 9310, 检测耗时: 4.1273ms
+  问题列表:
+    - [critical/power] (战力系统) 一章内战力变化过于频繁: 1次
+    - [critical/resurrection] (未知角色) 复活次数超限: 1次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+    - [critical/timeline] (时间线) 时间跳跃过多: 1次 (最大允许0次)
+
+【P1-V1-C5】先知优势，巧藏灵石避搜
+  文件: books\mine\chapters\chapter-P1-V1-C5.md
+  字数: 10764, 检测耗时: 4.6538ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 1次 (最大允许0次)
+
+【P1-V1-C6】灰衣现踪，溢出设定的变数
+  文件: books\mine\chapters\chapter-P1-V1-C6.md
+  字数: 11141, 检测耗时: 4.6695ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 2次 (最大允许0次)
+
+【P1-V1-C7】冷眼观亡，斩断作者幻梦
+  文件: books\mine\chapters\chapter-P1-V1-C7.md
+  字数: 11913, 检测耗时: 5.1604ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 4次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+
+【P1-V1-C8】暗积粮秣，潜备逃遁之资
+  文件: books\mine\chapters\chapter-P1-V1-C8.md
+  字数: 10744, 检测耗时: 5.2053ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 1次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+
+【P1-V1-C9】复生被窥，灵石换得缄默
+  文件: books\mine\chapters\chapter-P1-V1-C9.md
+  字数: 9330, 检测耗时: 4.0133ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 4次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+    - [warning/power] 章节内检测到 4 次修为/境界变化
+
+【P1-V2-C10】归帐谋遁，期改一月
+  文件: books\mine\chapters\chapter-P1-V2-C10.md
+  字数: 11224, 检测耗时: 5.0156ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 5次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+    - [warning/power] 章节内检测到 4 次修为/境界变化
+
+【P1-V2-C2】血纹无载，越界天规
+  文件: books\mine\chapters\chapter-P1-V2-C2.md
+  字数: 9569, 检测耗时: 3.5042ms
+  问题列表:
+    - [critical/power] (战力系统) 一章内战力变化过于频繁: 2次
+
+【P1-V2-C3】机关暗启，异息牵魂
+  文件: books\mine\chapters\chapter-P1-V2-C3.md
+  字数: 8665, 检测耗时: 5.132ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 3次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+
+【P1-V2-C4】灰影巡洞，缉字铜牌
+  文件: books\mine\chapters\chapter-P1-V2-C4.md
+  字数: 7786, 检测耗时: 3.0616ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 2次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+    - [warning/power] 章节内检测到 5 次修为/境界变化
+
+【P1-V2-C5】禁名「夺魄」，千魂血祭
+  文件: books\mine\chapters\chapter-P1-V2-C5.md
+  字数: 10577, 检测耗时: 3.5259ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 6次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+    - [warning/power] 章节内检测到 5 次修为/境界变化
+
+【P1-V2-C6】石落声起，刃穿魂归
+  文件: books\mine\chapters\chapter-P1-V2-C6.md
+  字数: 8488, 检测耗时: 4.5238ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 9次 (最大允许0次)
+    - [warning/power] 章节内检测到 6 次修为/境界变化
+
+【P1-V2-C7】残纹半玉，契合金源
+  文件: books\mine\chapters\chapter-P1-V2-C7.md
+  字数: 8874, 检测耗时: 4.0119ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 4次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+    - [warning/power] 章节内检测到 6 次修为/境界变化
+
+【P1-V2-C8】落石封门，秘藏禁踪
+  文件: books\mine\chapters\chapter-P1-V2-C8.md
+  字数: 9459, 检测耗时: 4.6677ms
+  问题列表:
+    - [critical/power] (战力系统) 一章内战力变化过于频繁: 1次
+    - [critical/resurrection] (未知角色) 复活次数超限: 2次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+
+【P1-V2-C9】岩崩尘散，凶迹全消
+  文件: books\mine\chapters\chapter-P1-V2-C9.md
+  字数: 10317, 检测耗时: 4.2135ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 1次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+
+【P1-V3-C1】岩洞密约，雨夜逃期
+  文件: books\mine\chapters\chapter-P1-V3-C1.md
+  字数: 9944, 检测耗时: 5.2513ms
+  问题列表:
+    - [critical/power] (战力系统) 一章内战力变化过于频繁: 1次
+    - [critical/resurrection] (未知角色) 复活次数超限: 6次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+
+【P1-V3-C10】破笼而出，仙途启行
+  文件: books\mine\chapters\chapter-P1-V3-C10.md
+  字数: 10020, 检测耗时: 3.5162ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 5次 (最大允许0次)
+    - [warning/power] 章节内检测到 5 次修为/境界变化
+
+【P1-V3-C2】暗标支点，矿脉伏机
+  文件: books\mine\chapters\chapter-P1-V3-C2.md
+  字数: 11635, 检测耗时: 6.6713ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 2次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+
+【P1-V3-C3】监工疑踪，份额陡增
+  文件: books\mine\chapters\chapter-P1-V3-C3.md
+  字数: 10725, 检测耗时: 5.2965ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 2次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+    - [critical/timeline] (时间线) 时间跳跃过多: 1次 (最大允许0次)
+
+【P1-V3-C4】嫁祸栽赃，阵成暗巷
+  文件: books\mine\chapters\chapter-P1-V3-C4.md
+  字数: 10335, 检测耗时: 3.243ms
+  问题列表:
+    - [critical/timeline] (时间线) 时间跳跃过多: 3次 (最大允许0次)
+
+【P1-V3-C5】引动灵阵，矿崩天倾
+  文件: books\mine\chapters\chapter-P1-V3-C5.md
+  字数: 8417, 检测耗时: 4.9113ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 3次 (最大允许0次)
+    - [critical/timeline] (时间线) 时间跳跃过多: 1次 (最大允许0次)
+    - [warning/power] 章节内检测到 4 次修为/境界变化
+
+【P1-V3-C6】引虎入瓮，碎石封仇
+  文件: books\mine\chapters\chapter-P1-V3-C6.md
+  字数: 9178, 检测耗时: 4.362ms
+  问题列表:
+    - [critical/power] (战力系统) 一章内战力变化过于频繁: 1次
+    - [critical/resurrection] (未知角色) 复活次数超限: 9次 (最大允许0次)
+    - [critical/timeline] (时间线) 时间跳跃过多: 1次 (最大允许0次)
+    - [warning/power] 章节内检测到 4 次修为/境界变化
+
+【P1-V3-C7】灰衣截路，刃穿魂归
+  文件: books\mine\chapters\chapter-P1-V3-C7.md
+  字数: 9370, 检测耗时: 4.2365ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 7次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+    - [critical/timeline] (时间线) 时间跳跃过多: 1次 (最大允许0次)
+    - [warning/power] 章节内检测到 8 次修为/境界变化
+
+【P1-V3-C8】借势岩崩，灰飞烟灭
+  文件: books\mine\chapters\chapter-P1-V3-C8.md
+  字数: 11075, 检测耗时: 3.5396ms
+  问题列表:
+    - [critical/power] (战力系统) 一章内战力变化过于频繁: 1次
+    - [critical/resurrection] (未知角色) 复活次数超限: 4次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+    - [critical/timeline] (时间线) 时间跳跃过多: 1次 (最大允许0次)
+    - [warning/power] 章节内检测到 7 次修为/境界变化
+
+【P1-V3-C9】密洞取玉，旧友相逢
+  文件: books\mine\chapters\chapter-P1-V3-C9.md
+  字数: 11746, 检测耗时: 5.9343ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 4次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+    - [critical/timeline] (时间线) 时间跳跃过多: 1次 (最大允许0次)
+
+【P1-V4-C1】采药乔装入青牛，檐底松烟暗递踪
+  文件: books\mine\chapters\chapter-P1-V4-C1.md
+  字数: 10048, 检测耗时: 3.5063ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 1次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+    - [critical/timeline] (时间线) 时间跳跃过多: 1次 (最大允许0次)
+
+【P1-V4-C2】百草辨株得短工，隔墙有耳问行踪
+  文件: books\mine\chapters\chapter-P1-V4-C2.md
+  字数: 10918, 检测耗时: 6.1837ms
+  问题列表:
+    - [critical/resurrection] (未知角色) 复活次数超限: 4次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+    - [critical/timeline] (时间线) 时间跳跃过多: 1次 (最大允许0次)
+
+【P1-V4-C3】算尽余寿涉旧矿，坊市购诀触灵基
+  文件: books\mine\chapters\chapter-P1-V4-C3.md
+  字数: 10117, 检测耗时: 3.5969ms
+  问题列表:
+    - [critical/power] (战力系统) 一章内战力变化过于频繁: 3次
+    - [critical/resurrection] (未知角色) 复活次数超限: 10次 (最大允许0次)
+    - [warning/power] 章节内检测到 7 次修为/境界变化
+
+【P1-V4-C4】假死巷口明损耗，痞言失口露凶名
+  文件: books\mine\chapters\chapter-P1-V4-C4.md
+  字数: 9860, 检测耗时: 4.5408ms
+  问题列表:
+    - [critical/power] (战力系统) 一章内战力变化过于频繁: 3次
+    - [critical/resurrection] (未知角色) 复活次数超限: 9次 (最大允许0次)
+    - [warning/power] 章节内检测到 8 次修为/境界变化
+
+【P1-V4-C5】山外采药斩赤兔，冲关忽闻探信人
+  文件: books\mine\chapters\chapter-P1-V4-C5.md
+  字数: 10483, 检测耗时: 4.0137ms
+  问题列表:
+    - [critical/power] (战力系统) 一章内战力变化过于频繁: 4次
+    - [critical/resurrection] (未知角色) 复活次数超限: 3次 (最大允许0次)
+    - [warning/power] 章节内检测到 5 次修为/境界变化
+
+【P1-V4-C6】三月苦修登三层，试复生还闻主亲临
+  文件: books\mine\chapters\chapter-P1-V4-C6.md
+  字数: 9934, 检测耗时: 5.523ms
+  问题列表:
+    - [critical/power] (战力系统) 一章内战力变化过于频繁: 2次
+    - [critical/resurrection] (未知角色) 复活次数超限: 15次 (最大允许0次)
+    - [warning/power] 章节内检测到 9 次修为/境界变化
+
+【P1-V4-C7】坊角留笺邀旧友，烟痕如昔引疑踪
+  文件: books\mine\chapters\chapter-P1-V4-C7.md
+  字数: 10680, 检测耗时: 4.5075ms
+  问题列表:
+    - [critical/power] (战力系统) 一章内战力变化过于频繁: 1次
+    - [critical/resurrection] (未知角色) 复活次数超限: 6次 (最大允许0次)
+    - [critical/resurrection] (未知角色) 未知角色复活缺乏代价
+    - [warning/power] 章节内检测到 5 次修为/境界变化
+
+┌─────────────────────────────────────────────────────────┐
+│                    跨章一致性问题                        │
+└─────────────────────────────────────────────────────────┘
+
+【P1-V1-C10 → P1-V1-C2】
+  类型: timeline/paradox
+  目标: 时间线
+  问题: 时间线倒流：本章时间早于前章
+  期望: 时间 >= 第90天, 实际: 第0天
+
+【P1-V1-C5 → P1-V1-C6】
+  类型: timeline/paradox
+  目标: 时间线
+  问题: 时间线倒流：本章时间早于前章
+  期望: 时间 >= 第90天, 实际: 第0天
+
+【P1-V2-C10 → P1-V2-C2】
+  类型: timeline/paradox
+  目标: 时间线
+  问题: 时间线倒流：本章时间早于前章
+  期望: 时间 >= 第90天, 实际: 第0天
+
+【P1-V2-C3 → P1-V2-C4】
+  类型: timeline/paradox
+  目标: 时间线
+  问题: 时间线倒流：本章时间早于前章
+  期望: 时间 >= 第90天, 实际: 第0天
+
+【P1-V2-C7 → P1-V2-C8】
+  类型: timeline/paradox
+  目标: 时间线
+  问题: 时间线倒流：本章时间早于前章
+  期望: 时间 >= 第90天, 实际: 第0天
+
+【P1-V2-C9 → P1-V3-C1】
+  类型: timeline/paradox
+  目标: 时间线
+  问题: 时间线倒流：本章时间早于前章
+  期望: 时间 >= 第90天, 实际: 第0天
+
+【P1-V3-C3 → P1-V3-C4】
+  类型: timeline/paradox
+  目标: 时间线
+  问题: 时间线倒流：本章时间早于前章
+  期望: 时间 >= 第30天, 实际: 第3天
+
+【P1-V3-C9 → P1-V4-C1】
+  类型: timeline/paradox
+  目标: 时间线
+  问题: 时间线倒流：本章时间早于前章
+  期望: 时间 >= 第30天, 实际: 第0天
+

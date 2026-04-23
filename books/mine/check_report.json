@@ -1,0 +1,1771 @@
+{
+  "book_path": "books/mine",
+  "cross_chapter_issues": [
+    {
+      "Type": "paradox",
+      "Category": "timeline",
+      "Severity": "critical",
+      "ChapterFrom": "P1-V1-C10",
+      "ChapterTo": "P1-V1-C2",
+      "Target": "时间线",
+      "Description": "时间线倒流：本章时间早于前章",
+      "Expected": "时间 \u003e= 第90天",
+      "Actual": "第0天"
+    },
+    {
+      "Type": "paradox",
+      "Category": "timeline",
+      "Severity": "critical",
+      "ChapterFrom": "P1-V1-C5",
+      "ChapterTo": "P1-V1-C6",
+      "Target": "时间线",
+      "Description": "时间线倒流：本章时间早于前章",
+      "Expected": "时间 \u003e= 第90天",
+      "Actual": "第0天"
+    },
+    {
+      "Type": "paradox",
+      "Category": "timeline",
+      "Severity": "critical",
+      "ChapterFrom": "P1-V2-C10",
+      "ChapterTo": "P1-V2-C2",
+      "Target": "时间线",
+      "Description": "时间线倒流：本章时间早于前章",
+      "Expected": "时间 \u003e= 第90天",
+      "Actual": "第0天"
+    },
+    {
+      "Type": "paradox",
+      "Category": "timeline",
+      "Severity": "critical",
+      "ChapterFrom": "P1-V2-C3",
+      "ChapterTo": "P1-V2-C4",
+      "Target": "时间线",
+      "Description": "时间线倒流：本章时间早于前章",
+      "Expected": "时间 \u003e= 第90天",
+      "Actual": "第0天"
+    },
+    {
+      "Type": "paradox",
+      "Category": "timeline",
+      "Severity": "critical",
+      "ChapterFrom": "P1-V2-C7",
+      "ChapterTo": "P1-V2-C8",
+      "Target": "时间线",
+      "Description": "时间线倒流：本章时间早于前章",
+      "Expected": "时间 \u003e= 第90天",
+      "Actual": "第0天"
+    },
+    {
+      "Type": "paradox",
+      "Category": "timeline",
+      "Severity": "critical",
+      "ChapterFrom": "P1-V2-C9",
+      "ChapterTo": "P1-V3-C1",
+      "Target": "时间线",
+      "Description": "时间线倒流：本章时间早于前章",
+      "Expected": "时间 \u003e= 第90天",
+      "Actual": "第0天"
+    },
+    {
+      "Type": "paradox",
+      "Category": "timeline",
+      "Severity": "critical",
+      "ChapterFrom": "P1-V3-C3",
+      "ChapterTo": "P1-V3-C4",
+      "Target": "时间线",
+      "Description": "时间线倒流：本章时间早于前章",
+      "Expected": "时间 \u003e= 第30天",
+      "Actual": "第3天"
+    },
+    {
+      "Type": "paradox",
+      "Category": "timeline",
+      "Severity": "critical",
+      "ChapterFrom": "P1-V3-C9",
+      "ChapterTo": "P1-V4-C1",
+      "Target": "时间线",
+      "Description": "时间线倒流：本章时间早于前章",
+      "Expected": "时间 \u003e= 第30天",
+      "Actual": "第0天"
+    }
+  ],
+  "results": [
+    {
+      "ChapterID": "P1-V1-C1",
+      "ChapterTitle": "寒矿醒转，首死触发复生",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V1-C1.md",
+      "TextLength": 11692,
+      "Issues": [
+        {
+          "Category": "power",
+          "SubCategory": "",
+          "Target": "战力系统",
+          "Description": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 5次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "power",
+          "Target": "战力系统",
+          "Issue": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical",
+          "Suggestion": "减少突破次数，增加修炼过程的描写和困难"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 5次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 5117100,
+      "Timestamp": "2026-04-22T22:42:52.3887264+08:00"
+    },
+    {
+      "ChapterID": "P1-V1-C10",
+      "ChapterTitle": "借矿难势，暗定逃出生天",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V1-C10.md",
+      "TextLength": 10110,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 4766000,
+      "Timestamp": "2026-04-22T22:42:52.3938435+08:00"
+    },
+    {
+      "ChapterID": "P1-V1-C2",
+      "ChapterTitle": "二度殒命，始知复生有耗",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V1-C2.md",
+      "TextLength": 9880,
+      "Issues": [
+        {
+          "Category": "power",
+          "SubCategory": "",
+          "Target": "战力系统",
+          "Description": "一章内战力变化过于频繁: 2次",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 13次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 9 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "power",
+          "Target": "战力系统",
+          "Issue": "一章内战力变化过于频繁: 2次",
+          "Severity": "critical",
+          "Suggestion": "减少突破次数，增加修炼过程的描写和困难"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 13次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        }
+      ],
+      "CheckDuration": 5177800,
+      "Timestamp": "2026-04-22T22:42:52.3991241+08:00"
+    },
+    {
+      "ChapterID": "P1-V1-C3",
+      "ChapterTitle": "以身试死，探明寿命折损",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V1-C3.md",
+      "TextLength": 11462,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 11次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 6 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 11次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        }
+      ],
+      "CheckDuration": 5660700,
+      "Timestamp": "2026-04-22T22:42:52.4037873+08:00"
+    },
+    {
+      "ChapterID": "P1-V1-C4",
+      "ChapterTitle": "矿洞识踪，竟入自著仙途",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V1-C4.md",
+      "TextLength": 9310,
+      "Issues": [
+        {
+          "Category": "power",
+          "SubCategory": "",
+          "Target": "战力系统",
+          "Description": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 1次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        },
+        {
+          "Category": "timeline",
+          "SubCategory": "",
+          "Target": "时间线",
+          "Description": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "power",
+          "Target": "战力系统",
+          "Issue": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical",
+          "Suggestion": "减少突破次数，增加修炼过程的描写和困难"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        },
+        {
+          "Type": "timeline",
+          "Target": "时间线",
+          "Issue": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "减少时间跳跃，或增加跳跃之间的内容描写"
+        }
+      ],
+      "CheckDuration": 4127300,
+      "Timestamp": "2026-04-22T22:42:52.409448+08:00"
+    },
+    {
+      "ChapterID": "P1-V1-C5",
+      "ChapterTitle": "先知优势，巧藏灵石避搜",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V1-C5.md",
+      "TextLength": 10764,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 1次 (最大允许0次)",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        }
+      ],
+      "CheckDuration": 4653800,
+      "Timestamp": "2026-04-22T22:42:52.4135753+08:00"
+    },
+    {
+      "ChapterID": "P1-V1-C6",
+      "ChapterTitle": "灰衣现踪，溢出设定的变数",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V1-C6.md",
+      "TextLength": 11141,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 2次 (最大允许0次)",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 2次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        }
+      ],
+      "CheckDuration": 4669500,
+      "Timestamp": "2026-04-22T22:42:52.4182291+08:00"
+    },
+    {
+      "ChapterID": "P1-V1-C7",
+      "ChapterTitle": "冷眼观亡，斩断作者幻梦",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V1-C7.md",
+      "TextLength": 11913,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 5160400,
+      "Timestamp": "2026-04-22T22:42:52.4234189+08:00"
+    },
+    {
+      "ChapterID": "P1-V1-C8",
+      "ChapterTitle": "暗积粮秣，潜备逃遁之资",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V1-C8.md",
+      "TextLength": 10744,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 1次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 5205300,
+      "Timestamp": "2026-04-22T22:42:52.428059+08:00"
+    },
+    {
+      "ChapterID": "P1-V1-C9",
+      "ChapterTitle": "复生被窥，灵石换得缄默",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V1-C9.md",
+      "TextLength": 9330,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 4 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 4013300,
+      "Timestamp": "2026-04-22T22:42:52.4332643+08:00"
+    },
+    {
+      "ChapterID": "P1-V2-C1",
+      "ChapterTitle": "监工鞭落，死矿催命",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V2-C1.md",
+      "TextLength": 9624,
+      "Issues": [],
+      "Violations": [],
+      "CheckDuration": 4013300,
+      "Timestamp": "2026-04-22T22:42:52.4372776+08:00"
+    },
+    {
+      "ChapterID": "P1-V2-C10",
+      "ChapterTitle": "归帐谋遁，期改一月",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V2-C10.md",
+      "TextLength": 11224,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 5次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 4 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 5次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 5015600,
+      "Timestamp": "2026-04-22T22:42:52.4412909+08:00"
+    },
+    {
+      "ChapterID": "P1-V2-C2",
+      "ChapterTitle": "血纹无载，越界天规",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V2-C2.md",
+      "TextLength": 9569,
+      "Issues": [
+        {
+          "Category": "power",
+          "SubCategory": "",
+          "Target": "战力系统",
+          "Description": "一章内战力变化过于频繁: 2次",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "power",
+          "Target": "战力系统",
+          "Issue": "一章内战力变化过于频繁: 2次",
+          "Severity": "critical",
+          "Suggestion": "减少突破次数，增加修炼过程的描写和困难"
+        }
+      ],
+      "CheckDuration": 3504200,
+      "Timestamp": "2026-04-22T22:42:52.4463065+08:00"
+    },
+    {
+      "ChapterID": "P1-V2-C3",
+      "ChapterTitle": "机关暗启，异息牵魂",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V2-C3.md",
+      "TextLength": 8665,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 3次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 3次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 5132000,
+      "Timestamp": "2026-04-22T22:42:52.4498107+08:00"
+    },
+    {
+      "ChapterID": "P1-V2-C4",
+      "ChapterTitle": "灰影巡洞，缉字铜牌",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V2-C4.md",
+      "TextLength": 7786,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 2次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 5 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 2次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 3061600,
+      "Timestamp": "2026-04-22T22:42:52.4549427+08:00"
+    },
+    {
+      "ChapterID": "P1-V2-C5",
+      "ChapterTitle": "禁名「夺魄」，千魂血祭",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V2-C5.md",
+      "TextLength": 10577,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 6次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 5 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 6次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 3525900,
+      "Timestamp": "2026-04-22T22:42:52.458515+08:00"
+    },
+    {
+      "ChapterID": "P1-V2-C6",
+      "ChapterTitle": "石落声起，刃穿魂归",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V2-C6.md",
+      "TextLength": 8488,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 9次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 6 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 9次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        }
+      ],
+      "CheckDuration": 4523800,
+      "Timestamp": "2026-04-22T22:42:52.4630376+08:00"
+    },
+    {
+      "ChapterID": "P1-V2-C7",
+      "ChapterTitle": "残纹半玉，契合金源",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V2-C7.md",
+      "TextLength": 8874,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 6 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 4011900,
+      "Timestamp": "2026-04-22T22:42:52.466054+08:00"
+    },
+    {
+      "ChapterID": "P1-V2-C8",
+      "ChapterTitle": "落石封门，秘藏禁踪",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V2-C8.md",
+      "TextLength": 9459,
+      "Issues": [
+        {
+          "Category": "power",
+          "SubCategory": "",
+          "Target": "战力系统",
+          "Description": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 2次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "power",
+          "Target": "战力系统",
+          "Issue": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical",
+          "Suggestion": "减少突破次数，增加修炼过程的描写和困难"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 2次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 4667700,
+      "Timestamp": "2026-04-22T22:42:52.4709945+08:00"
+    },
+    {
+      "ChapterID": "P1-V2-C9",
+      "ChapterTitle": "岩崩尘散，凶迹全消",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V2-C9.md",
+      "TextLength": 10317,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 1次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 4213500,
+      "Timestamp": "2026-04-22T22:42:52.4757339+08:00"
+    },
+    {
+      "ChapterID": "P1-V3-C1",
+      "ChapterTitle": "岩洞密约，雨夜逃期",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V3-C1.md",
+      "TextLength": 9944,
+      "Issues": [
+        {
+          "Category": "power",
+          "SubCategory": "",
+          "Target": "战力系统",
+          "Description": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 6次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "power",
+          "Target": "战力系统",
+          "Issue": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical",
+          "Suggestion": "减少突破次数，增加修炼过程的描写和困难"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 6次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 5251300,
+      "Timestamp": "2026-04-22T22:42:52.4789471+08:00"
+    },
+    {
+      "ChapterID": "P1-V3-C10",
+      "ChapterTitle": "破笼而出，仙途启行",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V3-C10.md",
+      "TextLength": 10020,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 5次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 5 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 5次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        }
+      ],
+      "CheckDuration": 3516200,
+      "Timestamp": "2026-04-22T22:42:52.4847012+08:00"
+    },
+    {
+      "ChapterID": "P1-V3-C2",
+      "ChapterTitle": "暗标支点，矿脉伏机",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V3-C2.md",
+      "TextLength": 11635,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 2次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 2次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 6671300,
+      "Timestamp": "2026-04-22T22:42:52.4877146+08:00"
+    },
+    {
+      "ChapterID": "P1-V3-C3",
+      "ChapterTitle": "监工疑踪，份额陡增",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V3-C3.md",
+      "TextLength": 10725,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 2次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        },
+        {
+          "Category": "timeline",
+          "SubCategory": "",
+          "Target": "时间线",
+          "Description": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 2次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        },
+        {
+          "Type": "timeline",
+          "Target": "时间线",
+          "Issue": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "减少时间跳跃，或增加跳跃之间的内容描写"
+        }
+      ],
+      "CheckDuration": 5296500,
+      "Timestamp": "2026-04-22T22:42:52.4943859+08:00"
+    },
+    {
+      "ChapterID": "P1-V3-C4",
+      "ChapterTitle": "嫁祸栽赃，阵成暗巷",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V3-C4.md",
+      "TextLength": 10335,
+      "Issues": [
+        {
+          "Category": "timeline",
+          "SubCategory": "",
+          "Target": "时间线",
+          "Description": "时间跳跃过多: 3次 (最大允许0次)",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "timeline",
+          "Target": "时间线",
+          "Issue": "时间跳跃过多: 3次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "减少时间跳跃，或增加跳跃之间的内容描写"
+        }
+      ],
+      "CheckDuration": 3243000,
+      "Timestamp": "2026-04-22T22:42:52.4996824+08:00"
+    },
+    {
+      "ChapterID": "P1-V3-C5",
+      "ChapterTitle": "引动灵阵，矿崩天倾",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V3-C5.md",
+      "TextLength": 8417,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 3次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "timeline",
+          "SubCategory": "",
+          "Target": "时间线",
+          "Description": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 4 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 3次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "timeline",
+          "Target": "时间线",
+          "Issue": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "减少时间跳跃，或增加跳跃之间的内容描写"
+        }
+      ],
+      "CheckDuration": 4911300,
+      "Timestamp": "2026-04-22T22:42:52.5029254+08:00"
+    },
+    {
+      "ChapterID": "P1-V3-C6",
+      "ChapterTitle": "引虎入瓮，碎石封仇",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V3-C6.md",
+      "TextLength": 9178,
+      "Issues": [
+        {
+          "Category": "power",
+          "SubCategory": "",
+          "Target": "战力系统",
+          "Description": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 9次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "timeline",
+          "SubCategory": "",
+          "Target": "时间线",
+          "Description": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 4 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "power",
+          "Target": "战力系统",
+          "Issue": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical",
+          "Suggestion": "减少突破次数，增加修炼过程的描写和困难"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 9次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "timeline",
+          "Target": "时间线",
+          "Issue": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "减少时间跳跃，或增加跳跃之间的内容描写"
+        }
+      ],
+      "CheckDuration": 4362000,
+      "Timestamp": "2026-04-22T22:42:52.5078367+08:00"
+    },
+    {
+      "ChapterID": "P1-V3-C7",
+      "ChapterTitle": "灰衣截路，刃穿魂归",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V3-C7.md",
+      "TextLength": 9370,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 7次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        },
+        {
+          "Category": "timeline",
+          "SubCategory": "",
+          "Target": "时间线",
+          "Description": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 8 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 7次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        },
+        {
+          "Type": "timeline",
+          "Target": "时间线",
+          "Issue": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "减少时间跳跃，或增加跳跃之间的内容描写"
+        }
+      ],
+      "CheckDuration": 4236500,
+      "Timestamp": "2026-04-22T22:42:52.5128552+08:00"
+    },
+    {
+      "ChapterID": "P1-V3-C8",
+      "ChapterTitle": "借势岩崩，灰飞烟灭",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V3-C8.md",
+      "TextLength": 11075,
+      "Issues": [
+        {
+          "Category": "power",
+          "SubCategory": "",
+          "Target": "战力系统",
+          "Description": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        },
+        {
+          "Category": "timeline",
+          "SubCategory": "",
+          "Target": "时间线",
+          "Description": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 7 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "power",
+          "Target": "战力系统",
+          "Issue": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical",
+          "Suggestion": "减少突破次数，增加修炼过程的描写和困难"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        },
+        {
+          "Type": "timeline",
+          "Target": "时间线",
+          "Issue": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "减少时间跳跃，或增加跳跃之间的内容描写"
+        }
+      ],
+      "CheckDuration": 3539600,
+      "Timestamp": "2026-04-22T22:42:52.5164352+08:00"
+    },
+    {
+      "ChapterID": "P1-V3-C9",
+      "ChapterTitle": "密洞取玉，旧友相逢",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V3-C9.md",
+      "TextLength": 11746,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        },
+        {
+          "Category": "timeline",
+          "SubCategory": "",
+          "Target": "时间线",
+          "Description": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        },
+        {
+          "Type": "timeline",
+          "Target": "时间线",
+          "Issue": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "减少时间跳跃，或增加跳跃之间的内容描写"
+        }
+      ],
+      "CheckDuration": 5934300,
+      "Timestamp": "2026-04-22T22:42:52.5199748+08:00"
+    },
+    {
+      "ChapterID": "P1-V4-C1",
+      "ChapterTitle": "采药乔装入青牛，檐底松烟暗递踪",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V4-C1.md",
+      "TextLength": 10048,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 1次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        },
+        {
+          "Category": "timeline",
+          "SubCategory": "",
+          "Target": "时间线",
+          "Description": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        },
+        {
+          "Type": "timeline",
+          "Target": "时间线",
+          "Issue": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "减少时间跳跃，或增加跳跃之间的内容描写"
+        }
+      ],
+      "CheckDuration": 3506300,
+      "Timestamp": "2026-04-22T22:42:52.5259091+08:00"
+    },
+    {
+      "ChapterID": "P1-V4-C2",
+      "ChapterTitle": "百草辨株得短工，隔墙有耳问行踪",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V4-C2.md",
+      "TextLength": 10918,
+      "Issues": [
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        },
+        {
+          "Category": "timeline",
+          "SubCategory": "",
+          "Target": "时间线",
+          "Description": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 4次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        },
+        {
+          "Type": "timeline",
+          "Target": "时间线",
+          "Issue": "时间跳跃过多: 1次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "减少时间跳跃，或增加跳跃之间的内容描写"
+        }
+      ],
+      "CheckDuration": 6183700,
+      "Timestamp": "2026-04-22T22:42:52.5294154+08:00"
+    },
+    {
+      "ChapterID": "P1-V4-C3",
+      "ChapterTitle": "算尽余寿涉旧矿，坊市购诀触灵基",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V4-C3.md",
+      "TextLength": 10117,
+      "Issues": [
+        {
+          "Category": "power",
+          "SubCategory": "",
+          "Target": "战力系统",
+          "Description": "一章内战力变化过于频繁: 3次",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 10次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 7 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "power",
+          "Target": "战力系统",
+          "Issue": "一章内战力变化过于频繁: 3次",
+          "Severity": "critical",
+          "Suggestion": "减少突破次数，增加修炼过程的描写和困难"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 10次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        }
+      ],
+      "CheckDuration": 3596900,
+      "Timestamp": "2026-04-22T22:42:52.5355991+08:00"
+    },
+    {
+      "ChapterID": "P1-V4-C4",
+      "ChapterTitle": "假死巷口明损耗，痞言失口露凶名",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V4-C4.md",
+      "TextLength": 9860,
+      "Issues": [
+        {
+          "Category": "power",
+          "SubCategory": "",
+          "Target": "战力系统",
+          "Description": "一章内战力变化过于频繁: 3次",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 9次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 8 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "power",
+          "Target": "战力系统",
+          "Issue": "一章内战力变化过于频繁: 3次",
+          "Severity": "critical",
+          "Suggestion": "减少突破次数，增加修炼过程的描写和困难"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 9次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        }
+      ],
+      "CheckDuration": 4540800,
+      "Timestamp": "2026-04-22T22:42:52.539196+08:00"
+    },
+    {
+      "ChapterID": "P1-V4-C5",
+      "ChapterTitle": "山外采药斩赤兔，冲关忽闻探信人",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V4-C5.md",
+      "TextLength": 10483,
+      "Issues": [
+        {
+          "Category": "power",
+          "SubCategory": "",
+          "Target": "战力系统",
+          "Description": "一章内战力变化过于频繁: 4次",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 3次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 5 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "power",
+          "Target": "战力系统",
+          "Issue": "一章内战力变化过于频繁: 4次",
+          "Severity": "critical",
+          "Suggestion": "减少突破次数，增加修炼过程的描写和困难"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 3次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        }
+      ],
+      "CheckDuration": 4013700,
+      "Timestamp": "2026-04-22T22:42:52.5437368+08:00"
+    },
+    {
+      "ChapterID": "P1-V4-C6",
+      "ChapterTitle": "三月苦修登三层，试复生还闻主亲临",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V4-C6.md",
+      "TextLength": 9934,
+      "Issues": [
+        {
+          "Category": "power",
+          "SubCategory": "",
+          "Target": "战力系统",
+          "Description": "一章内战力变化过于频繁: 2次",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 15次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 9 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "power",
+          "Target": "战力系统",
+          "Issue": "一章内战力变化过于频繁: 2次",
+          "Severity": "critical",
+          "Suggestion": "减少突破次数，增加修炼过程的描写和困难"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 15次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        }
+      ],
+      "CheckDuration": 5523000,
+      "Timestamp": "2026-04-22T22:42:52.5477505+08:00"
+    },
+    {
+      "ChapterID": "P1-V4-C7",
+      "ChapterTitle": "坊角留笺邀旧友，烟痕如昔引疑踪",
+      "FilePath": "books\\mine\\chapters\\chapter-P1-V4-C7.md",
+      "TextLength": 10680,
+      "Issues": [
+        {
+          "Category": "power",
+          "SubCategory": "",
+          "Target": "战力系统",
+          "Description": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "复活次数超限: 6次 (最大允许0次)",
+          "Severity": "critical"
+        },
+        {
+          "Category": "resurrection",
+          "SubCategory": "",
+          "Target": "未知角色",
+          "Description": "未知角色复活缺乏代价",
+          "Severity": "critical"
+        },
+        {
+          "Category": "power",
+          "SubCategory": "too_frequent",
+          "Target": "",
+          "Description": "章节内检测到 5 次修为/境界变化",
+          "Severity": "warning"
+        }
+      ],
+      "Violations": [
+        {
+          "Type": "power",
+          "Target": "战力系统",
+          "Issue": "一章内战力变化过于频繁: 1次",
+          "Severity": "critical",
+          "Suggestion": "减少突破次数，增加修炼过程的描写和困难"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "复活次数超限: 6次 (最大允许0次)",
+          "Severity": "critical",
+          "Suggestion": "限制未知角色的复活次数，或增加复活代价"
+        },
+        {
+          "Type": "resurrection",
+          "Target": "未知角色",
+          "Issue": "未知角色复活缺乏代价",
+          "Severity": "critical",
+          "Suggestion": "每次复活应消耗修为、寿命或其他代价"
+        }
+      ],
+      "CheckDuration": 4507500,
+      "Timestamp": "2026-04-22T22:42:52.5532735+08:00"
+    }
+  ],
+  "timestamp": "2026-04-22T22:42:52+08:00",
+  "total_chapters": 37
+}
