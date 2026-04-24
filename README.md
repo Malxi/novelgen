@@ -1,6 +1,45 @@
 # Novelgen - AI 辅助小说生成工具
 
-Novelgen 是一个命令行工具，用于 AI 辅助小说创作。它提供了一个结构化的工作流程，从最初的创意到完整的小说生成。
+Novelgen 是一个命令行工具，用于 AI 辅助小说创作。它提供了一个结构化的工作流程，从最初的创意到完整的小说生成，并创新性地引入了 RPG-DSL 系统实现智能化的内容验证和推演。
+
+## 📚 文档导航
+
+| 文档 | 说明 |
+|------|------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 项目架构总览 |
+| [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | 开发者指南 |
+| [docs/RPG_DSL_DOCUMENTATION_INDEX.md](docs/RPG_DSL_DOCUMENTATION_INDEX.md) | RPG-DSL 系统文档索引 |
+| [docs/](docs/) | 技术文档目录 |
+
+## ✨ 核心特性
+
+- **结构化创作**: 部→卷→章的三级大纲体系
+- **AI 驱动**: 每个阶段都有专门的 AI Agent
+- **RPG 验证**: 通过 DSL 系统验证内容一致性
+- **约束写作**: RPG 约束指导 AI 写作，避免战力崩坏等问题
+- **连续性保证**: 自动检测角色出场、转场桥段、章节回顾
+
+## 🚀 快速开始
+
+```bash
+# 1. 构建项目
+./build.ps1
+
+# 2. 初始化项目
+./bin/novelgen.exe init my_novel --genre "科幻" --chapter 20
+
+# 3. 进入项目目录
+cd my_novel
+
+# 4. 生成故事设定
+./bin/novelgen.exe setup gen "一个关于太空探险的故事"
+
+# 5. 生成大纲
+./bin/novelgen.exe compose gen
+
+# 6. 生成世界元素
+./bin/novelgen.exe craft gen
+```
 
 ## 核心工作流程
 
@@ -403,3 +442,111 @@ project-root/
 novelgen --help                           # 显示主帮助
 novelgen <command> --help                 # 显示命令帮助
 ```
+
+---
+
+## 🎮 RPG-DSL 系统
+
+Novelgen 创新性地引入了 RPG-DSL（Role-Playing Game Domain-Specific Language）系统，将小说内容转化为可执行的游戏化数据结构，实现智能化的内容验证和推演。
+
+### 为什么需要 RPG-DSL？
+
+- **内容验证**: 自动检测战力崩坏、角色死亡滥用、时间线混乱等问题
+- **约束写作**: RPG 约束指导 AI 写作，确保内容一致性
+- **游戏化**: 为小说改编游戏提供数值基础
+- **AI 友好**: 类自然语言的声明式语法，降低 AI 生成难度
+
+### RPG-DSL 工作流
+
+```
+故事数据 (JSON)
+    ↓
+AI 分析 → RPG DSL 文件 (.rpg)
+    ↓
+DSL Parser → AST
+    ↓
+DSL Validator → 验证报告
+    ↓
+DSL Converter → RPG World
+    ↓
+Simulator → 模拟报告（问题检测）
+    ↓
+Constraint System → 约束规则
+    ↓
+反馈给 AI 写作 Agent
+```
+
+### 快速使用
+
+```bash
+# 转换小说为 RPG DSL
+novelgen rpg dsl convert -b mine
+
+# 运行模拟检测问题
+novelgen simulate-dsl books/mine/story/rpg/final.rpg
+
+# 查看模拟报告
+cat simulation_report.json
+```
+
+### DSL 示例
+
+```dsl
+metadata {
+    title = "矿脉仙途"
+    genre = ["修仙", "穿越", "悬疑"]
+    dsl_version = "0.2.0"
+}
+
+characters {
+    player "林砚" {
+        id = "char_player"
+        stats {
+            hp = 100
+            mp = 50
+            attack = 15
+        }
+    }
+}
+
+storyline {
+    chapter "P1-V1-C1" {
+        objective "寒矿醒转" {
+            step 1 "苏醒" {
+                event "status_change" {
+                    subject = "休眠状态"
+                    change = "resolved"
+                }
+            }
+        }
+    }
+}
+```
+
+### RPG-DSL 文档
+
+| 文档 | 说明 |
+|------|------|
+| [RPG-DSL 文档索引](docs/RPG_DSL_DOCUMENTATION_INDEX.md) | 文档导航和快速开始 |
+| [DSL-RPG 集成规范](docs/DSL_RPG_INTEGRATION_SPEC.md) | 完整的架构设计和数据流 |
+| [DSL 规格文档](docs/RPG_DSL_SPEC.md) | 详细的语法定义和函数库 |
+| [约束系统集成](docs/RPG_CONSTRAINT_INTEGRATION.md) | RPG 约束指导写作方案 |
+| [RPG 写作指南](docs/RPG_WRITE_USAGE.md) | 使用 RPG 约束进行写作 |
+
+---
+
+## 📖 更多文档
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) - 项目架构总览
+- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - 开发者指南
+- [docs/](docs/) - 技术文档目录
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📄 许可证
+
+MIT

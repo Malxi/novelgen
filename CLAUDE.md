@@ -4,8 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Common commands
 
-- Build CLI binary: `go build -o bin/novelgen.exe`
-- Show CLI help: `novelgen --help` or `novelgen <command> --help`
+- Build CLI binary: `./build.ps1` (PowerShell) or `./build.bat` (CMD)
+- Manual build: `go build -o bin/novelgen.exe`
+- Run CLI: `bin/novelgen.exe --help` or `bin/novelgen.exe <command> --help`
+
+## Binary output
+
+All build scripts output the executable to `bin/novelgen.exe`. The `bin/` directory is created automatically if it doesn't exist.
 
 Note: No `*_test.go` files were found in the repo.
 
@@ -20,4 +25,4 @@ Note: No `*_test.go` files were found in the repo.
 - Prompt templates and prompt builders are in `internal/prompts/`.
 - Data structures for story setup, outlines, elements, recaps, and project config live in `internal/models/`.
 - Continuity logic (character presence, transitions, recaps) lives in `internal/logic/continuity/`, with shared state helpers in `internal/logic/`.
-- The project’s generated content layout (created by `novelgen init`) matches the structure documented in README (e.g., `novel.json`, `llm_config.json`, `story/setup`, `story/compose`, `story/craft`, `story/recaps`, `drafts/`, `chapters/`).
+- The project's generated content layout (created by `novelgen init`) matches the structure documented in README (e.g., `novel.json`, `llm_config.json`, `story/setup`, `story/compose`, `story/craft`, `story/recaps`, `drafts/`, `chapters/`).
