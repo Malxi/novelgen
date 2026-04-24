@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"time"
@@ -247,6 +248,11 @@ func (a *BaseAgent) parseResponse(content string, output interface{}) error {
 		}
 
 		if err := json.Unmarshal([]byte(jsonContent), output); err != nil {
+			if a.trySetDSLContentFromMalformed(content, output) || a.trySetDSLContentFromMalformed(jsonContent, output) {
+				logger.Warn("[%s] JSON parse failed, recovered DSL content via malformed-JSON fallback", a.name)
+				return nil
+			}
+
 			logger.Error("[%s] Failed to parse AI response as JSON: %v", a.name, err)
 			// Log more context about the error
 			errorPreview := jsonContent
@@ -258,6 +264,93 @@ func (a *BaseAgent) parseResponse(content string, output interface{}) error {
 		}
 	}
 	return nil
+}
+
+func (a *BaseAgent) trySetDSLContentFromMalformed(content string, output interface{}) bool {
+	dslContent, ok := extractDSLContentFromMalformed(content)
+	if !ok {
+		return false
+	}
+
+	v := reflect.ValueOf(output)
+	if v.Kind() != reflect.Ptr || v.IsNil() {
+		return false
+	}
+	elem := v.Elem()
+	if elem.Kind() != reflect.Struct {
+		return false
+	}
+
+	field := elem.FieldByName("DSLContent")
+	if !field.IsValid() || !field.CanSet() || field.Kind() != reflect.String {
+		return false
+	}
+	field.SetString(dslContent)
+	return true
+}
+
+func extractDSLContentFromMalformed(content string) (string, bool) {
+	trimmed := strings.TrimSpace(content)
+	if trimmed == "" {
+		return "", false
+	}
+
+	// Direct DSL fallback
+	if isLikelyDSL(trimmed) {
+		return trimmed, true
+	}
+
+	keyIdx := strings.Index(trimmed, "\"dsl_content\"")
+	if keyIdx == -1 {
+		return "", false
+	}
+
+	body := trimmed[keyIdx:]
+	start := findFirstDSLBlockStart(body)
+	if start == -1 {
+		return "", false
+	}
+
+	candidate := strings.TrimSpace(body[start:])
+	candidate = strings.TrimSuffix(candidate, "```")
+	candidate = strings.TrimSpace(candidate)
+
+	// Remove common loose-JSON tails
+	for _, suffix := range []string{"\"}", "\"\n}", "\"\r\n}", "\",\n}", "\",\r\n}", "\""} {
+		if strings.HasSuffix(candidate, suffix) {
+			candidate = strings.TrimSpace(strings.TrimSuffix(candidate, suffix))
+		}
+	}
+
+	if !isLikelyDSL(candidate) {
+		return "", false
+	}
+	return candidate, true
+}
+
+func findFirstDSLBlockStart(content string) int {
+	keywords := []string{"metadata {", "world {", "characters {", "storyline {"}
+	best := -1
+	for _, kw := range keywords {
+		if idx := strings.Index(content, kw); idx != -1 && (best == -1 || idx < best) {
+			best = idx
+		}
+	}
+	return best
+}
+
+func isLikelyDSL(content string) bool {
+	required := []string{"{", "}"}
+	for _, token := range required {
+		if !strings.Contains(content, token) {
+			return false
+		}
+	}
+	// At least one top-level DSL block keyword
+	return strings.Contains(content, "metadata {") ||
+		strings.Contains(content, "world {") ||
+		strings.Contains(content, "characters {") ||
+		strings.Contains(content, "storyline {")
 }
 
 // extractJSONFromMarkdown extracts JSON from markdown code blocks

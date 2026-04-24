@@ -113,9 +113,9 @@ var (
 	generatePrompt bool
 
 	// convert-chapters flags
-	volumeFlag      int
-	chaptersFlag    string
-	allVolumesFlag  bool
+	volumeFlag        int
+	chaptersFlag      string
+	allVolumesFlag    bool
 	simulateAfterFlag bool
 )
 
@@ -565,6 +565,10 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 		adapter.GetStorySetup(),
 	)
 	agent.SetLanguage("zh")
+	agent.SetRequireAI(true)
+	if llmClient == nil {
+		return fmt.Errorf("LLM 客户端不可用，无法执行 AI 章节转 DSL")
+	}
 
 	// 执行转换
 	dslContent, err := agent.ConvertChapters(
@@ -576,6 +580,38 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 	)
 	if err != nil {
 		return fmt.Errorf("AI 转换失败: %w", err)
+	}
+
+	// Parse validation and auto-repair loop
+	parser := dsl.NewParser(dslContent)
+	if _, parseErr := parser.Parse(); parseErr != nil {
+		fmt.Printf("⚠️  初次 DSL 解析失败，进入自动修复: %v\n", parseErr)
+		lastErr := parseErr
+		for attempt := 0; attempt < 2; attempt++ {
+			repairedDSL, repairErr := agent.RepairDSL(
+				cmd.Context(),
+				bookName,
+				lastErr.Error(),
+				dslContent,
+			)
+			if repairErr != nil {
+				return fmt.Errorf("DSL 自动修复失败: %w", repairErr)
+			}
+			reparse := dsl.NewParser(repairedDSL)
+			if _, err := reparse.Parse(); err == nil {
+				dslContent = repairedDSL
+				lastErr = nil
+				fmt.Printf("✅ DSL 自动修复成功 (attempt %d/2)\n", attempt+1)
+				break
+			} else {
+				lastErr = err
+				dslContent = repairedDSL
+				fmt.Printf("⚠️  修复后仍解析失败 (attempt %d/2): %v\n", attempt+1, err)
+			}
+		}
+		if lastErr != nil {
+			return fmt.Errorf("DSL 解析失败且修复未成功: %w", lastErr)
+		}
 	}
 
 	// 5. 保存合并的 DSL 文件

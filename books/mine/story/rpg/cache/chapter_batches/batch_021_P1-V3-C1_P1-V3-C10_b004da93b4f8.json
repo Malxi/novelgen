@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "book_name": "mine",
+  "batch_index": 20,
+  "batch_size": 10,
+  "batch_hash": "b004da93b4f8604e3069ebae9849dca7c6822d1915cae8e73083225eca2ab757",
+  "dsl_file": "D:\\Code\\nolvegen\\books\\mine\\story\\rpg\\cache\\chapter_batches\\batch_021_P1-V3-C1_P1-V3-C10_b004da93b4f8.rpg",
+  "updated_at": "2026-04-24T23:06:14+08:00",
+  "chapters": [
+    {
+      "chapter_id": "P1-V3-C1",
+      "path": "books/mine/story/recaps/P1-V3-C1.json",
+      "sha256": "b6266cd00b8a9be05178d78e1c77243ad43ced69c98ef11a786ef058aeb4135a"
+    },
+    {
+      "chapter_id": "P1-V3-C2",
+      "path": "books/mine/story/recaps/P1-V3-C2.json",
+      "sha256": "f8359635db7313125303344d5290eae9e9a68a2c51fb001b61617dbd8e5afc50"
+    },
+    {
+      "chapter_id": "P1-V3-C3",
+      "path": "books/mine/story/recaps/P1-V3-C3.json",
+      "sha256": "2879c51c2c103671ca327bd68bd3fdc5e665cefea91533ef9b153384fd95c36f"
+    },
+    {
+      "chapter_id": "P1-V3-C4",
+      "path": "books/mine/story/recaps/P1-V3-C4.json",
+      "sha256": "4031f91b440fb04e4c95154afc0f2d4b85f7ab4888f92d6c372e65da3bd6f724"
+    },
+    {
+      "chapter_id": "P1-V3-C5",
+      "path": "books/mine/story/recaps/P1-V3-C5.json",
+      "sha256": "fbf891205fc9c4d926e76df1178bf96dc96c03985fd62175a03d42d8b6238031"
+    },
+    {
+      "chapter_id": "P1-V3-C6",
+      "path": "books/mine/story/recaps/P1-V3-C6.json",
+      "sha256": "9335d1247764b6037c08ba52a82e7f8ac7398f23a19ecfdc95f312d88dac4a92"
+    },
+    {
+      "chapter_id": "P1-V3-C7",
+      "path": "books/mine/story/recaps/P1-V3-C7.json",
+      "sha256": "d224ea1ccd565085b364fcf167c0b3d432c69a88d49718f38354d7c58ab4d28b"
+    },
+    {
+      "chapter_id": "P1-V3-C8",
+      "path": "books/mine/story/recaps/P1-V3-C8.json",
+      "sha256": "4a4d849f9e4c9af32c2a86b0e485f79df1734846b8a6865c4632d536ae1b1187"
+    },
+    {
+      "chapter_id": "P1-V3-C9",
+      "path": "books/mine/story/recaps/P1-V3-C9.json",
+      "sha256": "b33b364b38b9f85e7ad47d444149c41701fe525ec6bc04deb23dec7c311b241a"
+    },
+    {
+      "chapter_id": "P1-V3-C10",
+      "path": "books/mine/story/recaps/P1-V3-C10.json",
+      "sha256": "e58ab60ad0cf890cbb1eed4fba7427245ae46f66216707cc1211cbde3f14d8a7"
+    }
+  ]
+}

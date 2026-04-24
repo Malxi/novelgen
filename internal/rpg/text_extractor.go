@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // ExtractedEntity 提取的实体
@@ -138,6 +139,9 @@ func (te *TextExtractor) extractCharacter(matches []string, line string, lineNum
 	if len(name) < 2 || len(name) > 5 {
 		return nil
 	}
+	if isLikelyNoiseName(name, line) {
+		return nil
+	}
 
 	// 过滤常见非人名词和错误提取
 	filterWords := []string{
@@ -199,6 +203,9 @@ func (te *TextExtractor) extractCharacterSimple(matches []string, line string, l
 	if len(name) < 2 || len(name) > 5 {
 		return nil
 	}
+	if isLikelyNoiseName(name, line) {
+		return nil
+	}
 
 	// 更严格的过滤词列表
 	filterWords := []string{"因此", "然后", "因此他", "然后他", "自己", "众人", "对方", "什么", "这个", "那个", "这里", "那里", "现在", "当时", "只见", "忽然", "突然", "原来", "虽然", "尽管", "因为", "所以", "于是", "但是", "然而", "不过", "只是", "只有", "只要", "如果", "假如", "即使", "哪怕", "无论", "不管", "不论", "不仅", "不但", "而且", "并且", "或者", "还是", "要么", "与其", "宁可", "宁愿", "除了", "除去", "除非", "关于", "对于", "由于", "根据", "按照", "依照", "通过", "经过", "随着", "为了", "为着", "可以", "能够", "应该", "需要", "必须", "一定", "也许", "大概", "可能", "似乎", "好像", "仿佛", "简直", "根本", "绝对", "完全", "实在", "确实", "的确", "真的"}
@@ -233,6 +240,45 @@ func (te *TextExtractor) extractCharacterSimple(matches []string, line string, l
 		Confidence: confidence,
 		LineNumber: lineNum,
 	}
+}
+
+func isLikelyNoiseName(name, line string) bool {
+	// Keep only short CJK-like names (most Chinese names are 2-4 runes).
+	runeLen := utf8.RuneCountInString(name)
+	if runeLen < 2 || runeLen > 4 {
+		return true
+	}
+
+	// Drop candidates containing punctuation / digits.
+	if strings.ContainsAny(name, "0123456789,.;:!?()[]{}<>/\\|@#$%^&*+-_=~`\"'") {
+		return true
+	}
+
+	// Typical false positives are action/particle suffixes like "林砚抬".
+	noiseSuffixes := []string{
+		"\u7684", "\u4e86", "\u7740", "\u8fc7", "\u5730", "\u5f97", "\u5728", "\u628a", "\u88ab",
+		"\u662f", "\u6709", "\u6765", "\u53bb", "\u8d77", "\u4e0a", "\u4e0b", "\u770b", "\u8bf4",
+		"\u9053", "\u95ee", "\u7b11", "\u54ed", "\u542c", "\u60f3", "\u5ff5", "\u8dd1", "\u8d70",
+	}
+	for _, suffix := range noiseSuffixes {
+		if strings.HasSuffix(name, suffix) {
+			return true
+		}
+	}
+
+	// Reject obvious function words that slipped through regex.
+	noiseWords := []string{
+		"\u56e0\u4e3a", "\u6240\u4ee5", "\u7136\u540e", "\u4f46\u662f", "\u5982\u679c", "\u8fd9\u4e2a",
+		"\u90a3\u4e2a", "\u81ea\u5df1", "\u5bf9\u65b9", "\u4f17\u4eba",
+	}
+	for _, word := range noiseWords {
+		if name == word {
+			return true
+		}
+	}
+
+	_ = line // reserved for future context checks
+	return false
 }
 
 // 推断角色类别

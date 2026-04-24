@@ -1,0 +1,37 @@
+modules:
+  time_gap_transition: true
+  resurrection_rule_consistency: true
+  cultivation_lifespan_coupling: true
+  npc_identity_conflict: true
+  injury_recovery_continuity: true
+  resource_budget_consistency: true
+
+thresholds:
+  time_gap_days: 10
+  resurrection_diversity_min: 3
+  resource_min_reuse_count: 2
+
+keywords:
+  transition_hints:
+    - "这段时间"
+    - "这半个月"
+    - "期间"
+    - "过去"
+    - "经过"
+    - "连续"
+    - "连日"
+    - "逐渐"
+  floor_rule_hints:
+    - "练气一层是底线"
+    - "跌破练气一层"
+    - "代价转移到寿元"
+    - "扣寿元"
+    - "折损寿元"
+  resource_names:
+    - "半块下品灵石"
+    - "半块灵石"
+  resource_consume:
+    - "吐纳"
+    - "修炼"
+    - "吸纳灵气"
+    - "炼化"

@@ -673,6 +673,42 @@ func (p *Parser) parseEvent() (*Event, error) {
 			return nil, err
 		}
 
+		// Support nested event blocks like:
+		// combat { ... }
+		// on_complete { ... }
+		if key == "combat" {
+			combat, err := p.parseCombatEvent()
+			if err != nil {
+				return nil, err
+			}
+			event.Combat = combat
+			continue
+		}
+		if key == "move" {
+			move, err := p.parseMoveEvent()
+			if err != nil {
+				return nil, err
+			}
+			event.Move = move
+			continue
+		}
+		if key == "spawn" {
+			spawn, err := p.parseSpawnEvent()
+			if err != nil {
+				return nil, err
+			}
+			event.Spawn = spawn
+			continue
+		}
+		if key == "on_complete" {
+			result, err := p.parseEventResult()
+			if err != nil {
+				return nil, err
+			}
+			event.OnComplete = result
+			continue
+		}
+
 		if err := p.expectChar('='); err != nil {
 			return nil, err
 		}
@@ -705,15 +741,6 @@ func (p *Parser) parseEvent() (*Event, error) {
 				event.Combat = &CombatEvent{}
 			}
 			event.Combat.Setup.Enemies = p.parseEnemySpawnList(value)
-		default:
-			// Handle nested blocks like on_complete
-			if key == "on_complete" {
-				result, err := p.parseEventResult()
-				if err != nil {
-					return nil, err
-				}
-				event.OnComplete = result
-			}
 		}
 	}
 
@@ -722,6 +749,127 @@ func (p *Parser) parseEvent() (*Event, error) {
 	}
 
 	return event, nil
+}
+
+// parseCombatEvent parses the combat block.
+func (p *Parser) parseCombatEvent() (*CombatEvent, error) {
+	combat := &CombatEvent{}
+
+	if err := p.expectChar('{'); err != nil {
+		return nil, err
+	}
+
+	for !p.peekChar('}') {
+		p.skipWhitespace()
+		if p.peekChar('}') {
+			break
+		}
+
+		key, err := p.parseIdentifier()
+		if err != nil {
+			return nil, err
+		}
+
+		if err := p.expectChar('='); err != nil {
+			return nil, err
+		}
+
+		value, err := p.parseValue()
+		if err != nil {
+			return nil, err
+		}
+
+		switch key {
+		case "enemies":
+			combat.Setup.Enemies = p.parseEnemySpawnList(value)
+		}
+	}
+
+	if err := p.expectChar('}'); err != nil {
+		return nil, err
+	}
+
+	return combat, nil
+}
+
+// parseMoveEvent parses the move block.
+func (p *Parser) parseMoveEvent() (*MoveEvent, error) {
+	move := &MoveEvent{}
+
+	if err := p.expectChar('{'); err != nil {
+		return nil, err
+	}
+
+	for !p.peekChar('}') {
+		p.skipWhitespace()
+		if p.peekChar('}') {
+			break
+		}
+
+		key, err := p.parseIdentifier()
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectChar('='); err != nil {
+			return nil, err
+		}
+		value, err := p.parseValue()
+		if err != nil {
+			return nil, err
+		}
+
+		switch key {
+		case "to":
+			move.To = p.toString(value)
+		}
+	}
+
+	if err := p.expectChar('}'); err != nil {
+		return nil, err
+	}
+
+	return move, nil
+}
+
+// parseSpawnEvent parses the spawn block.
+func (p *Parser) parseSpawnEvent() (*SpawnEvent, error) {
+	spawn := &SpawnEvent{}
+
+	if err := p.expectChar('{'); err != nil {
+		return nil, err
+	}
+
+	for !p.peekChar('}') {
+		p.skipWhitespace()
+		if p.peekChar('}') {
+			break
+		}
+
+		key, err := p.parseIdentifier()
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectChar('='); err != nil {
+			return nil, err
+		}
+		value, err := p.parseValue()
+		if err != nil {
+			return nil, err
+		}
+
+		switch key {
+		case "actor":
+			spawn.Actor = p.toString(value)
+		case "location":
+			spawn.Location = p.toString(value)
+		}
+	}
+
+	if err := p.expectChar('}'); err != nil {
+		return nil, err
+	}
+
+	return spawn, nil
 }
 
 // parseEventResult parses an event result block
@@ -856,6 +1004,8 @@ func (p *Parser) skipWhitespace() {
 		ch := p.peek()
 		if ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' {
 			p.advance()
+		} else if ch == '/' && p.peekNext() == '/' {
+			p.skipLine()
 		} else {
 			break
 		}
@@ -870,10 +1020,20 @@ func (p *Parser) skipWhitespaceAndComments() {
 		} else if ch == '#' {
 			// Skip comment line
 			p.skipLine()
+		} else if ch == '/' && p.peekNext() == '/' {
+			// Skip C++ style comment line
+			p.skipLine()
 		} else {
 			break
 		}
 	}
+}
+
+func (p *Parser) peekNext() byte {
+	if p.pos+1 >= len(p.content) {
+		return 0
+	}
+	return p.content[p.pos+1]
 }
 
 func (p *Parser) skipLine() {
@@ -886,6 +1046,16 @@ func (p *Parser) skipLine() {
 }
 
 func (p *Parser) skipBlock() {
+	p.skipWhitespaceAndComments()
+	for !p.eof() && p.peek() != '{' {
+		p.advance()
+	}
+	if p.eof() {
+		return
+	}
+
+	// Consume first '{' and then track nested depth.
+	p.advance()
 	depth := 1
 	for !p.eof() && depth > 0 {
 		ch := p.advance()

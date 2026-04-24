@@ -9,28 +9,28 @@ import (
 	"sort"
 	"strings"
 
-	"novelgen/internal/logger"
 	"novelgen/internal/llm"
+	"novelgen/internal/logger"
 	"novelgen/internal/models"
 )
 
 // ChapterToDSLInput is the input for converting chapters to DSL
 type ChapterToDSLInput struct {
-	BookName         string              `json:"book_name" md:"book_name" desc:"Book name"`
-	StorySetup       models.StorySetup   `json:"story_setup" md:"story_setup" desc:"Story setup with premise, genres, themes"`
-	Characters       map[string]models.Character `json:"characters" md:"characters" desc:"Characters from craft"`
-	Locations        map[string]models.Location  `json:"locations" md:"locations" desc:"Locations from craft"`
-	Chapters         []ChapterData       `json:"chapters" md:"chapters" desc:"Chapter recap data"`
+	BookName   string                      `json:"book_name" md:"book_name" desc:"Book name"`
+	StorySetup models.StorySetup           `json:"story_setup" md:"story_setup" desc:"Story setup with premise, genres, themes"`
+	Characters map[string]models.Character `json:"characters" md:"characters" desc:"Characters from craft"`
+	Locations  map[string]models.Location  `json:"locations" md:"locations" desc:"Locations from craft"`
+	Chapters   []ChapterData               `json:"chapters" md:"chapters" desc:"Chapter recap data"`
 }
 
 // ChapterData represents a single chapter's recap data
 type ChapterData struct {
-	ChapterID   string   `json:"chapter_id"`
-	Title       string   `json:"title"`
-	Location    string   `json:"location"`
-	Time        string   `json:"time"`
-	Present     []string `json:"present"`
-	PlotBeats   []string `json:"plot_beats"`
+	ChapterID string   `json:"chapter_id"`
+	Title     string   `json:"title"`
+	Location  string   `json:"location"`
+	Time      string   `json:"time"`
+	Present   []string `json:"present"`
+	PlotBeats []string `json:"plot_beats"`
 }
 
 // ChapterToDSLOutput is the output containing the DSL content
@@ -38,10 +38,19 @@ type ChapterToDSLOutput struct {
 	DSLContent string `json:"dsl_content" md:"dsl_content" desc:"Generated RPG-DSL code"`
 }
 
+// ChapterToDSLRepairInput is the input for repairing invalid DSL
+type ChapterToDSLRepairInput struct {
+	BookName     string `json:"book_name" md:"book_name" desc:"Book name"`
+	ParseError   string `json:"parse_error" md:"parse_error" desc:"Parser error message"`
+	InvalidDSL   string `json:"invalid_dsl" md:"invalid_dsl" desc:"Invalid DSL content to repair"`
+	LanguageHint string `json:"language_hint" md:"language_hint" desc:"Language hint for text fields"`
+}
+
 // ChapterToDSLAgent converts novelgen chapters to RPG-DSL format
 type ChapterToDSLAgent struct {
-	base  *BaseAgent
-	setup *models.StorySetup
+	base      *BaseAgent
+	setup     *models.StorySetup
+	requireAI bool
 }
 
 // NewChapterToDSLAgent creates a new ChapterToDSLAgent
@@ -63,14 +72,20 @@ func NewChapterToDSLAgent(client llm.Client, config *llm.Config, projectLLM *mod
 	})
 
 	return &ChapterToDSLAgent{
-		base:  base,
-		setup: setup,
+		base:      base,
+		setup:     setup,
+		requireAI: false,
 	}
 }
 
 // SetLanguage sets the output language
 func (a *ChapterToDSLAgent) SetLanguage(language string) {
 	a.base.SetLanguage(language)
+}
+
+// SetRequireAI toggles strict mode: if true, conversion must succeed via AI.
+func (a *ChapterToDSLAgent) SetRequireAI(requireAI bool) {
+	a.requireAI = requireAI
 }
 
 // ConvertChapters converts multiple chapters to DSL format
@@ -103,6 +118,9 @@ func (a *ChapterToDSLAgent) ConvertChapters(ctx context.Context, bookName string
 
 	// If LLM is not configured, use rule-based conversion
 	if a.base.config == nil {
+		if a.requireAI {
+			return "", fmt.Errorf("LLM not configured and requireAI=true")
+		}
 		logger.Info("LLM not configured, using rule-based conversion")
 		return a.convertChaptersRuleBased(bookName, characters, locations, chapters)
 	}
@@ -124,6 +142,9 @@ func (a *ChapterToDSLAgent) ConvertChapters(ctx context.Context, bookName string
 	}
 
 	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		if a.requireAI {
+			return "", fmt.Errorf("AI conversion failed: %w", err)
+		}
 		logger.Warn("AI conversion failed: %v", err)
 		logger.Info("Falling back to rule-based conversion")
 		return a.convertChaptersRuleBased(bookName, characters, locations, chapters)
@@ -177,6 +198,31 @@ func (a *ChapterToDSLAgent) ConvertSingleChapter(ctx context.Context, bookName s
 		return "", err
 	}
 
+	return output.DSLContent, nil
+}
+
+// RepairDSL asks AI to repair an invalid DSL string into parser-compatible DSL.
+func (a *ChapterToDSLAgent) RepairDSL(ctx context.Context, bookName, parseErr, invalidDSL string) (string, error) {
+	if a.base.config == nil {
+		return "", fmt.Errorf("LLM not configured")
+	}
+
+	input := ChapterToDSLRepairInput{
+		BookName:     bookName,
+		ParseError:   parseErr,
+		InvalidDSL:   invalidDSL,
+		LanguageHint: a.base.language,
+	}
+
+	var output ChapterToDSLOutput
+	params := InvokeParams{
+		Skills:  []string{"chapter-to-dsl-repair"},
+		Command: "repair invalid RPG-DSL to valid parser-compatible DSL",
+	}
+
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return "", err
+	}
 	return output.DSLContent, nil
 }
 

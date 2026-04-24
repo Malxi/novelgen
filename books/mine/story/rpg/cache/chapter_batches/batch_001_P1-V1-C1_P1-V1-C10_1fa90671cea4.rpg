@@ -1,0 +1,1144 @@
+metadata {
+    title = "第一部分：矿场囚笼与弈局开端"
+    dsl_version = "0.2.0"
+    source = "novel_gen_outline"
+}
+
+world {
+    location "黑风灵石矿丙字三号矿道" {
+        id = "loc_bing_zi_3_kuang_dao"
+        description = "黑风灵石矿外层低阶矿道之一，属于产出低、矿脉零散的丙级作业区，分配给最底层的新矿奴开采，因监工巡查频率极低，成为矿奴私下藏匿私挖灵石的首选区域，也是林砚穿越后首次利用剧情先知优势积累第一笔生存资本的地点。整体为宽约2米、高约2.2米的狭长拱形矿道，岩壁由坚硬粗糙的灰黑色玄铁矿石构成，表面零星嵌着淡白色的下品灵石矿屑，地面坑洼不平常年积着半指深的冰寒矿水，矿道深处120米位置有三处前人凿出的半人高的隐蔽岩腔，位置刁钻刚好避开矿道口的视线范围，壁上每隔三丈插着一盏燃黑油的石灯，火光昏黄跳闪，只能照亮身周半丈范围。"
+        __placeholder__ = false
+    }
+    location "黑风灵石矿丙字七号矿道" {
+        id = "loc_bing_zi_7_kuang_dao"
+        description = "黑风灵石矿外层低阶矿道之一，属于产出低、矿脉零散的丙级作业区，分配给最底层的新矿奴开采，因监工巡查频率极低，成为矿奴私下藏匿私挖灵石的首选区域，也是林砚穿越后首次利用剧情先知优势积累第一笔生存资本的地点。整体为宽约2米、高约2.2米的狭长拱形矿道，岩壁由坚硬粗糙的灰黑色玄铁矿石构成，表面零星嵌着淡白色的下品灵石矿屑，地面坑洼不平常年积着半指深的冰寒矿水，矿道深处120米位置有三处前人凿出的半人高的隐蔽岩腔，位置刁钻刚好避开矿道口的视线范围，壁上每隔三丈插着一盏燃黑油的石灯，火光昏黄跳闪，只能照亮身周半丈范围。"
+        __placeholder__ = false
+    }
+    location "黑风灵石矿丁字八号废弃矿道" {
+        id = "loc_ding_zi_8_abandoned_kuang_dao"
+        description = "黑风灵石矿早年开采完毕后被弃用的偏远支矿道，位置偏僻远离主采矿区，是矿奴躲避监工盘剥、藏匿私物的隐秘去处，极少有矿场管理人员涉足。矿道净高仅两米左右，两侧岩壁是风化严重的玄铁矿层，布满交错的开采凿痕和松动的碎石块，地面积着厚达寸许的黑灰色矿尘，散落着锈迹斑斑的断镐、破藤筐等废弃开采工具。矿道尽头因早年坍塌被堵死三分之二，仅留半人高的狭窄缝隙可供勉强穿行，岩壁缝隙中零星生长着喜阴的低阶灵草血蓟，偶尔能看到嵌在岩石缝里的细碎灵石渣泛着暗蓝光晕。"
+        __placeholder__ = false
+    }
+    location "黑风灵石矿矿道入口广场" {
+        id = "loc_kuang_dao_entrance_square"
+        description = "黑风灵石矿所有矿道出入口前的露天公共广场，是矿奴上下工点名、灵石上缴核验、监工发布指令、执行违规私刑的核心场所，所有进出矿道的人员必须在此接受盘查，是整个矿场管控最严苛、威慑力最强的区域之一。占地约两亩，地面由长年踩踏的黑褐色矿渣混合碎石夯实而成，凹凸不平遍布矿奴踩出的脚印。广场边缘立着十余根碗口粗的浸油木桩，桩上挂着锈迹斑斑的铁链、挖矿工具与用于示众的铁囚笼。正对矿道拱形石门的位置立着半人高的青石碑，以朱砂刻写所有矿奴的每日挖矿份额与未完成的惩罚记录，碑旁是摆满玄铁鞭、狼牙棍等刑具的木架。广场角落堆着待核验上缴的灵石箩筐，两侧设有监工值守的石哨岗，入夜后会点燃十余支浸了妖兽油的火把，将整片区域照得泛红，人和物的影子被拉得扭曲变形。"
+        __placeholder__ = false
+    }
+    location "黑风灵石矿矿奴大通铺" {
+        id = "loc_kuang_nu_dormitory"
+        description = "黑风灵石矿专为底层矿奴修建的简陋聚居地，是矿奴每日挖矿结束后仅有的休息场所，环境极其恶劣，挤满了走投无路的穷苦百姓和被掳来的修仙界底层修士，是矿场最能体现底层绝望的场所之一。整体由开采废石混合黄黏土夯筑而成，屋顶铺着发霉的茅草，缝隙漏风漏雨，仅开了一扇不足一人高的破木门，无窗。内部通铺沿墙搭建，总长三丈，仅铺着一层发黑发臭的干茅草，每人分配的休息宽度不足半尺，墙根堆满了矿奴的破棉衣、豁口的陶碗和挖矿用的残次工具，角落堆着散发馊味的窝头残渣。"
+        __placeholder__ = false
+    }
+    location "黑风灵石矿西坡三号矿道" {
+        id = "loc_xi_po_3_kuang_dao"
+        description = "黑风灵石矿西坡的贫矿道，表面矿脉零散产出极低，实则是隐藏的富矿带，监工鲜少巡查，是林砚私藏灵石筹备逃生物资的主要地点。"
+        __placeholder__ = false
+    }
+    location "黑风灵石矿废弃矿道隐秘岩洞" {
+        id = "loc_abandoned_kuang_dao_secret_cave"
+        description = "位于黑风灵石矿最偏僻的丁字八号废弃矿道尽头的天然岩洞，被早年逃亡失败的老矿奴改造为秘密藏身处，后被林砚凭借自己原著剧情记忆发现，成为他筹备逃亡计划的核心隐秘据点。需扒开矿道尽头半人高的松散玄铁矿石堆才能进入岩洞，洞内宽约三丈、高约两丈，洞壁被人工凿出数个大小不一的石龛，地面铺着干枯的矿草，角落有一处常年渗水的浅洼，深处岩壁下有林砚特意挖出的半米深的藏物土坑，入口处的碎石堆做了特殊标记，一旦被人移动会留下明显痕迹。"
+        __placeholder__ = false
+    }
+    location "黑风灵石矿废弃矿道" {
+        id = "loc_abandoned_kuang_dao"
+        description = "黑风灵石矿早年开采枯竭后被官方封禁的老旧矿道分支，因坍塌风险高、表层灵石开采殆尽被矿场列为禁区，实则是底层矿奴躲避监工盘剥、私藏物资的秘密地带，也是通往封印禁术『死后夺取』的地下遗迹的唯一隐蔽路径。入口被半人高的杂乱乱石半掩，岩壁上刻着早已褪色的朱砂『禁入』二字，内部岩壁坑洼不平，布满早年挖矿留下的镐痕和矿奴刻下的潦草记号，散落着大量灰白色的废灵石碎渣，头顶是参差不齐的裸露岩层，多处路段被坍塌的岩石堵死，仅能容一人侧身通过，深处岩壁上长着灰绿色的喜阴苔藓和零星淡蓝色发光地衣，越往深处走岩壁上的血色纹路越明显。"
+        __placeholder__ = false
+    }
+    location "黑风灵石矿主矿道" {
+        id = "loc_main_kuang_dao"
+        description = "是黑风灵石矿最早开挖、长度最长的核心采矿通道，连通所有分支矿道、废弃矿道与矿场出口，是矿场灵石产出的核心区域，同时也是矿难发生率最高的区域，岩壁深处暗藏着未被人发现的古代封印遗迹。整体高约两丈、宽一丈半，岩壁被长年累月的挖矿作业磨得凹凸不平，每隔三丈凿有一个放置松油灯的凹槽，灯光昏暗只能照亮半丈范围。地面铺着腐朽的运矿木轨，坑洼处积着混着矿尘的黑水，多处岩壁支着已经朽坏的杨木支架防止坍塌，岩壁缝隙里随处可见裸露的下品灵石碎末泛着微光。"
+        __placeholder__ = false
+    }
+}
+
+characters {
+    player "林砚" {
+        id = "char_lin_yan"
+        description = "原是蓝星华夏的网络小说作者，深耕矿场开局修仙题材创作五年，作品《矿脉仙途》设定严谨逻辑自洽，坐拥百万读者，因连续熬夜赶稿猝死穿越到自己创作的修仙世界中，成为黑风灵石矿的底层矿奴，刚穿越时修为为练气二层，拥有独有的「附矿场复活」金手指，复活会折损修为与寿命，还具备「剧情预判」「剧情修正」能力，目标是在修仙界活下去，查清穿越者与天道的真相，摆脱被猎杀、被利用的命运。外貌身高一米七八，身形偏瘦削但动作利落，皮肤因长期待在矿洞偏苍白，左眉尾有一道矿难留下的细浅疤痕，左肩有接筑基期灵力炮留下的狰狞永久性伤疤，指尖因前世常年码字、今世挖矿布满薄茧，日常穿洗得发白的粗布短打或朴素灰袍，习惯将半块血色封印玉佩藏在贴身衣襟内，眼神冷静克制，情绪波动时指尖会无意识摩挲玉佩边缘。"
+        __placeholder__ = false
+        str = 8
+        agi = 10
+        int = 15
+        vit = 9
+        hp = 90
+        mp = 150
+        class = "穿越者/练气期修士"
+    }
+    npc "周虎" {
+        id = "char_zhou_hu"
+        description = "黑风灵石矿丙字矿区矿监，三十七岁，身高近九尺，膀阔腰圆，满脸横肉，左脸横亘着一道三寸长的暗红刀疤，眉骨突出，眼缝狭小，看人时总带着凶光。常年穿着磨得起球的玄色劲装，腰侧别着一挂浸过血的牛皮长鞭，另一侧挂着绣着铜钱纹的鹿皮钱袋，手上常年沾着矿尘与血渍，指甲缝里嵌着深褐的泥垢与淡灰的灵石碎末，走路时脚步沉重，靴底钉着铁掌，老远就能听到咯噔咯噔的声响。性格残忍嗜虐、贪财如命、欺下媚上、行事粗野却心思缜密，对异常动向警觉性极高，履职八年来手上沾了近三十条矿奴的人命，靠盘剥矿奴私藏的灵石、克扣口粮攒下大笔身家，同时是缉厄司外围情报线人，每月固定向缉厄司派驻矿场的暗卫上报矿奴中的异常情况。修为练气五层，可催动灵气加持鞭法，一鞭可抽碎普通岩石。"
+        __placeholder__ = false
+        role = "黑风灵石矿丙字矿区矿监/缉厄司外围线人/前期反派"
+        default_location = "黑风灵石矿矿道入口广场"
+    }
+    npc "老陈" {
+        id = "char_lao_chen"
+        description = "黑风灵石矿老矿奴，缺半块左耳，是穿越者互助组织『书友会』的潜伏成员，性格谨慎，暗中帮助新进矿奴，熟悉矿场潜规则。"
+        __placeholder__ = false
+        role = "老矿奴/书友会潜伏成员"
+        default_location = "黑风灵石矿丙字矿区矿道"
+    }
+    npc "老郑" {
+        id = "char_lao_zheng"
+        description = "黑风灵石矿老矿奴，左脸有青色胎记和边缘黑痣，是穿越者互助组织『书友会』的潜伏成员，私藏有丙字矿区矿脉图，熟悉矿道结构。"
+        __placeholder__ = false
+        role = "老矿奴/书友会潜伏成员"
+        default_location = "黑风灵石矿丙字矿区矿道"
+    }
+    npc "小石头" {
+        id = "char_xiao_shi_tou"
+        description = "十二岁的无父无母小矿奴，熟悉全矿所有暗道，包括监工都不知道的岔洞，攒灵石想换临时身份牌逃去山外县城讨生活。"
+        __placeholder__ = false
+        role = "底层小矿奴/林砚逃生协作伙伴"
+        default_location = "黑风灵石矿矿奴大通铺"
+    }
+    npc "苏晚（苏主事）" {
+        id = "char_su_wan"
+        description = "缉厄司高层顾衍直属密探，化名苏主事派驻黑风矿排查穿越者，后续潜伏进入书友会成为核心成员，外表温柔怯懦实则冷血狡诈，演技精湛，擅长拿捏人心。外貌常穿月白或素青交领襦裙，身姿纤弱，眉眼温柔无害，眼尾自带淡粉，笑起来有浅浅梨涡，左耳垂有一颗细小朱砂痣常被鬓发遮挡，身上常年带着淡而清的海棠胭脂香，看起来仿佛不谙世事的小家碧玉，极易让人放下戒备。"
+        __placeholder__ = false
+        role = "缉厄司密探/书友会潜伏内鬼/前期核心反派"
+        default_location = "黑风灵石矿办公区"
+    }
+    npc "缉厄司灰衣暗卫" {
+        id = "char_hui_yi_an_wei"
+        description = "缉厄司基层执行者，统一身穿灰布劲装，腰挂刻有『缉』字的铜牌，佩刀上有十七道猎杀穿越者的刻痕，持有针对外来神魂的探测术，负责排查猎杀矿场内的穿越者。"
+        __placeholder__ = false
+        role = "缉厄司基层喽啰/前期反派"
+        default_location = "黑风灵石矿废弃矿道周边"
+    }
+    npc "小顺" {
+        id = "char_xiao_shun"
+        description = "带雀斑的少年矿奴，性格胆小怯懦，常年在矿场底层讨生活。"
+        __placeholder__ = false
+        role = "底层矿奴/背景NPC"
+        default_location = "黑风灵石矿矿奴大通铺"
+    }
+    npc "小管事" {
+        id = "char_xiao_guan_shi"
+        description = "矿场底层管事，负责协助周虎管理矿奴、登记挖矿定额，贪财好利。"
+        __placeholder__ = false
+        role = "矿场小管事/背景NPC"
+        default_location = "黑风灵石矿矿道入口广场"
+    }
+    npc "记账先生" {
+        id = "char_ji_zhang_xian_sheng"
+        description = "矿场负责登记交矿数量的人员，每日在矿道入口处核对矿奴上交的灵石重量。"
+        __placeholder__ = false
+        role = "矿场交矿登记人员/背景NPC"
+        default_location = "黑风灵石矿矿道入口广场"
+    }
+    npc "瘦猴" {
+        id = "char_shou_hou"
+        description = "底层矿奴，因偷藏灵石被缉厄司暗卫探测出异常抓走。"
+        __placeholder__ = false
+        role = "底层矿奴/背景NPC"
+        default_location = "黑风灵石矿矿奴大通铺"
+    }
+    npc "矿主远房管事" {
+        id = "char_kuang_zhu_guan_shi"
+        description = "矿主的远房亲戚，负责矿场的日常管理，对缉厄司人员毕恭毕敬。"
+        __placeholder__ = false
+        role = "矿场管事/背景NPC"
+        default_location = "黑风灵石矿办公区"
+    }
+    npc "缉厄司紫袍修士" {
+        id = "char_zi_pao_xiu_shi"
+        description = "缉厄司高层人员，修为高于普通灰衣暗卫，负责统筹黑风矿穿越者排查与禁术遗迹探查工作。"
+        __placeholder__ = false
+        role = "缉厄司高层/前期反派"
+        default_location = "黑风灵石矿场外围"
+    }
+    npc "小监工" {
+        id = "char_xiao_jian_gong"
+        description = "周虎手下的低层监工，负责协助周虎巡查矿道、搜身盘剥矿奴。"
+        __placeholder__ = false
+        role = "黑风灵石矿监工/背景NPC"
+        default_location = "黑风灵石矿矿道入口广场"
+    }
+}
+
+storyline {
+    chapter "寒矿醒转，首死触发复生" {
+        id = "P1-V1-C1"
+        objective "林砚穿越到自著修仙世界，首次死亡触发复活金手指，确认生存危机" {
+            step 1 {
+                description = "现代修仙网文作者林砚熬夜赶稿时猝死，穿越到自己创作的矿场开局修仙文世界中，成为黑风灵石矿内签了死契的练气二层散修矿奴"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚穿越到自著修仙世界，身份为黑风矿底层矿奴，初始修为练气二层"
+                        exp = 5
+                    }
+                }
+            }
+            step 2 {
+                description = "林砚刚苏醒就遭到矿监周虎鞭打，他消化完原身记忆后发现矿道内布有锁灵阵，完全压制练气期修士灵力，遂决定暂时隐忍不反抗"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚得知矿道内存在锁灵阵压制练气期灵力，决定暂避锋芒隐忍求生"
+                        exp = 5
+                    }
+                }
+            }
+            step 3 {
+                description = "老矿奴老陈给林砚递来一把豁口镐头，偷偷提醒他近期矿内不太平，有腰挂漆黑铜牌的灰衣官爷随意抓走可疑矿奴不留尸首，地底深处还有诡异哭声传出"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚从老陈处获得矿场异常信息，得知有灰衣官爷抓捕矿奴、地底有诡异哭声"
+                        exp = 5
+                    }
+                }
+            }
+            step 4 {
+                description = "林砚凭借自己写文积累的挖灵石经验，很快找准矿脉位置开始挖矿，半炷香时间就挖了小半筐下品灵石"
+                event {
+                    type = "acquire"
+                    on_complete {
+                        narration = "林砚利用作者先知优势，半炷香挖得小半筐下品灵石"
+                        exp = 10
+                        item = "下品灵石 x 小半筐"
+                    }
+                }
+            }
+            step 5 {
+                description = "矿道突发坍塌，林砚被碗口大的落石砸中当场死亡；周虎为了自保拽过身边的老陈挡石，导致老陈半边肩膀被碎石砸得血肉模糊"
+                event {
+                    type = "combat"
+                    combat {
+                        enemies = [{id = "env_tunnel_collapse", count = 1, level = 1}]
+                    }
+                    on_complete {
+                        narration = "矿道突发坍塌，林砚被落石砸中身亡，老陈被周虎拽去挡石受重伤"
+                        exp = 5
+                    }
+                }
+            }
+            step 6 {
+                description = "林砚在矿道内无监控的隐蔽角落复活，发现自己身上没有外伤，但修为跌落近一层，距离掉至练气一层仅一线，周围所有人都未察觉他死亡复活的异常"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚首次触发复活金手指，复活后无外伤，修为跌至练气二层阈值，未被他人察觉异常"
+                        exp = 20
+                    }
+                }
+            }
+            step 7 {
+                description = "林砚确认自己拥有死而复生的能力，将复活时攥在手里的半块下品灵石收进怀中，决定自行摸索复活规则，在危机四伏的黑风矿中活下去"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚确认自身拥有复活能力，决定摸索规则求生，收下复活时随身携带的半块下品灵石"
+                        exp = 10
+                        item = "下品灵石 x 1"
+                    }
+                }
+            }
+        }
+    }
+
+    chapter "二度殒命，始知复生有耗" {
+        id = "P1-V1-C2"
+        objective "林砚二次死亡复活，确认复活会折损修为，坚定求生念头" {
+            step 1 {
+                description = "林砚苏醒后误以为此前被落石砸死的记忆是幻觉，将丹田滞涩的不适感归因为锁灵阵压制与脑震荡"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚误以为死亡记忆是幻觉，将丹田不适归因为锁灵阵压制"
+                        exp = 5
+                    }
+                }
+            }
+            step 2 {
+                description = "矿监周虎发现林砚发呆，踹了他一脚并勒令他当日挖够三斤完整下品灵石，否则就把他扔去喂噬骨鼠"
+                event {
+                    type = "combat"
+                    combat {
+                        enemies = [{id = "char_zhou_hu", count = 1, level = 5}]
+                    }
+                    on_complete {
+                        narration = "林砚被周虎踹伤，接到当日挖够三斤下品灵石的定额要求"
+                        exp = 5
+                    }
+                }
+            }
+            step 3 {
+                description = "林砚为完成定额回到丙字三号矿道此前挖矿的位置，刚凿下一镐就遭遇二次矿道坍塌"
+                event {
+                    type = "combat"
+                    combat {
+                        enemies = [{id = "env_secondary_collapse", count = 1, level = 1}]
+                    }
+                    on_complete {
+                        narration = "林砚返回丙字三号矿道挖矿，遭遇二次坍塌"
+                        exp = 5
+                    }
+                }
+            }
+            step 4 {
+                description = "林砚右腿被落石砸断、颈动脉被碎石划破当场死亡，随后再度在矿道出口的安全区复活"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚被落石砸中身亡，第二次在矿道出口安全区复活"
+                        exp = 20
+                    }
+                }
+            }
+            step 5 {
+                description = "林砚确认自己真的拥有死而复生的能力，同时发现每死亡一次修为就会跌落：第一次死后从练气二层濒临跌到练气一层，第二次死后直接跌到练气一层"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚确认复活能力存在，同时确认每死亡一次修为就会跌落一层"
+                        exp = 10
+                    }
+                }
+            }
+            step 6 {
+                description = "林砚复盘出复活基础规则：复活点为离死亡点最近的无监控安全区域，且一次比更远离危险、复活后随身携带的物品不会丢失，死亡次数越多修为损耗越严重"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚复盘得出复活基础规则：复活点自动远离危险，随身物品不丢失，死亡次数越多修为损耗越大"
+                        exp = 10
+                    }
+                }
+            }
+            step 7 {
+                description = "林砚压下恐慌，决定先避开坍塌风险完成当日定额，再慢慢探索复活的其他规则，趁周虎核对台账的视线盲区，贴着岩壁阴影往矿道深处的安全矿脉走去"
+                event {
+                    type = "location"
+                    move {
+                        to = "黑风灵石矿丙字三号矿道深处安全矿脉"
+                    }
+                    on_complete {
+                        narration = "林砚决定先完成当日挖矿定额，前往矿道深处安全矿脉"
+                        exp = 5
+                    }
+                }
+            }
+        }
+    }
+
+    chapter "以身试死，探明寿命折损" {
+        id = "P1-V1-C3"
+        objective "林砚主动试死探明复活规则，确认折损寿命，发现自己穿进自著小说世界" {
+            step 1 {
+                description = "林砚躲在黑风矿潮湿的矿道岩壁后，听到监工周虎安排他次日前往塌方频发、有噬骨鼠出没的丙字三号矿道清障，还得知近期有灰衣大人来矿场巡查，被带走的矿奴无一生还，私下议论的人会被直接灭口"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚偷听到周虎安排他次日去高危矿道清障，得知灰衣大人巡查、议论者会被灭口的信息"
+                        exp = 10
+                    }
+                }
+            }
+            step 2 {
+                description = "林砚想到自己此前两次意外死亡已经把修为从穿越初期的练气二层跌到练气一层，丹田灵气滞涩，若次日去丙字三号矿道大概率死得不明不白，存活率不足两成，遂萌生主动可控试死、摸清复活规则的想法"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚认为次日前往高危矿道存活率不足两成，决定主动试死摸清复活规则"
+                        exp = 5
+                    }
+                }
+            }
+            step 3 {
+                description = "林砚故意在走到岩石旁的周虎面前现身，捡起脚边的两块完整下品灵石当众踩碎，精准激怒贪财的周虎，被周虎用缠了铁筋带倒刺的牛筋鞭抽碎喉骨当场死亡"
+                event {
+                    type = "combat"
+                    combat {
+                        enemies = [{id = "char_zhou_hu", count = 1, level = 5}]
+                    }
+                    on_complete {
+                        narration = "林砚故意激怒周虎被鞭打致死，完成主动试死"
+                        exp = 10
+                    }
+                }
+            }
+            step 4 {
+                description = "林砚在矿奴大通铺苏醒复活，发现自己贴身揣着的半块带凿痕的灵石碎渣仍在原位，修为依然保持练气一层没有下跌，但身体虚冷、脉搏仅一息两跳，比正常练气一层修士弱了一半，平白折损了十年寿命"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚在矿奴大通铺复活，确认修为未继续下跌，但折损了十年寿命，随身物品保留"
+                        exp = 20
+                    }
+                }
+            }
+            step 5 {
+                description = "管杂役的矿奴前来通知林砚，因他当日偷懒闹事，挖矿定额从三斤下品灵石涨到四斤，次日挖不够就要被打断腿喂噬骨鼠，林砚从门外杂役的对话得知，复活机制自动给所有在场人员补全了「周虎怕灰衣人查人头扣赏钱，故意留了林砚一命」的合理记忆，完全不会暴露复活异常"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚接到挖矿定额上涨的通知，同时确认复活机制会自动补全周围人的记忆，不会暴露异常"
+                        exp = 10
+                    }
+                }
+            }
+            step 6 {
+                description = "林砚啃窝头时瞥见矿场办公区的石梯上站着一名裹灰袍的女子，对方腰间挂着刻有「缉」字的青铜牌，身边随从拎着三个渗血的密封麻袋，周虎弓着腰在旁陪同，路过的矿奴都对灰袍女子避之不及"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚见到佩戴缉字铜牌的灰袍女子，确认缉厄司人员已进驻矿场"
+                        exp = 5
+                    }
+                }
+            }
+            step 7 {
+                description = "林砚无意间看到自己铺位旁的墙根有个指甲盖大的藏灵石的浅坑，发现大通铺的布局、住客特征都和自己五年前开写的矿场开局修仙文的开篇设定完全重合，大受震惊"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚发现所处环境与自己创作的《矿脉仙途》开篇设定完全重合，大受震惊"
+                        exp = 10
+                    }
+                }
+            }
+        }
+    }
+
+    chapter "矿洞识踪，竟入自著仙途" {
+        id = "P1-V1-C4"
+        objective "林砚确认穿进自著小说世界，获得矿脉图，决定利用先知优势改写炮灰命运" {
+            step 1 {
+                description = "林砚发现墙根的浅坑和自己创作的《矿脉仙途》开篇设定的藏物点细节完全吻合，心生疑窦"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚发现藏物点与自著小说设定吻合，心生疑窦"
+                        exp = 5
+                    }
+                }
+            }
+            step 2 {
+                description = "监工周虎持玄铁鞭召集所有矿奴点名，对未应答者直接记为矿难死亡，同时嘱咐小管事留意身上有奇怪印记的人，上报可换两颗聚气散奖励"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "周虎召集矿奴点名，下令上报有奇怪印记的人可换聚气散奖励"
+                        exp = 5
+                    }
+                }
+            }
+            step 3 {
+                description = "林砚确认周虎手上的玄铁虎纹戒指和自己设定的细节完全一致，同时发现缉厄司灰衣人出现时间早于原剧情，是第一个超出预期的变数"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚确认周虎的玄铁虎纹戒指与设定一致，同时发现缉厄司出现时间早于原剧情，存在变数"
+                        exp = 10
+                    }
+                }
+            }
+            step 4 {
+                description = "林砚假装被打伤虚弱，咳哑声音一瘸一拐回到铺位，捡到掉在地上沾了草屑的窝头收好"
+                event {
+                    type = "acquire"
+                    on_complete {
+                        narration = "林砚伪装受伤返回铺位，捡到沾草屑的窝头"
+                        exp = 5
+                        item = "杂粮窝头 x 1"
+                    }
+                }
+            }
+            step 5 {
+                description = "矿奴老郑偷偷将半卷麻纸塞到林砚铺草深处，林砚认出老郑左脸的青色胎记和边缘黑痣是自己给角色加的专属标识"
+                event {
+                    type = "acquire"
+                    on_complete {
+                        narration = "老郑偷偷塞给林砚半卷麻纸，林砚认出老郑的专属标识与设定一致"
+                        exp = 5
+                        item = "半卷麻纸 x 1"
+                    }
+                }
+            }
+            step 6 {
+                description = "老郑怕林砚告发自己私藏灵石，许诺明天分半块窝头求他保密，林砚答应不会对外说"
+                event {
+                    type = "relationship"
+                    on_complete {
+                        narration = "老郑与林砚达成保密约定，许诺次日分半块窝头"
+                        exp = 5
+                    }
+                }
+            }
+            step 7 {
+                description = "林砚取出老郑塞的麻纸，确认是自己当年随手画的丙字矿区矿脉图，上面标注了全部18条矿道、塌方点、隐藏下品灵石矿脉，还有落款的「郑」字标识，和设定稿分毫不差"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚确认麻纸是自己设定的丙字矿区矿脉图，与设定稿完全一致"
+                        exp = 10
+                        item = "丙字矿区矿脉图 x 1"
+                    }
+                }
+            }
+            step 8 {
+                description = "林砚瞥见缉厄司灰衣人在大通铺门口巡查，连忙将矿脉图藏好"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚发现缉厄司人员巡查，将矿脉图妥善藏好"
+                        exp = 5
+                    }
+                }
+            }
+            step 9 {
+                description = "林砚梳理所有吻合的细节，确认自己穿进了连载五年的《矿脉仙途》书中，身份是开篇第三章就会被周虎抽死的同名炮灰矿奴"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚确认穿进自著小说世界，身份是开篇死亡的炮灰矿奴"
+                        exp = 10
+                    }
+                }
+            }
+            step 10 {
+                description = "林砚计划后半夜趁监工换岗、所有矿奴睡熟时，用怀里的灵石碎渣修炼，补回跌至练气一层最低阈值的修为，决心利用先知优势改写自身炮灰命运"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚计划修炼补回修为，决心利用先知优势改写炮灰命运"
+                        exp = 5
+                    }
+                }
+            }
+        }
+    }
+
+    chapter "先知优势，巧藏灵石避搜" {
+        id = "P1-V1-C5"
+        objective "林砚利用先知优势挖矿藏灵石，躲过搜身，发现世界出现超出设定的变化" {
+            step 1 {
+                description = "天刚亮周虎喝骂所有矿奴前往丙字七号矿道挖矿，规定20斤下品灵石碎矿的硬定额，私藏灵石会被缉厄司灰衣人带走严惩"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "周虎下令所有矿奴前往丙字七号矿道挖矿，规定20斤碎矿定额，私藏灵石会被缉厄司严惩"
+                        exp = 5
+                    }
+                }
+            }
+            step 2 {
+                description = "林砚仗着自己是原世界作者的先知优势，清楚当日收工将有搜身环节，先挖够定额碎矿伪装成普通孱弱矿奴，趁监工打盹偷挖得三块完整下品灵石"
+                event {
+                    type = "acquire"
+                    on_complete {
+                        narration = "林砚利用先知优势，先挖够定额碎矿，趁监工打盹偷挖三块完整下品灵石"
+                        exp = 10
+                        item = "下品灵石 x 3"
+                    }
+                }
+            }
+            step 3 {
+                description = "林砚将灵石藏到自己当初写设定时预留的隐蔽岩缝内，摸到岩缝有类似云纹的刻痕，未细究便掩盖痕迹返回挖矿点"
+                event {
+                    type = "location"
+                    move {
+                        to = "黑风灵石矿丙字七号矿道隐蔽岩缝"
+                    }
+                    on_complete {
+                        narration = "林砚将灵石藏入预设的隐蔽岩缝，摸到岩缝有云纹刻痕"
+                        exp = 5
+                    }
+                }
+            }
+            step 4 {
+                description = "收工时周虎果然带监工进矿道搜身，老郑藏在草鞋鞋底的半块灵石被搜出，遭到周虎殴打致重伤、掉落三颗牙齿"
+                event {
+                    type = "combat"
+                    combat {
+                        enemies = [{id = "char_zhou_hu", count = 1, level = 5}]
+                    }
+                    on_complete {
+                        narration = "周虎带队搜身，老郑私藏的灵石被搜出遭殴打重伤"
+                        exp = 5
+                    }
+                }
+            }
+            step 5 {
+                description = "林砚伪装成懦弱怕事的模样，全程顺从配合搜身，未被查出藏过灵石的痕迹，顺利过关"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚伪装懦弱配合搜身，未被查出异常顺利过关"
+                        exp = 10
+                    }
+                }
+            }
+            step 6 {
+                description = "林砚返回大通铺后复盘发现，缉厄司的存在感远超出自己最初的剧情设定，搜查力度高于开篇正常水平"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚发现缉厄司的搜查力度远高于原剧情设定"
+                        exp = 5
+                    }
+                }
+            }
+            step 7 {
+                description = "后半夜林砚避开守夜监工溜回矿道，取出藏好的三块灵石贴身存放，撞见缉厄司灰衣人深夜潜入矿道深处的隐脉入口，他躲在阴影里未被对方发现"
+                event {
+                    type = "location"
+                    move {
+                        to = "黑风灵石矿丙字七号矿道隐蔽岩缝"
+                    }
+                    on_complete {
+                        narration = "林砚深夜潜回矿道取出灵石，撞见缉厄司灰衣人潜入隐脉入口，躲在阴影未被发现"
+                        exp = 10
+                        item = "下品灵石 x 3"
+                    }
+                }
+            }
+            step 8 {
+                description = "林砚认出缉厄司的铜牌云纹和自己此前在岩缝摸到的刻纹几乎一致，且缉厄司比原剧情提前三个月现身矿场，意识到自己构建的世界已经出现超出设定的变化"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚确认缉厄司铜牌云纹与岩缝刻痕一致，且缉厄司提前三个月现身，世界已出现超出设定的变化"
+                        exp = 10
+                    }
+                }
+            }
+        }
+    }
+
+    chapter "灰衣现踪，溢出设定的变数" {
+        id = "P1-V1-C6"
+        objective "林砚遭遇缉厄司穿越者排查，蒙混过关，发现书友会暗号，意识到剧情已经失控" {
+            step 1 {
+                description = "林砚凌晨潜回大通铺，发现老郑在等搜身风头过了兑现此前的约定，同时想起昨夜撞见缉厄司人员潜入隐脉入口，对方比原剧情提前三个月现身"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚凌晨潜回大通铺，老郑等候兑现此前的约定，林砚想起缉厄司提前现身的异常"
+                        exp = 5
+                    }
+                }
+            }
+            step 2 {
+                description = "白天林砚刻意按照原主的麻木节奏挖矿，多凿两斤碎渣不留可私藏的完整矿块，挨了周虎一脚也毫无反应，交矿时被周虎故意抬高定额盘剥，林砚伪装懦弱蒙混"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚伪装成麻木矿奴挖矿，挨周虎踹打毫无反应，被抬高定额盘剥也成功蒙混"
+                        exp = 5
+                    }
+                }
+            }
+            step 3 {
+                description = "收工时林砚在矿道入口撞见缉厄司灰衣暗卫，认出对方穿的是缉厄司制式青灰纺面料，佩戴的缉字铜牌、佩刀上的十七道刻痕都是猎杀穿越者的标记，对方正在用针对外来神魂的探测术排查过往矿奴"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚撞见缉厄司暗卫排查矿奴，认出对方的制式装备与猎杀穿越者的标记"
+                        exp = 10
+                    }
+                }
+            }
+            step 4 {
+                description = "偷藏灵石的矿奴瘦猴被探测出异常，当场被灰衣暗卫制住收进玄色布囊带走，在场所有人都不敢出声，林砚得知此前失踪的矿奴都是被缉厄司清理"
+                event {
+                    type = "combat"
+                    combat {
+                        enemies = [{id = "char_hui_yi_an_wei", count = 1, level = 3}]
+                    }
+                    on_complete {
+                        narration = "矿奴瘦猴被探测出异常被缉厄司带走，林砚得知此前失踪矿奴均被缉厄司清理"
+                        exp = 5
+                    }
+                }
+            }
+            step 5 {
+                description = "灰衣暗卫的视线扫到林砚，林砚伪装成患肺痨的懦弱病秧子，成功蒙混过关"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚伪装成肺痨病秧子，成功躲过缉厄司排查"
+                        exp = 10
+                    }
+                }
+            }
+            step 6 {
+                description = "林砚返回大通铺途中发现门板上的特殊标记，回到大通铺后惊觉原剧情已经失控，自己的创作者先知优势大打折扣"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚发现门板上的特殊标记，意识到原剧情已经失控，创作者先知优势失效"
+                        exp = 10
+                    }
+                }
+            }
+            step 7 {
+                description = "老郑主动递来带特殊炭灰标记的半块窝头，示意林砚去墙角第三块砖缝取东西，林砚猜到对方属于穿越者互助组织，不敢轻举妄动"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "老郑递来带特殊标记的窝头，示意林砚取东西，林砚猜测对方属于穿越者互助组织，不敢轻举妄动"
+                        exp = 5
+                        item = "杂粮窝头 x 半块"
+                    }
+                }
+            }
+            step 8 {
+                description = "林砚想起原剧情里老郑次日就会因私藏灵石被周虎打死，但如今局势不明不敢贸然提醒，意识到自己此前规划的所有生存路线全部作废，再抱创作者优越感只会死得更快"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚想起老郑原剧情次日会死亡，不敢贸然提醒，意识到所有既定生存路线作废，不能再抱创作者优越感"
+                        exp = 5
+                    }
+                }
+            }
+        }
+    }
+
+    chapter "冷眼观亡，斩断作者幻梦" {
+        id = "P1-V1-C7"
+        objective "林砚目睹老郑被周虎打死，彻底认清身处真实世界，斩断作者幻梦，发现书友会潜伏痕迹" {
+            step 1 {
+                description = "后半夜监工周虎踹开大通铺门，勒令所有矿奴到广场集合搜身，私藏物品者从重处罚"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "周虎勒令所有矿奴到广场集合搜身，私藏物品从重处罚"
+                        exp = 5
+                    }
+                }
+            }
+            step 2 {
+                description = "林砚明知老郑藏有中品灵石会在本次搜身中丧命，但害怕暴露异常引来缉厄司，再三犹豫后未向老郑示警"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚明知老郑会丧命，害怕暴露异常未予示警"
+                        exp = 5
+                    }
+                }
+            }
+            step 3 {
+                description = "林砚排队等待搜身时，发现多处半开书页形状的穿越者互助组织暗号，确认该组织在矿场内有不少潜伏成员"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚发现多处书友会专属暗号，确认该组织在矿场有不少潜伏成员"
+                        exp = 10
+                    }
+                }
+            }
+            step 4 {
+                description = "搜身过程中，小顺因偷藏窝头和碎石挨了两巴掌，林砚伪装成麻木畏缩的矿奴顺利通过搜身"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "小顺偷藏窝头挨了两巴掌，林砚伪装麻木顺利通过搜身"
+                        exp = 5
+                    }
+                }
+            }
+            step 5 {
+                description = "老郑藏在棉袄内衬里的中品灵石被小监工搜出，周虎为杀鸡儆猴，不顾老郑磕头求饶，用八角铁锤当场将老郑砸死"
+                event {
+                    type = "combat"
+                    combat {
+                        enemies = [{id = "char_zhou_hu", count = 1, level = 5}]
+                    }
+                    on_complete {
+                        narration = "老郑私藏的中品灵石被搜出，周虎当场将其砸死"
+                        exp = 5
+                    }
+                }
+            }
+            step 6 {
+                description = "林砚目睹老郑惨死全过程，彻底认清自己身处的是真实世界，此前抱有的作者光环、剧情豁免等幻梦完全破碎，只剩下强烈的求生欲"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚目睹老郑惨死，彻底斩断作者幻梦，认清身处真实世界，求生欲愈发强烈"
+                        exp = 20
+                    }
+                }
+            }
+            step 7 {
+                description = "林砚瞥见缉厄司人员藏在松树林监测矿场地面的异动纹路，确认缉厄司提前三个月抵达是为了追查矿场地下封印松动的问题"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚瞥见缉厄司监测矿场异动，确认对方提前到场是为了追查地下封印松动问题"
+                        exp = 10
+                    }
+                }
+            }
+            step 8 {
+                description = "林砚发现老郑、负责拖老郑尸体的小监工都是穿越者互助组织成员，但所有人都对老郑的死无动于衷"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚发现老郑和拖尸的小监工都是书友会成员，所有人对老郑的死无动于衷"
+                        exp = 5
+                    }
+                }
+            }
+            step 9 {
+                description = "返回大通铺途中，林砚撞见老陈用老郑的血迹画组织暗号，两人对视后均装作无事发生"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚撞见老陈用老郑的血迹画书友会暗号，两人对视后均装作无事发生"
+                        exp = 5
+                    }
+                }
+            }
+        }
+    }
+
+    chapter "暗积粮秣，潜备逃遁之资" {
+        id = "P1-V1-C8"
+        objective "林砚利用先知优势在富矿带挖矿攒灵石，储备逃生物资，发现缉厄司目标是禁术，暂不接触书友会" {
+            step 1 {
+                description = "林砚收到老陈悄悄压在自己铺位草席下的半块杂面窝头，发现窝头带有书友会专属的半开书页标记，不动声色将窝头揣进怀里"
+                event {
+                    type = "acquire"
+                    on_complete {
+                        narration = "林砚收到老陈送来的带书友会标记的窝头，不动声色收好"
+                        exp = 5
+                        item = "杂粮窝头 x 半块"
+                    }
+                }
+            }
+            step 2 {
+                description = "林砚用缝在衣襟里的灵石碎渣偷偷修炼，稳固练气二层修为，回忆此前撞见和自己复活灵光一致的绿光、老郑被周虎砸死喂妖兽的经历，彻底打消剧情光环的幻想，坚定逃生念头"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚修炼稳固练气二层修为，彻底打消剧情光环幻想，坚定逃生念头"
+                        exp = 10
+                    }
+                }
+            }
+            step 3 {
+                description = "林砚从老矿奴的议论中得知近期已有三名矿奴凭空失踪，确认是缉厄司提前三个月到场猎杀未隐藏好身份的穿越者"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚得知近期三名失踪矿奴均被缉厄司猎杀，确认对方已提前三个月到场"
+                        exp = 5
+                    }
+                }
+            }
+            step 4 {
+                description = "周虎以林砚此前交矿量超定额三成为由，将他发配到所有人避之不及的西坡三号贫矿道，要求每天多交两成矿，林砚清楚该矿道是自己笔下原主角的专属隐藏富矿带，暗中欣喜"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "周虎将林砚发配到西坡三号贫矿道，林砚知道此处是原设定的隐藏富矿带，暗中欣喜"
+                        exp = 10
+                    }
+                }
+            }
+            step 5 {
+                description = "林砚利用监工每两个时辰换岗的两炷香空窗期，偷偷到富矿点挖取灵石，将完整灵石藏在岩缝，只上交贫矿碎渣凑重量，还挖到了珍贵的疗伤药物血蓟草"
+                event {
+                    type = "acquire"
+                    on_complete {
+                        narration = "林砚利用监工换岗空窗期挖矿，藏起完整灵石只上交碎渣，还挖到珍贵的血蓟草"
+                        exp = 15
+                        item = "下品灵石 x 若干、血蓟草 x 若干"
+                    }
+                }
+            }
+            step 6 {
+                description = "挖矿第十天遭遇周虎带队突击搜身，林砚情急之下将五块下品灵石含在嘴里，靠满嘴矿灰的样子躲过排查，后槽牙差点被灵石崩碎"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚遭遇周虎突击搜身，将灵石含在嘴里成功蒙混过关"
+                        exp = 10
+                    }
+                }
+            }
+            step 7 {
+                description = "林砚撞见缉厄司人手持探灵光铜盘搜查偏僻矿道，躲进瘴气岔洞逃过一劫，决定偷偷用玄铁矿石磨制短刃防身"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚撞见缉厄司持探灵光铜盘搜查，躲进瘴气岔洞逃过一劫，决定磨制玄铁短刃防身"
+                        exp = 5
+                    }
+                }
+            }
+            step 8 {
+                description = "林砚分批将挖到的物资转移到只有自己知道的废弃矿道深处隐秘岩洞，发现岩洞门口有书友会的炭笔标记，顺手用矿灰抹除，确认书友会已经潜入黑风矿"
+                event {
+                    type = "location"
+                    move {
+                        to = "黑风灵石矿废弃矿道隐秘岩洞"
+                    }
+                    on_complete {
+                        narration = "林砚将物资转移到隐秘岩洞，发现书友会标记后抹除，确认书友会已潜入矿场"
+                        exp = 10
+                    }
+                }
+            }
+            step 9 {
+                description = "林砚清点藏身处物资，已有37块下品灵石（足够兑换出矿临时通行证还有富余）、5株血蓟草、2块磨出锋刃的玄铁矿石"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚清点逃生物资，已有37块下品灵石、5株血蓟草、2块玄铁短刃胚料"
+                        exp = 5
+                    }
+                }
+            }
+            step 10 {
+                description = "林砚发现岩洞深处的地下遗迹封印绿光比此前更亮，确认封印正在松动，推断缉厄司提前到场大概率是为了封印内的禁术金手指『死后夺取』"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚发现地下遗迹封印绿光更亮，确认封印松动，推断缉厄司目标是禁术『死后夺取』"
+                        exp = 10
+                    }
+                }
+            }
+            step 11 {
+                description = "林砚决定再在西坡三号矿道挖三天，凑够40块下品灵石再更换矿点，规避买通行证被克扣的风险"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚决定再挖三天凑够40块下品灵石，规避买通行证被克扣的风险"
+                        exp = 5
+                    }
+                }
+            }
+            step 12 {
+                description = "林砚走出废弃矿道时撞见苏姓主事现身崖边，身边跟着灰衣暗卫，心头一沉"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚撞见苏主事现身崖边，身边跟着灰衣暗卫，心头警觉"
+                        exp = 5
+                    }
+                }
+            }
+            step 13 {
+                description = "林砚返回大通铺时撞见老陈用镐头柄敲三下的书友会联络暗号，装作没看见侧身错开，决定优先攒够逃生筹码，暂不接触任何组织"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚撞见老陈发出书友会联络暗号，装作没看见错开，决定暂不接触任何组织，优先攒逃生筹码"
+                        exp = 5
+                    }
+                }
+            }
+        }
+    }
+
+    chapter "复生被窥，灵石换得缄默" {
+        id = "P1-V1-C9"
+        objective "林砚复活被小石头撞见，用两块灵石达成封口协议，得知更多矿场信息，原定逃生计划需调整" {
+            step 1 {
+                description = "林砚攥着半块萤石进入丁字八号废弃矿道，打算藏匿刚挖的灵石，默算私藏的灵石已有三十七块下品灵石，加上当日新挖的三块共四十块，原定再挖三天就能凑够买通哨卡的五十块下品灵石，比原计划提前八天"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚进入废弃矿道藏灵石，已攒37块下品灵石，加上新挖的3块共40块，比计划提前8天接近逃生目标"
+                        exp = 5
+                    }
+                }
+            }
+            step 2 {
+                description = "林砚刚触到藏物资的岩洞的活动岩石，矿道突发小型坍塌，被磨盘大的落石砸中天灵盖死亡"
+                event {
+                    type = "combat"
+                    combat {
+                        enemies = [{id = "env_small_collapse", count = 1, level = 1}]
+                    }
+                    on_complete {
+                        narration = "矿道突发小型坍塌，林砚被落石砸中身亡"
+                        exp = 5
+                    }
+                }
+            }
+            step 3 {
+                description = "林砚很快复活，探察丹田发现修为从练气二层掉回练气一层，所幸未触到修为下限折损寿命"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚快速复活，修为从练气二层掉回练气一层，未折损寿命"
+                        exp = 20
+                    }
+                }
+            }
+            step 4 {
+                description = "林砚发现小矿奴小石头躲在岩柱后目睹了自己复活的全过程，小石头此前传闻被灰衣人带走，实际是未查出异常被放回，一直攒灵石想换临时身份牌逃去山外县城讨生活"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚发现小石头目睹了自己复活的全过程，得知小石头被缉厄司排查后放回，攒灵石想逃去县城"
+                        exp = 10
+                    }
+                }
+            }
+            step 5 {
+                description = "林砚冲上前制住小石头，威胁他不许声张复活的事，小石头主动表示自己什么都没看见"
+                event {
+                    type = "relationship"
+                    on_complete {
+                        narration = "林砚威胁小石头不许声张，小石头主动表示什么都没看见"
+                        exp = 5
+                    }
+                }
+            }
+            step 6 {
+                description = "林砚拿出两块下品灵石作为封口费交给小石头，要求他永远不许泄露相关消息"
+                event {
+                    type = "acquire"
+                    on_complete {
+                        narration = "林砚给小石头两块下品灵石作为封口费，要求对方永远保密"
+                        exp = 10
+                    }
+                }
+            }
+            step 7 {
+                description = "小石头收下灵石后承诺绝不会泄露秘密，还主动告知林砚自己小时候曾见过其他复活的人被灰衣人抓走，之前矿场失踪的矿奴大概率与此有关"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "小石头承诺保密，告知林砚曾见过其他复活的人被灰衣人抓走，矿奴失踪大概率与此相关"
+                        exp = 10
+                    }
+                }
+            }
+            step 8 {
+                description = "小石头主动提出自己熟悉全矿所有暗道，包括监工都不知道的岔洞，林砚如果有需要可以到西坡废石堆划三道印子找他帮忙，不收钱"
+                event {
+                    type = "relationship"
+                    on_complete {
+                        narration = "小石头主动提出熟悉全矿暗道，愿意免费给林砚提供帮助，约定联络暗号"
+                        exp = 10
+                    }
+                }
+            }
+            step 9 {
+                description = "听见矿道外传来看监工的呼喝声，小石头立刻攥着窝头溜了，生怕被人看见和林砚待在一起"
+                event {
+                    type = "location"
+                    move {
+                        to = "黑风灵石矿丁字八号废弃矿道出口"
+                    }
+                    on_complete {
+                        narration = "听到监工呼喝声，小石头迅速溜走"
+                        exp = 5
+                    }
+                }
+            }
+            step 10 {
+                description = "林砚留在原地平复情绪，意识到原书未记载的意外极多，原定攒够灵石的计划因为修为掉级需要延长，决定后续稳妥行事，不再冒进"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚意识到原书未记载的意外很多，原定逃生计划因修为掉级需要延长，决定后续稳妥行事不再冒进"
+                        exp = 5
+                    }
+                }
+            }
+        }
+    }
+
+    chapter "借矿难势，暗定逃出生天" {
+        id = "P1-V1-C10"
+        objective "林砚得知三个月后将爆发大型矿难，决定借此机会逃生，提前探查矿道、筹备计划" {
+            step 1 {
+                description = "林砚行至丁字八号矿道口时被监工周虎阻拦催促，只得跟随矿奴队伍前往搬运点搬运灵石原矿"
+                event {
+                    type = "location"
+                    move {
+                        to = "黑风灵石矿搬运点"
+                    }
+                    on_complete {
+                        narration = "林砚被周虎阻拦，跟随矿奴队伍前往搬运点搬运原矿"
+                        exp = 5
+                    }
+                }
+            }
+            step 2 {
+                description = "林砚劳作时反复回忆复活当日被小石头撞见、以及上午撞见缉厄司苏主事与灰衣暗卫排查的场景，意识到留在黑风矿场随时有暴露穿越者身份的风险，原本攒够五十块下品灵石买通哨卡逃矿的计划风险过高，已经不可行"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚意识到留在矿场随时有暴露身份的风险，原定买通哨卡的逃生计划风险过高不可行"
+                        exp = 10
+                    }
+                }
+            }
+            step 3 {
+                description = "林砚想起自己所写的《矿脉仙途》原著剧情，得知三个月后黑风矿场西侧地脉会发生异动引发大范围矿难，届时矿场管事与监工都会优先抢救灵石仓库，对矿奴不管不顾，矿场警戒力量会降到最低，是绝佳的逃生窗口"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚想起原剧情三个月后将爆发大型矿难，届时矿场警戒最低，是绝佳逃生窗口"
+                        exp = 10
+                    }
+                }
+            }
+            step 4 {
+                description = "林砚当日收工时按定额上交所有开采的灵石，私藏1块下品灵石在怀中夹层未被监工发现，返程时撞见苏主事与灰衣暗卫议事，察觉对方比自己写的原设定更加冷厉，缉厄司的搜捕力度超出预期"
+                event {
+                    type = "acquire"
+                    on_complete {
+                        narration = "林砚按定额上交灵石，私藏1块未被发现，返程撞见苏主事与暗卫议事，察觉缉厄司搜捕力度超出预期"
+                        exp = 5
+                        item = "下品灵石 x 1"
+                    }
+                }
+            }
+            step 5 {
+                description = "林砚深夜起夜到茅房旁矮墙根时，偷听到两名监工闲聊，确认矿场内的灰衣人是官方组织缉厄司的暗卫，专门猎杀被称为『妖邪』的穿越者，带队的苏主事手段狠厉，可通过探查神魂、识别地球专属内容两种方式排查穿越者，此前已有穿越者因念出唐诗被当场烧死，连求情的矿主都被卸了一条胳膊"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚偷听到监工闲聊，确认灰衣人是缉厄司暗卫，专门猎杀穿越者，苏主事手段狠厉，可通过两种方式排查穿越者，已有穿越者被烧死"
+                        exp = 15
+                    }
+                }
+            }
+            step 6 {
+                description = "林砚确认缉厄司正是冲着黑风矿场内的穿越者而来，对方提前三个月到场，大概率是为了废弃矿道深处松动的『死后夺取』封印禁术遗迹，留给他的逃生时间实际不足三个月"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "林砚确认缉厄司目标是禁术『死后夺取』，提前三个月到场，留给自己的逃生时间不足三个月"
+                        exp = 10
+                    }
+                }
+            }
+            step 7 {
+                description = "林砚回到大通铺后敲定完整逃生计划，决定联络熟悉全矿暗道的小石头帮忙打探消息、筹备逃生物资，未来三个月绝不使用复活能力、绝不暴露任何穿越者特征，伪装成本土愚笨矿奴，提前准备备用复活点，矿难当日混在逃命矿奴中逃离"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚敲定完整逃生计划，决定联络小石头帮忙，未来三个月绝不暴露穿越者特征，矿难当日趁乱逃生"
+                        exp = 10
+                    }
+                }
+            }
+            step 8 {
+                description = "林砚决定次日向监工报备，谎称自己知道西坡矿道深处有未开采的零散小矿脉，借机申请去西坡挖矿，顺便探路、留下和小石头联络的记号，查看废弃矿道入口是否被封死"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚决定次日申请去西坡挖矿，借机探路、留联络暗号给小石头，查看废弃矿道入口情况"
+                        exp = 5
+                    }
+                }
+            }
+        }
+    }
+}

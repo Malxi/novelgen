@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 )
@@ -16,33 +15,33 @@ import (
 
 // SmartNovelChecker 智能小说检测器
 type SmartNovelChecker struct {
-	BookPath             string
-	Results              []SmartChapterResult
-	CrossChapterIssues   []CrossChapterIssue
-	BookSettings         BookSettings // 小说特定设定
+	BookPath           string
+	Results            []SmartChapterResult
+	CrossChapterIssues []CrossChapterIssue
+	BookSettings       BookSettings // 小说特定设定
 }
 
 // BookSettings 小说设定配置
 type BookSettings struct {
-	Title                string
-	HasResurrection      bool     // 是否有复活设定
-	ResurrectionCost     string   // 复活代价描述
-	Protagonist          string   // 主角名字
-	ValidPowerChanges    int      // 每章允许的最大战力变化次数
-	IgnoreTimeJumps      bool     // 是否忽略时间跳跃（如果小说是倒叙/插叙结构）
+	Title                    string
+	HasResurrection          bool     // 是否有复活设定
+	ResurrectionCost         string   // 复活代价描述
+	Protagonist              string   // 主角名字
+	ValidPowerChanges        int      // 每章允许的最大战力变化次数
+	IgnoreTimeJumps          bool     // 是否忽略时间跳跃（如果小说是倒叙/插叙结构）
 	AllowedResurrectionChars []string // 允许复活的角色名单
 }
 
 // SmartChapterResult 智能章节检测结果
 type SmartChapterResult struct {
-	ChapterID       string
-	ChapterTitle    string
-	FilePath        string
-	TextLength      int
-	RealIssues      []RealIssue    // 真正的问题
-	InfoNotes       []InfoNote     // 信息提示（非问题）
-	CheckDuration   time.Duration
-	Timestamp       time.Time
+	ChapterID     string
+	ChapterTitle  string
+	FilePath      string
+	TextLength    int
+	RealIssues    []RealIssue // 真正的问题
+	InfoNotes     []InfoNote  // 信息提示（非问题）
+	CheckDuration time.Duration
+	Timestamp     time.Time
 }
 
 // RealIssue 真正的问题
@@ -63,12 +62,12 @@ type InfoNote struct {
 // DefaultBookSettings 返回默认的小说设定（针对 books/mine）
 func DefaultBookSettings() BookSettings {
 	return BookSettings{
-		Title:                "寒矿醒转",
-		HasResurrection:      true,
-		ResurrectionCost:     "每次复活掉一层修为",
-		Protagonist:          "林砚",
-		ValidPowerChanges:    5, // 修仙小说允许较多修炼描写
-		IgnoreTimeJumps:      true, // 暂时忽略时间线问题
+		Title:                    "寒矿醒转",
+		HasResurrection:          true,
+		ResurrectionCost:         "每次复活掉一层修为",
+		Protagonist:              "林砚",
+		ValidPowerChanges:        5,              // 修仙小说允许较多修炼描写
+		IgnoreTimeJumps:          true,           // 暂时忽略时间线问题
 		AllowedResurrectionChars: []string{"林砚"}, // 只有主角能复活
 	}
 }
@@ -76,8 +75,8 @@ func DefaultBookSettings() BookSettings {
 // NewSmartNovelChecker 创建智能检测器
 func NewSmartNovelChecker(bookPath string, settings *BookSettings) (*SmartNovelChecker, error) {
 	checker := &SmartNovelChecker{
-		BookPath:     bookPath,
-		Results:      make([]SmartChapterResult, 0),
+		BookPath: bookPath,
+		Results:  make([]SmartChapterResult, 0),
 	}
 
 	if settings != nil {
@@ -92,7 +91,7 @@ func NewSmartNovelChecker(bookPath string, settings *BookSettings) (*SmartNovelC
 // CheckAllChapters 检测所有章节
 func (snc *SmartNovelChecker) CheckAllChapters() error {
 	chaptersDir := filepath.Join(snc.BookPath, "chapters")
-	
+
 	files, err := os.ReadDir(chaptersDir)
 	if err != nil {
 		return fmt.Errorf("读取章节目录失败: %w", err)
@@ -104,26 +103,26 @@ func (snc *SmartNovelChecker) CheckAllChapters() error {
 			chapterFiles = append(chapterFiles, f.Name())
 		}
 	}
-	sort.Strings(chapterFiles)
+	sortChapterFilenames(chapterFiles)
 
 	fmt.Printf("发现 %d 个章节文件\n", len(chapterFiles))
-	fmt.Printf("小说设定: %s (复活: %v, 主角: %s)\n\n", 
-		snc.BookSettings.Title, 
+	fmt.Printf("小说设定: %s (复活: %v, 主角: %s)\n\n",
+		snc.BookSettings.Title,
 		snc.BookSettings.HasResurrection,
 		snc.BookSettings.Protagonist)
 
 	for i, filename := range chapterFiles {
 		chapterPath := filepath.Join(chaptersDir, filename)
 		fmt.Printf("[%d/%d] 检测 %s...\n", i+1, len(chapterFiles), filename)
-		
+
 		result, err := snc.CheckChapter(chapterPath)
 		if err != nil {
 			fmt.Printf("  警告: %v\n", err)
 			continue
 		}
-		
+
 		snc.Results = append(snc.Results, *result)
-		
+
 		// 打印真正的问题
 		if len(result.RealIssues) > 0 {
 			fmt.Printf("  发现 %d 个真正的问题:\n", len(result.RealIssues))
@@ -131,14 +130,14 @@ func (snc *SmartNovelChecker) CheckAllChapters() error {
 				fmt.Printf("    ⚠️  [%s/%s] %s\n", issue.Severity, issue.Category, issue.Description)
 			}
 		}
-		
+
 		// 打印信息提示
 		if len(result.InfoNotes) > 0 {
 			for _, note := range result.InfoNotes {
 				fmt.Printf("    ℹ️  %s: %s\n", note.Type, note.Description)
 			}
 		}
-		
+
 		if len(result.RealIssues) == 0 && len(result.InfoNotes) == 0 {
 			fmt.Printf("  ✓ 未发现问题\n")
 		}
@@ -200,7 +199,7 @@ func (snc *SmartNovelChecker) checkResurrectionLogic(result *SmartChapterResult,
 	// 统计复活相关关键词
 	resurrectionPatterns := []string{"复活", "复生", "死而复生", "重生", "醒来", "睁开眼"}
 	deathPatterns := []string{"死了", "身亡", "殒命", "断气", "被砸死", "颈动脉", "骨头碎裂"}
-	
+
 	resurrectionCount := 0
 	deathCount := 0
 
@@ -249,7 +248,7 @@ func (snc *SmartNovelChecker) checkResurrectionLogic(result *SmartChapterResult,
 				break
 			}
 		}
-		
+
 		if !hasCostDescription && deathCount > 0 {
 			// 如果没描写代价，可能是问题
 			result.RealIssues = append(result.RealIssues, RealIssue{
@@ -267,7 +266,7 @@ func (snc *SmartNovelChecker) checkResurrectionLogic(result *SmartChapterResult,
 func (snc *SmartNovelChecker) checkPowerProgression(result *SmartChapterResult, text string) {
 	// 提取修为变化
 	cultivationChanges := extractCultivationChanges(text)
-	
+
 	if len(cultivationChanges) > 0 {
 		result.InfoNotes = append(result.InfoNotes, InfoNote{
 			Type:        "修炼",
@@ -292,12 +291,12 @@ func (snc *SmartNovelChecker) checkPowerProgression(result *SmartChapterResult, 
 func (snc *SmartNovelChecker) checkCharacterConsistency(result *SmartChapterResult, text string) {
 	// 检测角色状态矛盾
 	// 例如：角色上一段死了，下一段活着且无解释
-	
+
 	// 检测角色位置矛盾
 	locationKeywords := map[string][]string{
-		"矿场":  {"矿道", "矿区", "黑风矿", "丙字"},
-		"宗门":  {"宗门", "大殿", "长老", "峰主"},
-		"城镇":  {"镇", "城", "坊市", "街道"},
+		"矿场": {"矿道", "矿区", "黑风矿", "丙字"},
+		"宗门": {"宗门", "大殿", "长老", "峰主"},
+		"城镇": {"镇", "城", "坊市", "街道"},
 	}
 
 	foundLocations := make(map[string]bool)
@@ -324,7 +323,7 @@ func (snc *SmartNovelChecker) checkCharacterConsistency(result *SmartChapterResu
 // checkLogicHoles 检测逻辑漏洞
 func (snc *SmartNovelChecker) checkLogicHoles(result *SmartChapterResult, text string) {
 	// 检测可能的逻辑漏洞
-	
+
 	// 1. 物品凭空出现/消失
 	itemMentions := extractItemMentions(text)
 	if len(itemMentions) > 10 {
@@ -345,7 +344,7 @@ func (snc *SmartNovelChecker) checkLogicHoles(result *SmartChapterResult, text s
 func (snc *SmartNovelChecker) runCrossChapterCheck() {
 	// 简化版的跨章检测
 	// 主要检测角色状态连续性和时间线
-	
+
 	checker := NewCrossChapterChecker()
 
 	for _, result := range snc.Results {
@@ -446,7 +445,7 @@ func (snc *SmartNovelChecker) GenerateSmartReport() string {
 				} else {
 					severityIcon = "🟢"
 				}
-				
+
 				sb.WriteString(fmt.Sprintf("    %s [%s] %s\n", severityIcon, issue.Category, issue.Description))
 				if issue.Evidence != "" {
 					sb.WriteString(fmt.Sprintf("       证据: %s\n", issue.Evidence))
@@ -504,12 +503,12 @@ func detectSeverePowerJumps(changes []string) []string {
 	// 检测不合理的修为跳跃
 	// 例如：直接提到跨大境界
 	var jumps []string
-	
+
 	// 简单检测：如果出现多个不同境界
 	hasLianqi := false
 	hasZhuji := false
 	hasJindan := false
-	
+
 	for _, change := range changes {
 		if strings.Contains(change, "练气") {
 			hasLianqi = true
@@ -521,18 +520,18 @@ func detectSeverePowerJumps(changes []string) []string {
 			hasJindan = true
 		}
 	}
-	
+
 	// 如果一章内同时出现练气和金丹，那可能有问题
 	if hasLianqi && hasJindan {
 		jumps = append(jumps, "练气期到金丹期的大跨越")
 	}
-	
+
 	// 如果一章内同时出现练气和筑基，也可能有问题
 	if hasLianqi && hasZhuji {
 		// 筑基是练气后的正常突破，不算严重问题
 		// 但如果是同一章内就值得注意
 	}
-	
+
 	return jumps
 }
 

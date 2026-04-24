@@ -1,295 +1,108 @@
-# Skill: Convert Chapters to RPG-DSL
+# Skill: Chapters To RPG-DSL
 
-Convert novelgen chapter recaps to RPG-DSL format for story simulation and validation.
+Convert chapter recap JSON into parser-compatible RPG-DSL.
 
-## Description
+## Output Contract
 
-This skill analyzes chapter recap data (plot beats, characters, locations) and generates a complete RPG-DSL file that can be used for:
-- Story structure validation
-- Plot logic checking
-- Character consistency verification
-- Event sequence simulation
+- Return JSON only:
+  - `{"dsl_content":"..."}`
+- `dsl_content` must be plain DSL text only.
+- No markdown fences.
+- No comments (`#` and `//` forbidden).
+- Do not include explanations.
 
-The DSL captures the narrative structure in an executable format.
+## Critical Syntax Rules
 
-## Input Format
+- Use ASCII keys and keywords only.
+- Use only `=` for assignments.
+- Strings must be wrapped in `"` and escaped.
+- Keep braces balanced.
+- Never output Chinese keys such as `时间`, `修为`, `地点`, `敌人`.
+- Never output unknown top-level blocks.
 
-```json
-{
-  "book_name": "mine",
-  "story_setup": { /* story setup object */ },
-  "characters": { /* character definitions from craft */ },
-  "locations": { /* location definitions from craft */ },
-  "chapters": [
-    {
-      "chapter_id": "P1-V1-C1",
-      "title": "Chapter Title",
-      "location": "Primary location",
-      "time": "Timeline info",
-      "present": ["Character names"],
-      "plot_beats": ["Beat 1", "Beat 2", ...]
-    }
-  ]
-}
-```
+## Allowed Top-Level Blocks
 
-## Output Format
+- `metadata { ... }`
+- `world { ... }`
+- `characters { ... }`
+- `storyline { ... }`
 
-Generate a complete RPG-DSL file with this structure:
+`systems` is optional and should usually be omitted in chapter conversion.
 
-```dsl
-metadata {
-  title = "Book Title"
-  genre = ["genre1", "genre2"]
-  power_system = "system_name"
-  dsl_version = "0.2.0"
-  source = "novelgen_outline"
-}
+## Allowed Named Blocks
 
-world {
-  // Extract unique locations from chapters
-  location "Location Name" {
-    id = "location_id"
-    name = "Location Name"
-    type = "indoor|outdoor|dungeon|city"
-    description = "Brief description"
-    __placeholder__ = false
-  }
-}
+- `location "Name" { ... }`
+- `player "Name" { ... }`
+- `npc "Name" { ... }`
+- `chapter "Title" { ... }`
+- `objective "Goal" { ... }`
+- `step N { ... }`
+- `event { ... }`
 
-characters {
-  // Define player/protagonist
-  player "Protagonist Name" {
-    id = "char_protagonist"
-    name = "Protagonist Name"
-    description = "Brief description"
-    __placeholder__ = false
-    
-    str = 10
-    agi = 10
-    int = 10
-    vit = 10
-    hp = 100
-    mp = 50
-    
-    class = "class_name"
-    skills = []
-  }
-  
-  // Define NPCs from chapters
-  npc "NPC Name" {
-    id = "char_npc_id"
-    name = "NPC Name"
-    description = "Brief description"
-    __placeholder__ = false
-    
-    role = "role_type"
-    default_location = "location_id"
-  }
-}
+## Allowed Event Fields
 
-storyline {
-  // Convert each chapter to a DSL chapter
-  chapter "Chapter Title" {
-    id = "chapter_id"
-    
-    objective "Main Objective" {
-      // Convert plot beats to steps
-      step 1 {
-        description = "Plot beat description"
-        event {
-          type = "status|combat|location|acquire|knowledge"
-          // Event-specific fields
-        }
-      }
-    }
-  }
-}
-```
+- `type = "status|combat|location|acquire|knowledge|relationship"`
+- Optional:
+  - `combat { enemies = [{id = "enemy_x", count = 1, level = 1}] }`
+  - `move { to = "loc_x" }`
+  - `spawn { actor = "char_x" location = "loc_x" }`
+  - `on_complete { narration = "..." exp = 10 }`
 
-## Conversion Rules
+Do not use `setup { ... }` inside `combat`.
+Use `combat { enemies = [...] }` directly.
 
-### 1. Chapter Mapping
+## Required Minimal Fields
 
-Each chapter JSON becomes one DSL `chapter` block:
-- `chapter_id` -> `id`
-- `title` -> chapter name
-- Each `plot_beat` -> one `step`
+### metadata
+- `title`
+- `dsl_version = "0.2.0"`
+- `source = "novelgen_outline"`
 
-### 2. Event Type Detection
+### world/location
+- `id`
+- `name`
+- `description`
+- `__placeholder__ = false`
 
-Analyze plot beats to determine event type:
+### characters/player
+- `id`
+- `name`
+- `description`
+- `__placeholder__ = false`
+- `str`, `agi`, `int`, `vit`, `hp`, `mp`
+- `class`
 
-**combat**: Contains fighting, battle, attack, kill, defeat
-```dsl
-event {
-  type = "combat"
-  combat {
-    setup {
-      enemies = [
-        { id = "enemy_id", count = 1, level = 1 }
-      ]
-    }
-  }
-}
-```
+### characters/npc
+- `id`
+- `name`
+- `description`
+- `__placeholder__ = false`
+- `role`
+- `default_location`
 
-**location**: Contains movement, arrival, enter, go to
-```dsl
-event {
-  type = "location"
-  move {
-    to = "destination_location_id"
-  }
-}
-```
+### storyline/chapter
+- `id`
+- at least one `objective`
+- each objective has `step 1..N`
+- each step has `description` + `event`
 
-**acquire**: Contains get, obtain, find, receive item
-```dsl
-event {
-  type = "acquire"
-}
-```
+## Mapping Rules
 
-**knowledge**: Contains learn, discover, reveal, know
-```dsl
-event {
-  type = "knowledge"
-}
-```
+- Convert each input chapter to one `chapter` block.
+- Convert each `plot_beat` to one `step` in order.
+- Use provided chapter ID exactly.
+- Keep names/descriptions in {{language}}.
+- IDs must be ASCII-safe snake-case style:
+  - characters: `char_*`
+  - locations: `loc_*`
+  - enemies: `enemy_*`
 
-**status**: Default for character development, dialogue, emotions
-```dsl
-event {
-  type = "status"
-}
-```
+## Self-Check Before Output
 
-### 3. Character Extraction
+- Is output valid JSON with `dsl_content`?
+- Is `dsl_content` valid DSL without comments?
+- Are all keys ASCII English?
+- Are all `objective` lines in form: `objective "..." {`?
+- Are `step` lines in form: `step N {` (without `=`)?
+- Are combat enemies in form: `enemies = [{id = "...", count = 1, level = 1}]`?
 
-From `present` array and plot beats:
-- First appearance -> define NPC in `characters` block
-- Track which chapters each character appears in
-- Infer role from context (ally, enemy, neutral)
-
-### 4. Location Extraction
-
-From `location` field and plot beats:
-- Create unique location definitions
-- Use `connected_locations` if movement between locations is described
-
-### 5. ID Naming Conventions
-
-Use descriptive IDs with prefixes:
-- Characters: `char_` + lowercase_name (e.g., `char_lin_yan`)
-- Locations: `loc_` + lowercase_name (e.g., `loc_heifeng_mine`)
-- Enemies: `enemy_` + type (e.g., `enemy_guard`)
-- Items: `item_` + name (e.g., `item_jade_pendant`)
-
-## Example
-
-### Input Chapter:
-```json
-{
-  "chapter_id": "P1-V1-C1",
-  "title": "寒矿醒转，首死触发复生",
-  "location": "黑风灵石矿丙字矿区地下矿道",
-  "time": "苏醒当日",
-  "present": ["林砚", "周虎", "老陈"],
-  "plot_beats": [
-    "林砚穿越到修仙世界成为矿奴",
-    "遭到矿监周虎鞭打",
-    "老陈提醒近期矿内不太平",
-    "林砚开始挖矿",
-    "矿道坍塌，林砚被砸死",
-    "林砚复活，发现死而复生能力"
-  ]
-}
-```
-
-### Output DSL:
-```dsl
-  chapter "寒矿醒转，首死触发复生" {
-    id = "P1-V1-C1"
-    
-    objective "矿场生存" {
-      step 1 {
-        description = "林砚穿越到修仙世界成为黑风灵石矿的矿奴"
-        event {
-          type = "status"
-        }
-      }
-      
-      step 2 {
-        description = "遭到矿监周虎鞭打，决定暂时隐忍"
-        event {
-          type = "combat"
-          combat {
-            setup {
-              enemies = [
-                { id = "enemy_zhou_hu", count = 1, level = 3 }
-              ]
-            }
-          }
-          on_complete {
-            narration = "林砚决定隐忍，不与周虎正面冲突"
-          }
-        }
-      }
-      
-      step 3 {
-        description = "老陈提醒近期矿内不太平，有灰衣官爷抓人"
-        event {
-          type = "knowledge"
-        }
-      }
-      
-      step 4 {
-        description = "矿道突发坍塌，林砚被落石砸中死亡"
-        event {
-          type = "combat"
-          combat {
-            setup {
-              enemies = [
-                { id = "environment_collapse", count = 1, level = 1 }
-              ]
-            }
-          }
-          on_complete {
-            narration = "林砚在矿道内死亡"
-          }
-        }
-      }
-      
-      step 5 {
-        description = "林砚复活，发现拥有死而复生的特殊能力"
-        event {
-          type = "status"
-          on_complete {
-            narration = "确认死而复生能力，修为跌落"
-            exp = 50
-          }
-        }
-      }
-    }
-  }
-```
-
-## Validation Checklist
-
-Before outputting, verify:
-- [ ] All chapters are converted
-- [ ] Each chapter has at least one objective
-- [ ] Each objective has steps matching plot_beats
-- [ ] Event types are appropriate for the content
-- [ ] Character IDs match those defined in characters block
-- [ ] Location IDs match those defined in world block
-- [ ] DSL syntax is valid (proper braces, quotes, equals)
-
-## Notes
-
-- Use `__placeholder__ = false` for all elements with actual content
-- Include `description` fields for all major elements
-- Add `on_complete` with narration for significant events
-- Set appropriate `exp` rewards for breakthrough/achievement moments
-- Use Chinese for all text content (descriptions, names, narrations)

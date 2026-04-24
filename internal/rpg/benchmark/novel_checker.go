@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -19,9 +18,9 @@ import (
 
 // NovelChecker 小说检测器
 type NovelChecker struct {
-	BookPath       string
-	RPGData        *rpg.NovelRPGData
-	Results        []ChapterCheckResult
+	BookPath           string
+	RPGData            *rpg.NovelRPGData
+	Results            []ChapterCheckResult
 	CrossChapterIssues []CrossChapterIssue
 }
 
@@ -67,21 +66,21 @@ func NewNovelChecker(bookPath string) (*NovelChecker, error) {
 // CheckAllChapters 检测所有章节
 func (nc *NovelChecker) CheckAllChapters() error {
 	chaptersDir := filepath.Join(nc.BookPath, "chapters")
-	
+
 	// 读取所有章节文件
 	files, err := os.ReadDir(chaptersDir)
 	if err != nil {
 		return fmt.Errorf("读取章节目录失败: %w", err)
 	}
 
-	// 按文件名排序
+	// 按章节自然顺序排序（例如 C2 在 C10 前）
 	var chapterFiles []string
 	for _, f := range files {
 		if !f.IsDir() && strings.HasSuffix(f.Name(), ".md") {
 			chapterFiles = append(chapterFiles, f.Name())
 		}
 	}
-	sort.Strings(chapterFiles)
+	sortChapterFilenames(chapterFiles)
 
 	fmt.Printf("发现 %d 个章节文件\n", len(chapterFiles))
 
@@ -89,15 +88,15 @@ func (nc *NovelChecker) CheckAllChapters() error {
 	for i, filename := range chapterFiles {
 		chapterPath := filepath.Join(chaptersDir, filename)
 		fmt.Printf("[%d/%d] 检测 %s...\n", i+1, len(chapterFiles), filename)
-		
+
 		result, err := nc.CheckChapter(chapterPath)
 		if err != nil {
 			fmt.Printf("  警告: %v\n", err)
 			continue
 		}
-		
+
 		nc.Results = append(nc.Results, *result)
-		
+
 		// 打印发现的问题
 		if len(result.Issues) > 0 {
 			fmt.Printf("  发现 %d 个问题:\n", len(result.Issues))
@@ -144,10 +143,10 @@ func (nc *NovelChecker) CheckChapter(chapterPath string) (*ChapterCheckResult, e
 	if nc.RPGData != nil {
 		world := nc.buildGameWorld()
 		cs := rpg.NewConstraintSystem(world)
-		
+
 		violations := cs.ValidateChapter(result.ChapterID, text)
 		result.Violations = violations
-		
+
 		// 转换为 DetectedIssue
 		for _, v := range violations {
 			result.Issues = append(result.Issues, DetectedIssue{
@@ -162,7 +161,7 @@ func (nc *NovelChecker) CheckChapter(chapterPath string) (*ChapterCheckResult, e
 	// 2. 使用文本提取器检测
 	extractor := rpg.NewTextExtractor()
 	entities := extractor.ExtractFromText(text)
-	
+
 	// 检测潜在问题
 	issues := nc.detectIssuesFromEntities(entities, text)
 	result.Issues = append(result.Issues, issues...)
@@ -189,7 +188,7 @@ func (nc *NovelChecker) runCrossChapterCheck() {
 	if len(nc.CrossChapterIssues) > 0 {
 		fmt.Printf("发现 %d 个跨章一致性问题:\n", len(nc.CrossChapterIssues))
 		for _, issue := range nc.CrossChapterIssues {
-			fmt.Printf("  - [%s/%s] %s: %s\n", 
+			fmt.Printf("  - [%s/%s] %s: %s\n",
 				issue.Category, issue.Severity, issue.Target, issue.Description)
 		}
 	} else {
@@ -387,10 +386,10 @@ func (nc *NovelChecker) GenerateReport() string {
 // ExportJSON 导出 JSON 格式报告
 func (nc *NovelChecker) ExportJSON(filename string) error {
 	report := map[string]interface{}{
-		"timestamp":       time.Now().Format(time.RFC3339),
-		"book_path":       nc.BookPath,
-		"total_chapters":  len(nc.Results),
-		"results":         nc.Results,
+		"timestamp":            time.Now().Format(time.RFC3339),
+		"book_path":            nc.BookPath,
+		"total_chapters":       len(nc.Results),
+		"results":              nc.Results,
 		"cross_chapter_issues": nc.CrossChapterIssues,
 	}
 

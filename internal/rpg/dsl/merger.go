@@ -9,6 +9,7 @@ import (
 type MergePhase string
 
 const (
+	PhaseSetup   MergePhase = "setup"
 	PhaseOutline MergePhase = "outline"
 	PhaseCraft   MergePhase = "craft"
 	PhaseSystems MergePhase = "systems"
@@ -37,11 +38,11 @@ type DSLFragment struct {
 
 // MergeResult contains the result of merging
 type MergeResult struct {
-	DSL             *DSL
-	Placeholders    []PlaceholderInfo
-	Conflicts       []MergeConflict
-	Warnings        []string
-	PhasesMerged    []MergePhase
+	DSL          *DSL
+	Placeholders []PlaceholderInfo
+	Conflicts    []MergeConflict
+	Warnings     []string
+	PhasesMerged []MergePhase
 }
 
 // PlaceholderInfo tracks unfilled placeholders
@@ -79,12 +80,16 @@ func (dm *DSLMerger) AddFragment(dsl *DSL, phase MergePhase, filePath string) {
 	// Determine priority based on phase
 	priority := 0
 	switch phase {
+	case PhaseSetup:
+		priority = 0
 	case PhaseOutline:
 		priority = 1
 	case PhaseCraft:
 		priority = 2
 	case PhaseSystems:
 		priority = 3
+	case PhaseFinal:
+		priority = 4
 	}
 
 	fragment := &DSLFragment{
@@ -175,15 +180,66 @@ func (dm *DSLMerger) sortFragmentsByPriority() {
 // mergeFragment merges a single fragment into the result
 func (dm *DSLMerger) mergeFragment(result *MergeResult, fragment *DSLFragment) error {
 	switch fragment.Phase {
+	case PhaseSetup:
+		return dm.mergeSetup(result, fragment)
 	case PhaseOutline:
 		return dm.mergeOutline(result, fragment)
 	case PhaseCraft:
 		return dm.mergeCraft(result, fragment)
 	case PhaseSystems:
 		return dm.mergeSystems(result, fragment)
+	case PhaseFinal:
+		return dm.mergeFinal(result, fragment)
 	default:
 		return fmt.Errorf("unknown merge phase: %s", fragment.Phase)
 	}
+}
+
+// mergeSetup merges setup phase DSL (base metadata + numeric systems baseline)
+func (dm *DSLMerger) mergeSetup(result *MergeResult, fragment *DSLFragment) error {
+	dsl := fragment.DSL
+	if dsl == nil {
+		return nil
+	}
+
+	// Metadata baseline from setup.
+	if dsl.Metadata != nil {
+		result.DSL.Metadata.Title = dm.coalesceString(result.DSL.Metadata.Title, dsl.Metadata.Title)
+		result.DSL.Metadata.Subtitle = dm.coalesceString(result.DSL.Metadata.Subtitle, dsl.Metadata.Subtitle)
+		result.DSL.Metadata.Genre = dm.coalesceSlice(result.DSL.Metadata.Genre, dsl.Metadata.Genre)
+		result.DSL.Metadata.PowerSystem = dm.coalesceString(result.DSL.Metadata.PowerSystem, dsl.Metadata.PowerSystem)
+		result.DSL.Metadata.Tone = dm.coalesceString(result.DSL.Metadata.Tone, dsl.Metadata.Tone)
+		result.DSL.Metadata.DSLVersion = dm.coalesceString(result.DSL.Metadata.DSLVersion, dsl.Metadata.DSLVersion)
+	}
+
+	// Setup can also provide a base player shell.
+	if dsl.Characters != nil && dsl.Characters.Player != nil {
+		if result.DSL.Characters.Player == nil {
+			result.DSL.Characters.Player = dsl.Characters.Player
+		}
+	}
+
+	// Numeric systems baseline.
+	if err := dm.mergeSystems(result, fragment); err != nil {
+		return err
+	}
+	return nil
+}
+
+// mergeFinal merges a pre-composed final fragment.
+// We reuse existing per-phase merge logic in order:
+// outline -> craft -> systems.
+func (dm *DSLMerger) mergeFinal(result *MergeResult, fragment *DSLFragment) error {
+	if err := dm.mergeOutline(result, fragment); err != nil {
+		return err
+	}
+	if err := dm.mergeCraft(result, fragment); err != nil {
+		return err
+	}
+	// IMPORTANT:
+	// Final/chapter patches are detail-level data and must NOT override systems baseline.
+	// We intentionally skip systems merge here.
+	return nil
 }
 
 // mergeOutline merges outline phase DSL (basic framework)
@@ -305,6 +361,48 @@ func (dm *DSLMerger) mergeSystems(result *MergeResult, fragment *DSLFragment) er
 	dsl := fragment.DSL
 
 	if dsl.Systems != nil {
+		// Protect systems baseline from final/chapter patches.
+		if fragment.Phase == PhaseFinal {
+			if dsl.Systems.AttributeSystem != nil || dsl.Systems.PowerFormula != nil ||
+				len(dsl.Systems.ProgressionSystems) > 0 || len(dsl.Systems.Counters) > 0 {
+				result.Warnings = append(result.Warnings,
+					fmt.Sprintf("ignored systems override from final fragment: %s", fragment.FilePath))
+			}
+			return nil
+		}
+
+		// Merge attribute system (single baseline definition).
+		if dsl.Systems.AttributeSystem != nil {
+			if result.DSL.Systems.AttributeSystem != nil {
+				result.Conflicts = append(result.Conflicts, MergeConflict{
+					ElementType: "systems",
+					ElementID:   "attribute_system",
+					Field:       "full_definition",
+					Value1:      "existing",
+					Value2:      "new",
+					Resolved:    true,
+					Resolution:  "new_overrides",
+				})
+			}
+			result.DSL.Systems.AttributeSystem = dsl.Systems.AttributeSystem
+		}
+
+		// Merge power formula (single baseline definition).
+		if dsl.Systems.PowerFormula != nil {
+			if result.DSL.Systems.PowerFormula != nil {
+				result.Conflicts = append(result.Conflicts, MergeConflict{
+					ElementType: "systems",
+					ElementID:   "power_formula",
+					Field:       "full_definition",
+					Value1:      "existing",
+					Value2:      "new",
+					Resolved:    true,
+					Resolution:  "new_overrides",
+				})
+			}
+			result.DSL.Systems.PowerFormula = dsl.Systems.PowerFormula
+		}
+
 		// Merge progression systems (new format)
 		for _, prog := range dsl.Systems.ProgressionSystems {
 			result.DSL.Systems.ProgressionSystems = dm.mergeProgressionSystemList(
@@ -329,9 +427,9 @@ func (dm *DSLMerger) mergeSystems(result *MergeResult, fragment *DSLFragment) er
 
 func (dm *DSLMerger) createPlaceholderCharacter(char *Player, phase MergePhase) *Player {
 	placeholder := &Player{
-		Name:          char.Name,
-		ID:            char.ID,
-		IsPlaceholder: true,
+		Name:              char.Name,
+		ID:                char.ID,
+		IsPlaceholder:     true,
 		PlaceholderSource: string(phase),
 	}
 	return placeholder

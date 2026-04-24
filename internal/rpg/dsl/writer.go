@@ -471,12 +471,12 @@ func (dw *DSLWriter) writeStep(step Step) error {
 				dw.writeField("type", fmt.Sprintf("%q", step.Event.Type))
 
 				if step.Event.Combat != nil {
-				enemyIDs := make([]string, 0, len(step.Event.Combat.Setup.Enemies))
-				for _, spawn := range step.Event.Combat.Setup.Enemies {
-					enemyIDs = append(enemyIDs, spawn.ID)
+					enemyIDs := make([]string, 0, len(step.Event.Combat.Setup.Enemies))
+					for _, spawn := range step.Event.Combat.Setup.Enemies {
+						enemyIDs = append(enemyIDs, spawn.ID)
+					}
+					dw.writeField("enemies", dw.formatStringSlice(enemyIDs))
 				}
-				dw.writeField("enemies", dw.formatStringSlice(enemyIDs))
-			}
 
 				return nil
 			})
@@ -496,6 +496,20 @@ func (dw *DSLWriter) writeSystems(systems *Systems) error {
 
 	dw.writeLine("")
 	dw.writeBlock("systems", "", func() error {
+		// Write custom attribute system
+		if systems.AttributeSystem != nil {
+			if err := dw.writeAttributeSystem(systems.AttributeSystem); err != nil {
+				return err
+			}
+		}
+
+		// Write power formula
+		if systems.PowerFormula != nil {
+			if err := dw.writePowerFormula(systems.PowerFormula); err != nil {
+				return err
+			}
+		}
+
 		// Write counters
 		for _, counter := range systems.Counters {
 			if err := dw.writeCounter(counter); err != nil {
@@ -514,6 +528,85 @@ func (dw *DSLWriter) writeSystems(systems *Systems) error {
 	})
 
 	return nil
+}
+
+func (dw *DSLWriter) writeAttributeSystem(sys *AttributeSystem) error {
+	if sys == nil {
+		return nil
+	}
+
+	return dw.writeBlock("attribute_system", fmt.Sprintf("%q", sys.Name), func() error {
+		if sys.ID != "" {
+			dw.writeField("id", fmt.Sprintf("%q", sys.ID))
+		}
+		if sys.Description != "" {
+			dw.writeField("description", fmt.Sprintf("%q", sys.Description))
+		}
+
+		for _, attr := range sys.Attributes {
+			a := attr
+			if err := dw.writeBlock("attribute", fmt.Sprintf("%q", a.Name), func() error {
+				if a.ID != "" {
+					dw.writeField("id", fmt.Sprintf("%q", a.ID))
+				}
+				if a.Description != "" {
+					dw.writeField("description", fmt.Sprintf("%q", a.Description))
+				}
+				if a.Type != "" {
+					dw.writeField("type", fmt.Sprintf("%q", a.Type))
+				}
+				dw.writeField("base_value", fmt.Sprintf("%d", a.BaseValue))
+				if a.MinValue != 0 {
+					dw.writeField("min_value", fmt.Sprintf("%d", a.MinValue))
+				}
+				if a.MaxValue != 0 {
+					dw.writeField("max_value", fmt.Sprintf("%d", a.MaxValue))
+				}
+				if a.IsResource {
+					dw.writeField("is_resource", "true")
+				} else {
+					dw.writeField("is_resource", "false")
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (dw *DSLWriter) writePowerFormula(formula *PowerFormula) error {
+	if formula == nil {
+		return nil
+	}
+
+	return dw.writeBlock("power_formula", fmt.Sprintf("%q", formula.Name), func() error {
+		if formula.ID != "" {
+			dw.writeField("id", fmt.Sprintf("%q", formula.ID))
+		}
+		if formula.Description != "" {
+			dw.writeField("description", fmt.Sprintf("%q", formula.Description))
+		}
+		dw.writeField("base_power", fmt.Sprintf("%d", formula.BasePower))
+		if formula.Formula != "" {
+			dw.writeField("formula", fmt.Sprintf("%q", formula.Formula))
+		}
+
+		for _, f := range formula.Factors {
+			factor := f
+			if err := dw.writeBlock("factor", fmt.Sprintf("%q", factor.Name), func() error {
+				if factor.Attribute != "" {
+					dw.writeField("attribute", fmt.Sprintf("%q", factor.Attribute))
+				}
+				dw.writeField("weight", fmt.Sprintf("%g", factor.Weight))
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // writeCounter writes a counter

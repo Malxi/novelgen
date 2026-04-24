@@ -3,15 +3,17 @@ package dsl
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
+	"novelgen/internal/models"
 	"novelgen/internal/rpg"
 )
 
 // NovelgenAdapter converts novelgen project data to DSL
 type NovelgenAdapter struct {
-	project  *rpg.NovelgenProject
-	logger   *Logger
+	project *rpg.NovelgenProject
+	logger  *Logger
 }
 
 // NewNovelgenAdapter creates a new adapter
@@ -47,6 +49,8 @@ func (na *NovelgenAdapter) ToDSL(phase MergePhase) (*DSL, error) {
 	dsl.Metadata.Phase = string(phase)
 
 	switch phase {
+	case PhaseSetup:
+		return na.toSetupDSL(dsl)
 	case PhaseOutline:
 		return na.toOutlineDSL(dsl)
 	case PhaseCraft:
@@ -54,6 +58,36 @@ func (na *NovelgenAdapter) ToDSL(phase MergePhase) (*DSL, error) {
 	default:
 		return nil, fmt.Errorf("unsupported phase: %s", phase)
 	}
+}
+
+// toSetupDSL creates setup phase DSL (metadata + numeric systems baseline)
+func (na *NovelgenAdapter) toSetupDSL(dsl *DSL) (*DSL, error) {
+	na.logger.Info(LogCategorySystem, "Generating setup DSL")
+
+	setup := na.loadStorySetup()
+
+	// Metadata baseline.
+	if setup != nil {
+		if strings.TrimSpace(setup.ProjectName) != "" {
+			dsl.Metadata.Title = setup.ProjectName
+		}
+		dsl.Metadata.Genre = append([]string(nil), setup.Genres...)
+		dsl.Metadata.Tone = setup.Tone
+		dsl.Metadata.PowerSystem = na.inferPowerSystem(setup)
+	} else {
+		dsl.Metadata.PowerSystem = "default_progression_system"
+	}
+
+	// Baseline player shell for simulators.
+	dsl.Characters.Player = na.inferBasePlayer()
+
+	// Numeric systems.
+	dsl.Systems.AttributeSystem = na.buildAttributeSystem(setup)
+	dsl.Systems.PowerFormula = na.buildPowerFormula(dsl.Systems.AttributeSystem)
+	dsl.Systems.ProgressionSystems = na.buildProgressionSystems(setup)
+	dsl.Systems.Counters = na.buildCounterSystems(setup)
+
+	return dsl, nil
 }
 
 // toOutlineDSL creates outline phase DSL (basic framework)
@@ -81,14 +115,14 @@ func (na *NovelgenAdapter) toOutlineDSL(dsl *DSL) (*DSL, error) {
 			IsPlaceholder:     true,
 			PlaceholderSource: "outline",
 		}
-		
+
 		// Add connections
 		for _, connected := range loc.ConnectedLocs {
 			location.Connections = append(location.Connections, Connection{
 				To: sanitizeID(connected),
 			})
 		}
-		
+
 		dsl.World.Locations = append(dsl.World.Locations, location)
 	}
 
@@ -100,6 +134,261 @@ func (na *NovelgenAdapter) toOutlineDSL(dsl *DSL) (*DSL, error) {
 	return dsl, nil
 }
 
+func (na *NovelgenAdapter) loadStorySetup() *models.StorySetup {
+	candidates := []string{
+		filepath.Join(na.project.ProjectPath, "books", na.project.BookName, "story", "setup", "story_setup.json"),
+		filepath.Join(na.project.ProjectPath, "books", na.project.BookName, "story", "setup.json"),
+	}
+	var lastErr error
+	for _, setupPath := range candidates {
+		setup, err := models.LoadStorySetup(setupPath)
+		if err == nil {
+			return setup
+		}
+		lastErr = err
+	}
+
+	na.logger.Warn(LogCategorySystem, "Failed to load story setup, using fallback",
+		map[string]interface{}{"paths": candidates, "error": lastErr.Error()})
+	return nil
+}
+
+func (na *NovelgenAdapter) inferPowerSystem(setup *models.StorySetup) string {
+	if setup == nil {
+		return "default_progression_system"
+	}
+	parts := make([]string, 0, len(setup.Premises))
+	for _, p := range setup.Premises {
+		name := strings.TrimSpace(p.Name)
+		if name == "" {
+			continue
+		}
+		parts = append(parts, name)
+	}
+	if len(parts) == 0 {
+		for _, r := range setup.Rules {
+			r = strings.TrimSpace(r)
+			if r != "" {
+				parts = append(parts, r)
+			}
+			if len(parts) >= 3 {
+				break
+			}
+		}
+	}
+	if len(parts) == 0 {
+		return "default_progression_system"
+	}
+	return strings.Join(parts, " + ")
+}
+
+func (na *NovelgenAdapter) inferBasePlayer() *Player {
+	// Prefer explicitly tagged protagonist in craft.
+	for name, c := range na.project.Characters {
+		role := strings.ToLower(strings.TrimSpace(c.RoleInStory))
+		if role == "protagonist" || strings.Contains(role, "涓昏") {
+			return &Player{
+				ID:    sanitizeID(name),
+				Name:  name,
+				Class: inferClassFromCharacter(c),
+				Stats: inferStatsFromCharacter(c),
+			}
+		}
+	}
+
+	// Fallback: first character by sorted key for deterministic behavior.
+	if len(na.project.Characters) > 0 {
+		keys := make([]string, 0, len(na.project.Characters))
+		for k := range na.project.Characters {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		k := keys[0]
+		c := na.project.Characters[k]
+		return &Player{
+			ID:    sanitizeID(k),
+			Name:  k,
+			Class: inferClassFromCharacter(c),
+			Stats: inferStatsFromCharacter(c),
+		}
+	}
+
+	return &Player{
+		ID:    "char_player",
+		Name:  "主角",
+		Class: "adventurer",
+		Stats: Stats{STR: 10, AGI: 10, INT: 10, VIT: 10, HP: 100, MP: 50},
+	}
+}
+
+func (na *NovelgenAdapter) buildAttributeSystem(setup *models.StorySetup) *AttributeSystem {
+	sys := &AttributeSystem{
+		ID:          "attr_core",
+		Name:        "Core Attributes",
+		Description: "Numeric baseline attributes for simulation and continuity checks.",
+		Attributes: []AttributeDef{
+			{ID: "str", Name: "Strength", Type: "stat", BaseValue: 10, MinValue: 0, MaxValue: 999, IsResource: false},
+			{ID: "agi", Name: "Agility", Type: "stat", BaseValue: 10, MinValue: 0, MaxValue: 999, IsResource: false},
+			{ID: "int", Name: "Intelligence", Type: "stat", BaseValue: 10, MinValue: 0, MaxValue: 999, IsResource: false},
+			{ID: "vit", Name: "Vitality", Type: "stat", BaseValue: 10, MinValue: 0, MaxValue: 999, IsResource: false},
+			{ID: "hp", Name: "HP", Type: "resource", BaseValue: 100, MinValue: 0, MaxValue: 999999, IsResource: true},
+			{ID: "mp", Name: "MP", Type: "resource", BaseValue: 50, MinValue: 0, MaxValue: 999999, IsResource: true},
+		},
+	}
+
+	// Add an extra custom resource from setup premise keywords when available.
+	if setup != nil {
+		resourceID := ""
+		resourceName := ""
+		for _, p := range setup.Premises {
+			text := strings.ToLower(strings.TrimSpace(p.Name + " " + p.Description + " " + p.Category))
+			switch {
+			case strings.Contains(text, "修"), strings.Contains(text, "cultivation"):
+				resourceID, resourceName = "qi", "Qi"
+			case strings.Contains(text, "mana"), strings.Contains(text, "magic"), strings.Contains(text, "魔"):
+				resourceID, resourceName = "mana", "Mana"
+			case strings.Contains(text, "gene"), strings.Contains(text, "基因"):
+				resourceID, resourceName = "gene", "Gene Potential"
+			case strings.Contains(text, "mech"), strings.Contains(text, "机甲"):
+				resourceID, resourceName = "sync", "Sync"
+			}
+			if resourceID != "" {
+				break
+			}
+		}
+		if resourceID != "" {
+			sys.Attributes = append(sys.Attributes, AttributeDef{
+				ID: resourceID, Name: resourceName, Type: "resource",
+				BaseValue: 0, MinValue: 0, MaxValue: 999999, IsResource: true,
+			})
+		}
+	}
+
+	return sys
+}
+
+func (na *NovelgenAdapter) buildPowerFormula(attrSys *AttributeSystem) *PowerFormula {
+	factors := []Factor{
+		{Attribute: "str", Name: "Strength", Weight: 2.0},
+		{Attribute: "agi", Name: "Agility", Weight: 1.2},
+		{Attribute: "int", Name: "Intelligence", Weight: 1.8},
+		{Attribute: "vit", Name: "Vitality", Weight: 1.5},
+		{Attribute: "hp", Name: "HP", Weight: 0.1},
+		{Attribute: "mp", Name: "MP", Weight: 0.2},
+	}
+
+	// Include one extra custom factor if present.
+	if attrSys != nil {
+		for _, a := range attrSys.Attributes {
+			if a.ID != "str" && a.ID != "agi" && a.ID != "int" && a.ID != "vit" && a.ID != "hp" && a.ID != "mp" {
+				factors = append(factors, Factor{Attribute: a.ID, Name: a.Name, Weight: 1.0})
+				break
+			}
+		}
+	}
+
+	return &PowerFormula{
+		ID:          "power_core",
+		Name:        "Core Power Formula",
+		Description: "Deterministic combat power formula for benchmark simulation.",
+		Formula:     "base + sum(attr_i * weight_i)",
+		BasePower:   10,
+		Factors:     factors,
+	}
+}
+
+func (na *NovelgenAdapter) buildProgressionSystems(setup *models.StorySetup) []ProgressionSystem {
+	if setup == nil || len(setup.Premises) == 0 {
+		return []ProgressionSystem{
+			{
+				ID:          "default_progression",
+				Name:        "Default Progression",
+				Description: "Fallback progression system.",
+				Levels: []ProgressionLevel{
+					{Level: 1, Name: "Novice", Requirements: "start", Bonuses: []string{"+1 str", "+1 vit"}},
+					{Level: 2, Name: "Adept", Requirements: "exp>=100", Bonuses: []string{"+2 str", "+2 hp"}},
+					{Level: 3, Name: "Expert", Requirements: "exp>=300", Bonuses: []string{"+3 int", "+3 hp"}},
+				},
+			},
+		}
+	}
+
+	out := make([]ProgressionSystem, 0, len(setup.Premises))
+	for i, p := range setup.Premises {
+		id := sanitizeID(strings.TrimSpace(p.Name))
+		if id == "" {
+			id = fmt.Sprintf("premise_%d", i+1)
+		}
+		ps := ProgressionSystem{
+			ID:          id,
+			Name:        p.Name,
+			Description: p.Description,
+			Levels:      make([]ProgressionLevel, 0, len(p.Progression)),
+		}
+		for _, st := range p.Progression {
+			levelName := strings.TrimSpace(st.Name)
+			if levelName == "" {
+				levelName = fmt.Sprintf("L%d", st.Level)
+			}
+			req := strings.TrimSpace(st.Requirements)
+			if req == "" {
+				req = fmt.Sprintf("reach level %d", st.Level)
+			}
+			bonuses := []string{}
+			if strings.TrimSpace(st.Description) != "" {
+				bonuses = append(bonuses, st.Description)
+			}
+			ps.Levels = append(ps.Levels, ProgressionLevel{
+				Level:        st.Level,
+				Name:         levelName,
+				Requirements: req,
+				Bonuses:      bonuses,
+			})
+		}
+		// Keep at least one level for parser/simulator stability.
+		if len(ps.Levels) == 0 {
+			ps.Levels = append(ps.Levels, ProgressionLevel{
+				Level:        1,
+				Name:         "Initial",
+				Requirements: "start",
+				Bonuses:      []string{"baseline"},
+			})
+		}
+		out = append(out, ps)
+	}
+	return out
+}
+
+func (na *NovelgenAdapter) buildCounterSystems(setup *models.StorySetup) []CounterSystem {
+	counters := []CounterSystem{
+		{
+			Name:        "chapter_progress",
+			Track:       "story.chapter",
+			Description: "Story progression counter",
+			Milestones: []CounterMilestone{
+				{Value: 5, Reward: Reward{Title: "Arc Warmup", Description: "Reached chapter 5"}},
+				{Value: 10, Reward: Reward{Title: "Arc Core", Description: "Reached chapter 10"}},
+			},
+		},
+	}
+
+	// Add premise-driven counter for numeric pacing.
+	if setup != nil && len(setup.Premises) > 0 {
+		p := setup.Premises[0]
+		counters = append(counters, CounterSystem{
+			Name:        sanitizeID(p.Name) + "_progress",
+			Track:       "player.progression",
+			Description: "Primary progression pace tracker",
+			Milestones: []CounterMilestone{
+				{Value: 1, Reward: Reward{Title: "System Activated", Description: p.Name}},
+				{Value: 3, Reward: Reward{Title: "First Breakthrough", Description: "Core growth checkpoint"}},
+				{Value: 5, Reward: Reward{Title: "Mid-Arc Growth", Description: "Stable advancement"}},
+			},
+		})
+	}
+	return counters
+}
+
 // toCraftDSL creates craft phase DSL (detailed information)
 func (na *NovelgenAdapter) toCraftDSL(dsl *DSL) (*DSL, error) {
 	na.logger.Info(LogCategorySystem, "Generating craft DSL")
@@ -107,14 +396,14 @@ func (na *NovelgenAdapter) toCraftDSL(dsl *DSL) (*DSL, error) {
 	// Convert characters with full details
 	for name, char := range na.project.Characters {
 		player := na.convertNovelgenCharacterToPlayer(name, char)
-		
+
 		// Only set player if it's the protagonist
 		if char.RoleInStory == "主角" || char.RoleInStory == "protagonist" {
 			dsl.Characters.Player = player
 			// Don't add protagonist as NPC
 			continue
 		}
-		
+
 		// Otherwise add as NPC
 		npc := na.convertPlayerToNPC(player)
 		npc.IsPlaceholder = false
@@ -282,17 +571,17 @@ func (na *NovelgenAdapter) convertNovelgenCharacterToPlayer(name string, char rp
 // convertPlayerToNPC converts a player struct to NPC
 func (na *NovelgenAdapter) convertPlayerToNPC(player *Player) NPC {
 	return NPC{
-		ID:              player.ID,
-		Name:            player.Name,
-		Role:            player.RoleInStory,
-		Description:     player.Description,
-		Age:             player.Age,
-		Gender:          player.Gender,
-		Appearance:      "", // Would need separate field in novelgen
-		Background:      player.Background,
-		Personality:     player.Personality,
-		Affiliations:    player.Affiliations,
-		IsPlaceholder:   player.IsPlaceholder,
+		ID:            player.ID,
+		Name:          player.Name,
+		Role:          player.RoleInStory,
+		Description:   player.Description,
+		Age:           player.Age,
+		Gender:        player.Gender,
+		Appearance:    "", // Would need separate field in novelgen
+		Background:    player.Background,
+		Personality:   player.Personality,
+		Affiliations:  player.Affiliations,
+		IsPlaceholder: player.IsPlaceholder,
 	}
 }
 
@@ -340,6 +629,17 @@ func (na *NovelgenAdapter) ExportToDSLFiles(outputDir string) error {
 	na.logger.Info(LogCategorySystem, "Exporting to DSL files",
 		map[string]interface{}{"output_dir": outputDir})
 
+	// Generate setup DSL
+	setupDSL, err := na.ToDSL(PhaseSetup)
+	if err != nil {
+		return fmt.Errorf("failed to generate setup DSL: %w", err)
+	}
+
+	setupPath := filepath.Join(outputDir, "00_setup.rpg")
+	if err := na.writeDSLToFile(setupDSL, setupPath); err != nil {
+		return fmt.Errorf("failed to write setup DSL: %w", err)
+	}
+
 	// Generate outline DSL
 	outlineDSL, err := na.ToDSL(PhaseOutline)
 	if err != nil {
@@ -364,6 +664,7 @@ func (na *NovelgenAdapter) ExportToDSLFiles(outputDir string) error {
 
 	na.logger.Info(LogCategorySystem, "DSL export completed",
 		map[string]interface{}{
+			"setup_file":   setupPath,
 			"outline_file": outlinePath,
 			"craft_file":   craftPath,
 		})
