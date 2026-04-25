@@ -255,72 +255,17 @@ func (p *Parser) expectCharEnhanced(c byte) error {
 	return nil
 }
 
-// Enhanced validation error helpers
-
-// AddErrorWithPos adds an error with position information
-func (v *Validator) AddErrorWithPos(field, message string, pos Position) {
-	v.errors = append(v.errors, ValidationError{
-		Line:    pos.Line,
-		Column:  pos.Column,
-		Field:   field,
-		Message: message,
-	})
-}
-
-// AddValidationError adds a detailed validation error
-func (v *Validator) AddValidationError(err *DSLValidationError) {
-	v.errors = append(v.errors, ValidationError{
-		Line:    err.Pos.Line,
-		Column:  err.Pos.Column,
-		Field:   err.Field,
-		Message: err.Message,
-	})
-}
-
 // Common error messages with hints
 var CommonErrorHints = map[string]string{
-	"expected identifier":      "Identifiers must start with a letter and can contain letters, numbers, and underscores",
-	"expected string":          "Strings must be enclosed in double quotes",
-	"expected number":          "Numbers can be integers or decimals",
-	"unterminated string":      "Check for missing closing quote",
-	"unterminated block":       "Check for missing closing brace '}'",
-	"unknown block type":       "Valid block types are: metadata, world, characters, storyline, systems",
-	"duplicate id":             "All IDs must be unique within their scope",
-	"undefined reference":      "Make sure the referenced ID is defined before use",
-	"invalid expression":       "Check expression syntax and variable names",
-	"type mismatch":            "Ensure values match the expected type for this field",
-	"missing required field":   "This field is required and cannot be empty",
-	"invalid hook filter":      "Filter syntax: enemy_id == 'value' or damage >= 100",
-	"invalid counter config":   "Counter requires track and milestones fields",
-}
-
-// GetErrorHint returns a hint for a common error message
-func GetErrorHint(message string) string {
-	for key, hint := range CommonErrorHints {
-		if strings.Contains(strings.ToLower(message), key) {
-			return hint
-		}
-	}
-	return ""
-}
-
-// WrapError wraps an error with additional context
-func WrapError(err error, context string) error {
-	if err == nil {
-		return nil
-	}
-	return fmt.Errorf("%s: %w", context, err)
-}
-
-// WrapErrorWithPos wraps an error with position context
-func WrapErrorWithPos(err error, pos Position, operation string) error {
-	if err == nil {
-		return nil
-	}
-	return &DSLExecutionError{
-		Pos:       pos,
-		Operation: operation,
-		Message:   err.Error(),
-		Cause:     err,
-	}
+	"expected identifier":    "Identifiers must start with a letter and can contain letters, numbers, and underscores",
+	"expected string":        "Strings must be enclosed in double quotes",
+	"expected number":        "Numbers can be integers or decimals",
+	"unterminated string":    "Check for missing closing quote",
+	"unterminated block":     "Check for missing closing brace '}'",
+	"unknown block type":     "Valid block types are: metadata, world, characters, storyline, systems",
+	"duplicate id":           "All IDs must be unique within their scope",
+	"undefined reference":    "Make sure the referenced ID is defined before use",
+	"invalid expression":     "Check expression syntax and variable names",
+	"type mismatch":          "Ensure values match the expected type for this field",
+	"missing required field": "This field is required and cannot be empty",
 }

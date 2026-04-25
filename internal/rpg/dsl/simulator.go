@@ -66,11 +66,11 @@ type SimulationContext struct {
 // ProtagonistState 主角状态
 type ProtagonistState struct {
 	Name      string
-	Level     int      // 等级/境界（如：练气期、筑基期、金丹期...）
-	Power     int      // 战斗力/修为
-	HP        int      // 生命/体力
+	Level     int // 等级/境界（如：练气期、筑基期、金丹期...）
+	Power     int // 战斗力/修为
+	HP        int // 生命/体力
 	MaxHP     int
-	MP        int      // 法力/精神力/能量
+	MP        int // 法力/精神力/能量
 	MaxMP     int
 	Skills    []string // 已掌握的技能/功法
 	Items     []string // 拥有的道具/法宝/装备
@@ -80,9 +80,9 @@ type ProtagonistState struct {
 
 // Capacity 储物空间
 type Capacity struct {
-	Type     string // 储物袋、空间背包、系统空间、纳戒等
-	Current  int
-	Max      int
+	Type      string // 储物袋、空间背包、系统空间、纳戒等
+	Current   int
+	Max       int
 	CanExpand bool // 是否可以扩容
 }
 
@@ -99,8 +99,8 @@ type EventLog struct {
 // NewSimulator 创建新的模拟器
 func NewSimulator(dsl *DSL) *Simulator {
 	return &Simulator{
-		DSL:     dsl,
-		Issues:  make([]SimulationIssue, 0),
+		DSL:    dsl,
+		Issues: make([]SimulationIssue, 0),
 		Context: &SimulationContext{
 			ActiveCharacters: make(map[string]bool),
 			KnownInfo:        make(map[string]bool),
@@ -939,17 +939,6 @@ func (s *Simulator) GetIssuesBySeverity(severity SeverityLevel) []SimulationIssu
 	var result []SimulationIssue
 	for _, issue := range s.Issues {
 		if issue.Severity == severity {
-			result = append(result, issue)
-		}
-	}
-	return result
-}
-
-// GetIssuesByType 按类型获取问题
-func (s *Simulator) GetIssuesByType(issueType IssueType) []SimulationIssue {
-	var result []SimulationIssue
-	for _, issue := range s.Issues {
-		if issue.Type == issueType {
 			result = append(result, issue)
 		}
 	}

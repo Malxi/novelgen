@@ -367,17 +367,3 @@ func (c *Converter) mapLocationType(dslType string) rpg.MapType {
 		return rpg.MapTypeField
 	}
 }
-
-// GetConvertedID gets the converted RPG ID from DSL ID
-func (c *Converter) GetConvertedID(dslID string) (string, bool) {
-	if id, ok := c.charMap[dslID]; ok {
-		return id, true
-	}
-	if id, ok := c.locMap[dslID]; ok {
-		return id, true
-	}
-	if id, ok := c.itemMap[dslID]; ok {
-		return id, true
-	}
-	return "", false
-}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -55,13 +54,13 @@ const (
 
 // LogEntry represents a single log entry
 type LogEntry struct {
-	Timestamp time.Time       `json:"timestamp"`
-	Level     LogLevel        `json:"level"`
-	Category  LogCategory     `json:"category"`
-	Message   string          `json:"message"`
+	Timestamp time.Time              `json:"timestamp"`
+	Level     LogLevel               `json:"level"`
+	Category  LogCategory            `json:"category"`
+	Message   string                 `json:"message"`
 	Fields    map[string]interface{} `json:"fields,omitempty"`
-	Source    string          `json:"source,omitempty"`
-	Duration  time.Duration   `json:"duration,omitempty"`
+	Source    string                 `json:"source,omitempty"`
+	Duration  time.Duration          `json:"duration,omitempty"`
 }
 
 // Logger provides DSL execution logging capabilities
@@ -127,22 +126,6 @@ func NewLogger(writer io.Writer, opts ...LoggerOption) *Logger {
 	}
 
 	return l
-}
-
-// NewFileLogger creates a logger that writes to a file
-func NewFileLogger(path string, opts ...LoggerOption) (*Logger, error) {
-	// Create directory if needed
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create log directory: %w", err)
-	}
-
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open log file: %w", err)
-	}
-
-	return NewLogger(file, opts...), nil
 }
 
 // NewConsoleLogger creates a logger that writes to stdout
@@ -271,25 +254,6 @@ func (l *Logger) Error(category LogCategory, message string, fields ...map[strin
 	l.log(LogLevelError, category, message, f)
 }
 
-// Fatal logs a fatal message
-func (l *Logger) Fatal(category LogCategory, message string, fields ...map[string]interface{}) {
-	var f map[string]interface{}
-	if len(fields) > 0 {
-		f = fields[0]
-	}
-	l.log(LogLevelFatal, category, message, f)
-}
-
-// LogTiming logs a timed operation
-func (l *Logger) LogTiming(category LogCategory, operation string, duration time.Duration, fields map[string]interface{}) {
-	if fields == nil {
-		fields = make(map[string]interface{})
-	}
-	fields["operation"] = operation
-	fields["duration_ms"] = duration.Milliseconds()
-	l.log(LogLevelInfo, category, fmt.Sprintf("%s completed", operation), fields)
-}
-
 // GetEntries returns all stored entries
 func (l *Logger) GetEntries() []LogEntry {
 	l.mu.RLock()
@@ -312,47 +276,10 @@ func (l *Logger) GetEntriesByCategory(category LogCategory) []LogEntry {
 	return result
 }
 
-// GetEntriesByLevel returns entries filtered by level
-func (l *Logger) GetEntriesByLevel(level LogLevel) []LogEntry {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
-	var result []LogEntry
-	for _, entry := range l.entries {
-		if entry.Level >= level {
-			result = append(result, entry)
-		}
-	}
-	return result
-}
-
-// Clear clears all stored entries
-func (l *Logger) Clear() {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.entries = make([]LogEntry, 0)
-}
-
-// ExportToFile exports all entries to a JSON file
-func (l *Logger) ExportToFile(path string) error {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
-
-	data, err := json.MarshalIndent(l.entries, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal entries: %w", err)
-	}
-
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("failed to write log file: %w", err)
-	}
-
-	return nil
-}
-
 // DSLExecutionLogger provides high-level logging for DSL operations
 type DSLExecutionLogger struct {
-	logger    *Logger
-	startTime time.Time
+	logger     *Logger
+	startTime  time.Time
 	operations map[string]time.Time
 }
 

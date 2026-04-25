@@ -187,10 +187,10 @@ content := agent.GenerateChapter(ctx, chapter, ...)
 
 ```bash
 # 运行基准测试
-novelgen benchmark run -b mine
+novelgen rpg bench
 
-# 生成报告
-novelgen benchmark report --output report.json
+# 运行指定测试用例
+novelgen rpg bench --only power_collapse_frequent_breakthrough
 ```
 
 ---

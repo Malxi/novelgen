@@ -467,6 +467,26 @@ func (snc *SmartNovelChecker) GenerateSmartReport() string {
 // 辅助函数
 // ============================================================
 
+func extractChapterTitle(text string) string {
+	lines := strings.Split(text, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "# ") {
+			return strings.TrimPrefix(line, "# ")
+		}
+		if strings.HasPrefix(line, "## ") {
+			return strings.TrimPrefix(line, "## ")
+		}
+	}
+	return "未知标题"
+}
+
+func extractChapterID(filename string) string {
+	base := strings.TrimPrefix(filename, "chapter-")
+	base = strings.TrimSuffix(base, ".md")
+	return base
+}
+
 func extractOtherCharacters(text, protagonist string) []string {
 	// 提取非主角的角色名
 	allChars := extractCharacterNames(text)

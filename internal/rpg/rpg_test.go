@@ -49,7 +49,7 @@ func TestLevelUp(t *testing.T) {
 	initialHP := player.BaseStats.HP
 
 	// 给予足够经验升级
-	leveledUp := player.GainExp(150)
+	leveledUp, _ := player.GainExp(150)
 
 	if !leveledUp {
 		t.Error("Expected level up, but didn't happen")

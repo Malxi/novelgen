@@ -10,21 +10,6 @@ const (
 	DifficultyExpert                        // 专家 - 隐含问题、复杂场景
 )
 
-func (d DifficultyLevel) String() string {
-	switch d {
-	case DifficultyEasy:
-		return "easy"
-	case DifficultyMedium:
-		return "medium"
-	case DifficultyHard:
-		return "hard"
-	case DifficultyExpert:
-		return "expert"
-	default:
-		return "unknown"
-	}
-}
-
 // BenchmarkTestCase 标注了已知问题的基准测试用例
 type BenchmarkTestCase struct {
 	Name        string
@@ -150,7 +135,7 @@ func StandardTestCases() []BenchmarkTestCase {
 			{Category: "resurrection", SubCategory: "no_cost", Target: "林砚", Description: "复活无代价，战力不减反增", Severity: "critical"},
 		},
 		ValidContent: []string{},
-		Tags: []string{"resurrection", "frequency", "cost"},
+		Tags:         []string{"resurrection", "frequency", "cost"},
 	})
 
 	// TC3: 时间线跳跃过多
@@ -169,7 +154,7 @@ func StandardTestCases() []BenchmarkTestCase {
 			{Category: "timeline", SubCategory: "no_transition", Target: "时间线", Description: "时间跳跃之间缺乏内容填充", Severity: "warning"},
 		},
 		ValidContent: []string{},
-		Tags: []string{"timeline", "jump", "frequency"},
+		Tags:         []string{"timeline", "jump", "frequency"},
 	})
 
 	// TC4: 角色矛盾 - 角色同时在两处
@@ -184,7 +169,7 @@ func StandardTestCases() []BenchmarkTestCase {
 			{Category: "character", SubCategory: "location_contradiction", Target: "林砚", Description: "林砚同时在矿场和宗门", Severity: "critical"},
 		},
 		ValidContent: []string{},
-		Tags: []string{"character", "location", "contradiction"},
+		Tags:         []string{"character", "location", "contradiction"},
 	})
 
 	// TC5: 正常内容 - 不应误报
@@ -220,7 +205,7 @@ func StandardTestCases() []BenchmarkTestCase {
 			{Category: "character", SubCategory: "tool_character", Target: "张三", Description: "只出场一次的工具人", Severity: "warning"},
 		},
 		ValidContent: []string{},
-		Tags: []string{"character", "tool", "disappear"},
+		Tags:         []string{"character", "tool", "disappear"},
 	})
 
 	// TC7: 节奏失衡 - 全快节奏
@@ -251,7 +236,7 @@ func StandardTestCases() []BenchmarkTestCase {
 			{Category: "pacing", SubCategory: "all_fast", Target: "V1", Description: "连续5章快节奏", Severity: "error"},
 		},
 		ValidContent: []string{},
-		Tags: []string{"pacing", "fast", "stress"},
+		Tags:         []string{"pacing", "fast", "stress"},
 	})
 
 	// TC8: 战力系统不一致 - 等级倒退后无解释
@@ -267,7 +252,7 @@ func StandardTestCases() []BenchmarkTestCase {
 			{Category: "power", SubCategory: "inconsistency", Target: "林砚", Description: "修为突然跌落又恢复，无解释", Severity: "critical"},
 		},
 		ValidContent: []string{},
-		Tags: []string{"power", "inconsistency", "regression"},
+		Tags:         []string{"power", "inconsistency", "regression"},
 	})
 
 	// TC9: 隐含的时间跳跃（不使用标准关键词）
@@ -283,7 +268,7 @@ func StandardTestCases() []BenchmarkTestCase {
 			{Category: "timeline", SubCategory: "implicit_jumps", Target: "时间线", Description: "隐含时间跳跃：春去秋来、不知多少寒暑、斗转星移、半生", Severity: "warning"},
 		},
 		ValidContent: []string{},
-		Tags: []string{"timeline", "implicit", "poetic"},
+		Tags:         []string{"timeline", "implicit", "poetic"},
 	})
 
 	// ============================================================
@@ -300,7 +285,7 @@ func StandardTestCases() []BenchmarkTestCase {
 			{Category: "plot", SubCategory: "forbidden_element", Target: "复活", Description: "无理由的复活", Severity: "critical"},
 		},
 		ValidContent: []string{},
-		Tags: []string{"plot", "forbidden", "resurrection"},
+		Tags:         []string{"plot", "forbidden", "resurrection"},
 	})
 
 	// TC11: 角色关系矛盾 - 敌人突然变盟友无铺垫
@@ -317,7 +302,7 @@ func StandardTestCases() []BenchmarkTestCase {
 			{Category: "plot", SubCategory: "no_transition", Target: "关系转变", Description: "角色关系180度转变无解释", Severity: "warning"},
 		},
 		ValidContent: []string{},
-		Tags: []string{"character", "relationship", "inconsistency"},
+		Tags:         []string{"character", "relationship", "inconsistency"},
 	})
 
 	// TC12: 战力膨胀 - 跨级别秒杀
@@ -334,7 +319,7 @@ func StandardTestCases() []BenchmarkTestCase {
 			{Category: "power", SubCategory: "no_struggle", Target: "战斗", Description: "战斗缺乏过程，直接秒杀", Severity: "error"},
 		},
 		ValidContent: []string{},
-		Tags: []string{"power", "inflation", "cross_level"},
+		Tags:         []string{"power", "inflation", "cross_level"},
 	})
 
 	// ============================================================
@@ -360,7 +345,7 @@ func StandardTestCases() []BenchmarkTestCase {
 			{Category: "timeline", SubCategory: "excessive_jumps", Target: "时间线", Description: "三天、一个月后", Severity: "warning"},
 		},
 		ValidContent: []string{},
-		Tags: []string{"complex", "multiple", "mixed_issues"},
+		Tags:         []string{"complex", "multiple", "mixed_issues"},
 	})
 
 	// TC14: 隐蔽的战力崩坏 - 暗示性突破
@@ -378,7 +363,7 @@ func StandardTestCases() []BenchmarkTestCase {
 			{Category: "power", SubCategory: "implicit_jump", Target: "林砚", Description: "战力通过暗示突然暴涨", Severity: "error"},
 		},
 		ValidContent: []string{},
-		Tags: []string{"power", "hidden", "implicit", "expert"},
+		Tags:         []string{"power", "hidden", "implicit", "expert"},
 	})
 
 	// TC15: 时间悖论 - 跨章节时间线矛盾
@@ -395,50 +380,8 @@ func StandardTestCases() []BenchmarkTestCase {
 			{Category: "timeline", SubCategory: "cross_chapter_inconsistency", Target: "时间线", Description: "跨章节时间线不一致", Severity: "error"},
 		},
 		ValidContent: []string{},
-		Tags: []string{"timeline", "paradox", "cross_chapter", "expert"},
+		Tags:         []string{"timeline", "paradox", "cross_chapter", "expert"},
 	})
 
 	return cases
-}
-
-// GetTestCasesByDifficulty 按难度获取测试用例
-func GetTestCasesByDifficulty(level DifficultyLevel) []BenchmarkTestCase {
-	all := StandardTestCases()
-	var result []BenchmarkTestCase
-	for _, tc := range all {
-		if tc.Difficulty == level {
-			result = append(result, tc)
-		}
-	}
-	return result
-}
-
-// GetTestCasesByTag 按标签获取测试用例
-func GetTestCasesByTag(tag string) []BenchmarkTestCase {
-	all := StandardTestCases()
-	var result []BenchmarkTestCase
-	for _, tc := range all {
-		for _, t := range tc.Tags {
-			if t == tag {
-				result = append(result, tc)
-				break
-			}
-		}
-	}
-	return result
-}
-
-// GetTestCasesByCategory 按问题类别获取测试用例
-func GetTestCasesByCategory(category string) []BenchmarkTestCase {
-	all := StandardTestCases()
-	var result []BenchmarkTestCase
-	for _, tc := range all {
-		for _, issue := range tc.KnownIssues {
-			if issue.Category == category {
-				result = append(result, tc)
-				break
-			}
-		}
-	}
-	return result
 }

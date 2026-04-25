@@ -624,62 +624,6 @@ func (na *NovelgenAdapter) convertNovelgenItemToItem(name string, item rpg.Novel
 	}
 }
 
-// ExportToDSLFiles exports the project to DSL files
-func (na *NovelgenAdapter) ExportToDSLFiles(outputDir string) error {
-	na.logger.Info(LogCategorySystem, "Exporting to DSL files",
-		map[string]interface{}{"output_dir": outputDir})
-
-	// Generate setup DSL
-	setupDSL, err := na.ToDSL(PhaseSetup)
-	if err != nil {
-		return fmt.Errorf("failed to generate setup DSL: %w", err)
-	}
-
-	setupPath := filepath.Join(outputDir, "00_setup.rpg")
-	if err := na.writeDSLToFile(setupDSL, setupPath); err != nil {
-		return fmt.Errorf("failed to write setup DSL: %w", err)
-	}
-
-	// Generate outline DSL
-	outlineDSL, err := na.ToDSL(PhaseOutline)
-	if err != nil {
-		return fmt.Errorf("failed to generate outline DSL: %w", err)
-	}
-
-	outlinePath := filepath.Join(outputDir, "01_outline.rpg")
-	if err := na.writeDSLToFile(outlineDSL, outlinePath); err != nil {
-		return fmt.Errorf("failed to write outline DSL: %w", err)
-	}
-
-	// Generate craft DSL
-	craftDSL, err := na.ToDSL(PhaseCraft)
-	if err != nil {
-		return fmt.Errorf("failed to generate craft DSL: %w", err)
-	}
-
-	craftPath := filepath.Join(outputDir, "02_craft.rpg")
-	if err := na.writeDSLToFile(craftDSL, craftPath); err != nil {
-		return fmt.Errorf("failed to write craft DSL: %w", err)
-	}
-
-	na.logger.Info(LogCategorySystem, "DSL export completed",
-		map[string]interface{}{
-			"setup_file":   setupPath,
-			"outline_file": outlinePath,
-			"craft_file":   craftPath,
-		})
-
-	return nil
-}
-
-// writeDSLToFile writes DSL to a file
-func (na *NovelgenAdapter) writeDSLToFile(dsl *DSL, path string) error {
-	na.logger.Info(LogCategorySystem, "Writing DSL file",
-		map[string]interface{}{"path": path})
-
-	return dsl.WriteToFile(path)
-}
-
 // Helper functions
 
 func sanitizeID(name string) string {

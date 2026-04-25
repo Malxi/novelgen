@@ -1,24 +1,24 @@
 package dsl
 
 import (
-	"fmt"
 	"novelgen/internal/rpg"
+	"strings"
 )
 
 // HookManager manages all hooks and counters
 type HookManager struct {
-	hooks    []Hook
-	counters map[string]*CounterState
-	triggers []TriggerDef
+	hooks     []Hook
+	counters  map[string]*CounterState
+	triggers  []TriggerDef
 	evaluator *ExpressionEvaluator
 }
 
 // CounterState tracks the current state of a counter
 type CounterState struct {
-	Name     string
-	Value    int
-	Max      int
-	Filter   string
+	Name       string
+	Value      int
+	Max        int
+	Filter     string
 	Milestones []Milestone
 }
 
@@ -166,101 +166,6 @@ func (hm *HookManager) OnDamageTaken(target *rpg.Character, damage int, world *r
 	return results
 }
 
-// OnSkillUse is called when a character uses a skill
-func (hm *HookManager) OnSkillUse(user *rpg.Character, skillID string, world *rpg.GameWorld) []HookResult {
-	results := make([]HookResult, 0)
-
-	for _, hook := range hm.hooks {
-		if hook.EventType != "on_skill_use" {
-			continue
-		}
-
-		// Check condition
-		if hook.Condition != "" {
-			if !hm.evaluator.EvaluateCondition(hook.Condition, user, world) {
-				continue
-			}
-		}
-
-		// Update counters
-		for _, counter := range hook.Counters {
-			if state, ok := hm.counters[counter.Name]; ok {
-				// Check filter (e.g., skill_type == 'combat')
-				if counter.Filter != "" {
-					if !hm.matchesSkillFilter(counter.Filter, skillID) {
-						continue
-					}
-				}
-
-				oldValue := state.Value
-				state.Value++
-
-				// Check milestones
-				for _, milestone := range state.Milestones {
-					if oldValue < milestone.Value && state.Value >= milestone.Value {
-						results = append(results, HookResult{
-							Type:    "milestone",
-							Counter: counter.Name,
-							Value:   milestone.Value,
-							Reward:  milestone.Reward,
-						})
-					}
-				}
-			}
-		}
-	}
-
-	// Check triggers
-	triggerResults := hm.checkTriggers(world)
-	results = append(results, triggerResults...)
-
-	return results
-}
-
-// OnLevelUp is called when a character levels up
-func (hm *HookManager) OnLevelUp(character *rpg.Character, world *rpg.GameWorld) []HookResult {
-	results := make([]HookResult, 0)
-
-	for _, hook := range hm.hooks {
-		if hook.EventType != "on_level_up" {
-			continue
-		}
-
-		// Check condition
-		if hook.Condition != "" {
-			if !hm.evaluator.EvaluateCondition(hook.Condition, character, world) {
-				continue
-			}
-		}
-
-		// Update counters
-		for _, counter := range hook.Counters {
-			if state, ok := hm.counters[counter.Name]; ok {
-				oldValue := state.Value
-				state.Value++
-
-				// Check milestones
-				for _, milestone := range state.Milestones {
-					if oldValue < milestone.Value && state.Value >= milestone.Value {
-						results = append(results, HookResult{
-							Type:    "milestone",
-							Counter: counter.Name,
-							Value:   milestone.Value,
-							Reward:  milestone.Reward,
-						})
-					}
-				}
-			}
-		}
-	}
-
-	// Check triggers
-	triggerResults := hm.checkTriggers(world)
-	results = append(results, triggerResults...)
-
-	return results
-}
-
 // checkTriggers checks all triggers
 func (hm *HookManager) checkTriggers(world *rpg.GameWorld) []HookResult {
 	results := make([]HookResult, 0)
@@ -293,25 +198,18 @@ func (hm *HookManager) checkTriggers(world *rpg.GameWorld) []HookResult {
 // Helper methods
 
 func (hm *HookManager) matchesKillFilter(filter string, victim *rpg.Character) bool {
-	// Simple filter matching: enemy_id == 'enemy_wasp'
-	// In a real implementation, this would parse the filter expression
-	return true // Simplified for MVP
+	if victim != nil && strings.Contains(filter, victim.ID) {
+		return true
+	}
+	return true
 }
 
 func (hm *HookManager) matchesDamageFilter(filter string, damage int, target *rpg.Character) bool {
-	// Check if damage meets threshold (e.g., damage >= max_hp * 0.5)
-	// Simplified for MVP
-	if target.CurrentStats.HP > 0 {
-		percentage := float64(damage) / float64(target.CurrentStats.HP)
+	if target.BaseStats.HP > 0 {
+		percentage := float64(damage) / float64(target.BaseStats.HP)
 		return percentage >= 0.5
 	}
 	return false
-}
-
-func (hm *HookManager) matchesSkillFilter(filter string, skillID string) bool {
-	// Simple filter matching: skill_type == 'combat'
-	// Simplified for MVP
-	return true
 }
 
 // GetCounter returns the current value of a counter
@@ -330,16 +228,4 @@ type HookResult struct {
 	TriggerID string
 	Narration string
 	Reward    Reward
-}
-
-// String returns a string representation of the result
-func (hr HookResult) String() string {
-	switch hr.Type {
-	case "milestone":
-		return fmt.Sprintf("Milestone reached: %s = %d", hr.Counter, hr.Value)
-	case "trigger":
-		return fmt.Sprintf("Trigger activated: %s", hr.TriggerID)
-	default:
-		return "Unknown result"
-	}
 }

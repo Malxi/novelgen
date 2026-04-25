@@ -523,16 +523,6 @@ func (ee *EnhancedExpressionEvaluator) toBool(v interface{}) bool {
 	}
 }
 
-// GetAllFunctions returns list of all available functions
-func (ee *EnhancedExpressionEvaluator) GetAllFunctions() []string {
-	funcs := make([]string, 0, len(ee.functions))
-	for name := range ee.functions {
-		funcs = append(funcs, name)
-	}
-	sort.Strings(funcs)
-	return funcs
-}
-
 // Evaluate evaluates an expression and returns the result
 // This is a convenience wrapper around EvaluateExpression
 func (ee *EnhancedExpressionEvaluator) Evaluate(expression string, context map[string]interface{}) (interface{}, error) {

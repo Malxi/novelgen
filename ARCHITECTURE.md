@@ -123,8 +123,8 @@ novelgen/
 │   │   │   ├── metrics.go        # 指标收集
 │   │   │   ├── cross_chapter.go  # 跨章检测
 │   │   │   ├── fuzz_generator.go # 模糊测试
-│   │   │   ├── novel_checker.go  # 小说检查器
-│   │   │   └── cmd.go            # 命令行接口
+│   │   │   ├── chapter_sort.go   # 章节文件排序
+│   │   │   └── novel_checker_v2.go # 智能小说检查器
 │   │   ├── constraint_system.go  # 约束系统
 │   │   ├── simulation.go         # 模拟引擎
 │   │   ├── novelgen_adapter.go   # Novelgen 适配器
@@ -449,10 +449,10 @@ func (cs *ConstraintSystem) validateMyConstraint(chapterID, content string) []Co
 
 ```bash
 # 运行基准测试
-novelgen benchmark run
+novelgen rpg bench
 
-# 生成报告
-novelgen benchmark run --output report.json
+# 运行指定测试用例
+novelgen rpg bench --only power_collapse_frequent_breakthrough
 ```
 
 **功能：**

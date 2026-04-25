@@ -1,10 +1,9 @@
 package cmd
 
 import (
-"fmt"
-"testing"
+	"testing"
 )
 
 func TestDebugLoadDSL(t *testing.T) {
-DebugLoadDSL("fire-galaxy")
+	DebugLoadDSL("fire-galaxy")
 }
