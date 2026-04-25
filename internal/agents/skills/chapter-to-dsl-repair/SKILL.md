@@ -31,7 +31,7 @@ Return **only** corrected DSL content inside JSON field `dsl_content`.
 
 - structural: `metadata`, `world`, `characters`, `storyline`, `systems`
 - entities: `location`, `player`, `npc`, `chapter`, `objective`, `step`, `event`
-- event nested: `combat`, `move`, `spawn`, `on_complete`
+- event nested: `combat`, `move`, `spawn`, `on_complete`, `state_delta`
 - assignments use `=` only
 
 ## Frequent Fixes
@@ -53,6 +53,7 @@ Return **only** corrected DSL content inside JSON field `dsl_content`.
   - optional `move { to = "loc_xxx" }`
   - optional `spawn { actor = "char_xxx" location = "loc_xxx" }`
   - optional `on_complete { narration = "..." exp = 10 }`
+  - optional `state_delta { target = "char_xxx" kind = "cultivation|lifespan|injury|resource|death|revive|time|transition" field = "..." from = "..." to = "..." delta = -1 unit = "..." cost = "..." note = "..." }`
 
 ## Output
 
@@ -63,4 +64,3 @@ Return JSON only:
   "dsl_content": "<valid DSL text>"
 }
 ```
-

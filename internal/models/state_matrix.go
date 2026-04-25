@@ -54,4 +54,5 @@ type StateMatrix struct {
 	Gates         map[string]*GateState      // gate name -> gate state
 	Status        map[string]*StatusState    // character_name_status_type -> status state
 	Memories      map[string][]*MemoryState  // character name -> list of memories
+	RPG           *RPGState                  // Structured numeric/typed state for RPG simulation and prompts
 }

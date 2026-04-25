@@ -605,11 +605,31 @@ func (p *Parser) parseStep() (*Step, error) {
 	step := &Step{}
 
 	// Parse step number
-	numStr, err := p.parseNumber()
-	if err != nil {
-		return nil, err
+	p.skipWhitespace()
+	switch {
+	case p.peekChar('{'):
+		step.Order = 0
+	case p.peekChar('"'):
+		numStr, err := p.parseString()
+		if err != nil {
+			return nil, err
+		}
+		step.Order, _ = strconv.Atoi(numStr)
+	case p.peekChar('='):
+		p.advance()
+		p.skipWhitespace()
+		numStr, err := p.parseNumber()
+		if err != nil {
+			return nil, err
+		}
+		step.Order, _ = strconv.Atoi(numStr)
+	default:
+		numStr, err := p.parseNumber()
+		if err != nil {
+			return nil, err
+		}
+		step.Order, _ = strconv.Atoi(numStr)
 	}
-	step.Order, _ = strconv.Atoi(numStr)
 
 	if err := p.expectChar('{'); err != nil {
 		return nil, err
@@ -708,6 +728,14 @@ func (p *Parser) parseEvent() (*Event, error) {
 			event.OnComplete = result
 			continue
 		}
+		if key == "state_delta" {
+			delta, err := p.parseStateDelta()
+			if err != nil {
+				return nil, err
+			}
+			event.StateDeltas = append(event.StateDeltas, *delta)
+			continue
+		}
 
 		if err := p.expectChar('='); err != nil {
 			return nil, err
@@ -749,6 +777,62 @@ func (p *Parser) parseEvent() (*Event, error) {
 	}
 
 	return event, nil
+}
+
+func (p *Parser) parseStateDelta() (*StateDelta, error) {
+	delta := &StateDelta{}
+
+	if err := p.expectChar('{'); err != nil {
+		return nil, err
+	}
+
+	for !p.peekChar('}') {
+		p.skipWhitespace()
+		if p.peekChar('}') {
+			break
+		}
+
+		key, err := p.parseIdentifier()
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectChar('='); err != nil {
+			return nil, err
+		}
+		value, err := p.parseValue()
+		if err != nil {
+			return nil, err
+		}
+
+		switch key {
+		case "target":
+			delta.Target = p.toString(value)
+		case "kind":
+			delta.Kind = p.toString(value)
+		case "field":
+			delta.Field = p.toString(value)
+		case "from":
+			delta.From = p.toString(value)
+		case "to":
+			delta.To = p.toString(value)
+		case "delta":
+			if v, ok := p.toInt(value); ok {
+				delta.Delta = v
+			}
+		case "unit":
+			delta.Unit = p.toString(value)
+		case "cost":
+			delta.Cost = p.toString(value)
+		case "note":
+			delta.Note = p.toString(value)
+		}
+	}
+
+	if err := p.expectChar('}'); err != nil {
+		return nil, err
+	}
+
+	return delta, nil
 }
 
 // parseCombatEvent parses the combat block.
@@ -1099,21 +1183,43 @@ func (p *Parser) parseString() (string, error) {
 		return "", fmt.Errorf("expected string")
 	}
 	p.advance() // skip opening quote
-	start := p.pos
-	for !p.eof() && p.peek() != '"' {
-		p.advance()
+	var b strings.Builder
+	for !p.eof() {
+		ch := p.advance()
+		if ch == '\\' {
+			if p.eof() {
+				b.WriteByte(ch)
+				break
+			}
+			next := p.advance()
+			switch next {
+			case '"', '\\', '/':
+				b.WriteByte(next)
+			case 'n':
+				b.WriteByte('\n')
+			case 'r':
+				b.WriteByte('\r')
+			case 't':
+				b.WriteByte('\t')
+			default:
+				b.WriteByte(next)
+			}
+			continue
+		}
+		if ch == '"' {
+			return b.String(), nil
+		}
+		b.WriteByte(ch)
 	}
-	if p.eof() {
-		return "", fmt.Errorf("unterminated string")
-	}
-	str := p.content[start:p.pos]
-	p.advance() // skip closing quote
-	return str, nil
+	return "", fmt.Errorf("unterminated string")
 }
 
 func (p *Parser) parseNumber() (string, error) {
 	p.skipWhitespace()
 	start := p.pos
+	if !p.eof() && p.peek() == '-' {
+		p.advance()
+	}
 	for !p.eof() {
 		ch := p.peek()
 		if (ch >= '0' && ch <= '9') || ch == '.' {

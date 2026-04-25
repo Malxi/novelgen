@@ -477,6 +477,11 @@ func (dw *DSLWriter) writeStep(step Step) error {
 					}
 					dw.writeField("enemies", dw.formatStringSlice(enemyIDs))
 				}
+				for _, delta := range step.Event.StateDeltas {
+					if err := dw.writeStateDelta(delta); err != nil {
+						return err
+					}
+				}
 
 				return nil
 			})
@@ -486,6 +491,39 @@ func (dw *DSLWriter) writeStep(step Step) error {
 	})
 
 	return nil
+}
+
+func (dw *DSLWriter) writeStateDelta(delta StateDelta) error {
+	return dw.writeBlock("state_delta", "", func() error {
+		if delta.Target != "" {
+			dw.writeField("target", fmt.Sprintf("%q", delta.Target))
+		}
+		if delta.Kind != "" {
+			dw.writeField("kind", fmt.Sprintf("%q", delta.Kind))
+		}
+		if delta.Field != "" {
+			dw.writeField("field", fmt.Sprintf("%q", delta.Field))
+		}
+		if delta.From != "" {
+			dw.writeField("from", fmt.Sprintf("%q", delta.From))
+		}
+		if delta.To != "" {
+			dw.writeField("to", fmt.Sprintf("%q", delta.To))
+		}
+		if delta.Delta != 0 {
+			dw.writeField("delta", fmt.Sprintf("%d", delta.Delta))
+		}
+		if delta.Unit != "" {
+			dw.writeField("unit", fmt.Sprintf("%q", delta.Unit))
+		}
+		if delta.Cost != "" {
+			dw.writeField("cost", fmt.Sprintf("%q", delta.Cost))
+		}
+		if delta.Note != "" {
+			dw.writeField("note", fmt.Sprintf("%q", delta.Note))
+		}
+		return nil
+	})
 }
 
 // writeSystems writes the systems block

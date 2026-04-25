@@ -300,11 +300,12 @@ type Trigger struct {
 
 // Event represents a game event
 type Event struct {
-	Type       string // spawn, move, combat, dialogue, acquire
-	Trigger    *Trigger
-	Require    *Requirement
-	OnComplete *EventResult
-	OnFail     *EventResult
+	Type        string // spawn, move, combat, dialogue, acquire
+	Trigger     *Trigger
+	Require     *Requirement
+	OnComplete  *EventResult
+	OnFail      *EventResult
+	StateDeltas []StateDelta
 
 	// Type-specific fields
 	Spawn    *SpawnEvent
@@ -312,6 +313,19 @@ type Event struct {
 	Combat   *CombatEvent
 	Dialogue *DialogueEvent
 	Acquire  *AcquireEvent
+}
+
+// StateDelta represents a structured narrative state transition.
+type StateDelta struct {
+	Target string
+	Kind   string
+	Field  string
+	From   string
+	To     string
+	Delta  int
+	Unit   string
+	Cost   string
+	Note   string
 }
 
 // Requirement represents event requirements

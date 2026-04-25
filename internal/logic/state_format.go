@@ -2,6 +2,7 @@ package logic
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"novelgen/internal/models"
@@ -13,6 +14,11 @@ func FormatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) strin
 	var sb strings.Builder
 
 	sb.WriteString("CURRENT STORY STATE:\n")
+	if state.RPG != nil {
+		sb.WriteString("\n")
+		sb.WriteString(FormatRPGState(state.RPG, chapter))
+		sb.WriteString("\n")
+	}
 
 	// Build set of relevant characters for this chapter
 	// Include both explicitly listed characters and those mentioned in events
@@ -284,6 +290,235 @@ func FormatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) strin
 	sb.WriteString("=== END STATE ===\n")
 
 	return sb.String()
+}
+
+// FormatRPGState formats the structured RPG state for writing prompts.
+func FormatRPGState(state *models.RPGState, chapter *models.Chapter) string {
+	if state == nil {
+		return ""
+	}
+	var sb strings.Builder
+	sb.WriteString("RPG STATE (structured, authoritative):\n")
+	if state.CurrentChapter != "" || state.CurrentLocation != "" {
+		sb.WriteString(fmt.Sprintf("- Current: chapter=%s location=%s\n", state.CurrentChapter, state.CurrentLocation))
+	}
+
+	relevantChars := map[string]bool{}
+	if chapter != nil {
+		for _, name := range chapter.Characters {
+			relevantChars[name] = true
+		}
+		for _, event := range chapter.Events {
+			if actor := event.GetActor(); actor != "" {
+				relevantChars[actor] = true
+			}
+			if target := event.GetTarget(); target != "" && event.GetTargetType() == models.TargetTypeCharacter {
+				relevantChars[target] = true
+			}
+			for _, name := range event.Characters {
+				relevantChars[name] = true
+			}
+		}
+	}
+
+	characterNames := sortedRPGCharacterNames(state.Characters)
+	if len(characterNames) > 0 {
+		sb.WriteString("- Characters:\n")
+		for _, name := range characterNames {
+			if len(relevantChars) > 0 && !relevantChars[name] {
+				continue
+			}
+			char := state.Characters[name]
+			sb.WriteString(fmt.Sprintf("  - %s", char.Name))
+			if char.Role != "" {
+				sb.WriteString(fmt.Sprintf(" role=%s", char.Role))
+			}
+			if char.Location != "" {
+				sb.WriteString(fmt.Sprintf(" location=%s", char.Location))
+			}
+			if char.Realm != "" {
+				sb.WriteString(fmt.Sprintf(" realm=%s", char.Realm))
+			}
+			if char.Level > 0 {
+				sb.WriteString(fmt.Sprintf(" level=%d", char.Level))
+			}
+			if !char.Alive {
+				sb.WriteString(" alive=false")
+			}
+			sb.WriteString("\n")
+			writeStringMap(&sb, "status", char.Status, "    ")
+			writeIntMap(&sb, "inventory", char.Inventory, "    ")
+			if len(char.Goals) > 0 {
+				sb.WriteString(fmt.Sprintf("    goals=%s\n", strings.Join(char.Goals, " | ")))
+			}
+			if len(char.Knowledge) > 0 {
+				sb.WriteString(fmt.Sprintf("    knowledge=%s\n", strings.Join(char.Knowledge, " | ")))
+			}
+		}
+	}
+
+	if len(state.Relationships) > 0 {
+		sb.WriteString("- Relationships:\n")
+		for _, key := range sortedRPGRelationKeys(state.Relationships) {
+			rel := state.Relationships[key]
+			if len(relevantChars) > 0 && !relevantChars[rel.From] && !relevantChars[rel.To] {
+				continue
+			}
+			sb.WriteString(fmt.Sprintf("  - %s -> %s: %s", rel.From, rel.To, rel.Status))
+			if rel.Details != "" {
+				sb.WriteString(fmt.Sprintf(" (%s)", rel.Details))
+			}
+			sb.WriteString("\n")
+		}
+	}
+
+	if len(state.Resources) > 0 {
+		var resourceLines strings.Builder
+		for _, key := range sortedRPGResourceKeys(state.Resources) {
+			res := state.Resources[key]
+			if res.Owner == "" && res.Status == "available" {
+				continue
+			}
+			resourceLines.WriteString(fmt.Sprintf("  - %s owner=%s qty=%d status=%s\n", res.Name, res.Owner, res.Quantity, res.Status))
+		}
+		if resourceLines.Len() > 0 {
+			sb.WriteString("- Resources:\n")
+			sb.WriteString(resourceLines.String())
+		}
+	}
+
+	if len(state.Storylines) > 0 {
+		sb.WriteString("- Storylines:\n")
+		for _, key := range sortedRPGQuestKeys(state.Storylines) {
+			quest := state.Storylines[key]
+			sb.WriteString(fmt.Sprintf("  - %s status=%s progress=%s\n", quest.Name, quest.Status, quest.Progress))
+		}
+	}
+
+	if len(state.Deltas) > 0 {
+		sb.WriteString("- Recent State Deltas:\n")
+		start := len(state.Deltas) - 8
+		if start < 0 {
+			start = 0
+		}
+		for _, delta := range state.Deltas[start:] {
+			sb.WriteString(fmt.Sprintf("  - [%s] %s.%s %s -> %s", delta.ChapterID, delta.Target, delta.Field, delta.From, delta.To))
+			if delta.Kind != "" {
+				sb.WriteString(fmt.Sprintf(" kind=%s", delta.Kind))
+			}
+			if delta.Delta != 0 {
+				sb.WriteString(fmt.Sprintf(" delta=%d", delta.Delta))
+			}
+			if delta.Note != "" {
+				sb.WriteString(fmt.Sprintf(" note=%s", delta.Note))
+			}
+			sb.WriteString("\n")
+		}
+	}
+
+	sb.WriteString("=== END RPG STATE ===\n")
+	return sb.String()
+}
+
+func FormatRPGStateComparison(comparison RPGStateComparison) string {
+	var sb strings.Builder
+	sb.WriteString("RPG STATE COMPARISON (outline expected vs DSL observed):\n")
+	if comparison.ChapterID != "" {
+		sb.WriteString(fmt.Sprintf("- Chapter: %s\n", comparison.ChapterID))
+	}
+	if len(comparison.Drifts) == 0 {
+		sb.WriteString("- No state drift detected.\n")
+		sb.WriteString("=== END RPG STATE COMPARISON ===\n")
+		return sb.String()
+	}
+	summary := map[string]int{}
+	for _, drift := range comparison.Drifts {
+		summary[drift.Severity]++
+	}
+	sb.WriteString(fmt.Sprintf("- Summary: critical=%d warning=%d info=%d\n", summary["critical"], summary["warning"], summary["info"]))
+	for _, drift := range comparison.Drifts {
+		sb.WriteString(fmt.Sprintf("  - [%s/%s] %s", drift.Severity, drift.Kind, drift.Target))
+		if drift.Field != "" {
+			sb.WriteString("." + drift.Field)
+		}
+		if drift.Expected != "" || drift.Observed != "" {
+			sb.WriteString(fmt.Sprintf(" expected=%q observed=%q", drift.Expected, drift.Observed))
+		}
+		if drift.Note != "" {
+			sb.WriteString(" note=" + drift.Note)
+		}
+		sb.WriteString("\n")
+	}
+	sb.WriteString("=== END RPG STATE COMPARISON ===\n")
+	return sb.String()
+}
+
+func sortedRPGCharacterNames(values map[string]*models.RPGCharacterState) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func sortedRPGResourceKeys(values map[string]*models.RPGResourceState) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func sortedRPGRelationKeys(values map[string]*models.RPGRelationState) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func sortedRPGQuestKeys(values map[string]*models.RPGQuestState) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func writeStringMap(sb *strings.Builder, label string, values map[string]string, indent string) {
+	if len(values) == 0 {
+		return
+	}
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%s", key, values[key]))
+	}
+	sb.WriteString(fmt.Sprintf("%s%s=%s\n", indent, label, strings.Join(parts, ", ")))
+}
+
+func writeIntMap(sb *strings.Builder, label string, values map[string]int, indent string) {
+	if len(values) == 0 {
+		return
+	}
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%d", key, values[key]))
+	}
+	sb.WriteString(fmt.Sprintf("%s%s=%s\n", indent, label, strings.Join(parts, ", ")))
 }
 
 // formatItems formats the items section of the state matrix

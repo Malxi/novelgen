@@ -1,0 +1,42 @@
+{
+  "expected_issues": [
+    {
+      "id": "resurrection_cost_p1v1c9",
+      "must_detect": true,
+      "chapter": "P1-V1-C9",
+      "type": "logic",
+      "severity": "critical",
+      "description_contains": ["死亡后从练气二层", "未出现寿元代价"]
+    },
+    {
+      "id": "resurrection_cost_p1v3c5",
+      "must_detect": true,
+      "chapter": "P1-V3-C5",
+      "type": "logic",
+      "severity": "critical",
+      "description_contains": ["死亡后从练气二层", "未出现寿元代价"]
+    },
+    {
+      "id": "resurrection_modes_inconsistent",
+      "must_detect": true,
+      "type": "logic",
+      "severity": "warning",
+      "description_contains": ["多次死亡代价模式不一致"]
+    },
+    {
+      "id": "cultivation_jump_p1v3c5",
+      "must_detect": true,
+      "chapter": "P1-V3-C5",
+      "type": "growth",
+      "severity": "warning",
+      "description_contains": ["修为从", "提升到本章练气2层"]
+    },
+    {
+      "id": "time_gap_transition",
+      "must_detect": true,
+      "type": "continuity",
+      "severity": "warning",
+      "description_contains": ["章节时间跨度约", "未捕捉到明确过渡说明"]
+    }
+  ]
+}

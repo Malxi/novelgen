@@ -7,12 +7,21 @@ import (
 
 // SimulationIssue 表示模拟中发现的问题
 type SimulationIssue struct {
-	Type        IssueType
-	Severity    SeverityLevel
-	Chapter     string
-	Step        int
-	Description string
-	Suggestion  string
+	Type        IssueType       `json:"type"`
+	Severity    SeverityLevel   `json:"severity"`
+	Chapter     string          `json:"chapter,omitempty"`
+	Step        int             `json:"step,omitempty"`
+	Description string          `json:"description"`
+	Suggestion  string          `json:"suggestion,omitempty"`
+	Evidence    []IssueEvidence `json:"evidence,omitempty"`
+}
+
+// IssueEvidence points to the DSL facts or chapter observations behind an issue.
+type IssueEvidence struct {
+	Chapter string `json:"chapter,omitempty"`
+	Step    int    `json:"step,omitempty"`
+	Source  string `json:"source,omitempty"`
+	Text    string `json:"text,omitempty"`
 }
 
 // IssueType 问题类型 - 针对小说剧情检测
@@ -134,6 +143,8 @@ func (s *Simulator) SimulateAll() []SimulationIssue {
 	for _, chapter := range s.DSL.Storyline.Chapters {
 		s.simulateChapter(&chapter)
 	}
+
+	s.checkNarrativeStateConsistency()
 
 	// 检查整体一致性
 	s.checkOverallConsistency()
@@ -816,6 +827,10 @@ func (s *Simulator) checkOverallConsistency() {
 // 辅助函数
 
 func (s *Simulator) addIssue(issueType IssueType, severity SeverityLevel, chapter string, step int, description, suggestion string) {
+	s.addIssueWithEvidence(issueType, severity, chapter, step, description, suggestion, nil)
+}
+
+func (s *Simulator) addIssueWithEvidence(issueType IssueType, severity SeverityLevel, chapter string, step int, description, suggestion string, evidence []IssueEvidence) {
 	s.Issues = append(s.Issues, SimulationIssue{
 		Type:        issueType,
 		Severity:    severity,
@@ -823,7 +838,36 @@ func (s *Simulator) addIssue(issueType IssueType, severity SeverityLevel, chapte
 		Step:        step,
 		Description: description,
 		Suggestion:  suggestion,
+		Evidence:    compactIssueEvidence(evidence),
 	})
+}
+
+func compactIssueEvidence(evidence []IssueEvidence) []IssueEvidence {
+	if len(evidence) == 0 {
+		return nil
+	}
+	out := make([]IssueEvidence, 0, len(evidence))
+	seen := map[string]bool{}
+	for _, ev := range evidence {
+		ev.Text = strings.TrimSpace(ev.Text)
+		if ev.Text == "" {
+			continue
+		}
+		if len([]rune(ev.Text)) > 180 {
+			runes := []rune(ev.Text)
+			ev.Text = string(runes[:180]) + "..."
+		}
+		key := fmt.Sprintf("%s|%d|%s|%s", ev.Chapter, ev.Step, ev.Source, ev.Text)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, ev)
+		if len(out) >= 5 {
+			break
+		}
+	}
+	return out
 }
 
 func (s *Simulator) findChapter(id string) *Chapter {
@@ -962,11 +1006,33 @@ func FormatIssue(issue SimulationIssue) string {
 		location = fmt.Sprintf("%s (步骤 %d)", issue.Chapter, issue.Step)
 	}
 
-	return fmt.Sprintf("%s [%s] %s\n   位置: %s\n   建议: %s",
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("%s [%s] %s\n   位置: %s\n   建议: %s",
 		severityIcon,
 		strings.ToUpper(string(issue.Type)),
 		issue.Description,
 		location,
 		issue.Suggestion,
-	)
+	))
+	if len(issue.Evidence) > 0 {
+		b.WriteString("\n   Evidence:")
+		for i, ev := range issue.Evidence {
+			if i >= 3 {
+				break
+			}
+			loc := ev.Chapter
+			if ev.Step > 0 {
+				loc = fmt.Sprintf("%s step %d", ev.Chapter, ev.Step)
+			}
+			if loc == "" {
+				loc = "global"
+			}
+			source := ev.Source
+			if source == "" {
+				source = "dsl"
+			}
+			b.WriteString(fmt.Sprintf("\n   - %s / %s: %s", loc, source, ev.Text))
+		}
+	}
+	return b.String()
 }

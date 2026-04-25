@@ -17,7 +17,7 @@ import (
 	"novelgen/internal/rpg/dsl"
 )
 
-const batchCacheVersion = 1
+const batchCacheVersion = 2
 
 type batchManifest struct {
 	Version    int                 `json:"version"`
@@ -172,7 +172,24 @@ func convertChapterBatch(
 	if err != nil {
 		return nil, fmt.Errorf("解析 batch %d 缓存 DSL 失败: %w", batchIndex+1, err)
 	}
+	normalizeBatchChapterIDs(batchDSL, manifest)
 	return batchDSL, nil
+}
+
+func normalizeBatchChapterIDs(batchDSL *dsl.DSL, manifest *batchManifest) {
+	if batchDSL == nil || batchDSL.Storyline == nil || manifest == nil {
+		return
+	}
+	for i := range batchDSL.Storyline.Chapters {
+		if i >= len(manifest.Chapters) {
+			break
+		}
+		expectedID := manifest.Chapters[i].ChapterID
+		if strings.TrimSpace(expectedID) == "" {
+			continue
+		}
+		batchDSL.Storyline.Chapters[i].ID = expectedID
+	}
 }
 
 func ensureParseableDSL(ctx context.Context, agent *agents.ChapterToDSLAgent, bookName, dslContent string) (string, error) {
@@ -195,9 +212,22 @@ func ensureParseableDSL(ctx context.Context, agent *agents.ChapterToDSLAgent, bo
 				fmt.Printf("修复后仍解析失败 (attempt %d/2): %v\n", attempt+1, err)
 			}
 		}
+		dumpFailedDSL(bookName, dslContent, lastErr)
 		return "", fmt.Errorf("DSL 解析失败且修复未成功: %w", lastErr)
 	}
 	return dslContent, nil
+}
+
+func dumpFailedDSL(bookName, dslContent string, parseErr error) {
+	dir := filepath.Join("books", bookName, "story", "rpg", "cache", "failed_dsl")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return
+	}
+	stamp := time.Now().Format("20060102_150405")
+	base := filepath.Join(dir, fmt.Sprintf("failed_%s", stamp))
+	_ = os.WriteFile(base+".rpg", []byte(dslContent), 0644)
+	_ = os.WriteFile(base+".err.txt", []byte(parseErr.Error()), 0644)
+	fmt.Printf("失败 DSL 已保存用于排查: %s.rpg\n", base)
 }
 
 func splitChapterBatches(files []string, batchSize int) [][]string {

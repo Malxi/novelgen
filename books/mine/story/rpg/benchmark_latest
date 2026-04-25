@@ -1,1056 +1,269 @@
 {
-  "timestamp": "2026-04-24T23:12:04+08:00",
+  "timestamp": "2026-04-25T22:02:19+08:00",
   "book_name": "mine",
   "book_path": "D:\\Code\\nolvegen\\books\\mine",
   "source": "chapters(recap) -\u003e AI(batch/cache) -\u003e DSL -\u003e simulate",
   "chapter_count": 38,
   "dsl_file": "D:\\Code\\nolvegen\\books\\mine\\story\\rpg\\01_outline.rpg",
+  "min_severity": "warning",
+  "include_dsl_hygiene": false,
   "summary": {
-    "total": 130,
-    "critical": 7,
-    "warning": 41,
-    "info": 82
+    "total": 12,
+    "critical": 2,
+    "warning": 10,
+    "info": 0
+  },
+  "all_summary": {
+    "total": 153,
+    "critical": 2,
+    "warning": 30,
+    "info": 121
+  },
+  "filtered_out": 141,
+  "golden": {
+    "path": "D:\\Code\\nolvegen\\books\\mine\\story\\rpg\\expected_issues.json",
+    "expected": 5,
+    "detected": 5,
+    "missed": 0,
+    "recall": 1,
+    "matches": [
+      {
+        "expected_id": "resurrection_cost_p1v1c9",
+        "chapter": "P1-V1-C9",
+        "type": "logic",
+        "severity": "critical",
+        "description": "死亡后从练气二层或更高境界跌到练气一层，但未出现寿元代价，和既有底线规则冲突"
+      },
+      {
+        "expected_id": "resurrection_cost_p1v3c5",
+        "chapter": "P1-V3-C5",
+        "type": "logic",
+        "severity": "critical",
+        "description": "死亡后从练气二层或更高境界跌到练气一层，但未出现寿元代价，和既有底线规则冲突"
+      },
+      {
+        "expected_id": "resurrection_modes_inconsistent",
+        "type": "logic",
+        "severity": "warning",
+        "description": "多次死亡代价模式不一致，DSL 状态机观察到修为掉级、寿元折损和无明确代价并存"
+      },
+      {
+        "expected_id": "cultivation_jump_p1v3c5",
+        "chapter": "P1-V3-C5",
+        "type": "growth",
+        "severity": "warning",
+        "description": "修为从 P1-V2-C6 的练气1层提升到本章练气2层，但 DSL 未捕捉到明确修炼或恢复过程"
+      },
+      {
+        "expected_id": "time_gap_transition",
+        "chapter": "P1-V1-C10",
+        "type": "continuity",
+        "severity": "warning",
+        "description": "章节时间跨度约 90 天，但 DSL 未捕捉到明确过渡说明"
+      }
+    ]
   },
   "issues": [
     {
-      "Type": "pacing",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "建议添加明确的起始章节（序章/苏醒等）",
-      "Suggestion": "让读者更容易进入故事"
-    },
-    {
-      "Type": "description",
-      "Severity": "warning",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "主角缺少背景故事",
-      "Suggestion": "添加主角的背景故事，让读者更容易产生共鸣"
-    },
-    {
-      "Type": "character",
-      "Severity": "warning",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "主角缺少性格或动机描述",
-      "Suggestion": "定义主角的性格特点和行动动机"
-    },
-    {
-      "Type": "conflict",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "缺少明确的反派角色",
-      "Suggestion": "考虑添加一个反派角色来增加冲突"
-    },
-    {
-      "Type": "character",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "缺少导师/引路人角色",
-      "Suggestion": "考虑添加一个导师角色来帮助主角成长"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿丙字三号矿道' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿丙字七号矿道' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿丁字八号废弃矿道' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿矿道入口广场' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿矿奴大通铺' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿西坡三号矿道' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿废弃矿道隐秘岩洞' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿废弃矿道' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿主矿道' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风矿场管工房周边' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '西坡废石堆' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '未标注废弃深矿洞' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '未登记深矿道' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '遗迹入口岔道口' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '遗迹外围矿道' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '北区矿道岔道岩柱处' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '五百米废弃岔路口' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '地下遗迹外围区域' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '上古遗迹入口' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '矿道出口' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '西岔道背光处' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '矿奴居所外围' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '矿奴大通铺' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '废弃矿道隐藏岩洞' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿废弃矿道隐藏岩洞' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿矿道入口广场' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿西岔道交汇处' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿主支矿道内部' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿监工棚' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿岩台制高点' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿废弃矿道出口' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿西侧支矿道' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿岩缝小路' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风灵石矿矿道三岔路口' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风矿外围黑松林' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '黑风矿管控区边界木栅栏' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 '通往青牛镇的林间土路' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 'loc_qingniu_town_gate' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 'loc_convenient_inn' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 'loc_inn_back_alley' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 'loc_qingniu_fangshi' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 'loc_baicaotang' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 'loc_gongfa_ge' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 'loc_suburban_herb_area' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 'loc_rental_training_room' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 'loc_heifeng_abandoned_mine_tunnel' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 'loc_abandoned_temple_behind_fangshi' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "地点 'loc_fangshi_exit_alley' 缺少氛围描述",
-      "Suggestion": "添加氛围描述，增强场景感"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V1-C1",
-      "Step": 5,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V1-C2",
-      "Step": 2,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V1-C2",
-      "Step": 3,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "logic",
-      "Severity": "critical",
-      "Chapter": "P1-V1-C2",
-      "Step": 7,
-      "Description": "移动到未定义的地点: 黑风灵石矿丙字三号矿道深处安全矿脉",
-      "Suggestion": "在 world 块中定义此地点"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V1-C3",
-      "Step": 3,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "logic",
-      "Severity": "critical",
-      "Chapter": "P1-V1-C5",
-      "Step": 3,
-      "Description": "移动到未定义的地点: 黑风灵石矿丙字七号矿道隐蔽岩缝",
-      "Suggestion": "在 world 块中定义此地点"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V1-C5",
-      "Step": 4,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "logic",
-      "Severity": "critical",
-      "Chapter": "P1-V1-C5",
-      "Step": 7,
-      "Description": "移动到未定义的地点: 黑风灵石矿丙字七号矿道隐蔽岩缝",
-      "Suggestion": "在 world 块中定义此地点"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V1-C6",
-      "Step": 4,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V1-C7",
-      "Step": 5,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "logic",
-      "Severity": "critical",
-      "Chapter": "P1-V1-C8",
-      "Step": 8,
-      "Description": "移动到未定义的地点: 黑风灵石矿废弃矿道隐秘岩洞",
-      "Suggestion": "在 world 块中定义此地点"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V1-C9",
-      "Step": 2,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "logic",
-      "Severity": "critical",
-      "Chapter": "P1-V1-C9",
-      "Step": 9,
-      "Description": "移动到未定义的地点: 黑风灵石矿丁字八号废弃矿道出口",
-      "Suggestion": "在 world 块中定义此地点"
-    },
-    {
-      "Type": "logic",
-      "Severity": "critical",
-      "Chapter": "P1-V1-C10",
-      "Step": 1,
-      "Description": "移动到未定义的地点: 黑风灵石矿搬运点",
-      "Suggestion": "在 world 块中定义此地点"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "chap_p1_v2_c1",
-      "Step": 2,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "continuity",
-      "Severity": "info",
-      "Chapter": "chap_p1_v2_c1",
-      "Step": 4,
-      "Description": "场景切换建议添加过渡描述",
-      "Suggestion": "描述角色如何从一个地点移动到另一个地点"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "chap_p1_v2_c1",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "chap_p1_v2_c2",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "chap_p1_v2_c3",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "chap_p1_v2_c4",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "chap_p1_v2_c5",
-      "Step": 1,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "chap_p1_v2_c5",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "chap_p1_v2_c6",
-      "Step": 1,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "chap_p1_v2_c6",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "chap_p1_v2_c7",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "chap_p1_v2_c8",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "chap_p1_v2_c9",
-      "Step": 5,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "continuity",
-      "Severity": "info",
-      "Chapter": "chap_p1_v2_c9",
-      "Step": 7,
-      "Description": "场景切换建议添加过渡描述",
-      "Suggestion": "描述角色如何从一个地点移动到另一个地点"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "chap_p1_v2_c9",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "continuity",
-      "Severity": "info",
-      "Chapter": "chap_p1_v2_c10",
-      "Step": 1,
-      "Description": "场景切换建议添加过渡描述",
-      "Suggestion": "描述角色如何从一个地点移动到另一个地点"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "chap_p1_v2_c10",
-      "Step": 6,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "chap_p1_v2_c10",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "continuity",
-      "Severity": "info",
-      "Chapter": "P1-V3-C2",
-      "Step": 2,
-      "Description": "场景切换建议添加过渡描述",
-      "Suggestion": "描述角色如何从一个地点移动到另一个地点"
-    },
-    {
-      "Type": "continuity",
-      "Severity": "info",
-      "Chapter": "P1-V3-C2",
-      "Step": 6,
-      "Description": "场景切换建议添加过渡描述",
-      "Suggestion": "描述角色如何从一个地点移动到另一个地点"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V3-C5",
-      "Step": 7,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V3-C6",
-      "Step": 2,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V3-C6",
-      "Step": 4,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V3-C7",
-      "Step": 2,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V3-C8",
-      "Step": 1,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V3-C8",
-      "Step": 3,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "equipment",
-      "Severity": "warning",
-      "Chapter": "P1-V3-C9",
-      "Step": 6,
-      "Description": "背包已满(20/20)，无法获得更多物品",
-      "Suggestion": "清理空间、扩容、或使用物品"
-    },
-    {
-      "Type": "continuity",
-      "Severity": "info",
-      "Chapter": "P1-V3-C10",
-      "Step": 1,
-      "Description": "场景切换建议添加过渡描述",
-      "Suggestion": "描述角色如何从一个地点移动到另一个地点"
-    },
-    {
-      "Type": "continuity",
-      "Severity": "info",
-      "Chapter": "P1-V3-C10",
-      "Step": 7,
-      "Description": "场景切换建议添加过渡描述",
-      "Suggestion": "描述角色如何从一个地点移动到另一个地点"
-    },
-    {
-      "Type": "continuity",
-      "Severity": "info",
-      "Chapter": "P1-V4-C1",
-      "Step": 1,
-      "Description": "场景切换建议添加过渡描述",
-      "Suggestion": "描述角色如何从一个地点移动到另一个地点"
-    },
-    {
-      "Type": "equipment",
-      "Severity": "warning",
-      "Chapter": "P1-V4-C1",
-      "Step": 4,
-      "Description": "背包已满(20/20)，无法获得更多物品",
-      "Suggestion": "清理空间、扩容、或使用物品"
-    },
-    {
-      "Type": "continuity",
-      "Severity": "info",
-      "Chapter": "P1-V4-C2",
-      "Step": 2,
-      "Description": "场景切换建议添加过渡描述",
-      "Suggestion": "描述角色如何从一个地点移动到另一个地点"
-    },
-    {
-      "Type": "equipment",
-      "Severity": "warning",
-      "Chapter": "P1-V4-C2",
-      "Step": 5,
-      "Description": "背包已满(20/20)，无法获得更多物品",
-      "Suggestion": "清理空间、扩容、或使用物品"
-    },
-    {
-      "Type": "equipment",
-      "Severity": "warning",
-      "Chapter": "P1-V4-C2",
-      "Step": 8,
-      "Description": "背包已满(20/20)，无法获得更多物品",
-      "Suggestion": "清理空间、扩容、或使用物品"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "P1-V4-C3",
-      "Step": 6,
-      "Description": "获取事件建议添加结果描述",
-      "Suggestion": "描述获得了什么以及获得后的感受"
-    },
-    {
-      "Type": "equipment",
-      "Severity": "warning",
-      "Chapter": "P1-V4-C3",
-      "Step": 7,
-      "Description": "背包已满(20/20)，无法获得更多物品",
-      "Suggestion": "清理空间、扩容、或使用物品"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "P1-V4-C3",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V4-C4",
-      "Step": 2,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "equipment",
-      "Severity": "warning",
-      "Chapter": "P1-V4-C4",
-      "Step": 6,
-      "Description": "背包已满(20/20)，无法获得更多物品",
-      "Suggestion": "清理空间、扩容、或使用物品"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "P1-V4-C4",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "equipment",
-      "Severity": "warning",
-      "Chapter": "P1-V4-C5",
-      "Step": 2,
-      "Description": "背包已满(20/20)，无法获得更多物品",
-      "Suggestion": "清理空间、扩容、或使用物品"
-    },
-    {
-      "Type": "equipment",
-      "Severity": "warning",
-      "Chapter": "P1-V4-C5",
-      "Step": 3,
-      "Description": "背包已满(20/20)，无法获得更多物品",
-      "Suggestion": "清理空间、扩容、或使用物品"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V4-C5",
-      "Step": 4,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "description",
-      "Severity": "info",
-      "Chapter": "P1-V4-C5",
-      "Step": 6,
-      "Description": "获取事件建议添加结果描述",
-      "Suggestion": "描述获得了什么以及获得后的感受"
-    },
-    {
-      "Type": "equipment",
-      "Severity": "warning",
-      "Chapter": "P1-V4-C5",
-      "Step": 7,
-      "Description": "背包已满(20/20)，无法获得更多物品",
-      "Suggestion": "清理空间、扩容、或使用物品"
-    },
-    {
-      "Type": "equipment",
-      "Severity": "warning",
-      "Chapter": "P1-V4-C6",
-      "Step": 3,
-      "Description": "背包已满(20/20)，无法获得更多物品",
-      "Suggestion": "清理空间、扩容、或使用物品"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "P1-V4-C6",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "P1-V4-C7",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "character",
-      "Severity": "info",
-      "Chapter": "P1-V5-C9",
-      "Step": 1,
-      "Description": "关系事件建议明确涉及的角色",
-      "Suggestion": "指明是哪个角色的关系发生变化"
-    },
-    {
-      "Type": "missing_info",
-      "Severity": "warning",
-      "Chapter": "P1-V5-C9",
-      "Step": 2,
-      "Description": "战斗事件没有指定敌人",
-      "Suggestion": "添加具体的敌人信息（名称、等级、能力等）"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "P1-V5-C9",
-      "Step": 0,
-      "Description": "章节内容较多但缺少主角成长",
-      "Suggestion": "考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素"
-    },
-    {
-      "Type": "character",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "NPC '老郑' 只在一个章节中出现",
-      "Suggestion": "考虑让角色在其他章节中也有出现，增强存在感"
-    },
-    {
-      "Type": "conflict",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "故事中冲突事件较少",
-      "Suggestion": "考虑添加更多冲突来增加故事张力"
-    },
-    {
-      "Type": "growth",
-      "Severity": "info",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "故事较长(38章)但主角成长较少(等级1)，建议增加突破情节",
-      "Suggestion": "考虑在中期添加境界突破、能力觉醒等成长高潮"
-    },
-    {
-      "Type": "continuity",
-      "Severity": "warning",
-      "Chapter": "P1-V1-C10",
-      "Step": 0,
-      "Description": "章节时间跨度约 15 天，但缺少明确过渡描写（上一章: P1-V1-C9）",
-      "Suggestion": "建议补 1-2 段过渡，说明这段时间的生存、修炼、关系变化"
-    },
-    {
-      "Type": "logic",
-      "Severity": "warning",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "多次死亡代价模式不一致（修为掉级/寿元折损组合波动较大）",
-      "Suggestion": "建议在设定中明确死亡代价分支条件，并在对应章节显式触发条件"
-    },
-    {
-      "Type": "logic",
-      "Severity": "critical",
-      "Chapter": "P1-V1-C9",
-      "Step": 0,
-      "Description": "死亡后从练气二层降到一层但未出现寿元代价，和既有底线规则存在冲突",
-      "Suggestion": "补充本次免寿元代价的触发条件，或修正为扣寿元版本"
-    },
-    {
-      "Type": "growth",
-      "Severity": "warning",
-      "Chapter": "P1-V2-C10",
-      "Step": 0,
-      "Description": "修为从 P1-V2-C9 章的练气1层提升到本章练气9层，但缺少明确恢复/修炼过程",
-      "Suggestion": "补一段修炼恢复过程，或在 recap/status 中显式标注提升原因"
-    },
-    {
-      "Type": "growth",
-      "Severity": "warning",
-      "Chapter": "P1-V3-C7",
-      "Step": 0,
-      "Description": "修为从 P1-V3-C6 章的练气1层提升到本章练气7层，但缺少明确恢复/修炼过程",
-      "Suggestion": "补一段修炼恢复过程，或在 recap/status 中显式标注提升原因"
-    },
-    {
-      "Type": "character",
-      "Severity": "warning",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "人物特征 '缺半块左耳' 同时指向多个角色：老郑 / 老陈，可能存在身份混淆",
-      "Suggestion": "统一角色ID和特征归属，必要时增加一句区分（同名/绰号/误认）"
-    },
-    {
-      "Type": "character",
-      "Severity": "warning",
-      "Chapter": "",
-      "Step": 0,
-      "Description": "人物特征 '左耳' 同时指向多个角色：老郑 / 老陈，可能存在身份混淆",
-      "Suggestion": "统一角色ID和特征归属，必要时增加一句区分（同名/绰号/误认）"
-    },
-    {
-      "Type": "continuity",
-      "Severity": "warning",
-      "Chapter": "P1-V1-C3",
-      "Step": 0,
-      "Description": "角色 '老陈' 在 P1-V1-C1 重伤后，本章恢复正常行动但缺少疗伤过程",
-      "Suggestion": "补充伤势恢复时间/手段（药物、休养、治疗者）"
-    },
-    {
-      "Type": "balance",
-      "Severity": "info",
-      "Chapter": "P1-V4-C7",
-      "Step": 0,
-      "Description": "“半块下品灵石”多次承担修炼消耗，但持续性与消耗上限未交代",
-      "Suggestion": "补充半块灵石可支持次数、衰减机制，或补写中途替代资源来源"
+      "type": "continuity",
+      "severity": "warning",
+      "chapter": "P1-V1-C10",
+      "description": "章节时间跨度约 90 天，但 DSL 未捕捉到明确过渡说明",
+      "suggestion": "在章节开头或上一章结尾补充过渡段，说明这段时间的修炼、生存、关系和资源变化",
+      "evidence": [
+        {
+          "chapter": "P1-V1-C10",
+          "source": "time",
+          "text": "elapsed_days=90 has_transition=false"
+        }
+      ]
+    },
+    {
+      "type": "continuity",
+      "severity": "warning",
+      "chapter": "P1-V2-C1",
+      "description": "章节时间跨度约 90 天，但 DSL 未捕捉到明确过渡说明",
+      "suggestion": "在章节开头或上一章结尾补充过渡段，说明这段时间的修炼、生存、关系和资源变化",
+      "evidence": [
+        {
+          "chapter": "P1-V2-C1",
+          "source": "time",
+          "text": "elapsed_days=90 has_transition=false"
+        }
+      ]
+    },
+    {
+      "type": "continuity",
+      "severity": "warning",
+      "chapter": "P1-V2-C6",
+      "description": "章节时间跨度约 15 天，但 DSL 未捕捉到明确过渡说明",
+      "suggestion": "在章节开头或上一章结尾补充过渡段，说明这段时间的修炼、生存、关系和资源变化",
+      "evidence": [
+        {
+          "chapter": "P1-V2-C6",
+          "source": "time",
+          "text": "elapsed_days=15 has_transition=false"
+        }
+      ]
+    },
+    {
+      "type": "continuity",
+      "severity": "warning",
+      "chapter": "P1-V2-C9",
+      "description": "章节时间跨度约 30 天，但 DSL 未捕捉到明确过渡说明",
+      "suggestion": "在章节开头或上一章结尾补充过渡段，说明这段时间的修炼、生存、关系和资源变化",
+      "evidence": [
+        {
+          "chapter": "P1-V2-C9",
+          "source": "time",
+          "text": "elapsed_days=30 has_transition=false"
+        }
+      ]
+    },
+    {
+      "type": "continuity",
+      "severity": "warning",
+      "chapter": "P1-V2-C10",
+      "description": "章节时间跨度约 30 天，但 DSL 未捕捉到明确过渡说明",
+      "suggestion": "在章节开头或上一章结尾补充过渡段，说明这段时间的修炼、生存、关系和资源变化",
+      "evidence": [
+        {
+          "chapter": "P1-V2-C10",
+          "source": "time",
+          "text": "elapsed_days=30 has_transition=false"
+        }
+      ]
+    },
+    {
+      "type": "continuity",
+      "severity": "warning",
+      "chapter": "P1-V3-C1",
+      "description": "章节时间跨度约 30 天，但 DSL 未捕捉到明确过渡说明",
+      "suggestion": "在章节开头或上一章结尾补充过渡段，说明这段时间的修炼、生存、关系和资源变化",
+      "evidence": [
+        {
+          "chapter": "P1-V3-C1",
+          "source": "time",
+          "text": "elapsed_days=30 has_transition=false"
+        }
+      ]
+    },
+    {
+      "type": "continuity",
+      "severity": "warning",
+      "chapter": "P1-V3-C4",
+      "description": "章节时间跨度约 15 天，但 DSL 未捕捉到明确过渡说明",
+      "suggestion": "在章节开头或上一章结尾补充过渡段，说明这段时间的修炼、生存、关系和资源变化",
+      "evidence": [
+        {
+          "chapter": "P1-V3-C4",
+          "source": "time",
+          "text": "elapsed_days=15 has_transition=false"
+        }
+      ]
+    },
+    {
+      "type": "continuity",
+      "severity": "warning",
+      "chapter": "P1-V3-C6",
+      "description": "章节时间跨度约 30 天，但 DSL 未捕捉到明确过渡说明",
+      "suggestion": "在章节开头或上一章结尾补充过渡段，说明这段时间的修炼、生存、关系和资源变化",
+      "evidence": [
+        {
+          "chapter": "P1-V3-C6",
+          "source": "time",
+          "text": "elapsed_days=30 has_transition=false"
+        }
+      ]
+    },
+    {
+      "type": "logic",
+      "severity": "critical",
+      "chapter": "P1-V1-C9",
+      "description": "死亡后从练气二层或更高境界跌到练气一层，但未出现寿元代价，和既有底线规则冲突",
+      "suggestion": "补充本次免寿元代价的触发条件，或修正为扣寿元版本",
+      "evidence": [
+        {
+          "chapter": "P1-V1-C9",
+          "source": "state_delta",
+          "text": "target=char_lin_yan kind=death from=存活 to=死亡"
+        },
+        {
+          "chapter": "P1-V1-C9",
+          "source": "state_delta",
+          "text": "target=char_lin_yan kind=revive from=死亡 to=存活"
+        },
+        {
+          "chapter": "P1-V1-C9",
+          "source": "state_delta",
+          "text": "target=char_lin_yan kind=cultivation field=修为 from=练气二层（稳固） to=练气一层 delta=-1"
+        },
+        {
+          "chapter": "P1-V1-C9",
+          "source": "rule_observation",
+          "text": "floor_rule_seen_at_index=2 from_level=2 to_level=1 has_lifespan=false no_lifespan=true"
+        }
+      ]
+    },
+    {
+      "type": "logic",
+      "severity": "critical",
+      "chapter": "P1-V3-C5",
+      "description": "死亡后从练气二层或更高境界跌到练气一层，但未出现寿元代价，和既有底线规则冲突",
+      "suggestion": "补充本次免寿元代价的触发条件，或修正为扣寿元版本",
+      "evidence": [
+        {
+          "chapter": "P1-V3-C5",
+          "source": "state_delta",
+          "text": "target=char_lin_yan kind=death field=death_count delta=1 note=第一次死亡复活，修为从练气二层跌至练气一层"
+        },
+        {
+          "chapter": "P1-V3-C5",
+          "source": "state_delta",
+          "text": "target=char_lin_yan kind=cultivation field=level from=qi_2 to=qi_1 delta=-1 note=修为降级至练气一层"
+        },
+        {
+          "chapter": "P1-V3-C5",
+          "source": "rule_observation",
+          "text": "floor_rule_seen_at_index=2 from_level=2 to_level=1 has_lifespan=false no_lifespan=true"
+        }
+      ]
+    },
+    {
+      "type": "logic",
+      "severity": "warning",
+      "description": "多次死亡代价模式不一致，DSL 状态机观察到修为掉级、寿元折损和无明确代价并存",
+      "suggestion": "把复活规则写入 story setup -\u003e RPG DSL，并在每次死亡事件中显式标出触发分支",
+      "evidence": [
+        {
+          "source": "death_modes",
+          "text": "level_and_lifespan, level_only, lifespan_only, none"
+        }
+      ]
+    },
+    {
+      "type": "growth",
+      "severity": "warning",
+      "chapter": "P1-V3-C5",
+      "description": "修为从 P1-V2-C6 的练气1层提升到本章练气2层，但 DSL 未捕捉到明确修炼或恢复过程",
+      "suggestion": "补充吐纳、闭关、资源消耗或突破描写，或让 chapter -\u003e DSL 显式输出 cultivation_change",
+      "evidence": [
+        {
+          "chapter": "P1-V2-C6",
+          "source": "previous_level",
+          "text": "level=1"
+        },
+        {
+          "chapter": "P1-V3-C5",
+          "source": "current_level",
+          "text": "level=2 has_cultivate=false has_recovery=false"
+        },
+        {
+          "chapter": "P1-V3-C5",
+          "source": "state_delta",
+          "text": "target=char_lin_yan kind=cultivation field=level from=qi_2 to=qi_1 delta=-1 note=修为降级至练气一层"
+        }
+      ]
     }
   ]
 }

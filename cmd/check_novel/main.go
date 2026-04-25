@@ -18,11 +18,14 @@ import (
 
 func main() {
 	var (
-		bookArg    = flag.String("book", "books/mine", "小说目录路径或书名，例如 books/mine 或 mine")
-		output     = flag.String("output", "", "输出文本报告文件路径")
-		jsonOutput = flag.String("json", "", "输出 JSON 报告文件路径")
-		batchSize  = flag.Int("batch-size", 10, "AI 章节转 DSL 的批大小")
-		help       = flag.Bool("h", false, "显示帮助")
+		bookArg           = flag.String("book", "books/mine", "小说目录路径或书名，例如 books/mine 或 mine")
+		output            = flag.String("output", "", "输出文本报告文件路径")
+		jsonOutput        = flag.String("json", "", "输出 JSON 报告文件路径")
+		batchSize         = flag.Int("batch-size", 10, "AI 章节转 DSL 的批大小")
+		minSeverity       = flag.String("min-severity", "warning", "报告最小严重级别: critical, warning, info")
+		includeDSLHygiene = flag.Bool("include-dsl-hygiene", false, "报告中包含 DSL 抽取质量/完整性提示")
+		goldenPath        = flag.String("golden", "", "golden benchmark 文件路径；为空时自动使用 story/rpg/expected_issues.json")
+		help              = flag.Bool("h", false, "显示帮助")
 	)
 
 	flag.Parse()
@@ -49,7 +52,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := runAIDSLCheck(context.Background(), bookName, bookPath, *output, *jsonOutput, *batchSize); err != nil {
+	threshold, err := parseMinSeverity(*minSeverity)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "错误: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := runAIDSLCheck(context.Background(), bookName, bookPath, *output, *jsonOutput, *batchSize, threshold, *includeDSLHygiene, *goldenPath); err != nil {
 		fmt.Fprintf(os.Stderr, "错误: %v\n", err)
 		os.Exit(1)
 	}
@@ -63,17 +72,22 @@ type reportSummary struct {
 }
 
 type checkNovelAIReport struct {
-	Timestamp    string                `json:"timestamp"`
-	BookName     string                `json:"book_name"`
-	BookPath     string                `json:"book_path"`
-	Source       string                `json:"source"`
-	ChapterCount int                   `json:"chapter_count"`
-	DSLFile      string                `json:"dsl_file"`
-	Summary      reportSummary         `json:"summary"`
-	Issues       []dsl.SimulationIssue `json:"issues"`
+	Timestamp         string                `json:"timestamp"`
+	BookName          string                `json:"book_name"`
+	BookPath          string                `json:"book_path"`
+	Source            string                `json:"source"`
+	ChapterCount      int                   `json:"chapter_count"`
+	DSLFile           string                `json:"dsl_file"`
+	MinSeverity       string                `json:"min_severity"`
+	IncludeDSLHygiene bool                  `json:"include_dsl_hygiene"`
+	Summary           reportSummary         `json:"summary"`
+	AllSummary        reportSummary         `json:"all_summary"`
+	FilteredOut       int                   `json:"filtered_out"`
+	Golden            *goldenEvaluation     `json:"golden,omitempty"`
+	Issues            []dsl.SimulationIssue `json:"issues"`
 }
 
-func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutputPath string, batchSize int) error {
+func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutputPath string, batchSize int, minSeverity dsl.SeverityLevel, includeDSLHygiene bool, goldenPath string) error {
 	fmt.Printf("开始 AI DSL Benchmark: %s (%s)\n\n", bookName, bookPath)
 
 	adapter, err := agents.LoadNovelgenProject(bookName)
@@ -143,12 +157,15 @@ func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutp
 
 	simulator := dsl.NewSimulator(dslData)
 	issues := simulator.SimulateAll()
-	rules := loadConsistencyRules(bookPath)
-	issues = append(issues, buildCrossChapterConsistencyIssues(chapterFiles, rules)...)
-	report := buildReport(bookName, bookPath, dslFile, len(chapterFiles), issues)
+	report := buildReport(bookName, bookPath, dslFile, len(chapterFiles), issues, minSeverity, includeDSLHygiene)
+	golden, err := maybeEvaluateGolden(bookPath, goldenPath, report.Issues)
+	if err != nil {
+		return err
+	}
+	report.Golden = golden
 
 	printSummary(report)
-	printIssues(&dsl.Simulator{Issues: issues})
+	printIssues(&dsl.Simulator{Issues: report.Issues})
 
 	if outputPath != "" {
 		text := formatTextReport(report)
@@ -170,6 +187,26 @@ func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutp
 	}
 
 	return nil
+}
+
+func maybeEvaluateGolden(bookPath, requestedPath string, issues []dsl.SimulationIssue) (*goldenEvaluation, error) {
+	path := strings.TrimSpace(requestedPath)
+	explicit := path != ""
+	if path == "" {
+		path = filepath.Join(bookPath, "story", "rpg", "expected_issues.json")
+	}
+	if _, err := os.Stat(path); err != nil {
+		if explicit {
+			return nil, fmt.Errorf("加载 golden benchmark 失败: %w", err)
+		}
+		return nil, nil
+	}
+	spec, err := loadGoldenSpec(path)
+	if err != nil {
+		return nil, fmt.Errorf("加载 golden benchmark 失败: %w", err)
+	}
+	eval := evaluateGolden(path, spec, issues)
+	return &eval, nil
 }
 
 func resolveBook(bookArg string) (bookName string, bookPath string, err error) {
@@ -199,7 +236,31 @@ func resolveBook(bookArg string) (bookName string, bookPath string, err error) {
 	return "", "", fmt.Errorf("找不到有效书目录: %s", trimmed)
 }
 
-func buildReport(bookName, bookPath, dslFile string, chapterCount int, issues []dsl.SimulationIssue) checkNovelAIReport {
+func buildReport(bookName, bookPath, dslFile string, chapterCount int, issues []dsl.SimulationIssue, minSeverity dsl.SeverityLevel, includeDSLHygiene bool) checkNovelAIReport {
+	allSummary := summarizeIssues(issues)
+	reportedIssues := filterIssuesByMinSeverity(issues, minSeverity)
+	if !includeDSLHygiene {
+		reportedIssues = filterDSLHygieneIssues(reportedIssues)
+	}
+	reportedSummary := summarizeIssues(reportedIssues)
+
+	return checkNovelAIReport{
+		Timestamp:         time.Now().Format(time.RFC3339),
+		BookName:          bookName,
+		BookPath:          bookPath,
+		Source:            "chapters(recap) -> AI(batch/cache) -> DSL -> simulate",
+		ChapterCount:      chapterCount,
+		DSLFile:           dslFile,
+		MinSeverity:       string(minSeverity),
+		IncludeDSLHygiene: includeDSLHygiene,
+		Summary:           reportedSummary,
+		AllSummary:        allSummary,
+		FilteredOut:       allSummary.Total - reportedSummary.Total,
+		Issues:            reportedIssues,
+	}
+}
+
+func summarizeIssues(issues []dsl.SimulationIssue) reportSummary {
 	s := reportSummary{Total: len(issues)}
 	for _, issue := range issues {
 		switch issue.Severity {
@@ -211,16 +272,65 @@ func buildReport(bookName, bookPath, dslFile string, chapterCount int, issues []
 			s.Info++
 		}
 	}
+	return s
+}
 
-	return checkNovelAIReport{
-		Timestamp:    time.Now().Format(time.RFC3339),
-		BookName:     bookName,
-		BookPath:     bookPath,
-		Source:       "chapters(recap) -> AI(batch/cache) -> DSL -> simulate",
-		ChapterCount: chapterCount,
-		DSLFile:      dslFile,
-		Summary:      s,
-		Issues:       issues,
+func filterIssuesByMinSeverity(issues []dsl.SimulationIssue, minSeverity dsl.SeverityLevel) []dsl.SimulationIssue {
+	filtered := make([]dsl.SimulationIssue, 0, len(issues))
+	minRank := severityRank(minSeverity)
+	for _, issue := range issues {
+		if severityRank(issue.Severity) >= minRank {
+			filtered = append(filtered, issue)
+		}
+	}
+	return filtered
+}
+
+func filterDSLHygieneIssues(issues []dsl.SimulationIssue) []dsl.SimulationIssue {
+	filtered := make([]dsl.SimulationIssue, 0, len(issues))
+	for _, issue := range issues {
+		if isDSLHygieneIssue(issue) {
+			continue
+		}
+		filtered = append(filtered, issue)
+	}
+	return filtered
+}
+
+func isDSLHygieneIssue(issue dsl.SimulationIssue) bool {
+	desc := issue.Description
+	if strings.Contains(desc, "主角缺少背景故事") ||
+		strings.Contains(desc, "主角缺少性格或动机描述") ||
+		strings.Contains(desc, "战斗事件缺少配置") ||
+		strings.Contains(desc, "战斗事件没有指定敌人") {
+		return true
+	}
+	return false
+}
+
+func parseMinSeverity(raw string) (dsl.SeverityLevel, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "", "warning", "warn":
+		return dsl.SeverityWarning, nil
+	case "critical", "crit":
+		return dsl.SeverityCritical, nil
+	case "info", "all":
+		return dsl.SeverityInfo, nil
+	default:
+		return "", fmt.Errorf("无效 min-severity: %s (可选 critical, warning, info)", raw)
+	}
+}
+
+func severityRank(severity dsl.SeverityLevel) int {
+	switch severity {
+	case dsl.SeverityCritical:
+		return 3
+	case dsl.SeverityWarning:
+		return 2
+	case dsl.SeverityInfo:
+		return 1
+	default:
+		return 0
 	}
 }
 
@@ -231,8 +341,19 @@ func printSummary(report checkNovelAIReport) {
 	fmt.Printf("Book: %s\n", report.BookName)
 	fmt.Printf("Chapters: %d\n", report.ChapterCount)
 	fmt.Printf("DSL: %s\n", report.DSLFile)
-	fmt.Printf("Issues: total=%d critical=%d warning=%d info=%d\n",
+	fmt.Printf("Reported issues (min=%s, include_dsl_hygiene=%t): total=%d critical=%d warning=%d info=%d\n",
+		report.MinSeverity, report.IncludeDSLHygiene,
 		report.Summary.Total, report.Summary.Critical, report.Summary.Warning, report.Summary.Info)
+	if report.FilteredOut > 0 {
+		fmt.Printf("All issues: total=%d critical=%d warning=%d info=%d (filtered_out=%d)\n",
+			report.AllSummary.Total, report.AllSummary.Critical, report.AllSummary.Warning, report.AllSummary.Info, report.FilteredOut)
+	}
+	if summary := formatGoldenSummary(report.Golden); summary != "" {
+		fmt.Println(summary)
+		if report.Golden.Missed > 0 {
+			fmt.Printf("Golden missed: %s\n", strings.Join(report.Golden.MissingIssues, ", "))
+		}
+	}
 }
 
 func printIssues(simulator *dsl.Simulator) {
@@ -268,8 +389,20 @@ func formatTextReport(report checkNovelAIReport) string {
 	b.WriteString(fmt.Sprintf("Source: %s\n", report.Source))
 	b.WriteString(fmt.Sprintf("ChapterCount: %d\n", report.ChapterCount))
 	b.WriteString(fmt.Sprintf("DSL: %s\n", report.DSLFile))
-	b.WriteString(fmt.Sprintf("Issues: total=%d critical=%d warning=%d info=%d\n\n",
+	b.WriteString(fmt.Sprintf("MinSeverity: %s\n", report.MinSeverity))
+	b.WriteString(fmt.Sprintf("IncludeDSLHygiene: %t\n", report.IncludeDSLHygiene))
+	b.WriteString(fmt.Sprintf("ReportedIssues: total=%d critical=%d warning=%d info=%d\n",
 		report.Summary.Total, report.Summary.Critical, report.Summary.Warning, report.Summary.Info))
+	b.WriteString(fmt.Sprintf("AllIssues: total=%d critical=%d warning=%d info=%d filtered_out=%d\n\n",
+		report.AllSummary.Total, report.AllSummary.Critical, report.AllSummary.Warning, report.AllSummary.Info, report.FilteredOut))
+	if summary := formatGoldenSummary(report.Golden); summary != "" {
+		b.WriteString(summary)
+		b.WriteString("\n")
+		if report.Golden.Missed > 0 {
+			b.WriteString(fmt.Sprintf("GoldenMissed: %s\n", strings.Join(report.Golden.MissingIssues, ", ")))
+		}
+		b.WriteString("\n")
+	}
 
 	for i, issue := range report.Issues {
 		b.WriteString(fmt.Sprintf("%d. [%s/%s] %s\n",
@@ -283,6 +416,13 @@ func formatTextReport(report checkNovelAIReport) string {
 		}
 		if issue.Suggestion != "" {
 			b.WriteString(fmt.Sprintf("   Suggestion: %s\n", issue.Suggestion))
+		}
+		for _, ev := range issue.Evidence {
+			location := ev.Chapter
+			if ev.Step > 0 {
+				location = fmt.Sprintf("%s step %d", ev.Chapter, ev.Step)
+			}
+			b.WriteString(fmt.Sprintf("   Evidence: %s / %s: %s\n", location, ev.Source, ev.Text))
 		}
 		b.WriteString("\n")
 	}
