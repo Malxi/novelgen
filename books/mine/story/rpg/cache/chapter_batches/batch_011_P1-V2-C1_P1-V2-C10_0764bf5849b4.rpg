@@ -1,0 +1,1095 @@
+metadata {
+    title = "穿越者的天道弈局：黑风矿场篇"
+    dsl_version = "0.2.0"
+    source = "novelgen_outline"
+}
+world {
+    location "黑风矿矿道入口" {
+        id = "loc_heifeng_mine_tunnel_entrance"
+        description = "黑风矿所有矿道的总入口，是矿奴上下工、交灵石、监工盘查的核心区域，常年有监工把守，戒备森严。"
+        __placeholder__ = false
+    }
+    location "黑风矿西坡废石堆" {
+        id = "loc_heifeng_mine_west_slope_waste_rock_pile"
+        description = "黑风矿西坡堆放开采废弃矿渣的区域，人迹罕至，是矿奴私下传递消息、藏匿物资的隐蔽地点。"
+        __placeholder__ = false
+    }
+    location "黑风矿未登记废弃深矿道" {
+        id = "loc_heifeng_mine_abandoned_deep_tunnel"
+        description = "黑风矿最深处未登记在矿场地图上的废弃矿道，因早年矿难死了多名矿奴被封禁，深处连通封印「死后夺取」禁术的上古遗迹。"
+        __placeholder__ = false
+    }
+    location "黑风矿矿奴大通铺" {
+        id = "loc_heifeng_mine_miner_dormitory"
+        description = "黑风矿底层矿奴的集体居所，环境简陋拥挤，漏风漏雨，几十名矿奴挤在通铺上休息，没有任何隐私可言。"
+        __placeholder__ = false
+    }
+    location "黑风矿西岔道" {
+        id = "loc_heifeng_mine_west_branch_tunnel"
+        description = "黑风矿西侧的废弃岔道，位置偏僻监工很少巡逻，是林砚和小石头约定的秘密碰头地点。"
+        __placeholder__ = false
+    }
+    location "黑风矿地下遗迹入口" {
+        id = "loc_heifeng_mine_forbidden_ruins_entrance"
+        description = "封印「死后夺取」禁术的上古遗迹的外围入口，岩壁上刻满血色符文，只有持对应残玉才能触发机关打开。"
+        __placeholder__ = false
+    }
+    location "黑风矿地下遗迹外围" {
+        id = "loc_heifeng_mine_forbidden_ruins_outer"
+        description = "上古遗迹的外围区域，空气中弥漫着高浓度灵气和浸骨阴气，岩壁上刻满上古符文，没有任何照明，能见度极低。"
+        __placeholder__ = false
+    }
+    location "黑风矿废弃矿道落石陷阱" {
+        id = "loc_heifeng_mine_abandoned_tunnel_rockfall_trap"
+        description = "林砚半个月前提前布置的落石陷阱，只要有重物落地的震动就会触发坍塌，掩埋现场所有痕迹。"
+        __placeholder__ = false
+    }
+    location "黑风矿废弃矿道岔路口" {
+        id = "loc_heifeng_mine_abandoned_tunnel_fork"
+        description = "废弃矿道内的岔路口，位置偏僻，岩层稳定，是林砚复活金手指的固定刷新位置。"
+        __placeholder__ = false
+    }
+}
+characters {
+    player "林砚" {
+        id = "char_lin_yan"
+        description = "前世是专写矿场开局修仙文的网络作者，穿越成黑风矿底层矿奴，觉醒与写作绑定的复活金手指，每死亡一次折损十年阳寿，目前剩余24年阳寿，修为练气一层，心思缜密逻辑清晰，正谋划逃离黑风矿。"
+        __placeholder__ = false
+        str = 3
+        agi = 4
+        int = 9
+        vit = 3
+        hp = 100
+        mp = 20
+        class = "穿越者/黑风矿矿奴"
+        realm = "练气一层"
+        remaining_lifespan = 24
+    }
+    npc "周虎" {
+        id = "char_zhou_hu"
+        description = "黑风矿监工，左脸有一道从眉骨划到下颌的刀疤，性格残忍贪婪，靠盘剥矿奴灵石牟利，是缉厄司的外围线人，修为练气四层。"
+        __placeholder__ = false
+        role = "黑风矿监工/缉厄司外围线人"
+        realm = "练气四层"
+        default_location = "loc_heifeng_mine_tunnel_entrance"
+    }
+    npc "暗卫甲（七十三）" {
+        id = "char_wei_73"
+        description = "缉厄司底层暗卫，编号七十三，练气九层修为，性格冷酷谨慎，负责黑风矿区域的穿越者排查与遗迹探查，手上沾染多名穿越者的性命。"
+        __placeholder__ = false
+        role = "缉厄司暗卫"
+        realm = "练气九层"
+        default_location = "loc_heifeng_mine_abandoned_deep_tunnel"
+    }
+    npc "暗卫乙" {
+        id = "char_wei_b"
+        description = "缉厄司底层暗卫，练气七层修为，性格贪财鲁莽，是暗卫甲的副手，一直想抓穿越者换赏金凑够买筑基丹的钱。"
+        __placeholder__ = false
+        role = "缉厄司暗卫"
+        realm = "练气七层"
+        default_location = "loc_heifeng_mine_abandoned_deep_tunnel"
+    }
+    npc "小石头" {
+        id = "char_xiao_shi_tou"
+        description = "黑风矿的小矿奴，父母双亡，熟悉矿道所有地形，嘴严守信，之前差点被监工放养的恶犬咬死时被林砚救下，是林砚逃离计划的核心盟友。"
+        __placeholder__ = false
+        role = "黑风矿矿奴/林砚盟友"
+        default_location = "loc_heifeng_mine_miner_dormitory"
+    }
+    npc "顾大人" {
+        id = "char_gu"
+        description = "缉厄司高层，是本次黑风矿禁术解封行动的总负责人，修为高深，心思缜密，目标是取出「死后夺取」禁术收割所有西境穿越者的天道碎片。"
+        __placeholder__ = false
+        role = "缉厄司高层"
+        default_location = "缉厄司青牛镇分舵"
+    }
+    npc "书友会成员" {
+        id = "char_book_club_member"
+        description = "穿越者互助组织「书友会」的潜伏成员，目前在黑风矿内活动，暗中收集缉厄司的相关情报，帮助被追杀的穿越者脱身。"
+        __placeholder__ = false
+        role = "穿越者互助组织成员"
+        default_location = "loc_heifeng_mine_miner_dormitory"
+    }
+}
+storyline {
+    chapter "监工鞭落，死矿催命" {
+        id = "chapter_c1_whip_fall_death_mine"
+        objective "林砚伪装躲避探查，初探废弃矿道" {
+            step 1 {
+                name = "林砚整理随身物资，伪装成憨傻矿奴出门"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "supplies"
+                        from = "无"
+                        to = "1块下品灵石+半块萤石"
+                        delta = "+1下品灵石+1萤石"
+                        note = "确认随身物资完好，用矿灰掩盖容貌伪装憨傻矿奴"
+                    }
+                }
+            }
+            step 2 {
+                name = "偶遇带淡金色灵光的缉厄司暗卫，靠地脉干扰和金手指隐匿躲过探查"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "detection_status"
+                        to = "未被发现"
+                        note = "借助矿场地脉符文波动和复活金手指自带的微弱隐匿效果，躲过练气九层暗卫的探查"
+                    }
+                }
+            }
+            step 3 {
+                name = "哄骗管工获得西坡挖矿许可，留下和小石头亥时在丁字七号矿道碰头的暗号"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_escape_plan"
+                        kind = "transition"
+                        to = "推进"
+                        note = "在西坡废石堆留下三角暗号，约定和小石头亥时碰头协商逃离计划"
+                    }
+                }
+            }
+            step 4 {
+                name = "前往废弃矿道探路，被早就盯上他的周虎拦下"
+                event {
+                    type = "combat"
+                    combat {
+                        enemies = [{id = "char_zhou_hu", count = 1, level = 4, realm = "练气四层"}]
+                    }
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "injury"
+                        field = "back"
+                        to = "轻伤"
+                        delta = "-5hp"
+                        note = "被周虎一鞭抽中后背，粗布短打撕裂，留下血痕"
+                    }
+                }
+            }
+            step 5 {
+                name = "被周虎罚入废弃矿道挖矿，要求每日上交5块下品灵石，天黑前先交3块"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "mining_quota"
+                        to = "每日5块下品灵石，当日先交3块"
+                        note = "被周虎恶意刁难，要求高额挖矿配额，完不成会被重罚甚至打死"
+                    }
+                }
+            }
+            step 6 {
+                name = "进入废弃矿道，发现洞内灵气浓度远超普通矿道，怀疑深处藏有禁术遗迹"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "forbidden_artifact_clue"
+                        to = "获得"
+                        note = "察觉废弃矿道灵气浓度远超普通区域，怀疑深处藏有「死后夺取」禁术封印遗迹"
+                    }
+                }
+            }
+            step 7 {
+                name = "沿途刻专属三角记号防迷路，捡到带血纹的碎石，指尖触碰有针刺感后松手"
+                event {
+                    type = "acquire"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "rune_stone"
+                        delta = "+1血纹碎石"
+                        note = "捡到与禁术同源的血纹碎石，指尖触碰有针刺感，疑似封印的一部分"
+                    }
+                }
+            }
+            step 8 {
+                name = "发现矿道深处有淡绿光晃动和细碎低语，朝着黑暗深处走去"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_forbidden_artifact_explore"
+                        kind = "transition"
+                        to = "开启"
+                        note = "发现深处有异常绿光和低语，朝着疑似遗迹的方向前进"
+                    }
+                }
+            }
+        }
+    }
+    chapter "血纹无载，越界天规" {
+        id = "chapter_c2_rune_sky_rule"
+        objective "探查废弃矿道深处，确认未知遗迹存在" {
+            step 1 {
+                name = "踏入黑暗深处，踩到此前闯入矿道惨死的矿奴焦尸，对方手指直指岩壁方向"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "miner_death_clue"
+                        to = "获得"
+                        note = "发现此前擅自闯入矿道的矿奴焦尸，死者手指直指岩壁符文方向"
+                    }
+                }
+            }
+            step 2 {
+                name = "捡起死者脚边的下品灵石碎块凑配额，捡回掉落的血纹碎石揣入衣兜"
+                event {
+                    type = "acquire"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "low_grade_spirit_stone"
+                        delta = "+4碎块"
+                        note = "捡到4块下品灵石碎块，填补当日配额缺口"
+                    }
+                }
+            }
+            step 3 {
+                name = "谨慎前进沿途刻专属三角记号防迷路，越往深处灵气浓度越高，神魂出现持续刺痛"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "soul_status"
+                        to = "轻微刺痛"
+                        note = "神魂受遗迹封印力量影响，出现持续刺痛感"
+                    }
+                }
+            }
+            step 4 {
+                name = "发现岩壁上刻满原书设定不存在的血色符文，手中血纹碎石纹路与岩壁完全吻合，确认死者是触碰符文被雷系灵力电死"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "rune_seal_clue"
+                        to = "获得"
+                        note = "确认岩壁上的血色符文是封印外围，触碰到会触发雷系攻击，此前矿奴就是触碰符文惨死"
+                    }
+                }
+            }
+            step 5 {
+                name = "推测剧情偏离原设定的两种可能性：要么有持设定修改金手指的穿越者改动世界，要么世界本身因穿越者到来衍生新内容"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_world_abnormality_clue"
+                        kind = "transition"
+                        to = "开启"
+                        note = "察觉当前世界剧情完全脱离自己所写的原书设定，存在未知变量"
+                    }
+                }
+            }
+            step 6 {
+                name = "察觉自身复活金手指热源与血色符文力量同源，判断符文是封印特殊力量的法阵外围纹路"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "resonance"
+                        to = "触发"
+                        note = "复活金手指与血色符文产生同源共振，确认符文是封印特殊力量的外围法阵"
+                    }
+                }
+            }
+            step 7 {
+                name = "冒险触碰血色符文被吸力粘住指尖，体内灵力乱窜，挣脱后检查无暗伤，灵力反而略有浑厚"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "cultivation"
+                        field = "spirit_power"
+                        delta = "+0.1层"
+                        note = "触碰符文触发陷阱，体内灵力短暂乱窜，挣脱后无暗伤，灵力反而略有提升"
+                    }
+                }
+            }
+            step 8 {
+                name = "发现岩壁旁有原设定不存在的通往更深处的岔道口，此前消失的淡绿光正从岔道口深处飘出"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_forbidden_artifact_explore"
+                        kind = "transition"
+                        to = "推进"
+                        note = "发现原书设定中不存在的通往遗迹更深处的岔道口，深处飘出淡绿色异光"
+                    }
+                }
+            }
+        }
+    }
+    chapter "机关暗启，异息牵魂" {
+        id = "chapter_c3_mechanism_soul_tie"
+        objective "破解外围机关，确认遗迹内部存在禁术" {
+            step 1 {
+                name = "几缕缠在绿光边缘的赤红光丝擦过指尖，掏出血纹碎石比对，发现碎石与岩壁符文震颤频率完全一致"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "resonance"
+                        to = "增强"
+                        note = "血纹碎石与岩壁封印符文的共振频率完全同步，确认是同源物品"
+                    }
+                }
+            }
+            step 2 {
+                name = "发现脚边有被落石砸坏的缉厄司青铜监测牌，确认是此前矿震导致遗迹入口迟迟未被发现"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "enemy_clue"
+                        to = "获得"
+                        note = "发现缉厄司遗留的监测牌，确认缉厄司已经在探查遗迹，此前矿震掩盖了入口痕迹未被发现"
+                    }
+                }
+            }
+            step 3 {
+                name = "凭借写作积累的机关知识，判断冷热符文交汇处是机关触发点，确认遗迹是世界线变动衍生的新内容"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "mechanism_rule"
+                        to = "掌握"
+                        note = "凭借写作矿场题材积累的机关知识，成功判断出封印机关的触发逻辑，确认遗迹是世界线变动衍生的新内容，不在原书设定内"
+                    }
+                }
+            }
+            step 4 {
+                name = "权衡利弊后按下凸起机关触发石，刻满符文的岩壁缓缓滑开，露出通往地下的遗迹通道，通道涌出高浓度灵气和浸骨阴气，具备吞光效果内部光线极暗"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "loc_heifeng_mine_forbidden_ruins_entrance"
+                        kind = "transition"
+                        to = "开启"
+                        note = "成功触发机关打开遗迹入口，通道内涌出高浓度灵气和浸骨阴气，具备吞光效果，内部几乎没有光线"
+                    }
+                }
+            }
+            step 5 {
+                name = "正犹豫是否进入遗迹，丹田处复活金手指突然产生同源牵引感，确认通道内封印着二十年前被缉厄司围剿的穿越者所持有的「死后夺取」禁术金手指"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "forbidden_artifact_info"
+                        to = "获得"
+                        note = "通过金手指共振确认遗迹内封印的就是二十年前造成大量穿越者死亡的「死后夺取」禁术"
+                    }
+                }
+            }
+            step 6 {
+                name = "权衡取得禁术的风险与收益，正准备做出进入遗迹的决定时，矿道深处隐约传来细碎的不明异动"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_enemy_encounter"
+                        kind = "transition"
+                        to = "触发"
+                        note = "察觉矿道深处有缉厄司暗卫靠近的动静，被迫中断探查计划"
+                    }
+                }
+            }
+        }
+    }
+    chapter "灰影巡洞，缉字铜牌" {
+        id = "chapter_c4_gray_shadow_bronze_medal"
+        objective "躲避缉厄司暗卫探查，避免身份暴露" {
+            step 1 {
+                name = "察觉两名修为远超自身的修士靠近，立刻捏灭火折子，拖过矿篓遮挡，躲到岩柱阴影里收敛气息"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "hide_status"
+                        to = "隐匿中"
+                        note = "立刻熄灭照明，躲入岩柱阴影，收敛自身所有气息避免被发现"
+                    }
+                }
+            }
+            step 2 {
+                name = "两名穿特殊灰衣的人现身，认出对方腰上挂着刻有「缉」字的铜牌，是专门猎杀穿越者的缉厄司成员"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "enemy_identity"
+                        to = "确认"
+                        note = "认出两名来者是专门猎杀穿越者的缉厄司暗卫，修为分别为练气九层和练气七层，远超自身练气一层"
+                    }
+                }
+            }
+            step 3 {
+                name = "兜里的金手指碎石差点和暗卫甲的灵力产生共鸣暴露位置，及时按住压制住波动"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "rune_stone"
+                        delta = "共振压制成功"
+                        note = "及时按住血纹碎石，压制住共振波动，未被暗卫察觉异常"
+                    }
+                }
+            }
+            step 4 {
+                name = "暗卫甲察觉到封印石壁有刚被触发的灵力残留，但受岩壁血色符文散逸的紊乱灵力干扰，无法追踪闯入者痕迹"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "trace_status"
+                        to = "未被追踪"
+                        note = "借符文散逸的紊乱灵力完美掩盖触发机关留下的痕迹，暗卫无法追踪到闯入者身份"
+                    }
+                }
+            }
+            step 5 {
+                name = "暗卫甲收到舵主传讯，北区矿道发现书友会穿越者踪迹，要求二人立刻前往支援，暗卫甲在石壁留下监测灵力印和灰色监测石后，带着暗卫乙离开"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_book_club_clue"
+                        kind = "transition"
+                        to = "开启"
+                        note = "获知书友会有成员也在黑风矿内活动，被缉厄司盯上，暗卫留下监测符后前往北区支援"
+                    }
+                }
+            }
+            step 6 {
+                name = "躲在岩柱后等了一刻钟，确认二人彻底离开后才敢现身，复盘刚才的惊险遭遇，意识到自身处境极度凶险"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "safety_status"
+                        to = "暂时安全"
+                        note = "确认暗卫彻底离开，暂时脱离险境，意识到自身当前处境极度危险，随时可能暴露"
+                    }
+                }
+            }
+        }
+    }
+    chapter "禁名「夺魄」，千魂血祭" {
+        id = "chapter_c5_forbidden_name_soul_sacrifice"
+        objective "偷听清卫对话，获知禁术真相与自身处境" {
+            step 1 {
+                name = "正打算触碰脚边的灰色监测石，察觉原本离开的暗卫去而复返，立刻躲进岩柱阴影，强忍未愈合的鞭伤痛不敢发出动静，依靠血色符文的紊乱灵力和复活金手指的隐匿效果，躲开练气九层暗卫的探查"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "injury"
+                        field = "back"
+                        delta = "疼痛加剧，hp-2"
+                        note = "暗卫去而复返，躲在阴影中拉扯到未愈合的鞭伤，忍痛不敢发出任何动静，成功躲过探查"
+                    }
+                }
+            }
+            step 2 {
+                name = "暗卫乙抱怨被调虎离山，白跑一趟没找到书友会踪迹，原本留在岔道的监测石也被余震砸碎"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "enemy_schedule"
+                        to = "获得"
+                        note = "得知暗卫是被调虎离山引走，此前遗留的监测石已经被矿震砸碎，没有留下任何痕迹"
+                    }
+                }
+            }
+            step 3 {
+                name = "暗卫甲判断有人故意引走他们，封印波动已经接近临界值，近期肯定有人触发过机关"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "loc_heifeng_mine_forbidden_ruins_entrance"
+                        kind = "transition"
+                        field = "seal_loose_status"
+                        to = "确认"
+                        note = "确认封印下个月就会松动，缉厄司已经盯上此处"
+                    }
+                }
+            }
+            step 4 {
+                name = "兜里的共鸣碎石因暗卫甲输入封印的灵力产生共振，立刻按住碎石，消耗丹田内一成灵力压下共鸣，没有被暗卫察觉"
+                event {
+                    type = "acquire"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "spirit_power"
+                        delta = "-10%"
+                        note = "消耗一成灵力成功压制碎石共振，未被暗卫发现"
+                    }
+                }
+            }
+            step 5 {
+                name = "暗卫乙猜测触发机关的是拥有复活金手指的矿奴林砚，提到抓到林砚能获得五十块中品灵石的赏金"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "bounty_info"
+                        to = "获得"
+                        note = "得知自己的穿越者身份已经暴露，被缉厄司悬赏五十块中品灵石抓捕"
+                    }
+                }
+            }
+            step 6 {
+                name = "暗卫甲否认是林砚，称练气一层修为触发不了上古封印机关，推测是书友会成员躲在矿场，还透露下个月顾大人会带破阵人手来解封，取出名为「夺魄」的禁术，届时可以收割所有西境穿越者的金手指、天道碎片与修为"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "forbidden_artifact_plan"
+                        to = "获得"
+                        note = "得知缉厄司下个月就要来解封「夺魄」禁术，届时会收割西境所有穿越者的金手指和天道碎片"
+                    }
+                }
+            }
+            step 7 {
+                name = "暗卫乙提及二十年前有惊悚悬疑类穿越者靠「夺魄」禁术杀了上千穿越者，最终被缉厄司付出七位金丹修士的代价击杀，禁术也被封在此处的往事"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "forbidden_artifact_history"
+                        to = "获得"
+                        note = "获知「夺魄」禁术的过往历史，二十年前的持有者曾靠禁术屠杀上千穿越者，缉厄司付出七位金丹修士的代价才将其封印"
+                    }
+                }
+            }
+            step 8 {
+                name = "终于明白缉厄司猎杀穿越者并非为了维护天道秩序，而是要抽取穿越者的天道碎片填补天道裂缝，穿越者只是他们可以随意收割的耗材"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_heaven_conspiracy_clue"
+                        kind = "transition"
+                        to = "开启"
+                        note = "获知缉厄司猎杀穿越者的真实目的，是抽取天道碎片修补已经破损的天道，穿越者只是他们的移动耗材"
+                    }
+                }
+            }
+            step 9 {
+                name = "暗卫甲安排明天抓捕三名已经排查到的可疑矿奴，就地抽取天道碎片不用走流程，还要暗卫乙找监工周虎提走林砚，抽取他的复活类金手指天道碎片，能多领二十块中品灵石赏金"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "wanted_level"
+                        to = "提升"
+                        note = "得知明天缉厄司就会安排周虎把自己交出去，抽走复活金手指对应的天道碎片，抓到自己额外有二十块中品灵石赏金"
+                    }
+                }
+            }
+            step 10 {
+                name = "暗卫甲在封印石壁上贴了追踪符，有异动会第一时间收到提示，还安排当晚加派人手巡逻岔道，不让任何矿奴靠近；他原本怀疑岩柱方向有问题要上前检查，被暗卫乙以头顶碎石松动、约了兄弟喝酒为由拉住"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "loc_heifeng_mine_forbidden_ruins_entrance"
+                        kind = "transition"
+                        field = "trap_set"
+                        to = "是"
+                        note = "暗卫在入口留下追踪符，加派巡逻人手，原本要检查岩柱方向，被暗卫乙劝走"
+                    }
+                }
+            }
+            step 11 {
+                name = "两名暗卫离开后，屏息等了一刻钟确认安全才放松下来，理清所有线索后意识到自己明天就会被抓、下个月禁术出世后所有西境穿越者都会被赶尽杀绝的必死死局"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_escape_plan"
+                        kind = "transition"
+                        to = "紧急调整"
+                        note = "确认自身陷入必死局面，原定三个月后的逃离计划必须提前，否则不仅自己会死，所有西境穿越者都会被屠杀"
+                    }
+                }
+            }
+        }
+    }
+    chapter "石落声起，刃穿魂归" {
+        id = "chapter_c6_stone_fall_soul_return"
+        objective "遭遇暗卫刺杀，触发复活能力蒙混过关" {
+            step 1 {
+                name = "后背上的冷汗一层接一层冒出来，把单薄的矿奴服浸得能拧出水，刚要抬手擦掉下颌的冷汗，就听见矿道拐角处传来脚步声，灰黑色的缉厄司衣角闪了进来——两个暗卫去而复返"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_enemy_encounter"
+                        kind = "transition"
+                        to = "触发"
+                        note = "暗卫去而复返，再次陷入险境"
+                    }
+                }
+            }
+            step 2 {
+                name = "暗卫甲整个人转过来，指尖淡蓝色的灵力已经翻涌成尖锐的刃状，目光像淬了冰的锥子，直直扎向藏身的岩柱方向，要求他出来"
+                event {
+                    type = "combat"
+                    combat {
+                        enemies = [
+                            {id = "char_wei_73", count = 1, level = 9, realm = "练气九层"},
+                            {id = "char_wei_b", count = 1, level = 7, realm = "练气七层"}
+                        ]
+                    }
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "combat_status"
+                        to = "遭遇"
+                        note = "被暗卫发现位置，双方战力差距悬殊，无任何胜算"
+                    }
+                }
+            }
+            step 3 {
+                name = "紧绷了足足一个多时辰的脚尖下意识往前蹭了一下，刚好踢在脚边那块松了大半的小石子，发出脆响彻底暴露位置"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "exposed_status"
+                        to = "完全暴露"
+                        note = "误踢石子发出声响，彻底暴露藏身位置"
+                    }
+                }
+            }
+            step 4 {
+                name = "暗卫乙发出的灵气刃脱手飞出，快到连抬手格挡的动作都做不到，泛着冷白色光的刃尖穿过岩柱缝隙，精准刺穿心脏，当场死亡"
+                event {
+                    type = "combat"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "death"
+                        field = "hp"
+                        to = 0
+                        delta = "-95hp"
+                        note = "被暗卫乙的灵气刃精准刺穿心脏，当场死亡"
+                    }
+                }
+            }
+            step 5 {
+                name = "触发复活金手指，在距离死亡地点五百米的废弃岔路口复活，本次复活折损十年阳寿，剩余阳寿仅剩24年，修为仍保持练气一层"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "lifespan"
+                        field = "remaining_years"
+                        from = 34
+                        to = 24
+                        delta = -10
+                        note = "触发复活金手指，在预设复活点复活，折损十年阳寿，修为无损失"
+                    }
+                }
+            }
+            step 6 {
+                name = "半个月前提前设置的落石陷阱被死亡时掉落的矿镐震动触发，坍塌的碎石彻底掩埋了死亡现场的所有痕迹"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "loc_heifeng_mine_abandoned_tunnel_rockfall_trap"
+                        kind = "transition"
+                        to = "触发"
+                        note = "提前设置的落石陷阱被掉落的矿镐震动触发，彻底掩埋死亡现场所有痕迹，包括暗卫遗留的监测符"
+                    }
+                }
+            }
+            step 7 {
+                name = "两名暗卫误以为林砚被落石砸得尸骨无存，忌惮矿尘里的尸气会影响灵力，放弃在现场搜寻，决定次日安排监工周虎集合所有矿奴排查确认林砚是否存活"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "death_covered_status"
+                        to = "成功掩盖"
+                        note = "暗卫误以为他被落石砸得尸骨无存，放弃现场搜寻，只安排明天集合矿奴排查"
+                    }
+                }
+            }
+            step 8 {
+                name = "两名暗卫提及下个月矿道深处的封印即将松动，要求当夜不许任何矿奴靠近封印区域，随后便前往其他岔道巡逻"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "seal_schedule"
+                        to = "再次确认"
+                        note = "再次确认封印下个月松动，缉厄司已经加派巡逻人手看守"
+                    }
+                }
+            }
+            step 9 {
+                name = "确认暗卫彻底离开后放松下来，盘算着要趁暗卫巡逻其他岔道的间隙绕路前往遗迹入口探查封印和禁术相关线索"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_forbidden_artifact_explore"
+                        kind = "transition"
+                        to = "重启"
+                        note = "计划趁暗卫巡逻其他区域的间隙，再次返回遗迹探查线索"
+                    }
+                }
+            }
+        }
+    }
+    chapter "残纹半玉，契合金源" {
+        id = "chapter_c7_broken_jade_gold_source"
+        objective "进入遗迹获取禁术钥匙残玉" {
+            step 1 {
+                name = "熟知自己写过的反派套路，在矿道岔口蹲守三千七百息（半个多时辰）确认安全，全程小心控制动作不留下明显行迹"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "hide_status"
+                        to = "隐匿"
+                        note = "蹲守半个多时辰确认暗卫完全离开，全程未留下任何行迹"
+                    }
+                }
+            }
+            step 2 {
+                name = "避开暗卫巡逻的主矿道，绕满是碎石的废弃岔路前往地下遗迹，沿路蹭掉自己留下的脚印掩盖行踪"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "track_covered_status"
+                        to = "完全掩盖"
+                        note = "绕偏僻岔路返回遗迹，沿路蹭掉所有脚印，避免被巡逻暗卫发现踪迹"
+                    }
+                }
+            }
+            step 3 {
+                name = "确认遗迹入口无埋伏后溜入遗迹外围，凭借口袋里共鸣碎石的发烫提示，在碎石缝中发现半块淡青色残玉"
+                event {
+                    type = "acquire"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "forbidden_jade_fragment"
+                        delta = "+1"
+                        note = "在碎石缝中找到禁术封印的钥匙半块残玉，是打开封印的唯一道具"
+                    }
+                }
+            }
+            step 4 {
+                name = "残玉与复活金手指产生同源共鸣，通过共鸣获知残玉是禁术「死后夺取」的封印钥匙，以及残玉的具体使用规则：每三个时辰耗十分之一练气一层灵力隐匿，练气三层可激活，强行激活扣五年阳寿，激活后百里内缉厄司可定位"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "jade_use_rule"
+                        to = "完全掌握"
+                        note = "通过金手指共振获知残玉的所有使用规则和代价，目前练气一层修为无法激活，只能消耗灵力隐匿波动"
+                    }
+                }
+            }
+            step 5 {
+                name = "消耗十分之一的练气一层灵力包裹残玉，掩盖其外泄波动，又从衣服下摆撕下粗布将残玉层层裹好放入贴身里衣口袋，确认金丹修士不特意搜身就无法察觉"
+                event {
+                    type = "acquire"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "spirit_power"
+                        delta = "-10%"
+                        note = "消耗一成灵力掩盖残玉的外泄波动，用粗布层层包裹后贴身藏匿，金丹以下修士无法察觉"
+                    }
+                }
+            }
+            step 6 {
+                name = "梳理当前线索，确认此前遗落的矿镐和暗卫监测石已被落石掩埋无破绽，意识到需赶在明日全矿排查前通知盟友调整原定三个月后逃离的计划"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_escape_plan"
+                        kind = "transition"
+                        to = "调整提前"
+                        note = "确认所有痕迹都被掩盖，必须赶在明天全矿排查前通知小石头将原定三个月后的逃离计划提前"
+                    }
+                }
+            }
+            step 7 {
+                name = "检查确认未在遗迹外围留下任何痕迹后，转身离开遗迹没入矿道黑暗中"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "loc_heifeng_mine_forbidden_ruins_entrance"
+                        kind = "transition"
+                        field = "trace_cleared_status"
+                        to = "完全清除"
+                        note = "清除所有探查痕迹，关闭遗迹入口，伪装成未被动过的样子后离开"
+                    }
+                }
+            }
+        }
+    }
+    chapter "落石封门，秘藏禁踪" {
+        id = "chapter_c8_rockfall_seal_secret"
+        objective "封堵遗迹入口，避免禁术提前被缉厄司获取" {
+            step 1 {
+                name = "按照记忆精准点按岩壁上的符文节点，成功关闭遗迹入口，将入口伪装得与周围岩壁毫无二致，完全看不出拼接痕迹"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "loc_heifeng_mine_forbidden_ruins_entrance"
+                        kind = "transition"
+                        to = "关闭伪装"
+                        note = "成功关闭遗迹入口，完全伪装成普通岩壁，没有任何拼接痕迹"
+                    }
+                }
+            }
+            step 2 {
+                name = "确认贴身藏匿的残玉仅需每三个时辰消耗十分之一练气一层的灵力即可维持隐匿效果，无需折损阳寿"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "spirit_power_consumption"
+                        to = "确认可承受"
+                        note = "确认残玉每三个时辰仅消耗十分之一练气一层灵力，在可承受范围内，无需折损阳寿"
+                    }
+                }
+            }
+            step 3 {
+                name = "回忆此前听到的暗卫对话，得知遗迹封印下个月即将松动，缉厄司会提前排查这片废弃矿道，当前的入口机关最多只能瞒过对方半个月，一旦禁术「死后夺取」落入缉厄司手中，方圆千里内的所有穿越者都会遭遇灭顶之灾"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "enemy_seal_plan"
+                        to = "确认"
+                        note = "确认当前伪装最多只能瞒过缉厄司半个月，半个月后他们必然会发现遗迹入口，一旦禁术落入他们手中，所有西境穿越者都会死"
+                    }
+                }
+            }
+            step 4 {
+                name = "回忆书友会旧档案：二十年前持有「死后夺取」禁术的悬疑作者曾三个月屠杀三百二十七名穿越者，折损缉厄司十七名筑基修士，最终被书友会卧底传递消息拿下，禁术便封印在此处遗迹"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "forbidden_artifact_history_detail"
+                        to = "获得"
+                        note = "回想起书友会档案中关于「夺魄」禁术的详细记载，该禁术危害极大，一旦落入缉厄司手中后果不堪设想"
+                    }
+                }
+            }
+            step 5 {
+                name = "担心缉厄司拿到禁术后，自己尚未实施的逃去修仙界的计划会泡汤，连后天约定在西岔道碰头商议逃离计划的小石头也会受牵连丧命"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_escape_plan"
+                        kind = "transition"
+                        to = "优先级升级为最高"
+                        note = "意识到必须尽快逃离，还要保护盟友小石头的安全，不能让他被缉厄司牵连"
+                    }
+                }
+            }
+            step 6 {
+                name = "想起自己此前为写矿场题材修仙文，曾钻研矿山岩体力学、矿井灾害防治等专业教材，还请教过从业三十年的矿山安全员，具备定向坍塌测算的专业能力"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "mining_mechanics_calculation"
+                        to = "激活"
+                        note = "动用前世写作积累的专业矿山力学知识，测算定向坍塌方案封堵遗迹入口"
+                    }
+                }
+            }
+            step 7 {
+                name = "回忆自己三个月来在黑风矿当矿奴期间，已经反复勘测过这片区域的岩层情况，所有参数早已熟记于心"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "rock_layer_params"
+                        to = "完全掌握"
+                        note = "三个月挖矿期间已经反复勘测过这片区域的所有岩层参数，所有数据都熟记于心"
+                    }
+                }
+            }
+            step 8 {
+                name = "现场敲击勘测岩壁、地面的岩层情况，确认松散岩层的范围、应力点位置、落石坍塌效果均符合预期，测算出用脚边二十斤重的玄铁矿石砸向应力点即可触发定向坍塌，不会留下人为痕迹，还能为自己争取十天以上的缓冲时间"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "directional_collapse"
+                        to = "确认可行"
+                        note = "完成定向坍塌方案测算，只需砸向应力点即可触发坍塌封堵入口，不会留人为痕迹，能争取至少十天缓冲时间"
+                    }
+                }
+            }
+            step 9 {
+                name = "核对完全部坍塌细节、撤退路线，确认无任何纰漏，正准备动手触发坍塌时，突然听到远处矿道传来暗卫甲胄碰撞的声响，暗卫巡逻时间比预判早了整整一刻钟"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_enemy_encounter"
+                        kind = "transition"
+                        to = "触发"
+                        note = "暗卫巡逻时间比预判早了一刻钟，仅剩下不到三分钟时间完成坍塌操作"
+                    }
+                }
+            }
+        }
+    }
+    chapter "岩崩尘散，凶迹全消" {
+        id = "chapter_c9_rock_collapse_trace_clear"
+        objective "触发定向坍塌封堵遗迹，返回矿奴居所调整逃离计划" {
+            step 1 {
+                name = "发现暗卫巡逻时间比预判早了一刻钟，仅剩下不到三分钟时间处理遗迹入口"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "remaining_time"
+                        to = "3分钟"
+                        note = "时间紧迫，必须在三分钟内完成坍塌操作并撤离，否则会被暗卫发现"
+                    }
+                }
+            }
+            step 2 {
+                name = "为避免灵波被探测到，没有动用灵力，仅靠肉身力气用玄铁矿石砸岩壁应力点七次，触发矿道自然坍塌，完全封堵住遗迹入口，抹除了所有人为操作痕迹"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "loc_heifeng_mine_forbidden_ruins_entrance"
+                        kind = "transition"
+                        to = "完全封堵"
+                        note = "靠肉身力量砸应力点七次，触发定向坍塌，彻底封堵遗迹入口，未动用灵力，未留下任何人为痕迹"
+                    }
+                }
+            }
+            step 3 {
+                name = "巡逻暗卫误以为是常规自然坍塌，怕被落石伤到，没有进入废矿道查看，直接转向其他岔口巡逻"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "discovered_status"
+                        to = "未被发现"
+                        note = "暗卫误以为是常规自然坍塌，怕被落石伤到，没有进入矿道查看，成功蒙混过关"
+                    }
+                }
+            }
+            step 4 {
+                name = "取出之前藏好的五块下品灵石，往矿道出口走，路上特意蹭灰掩盖虎口的血痕，伪装成普通矿奴的样子"
+                event {
+                    type = "acquire"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "low_grade_spirit_stone"
+                        delta = "+5"
+                        note = "取出预先藏好的五块下品灵石，伪装成挖矿成果，蹭矿灰掩盖虎口血痕"
+                    }
+                }
+            }
+            step 5 {
+                name = "在废弃矿道入口撞见前来查看坍塌情况的周虎及其手下，刻意表现出被坍塌吓到的惧怕状态，符合普通矿奴见监工的常态"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "disguise_status"
+                        to = "成功"
+                        note = "伪装成被坍塌吓到的普通矿奴，表现符合常态，未引起周虎怀疑"
+                    }
+                }
+            }
+            step 6 {
+                name = "周虎手下清点林砚的五块灵石，周虎因知晓废弃矿道近期因封印溢散灵气、出矿率高一倍的通报，打消了对林砚的疑虑，没收两块灵石作为孝敬，抽了林砚一鞭后便赶去处理其他矿奴偷懒的事"
+                event {
+                    type = "combat"
+                    combat {
+                        enemies = [{id = "char_zhou_hu", count = 1, level = 4, realm = "练气四层"}]
+                    }
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "low_grade_spirit_stone"
+                        delta = "-2"
+                        note = "被周虎没收两块灵石孝敬，挨了一鞭，未暴露任何异常，周虎转身离开"
+                    }
+                }
+            }
+            step 7 {
+                name = "绕到西岔道背光处，用玄铁碎渣刻下和小石头约定的「提前两天碰头」的三角暗号，通过书友会联络石确认附近没有缉厄司人员和其他穿越者"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_escape_plan"
+                        kind = "transition"
+                        to = "通知盟友"
+                        note = "留下三角暗号通知小石头提前两天碰头，通过联络石确认附近安全，没有其他人员"
+                    }
+                }
+            }
+            step 8 {
+                name = "得知缉厄司下个月就要来矿场排查，最多十天就可能挖到他封起来的落石堆，原本定的三个月后借大型矿难逃离的计划时间不够，决定将逃离时间提前一个月，同时要把贴身的残玉找安全地方藏好"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "pt_escape_plan"
+                        kind = "transition"
+                        to = "确定提前一个月执行"
+                        note = "正式确定将逃离计划提前一个月，接下来需要准备逃离物资，寻找安全地方藏匿残玉"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,60 @@
+{
+  "version": 2,
+  "book_name": "mine",
+  "batch_index": 30,
+  "batch_size": 10,
+  "batch_hash": "7766b65db5c0b484515b1e9904e7f717aa0f5760d1c92954087ae066561fbae7",
+  "dsl_file": "D:\\Code\\nolvegen\\books\\mine\\story\\rpg\\cache\\chapter_batches\\batch_031_P1-V4-C1_P1-V4-C7_7766b65db5c0.rpg",
+  "updated_at": "2026-04-26T17:22:08+08:00",
+  "chapters": [
+    {
+      "chapter_id": "P1-V4-C1",
+      "chapter_path": "D:/Code/nolvegen/books/mine/chapters/chapter-P1-V4-C1.md",
+      "chapter_sha256": "413d48b168e315b58e30f2029012ab6bacb9b62f08fccfb034582540ebef608d",
+      "recap_path": "D:/Code/nolvegen/books/mine/story/recaps/P1-V4-C1.json",
+      "recap_sha256": "57437d0ca41f28c2538adb2a8eb1f8dff1b84f76265a94c524b99565e2e62893"
+    },
+    {
+      "chapter_id": "P1-V4-C2",
+      "chapter_path": "D:/Code/nolvegen/books/mine/chapters/chapter-P1-V4-C2.md",
+      "chapter_sha256": "4e47c2c6b8d1c0825f862701493bd65ac61dce59684957d206ffce87f819d0de",
+      "recap_path": "D:/Code/nolvegen/books/mine/story/recaps/P1-V4-C2.json",
+      "recap_sha256": "c5db9f5722c51c3dc5547c4ed3b3c8a31445c1e234848b61834f38b0a3b4b6f3"
+    },
+    {
+      "chapter_id": "P1-V4-C3",
+      "chapter_path": "D:/Code/nolvegen/books/mine/chapters/chapter-P1-V4-C3.md",
+      "chapter_sha256": "5aa88c66dc5616187c35673c5bc24fae1b3228b831aa77f85914682b29e062e1",
+      "recap_path": "D:/Code/nolvegen/books/mine/story/recaps/P1-V4-C3.json",
+      "recap_sha256": "e532477c463735a68fe68db32e4493c72d5f0f8750b940a7e8fdf82f55f2e600"
+    },
+    {
+      "chapter_id": "P1-V4-C4",
+      "chapter_path": "D:/Code/nolvegen/books/mine/chapters/chapter-P1-V4-C4.md",
+      "chapter_sha256": "ebae18c2202633b4bcca9713ffdf73bcb098a3dcaf22d1701a40bb622afe4001",
+      "recap_path": "D:/Code/nolvegen/books/mine/story/recaps/P1-V4-C4.json",
+      "recap_sha256": "bfae44f4ee290da0159dfc6ad97ce98ed5d94c5f868291a14e733dd327c3746b"
+    },
+    {
+      "chapter_id": "P1-V4-C5",
+      "chapter_path": "D:/Code/nolvegen/books/mine/chapters/chapter-P1-V4-C5.md",
+      "chapter_sha256": "0e1e42e1e8280d56c7d00f6ba37e81c4c61bedd3b33b2aa850ae6388cd5d22f7",
+      "recap_path": "D:/Code/nolvegen/books/mine/story/recaps/P1-V4-C5.json",
+      "recap_sha256": "c385b70574c690a2845f5b12a24323778d07669f8a01744c9ec658763fa4b12c"
+    },
+    {
+      "chapter_id": "P1-V4-C6",
+      "chapter_path": "D:/Code/nolvegen/books/mine/chapters/chapter-P1-V4-C6.md",
+      "chapter_sha256": "f0044cbfbcdf67fba369898a2601b61ed5b5cbd56dda306c8b8ce336587132db",
+      "recap_path": "D:/Code/nolvegen/books/mine/story/recaps/P1-V4-C6.json",
+      "recap_sha256": "75aaa6d0b0f0d0f53a0b6d6e77712017bf7f9c8fe6e23d2b4ab5f5ba9f34794a"
+    },
+    {
+      "chapter_id": "P1-V4-C7",
+      "chapter_path": "D:/Code/nolvegen/books/mine/chapters/chapter-P1-V4-C7.md",
+      "chapter_sha256": "835d1f5cd80c36aa3a7d76e31c823fa071bb10bdfd222f71f7eb5c50f938207e",
+      "recap_path": "D:/Code/nolvegen/books/mine/story/recaps/P1-V4-C7.json",
+      "recap_sha256": "6b6108a1795e93f396006b4d2c6bf77b7315325e574a766674c1e23340d2c130"
+    }
+  ]
+}

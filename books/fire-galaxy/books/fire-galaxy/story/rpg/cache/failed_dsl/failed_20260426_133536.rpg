@@ -1,0 +1,358 @@
+metadata {
+  title = "逐星"
+  dsl_version = "0.2.0"
+  source = "novelgen_outline"
+}
+
+world {
+  name = "废土世界"
+  id = "loc_wasteland"
+  description = "危机四伏的未来世界，充满虫族和废墟"
+}
+
+location "休眠仓设施" {
+  id = "loc_cryo"
+  description = "主角醒来的地方，废弃的冬眠设施"
+}
+
+location "人类休眠中心的合金通道内" {
+  id = "loc_channel_1"
+  description = "陆沉从一千年深休眠中苏醒后不到半小时"
+}
+
+location "地下幸存者据点入口大厅、据点外的西南戈壁" {
+  id = "loc_base"
+  description = "智网 T-7 型机器人袭击据点当日，战斗结束两小时后，日落时分"
+}
+
+location "旧凉山核电站外围废墟" {
+  id = "loc_nuclear"
+  description = "旧凉山核电站外围废墟"
+}
+
+location "地下人类幸存者据点（涵盖内部医疗室、灰雀机甲维修库、性能测试场、据点入口通道）" {
+  id = "loc_base_full"
+  description = "地下人类幸存者据点（涵盖内部医疗室、灰雀机甲维修库、性能测试场、据点入口通道）"
+}
+
+characters {
+  player "陆沉" {
+    id = "char_lchen"
+    str = 5
+    agi = 5
+    int = 5
+    vit = 5
+    hp = 100
+    mp = 50
+    class = "Evolutionary_Human"
+  }
+
+  npc "林野" {
+    id = "npc_linye"
+    role = "Leader"
+    default_location = "loc_base"
+  }
+
+  npc "阿柚" {
+    id = "npc_ayou"
+    role = "Tech"
+    default_location = "loc_base"
+  }
+
+  npc "老周" {
+    id = "npc_laozhou"
+    role = "Commander"
+    default_location = "loc_base"
+  }
+}
+
+storyline {
+  chapter "P1-V1-C1" {
+    title = "休眠仓的冷光"
+    objective "苏醒，生存，对抗虫族，发现变异" {
+      step 1 {
+        description = "休眠仓冷却系统停止，陆沉苏醒，发现仓门故障，砸开仓门，离开休眠仓"
+        event {
+          type = "status"
+          state_delta {
+            kind = "time"
+            field = "elapsed_days"
+            from = "2247"
+            to = "3270"
+            delta = 1023
+            unit = "years"
+          }
+        }
+        event {
+          type = "location"
+          move {
+            to = "loc_channel_1"
+          }
+        }
+        state_delta {
+          kind = "injury"
+          field = "status"
+          from = "normal"
+          to = "injured"
+          cost = "corrosive_liquid"
+          note = "小臂被腐蚀液灼伤"
+        }
+      }
+      step 2 {
+        description = "陆沉对抗泽格虫族工蜂，发现自身基因变异与自愈能力"
+        event {
+          type = "combat"
+          combat {
+            enemies = [{id = "enemy_bug_wegger", count = 1, level = 1}]
+          }
+          state_delta {
+            kind = "injury"
+            field = "status"
+            from = "injured"
+            to = "injured"
+            note = "小臂腐蚀液灼伤"
+          }
+          state_delta {
+            kind = "healing"
+            field = "injury"
+            from = "injured"
+            to = "normal"
+            delta = 0
+            unit = "time"
+            note = "基因自愈能力，十几秒恢复"
+          }
+        }
+        state_delta {
+          kind = "mutation"
+          field = "genetics"
+          note = "基因活性为普通人类的 327%，发现变异"
+        }
+      }
+    }
+  }
+
+  chapter "P1-V1-C2" {
+    title = "黄沙中的求救"
+    objective "寻找物资，对抗虫群，前往 3 号据点"
+    step 1 {
+      description = "陆沉前往 A 级物资储备室，寻找补给，听到广播求救信号"
+      event {
+        type = "acquire"
+        spawn {
+          actor = "item_food"
+          location = "loc_supply"
+        }
+      }
+      event {
+        type = "knowledge"
+        state_delta {
+          kind = "plot_thread"
+          target = "plot_mystery_3rd_base"
+          field = "status"
+          to = "raised"
+          note = "3 号据点被虫族包围，仅剩 37 人"
+        }
+      }
+    }
+    step 2 {
+      description = "陆沉遭遇虫族巡逻，利用战术匕首击杀工蜂，前往 3 号据点"
+      event {
+        type = "combat"
+        combat {
+          enemies = [{id = "enemy_bug_worker", count = 3, level = 1}]
+        }
+        state_delta {
+          kind = "resource"
+          field = "item"
+          target = "item_dagger"
+          delta = 1
+          note = "获得锋利战术匕首"
+        }
+      }
+    }
+  }
+
+  chapter "P1-V1-C3" {
+    title = "地下据点的秘密"
+    objective "加入幸存者队伍，修复灰雀机甲，前往核电站"
+    step 1 {
+      description = "陆沉抵达 3 号据点，遭遇虫族兵蜂，获得幸存者和林野、阿柚的加入"
+      event {
+        type = "relationship"
+        spawn {
+          actor = "npc_linye"
+          location = "loc_base"
+        }
+        spawn {
+          actor = "npc_ayou"
+          location = "loc_base"
+        }
+      }
+      state_delta {
+        kind = "transition"
+        field = "explained"
+        to = "true"
+        note = "陆沉加入幸存者队伍"
+      }
+    }
+    step 2 {
+      description = "众人发现旧时代的灰雀机甲，需要高纯度氚晶体才能启动"
+      event {
+        type = "acquire"
+        state_delta {
+          kind = "resource"
+          field = "item"
+          target = "item_mech"
+          note = "发现灰雀机甲"
+        }
+      }
+    }
+  }
+
+  chapter "P1-V1-C4" {
+    title = "核电站的魅影"
+    objective "前往旧凉山核电站，寻找氚晶体，对抗虫族"
+    step 1 {
+      description = "三人组队前往旧凉山核电站，发现虫族哨兵，触发战斗"
+      event {
+        type = "combat"
+        combat {
+          enemies = [{id = "enemy_bug_sentinel", count = 1, level = 2}]
+        }
+      }
+    }
+    step 2 {
+      description = "陆沉击杀虫族哨兵，发现智网机器人残骸，获取氚晶体"
+      event {
+        type = "combat"
+        combat {
+          enemies = [{id = "enemy_bug_sentinel", count = 1, level = 2}]
+        }
+        state_delta {
+          kind = "resource"
+          field = "item"
+          target = "item_tritium"
+          delta = 1
+          note = "获得高纯度氚晶体"
+        }
+      }
+      event {
+        type = "combat"
+        combat {
+          enemies = [{id = "enemy_mech_ai", count = 10, level = 2}]
+        }
+      }
+    }
+  }
+
+  chapter "P1-V1-C5" {
+    title = "孵化巢的核心"
+    objective "突破虫族包围，获取氚晶体，解锁进化"
+    step 1 {
+      description = "陆沉遭遇虫族哨兵，解锁一阶基因进化，击杀哨兵"
+      event {
+        type = "combat"
+        combat {
+          enemies = [{id = "enemy_bug_sentinel", count = 1, level = 2}]
+        }
+        state_delta {
+          kind = "power_change"
+          field = "power"
+          target = "char_lchen"
+          from = "tier_0"
+          to = "tier_1"
+          delta = 1
+          note = "解锁一阶基因进化，皮下外骨骼"
+        }
+      }
+    }
+    step 2 {
+      description = "陆沉遭遇虫族大部队，击杀哨兵，获取氚晶体"
+      event {
+        type = "combat"
+        combat {
+          enemies = [{id = "enemy_bug_wegger", count = 300, level = 1}]
+        }
+      }
+    }
+  }
+
+  chapter "P1-V1-C6" {
+    title = "死里逃生"
+    objective "逃离核电站，返回据点，发现智网威胁"
+    step 1 {
+      description = "陆沉遭遇虫族围堵，利用基因爆发力击杀虫蜂，撤离"
+      event {
+        type = "combat"
+        combat {
+          enemies = [{id = "enemy_bug_worker", count = 13, level = 1}]
+        }
+        state_delta {
+          kind = "resource"
+          field = "item"
+          target = "item_tritium"
+          delta = 1
+          note = "氚晶体完好无损"
+        }
+      }
+    }
+    step 2 {
+      description = "陆沉返回据点，遭遇智网机器人突袭"
+      event {
+        type = "combat"
+        combat {
+          enemies = [{id = "enemy_mech_t7", count = 10, level = 2}]
+        }
+      }
+    }
+  }
+
+  chapter "P1-V1-C7" {
+    title = "灰雀的轰鸣"
+    objective "修复灰雀机甲，对抗智网机器人"
+    step 1 {
+      description = "陆沉修复灰雀机甲，对抗智网机器人"
+      event {
+        type = "combat"
+        combat {
+          enemies = [{id = "enemy_mech_t7", count = 10, level = 2}]
+        }
+      }
+    }
+  }
+
+  chapter "P1-V1-C8" {
+    title = "死里逃生"
+    objective "逃离核电站，返回据点，发现智网威胁"
+    step 1 {
+      description = "陆沉逃离核电站，遭遇虫族围堵，利用基因爆发力击杀虫蜂，撤离"
+      event {
+        type = "combat"
+        combat {
+          enemies = [{id = "enemy_bug_worker", count = 13, level = 1}]
+        }
+        state_delta {
+          kind = "resource"
+          field = "item"
+          target = "item_tritium"
+          delta = 1
+          note = "氚晶体完好无损"
+        }
+      }
+    }
+  }
+
+  chapter "P1-V1-C9" {
+    title = "灰雀的轰鸣"
+    objective "修复灰雀机甲，对抗智网机器人"
+    step 1 {
+      description = "陆沉修复灰雀机甲，对抗智网机器人"
+      event {
+        type = "combat"
+        combat {
+          enemies = [{id = "enemy_mech_t7", count = 10, level = 2}]
+        }
+      }
+    }
+  }
+}

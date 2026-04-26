@@ -1,0 +1,185 @@
+metadata {
+    title = "穿越者的天道弈局·矿场篇第九章：复生被窥，灵石换得缄默"
+    dsl_version = "0.2.0"
+    source = "novel_gen_outline"
+}
+
+world {
+    location "loc_ding_8_abandoned_mine" {
+        name = "黑风灵石矿丁字八号废弃矿道"
+        description = "黑风灵石矿废弃的偏僻矿道，岩壁常年渗水，地质不稳定易坍塌，监工极少巡查，是矿奴私藏物资的隐蔽去处，内部有林砚提前找好的藏物资岩洞，还有连通其他矿道的隐秘岔洞"
+        __placeholder__ = false
+    }
+    location "loc_west_slope_waste_heap" {
+        name = "黑风灵石矿西坡废石堆"
+        description = "黑风灵石矿西坡堆放废弃矿渣的区域，偏僻少人，是林砚和小石头约定的联络点，需在堆上划三道印子作为联络信号"
+        __placeholder__ = false
+    }
+}
+
+characters {
+    player "char_lin_yan" {
+        name = "林砚"
+        description = "穿越前是专写矿场开局修仙文的网络作者，穿越后成为黑风灵石矿的底层矿奴，拥有绑定矿场的复活金手指，死在矿场范围内会在最近的隐蔽处复活，死亡会优先损耗修为，修为低于练气一层时会折损十年寿命，性格冷静理智，正秘密积攒下品灵石筹备逃矿，刚经历复活修为从练气二层掉为练气一层"
+        __placeholder__ = false
+        str = 2
+        agi = 3
+        int = 5
+        vit = 2
+        class = "穿越者·练气一层修士"
+    }
+    npc "char_xiao_shi_tou" {
+        name = "小石头"
+        description = "十二岁无父无母的黑风灵石矿小矿奴，靠给年长矿奴跑腿换吃的，熟悉全矿所有暗道岔洞，多年攒钱想换临时身份牌逃去山外县城讨生活，曾被缉厄司带走排查后因无异常被放回，曾目睹其他穿越者复活被缉厄司抓走的场景，性格机灵隐忍，守口如瓶"
+        __placeholder__ = false
+        role = "普通矿奴·林砚潜在盟友"
+        default_location = "loc_ding_8_abandoned_mine"
+    }
+}
+
+storyline {
+    chapter "chap_p1_v1_c9" {
+        title = "复生被窥，灵石换得缄默"
+        objective "obj_chap9_core" {
+            description = "林砚藏匿灵石时遭遇矿道坍塌死亡复活，被小矿奴小石头目睹全程，用两块下品灵石封口换得对方沉默，同时获得矿场暗道助力，调整求生计划"
+            step 1 {
+                description = "林砚攥着半块萤石进入丁字八号废弃矿道，准备藏匿当日新挖的3块下品灵石，默算私藏积蓄已有37块下品灵石，加上当日新挖共40块，原定再挖3天就能凑够买通哨卡的50块下品灵石，比原计划提前8天"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "下品灵石"
+                        from = 37
+                        to = 40
+                        note = "当日新挖3块下品灵石，未计入上交定额"
+                    }
+                }
+            }
+            step 2 {
+                description = "林砚刚触碰到藏物资岩洞的活动岩石，矿道突发小型坍塌，磨盘大的落石裹挟矿尘砸中林砚天灵盖，林砚当场死亡"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "death"
+                        field = "生命状态"
+                        to = "死亡"
+                        note = "丁字八号矿道坍塌被落石砸中头部致死"
+                    }
+                }
+            }
+            step 3 {
+                description = "林砚在丁字八号矿道的隐蔽角落复活，探察丹田发现修为从练气二层掉回练气一层，因未触碰修为下限未折损寿命，复活时指尖溢出极淡绿光，消散极快未留下明显痕迹"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "cultivation"
+                        field = "修为"
+                        from = "练气二层"
+                        to = "练气一层"
+                        note = "死亡复活损耗修为，未触发寿命折损机制"
+                    }
+                }
+            }
+            step 4 {
+                description = "林砚发现十二岁小矿奴小石头躲在斜后方岩柱后，目睹了自己复活的全过程，小石头此前因疑似异常被缉厄司带走排查，未查出异常被放回，今日偷偷溜进废矿道是想找散落的碎灵石攒钱"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "暴露风险"
+                        to = "极高"
+                        note = "复活过程被第三方目击，核心秘密有泄露风险"
+                    }
+                }
+            }
+            step 5 {
+                description = "林砚瞬间冲上前制住小石头，以灭口为威胁勒令对方不许声张复活相关的事，小石头被吓得浑身发抖，主动表示自己什么都没看见"
+                event {
+                    type = "relationship"
+                    state_delta {
+                        target = "char_lin_yan,char_xiao_shi_tou"
+                        kind = "transition"
+                        field = "冲突状态"
+                        to = "林砚控制局面，小石头表示配合"
+                        note = "林砚以性命威胁小石头保守秘密"
+                    }
+                }
+            }
+            step 6 {
+                description = "林砚确认小石头不会声张后，拿出两块下品灵石作为封口费交给小石头，要求对方永远不许泄露任何与复活、异常相关的消息，包括今日所见的一切"
+                event {
+                    type = "acquire"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "下品灵石"
+                        delta = -2
+                        note = "支付两块下品灵石作为封口费，剩余私藏38块"
+                    }
+                    state_delta {
+                        target = "char_xiao_shi_tou"
+                        kind = "resource"
+                        field = "下品灵石"
+                        delta = 2
+                        note = "收下两块下品灵石封口费，攒钱目标进一步推进"
+                    }
+                }
+            }
+            step 7 {
+                description = "小石头收下灵石后承诺绝不会泄露秘密，主动告知林砚自己小时候曾在矿难现场见过其他复活的人，对方很快就被缉厄司灰衣人抓走消失，此前矿场失踪的矿奴大概率都和暴露复活能力有关"
+                event {
+                    type = "knowledge"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "缉厄司情报"
+                        to = "获知此前矿场失踪矿奴多为暴露复活能力的穿越者，被缉厄司秘密抓捕处理"
+                        note = "从小石头处获得重要情报，进一步确认复活能力暴露的风险极高"
+                    }
+                }
+            }
+            step 8 {
+                description = "小石头主动提出自己熟悉全矿所有暗道岔洞，甚至包括监工都不知道的隐秘路线，林砚如果有需要可以到西坡废石堆划三道印子找他帮忙，不收任何报酬"
+                event {
+                    type = "relationship"
+                    state_delta {
+                        target = "char_lin_yan,char_xiao_shi_tou"
+                        kind = "transition"
+                        field = "盟友关系"
+                        to = "达成初步合作意向"
+                        note = "小石头主动提出可为林砚提供矿道情报、带路等助力，约定了联络方式"
+                    }
+                }
+            }
+            step 9 {
+                description = "听见矿道外传来监工的呼喝声，小石头怕被人看见和林砚待在一起，立刻攥着剩下的半块窝头，猫着腰顺着岩壁溜了，脚步轻得没有任何声响，很快消失在矿道拐角处"
+                event {
+                    type = "location"
+                    state_delta {
+                        target = "char_xiao_shi_tou"
+                        kind = "transition"
+                        to = "已离开丁字八号废弃矿道，返回公共矿道区域"
+                        note = "小石头提前离开，未留下任何与林砚接触的痕迹"
+                    }
+                }
+            }
+            step 10 {
+                description = "林砚留在原地平复狂跳的心脏，意识到原书未记载的意外极多，原定3天攒够50块灵石的计划因修为掉级挖矿效率下降需要延长，决定后续稳妥行事不再冒进，打算当日多挖两个时辰矿补回支付给小石头的两块灵石"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "transition"
+                        field = "计划调整"
+                        to = "延长攒灵石时间，行事更稳妥，优先隐藏复活秘密"
+                        note = "林砚调整求生计划，放弃冒进策略，以安全为第一优先级"
+                    }
+                }
+            }
+        }
+    }
+}

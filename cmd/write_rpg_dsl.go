@@ -30,6 +30,7 @@ type writeRPGDSLResult struct {
 	BatchCount       int
 	ReusedBatches    int
 	GeneratedBatches int
+	Issues           []rpgdsl.SimulationIssue // DSL-RPG simulate 检测出的 issues
 }
 
 type writeRPGDSLBatchManifest struct {
@@ -157,6 +158,10 @@ func emitChapterRPGDSLForProject(
 	if err := os.WriteFile(outputPath, []byte(combined.String()), 0644); err != nil {
 		return result, err
 	}
+
+	// Run DSL-RPG Simulator to detect issues
+	simulator := rpgdsl.NewSimulator(combined)
+	result.Issues = simulator.SimulateAll()
 
 	result.DSLPath = outputPath
 	result.CacheDir = cacheDir
@@ -598,4 +603,70 @@ func appendMissingWriteRPGDSLArcs(dst, src []rpgdsl.Arc) []rpgdsl.Arc {
 		}
 	}
 	return dst
+}
+
+// FilterImportantIssues 过滤出重要的 issues (critical 和 warning)
+func FilterImportantIssues(issues []rpgdsl.SimulationIssue) []rpgdsl.SimulationIssue {
+	var important []rpgdsl.SimulationIssue
+	for _, issue := range issues {
+		if issue.Severity == rpgdsl.SeverityCritical || issue.Severity == rpgdsl.SeverityWarning {
+			important = append(important, issue)
+		}
+	}
+	return important
+}
+
+// GroupIssuesByChapter 将 issues 按章节分组
+func GroupIssuesByChapter(issues []rpgdsl.SimulationIssue) map[string][]rpgdsl.SimulationIssue {
+	grouped := make(map[string][]rpgdsl.SimulationIssue)
+	for _, issue := range issues {
+		chapterID := issue.Chapter
+		if chapterID == "" {
+			chapterID = "_global_" // 全局问题
+		}
+		grouped[chapterID] = append(grouped[chapterID], issue)
+	}
+	return grouped
+}
+
+// FormatIssuesAsSuggestions 将 issues 格式化为 improvement suggestions
+func FormatIssuesAsSuggestions(issues []rpgdsl.SimulationIssue) string {
+	if len(issues) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString("## DSL-RPG 模拟检测发现的问题\n\n")
+
+	for i, issue := range issues {
+		severity := "警告"
+		if issue.Severity == rpgdsl.SeverityCritical {
+			severity = "严重"
+		}
+
+		sb.WriteString(fmt.Sprintf("### 问题 %d [%s] %s\n", i+1, severity, issue.Type))
+		sb.WriteString(fmt.Sprintf("- **描述**: %s\n", issue.Description))
+		sb.WriteString(fmt.Sprintf("- **建议**: %s\n", issue.Suggestion))
+		if issue.Chapter != "" {
+			sb.WriteString(fmt.Sprintf("- **位置**: 章节 %s", issue.Chapter))
+			if issue.Step > 0 {
+				sb.WriteString(fmt.Sprintf(" (步骤 %d)", issue.Step))
+			}
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
+// GetChapterSpecificSuggestions 获取特定章节的 suggestions
+func GetChapterSpecificSuggestions(issues []rpgdsl.SimulationIssue, chapterID string) string {
+	var chapterIssues []rpgdsl.SimulationIssue
+	for _, issue := range issues {
+		if issue.Chapter == chapterID {
+			chapterIssues = append(chapterIssues, issue)
+		}
+	}
+	return FormatIssuesAsSuggestions(chapterIssues)
 }

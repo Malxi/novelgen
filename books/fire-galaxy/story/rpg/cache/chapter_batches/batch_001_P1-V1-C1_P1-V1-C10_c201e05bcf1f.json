@@ -1,0 +1,61 @@
+{
+  "version": 2,
+  "book_name": "fire-galaxy",
+  "batch_index": 0,
+  "batch_size": 10,
+  "batch_hash": "c201e05bcf1f7b210ad6cd84c6c98fa7637bf57943bae2c0296966f52b28642c",
+  "dsl_file": "D:\\Code\\nolvegen\\books\\fire-galaxy\\story\\rpg\\cache\\chapter_batches\\batch_001_P1-V1-C1_P1-V1-C10_c201e05bcf1f.rpg",
+  "updated_at": "2026-04-26T11:02:32+08:00",
+  "chapters": [
+    {
+      "chapter_id": "P1-V1-C1",
+      "path": "books/fire-galaxy/story/recaps/P1-V1-C1.json",
+      "sha256": "7b83aaf1efc464ebe2ece74e9442a18c9a7c05fc0df7d51241a71742cff51b2a"
+    },
+    {
+      "chapter_id": "P1-V1-C2",
+      "path": "books/fire-galaxy/story/recaps/P1-V1-C2.json",
+      "sha256": "a50554654629d5477d3e0eba35ec7fd1bf0832c1fe0abe4b7d76d7c99b474d29"
+    },
+    {
+      "chapter_id": "P1-V1-C3",
+      "path": "books/fire-galaxy/story/recaps/P1-V1-C3.json",
+      "sha256": "fa0c4237093d4e9e5c699b1695fe8fdf0f6baa0429b1ca11b0f86cfa13d92f26"
+    },
+    {
+      "chapter_id": "P1-V1-C4",
+      "path": "books/fire-galaxy/story/recaps/P1-V1-C4.json",
+      "sha256": "07fa42acd9b7ac781a978117a33824368f3b74f9158dbc23a4473e10246d9c93"
+    },
+    {
+      "chapter_id": "P1-V1-C5",
+      "path": "books/fire-galaxy/story/recaps/P1-V1-C5.json",
+      "sha256": "c56ea966cefe0d3e412cb0a29edfdf2205fcd60766acbef33e962055a965f14a"
+    },
+    {
+      "chapter_id": "P1-V1-C6",
+      "path": "books/fire-galaxy/story/recaps/P1-V1-C6.json",
+      "sha256": "5f79a1ea0b4ea127551656595741e2865d70683af6df9a3ddf0244691dab74d6"
+    },
+    {
+      "chapter_id": "P1-V1-C7",
+      "path": "books/fire-galaxy/story/recaps/P1-V1-C7.json",
+      "sha256": "5dd4bc27e7497fdff4dd39e6803f94fbb11cd02cd47ee15e5397e6d82da8ad27"
+    },
+    {
+      "chapter_id": "P1-V1-C8",
+      "path": "books/fire-galaxy/story/recaps/P1-V1-C8.json",
+      "sha256": "ff69b994fe6af72fcc2cac45435916aaf32f1cac226c667b6392de59e508b5a5"
+    },
+    {
+      "chapter_id": "P1-V1-C9",
+      "path": "books/fire-galaxy/story/recaps/P1-V1-C9.json",
+      "sha256": "73e6a29cd56f388ba6dbd82131f7bb25d9a028c0ff45dca93b6289a295f1c7c0"
+    },
+    {
+      "chapter_id": "P1-V1-C10",
+      "path": "books/fire-galaxy/story/recaps/P1-V1-C10.json",
+      "sha256": "f6846255b96a2b343f4b8ac5f2aed050e0d82ef2122869aa453e712bb15c645b"
+    }
+  ]
+}

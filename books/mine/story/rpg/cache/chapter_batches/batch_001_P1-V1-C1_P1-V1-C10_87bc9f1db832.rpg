@@ -1,0 +1,217 @@
+metadata {
+    title = "P1-V1-C9 复生被窥，灵石换得缄默"
+    dsl_version = "0.2.0"
+    source = "novelgen_outline"
+}
+world {
+    location "loc_qingli_mine_ding8_abandoned_tunnel" {
+        id = "loc_qingli_mine_ding8_abandoned_tunnel"
+        name = "青砾矿场丁字八号废弃矿道"
+        description = "黑风矿偏僻废弃矿道，是林砚私藏物资的隐秘地点，岩壁潮湿渗水，多岔洞，平时很少有人进入，存在坍塌风险，深处有隐藏岩洞可藏物资"
+        __placeholder__ = false
+    }
+    location "loc_qingli_mine_west_slope_waste_pile" {
+        id = "loc_qingli_mine_west_slope_waste_pile"
+        name = "西坡废石堆"
+        description = "黑风矿西侧堆放废弃矿渣的偏僻区域，人迹罕至，是林砚和小石头约定的秘密联络点"
+        __placeholder__ = false
+    }
+}
+characters {
+    player "char_lin_yan" {
+        id = "char_lin_yan"
+        name = "林砚"
+        description = "穿越者，原矿场修仙文作者，现为黑风矿底层矿奴，拥有黑风矿范围内的复活能力，熟悉全矿矿脉分布，正在攒灵石准备逃矿，当前修为练气一层"
+        __placeholder__ = false
+        str = 4
+        agi = 5
+        int = 9
+        vit = 5
+        hp = 50
+        mp = 10
+        class = "修仙者·练气一层"
+    }
+    npc "char_xiao_shi_tou" {
+        id = "char_xiao_shi_tou"
+        name = "小石头"
+        description = "12岁无父无母的黑风矿小矿奴，常年靠给年长矿奴跑腿换食物，熟悉全矿所有暗道岔洞，正在攒灵石想要换临时身份牌逃去山外县城，目睹林砚复活后收下两块下品灵石答应保密"
+        __placeholder__ = false
+        role = "平民矿奴·中立NPC"
+        str = 2
+        agi = 7
+        int = 6
+        vit = 3
+        hp = 30
+        mp = 0
+        class = "无修为凡人"
+    }
+    npc "char_zhou_hu" {
+        id = "char_zhou_hu"
+        name = "周虎"
+        description = "黑风矿监工头，残暴嗜财，手上沾有多名矿奴性命，对私藏灵石的矿奴惩罚极重，当前修为练气四层"
+        __placeholder__ = false
+        role = "敌对监工·NPC"
+        str = 7
+        agi = 4
+        int = 4
+        vit = 7
+        hp = 70
+        mp = 20
+        class = "修仙者·练气四层"
+    }
+}
+storyline {
+    chapter "ch_p1_v1_c9" {
+        id = "ch_p1_v1_c9"
+        title = "复生被窥，灵石换得缄默"
+        objective "隐藏复活秘密，支付封口费稳住目击者，应对突发检查风险" {
+            step 1 {
+                description = "林砚攥着半块萤石进入丁字八号废弃矿道，打算藏匿当日新挖的3块下品灵石，默算私藏积蓄已达40块，原定再挖3天就能凑够买通哨卡的50块下品灵石，比原计划提前8天逃矿"
+                event {
+                    type = "status"
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "private_ling_shi"
+                        from = 37
+                        to = 40
+                        note = "当日新挖3块下品灵石，私藏积蓄达到40块，距离50块的逃矿目标只剩10块"
+                    }
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "status"
+                        field = "escape_progress"
+                        from = 0.74
+                        to = 0.8
+                        note = "逃矿计划进度达到80%，原定3天后即可凑够资金买通哨卡"
+                    }
+                }
+            }
+            step 2 {
+                description = "林砚刚触碰到藏物资的岩洞活动岩石，矿道突发小型坍塌，磨盘大的落石砸中天灵盖，林砚当场死亡，随即触发复活能力原地复活，修为从练气二层掉回练气一层，未触发寿命折损"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "矿道突发小型坍塌，磨盘大的落石砸中天灵盖，林砚当场死亡，随即触发复活能力原地复活，修为从练气二层掉回练气一层，未触发寿命折损"
+                    }
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "cultivation"
+                        field = "level"
+                        from = "练气二层"
+                        to = "练气一层"
+                        note = "复活损耗修为，因未触及练气一层下限，未折损寿命"
+                    }
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "status"
+                        field = "hp"
+                        from = 0
+                        to = 50
+                        note = "复活成功，生命值回满，无外伤残留"
+                    }
+                }
+            }
+            step 3 {
+                description = "林砚复活后察觉异常，发现小矿奴小石头躲在三步外的岩柱后目睹了自己复活的全过程，立刻冲上前制住小石头捂嘴按在岩壁上，威胁他不许声张，否则会让他死无全尸"
+                event {
+                    type = "relationship"
+                    on_complete {
+                        narration = "林砚复活后察觉异常，发现小矿奴小石头躲在三步外的岩柱后目睹了自己复活的全过程，立刻冲上前制住小石头捂嘴按在岩壁上，威胁他不许声张，否则会让他死无全尸，小石头被制住不敢反抗，主动表示自己什么都没看见，不会泄露任何消息"
+                    }
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "status"
+                        field = "secret_exposure_risk"
+                        from = "low"
+                        to = "extreme_high"
+                        note = "复活核心秘密被目击者发现，暴露风险拉满，一旦泄露会直接引来缉厄司抓捕"
+                    }
+                }
+            }
+            step 4 {
+                description = "林砚确认小石头没有喊人意图后松开对方，拿出两块下品灵石作为封口费交给小石头，要求他永远不得泄露任何和复活相关的消息，否则会杀他灭口"
+                event {
+                    type = "relationship"
+                    on_complete {
+                        narration = "林砚确认小石头没有喊人意图后松开对方，拿出两块下品灵石作为封口费交给小石头，要求他永远不得泄露任何和复活相关的消息，否则会杀他灭口，小石头收下灵石，当场承诺绝不会泄露任何相关消息，甚至可以帮林砚隐瞒踪迹"
+                    }
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "private_ling_shi"
+                        from = 40
+                        to = 38
+                        note = "支付2块下品灵石封口费，私藏积蓄减少至38块"
+                    }
+                    state_delta {
+                        target = "char_xiao_shi_tou"
+                        kind = "relationship"
+                        field = "loyalty_to_lin"
+                        from = 0
+                        to = 0.8
+                        note = "收了封口费，对林砚的信任度提升，不会主动泄露其秘密"
+                    }
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "status"
+                        field = "secret_exposure_risk"
+                        from = "extreme_high"
+                        to = "medium"
+                        note = "目击者被封口，暴露风险大幅降低"
+                    }
+                }
+            }
+            step 5 {
+                description = "小石头为了表示诚意，主动告知林砚自己小时候曾见过其他会复活的人被灰衣人抓走，矿场之前失踪的矿奴大概率与此有关，还提出自己熟悉全矿所有暗道岔洞，林砚有需求可以到西坡废石堆划三道印子找他帮忙，不收费用，听到矿道外传监工呼喝声后立刻攥着窝头溜了，生怕被人看见和林砚待在一起"
+                event {
+                    type = "knowledge"
+                    on_complete {
+                        narration = "小石头为了表示诚意，主动告知林砚自己小时候曾见过其他会复活的人被灰衣人抓走，矿场之前失踪的矿奴大概率与此有关，还提出自己熟悉全矿所有暗道岔洞，林砚有需求可以到西坡废石堆划三道印子找他帮忙，不收费用，听到矿道外传监工呼喝声后立刻攥着窝头溜了，生怕被人看见和林砚待在一起。林砚获得关键情报和矿场活地图协助渠道，对缉厄司的抓捕规则有了更清晰的认知"
+                    }
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "knowledge"
+                        field = "crosser_arrest_rule"
+                        from = "unknown"
+                        to = "known"
+                        note = "确认复活能力一旦暴露会立刻引来缉厄司抓捕，失踪矿奴都是因此被抓"
+                    }
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "resource"
+                        field = "informant_channel"
+                        from = "none"
+                        to = "available"
+                        note = "获得小石头的矿场情报和暗道协助渠道，后续探路、逃矿都可以找他帮忙"
+                    }
+                }
+            }
+            step 6 {
+                description = "林砚留在原地平复情绪，意识到原书未记载的意外风险极多，原定三天凑够灵石的计划因为修为掉级、挖矿效率下降需要延长至少半个月，决定后续稳妥行事不再冒进，拿起矿镐准备去富矿带挖矿补回用掉的2块灵石，刚走到矿道口就撞见监工周虎前来核对当日挖矿定额"
+                event {
+                    type = "status"
+                    on_complete {
+                        narration = "林砚留在原地平复情绪，意识到原书未记载的意外风险极多，原定三天凑够灵石的计划因为修为掉级、挖矿效率下降需要延长至少半个月，决定后续稳妥行事不再冒进，拿起矿镐准备去富矿带挖矿补回用掉的2块灵石，刚走到矿道口就撞见监工周虎前来核对当日挖矿定额。林砚无法立刻前往富矿带挖矿，被迫先应对周虎的检查，面临定额不足被罚的风险"
+                    }
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "status"
+                        field = "escape_progress"
+                        from = 0.8
+                        to = 0.76
+                        note = "修为掉级导致挖矿效率下降，逃矿计划需要延长至少15天才能凑够资金"
+                    }
+                    state_delta {
+                        target = "char_lin_yan"
+                        kind = "status"
+                        field = "imminent_risk"
+                        from = "none"
+                        to = "low"
+                        note = "撞见周虎核验定额，面临当日挖矿重量不足被惩罚的风险"
+                    }
+                }
+            }
+        }
+    }
+}

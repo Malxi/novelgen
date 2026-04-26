@@ -1,0 +1,105 @@
+metadata {
+  title="穿越者的天道弈局"
+  dsl_version="0.2.0"
+  source="novelgen_out"
+}
+world {
+  location "黑风灵石矿丁字八号废弃矿道" {
+    id="loc_heifeng_ding8"
+    description="黑风矿最偏僻的废弃矿道之一，连通林砚藏物资的隐蔽岩洞与地下遗迹外围区域，常年有落石坍塌风险，监工极少巡查，是矿奴偷偷藏东西、躲懒的隐秘去处"
+    __placeholder__=false
+  }
+  location "黑风灵石矿西坡废石堆" {
+    id="loc_heifeng_xipo_dump"
+    description="西坡矿脉废弃石料的集中堆放地，偏僻荒凉几乎没人来，是林砚和小石头约定的秘密联络点"
+    __placeholder__=false
+  }
+}
+characters {
+  player "林砚" {
+    id="char_linyan"
+    description="地球穿越者，穿前是专写矿场开局修仙文的网文作者，穿成黑风矿底层签了死契的矿奴，拥有黑风矿范围内的复活能力，复活会扣除修为，修为低于练气一层则扣十年寿命，熟知黑风矿所有矿脉分布与原书剧情，目前修为练气一层，藏有38块下品灵石、5株血蓟草、2把玄铁短刃，正在攒钱买通哨卡逃矿"
+    __placeholder__=false
+    str=5
+    agi=7
+    int=10
+    vit=6
+    hp="80/80"
+    mp="10/10"
+    class="穿书者·练气一层"
+  }
+  npc "小石头" {
+    id="char_xiaoshitou"
+    description="十二岁本地矿奴，父母死于矿难，无依无靠，靠给年长矿奴跑腿换食物，熟悉黑风矿所有暗道岔洞包括监工不知道的隐秘路线，之前见过复活者被灰衣人抓走，正在攒灵石换临时身份牌想逃去山外县城，收下林砚2块下品灵石封口费后承诺保密，愿意为林砚提供情报与路线支持"
+    __placeholder__=false
+    role="情报提供者·潜在盟友"
+  }
+}
+storyline {
+  chapter "复生被窥，灵石换得缄默" {
+    id="chp_v1_c9"
+    objective "处理复活秘密被撞破的危机，确保复活能力不暴露，稳定当前生存局面" {
+      id="obj_c9_handle_leak"
+      step 1 {
+        description="林砚将当日新挖到的3块下品灵石藏进隐蔽岩洞，核算总积蓄已达40块，原定再挖3天就能凑够50块买通哨卡逃矿，比计划提前8天"
+      }
+      step 2 {
+        description="林砚正准备离开岩洞时，矿道顶部突发小型落石坍塌，磨盘大的落石直接砸中他天灵盖，当场死亡；随后触发复活能力，复活时逸散的淡绿色灵光被衣襟内的血色玉佩吸收掩盖，未留下痕迹，修为从练气二层掉回练气一层，未触达修为下限因此未折损寿命"
+        event {
+          type="status"
+          state_delta {
+            kind="cultivation"
+            target="char_linyan"
+            field="修为"
+            from="练气二层"
+            to="练气一层"
+            note="复活强制掉级，挖矿效率小幅下降，原定3天攒够灵石的计划延后至少大半个月"
+          }
+        }
+      }
+      step 3 {
+        description="林砚刚站稳就发现躲在斜后方岩柱后的小石头撞见了复活全程，得知原本被送去郑家村投靠姑母的小石头因姑母染疫病去世，早已逃回矿场多日，正在攒碎灵石想换临时身份牌逃去山外县城，刚才是来废弃矿道捡碎灵石才撞见了异常"
+      }
+      step 4 {
+        description="林砚迅速制住小石头，先口头掩饰自己是提前躲进旁边岩缝避过落石，再出言威胁泄露秘密就会让他死无全尸，察觉小石头有交易意图后，拿出2块下品灵石作为封口费"
+        event {
+          type="status"
+          state_delta {
+            kind="resource"
+            target="char_linyan"
+            field="下品灵石"
+            from="40块"
+            to="38块"
+            note="支付2块下品灵石作为封口费，换取小石头对复活秘密保密"
+          }
+        }
+        event {
+          type="relationship"
+          state_delta {
+            kind="relationship"
+            target1="char_linyan"
+            target2="char_xiaoshitou"
+            change="从陌生转为利益绑定，小石头承诺严格保密，愿意为林砚提供矿场暗道情报与路线支持"
+          }
+        }
+      }
+      step 5 {
+        description="小石头收下灵石立刻藏好，承诺死都不会泄露半个字，主动透露自己小时候见过另一名复活者被灰衣人抓走，告知林砚以后有需要可以到西坡废石堆划三道印子找他，随后听见矿道入口传来监工呼喝声，立刻猫着腰溜得无影无踪"
+      }
+      step 6 {
+        description="林砚复盘本次意外，意识到原书剧情存在大量他从未写过的未知隐患，同时发现隐蔽岩洞缝隙透出的地下遗迹封印淡绿色微光比半个月前亮了不少，判断封印松动速度加快，缉厄司的搜索力度会越来越大，留给自己攒钱逃矿的时间比预想的少得多"
+        event {
+          type="status"
+          state_delta {
+            kind="transition"
+            target="地下遗迹封印松动线"
+            field="进度"
+            from="30%"
+            to="40%"
+            note="封印逸散的微光变亮，缉厄司搜捕穿越者的力度会进一步加大，逃矿时间窗口大幅压缩"
+          }
+        }
+      }
+    }
+  }
+}

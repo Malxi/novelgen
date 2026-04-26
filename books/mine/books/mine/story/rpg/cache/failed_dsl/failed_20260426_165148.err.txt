@@ -1,0 +1,1 @@
+line 118: error parsing storyline: expected '=', got '{'

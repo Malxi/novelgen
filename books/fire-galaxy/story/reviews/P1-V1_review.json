@@ -1,0 +1,480 @@
+{
+  "volume_id": "P1-V1",
+  "volume_title": "苏醒于尘埃之上",
+  "reviews": [
+    {
+      "chapter_id": "P1-V1-C1",
+      "chapter_title": "休眠仓的冷光",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 设定合规: 统一设定，可将state matrix的「废弃百年」调整为「废弃千年」，或修改章节内的时间推算结果，保持表述一致",
+        "[高优先级] 情节逻辑: 调整星元元年的对应公元年份为公元2943年，即可匹配星元327年对应公元3270年的设定，逻辑自洽",
+        "[打磨优先级] 节奏优化: 精简推送内容，仅保留「虫族入侵、人类败退、仅剩3个据点」核心信息即可，删除冗余的时间节点表述，加快节奏",
+        "[打磨优先级] 情绪优化: 增加细节呼应，比如陆沉摸到休眠服上的半人马座远征徽章，对比记忆里人类即将开拓星海的盛况，强化文明陨落的反差感，提升情绪冲击力"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C2",
+      "chapter_title": "第一头虫影",
+      "overall_score": 5,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命] 红线规则修正: 逐句调整叙事动词为一般现在时，比如将「攥紧」改为「攥着」、「贴住」改为「贴着」，所有动作描述统一为现在时",
+        "[致命] 红线规则修正: 删减重复的腐蚀效果描写（如第9段、第10段重复提到腐蚀液烧地面的内容可合并），压缩22字即可符合要求",
+        "[高] 设定合规修正: 在第13段陆沉靠在墙上喘气的位置添加细节：「他指尖扫过腰后别着的钛合金破拆锥，衣兜里的高能营养片硌得肋骨发疼，才稍稍压下翻涌的气血」，匹配全局设定",
+        "[高] 设定合规修正: 将第2段的「一千年的深休眠」改为「一千多年的深休眠」，在倒数第4段提到时间疑点时明确呼应「手环显示的1023年休眠时长和休眠仓内置屏显示的3011年」的矛盾，保留核心伏笔",
+        "[打磨] 文笔优化: 调整为「腥气撞进鼻腔，陆沉死死压住呛咳的冲动，避免暴露更多气息」，更贴合角色身份"
+      ],
+      "needs_revision": true
+    },
+    {
+      "chapter_id": "P1-V1-C3",
+      "chapter_title": "基因觉醒",
+      "overall_score": 5,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命优先级] 红线修正: 将该句改为陆沉视角的感知内容，如“腕上手环的红色警报频闪，二十余道虫族热源正以每秒3米的速度从后方逼近”",
+        "[致命优先级] 红线修正: 删除全文所有表完成态的“了”“过”等助词，统一为现在时表述，例如将“锈门终于被撬开了一条缝隙”改为“锈门终于撬开一条缝隙”",
+        "[致命优先级] 红线修正: 优先删减最后一段“他的征途从来都不是休眠前规划的星辰大海……重新夺回来”的直白抒情内容，将总字数压缩至3150字以内",
+        "[高优先级] 情节优化: 在开篇增加陆沉刚迈出几步就听到前方通道传来节肢刮蹭声响、前后被虫族包围的情节，补充他快速锁定物资储备室作为临时躲避点的决策逻辑，强化初期冲突张力",
+        "[打磨优先级] 人物优化: 给陆沉增加1-2句符合人设的短台词，例如确认S级体质时低喃“原来如此”，听到求救信号时攥紧工兵铲低声道“等着”"
+      ],
+      "needs_revision": true
+    },
+    {
+      "chapter_id": "P1-V1-C4",
+      "chapter_title": "黄沙中的求救",
+      "overall_score": 9,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[打磨优先级] 文笔打磨: 将重复的「绿色的体液」替换为「酸腥的虫血」「淡绿色腐蚀汁液」等差异化表述；将第22段的「他不知道的是」调整为陆沉的感知细节，例如修改为「沙风卷着兵蜂的嘶吼擦过耳侧，陆沉攥紧匕首的指尖微微发力——他还没意识到，前方地下据点里藏着的东西，会彻底改写人类与虫族的战争走势」，保留伏笔的同时不突破限知视角",
+        "[打磨优先级] 人物优化: 给受伤男队员加1-2句简单台词，例如接过干粮时哑着嗓子低声说「多谢，我叫阿明」，既丰富人物真实感，也能填补约30字的字数缺口",
+        "[打磨优先级] 细节补充: 在第1段末尾加一句细节描写，例如「防护服肩线处还印着他休眠前所属的远征舰队徽章，在沙粒的摩擦下已经磨得发淡」，补充人设细节的同时补全剩余字数缺口，刚好达到3000字的目标要求"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C5",
+      "chapter_title": "地下据点的秘密",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 剧情连续性优化: 在众人进入据点、林野靠门坐下的段落后，加一句「穿白大褂的医护人员很快从隧道深处跑过来，扶着受伤的队员往医疗区去了」的细节，补全配角动线",
+        "[高优先级] 伏笔呼应优化: 在陆沉看到机甲、呼吸顿住的段落，加一句「他想起逃亡路上阿柚提过据点藏着一台修不好的旧机甲，没想到居然是自己当年参与过动力测试的灰雀系列」的心理活动，呼应前章设定",
+        "[打磨优先级] 人物细节优化: 在老周给陆沉递麦茶的段落，加一句「缺了两根手指的左手稳稳端着搪瓷杯递过来，杯壁上的豁口正对着他」的细节，强化人物特征",
+        "[打磨优先级] 道具细节优化: 在陆沉激活手环扫描机甲的段落，加一句「之前预警兵蜂的红色警示灯已经自动熄灭，淡蓝色的全息线路图立刻弹了出来」的细节，补全道具状态连续性"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C6",
+      "chapter_title": "核电站的魅影",
+      "overall_score": 7,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[致命] 核心设定修正: 将所有叙事、动作、对话描述的动词调整为现在时态，确保符合设定要求",
+        "[致命] 核心设定修正: 将所有电站名称表述统一替换为「西昌旧核电站」，消除地理设定矛盾",
+        "[高] 文风优化: 将「我也不同意你solo去」替换为「我也不同意你独自一人去」，贴合故事语境",
+        "[高] 情节优化: 删除该段内容，如需埋设反叛AI「智网」的伏笔，可放在后续进入核电站核心区的情节中自然呈现",
+        "[打磨] 细节打磨: 压缩1-2句次要的装备细节描写，将总字数控制在3150字以内，符合字数合规要求",
+        "[打磨] 细节打磨: 增加1句细节：比如陆沉比林野、阿柚更早感知到头顶虫族哨兵的动静，呼应其进化后的感知能力，强化人物成长线"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C7",
+      "chapter_title": "孵化巢的核心",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 剧情逻辑优化: 将第1段的「虫族大部队还有八分钟到」调整为「虫族大部队还有二十分钟到」，同时将第11段的「整整五百米的管道爬了十五分钟」调整为「整整五百米的管道爬了八分钟」，匹配整体时间逻辑",
+        "[高优先级] 人物刻画优化: 在爬管道躲避工蜂的段落增加阿柚压低声音提醒两人「管道壁沾了虫族信息素，别碰掉碎屑」的细节，或在发现智网残骸时补充「我之前探测到的非虫族异常信号就是它发出的」的台词，丰富人物层次",
+        "[打磨优先级] 合规性优化: 精简部分冗余描写，比如将第10段通风管道内的黏液描写精简为「管壁沾着干涸的虫族黏液，蹭上去黏糊糊的」，删掉第15段陆沉心理活动中「不用再眼睁睁看着同伴被虫族拖走撕碎」一句，将字数控制在3150字以内",
+        "[打磨优先级] 文笔优化: 将部分「绿色体液」替换为「虫血」「腐蚀性组织液」，部分「螯爪」替换为「镰状前肢」「节肢利刃」，丰富表达"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C8",
+      "chapter_title": "死里逃生",
+      "overall_score": 9,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[打磨优先级] 剧情连续性优化: 在陆沉摸到机器人碎片的部分增加一句「碎片上残存的『清除所有活物』的任务指令还刻在他的脑海里」，强化威胁感铺垫",
+        "[打磨优先级] 情节闭环优化: 在陆沉跳出通风管道的部分增加一句「刚好卡着第九分四十七秒落地」，呼应之前的约定，让情节更闭环",
+        "[打磨优先级] 文笔优化: 将部分重复表述替换为「虫族淡绿色组织液」「重重砸落在水磨石地面」「闷响着砸落」等差异化表述，丰富句式层次",
+        "[打磨优先级] 设定呼应优化: 在陆沉徒手捏碎工蜂螯爪的部分增加一句「左臂破损的防护服袖口被浆液溅到，露出的皮肤却因为皮下外骨骼的保护毫发无损」，既呼应前序设定，也强化基因升级的效果",
+        "[打磨优先级] 情绪感染力优化: 在幸存者欢呼前增加一句「前几天还在商量要放弃据点迁徙的老周第一个冲了过来，手里攥着昨天刚写完的迁徙申请」，强化情绪反差，提升场景感染力"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C9",
+      "chapter_title": "灰雀的轰鸣",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 合规调整: 删减测试机甲时的重复描写，例如将「速度快得带出了风声，急停、转弯、跳跃，所有动作都流畅得没有半分卡顿」简化为「急停、转弯、跳跃动作流畅无卡顿」，即可将字数压缩到合格范围内",
+        "[打磨优先级] 设定补全: 在陆沉坐起身活动手指的段落添加一句「指尖抚过小臂，之前生成外骨骼的位置还留着淡淡的银灰色细纹，触感比普通皮肤坚硬三倍」，补全设定呼应",
+        "[打磨优先级] 人物优化: 在幸存者欢呼的内容中添加1-2个差异化细节，例如「头发花白的老猎人攥着磨亮的猎枪冲他用力点头，抱着孩子的年轻母亲捂住孩子的嘴，红着眼眶朝他鞠了半躬」，丰富群像层次",
+        "[高优先级] 文风调整: 将「是他未来要统一人类、夺回母星的起点」修改为「是他要守住的第一片容身之地」，符合当前阶段陆沉的认知，避免跳出限知视角"
+      ],
+      "needs_revision": false
+    },
+    {
+      "chapter_id": "P1-V1-C10",
+      "chapter_title": "逐星的第一步",
+      "overall_score": 8,
+      "plot_coherence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "plot_rationality": {
+        "score": 0,
+        "logic_flaws": null,
+        "suggestions": null
+      },
+      "character_consistency": {
+        "score": 0,
+        "inconsistencies": null,
+        "suggestions": null
+      },
+      "pacing_review": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "scene_continuity": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "character_presence": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "recap_quality": {
+        "score": 0,
+        "issues": null,
+        "suggestions": null
+      },
+      "suggestions": [
+        "[高优先级] 连续性优化: 在第3段陆沉操控机甲躲避能量束的情节后，新增1句话：「林野带领的战斗人员躲在立柱后同步开火，精准打瞎了两台机器人的光学传感器，为陆沉争取到了绕后突袭的空隙」，既呼应前章设定，也让战斗逻辑更合理",
+        "[打磨优先级] 人物塑造优化: 在老周发言结束、幸存者围上来的情节后，新增细节：「林野笑着锤了锤机甲的金属外壳，朝陆沉比了个大拇指：‘我就知道跟着你准没错’，阿柚举着手里的探测器晃了晃：‘我已经把南海发射场的坐标提前导进机甲导航系统了’」，强化核心配角的辨识度",
+        "[打磨优先级] 文笔优化: 删除最后一段的重复抒情内容，保留倒数第二段以导航信号灯收尾的内容，让结尾更简洁有力，余味更足"
+      ],
+      "needs_revision": false
+    }
+  ],
+  "summary": ""
+}

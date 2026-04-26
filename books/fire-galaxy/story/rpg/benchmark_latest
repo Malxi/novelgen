@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-04-26T11:28:11+08:00",
+  "book_name": "fire-galaxy",
+  "book_path": "D:\\Code\\nolvegen\\books\\fire-galaxy",
+  "source": "chapters(recap) -\u003e AI(batch/cache) -\u003e DSL -\u003e simulate",
+  "chapter_count": 10,
+  "dsl_file": "D:\\Code\\nolvegen\\books\\fire-galaxy\\story\\rpg\\04_chapters.rpg",
+  "min_severity": "warning",
+  "include_dsl_hygiene": false,
+  "summary": {
+    "total": 0,
+    "critical": 0,
+    "warning": 0,
+    "info": 0
+  },
+  "all_summary": {
+    "total": 41,
+    "critical": 0,
+    "warning": 27,
+    "info": 14
+  },
+  "filtered_out": 41,
+  "issues": []
+}

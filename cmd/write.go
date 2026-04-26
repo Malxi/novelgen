@@ -1199,6 +1199,20 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	recapAgent.SetLanguage(config.Language)
 	recapStore := recap.NewStore(root)
 
+	// Pre-generate RPG DSL and detect issues if enabled
+	var rpgDSLIssues []dsl.SimulationIssue
+	if writeEmitRPGDSLFlag {
+		log.Info("\n[Pre-step] Generating RPG DSL and detecting issues...")
+		result, err := emitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, writeRPGBatchSizeFlag)
+		if err != nil {
+			log.Error("Failed to generate RPG DSL: %v", err)
+		} else {
+			rpgDSLIssues = result.Issues
+			log.Info("RPG DSL generated: %s", result.DSLPath)
+			log.Info("Issues detected: %d total, %d important", len(result.Issues), len(FilterImportantIssues(result.Issues)))
+		}
+	}
+
 	// Process each chapter completely before moving to the next
 	for chapterIdx, chapter := range chaptersToProcess {
 		log.Info("\n%s", strings.Repeat("=", 60))
@@ -1292,13 +1306,22 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		currentContent := content
 		chapterReview := &draftReview
 		for round := 1; round <= writeMaxRoundsFlag; round++ {
-			if len(chapterReview.Suggestions) == 0 && !chapterReview.NeedsRevision {
+			// Check for RPG DSL issues for this chapter
+			chapterRPGIssues := GetChapterSpecificSuggestions(rpgDSLIssues, chapter.ID)
+			hasRPGIssues := chapterRPGIssues != ""
+
+			if len(chapterReview.Suggestions) == 0 && !chapterReview.NeedsRevision && !hasRPGIssues {
 				log.Info("Chapter %s: no suggestions and no revision needed, skipping improvement", chapter.ID)
 				break
 			}
 
-			log.Info("Improvement round %d/%d (score: %d)", round, writeMaxRoundsFlag, chapterReview.OverallScore)
+			log.Info("Improvement round %d/%d (score: %d, RPG issues: %v)", round, writeMaxRoundsFlag, chapterReview.OverallScore, hasRPGIssues)
 			suggestions := buildImprovementSuggestions(chapterReview)
+
+			// Append RPG DSL issues as suggestions if any
+			if hasRPGIssues {
+				suggestions += "\n\n" + chapterRPGIssues
+			}
 			chapterContext := loadChapterContext(outline, chapter, writeContextFlag)
 			stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
 			improvedContent, err := writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, stateMatrix, targetWords, currentContent, suggestions)
@@ -1356,17 +1379,6 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		log.Info("\nCompleted chapter: %s", chapter.ID)
 	}
 
-	if writeEmitRPGDSLFlag {
-		log.Info("\n[Step 5/5] Updating chapter RPG DSL...")
-		result, err := emitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, writeRPGBatchSizeFlag)
-		if err != nil {
-			log.Error("Failed to update chapter RPG DSL: %v", err)
-		} else {
-			log.Info("RPG DSL output: %s", result.DSLPath)
-			log.Info("RPG DSL cache dir: %s", result.CacheDir)
-			log.Info("RPG DSL batches: total=%d reused=%d generated=%d chapters=%d", result.BatchCount, result.ReusedBatches, result.GeneratedBatches, result.ChapterCount)
-		}
-	}
 	log.Info("\n=== PIPELINE COMPLETE ===")
 	log.Info("All phases completed successfully!")
 	return nil

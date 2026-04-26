@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -12,6 +13,7 @@ import (
 	"novelgen/internal/logic"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
+	"novelgen/internal/rpg/dsl"
 
 	"github.com/spf13/cobra"
 )
@@ -140,6 +142,17 @@ func runPolish(cmd *cobra.Command, args []string) error {
 
 		log.Info("Found %d chapters in volume %s", len(chapters), volume.ID)
 
+		// Generate RPG DSL and detect issues for this volume
+		var rpgDSLIssues []dsl.SimulationIssue
+		log.Info("Generating RPG DSL and detecting issues for volume %s...", volume.ID)
+		result, err := emitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, 10)
+		if err != nil {
+			log.Error("Failed to generate RPG DSL: %v", err)
+		} else {
+			rpgDSLIssues = result.Issues
+			log.Info("RPG DSL generated, issues detected: %d total, %d important", len(result.Issues), len(FilterImportantIssues(result.Issues)))
+		}
+
 		// Run improvement rounds
 		for round := 1; round <= polishMaxRoundsFlag; round++ {
 			log.Info("--- Improvement Round %d/%d ---", round, polishMaxRoundsFlag)
@@ -163,15 +176,19 @@ func runPolish(cmd *cobra.Command, args []string) error {
 			if len(volumeReviewResult.VolumeLevelIssues) > 0 || len(volumeReviewResult.VolumeLevelSuggestions) > 0 {
 				hasAnySuggestions = true
 			}
+			// Also check if there are RPG DSL issues
+			if len(FilterImportantIssues(rpgDSLIssues)) > 0 {
+				hasAnySuggestions = true
+			}
 
 			if !hasAnySuggestions && polishPromptFlag == "" {
 				log.Info("No suggestions for any chapter, stopping improvement")
 				break
 			}
 
-			// Step 2: Improve chapters based on volume review
-			log.Info("Improving chapters based on volume review...")
-			improvedCount := improveChaptersWithVolumeReview(ctx, writeAgent, recapAgent, recapStore, stateManager, volume, chapters, volumeReviewResult, outline, targetWords)
+			// Step 2: Improve chapters based on volume review and RPG DSL issues
+			log.Info("Improving chapters based on volume review and RPG DSL issues...")
+			improvedCount := improveChaptersWithVolumeReviewAndRPGIssues(ctx, writeAgent, recapAgent, recapStore, stateManager, volume, chapters, volumeReviewResult, rpgDSLIssues, outline, targetWords)
 			log.Info("Round %d complete: %d chapters improved", round, improvedCount)
 
 			// If no chapters were improved, stop
@@ -277,8 +294,8 @@ func performVolumeReview(ctx context.Context, writeAgent *agents.WriteAgent, vol
 	return writeAgent.ReviewVolume(ctx, volume, chapters, chapterContents, targetWords)
 }
 
-// improveChaptersWithVolumeReview improves chapters based on volume-level review
-func improveChaptersWithVolumeReview(ctx context.Context, writeAgent *agents.WriteAgent, recapAgent *agents.RecapAgent, recapStore *recap.Store, stateManager *logic.StateMatrixManager, volume *models.Volume, chapters []*models.Chapter, volumeReview agents.VolumeReviewResult, outline *models.Outline, targetWords int) int {
+// improveChaptersWithVolumeReviewAndRPGIssues improves chapters based on volume-level review and RPG DSL issues
+func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent *agents.WriteAgent, recapAgent *agents.RecapAgent, recapStore *recap.Store, stateManager *logic.StateMatrixManager, volume *models.Volume, chapters []*models.Chapter, volumeReview agents.VolumeReviewResult, rpgDSLIssues []dsl.SimulationIssue, outline *models.Outline, targetWords int) int {
 	log := logger.GetLogger()
 
 	// Create review map
@@ -313,7 +330,9 @@ func improveChaptersWithVolumeReview(ctx context.Context, writeAgent *agents.Wri
 				}
 
 				// Check if improvement is needed
-				hasSuggestions := len(review.Issues) > 0 || len(review.Suggestions) > 0 || len(volumeReview.VolumeLevelIssues) > 0 || len(volumeReview.VolumeLevelSuggestions) > 0
+				chapterRPGIssues := GetChapterSpecificSuggestions(rpgDSLIssues, chapter.ID)
+				hasRPGIssues := chapterRPGIssues != ""
+				hasSuggestions := len(review.Issues) > 0 || len(review.Suggestions) > 0 || len(volumeReview.VolumeLevelIssues) > 0 || len(volumeReview.VolumeLevelSuggestions) > 0 || hasRPGIssues
 				hasUserPrompt := polishPromptFlag != ""
 
 				// Skip if no suggestions and no user prompt
@@ -360,19 +379,24 @@ func improveChaptersWithVolumeReview(ctx context.Context, writeAgent *agents.Wri
 				}
 
 				// Add volume-level issues and suggestions
-			if len(volumeReview.VolumeLevelIssues) > 0 {
-				suggestions.WriteString("\n### 卷级整体问题（请检查本章是否涉及以下问题，如涉及则必须修正）\n")
-				for _, issue := range volumeReview.VolumeLevelIssues {
-					suggestions.WriteString(fmt.Sprintf("- %s\n", issue))
+				if len(volumeReview.VolumeLevelIssues) > 0 {
+					suggestions.WriteString("\n### 卷级整体问题（请检查本章是否涉及以下问题，如涉及则必须修正）\n")
+					for _, issue := range volumeReview.VolumeLevelIssues {
+						suggestions.WriteString(fmt.Sprintf("- %s\n", issue))
+					}
 				}
-			}
 
-			if len(volumeReview.VolumeLevelSuggestions) > 0 {
-				suggestions.WriteString("\n### 卷级整体建议（请检查本章是否涉及以下内容，如涉及则按建议修正）\n")
-				for _, s := range volumeReview.VolumeLevelSuggestions {
-					suggestions.WriteString(fmt.Sprintf("- %s\n", s))
+				if len(volumeReview.VolumeLevelSuggestions) > 0 {
+					suggestions.WriteString("\n### 卷级整体建议（请检查本章是否涉及以下内容，如涉及则按建议修正）\n")
+					for _, s := range volumeReview.VolumeLevelSuggestions {
+						suggestions.WriteString(fmt.Sprintf("- %s\n", s))
+					}
 				}
-			}
+
+				// Add RPG DSL issues if any
+				if hasRPGIssues {
+					suggestions.WriteString("\n" + chapterRPGIssues)
+				}
 
 				// Add user prompt if provided
 				if polishPromptFlag != "" {
