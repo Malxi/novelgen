@@ -847,6 +847,73 @@ func splitLinesAndTrim(s string) []string {
 	return result
 }
 
+// runOutlineValidatorOnModel converts models.Outline to rpg.StoryOutline,
+// runs the outline validator, and returns issues as ReviewSuggestions.
+func runOutlineValidatorOnModel(outline *models.Outline) []models.ReviewSuggestion {
+	if outline == nil {
+		return nil
+	}
+	// Convert via JSON roundtrip (models.Outline → rpg.StoryOutline)
+	data, err := json.Marshal(outline)
+	if err != nil {
+		return nil
+	}
+	var storyOutline rpg.StoryOutline
+	if err := json.Unmarshal(data, &storyOutline); err != nil {
+		return nil
+	}
+
+	validator := rpg.NewOutlineValidator(&storyOutline)
+	result := validator.Validate()
+
+	var suggestions []models.ReviewSuggestion
+
+	for _, issue := range result.Issues {
+		suggestions = append(suggestions, models.ReviewSuggestion{
+			Category:   issue.Type,
+			TargetID:   issue.Location,
+			TargetName: issue.Location,
+			Issue:      issue.Description,
+			Suggestion: issue.Fix,
+			Priority:   severityToPriorityStr(issue.Severity),
+		})
+	}
+	for _, w := range result.Warnings {
+		suggestions = append(suggestions, models.ReviewSuggestion{
+			Category:   w.Type,
+			TargetID:   w.Location,
+			TargetName: w.Location,
+			Issue:      w.Description,
+			Suggestion: w.Suggestion,
+			Priority:   models.PriorityMedium,
+		})
+	}
+	for _, s := range result.Suggestions {
+		suggestions = append(suggestions, models.ReviewSuggestion{
+			Category:   s.Type,
+			TargetID:   s.Location,
+			TargetName: s.Location,
+			Issue:      s.Current,
+			Suggestion: s.Suggested,
+			Priority:   models.PriorityLow,
+		})
+	}
+	return suggestions
+}
+
+func severityToPriorityStr(severity string) string {
+	switch severity {
+	case "critical":
+		return models.PriorityHigh
+	case "major":
+		return models.PriorityHigh
+	case "minor":
+		return models.PriorityMedium
+	default:
+		return models.PriorityLow
+	}
+}
+
 // iterateOutlineImprovement runs the review-improvement loop
 func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, concurrency int, hierarchical bool, forceImprove bool, userPrompt string) error {
 	logger.Section("Outline Iteration Improvement")
@@ -921,6 +988,15 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 					logger.Info("Extra compose improve pass completed for DSL-critical issues")
 				}
 			}
+		}
+	}
+
+	// Enrich with outline validator feedback (timeline, state_anchor, etc.)
+	if review != nil {
+		validatorIssues := runOutlineValidatorOnModel(improvedOutline)
+		if len(validatorIssues) > 0 {
+			review.Suggestions = append(review.Suggestions, validatorIssues...)
+			logger.Info("Outline validator added %d suggestions to review", len(validatorIssues))
 		}
 	}
 
