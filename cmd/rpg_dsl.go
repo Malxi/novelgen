@@ -478,29 +478,46 @@ func runSimulate(cmd *cobra.Command, args []string) error {
 }
 
 func runConvertChapters(cmd *cobra.Command, args []string) error {
-	fmt.Printf("🔄 转换章节为 DSL: %s\n\n", bookName)
+	fmt.Printf("🔄 转换章节为 DSL (基于章节内容): %s\n\n", bookName)
 
 	// 1. 加载项目数据
 	fmt.Println("📂 加载项目数据...")
-	adapter, err := agents.LoadNovelgenProject(bookName)
+	outline, err := loadOutline()
 	if err != nil {
-		return fmt.Errorf("加载项目失败: %w", err)
+		return fmt.Errorf("加载 outline 失败: %w", err)
 	}
+	setup, err := loadStorySetup()
+	if err != nil {
+		return fmt.Errorf("加载 story setup 失败: %w", err)
+	}
+	charModels, locModels, _, err := loadAllElements()
+	if err != nil {
+		return fmt.Errorf("加载 craft 元素失败: %w", err)
+	}
+	characters := derefCharacterMap(charModels)
+	locations := derefLocationMap(locModels)
 
-	// 2. 查找章节文件
-	chapterFiles, err := adapter.FindChapterRecaps()
+	// 2. 查找章节 .md 文件（优先章节内容，附带 recap 辅助）
+	root, err := findProjectRoot()
+	if err != nil {
+		return fmt.Errorf("查找项目根目录失败: %w", err)
+	}
+	chapterInputs, err := findProjectChapterInputs(root, outline)
 	if err != nil {
 		return fmt.Errorf("查找章节文件失败: %w", err)
 	}
 
-	// 应用过滤
-	chapterFiles = filterChapters(chapterFiles, volumeFlag, chaptersFlag, allVolumesFlag)
-
-	if len(chapterFiles) == 0 {
-		return fmt.Errorf("未找到符合条件的章节文件")
+	// 按章节 ID 过滤
+	if chaptersFlag != "" || volumeFlag != 0 {
+		chapterInputs = filterChapterInputs(chapterInputs, volumeFlag, chaptersFlag, allVolumesFlag)
 	}
 
-	fmt.Printf("📚 找到 %d 个章节文件\n", len(chapterFiles))
+	if len(chapterInputs) == 0 {
+		return fmt.Errorf("未找到符合条件的章节 markdown 文件")
+	}
+	sortRPGDSLChapterInputs(chapterInputs)
+
+	fmt.Printf("📚 找到 %d 个章节 markdown 文件\n", len(chapterInputs))
 
 	// 3. 创建 RPG 目录
 	rpgDir := getBookRPGDir(bookName)
@@ -508,119 +525,70 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("创建 RPG 目录失败: %w", err)
 	}
 
-	// 4. 使用 AI Agent 转换所有章节到一个 DSL 文件
-	fmt.Println("\n🤖 使用 AI Agent 转换章节...")
+	// 4. 使用 AI Agent 转换章节内容到 DSL
+	fmt.Println("\n🤖 使用 AI Agent 从章节内容转换 DSL...")
 
-	// 加载全局 LLM 配置
 	llmConfig, err := llm.LoadOrCreateConfig()
 	if err != nil {
 		fmt.Printf("⚠️  加载 LLM 配置失败: %v\n", err)
-		fmt.Println("   将使用规则转换（无 AI）")
 		llmConfig = nil
 	}
 
-	// 加载项目级配置 (novel.json)
 	projectConfigPath := filepath.Join("books", bookName, "novel.json")
 	projectConfig, err := models.LoadProjectConfig(projectConfigPath)
 	if err != nil {
 		fmt.Printf("⚠️  加载项目配置失败: %v\n", err)
-		fmt.Println("   将使用全局 LLM 配置")
 	} else {
 		fmt.Printf("✅ 加载项目配置: %s\n", projectConfig.Name)
-		fmt.Printf("   项目级 LLM: %s / %s\n", projectConfig.LLM.Provider, projectConfig.LLM.Model)
 	}
 
-	// 创建 LLM 客户端
 	var llmClient llm.Client
 	var projectLLM *models.ProjectLLM
 
 	if llmConfig != nil && len(llmConfig.Providers) > 0 {
-		// 优先使用项目级配置，如果没有则使用全局默认配置
 		if projectConfig != nil && projectConfig.LLM.Provider != "" && projectConfig.LLM.Model != "" {
 			projectLLM = &projectConfig.LLM
-			fmt.Printf("✅ 使用项目级 LLM 配置: %s / %s\n", projectLLM.Provider, projectLLM.Model)
 		} else {
-			projectLLM = &models.ProjectLLM{
-				Provider: llmConfig.DefaultProvider,
-				Model:    llmConfig.DefaultModel,
-			}
-			fmt.Printf("✅ 使用全局 LLM 配置: %s / %s\n", projectLLM.Provider, projectLLM.Model)
+			projectLLM = &models.ProjectLLM{Provider: llmConfig.DefaultProvider, Model: llmConfig.DefaultModel}
 		}
-
+		fmt.Printf("✅ LLM: %s / %s\n", projectLLM.Provider, projectLLM.Model)
 		llmClient = llmConfig.CreateClient(projectLLM)
-		if llmClient == nil {
-			fmt.Println("⚠️  创建 LLM 客户端失败，将使用规则转换")
-		} else {
-			fmt.Println("✅ LLM 客户端创建成功，将使用 AI 转换")
-		}
 	} else {
-		fmt.Println("⚠️  未找到有效的 LLM 配置，将使用规则转换")
+		fmt.Println("⚠️  未找到有效的 LLM 配置")
 	}
 
-	// 创建 Agent
-	agent := agents.NewChapterToDSLAgent(
-		llmClient,
-		llmConfig,
-		projectLLM,
-		adapter.GetStorySetup(),
-	)
+	agent := agents.NewChapterToDSLAgent(llmClient, llmConfig, projectLLM, setup)
 	agent.SetLanguage("zh")
 	agent.SetRequireAI(true)
 	if llmClient == nil {
 		return fmt.Errorf("LLM 客户端不可用，无法执行 AI 章节转 DSL")
 	}
 
-	// 执行转换
-	dslContent, err := agent.ConvertChapters(
-		cmd.Context(),
-		bookName,
-		adapter.GetCharacters(),
-		adapter.GetLocations(),
-		chapterFiles,
-	)
+	// 加载章节内容 + 可选 recap
+	chapterData, err := loadWriteRPGDSLChapterData(chapterInputs)
+	if err != nil {
+		return fmt.Errorf("加载章节内容失败: %w", err)
+	}
+	fmt.Printf("📄 加载了 %d 个章节的完整内容\n", len(chapterData))
+
+	dslContent, err := agent.ConvertChapterData(cmd.Context(), bookName, characters, locations, chapterData)
 	if err != nil {
 		return fmt.Errorf("AI 转换失败: %w", err)
 	}
 
-	// Parse validation and auto-repair loop
-	parser := dsl.NewParser(dslContent)
-	if _, parseErr := parser.Parse(); parseErr != nil {
-		fmt.Printf("⚠️  初次 DSL 解析失败，进入自动修复: %v\n", parseErr)
-		lastErr := parseErr
-		for attempt := 0; attempt < 2; attempt++ {
-			repairedDSL, repairErr := agent.RepairDSL(
-				cmd.Context(),
-				bookName,
-				lastErr.Error(),
-				dslContent,
-			)
-			if repairErr != nil {
-				return fmt.Errorf("DSL 自动修复失败: %w", repairErr)
-			}
-			reparse := dsl.NewParser(repairedDSL)
-			if _, err := reparse.Parse(); err == nil {
-				dslContent = repairedDSL
-				lastErr = nil
-				fmt.Printf("✅ DSL 自动修复成功 (attempt %d/2)\n", attempt+1)
-				break
-			} else {
-				lastErr = err
-				dslContent = repairedDSL
-				fmt.Printf("⚠️  修复后仍解析失败 (attempt %d/2): %v\n", attempt+1, err)
-			}
-		}
-		if lastErr != nil {
-			return fmt.Errorf("DSL 解析失败且修复未成功: %w", lastErr)
-		}
+	// Parse validation and auto-repair
+	dslContent, err = ensureWriteRPGDSLParseable(cmd.Context(), agent, bookName, dslContent)
+	if err != nil {
+		return fmt.Errorf("DSL 解析/修复失败: %w", err)
 	}
 
-	// 5. 保存合并的 DSL 文件
-	outlineFile := filepath.Join(rpgDir, "01_outline.rpg")
-	if err := os.WriteFile(outlineFile, []byte(dslContent), 0644); err != nil {
+	// 5. 保存到 04_chapters.rpg (基于章节内容)
+	chaptersFile := filepath.Join(rpgDir, "04_chapters.rpg")
+	if err := os.WriteFile(chaptersFile, []byte(dslContent), 0644); err != nil {
 		return fmt.Errorf("保存 DSL 文件失败: %w", err)
 	}
 
-	fmt.Printf("\n✅ 转换完成，已保存: %s\n", outlineFile)
+	fmt.Printf("\n✅ 转换完成，已保存: %s\n", chaptersFile)
 	fmt.Printf("   DSL 内容长度: %d 字符\n", len(dslContent))
 
 	// 6. 运行模拟（如果启用）
@@ -632,6 +600,34 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// filterChapterInputs filters chapter inputs by volume/chapter flags.
+func filterChapterInputs(inputs []writeRPGDSLChapterInput, volume int, chapters string, allVolumes bool) []writeRPGDSLChapterInput {
+	if chapters != "" {
+		chapterSet := make(map[string]bool)
+		for _, ch := range strings.Split(chapters, ",") {
+			chapterSet[strings.TrimSpace(ch)] = true
+		}
+		var filtered []writeRPGDSLChapterInput
+		for _, input := range inputs {
+			if chapterSet[input.ChapterID] || chapterSet[extractChapterNumber(input.ChapterID)] {
+				filtered = append(filtered, input)
+			}
+		}
+		return filtered
+	}
+	if volume > 0 && !allVolumes {
+		prefix := fmt.Sprintf("P1-V%d-", volume)
+		var filtered []writeRPGDSLChapterInput
+		for _, input := range inputs {
+			if strings.HasPrefix(input.ChapterID, prefix) || strings.Contains(input.ChapterID, fmt.Sprintf("-V%d-", volume)) {
+				filtered = append(filtered, input)
+			}
+		}
+		return filtered
+	}
+	return inputs
 }
 
 // Helper functions
@@ -756,55 +752,13 @@ func exportToYAML(dslData *dsl.DSL, path string) error {
 	return fmt.Errorf("YAML export not yet implemented")
 }
 
-// filterChapters 过滤章节文件
-func filterChapters(files []string, volume int, chapters string, allVolumes bool) []string {
-	// 如果指定了具体章节
-	if chapters != "" {
-		var filtered []string
-		chapterSet := make(map[string]bool)
-		for _, ch := range strings.Split(chapters, ",") {
-			chapterSet[strings.TrimSpace(ch)] = true
-		}
-		for _, file := range files {
-			base := filepath.Base(file)
-			chapterID := strings.TrimSuffix(base, ".json")
-			if chapterSet[chapterID] {
-				filtered = append(filtered, file)
-			}
-		}
-		return filtered
-	}
-
-	// 按卷过滤
-	if volume > 0 && !allVolumes {
-		var filtered []string
-		volumePrefix := fmt.Sprintf("P1-V%d-", volume)
-		for _, file := range files {
-			if strings.Contains(filepath.Base(file), volumePrefix) {
-				filtered = append(filtered, file)
-			}
-		}
-		return filtered
-	}
-
-	return files
-}
-
 // convertChapterToDSL 使用 LLM Agent 转换章节为 DSL
 // runSimulationForOutline 为 outline.rpg 运行模拟
 func runSimulationForOutline(bookName string) error {
-	rpgDir := getBookRPGDir(bookName)
-	outlineFile := filepath.Join(rpgDir, "01_outline.rpg")
-
-	content, err := os.ReadFile(outlineFile)
+	// Load and merge all RPG DSL files (01_outline.rpg, 02_craft.rpg, 03_systems.rpg, 04_chapters.rpg)
+	dslData, err := loadAndMergeDSL(bookName)
 	if err != nil {
-		return fmt.Errorf("读取 outline.rpg 失败: %w", err)
-	}
-
-	parser := dsl.NewParser(string(content))
-	dslData, err := parser.Parse()
-	if err != nil {
-		return fmt.Errorf("解析 DSL 失败: %w", err)
+		return fmt.Errorf("加载/合并 DSL 失败: %w", err)
 	}
 
 	// 运行模拟

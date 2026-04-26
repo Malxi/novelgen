@@ -16,6 +16,7 @@ import (
 	"novelgen/internal/logic"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
+	"novelgen/internal/rpg/dsl"
 
 	"github.com/spf13/cobra"
 )
@@ -37,12 +38,18 @@ var (
 )
 
 var draftCmd = &cobra.Command{
-	Use:   "draft",
-	Short: "Generate and improve draft chapters",
-	Long: `Generate, review, and improve draft chapters based on outline and story state.
+	Use:        "draft",
+	Short:      "Legacy: generate and improve draft chapters",
+	Hidden:     true,
+	Deprecated: "draft is a legacy optional workflow; use `novelgen write pipeline` for the default direct-to-final flow.",
+	Long: `Legacy optional workflow for generating, reviewing, and improving draft chapters.
 
 Drafts are preliminary versions of chapters saved to the drafts/ directory.
-They serve as the foundation for final chapter generation.
+They are no longer part of the recommended default workflow. New projects should
+write final chapters directly with:
+
+  novelgen write pipeline --chapter P1-V1-C1
+  novelgen write pipeline --volume P1-V1
 
 Subcommands:
   gen      - Generate new draft chapters
@@ -726,6 +733,18 @@ func improveChaptersWithAgent(ctx context.Context, agent *agents.DraftAgent, cha
 	}
 	stateManager := logic.NewStateMatrixManager(root)
 
+	// Pre-build DSL simulation for enrichment (shared across goroutines)
+	var dslIssues []dsl.SimulationIssue
+	dslBridge := dsl.NewSimulationBridge()
+	if charModels, locModels, itemModels, elErr := loadAllElements(); elErr == nil {
+		setup, _ := loadStorySetup()
+		dslAdapter := dsl.NewModelAdapter(setup, outline, charModels, locModels, itemModels)
+		dslIssues, _ = dslAdapter.Simulate(dsl.PhaseCraft)
+		if len(dslIssues) > 0 {
+			log.Info("DSL simulation loaded %d issues for improvement enrichment", len(dslIssues))
+		}
+	}
+
 	if concurrency <= 0 {
 		concurrency = 1
 	}
@@ -760,6 +779,17 @@ func improveChaptersWithAgent(ctx context.Context, agent *agents.DraftAgent, cha
 
 				// Build improvement prompt
 				suggestions := buildImprovementSuggestions(review)
+
+				// Append DSL simulation feedback for this chapter
+				if len(dslIssues) > 0 {
+					chapterIssues := dslBridge.IssuesForChapter(dslIssues, chapter.ID)
+					if len(chapterIssues) > 0 {
+						dslFeedback := dslBridge.FormatAsString(chapterIssues)
+						if dslFeedback != "" {
+							suggestions += "\n\n" + dslFeedback
+						}
+					}
+				}
 
 				// Calculate state matrix
 				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)

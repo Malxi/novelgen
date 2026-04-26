@@ -14,11 +14,13 @@ var rootCmd = &cobra.Command{
 It provides a structured workflow to guide you from initial idea to complete novel:
   1. init     - Initialize a new novel project
   2. setup    - Create story setup (genre, premise, theme, etc.)
-  3. compose  - Generate story outline (parts → volumes → chapters)
+  3. compose  - Generate story outline (parts -> volumes -> chapters)
   4. craft    - Create detailed world elements (characters, locations, items)
-  5. draft    - Generate and improve draft chapters
-  6. write    - Generate final polished chapters
-  7. export   - Export the completed novel to various formats
+  5. write    - Generate, review, improve, recap, and emit RPG DSL for final chapters
+  6. export   - Export the completed novel to various formats
+
+Legacy note: draft commands still exist for old projects, but the recommended
+workflow writes final chapters directly with "novelgen write pipeline".
 
 Use "novelgen <command> --help" for more information about a command.`,
 }

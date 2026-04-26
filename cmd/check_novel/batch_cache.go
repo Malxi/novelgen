@@ -14,6 +14,7 @@ import (
 
 	"novelgen/internal/agents"
 	"novelgen/internal/models"
+	"novelgen/internal/rpg"
 	"novelgen/internal/rpg/dsl"
 )
 
@@ -31,9 +32,17 @@ type batchManifest struct {
 }
 
 type batchChapterState struct {
-	ChapterID string `json:"chapter_id"`
-	Path      string `json:"path"`
-	SHA256    string `json:"sha256"`
+	ChapterID     string `json:"chapter_id"`
+	ChapterPath   string `json:"chapter_path"`
+	ChapterSHA256 string `json:"chapter_sha256"`
+	RecapPath     string `json:"recap_path,omitempty"`
+	RecapSHA256   string `json:"recap_sha256,omitempty"`
+}
+
+type chapterDSLInputFile struct {
+	ChapterID   string
+	ChapterPath string
+	RecapPath   string
 }
 
 func convertChaptersWithBatchCache(
@@ -42,7 +51,7 @@ func convertChaptersWithBatchCache(
 	bookName, bookPath string,
 	characters map[string]models.Character,
 	locations map[string]models.Location,
-	chapterFiles []string,
+	chapterFiles []chapterDSLInputFile,
 	batchSize int,
 ) (string, *dsl.DSL, error) {
 	if batchSize <= 0 {
@@ -94,7 +103,7 @@ func convertChapterBatchAdaptive(
 	bookName string,
 	characters map[string]models.Character,
 	locations map[string]models.Location,
-	chapterFiles []string,
+	chapterFiles []chapterDSLInputFile,
 	batchIndex int,
 	configuredBatchSize int,
 	cacheDir string,
@@ -126,7 +135,7 @@ func convertChapterBatch(
 	bookName string,
 	characters map[string]models.Character,
 	locations map[string]models.Location,
-	chapterFiles []string,
+	chapterFiles []chapterDSLInputFile,
 	batchIndex int,
 	configuredBatchSize int,
 	cacheDir string,
@@ -147,7 +156,11 @@ func convertChapterBatch(
 			manifest.Chapters[len(manifest.Chapters)-1].ChapterID,
 			len(manifest.Chapters),
 		)
-		dslContent, err = agent.ConvertChapters(ctx, bookName, characters, locations, chapterFiles)
+		chapterData, err := loadChapterDSLInputData(chapterFiles)
+		if err != nil {
+			return nil, err
+		}
+		dslContent, err = agent.ConvertChapterData(ctx, bookName, characters, locations, chapterData)
 		if err != nil {
 			return nil, fmt.Errorf("AI 转换 batch %d 失败: %w", batchIndex+1, err)
 		}
@@ -192,6 +205,69 @@ func normalizeBatchChapterIDs(batchDSL *dsl.DSL, manifest *batchManifest) {
 	}
 }
 
+func findCheckNovelChapterInputs(bookPath string, outline *rpg.StoryOutline) ([]chapterDSLInputFile, error) {
+	chapterFiles := map[string]string{}
+	if outline != nil {
+		for _, part := range outline.Parts {
+			for _, volume := range part.Volumes {
+				for _, chapter := range volume.Chapters {
+					for _, path := range candidateCheckNovelChapterPaths(bookPath, chapter.ID) {
+						if _, err := os.Stat(path); err == nil {
+							chapterFiles[chapter.ID] = path
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+	if len(chapterFiles) == 0 {
+		pattern := filepath.Join(bookPath, "chapters", "chapter-*.md")
+		files, err := filepath.Glob(pattern)
+		if err != nil {
+			return nil, err
+		}
+		for _, file := range files {
+			chapterID := strings.TrimSuffix(strings.TrimPrefix(filepath.Base(file), "chapter-"), filepath.Ext(file))
+			chapterFiles[chapterID] = file
+		}
+	}
+
+	inputs := make([]chapterDSLInputFile, 0, len(chapterFiles))
+	for chapterID, chapterPath := range chapterFiles {
+		input := chapterDSLInputFile{
+			ChapterID:   chapterID,
+			ChapterPath: chapterPath,
+		}
+		recapPath := filepath.Join(bookPath, "story", "recaps", chapterID+".json")
+		if _, err := os.Stat(recapPath); err == nil {
+			input.RecapPath = recapPath
+		}
+		inputs = append(inputs, input)
+	}
+	return inputs, nil
+}
+
+func candidateCheckNovelChapterPaths(bookPath, chapterID string) []string {
+	return []string{
+		filepath.Join(bookPath, "chapters", "chapter-"+chapterID+".md"),
+		filepath.Join(bookPath, "chapters", "chapter-"+extractCheckNovelChapterNumber(chapterID)+".md"),
+	}
+}
+
+func extractCheckNovelChapterNumber(chapterID string) string {
+	parts := strings.Split(chapterID, "-")
+	if len(parts) > 0 {
+		last := parts[len(parts)-1]
+		return strings.TrimLeft(last, "Cc")
+	}
+	parts = strings.Split(chapterID, "_")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+	return chapterID
+}
+
 func ensureParseableDSL(ctx context.Context, agent *agents.ChapterToDSLAgent, bookName, dslContent string) (string, error) {
 	parser := dsl.NewParser(dslContent)
 	if _, parseErr := parser.Parse(); parseErr != nil {
@@ -218,6 +294,51 @@ func ensureParseableDSL(ctx context.Context, agent *agents.ChapterToDSLAgent, bo
 	return dslContent, nil
 }
 
+func loadChapterDSLInputData(files []chapterDSLInputFile) ([]agents.ChapterData, error) {
+	chapters := make([]agents.ChapterData, 0, len(files))
+	for _, file := range files {
+		content, err := os.ReadFile(file.ChapterPath)
+		if err != nil {
+			return nil, err
+		}
+		chapter := agents.ChapterData{
+			ChapterID: file.ChapterID,
+			Title:     firstMarkdownHeadingForCheckNovel(string(content), file.ChapterID),
+			Content:   string(content),
+		}
+		if file.RecapPath != "" {
+			recapData, err := os.ReadFile(file.RecapPath)
+			if err != nil {
+				return nil, err
+			}
+			var recap agents.ChapterRecap
+			if err := json.Unmarshal(recapData, &recap); err != nil {
+				return nil, err
+			}
+			chapter.Recap = &recap
+			chapter.Location = recap.Location
+			chapter.Time = recap.Time
+			chapter.Present = recap.Present
+			chapter.PlotBeats = recap.PlotBeats
+			if strings.TrimSpace(recap.Title) != "" {
+				chapter.Title = recap.Title
+			}
+		}
+		chapters = append(chapters, chapter)
+	}
+	return chapters, nil
+}
+
+func firstMarkdownHeadingForCheckNovel(content, fallback string) string {
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "#") {
+			return strings.TrimSpace(strings.TrimLeft(line, "#"))
+		}
+	}
+	return fallback
+}
+
 func dumpFailedDSL(bookName, dslContent string, parseErr error) {
 	dir := filepath.Join("books", bookName, "story", "rpg", "cache", "failed_dsl")
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -230,8 +351,8 @@ func dumpFailedDSL(bookName, dslContent string, parseErr error) {
 	fmt.Printf("失败 DSL 已保存用于排查: %s.rpg\n", base)
 }
 
-func splitChapterBatches(files []string, batchSize int) [][]string {
-	var batches [][]string
+func splitChapterBatches(files []chapterDSLInputFile, batchSize int) [][]chapterDSLInputFile {
+	var batches [][]chapterDSLInputFile
 	for start := 0; start < len(files); start += batchSize {
 		end := start + batchSize
 		if end > len(files) {
@@ -242,25 +363,37 @@ func splitChapterBatches(files []string, batchSize int) [][]string {
 	return batches
 }
 
-func buildBatchManifest(bookName string, batchIndex, batchSize int, chapterFiles []string, cacheDir string) (*batchManifest, error) {
+func buildBatchManifest(bookName string, batchIndex, batchSize int, chapterFiles []chapterDSLInputFile, cacheDir string) (*batchManifest, error) {
 	chapters := make([]batchChapterState, 0, len(chapterFiles))
 	var hashInput strings.Builder
 	hashInput.WriteString(fmt.Sprintf("version=%d\nbook=%s\nbatch_index=%d\nbatch_size=%d\n", batchCacheVersion, bookName, batchIndex, batchSize))
 
 	for _, file := range chapterFiles {
-		sum, err := fileSHA256(file)
+		chapterSum, err := fileSHA256(file.ChapterPath)
 		if err != nil {
 			return nil, err
 		}
-		chapterID := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
+		recapSum := ""
+		if file.RecapPath != "" {
+			recapSum, err = fileSHA256(file.RecapPath)
+			if err != nil {
+				return nil, err
+			}
+		}
 		chapters = append(chapters, batchChapterState{
-			ChapterID: chapterID,
-			Path:      filepath.ToSlash(file),
-			SHA256:    sum,
+			ChapterID:     file.ChapterID,
+			ChapterPath:   filepath.ToSlash(file.ChapterPath),
+			ChapterSHA256: chapterSum,
+			RecapPath:     filepath.ToSlash(file.RecapPath),
+			RecapSHA256:   recapSum,
 		})
-		hashInput.WriteString(chapterID)
-		hashInput.WriteString("=")
-		hashInput.WriteString(sum)
+		hashInput.WriteString(file.ChapterID)
+		hashInput.WriteString(".chapter=")
+		hashInput.WriteString(chapterSum)
+		hashInput.WriteString("\n")
+		hashInput.WriteString(file.ChapterID)
+		hashInput.WriteString(".recap=")
+		hashInput.WriteString(recapSum)
 		hashInput.WriteString("\n")
 	}
 
@@ -342,10 +475,10 @@ func fileSHA256(path string) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func sortChapterJSONFiles(files []string) {
+func sortChapterJSONFiles(files []chapterDSLInputFile) {
 	sort.Slice(files, func(i, j int) bool {
-		a1, b1, c1 := parsePVC(strings.TrimSuffix(filepath.Base(files[i]), filepath.Ext(files[i])))
-		a2, b2, c2 := parsePVC(strings.TrimSuffix(filepath.Base(files[j]), filepath.Ext(files[j])))
+		a1, b1, c1 := parsePVC(files[i].ChapterID)
+		a2, b2, c2 := parsePVC(files[j].ChapterID)
 		if a1 != a2 {
 			return a1 < a2
 		}
@@ -355,7 +488,7 @@ func sortChapterJSONFiles(files []string) {
 		if c1 != c2 {
 			return c1 < c2
 		}
-		return files[i] < files[j]
+		return files[i].ChapterID < files[j].ChapterID
 	})
 }
 

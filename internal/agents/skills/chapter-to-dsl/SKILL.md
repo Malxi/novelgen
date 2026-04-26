@@ -1,6 +1,6 @@
 # Skill: Chapters To RPG-DSL
 
-Convert chapter recap JSON into parser-compatible RPG-DSL.
+Convert full chapter markdown text plus optional recap JSON into parser-compatible RPG-DSL.
 
 ## Output Contract
 
@@ -47,7 +47,7 @@ Convert chapter recap JSON into parser-compatible RPG-DSL.
   - `move { to = "loc_x" }`
   - `spawn { actor = "char_x" location = "loc_x" }`
   - `on_complete { narration = "..." exp = 10 }`
-  - `state_delta { target = "char_x" kind = "cultivation|lifespan|injury|resource|death|revive|time|transition" field = "..." from = "..." to = "..." delta = -1 unit = "..." cost = "..." note = "..." }`
+  - `state_delta { target = "char_x" kind = "cultivation|lifespan|injury|resource|death|revive|time|transition|power_change|breakthrough|plot_thread" field = "..." from = "..." to = "..." delta = -1 unit = "..." cost = "..." note = "..." }`
 
 Do not use `setup { ... }` inside `combat`.
 Use `combat { enemies = [...] }` directly.
@@ -90,8 +90,9 @@ Use one or more `state_delta` blocks when the step changes important story state
 
 ## Mapping Rules
 
+- Treat `content` as the authoritative source. Use `recap`/`plot_beats` only as navigation aids.
 - Convert each input chapter to one `chapter` block.
-- Convert each `plot_beat` to one `step` in order.
+- Convert important events from the full chapter text into ordered `step` blocks. `plot_beat` can suggest coarse order, but do not ignore details only present in `content`.
 - Use provided chapter ID exactly.
 - Keep names/descriptions in {{language}}.
 - IDs must be ASCII-safe snake-case style:
@@ -133,6 +134,32 @@ Add `state_delta` inside the relevant `event { ... }` whenever the chapter state
   - `kind = "transition"`
   - `field = "explained"`
   - `to = "true"`.
+- power / combat-power changes (for progression tracking across chapters):
+  - `kind = "power_change"`
+  - `target = "character_id"`
+  - `delta = 50` (positive = increase, negative = decrease).
+  - Use when the chapter shows clear strength gain or loss.
+- breakthrough / evolution events (unlocks new tier, realm, or species ability):
+  - `kind = "breakthrough"`
+  - `target = "character_id"`
+  - `field = "realm"` or `field = "stage"`
+  - `from = "normal"` / `to = "stage_1"`.
+  - `note = "基因进化突破，解锁皮下外骨骼"`
+- unresolved plot threads, mysteries, or foreshadowing raised / resolved:
+  - `kind = "plot_thread"`
+  - `target = "mystery_or_thread_id"` (ASCII snake identifier).
+  - `field = "status"`
+  - `to = "raised"` when a mystery is introduced, `to = "resolved"` when it is answered.
+  - `note = "休眠仓显示3011年，手环显示1023年，矛盾未解释"`
+  - The simulator tracks raised vs resolved counts; unresolved threads produce a summary issue.
+
+Use chapter text to capture details recap often drops:
+
+- start/end continuity, especially injuries or status that should carry into the next chapter.
+- exact resource gains/consumption and quantities when stated.
+- rules explained in dialogue or narration.
+- NPC identity features, aliases, age, and role clues.
+- time skips and whether the prose provides transition explanation.
 
 Prefer structured deltas over only natural-language narration. If the value is unclear, still add a delta with `note = "unclear: ..."` rather than inventing a number.
 
@@ -144,4 +171,4 @@ Prefer structured deltas over only natural-language narration. If the value is u
 - Are all `objective` lines in form: `objective "..." {`?
 - Are `step` lines in form: `step N {` (without `=`)?
 - Are combat enemies in form: `enemies = [{id = "...", count = 1, level = 1}]`?
-- Are important deaths, revivals, cultivation changes, lifespan changes, injuries, resources, and time jumps represented with `state_delta`?
+- Are important deaths, revivals, cultivation changes, lifespan changes, injuries, resources, time jumps, power changes, breakthroughs, and plot threads represented with `state_delta`?

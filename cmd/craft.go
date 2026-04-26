@@ -12,6 +12,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/rpg/dsl"
 
 	"github.com/spf13/cobra"
 )
@@ -104,9 +105,7 @@ Examples:
 
   # Run 3 improvement rounds
   novelgen craft improve --max-rounds 3`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return fmt.Errorf("craft improve command is not yet implemented")
-	},
+	RunE: runCraftImprove,
 }
 
 func init() {
@@ -881,6 +880,193 @@ func saveJSON(path string, data interface{}) error {
 	}
 
 	return os.WriteFile(path, output, 0644)
+}
+
+func runCraftImprove(cmd *cobra.Command, args []string) error {
+	log := logger.GetLogger()
+	ctx := cmd.Context()
+
+	// Load project config
+	config, err := loadProjectConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load project config: %w", err)
+	}
+
+	// Load story setup
+	setup, err := loadStorySetup()
+	if err != nil {
+		return fmt.Errorf("failed to load story setup: %w", err)
+	}
+
+	// Load outline
+	outline, err := loadOutline()
+	if err != nil {
+		return fmt.Errorf("failed to load outline: %w", err)
+	}
+
+	// Load existing elements
+	charModels, locModels, itemModels, err := loadAllElements()
+	if err != nil {
+		return fmt.Errorf("failed to load elements: %w", err)
+	}
+
+	// Load LLM config
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load LLM config: %w", err)
+	}
+
+	// Create LLM client
+	client := cfg.CreateClient(&config.LLM)
+	if client == nil {
+		return fmt.Errorf("failed to create LLM client")
+	}
+
+	// Create iteration agent
+	agent := agents.NewCraftIterationAgent(client, cfg, &config.LLM, setup, outline)
+	agent.SetLanguage(config.Language)
+
+	threshold := 80.0
+	maxRounds := craftMaxRoundsFlag
+	if maxRounds <= 0 {
+		maxRounds = 1
+	}
+
+	// Determine type to improve
+	elemType := craftElementTypeFlag
+	if elemType == "" {
+		elemType = "all"
+	}
+
+	// DSL simulation bridge for enrichment
+	bridge := dsl.NewSimulationBridge()
+
+	// Improve characters
+	if elemType == "all" || elemType == "characters" {
+		if len(charModels) == 0 {
+			log.Info("No characters to improve")
+		} else {
+			chars := make(map[string]models.Character)
+			for k, v := range charModels {
+				chars[k] = *v
+			}
+
+			log.Info("Improving %d characters (max %d rounds)...", len(chars), maxRounds)
+			improved, review, iterErr := agent.IterateCharacters(ctx, chars, maxRounds, threshold, craftPromptFlag)
+			if iterErr != nil {
+				log.Error("Character improvement failed: %v", iterErr)
+			} else {
+				// Enrich with DSL simulation
+				if review != nil {
+					enrichReviewWithDSL(log, bridge, setup, outline, charModels, locModels, itemModels, dsl.PhaseCraft, review)
+					// Extra improve if critical DSL issues found
+					if hasCriticalDSLIssues(bridge, setup, outline, charModels, locModels, itemModels, dsl.PhaseCraft) {
+						improved, _, _ = agent.IterateCharacters(ctx, improved, 1, threshold, craftPromptFlag)
+						log.Info("Extra character improve pass for DSL-critical issues")
+					}
+				}
+				if saveErr := saveCharacters(improved); saveErr != nil {
+					log.Error("Failed to save characters: %v", saveErr)
+				} else {
+					log.Info("✓ Improved characters saved")
+				}
+			}
+		}
+	}
+
+	// Improve locations
+	if elemType == "all" || elemType == "locations" {
+		if len(locModels) == 0 {
+			log.Info("No locations to improve")
+		} else {
+			locs := make(map[string]models.Location)
+			for k, v := range locModels {
+				locs[k] = *v
+			}
+
+			log.Info("Improving %d locations (max %d rounds)...", len(locs), maxRounds)
+			improved, review, iterErr := agent.IterateLocations(ctx, locs, maxRounds, threshold, craftPromptFlag)
+			if iterErr != nil {
+				log.Error("Location improvement failed: %v", iterErr)
+			} else {
+				if review != nil {
+					enrichReviewWithDSL(log, bridge, setup, outline, charModels, locModels, itemModels, dsl.PhaseCraft, review)
+					if hasCriticalDSLIssues(bridge, setup, outline, charModels, locModels, itemModels, dsl.PhaseCraft) {
+						improved, _, _ = agent.IterateLocations(ctx, improved, 1, threshold, craftPromptFlag)
+						log.Info("Extra location improve pass for DSL-critical issues")
+					}
+				}
+				if saveErr := saveLocations(improved); saveErr != nil {
+					log.Error("Failed to save locations: %v", saveErr)
+				} else {
+					log.Info("✓ Improved locations saved")
+				}
+			}
+		}
+	}
+
+	// Improve items
+	if elemType == "all" || elemType == "items" {
+		if len(itemModels) == 0 {
+			log.Info("No items to improve")
+		} else {
+			items := make(map[string]models.Item)
+			for k, v := range itemModels {
+				items[k] = *v
+			}
+
+			log.Info("Improving %d items (max %d rounds)...", len(items), maxRounds)
+			improved, review, iterErr := agent.IterateItems(ctx, items, maxRounds, threshold, craftPromptFlag)
+			if iterErr != nil {
+				log.Error("Item improvement failed: %v", iterErr)
+			} else {
+				if review != nil {
+					enrichReviewWithDSL(log, bridge, setup, outline, charModels, locModels, itemModels, dsl.PhaseCraft, review)
+					if hasCriticalDSLIssues(bridge, setup, outline, charModels, locModels, itemModels, dsl.PhaseCraft) {
+						improved, _, _ = agent.IterateItems(ctx, improved, 1, threshold, craftPromptFlag)
+						log.Info("Extra item improve pass for DSL-critical issues")
+					}
+				}
+				if saveErr := saveItems(improved); saveErr != nil {
+					log.Error("Failed to save items: %v", saveErr)
+				} else {
+					log.Info("✓ Improved items saved")
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// enrichReviewWithDSL runs DSL simulation and merges issues into the review result.
+func enrichReviewWithDSL(log logger.LoggerInterface, bridge *dsl.SimulationBridge, setup *models.StorySetup, outline *models.Outline, characters map[string]*models.Character, locations map[string]*models.Location, items map[string]*models.Item, phase dsl.MergePhase, review *models.ReviewResult) {
+	adapter := dsl.NewModelAdapter(setup, outline, characters, locations, items)
+	dslIssues, err := adapter.Simulate(phase)
+	if err != nil {
+		log.Debug("DSL simulation skipped: %v", err)
+		return
+	}
+	if len(dslIssues) == 0 {
+		return
+	}
+	bridge.MergeIntoReview(dslIssues, review)
+	log.Info("DSL simulation enriched review with %d additional issues", len(dslIssues))
+}
+
+// hasCriticalDSLIssues returns true if DSL simulation finds critical issues.
+func hasCriticalDSLIssues(bridge *dsl.SimulationBridge, setup *models.StorySetup, outline *models.Outline, characters map[string]*models.Character, locations map[string]*models.Location, items map[string]*models.Item, phase dsl.MergePhase) bool {
+	adapter := dsl.NewModelAdapter(setup, outline, characters, locations, items)
+	dslIssues, err := adapter.Simulate(phase)
+	if err != nil {
+		return false
+	}
+	for _, iss := range dslIssues {
+		if iss.Severity == dsl.SeverityCritical {
+			return true
+		}
+	}
+	return false
 }
 
 // findProjectRoot finds the project root directory by looking for novel.json

@@ -67,9 +67,12 @@ func FormatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) strin
 			if char.Notes != "" {
 				sb.WriteString(fmt.Sprintf("    - Notes: %s\n", char.Notes))
 			}
-			// Goals are stored in state matrix dynamically
-			if goals, exists := state.Goals[charName]; exists && len(goals) > 0 {
-				sb.WriteString(fmt.Sprintf("    - Current Goals: %s\n", strings.Join(goals, ", ")))
+			// Goals from RPGState (canonical source)
+			if state.RPG != nil && state.RPG.Characters[charName] != nil {
+				rpgChar := state.RPG.Characters[charName]
+				if len(rpgChar.Goals) > 0 {
+					sb.WriteString(fmt.Sprintf("    - Current Goals: %s\n", strings.Join(rpgChar.Goals, ", ")))
+				}
 			}
 		}
 	}
@@ -100,62 +103,61 @@ func FormatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) strin
 		sb.WriteString("\n")
 	}
 
-	// Active storylines (filter out completed ones)
-	activeStorylines := make(map[string]*models.StorylineState)
-	for id, sl := range state.Storylines {
-		// Skip completed storylines
-		if sl.Status == "completed" || strings.Contains(sl.Status, "completed") {
-			continue
-		}
-		activeStorylines[id] = sl
-	}
-
-	if len(activeStorylines) > 0 {
-		sb.WriteString("Active Storylines:\n")
-		for id, sl := range activeStorylines {
-			sb.WriteString(fmt.Sprintf("- %s", sl.Name))
-			if sl.Description != "" {
-				sb.WriteString(fmt.Sprintf(" (%s)", sl.Description))
+	// Active storylines from RPGState (canonical source)
+	if state.RPG != nil && len(state.RPG.Storylines) > 0 {
+		activeStorylines := make(map[string]*models.RPGQuestState)
+		for id, sl := range state.RPG.Storylines {
+			if sl.Status == "completed" || strings.Contains(sl.Status, "completed") {
+				continue
 			}
-			sb.WriteString(fmt.Sprintf(": %s", sl.Status))
-			sb.WriteString("\n")
+			activeStorylines[id] = sl
+		}
 
-			// Show full progress history
-			if len(sl.ProgressHistory) > 0 {
-				sb.WriteString("  Progress History:\n")
-				for i, progress := range sl.ProgressHistory {
-					sb.WriteString(fmt.Sprintf("    Step %d [%s]: %s - %s\n",
-						i+1, progress.ChapterID, progress.Status, progress.Details))
+		if len(activeStorylines) > 0 {
+			sb.WriteString("Active Storylines:\n")
+			for id, sl := range activeStorylines {
+				sb.WriteString(fmt.Sprintf("- %s", sl.Name))
+				if sl.Description != "" {
+					sb.WriteString(fmt.Sprintf(" (%s)", sl.Description))
+				}
+				sb.WriteString(fmt.Sprintf(": %s", sl.Status))
+				sb.WriteString("\n")
+
+				if len(sl.ProgressHistory) > 0 {
+					sb.WriteString("  Progress History:\n")
+					for i, progress := range sl.ProgressHistory {
+						sb.WriteString(fmt.Sprintf("    Step %d [%s]: %s - %s\n",
+							i+1, progress.ChapterID, progress.Status, progress.Details))
+					}
+				}
+
+				if id != sl.Name {
+					sb.WriteString(fmt.Sprintf("  [ID: %s]\n", id))
 				}
 			}
-
-			// Also show the ID for reference
-			if id != sl.Name {
-				sb.WriteString(fmt.Sprintf("  [ID: %s]\n", id))
-			}
+			sb.WriteString("\n")
 		}
-		sb.WriteString("\n")
 	}
 
-	// Character relationships (only show relationships involving characters in this chapter)
-	if len(state.Relationships) > 0 {
-		relevantRelations := make(map[string]string)
-		for pair, relation := range state.Relationships {
-			// Check if either character in the pair is in this chapter
-			chars := strings.Split(pair, "_")
-			if len(chars) >= 2 {
-				for _, chapterChar := range chapter.Characters {
-					if chars[0] == chapterChar || chars[1] == chapterChar {
-						relevantRelations[pair] = relation
-						break
-					}
+	// Character relationships from RPGState (canonical source)
+	if state.RPG != nil && len(state.RPG.Relationships) > 0 {
+		relevantRelations := make(map[string]*models.RPGRelationState)
+		for _, rel := range state.RPG.Relationships {
+			for _, chapterChar := range chapter.Characters {
+				if rel.From == chapterChar || rel.To == chapterChar {
+					relevantRelations[rel.From+"_"+rel.To] = rel
+					break
 				}
 			}
 		}
 		if len(relevantRelations) > 0 {
 			sb.WriteString("Key Relationships:\n")
-			for pair, relation := range relevantRelations {
-				sb.WriteString(fmt.Sprintf("- %s: %s\n", pair, relation))
+			for _, rel := range relevantRelations {
+				sb.WriteString(fmt.Sprintf("- %s → %s: %s", rel.From, rel.To, rel.Status))
+				if rel.Details != "" {
+					sb.WriteString(fmt.Sprintf(" (%s)", rel.Details))
+				}
+				sb.WriteString("\n")
 			}
 			sb.WriteString("\n")
 		}
@@ -526,8 +528,25 @@ func formatItems(sb *strings.Builder, state *models.StateMatrix, chapter *models
 	// Items relevant to this chapter
 	relevantItems := make(map[string]string) // itemName -> description
 
-	// 1. Items owned by characters in this chapter
+	// 1. Items owned by characters in this chapter (from RPGState Resources)
+	if state.RPG != nil {
+		for itemName, res := range state.RPG.Resources {
+			if res.Owner != "" {
+				for _, charName := range chapter.Characters {
+					if res.Owner == charName {
+						relevantItems[itemName] = fmt.Sprintf("owned by %s (qty: %d)", charName, res.Quantity)
+						break
+					}
+				}
+			}
+		}
+	}
+
+	// 1b. Fallback: also check state.Items for items not yet in RPGState
 	for itemName, item := range state.Items {
+		if _, already := relevantItems[itemName]; already {
+			continue
+		}
 		if item.Owner != "" {
 			for _, charName := range chapter.Characters {
 				if item.Owner == charName {

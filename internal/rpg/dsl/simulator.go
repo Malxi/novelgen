@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -70,6 +71,16 @@ type SimulationContext struct {
 
 	// 主角状态跟踪（根据小说类型）
 	Protagonist ProtagonistState
+
+	// 战力历史（每章记录一次）
+	PowerHistory []PowerSnapshot
+
+	// 可选进度规则（从 DSL Systems 读取）
+	ProgressionRules ProgressionRules
+
+	// 伏笔追踪
+	PlotThreadsRaised   int
+	PlotThreadsResolved int
 }
 
 // ProtagonistState 主角状态
@@ -103,6 +114,21 @@ type EventLog struct {
 	Description string
 	Characters  []string
 	Location    string
+}
+
+// PowerSnapshot records the protagonist's power state at a chapter boundary.
+type PowerSnapshot struct {
+	ChapterID           string
+	Power               int
+	Level               int
+	HasBreakthrough     bool // true if this chapter contains a breakthrough/evolution event
+	BreakthroughDetails string
+}
+
+// ProgressionRules defines optional constraints read from DSL Systems.
+// All fields are optional — zero/empty means "no constraint".
+type ProgressionRules struct {
+	MaxPowerIncreaseRatio float64 // e.g. 2.0 = power may at most double in one chapter without a breakthrough
 }
 
 // NewSimulator 创建新的模拟器
@@ -148,6 +174,10 @@ func (s *Simulator) SimulateAll() []SimulationIssue {
 
 	// 检查整体一致性
 	s.checkOverallConsistency()
+
+	// 通用检查（从 DSL Systems 读取规则，不绑定小说类型）
+	s.checkPowerProgression()
+	s.checkPlotThreads()
 
 	return s.Issues
 }
@@ -257,6 +287,28 @@ func (s *Simulator) initialize() {
 	for _, npc := range s.DSL.Characters.NPCs {
 		s.characterArc[npc.ID] = make([]string, 0)
 	}
+
+	// 从 DSL Systems 读取可选的进度规则
+	if s.DSL.Systems != nil {
+		s.Context.ProgressionRules = s.parseProgressionRules()
+	}
+}
+
+func (s *Simulator) parseProgressionRules() ProgressionRules {
+	rules := ProgressionRules{MaxPowerIncreaseRatio: 2.0} // default: warn if power doubles in one chapter
+	for _, sys := range s.DSL.Systems.ProgressionSystems {
+		if sys.ID == "progression_rules" || strings.Contains(strings.ToLower(sys.Name), "progression") {
+			for _, lvl := range sys.Levels {
+				switch strings.ToLower(lvl.Name) {
+				case "max_power_increase_ratio":
+					if v, err := strconv.ParseFloat(strings.TrimSpace(lvl.Requirements), 64); err == nil && v > 0 {
+						rules.MaxPowerIncreaseRatio = v
+					}
+				}
+			}
+		}
+	}
+	return rules
 }
 
 // 检查故事结构
@@ -448,6 +500,10 @@ func (s *Simulator) simulateChapter(chapter *Chapter) {
 
 	// 检查章节内部的逻辑
 	s.checkChapterLogic(chapter)
+
+	// 记录主角战力快照（用于跨章节对比）
+	s.recordPowerSnapshot(chapter)
+	s.trackPlotThreads(chapter)
 }
 
 // 模拟步骤
@@ -976,6 +1032,89 @@ func (s *Simulator) getAllyDescription() string {
 		return "无盟友"
 	}
 	return fmt.Sprintf("盟友%d人", len(s.Context.Protagonist.Allies))
+}
+
+// recordPowerSnapshot captures the protagonist's power state after a chapter finishes.
+func (s *Simulator) recordPowerSnapshot(chapter *Chapter) {
+	hasBreakthrough := false
+	details := ""
+	for _, objective := range chapter.Objectives {
+		for _, step := range objective.Steps {
+			for _, delta := range step.Event.StateDeltas {
+				switch strings.ToLower(delta.Kind) {
+				case "breakthrough", "evolution", "cultivation", "power_change":
+					if delta.Delta > 0 || delta.To != "" {
+						hasBreakthrough = true
+						if details == "" && delta.Note != "" {
+							details = delta.Note
+						}
+					}
+				}
+			}
+		}
+	}
+	s.Context.PowerHistory = append(s.Context.PowerHistory, PowerSnapshot{
+		ChapterID:           chapter.ID,
+		Power:               s.Context.Protagonist.Power,
+		Level:               s.Context.Protagonist.Level,
+		HasBreakthrough:     hasBreakthrough,
+		BreakthroughDetails: details,
+	})
+}
+
+// trackPlotThreads counts plot_thread deltas raised/resolved in this chapter.
+func (s *Simulator) trackPlotThreads(chapter *Chapter) {
+	for _, objective := range chapter.Objectives {
+		for _, step := range objective.Steps {
+			for _, delta := range step.Event.StateDeltas {
+				if strings.ToLower(delta.Kind) != "plot_thread" {
+					continue
+				}
+				switch strings.ToLower(delta.To) {
+				case "raised":
+					s.Context.PlotThreadsRaised++
+				case "resolved":
+					s.Context.PlotThreadsResolved++
+				}
+			}
+		}
+	}
+}
+
+// checkPowerProgression validates that power jumps between chapters are
+// accompanied by breakthrough/evolution events. Threshold read from DSL Systems.
+func (s *Simulator) checkPowerProgression() {
+	if len(s.Context.PowerHistory) < 2 {
+		return
+	}
+	ratio := s.Context.ProgressionRules.MaxPowerIncreaseRatio
+	if ratio <= 0 {
+		return // no constraint configured
+	}
+	for i := 1; i < len(s.Context.PowerHistory); i++ {
+		prev := s.Context.PowerHistory[i-1]
+		curr := s.Context.PowerHistory[i]
+		if prev.Power <= 0 {
+			continue
+		}
+		if float64(curr.Power)/float64(prev.Power) > ratio && !curr.HasBreakthrough {
+			s.addIssue(IssueGrowth, SeverityWarning, curr.ChapterID, 0,
+				fmt.Sprintf("主角战力跳跃过大: 从 %d (C%d) 到 %d (C%d)，增幅 %.1fx，但章节缺少突破/进化事件",
+					prev.Power, i, curr.Power, i+1, float64(curr.Power)/float64(prev.Power)),
+				"添加对应的突破/进化/觉醒事件说明，或降低单章战力增幅")
+		}
+	}
+}
+
+// checkPlotThreads reports unresolved plot threads at the end of the story.
+func (s *Simulator) checkPlotThreads() {
+	unresolved := s.Context.PlotThreadsRaised - s.Context.PlotThreadsResolved
+	if unresolved > 0 {
+		s.addIssue(IssuePlotHole, SeverityInfo, "", 0,
+			fmt.Sprintf("存在 %d 个未回收的伏笔/剧情线 (提出 %d, 回收 %d)",
+				unresolved, s.Context.PlotThreadsRaised, s.Context.PlotThreadsResolved),
+			"确认这些伏笔是否计划在后续章节中回收，或添加对应的 resolved state_delta")
+	}
 }
 
 // GetIssuesBySeverity 按严重程度获取问题

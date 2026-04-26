@@ -18,27 +18,27 @@ import (
 
 func main() {
 	var (
-		bookArg           = flag.String("book", "books/mine", "小说目录路径或书名，例如 books/mine 或 mine")
-		output            = flag.String("output", "", "输出文本报告文件路径")
-		jsonOutput        = flag.String("json", "", "输出 JSON 报告文件路径")
-		batchSize         = flag.Int("batch-size", 10, "AI 章节转 DSL 的批大小")
-		minSeverity       = flag.String("min-severity", "warning", "报告最小严重级别: critical, warning, info")
-		includeDSLHygiene = flag.Bool("include-dsl-hygiene", false, "报告中包含 DSL 抽取质量/完整性提示")
-		goldenPath        = flag.String("golden", "", "golden benchmark 文件路径；为空时自动使用 story/rpg/expected_issues.json")
-		help              = flag.Bool("h", false, "显示帮助")
+		bookArg           = flag.String("book", "books/mine", "灏忚鐩綍璺緞鎴栦功鍚嶏紝渚嬪 books/mine 鎴?mine")
+		output            = flag.String("output", "", "杈撳嚭鏂囨湰鎶ュ憡鏂囦欢璺緞")
+		jsonOutput        = flag.String("json", "", "杈撳嚭 JSON 鎶ュ憡鏂囦欢璺緞")
+		batchSize         = flag.Int("batch-size", 10, "AI 绔犺妭杞?DSL 鐨勬壒澶у皬")
+		minSeverity       = flag.String("min-severity", "warning", "鎶ュ憡鏈€灏忎弗閲嶇骇鍒? critical, warning, info")
+		includeDSLHygiene = flag.Bool("include-dsl-hygiene", false, "include DSL extraction hygiene issues in report")
+		goldenPath        = flag.String("golden", "", "golden benchmark 鏂囦欢璺緞锛涗负绌烘椂鑷姩浣跨敤 story/rpg/expected_issues.json")
+		help              = flag.Bool("h", false, "鏄剧ず甯姪")
 	)
 
 	flag.Parse()
 
 	if *help {
-		fmt.Println("小说 RPG 问题检测工具 (AI DSL Pipeline)")
+		fmt.Println("灏忚 RPG 闂妫€娴嬪伐鍏?(AI DSL Pipeline)")
 		fmt.Println()
-		fmt.Println("用法: check_novel [选项]")
+		fmt.Println("鐢ㄦ硶: check_novel [閫夐」]")
 		fmt.Println()
-		fmt.Println("选项:")
+		fmt.Println("閫夐」:")
 		flag.PrintDefaults()
 		fmt.Println()
-		fmt.Println("示例:")
+		fmt.Println("绀轰緥:")
 		fmt.Println("  check_novel -book=books/mine")
 		fmt.Println("  check_novel -book=mine")
 		fmt.Println("  check_novel -book=books/mine -output=report.txt")
@@ -48,18 +48,18 @@ func main() {
 
 	bookName, bookPath, err := resolveBook(*bookArg)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "错误: %v\n", err)
+		fmt.Fprintf(os.Stderr, "閿欒: %v\n", err)
 		os.Exit(1)
 	}
 
 	threshold, err := parseMinSeverity(*minSeverity)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "错误: %v\n", err)
+		fmt.Fprintf(os.Stderr, "閿欒: %v\n", err)
 		os.Exit(1)
 	}
 
 	if err := runAIDSLCheck(context.Background(), bookName, bookPath, *output, *jsonOutput, *batchSize, threshold, *includeDSLHygiene, *goldenPath); err != nil {
-		fmt.Fprintf(os.Stderr, "错误: %v\n", err)
+		fmt.Fprintf(os.Stderr, "閿欒: %v\n", err)
 		os.Exit(1)
 	}
 }
@@ -88,41 +88,41 @@ type checkNovelAIReport struct {
 }
 
 func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutputPath string, batchSize int, minSeverity dsl.SeverityLevel, includeDSLHygiene bool, goldenPath string) error {
-	fmt.Printf("开始 AI DSL Benchmark: %s (%s)\n\n", bookName, bookPath)
+	fmt.Printf("寮€濮?AI DSL Benchmark: %s (%s)\n\n", bookName, bookPath)
 
 	adapter, err := agents.LoadNovelgenProject(bookName)
 	if err != nil {
-		return fmt.Errorf("加载项目失败: %w", err)
+		return fmt.Errorf("鍔犺浇椤圭洰澶辫触: %w", err)
 	}
 
-	chapterFiles, err := adapter.FindChapterRecaps()
+	chapterFiles, err := findCheckNovelChapterInputs(bookPath, adapter.GetOutline())
 	if err != nil {
-		return fmt.Errorf("查找章节 recap 文件失败: %w", err)
+		return fmt.Errorf("查找章节正文失败: %w", err)
 	}
 	if len(chapterFiles) == 0 {
-		return fmt.Errorf("未找到 recap 文件。请先生成 recaps (story/recaps/*.json)")
+		return fmt.Errorf("未找到章节正文。请先生成 chapters/*.md")
 	}
 
 	llmConfig, err := llm.LoadOrCreateConfig()
 	if err != nil {
-		return fmt.Errorf("加载 LLM 配置失败: %w", err)
+		return fmt.Errorf("鍔犺浇 LLM 閰嶇疆澶辫触: %w", err)
 	}
 	if llmConfig == nil || len(llmConfig.Providers) == 0 {
-		return fmt.Errorf("未找到有效 LLM 配置，无法执行 AI -> DSL")
+		return fmt.Errorf("鏈壘鍒版湁鏁?LLM 閰嶇疆锛屾棤娉曟墽琛?AI -> DSL")
 	}
 
 	projectConfig, err := models.LoadProjectConfig(filepath.Join(bookPath, "novel.json"))
 	if err != nil {
-		return fmt.Errorf("加载 novel.json 失败: %w", err)
+		return fmt.Errorf("鍔犺浇 novel.json 澶辫触: %w", err)
 	}
 	if projectConfig.LLM.Provider == "" || projectConfig.LLM.Model == "" {
-		return fmt.Errorf("novel.json 缺少 llm.provider 或 llm.model，无法执行 AI -> DSL")
+		return fmt.Errorf("novel.json 缂哄皯 llm.provider 鎴?llm.model锛屾棤娉曟墽琛?AI -> DSL")
 	}
 
 	projectLLM := &projectConfig.LLM
 	client := llmConfig.CreateClient(projectLLM)
 	if client == nil {
-		return fmt.Errorf("创建 LLM client 失败: provider=%s model=%s", projectLLM.Provider, projectLLM.Model)
+		return fmt.Errorf("鍒涘缓 LLM client 澶辫触: provider=%s model=%s", projectLLM.Provider, projectLLM.Model)
 	}
 
 	agent := agents.NewChapterToDSLAgent(client, llmConfig, projectLLM, adapter.GetStorySetup())
@@ -131,7 +131,7 @@ func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutp
 
 	rpgDir := filepath.Join(bookPath, "story", "rpg")
 	if err := os.MkdirAll(rpgDir, 0755); err != nil {
-		return fmt.Errorf("创建 rpg 目录失败: %w", err)
+		return fmt.Errorf("鍒涘缓 rpg 鐩綍澶辫触: %w", err)
 	}
 
 	dslContent, dslData, err := convertChaptersWithBatchCache(
@@ -150,9 +150,9 @@ func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutp
 
 	applySimulationDefaults(bookName, dslData)
 
-	dslFile := filepath.Join(rpgDir, "01_outline.rpg")
+	dslFile := filepath.Join(rpgDir, "04_chapters.rpg")
 	if err := os.WriteFile(dslFile, []byte(dslContent), 0644); err != nil {
-		return fmt.Errorf("保存 DSL 文件失败: %w", err)
+		return fmt.Errorf("淇濆瓨 DSL 鏂囦欢澶辫触: %w", err)
 	}
 
 	simulator := dsl.NewSimulator(dslData)
@@ -170,20 +170,20 @@ func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutp
 	if outputPath != "" {
 		text := formatTextReport(report)
 		if err := os.WriteFile(outputPath, []byte(text), 0644); err != nil {
-			return fmt.Errorf("保存文本报告失败: %w", err)
+			return fmt.Errorf("淇濆瓨鏂囨湰鎶ュ憡澶辫触: %w", err)
 		}
-		fmt.Printf("\n文本报告已保存到: %s\n", outputPath)
+		fmt.Printf("\n鏂囨湰鎶ュ憡宸蹭繚瀛樺埌: %s\n", outputPath)
 	}
 
 	if jsonOutputPath != "" {
 		data, err := json.MarshalIndent(report, "", "  ")
 		if err != nil {
-			return fmt.Errorf("JSON 编码失败: %w", err)
+			return fmt.Errorf("JSON 缂栫爜澶辫触: %w", err)
 		}
 		if err := os.WriteFile(jsonOutputPath, data, 0644); err != nil {
-			return fmt.Errorf("保存 JSON 报告失败: %w", err)
+			return fmt.Errorf("淇濆瓨 JSON 鎶ュ憡澶辫触: %w", err)
 		}
-		fmt.Printf("JSON 报告已保存到: %s\n", jsonOutputPath)
+		fmt.Printf("JSON 鎶ュ憡宸蹭繚瀛樺埌: %s\n", jsonOutputPath)
 	}
 
 	return nil
@@ -197,13 +197,13 @@ func maybeEvaluateGolden(bookPath, requestedPath string, issues []dsl.Simulation
 	}
 	if _, err := os.Stat(path); err != nil {
 		if explicit {
-			return nil, fmt.Errorf("加载 golden benchmark 失败: %w", err)
+			return nil, fmt.Errorf("鍔犺浇 golden benchmark 澶辫触: %w", err)
 		}
 		return nil, nil
 	}
 	spec, err := loadGoldenSpec(path)
 	if err != nil {
-		return nil, fmt.Errorf("加载 golden benchmark 失败: %w", err)
+		return nil, fmt.Errorf("鍔犺浇 golden benchmark 澶辫触: %w", err)
 	}
 	eval := evaluateGolden(path, spec, issues)
 	return &eval, nil
@@ -212,7 +212,7 @@ func maybeEvaluateGolden(bookPath, requestedPath string, issues []dsl.Simulation
 func resolveBook(bookArg string) (bookName string, bookPath string, err error) {
 	trimmed := strings.TrimSpace(bookArg)
 	if trimmed == "" {
-		return "", "", fmt.Errorf("-book 不能为空")
+		return "", "", fmt.Errorf("-book 涓嶈兘涓虹┖")
 	}
 
 	if st, statErr := os.Stat(trimmed); statErr == nil && st.IsDir() {
@@ -221,7 +221,7 @@ func resolveBook(bookArg string) (bookName string, bookPath string, err error) {
 			absPath, _ := filepath.Abs(trimmed)
 			return filepath.Base(absPath), absPath, nil
 		}
-		return "", "", fmt.Errorf("目录存在但缺少 novel.json: %s", trimmed)
+		return "", "", fmt.Errorf("鐩綍瀛樺湪浣嗙己灏?novel.json: %s", trimmed)
 	}
 
 	candidate := filepath.Join("books", trimmed)
@@ -233,7 +233,7 @@ func resolveBook(bookArg string) (bookName string, bookPath string, err error) {
 		}
 	}
 
-	return "", "", fmt.Errorf("找不到有效书目录: %s", trimmed)
+	return "", "", fmt.Errorf("鎵句笉鍒版湁鏁堜功鐩綍: %s", trimmed)
 }
 
 func buildReport(bookName, bookPath, dslFile string, chapterCount int, issues []dsl.SimulationIssue, minSeverity dsl.SeverityLevel, includeDSLHygiene bool) checkNovelAIReport {
@@ -248,7 +248,7 @@ func buildReport(bookName, bookPath, dslFile string, chapterCount int, issues []
 		Timestamp:         time.Now().Format(time.RFC3339),
 		BookName:          bookName,
 		BookPath:          bookPath,
-		Source:            "chapters(recap) -> AI(batch/cache) -> DSL -> simulate",
+		Source:            "chapters(md)+recaps(optional) -> AI(batch/cache) -> DSL -> simulate",
 		ChapterCount:      chapterCount,
 		DSLFile:           dslFile,
 		MinSeverity:       string(minSeverity),
@@ -298,11 +298,11 @@ func filterDSLHygieneIssues(issues []dsl.SimulationIssue) []dsl.SimulationIssue 
 }
 
 func isDSLHygieneIssue(issue dsl.SimulationIssue) bool {
-	desc := issue.Description
-	if strings.Contains(desc, "主角缺少背景故事") ||
-		strings.Contains(desc, "主角缺少性格或动机描述") ||
-		strings.Contains(desc, "战斗事件缺少配置") ||
-		strings.Contains(desc, "战斗事件没有指定敌人") {
+	desc := strings.ToLower(issue.Description)
+	if strings.Contains(desc, "missing protagonist background") ||
+		strings.Contains(desc, "missing protagonist motivation") ||
+		strings.Contains(desc, "battle event missing config") ||
+		strings.Contains(desc, "battle event missing enemies") {
 		return true
 	}
 	return false
@@ -317,10 +317,9 @@ func parseMinSeverity(raw string) (dsl.SeverityLevel, error) {
 	case "info", "all":
 		return dsl.SeverityInfo, nil
 	default:
-		return "", fmt.Errorf("无效 min-severity: %s (可选 critical, warning, info)", raw)
+		return "", fmt.Errorf("invalid min-severity: %s (allowed: critical, warning, info)", raw)
 	}
 }
-
 func severityRank(severity dsl.SeverityLevel) int {
 	switch severity {
 	case dsl.SeverityCritical:
@@ -358,7 +357,7 @@ func printSummary(report checkNovelAIReport) {
 
 func printIssues(simulator *dsl.Simulator) {
 	if simulator == nil || len(simulator.Issues) == 0 {
-		fmt.Println("\n未发现明显问题")
+		fmt.Println("\nNo obvious issues found")
 		return
 	}
 
@@ -447,7 +446,7 @@ func applySimulationDefaults(bookName string, dslData *dsl.DSL) {
 		dslData.Characters = &dsl.Characters{}
 	}
 	if dslData.Characters.Player == nil {
-		playerName := "主角"
+		playerName := "涓昏"
 		if len(dslData.Characters.NPCs) > 0 && strings.TrimSpace(dslData.Characters.NPCs[0].Name) != "" {
 			playerName = dslData.Characters.NPCs[0].Name
 		}

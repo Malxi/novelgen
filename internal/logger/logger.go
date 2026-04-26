@@ -41,6 +41,7 @@ type Logger struct {
 	output     io.Writer
 	file       *os.File
 	projectDir string
+	logFile    string
 }
 
 // LoggerInterface defines the logger interface
@@ -104,8 +105,23 @@ func (l *Logger) EnableFileLogging() error {
 	}
 
 	l.file = file
+	l.logFile = logFile
 	l.output = io.MultiWriter(os.Stdout, file)
 	return nil
+}
+
+// LogFilePath returns the active file log path, if file logging is enabled.
+func (l *Logger) LogFilePath() string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return l.logFile
+}
+
+// ProjectDir returns the directory used for project-scoped logs.
+func (l *Logger) ProjectDir() string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return l.projectDir
 }
 
 // Close closes the logger
@@ -116,6 +132,7 @@ func (l *Logger) Close() {
 		l.file.Close()
 		l.file = nil
 	}
+	l.logFile = ""
 }
 
 // log writes a log entry

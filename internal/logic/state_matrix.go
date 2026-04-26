@@ -110,115 +110,19 @@ func (m *StateMatrixManager) CalculateRPGState(outline *models.Outline, targetCh
 func (m *StateMatrixManager) applyEvent(state *models.StateMatrix, event models.Event, chapterID string) {
 	m.applyRPGEvent(state, event, chapterID)
 
+	// Fields now tracked exclusively in RPGState:
+	//   relationship → state.RPG.Relationships
+	//   goal         → state.RPG.Characters[name].Goals
+	//   item         → state.RPG.Resources (ownership) + state.RPG.Characters[name].Inventory
+	//   storyline    → state.RPG.Storylines
+	// applyRPGEvent() is always called first and handles all of the above.
+
 	switch event.Type {
-	case "relationship":
-		// Format: relationship between char1 and char2 changes
-		if len(event.Characters) >= 2 {
-			key := event.Characters[0] + "_" + event.Characters[1]
-			state.Relationships[key] = event.Change
-		}
-	case "goal":
-		// Character goal update
-		if len(event.Characters) > 0 && event.Change != "" {
-			charName := event.Characters[0]
-			change := event.Change
-
-			// Skip if goal already exists (deduplication)
-			for _, existing := range state.Goals[charName] {
-				if existing == change {
-					return
-				}
-			}
-
-			// Remove completed/abandoned goals to prevent accumulation
-			if change == "achieved" || change == "abandoned" {
-				// Remove the goal that was achieved/abandoned
-				if event.Subject != "" {
-					newGoals := []string{}
-					for _, g := range state.Goals[charName] {
-						if g != event.Subject {
-							newGoals = append(newGoals, g)
-						}
-					}
-					state.Goals[charName] = newGoals
-				}
-				return
-			}
-
-			// Add new goal
-			state.Goals[charName] = append(state.Goals[charName], change)
-
-			// Limit goals per character to prevent explosion (keep most recent 5)
-			const maxGoals = 5
-			if len(state.Goals[charName]) > maxGoals {
-				state.Goals[charName] = state.Goals[charName][len(state.Goals[charName])-maxGoals:]
-			}
-		}
-	case "item":
-		// Character gets or loses item
-		if len(event.Characters) > 0 && event.Subject != "" {
-			charName := event.Characters[0]
-			itemName := event.Subject
-			if event.Change == "get" || event.Change == "acquired" || event.Change == "obtained" {
-				// Create item if not exists
-				if _, exists := state.Items[itemName]; !exists {
-					state.Items[itemName] = &models.Item{
-						Name:        itemName,
-						Description: event.Details,
-						Owner:       charName,
-					}
-				} else {
-					state.Items[itemName].Owner = charName
-				}
-			} else if event.Change == "lost" || event.Change == "used" || event.Change == "consumed" {
-				if item, exists := state.Items[itemName]; exists {
-					item.Owner = ""
-				}
-			}
-		}
 	case "premise":
 		// Character premise/progression update
 		if len(event.Characters) > 0 && event.Subject != "" {
 			key := event.Characters[0] + "_" + event.Subject
 			state.Premises[key] = event.Change
-		}
-	case "storyline":
-		// Storyline progression - accumulate history
-		if event.Subject != "" {
-			// Find storyline description from setup
-			storylineName := event.Subject
-			storylineDesc := ""
-			if setup := m.loadSetup(); setup != nil {
-				for _, sl := range setup.Storylines {
-					if sl.Name == event.Subject {
-						storylineName = sl.Name
-						storylineDesc = sl.Description
-						break
-					}
-				}
-			}
-
-			// Get or create storyline state
-			slState, exists := state.Storylines[event.Subject]
-			if !exists {
-				slState = &models.StorylineState{
-					Name:            storylineName,
-					Description:     storylineDesc,
-					ProgressHistory: []models.StorylineProgress{},
-				}
-				state.Storylines[event.Subject] = slState
-			}
-
-			// Update current status and progress
-			slState.Status = event.Change
-			slState.Progress = event.Details
-
-			// Append to history
-			slState.ProgressHistory = append(slState.ProgressHistory, models.StorylineProgress{
-				ChapterID: chapterID,
-				Status:    event.Change,
-				Details:   event.Details,
-			})
 		}
 	case "gate":
 		// Gate/obstacle introduced, escalated, or overcome
@@ -537,6 +441,16 @@ func (m *StateMatrixManager) applyRPGQuestEvent(state *models.StateMatrix, chapt
 	quest := rpgState.Storylines[event.Subject]
 	if quest == nil {
 		quest = &models.RPGQuestState{ID: event.Subject, Name: event.Subject}
+		// Load description from story setup if available
+		if setup := m.loadSetup(); setup != nil {
+			for _, sl := range setup.Storylines {
+				if sl.Name == event.Subject {
+					quest.Name = sl.Name
+					quest.Description = sl.Description
+					break
+				}
+			}
+		}
 		rpgState.Storylines[event.Subject] = quest
 	}
 	quest.Status = event.Change
@@ -645,38 +559,64 @@ func (m *StateMatrixManager) loadRPGDSLDeltas() map[string][]models.RPGStateDelt
 		return m.rpgDeltasByChapter
 	}
 
-	path := filepath.Join(m.projectRoot, "story", "rpg", "01_outline.rpg")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return m.rpgDeltasByChapter
-	}
-	parsed, err := rpgdsl.NewParser(string(data)).Parse()
-	if err != nil || parsed == nil || parsed.Storyline == nil {
-		return m.rpgDeltasByChapter
-	}
-	if parsed.Characters != nil {
-		if parsed.Characters.Player != nil {
-			m.rpgPlayerID = strings.TrimSpace(parsed.Characters.Player.ID)
-			m.addRPGTargetAlias(parsed.Characters.Player.ID, parsed.Characters.Player.Name)
+	for _, path := range m.rpgDSLPaths() {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
 		}
-		for _, npc := range parsed.Characters.NPCs {
-			m.addRPGTargetAlias(npc.ID, npc.Name)
+		parsed, err := rpgdsl.NewParser(string(data)).Parse()
+		if err != nil || parsed == nil {
+			continue
 		}
-		for _, enemy := range parsed.Characters.Enemies {
-			m.addRPGTargetAlias(enemy.ID, enemy.Name)
+		m.addRPGAliasesFromDSL(parsed)
+		if parsed.Storyline == nil {
+			continue
 		}
-	}
-	for _, chapter := range parsed.Storyline.Chapters {
-		for _, objective := range chapter.Objectives {
-			for _, step := range objective.Steps {
-				for _, delta := range step.Event.StateDeltas {
-					converted := convertRPGDSLStateDelta(chapter.ID, delta)
-					m.rpgDeltasByChapter[chapter.ID] = append(m.rpgDeltasByChapter[chapter.ID], converted)
+		for _, chapter := range parsed.Storyline.Chapters {
+			for _, objective := range chapter.Objectives {
+				for _, step := range objective.Steps {
+					for _, delta := range step.Event.StateDeltas {
+						converted := convertRPGDSLStateDelta(chapter.ID, delta)
+						m.rpgDeltasByChapter[chapter.ID] = append(m.rpgDeltasByChapter[chapter.ID], converted)
+					}
 				}
 			}
 		}
 	}
 	return m.rpgDeltasByChapter
+}
+
+func (m *StateMatrixManager) rpgDSLPaths() []string {
+	rpgDir := filepath.Join(m.projectRoot, "story", "rpg")
+	candidates := []string{
+		filepath.Join(rpgDir, "01_outline.rpg"),
+		filepath.Join(rpgDir, "02_craft.rpg"),
+		filepath.Join(rpgDir, "03_systems.rpg"),
+		filepath.Join(rpgDir, "04_chapters.rpg"),
+	}
+	paths := make([]string, 0, len(candidates))
+	for _, path := range candidates {
+		if _, err := os.Stat(path); err == nil {
+			paths = append(paths, path)
+		}
+	}
+	return paths
+}
+
+func (m *StateMatrixManager) addRPGAliasesFromDSL(parsed *rpgdsl.DSL) {
+	if parsed == nil || parsed.Characters == nil {
+		return
+	}
+	if parsed.Characters.Player != nil {
+		m.rpgPlayerID = strings.TrimSpace(parsed.Characters.Player.ID)
+		m.addRPGTargetAlias(parsed.Characters.Player.ID, parsed.Characters.Player.Name)
+	}
+	for _, npc := range parsed.Characters.NPCs {
+		m.addRPGTargetAlias(npc.ID, npc.Name)
+	}
+	for _, enemy := range parsed.Characters.Enemies {
+		m.addRPGTargetAlias(enemy.ID, enemy.Name)
+	}
 }
 
 func (m *StateMatrixManager) addRPGTargetAlias(id, name string) {
@@ -885,47 +825,10 @@ func findProtagonistName(state *models.StateMatrix) string {
 	return ""
 }
 
-// applyStorylineEventWithDescription applies a storyline event to get its description
-// This is used for storyline events in the current chapter so AI knows what the storyline is about
+// applyStorylineEventWithDescription is deprecated — storyline state is now tracked
+// via RPGQuestState in state.RPG.Storylines (populated by applyRPGQuestEvent).
+// Kept as a no-op for compatibility; will be removed in a future cleanup.
 func (m *StateMatrixManager) applyStorylineEventWithDescription(state *models.StateMatrix, event models.Event, chapterID string) {
-	if event.Subject == "" {
-		return
-	}
-
-	// Find storyline description from setup
-	storylineName := event.Subject
-	storylineDesc := ""
-	if setup := m.loadSetup(); setup != nil {
-		for _, sl := range setup.Storylines {
-			if sl.Name == event.Subject {
-				storylineName = sl.Name
-				storylineDesc = sl.Description
-				break
-			}
-		}
-	}
-
-	// Get or create storyline state
-	slState, exists := state.Storylines[event.Subject]
-	if !exists {
-		slState = &models.StorylineState{
-			Name:            storylineName,
-			Description:     storylineDesc,
-			ProgressHistory: []models.StorylineProgress{},
-		}
-		state.Storylines[event.Subject] = slState
-	}
-
-	// Update with "(starting this chapter)" marker
-	slState.Status = event.Change + " (starting this chapter)"
-	slState.Progress = event.Details
-
-	// Append to history
-	slState.ProgressHistory = append(slState.ProgressHistory, models.StorylineProgress{
-		ChapterID: chapterID,
-		Status:    event.Change,
-		Details:   event.Details,
-	})
 }
 
 // loadElementsIntoState loads generated elements into state matrix

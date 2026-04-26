@@ -48,9 +48,8 @@ cd my_novel
 2. setup    → 创建故事设定（类型、前提、主题等）
 3. compose  → 生成故事大纲（部 → 卷 → 章）
 4. craft    → 创建详细的世界元素（角色、地点、物品）
-5. draft    → 生成并改进草稿章节
-6. write    → 生成最终润色的章节
-7. export   → 导出完成的小说
+5. write    → 直接生成最终章节、评审/改进、抽取 recap、输出 RPG DSL
+6. export   → 导出完成的小说
 ```
 
 ## 整体生成流程说明（从灵感到成书）
@@ -59,8 +58,8 @@ cd my_novel
 - **设定生成**：`setup` 产出故事设定（类型、前提、规则、主题、叙事风格）。
 - **大纲搭建**：`compose` 构建部→卷→章的层级大纲。
 - **世界元素完善**：`craft` 扫描大纲并补齐角色、地点、物品等。
-- **草稿生产与修订**：`draft gen/review/improve` 生成草稿并按评审反馈迭代；必要时触发连续性修复（转场桥段/角色出场）。
-- **最终章节生成**：`write gen` 基于草稿输出最终文本，并自动抽取 recap；`write improve` 继续按评审修订。
+- **最终章节生成**：推荐使用 `write pipeline` 直接从 setup/outline/craft/RPGState/recap 生成最终章节，并自动评审、改进、抽取 recap、更新 `story/rpg/04_chapters.rpg`。
+- **草稿工作流（可选/旧版）**：`draft gen/review/improve` 仍保留用于旧项目或试写，但不再是默认主流程。
 - **导出成书**：`export` 输出为 markdown/txt。
 
 ---
@@ -162,9 +161,9 @@ novelgen craft improve --type characters --max-rounds 2
 
 ---
 
-### 5. `novelgen draft` - 生成草稿
+### Legacy. `novelgen draft` - 可选草稿工作流
 
-基于大纲和故事状态生成、评审和改进草稿章节。
+`draft` 已从默认主流程中软移除。它仍可用于旧项目兼容、试写或临时草稿，但新项目推荐直接使用 `novelgen write pipeline` 生成最终章节。
 
 **子命令：**
 
@@ -221,11 +220,18 @@ novelgen draft improve --volume 1 --max-rounds 3
 
 ---
 
-### 6. `novelgen write` - 生成最终章节
+### 5. `novelgen write` - 直接生成最终章节
 
-基于草稿生成润色的最终章节内容。
+推荐使用 `write pipeline` 直接从大纲、故事设定、世界元素、RPGState、recap 和上下文章节生成最终章节。Pipeline 会自动完成生成、评审、改进、recap 抽取和章节级 RPG DSL 输出。
 
 **子命令：**
+
+#### `write pipeline` - 推荐主流程
+```bash
+novelgen write pipeline --chapter P1-V1-C1
+novelgen write pipeline --volume P1-V1 --max-rounds 2
+novelgen write pipeline --all --rpg-batch-size 10
+```
 
 #### `write gen` - 生成最终章节
 | Option | 类型 | 默认值 | 说明 |
@@ -259,14 +265,14 @@ novelgen draft improve --volume 1 --max-rounds 3
 
 **示例：**
 ```bash
-novelgen write gen --chapter 1            # 生成第1章最终版
-novelgen write gen --all                  # 生成所有章节
-novelgen write improve --volume 1         # 改进第1卷
+novelgen write pipeline --chapter 1       # 推荐：生成/评审/改进/recap/RPG DSL
+novelgen write pipeline --all             # 推荐：处理所有章节
+novelgen write improve --volume 1         # 手动改进第1卷
 ```
 
 ---
 
-### 7. `novelgen export` - 导出小说
+### 6. `novelgen export` - 导出小说
 
 将完成的小说导出为各种格式。
 
@@ -293,8 +299,8 @@ novelgen export novel --output my_book.md # 指定输出文件
 提取高信号、规范的章节回顾 JSON，用于改善章节间连续性。
 
 **说明：**
-- `draft gen` / `write gen` 会在生成后自动抽取并保存 recap（best-effort）。
-- `novelgen recap gen` 主要用于批量重建或指定源文本（`drafts`/`chapters`）。
+- `write pipeline` / `write gen` 会在生成后自动抽取并保存 recap（best-effort）。
+- `novelgen recap gen` 主要用于批量重建或指定源文本；默认从最终章节 `chapters/` 读取。
 
 **子命令：**
 - `gen` - 生成回顾 JSON
@@ -304,7 +310,7 @@ novelgen export novel --output my_book.md # 指定输出文件
 |--------|------|--------|------|
 | `--chapter` | string | "" | 章节号 |
 | `--all` | bool | false | 所有章节 |
-| `--source` | string | "drafts" | 源文本（drafts/chapters） |
+| `--source` | string | "chapters" | 源文本（chapters/drafts；drafts 为旧版兼容） |
 | `--concurrency` | int | 1 | 并发数 |
 
 **示例：**
@@ -368,26 +374,16 @@ novelgen compose gen
 # 4. 生成世界元素
 novelgen craft gen
 
-# 5. 生成草稿
-novelgen draft gen --all
+# 5. 直接生成最终章节、评审/改进、抽取 recap、输出 RPG DSL
+novelgen write pipeline --all --max-rounds 2
 
-# 6. 评审和改进草稿
-novelgen draft review --all
-novelgen draft improve --all --max-rounds 3
-
-# 7. 生成章节回顾（用于连续性）
+# 6. 如有需要，手动重建章节回顾（默认从 chapters/ 读取）
 novelgen recap gen --all
 
-# 8. 生成最终章节
-novelgen write gen --all
-
-# 9. 改进最终章节
-novelgen write improve --all --max-rounds 2
-
-# 10. 导出小说
+# 7. 导出小说
 novelgen export novel --output my_novel.md
 
-# 11. 翻译（可选）
+# 8. 翻译（可选）
 novelgen translate my_novel.md --target-lang en --output my_novel_en.md
 ```
 
@@ -416,7 +412,7 @@ project-root/
 │       └── V{n}_review.json
 ├── chapters/               # 最终章节
 │   └── chapter-{n}.md
-├── drafts/                 # 草稿
+├── drafts/                 # 旧版/可选草稿
 │   └── C{n}.md
 └── logs/                   # 日志
 ```

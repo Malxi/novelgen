@@ -442,18 +442,18 @@ func formatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) strin
 		}
 	}
 
-	// Active relationships
-	if len(state.Relationships) > 0 {
+	// Active relationships from RPGState (canonical source)
+	if state.RPG != nil && len(state.RPG.Relationships) > 0 {
 		sb.WriteString("\nActive Relationships:\n")
-		for relKey, relStatus := range state.Relationships {
-			sb.WriteString(fmt.Sprintf("  %s: %s\n", relKey, relStatus))
+		for _, rel := range state.RPG.Relationships {
+			sb.WriteString(fmt.Sprintf("  %s → %s: %s\n", rel.From, rel.To, rel.Status))
 		}
 	}
 
-	// Active storylines
-	if len(state.Storylines) > 0 {
+	// Active storylines from RPGState (canonical source)
+	if state.RPG != nil && len(state.RPG.Storylines) > 0 {
 		sb.WriteString("\nActive Storylines:\n")
-		for _, sl := range state.Storylines {
+		for _, sl := range state.RPG.Storylines {
 			if sl.Status == "active" || sl.Status == "in_progress" {
 				sb.WriteString(fmt.Sprintf("  %s: %s\n", sl.Name, sl.Progress))
 			}

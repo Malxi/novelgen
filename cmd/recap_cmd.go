@@ -35,14 +35,13 @@ chapter-to-chapter continuity (scene anchors, unresolved beats, promises, items,
 
 var recapGenCmd = &cobra.Command{
 	Use:   "gen",
-	Short: "Generate recap JSON from drafts/chapters",
+	Short: "Generate recap JSON from final chapters",
 	Long: `Generate recap JSON for chapters.
 
 Examples:
   novelgen recap gen --chapter 1
   novelgen recap gen --chapter 1-10
   novelgen recap gen --all
-  novelgen recap gen --source drafts
   novelgen recap gen --source chapters`,
 	RunE: runRecapGen,
 }
@@ -52,7 +51,7 @@ func init() {
 
 	recapGenCmd.Flags().StringVar(&recapChapterFlag, "chapter", "", "Chapter number(s) to recap (e.g., '1', '1-5', or 'P1-V1-C1')")
 	recapGenCmd.Flags().BoolVar(&recapAllFlag, "all", false, "Generate recaps for all chapters")
-	recapGenCmd.Flags().StringVar(&recapSourceFlag, "source", "drafts", "Source text: drafts|chapters")
+	recapGenCmd.Flags().StringVar(&recapSourceFlag, "source", "chapters", "Source text: chapters|drafts (drafts is legacy)")
 	recapGenCmd.Flags().IntVar(&recapConcurrencyFlag, "concurrency", 1, "Number of concurrent recap generations")
 
 	// Register recap command using the new plugin mechanism

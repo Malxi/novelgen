@@ -15,6 +15,7 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
+	"novelgen/internal/rpg/dsl"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -799,6 +800,36 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 
 	// Update the outline with improved version
 	*outline = *improvedOutline
+
+	// Enrich with DSL simulation feedback
+	if review != nil {
+		dslBridge := dsl.NewSimulationBridge()
+		dslAdapter := dsl.NewModelAdapter(setup, improvedOutline, nil, nil, nil)
+		if dslIssues, simErr := dslAdapter.Simulate(dsl.PhaseOutline); simErr == nil && len(dslIssues) > 0 {
+			dslBridge.MergeIntoReview(dslIssues, review)
+			logger.Info("DSL simulation found %d issues for outline", len(dslIssues))
+
+			hasCritical := false
+			for _, iss := range dslIssues {
+				if iss.Severity == dsl.SeverityCritical {
+					hasCritical = true
+					break
+				}
+			}
+			if hasCritical && maxIterations > 0 {
+				// One more iteration with merged feedback
+				if hierarchical {
+					improvedOutline, _, err = agent.IterateHierarchical(ctx, improvedOutline, 1, 80.0, true, userPrompt, setup)
+				} else {
+					improvedOutline, _, err = agent.Iterate(ctx, improvedOutline, 1, 80.0, true, userPrompt, setup)
+				}
+				if err == nil {
+					*outline = *improvedOutline
+					logger.Info("Extra compose improve pass completed for DSL-critical issues")
+				}
+			}
+		}
+	}
 
 	// Save intermediate result
 	outlinePath := filepath.Join("story", "compose", fmt.Sprintf("outline_iter_%d.json", maxIterations))

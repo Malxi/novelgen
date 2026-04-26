@@ -159,7 +159,7 @@ Structure:
 // savePromptsToFile saves the prompts to a file for debugging
 func (a *BaseAgent) savePromptsToFile(agentName, systemPrompt, userPrompt string) error {
 	// Create logs directory if it doesn't exist
-	logsDir := filepath.Join("logs", "prompts")
+	logsDir := filepath.Join(agentLogRoot(), "logs", "prompts")
 	if err := os.MkdirAll(logsDir, 0755); err != nil {
 		return fmt.Errorf("failed to create logs directory: %w", err)
 	}
@@ -185,14 +185,14 @@ func (a *BaseAgent) savePromptsToFile(agentName, systemPrompt, userPrompt string
 		return fmt.Errorf("failed to write prompts file: %w", err)
 	}
 
-	logger.Debug("[%s] Saved prompts to: %s", a.name, filepath)
+	logger.Info("[%s] Prompt log: %s", a.name, filepath)
 	return nil
 }
 
 // saveResponseToFile saves the AI response to a file for debugging
 func (a *BaseAgent) saveResponseToFile(agentName, response string) error {
 	// Create logs directory if it doesn't exist
-	logsDir := filepath.Join("logs", "responses")
+	logsDir := filepath.Join(agentLogRoot(), "logs", "responses")
 	if err := os.MkdirAll(logsDir, 0755); err != nil {
 		return fmt.Errorf("failed to create logs directory: %w", err)
 	}
@@ -217,8 +217,15 @@ func (a *BaseAgent) saveResponseToFile(agentName, response string) error {
 		return fmt.Errorf("failed to write response file: %w", err)
 	}
 
-	logger.Debug("[%s] Saved response to: %s", a.name, filepath)
+	logger.Info("[%s] Response log: %s (%d chars)", a.name, filepath, len(response))
 	return nil
+}
+
+func agentLogRoot() string {
+	if dir := strings.TrimSpace(logger.Default().ProjectDir()); dir != "" {
+		return dir
+	}
+	return "."
 }
 
 // parseResponse parses the AI response into the output struct

@@ -15,6 +15,7 @@ import (
 	"novelgen/internal/logic"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
+	"novelgen/internal/rpg/dsl"
 
 	"github.com/spf13/cobra"
 )
@@ -34,32 +35,40 @@ var (
 	writeCharacterPatchRetriesFlag int
 	writeCharacterFixFlag          bool
 	writePromptFlag                string
+	writeEmitRPGDSLFlag            bool
+	writeRPGBatchSizeFlag          int
 )
 
 var writeCmd = &cobra.Command{
 	Use:   "write",
-	Short: "Generate final chapter content",
-	Long: `Generate polished final chapter content based on drafts.
+	Short: "Generate, review, improve, and validate final chapters",
+	Long: `Generate polished final chapter content directly from outline, story setup,
+RPG state, recaps, and neighboring chapter context.
 
-This command reads draft chapters and generates refined final content,
-ensuring continuity with surrounding chapters by including them as context.
+The recommended default is "write pipeline": it writes final chapters, reviews
+and improves them, extracts recaps, and updates chapter-level RPG DSL.
 
 Features:
   - Context-aware generation (includes surrounding chapters)
-  - State matrix tracking (character states, relationships, items)
+  - RPG state tracking (character states, relationships, items, resources)
+  - Recap extraction for continuity
+  - Chapter RPG DSL export for simulation checks
   - Consistent voice and style across chapters
 
 Final chapters are saved to the chapters/ directory.
 
 Subcommands:
-  gen      - Generate final chapters from drafts
+  pipeline - Recommended direct-to-final flow
+  gen      - Generate final chapters
+  review   - Review final chapters
   improve  - Improve final chapters based on review`,
 }
 
 var writeGenCmd = &cobra.Command{
 	Use:   "gen",
 	Short: "Generate final chapter content",
-	Long: `Generate final chapter content with continuity from surrounding drafts.
+	Long: `Generate final chapter content with continuity from outline state, recaps,
+and surrounding final chapters when available.
 
 Examples:
   # Generate final content for chapter 1
@@ -182,6 +191,7 @@ func init() {
 	writePipelineCmd.Flags().StringVar(&writeChapterFlag, "chapter", "", "Chapter to process (e.g., '1' or 'P1-V1-C1')")
 	writePipelineCmd.Flags().StringVar(&writeVolumeFlag, "volume", "", "Volume to process (e.g., '1', 'P1-V1')")
 	writePipelineCmd.Flags().StringVar(&writePartFlag, "part", "", "Part to process (e.g., '1', 'P1')")
+	writePipelineCmd.Flags().BoolVar(&writeAllFlag, "all", false, "Process all chapters")
 	writePipelineCmd.Flags().IntVar(&writeWordsFlag, "words", 2000, "Target word count for the chapter")
 	writePipelineCmd.Flags().IntVar(&writeMaxRoundsFlag, "max-rounds", 2, "Maximum improvement rounds")
 	writePipelineCmd.Flags().IntVar(&writeMinScoreFlag, "min-score", 7, "Minimum acceptable score (1-10)")
@@ -191,6 +201,8 @@ func init() {
 	writePipelineCmd.Flags().IntVar(&writeBridgeRetriesFlag, "bridge-retries", 1, "Max retries for teleport transition bridge patch")
 	writePipelineCmd.Flags().BoolVar(&writeCharacterFixFlag, "enable-character-presence-auto-fix", true, "Enable automatic character presence fixes")
 	writePipelineCmd.Flags().IntVar(&writeCharacterPatchRetriesFlag, "character-patch-retries", 1, "Max retries for character presence patch")
+	writePipelineCmd.Flags().BoolVar(&writeEmitRPGDSLFlag, "emit-rpg-dsl", true, "Update story/rpg/04_chapters.rpg from chapter markdown plus optional recaps")
+	writePipelineCmd.Flags().IntVar(&writeRPGBatchSizeFlag, "rpg-batch-size", 10, "Chapter markdown batch size for AI -> RPG DSL conversion")
 
 	// Register write command using the new plugin mechanism
 	RegisterCommand(func() *cobra.Command {
@@ -247,6 +259,7 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
+	setupWriteRunLogging(root, "write gen")
 
 	// Create state matrix manager
 	stateManager := logic.NewStateMatrixManager(root)
@@ -548,6 +561,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
+	setupWriteRunLogging(root, "write improve")
 
 	// Create state matrix manager
 	stateManager := logic.NewStateMatrixManager(root)
@@ -651,6 +665,18 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, stateManager *logic.StateMatrixManager, concurrency int, targetWords int) int {
 	log := logger.GetLogger()
 
+	// Pre-build DSL simulation for enrichment (shared across goroutines)
+	var dslIssues []dsl.SimulationIssue
+	dslBridge := dsl.NewSimulationBridge()
+	if charModels, locModels, itemModels, elErr := loadAllElements(); elErr == nil {
+		setup, _ := loadStorySetup()
+		dslAdapter := dsl.NewModelAdapter(setup, outline, charModels, locModels, itemModels)
+		dslIssues, _ = dslAdapter.Simulate(dsl.PhaseCraft)
+		if len(dslIssues) > 0 {
+			log.Info("DSL simulation loaded %d issues for improvement enrichment", len(dslIssues))
+		}
+	}
+
 	// Create review map for quick lookup
 	reviewMap := make(map[string]*agents.DraftReview)
 	for i := range reviews {
@@ -685,6 +711,17 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 
 				// Build improvement suggestions
 				suggestions := buildImprovementSuggestions(review)
+
+				// Append DSL simulation feedback for this chapter
+				if len(dslIssues) > 0 {
+					chapterIssues := dslBridge.IssuesForChapter(dslIssues, chapter.ID)
+					if len(chapterIssues) > 0 {
+						dslFeedback := dslBridge.FormatAsString(chapterIssues)
+						if dslFeedback != "" {
+							suggestions += "\n\n" + dslFeedback
+						}
+					}
+				}
 
 				// Append user prompt if provided
 				if writePromptFlag != "" {
@@ -805,6 +842,7 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
+	setupWriteRunLogging(root, "write review")
 
 	// Create state matrix manager
 	stateManager := logic.NewStateMatrixManager(root)
@@ -1141,6 +1179,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
+	setupWriteRunLogging(root, "write pipeline")
 
 	// Create state matrix manager
 	stateManager := logic.NewStateMatrixManager(root)
@@ -1153,6 +1192,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 
 	log.Info("=== WRITE PIPELINE ===")
 	log.Info("Processing %d chapter(s)", len(chaptersToProcess))
+	log.Info("RPG DSL export: enabled=%t batch_size=%d output=%s", writeEmitRPGDSLFlag, writeRPGBatchSizeFlag, filepath.Join(root, "story", "rpg", "04_chapters.rpg"))
 
 	// Create recap agent for all chapters
 	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
@@ -1182,9 +1222,9 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				continue
 			}
 			content = generatedContent
-			log.Info("✓ Generated and saved chapter: %s", chapter.ID)
+			log.Info("Generated chapter output: %s", finalChapterPath(root, chapter))
 		} else {
-			log.Info("Chapter %s already exists, skipping generation", chapter.ID)
+			log.Info("Chapter %s already exists, using: %s", chapter.ID, finalChapterPath(root, chapter))
 		}
 
 		// Step 2: Review chapter
@@ -1244,7 +1284,8 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		if err := saveVolumeReview(volumeReview); err != nil {
 			log.Error("Failed to save review for chapter %s: %v", chapter.ID, err)
 		}
-		log.Info("✓ Reviewed chapter %s: score %.1f", chapter.ID, reviewResult.OverallScore)
+		log.Info("Review output: %s", reviewPath)
+		log.Info("Reviewed chapter %s: score %.1f", chapter.ID, reviewResult.OverallScore)
 
 		// Step 3: Improve chapter (iterative)
 		log.Info("\n[Step 3/4] Improving chapter...")
@@ -1270,7 +1311,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				break
 			}
 			currentContent = improvedContent
-			log.Info("✓ Improved chapter: %s", chapter.ID)
+			log.Info("Improved chapter output: %s", finalChapterPath(root, chapter))
 
 			// Re-review after improvement (if not last round)
 			if round < writeMaxRoundsFlag {
@@ -1308,13 +1349,24 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 			if err := recapStore.Save(chapterRecap); err != nil {
 				log.Error("Failed to save recap for chapter %s: %v", chapter.ID, err)
 			} else {
-				log.Info("✓ Generated and saved recap for chapter: %s", chapter.ID)
+				log.Info("Recap output: %s", filepath.Join(root, "story", "recaps", chapter.ID+".json"))
 			}
 		}
 
-		log.Info("\n✓ Completed chapter: %s", chapter.ID)
+		log.Info("\nCompleted chapter: %s", chapter.ID)
 	}
 
+	if writeEmitRPGDSLFlag {
+		log.Info("\n[Step 5/5] Updating chapter RPG DSL...")
+		result, err := emitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, writeRPGBatchSizeFlag)
+		if err != nil {
+			log.Error("Failed to update chapter RPG DSL: %v", err)
+		} else {
+			log.Info("RPG DSL output: %s", result.DSLPath)
+			log.Info("RPG DSL cache dir: %s", result.CacheDir)
+			log.Info("RPG DSL batches: total=%d reused=%d generated=%d chapters=%d", result.BatchCount, result.ReusedBatches, result.GeneratedBatches, result.ChapterCount)
+		}
+	}
 	log.Info("\n=== PIPELINE COMPLETE ===")
 	log.Info("All phases completed successfully!")
 	return nil

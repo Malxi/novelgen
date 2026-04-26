@@ -20,17 +20,30 @@ type ChapterToDSLInput struct {
 	StorySetup models.StorySetup           `json:"story_setup" md:"story_setup" desc:"Story setup with premise, genres, themes"`
 	Characters map[string]models.Character `json:"characters" md:"characters" desc:"Characters from craft"`
 	Locations  map[string]models.Location  `json:"locations" md:"locations" desc:"Locations from craft"`
-	Chapters   []ChapterData               `json:"chapters" md:"chapters" desc:"Chapter recap data"`
+	Chapters   []ChapterData               `json:"chapters" md:"chapters" desc:"Chapter full text with optional recap data"`
 }
 
-// ChapterData represents a single chapter's recap data
+// ChapterData represents a chapter's full text plus optional recap summary.
 type ChapterData struct {
-	ChapterID string   `json:"chapter_id"`
-	Title     string   `json:"title"`
-	Location  string   `json:"location"`
-	Time      string   `json:"time"`
-	Present   []string `json:"present"`
-	PlotBeats []string `json:"plot_beats"`
+	ChapterID string        `json:"chapter_id"`
+	Title     string        `json:"title"`
+	Content   string        `json:"content,omitempty" md:"content" desc:"Full chapter markdown text; primary source for DSL extraction"`
+	Location  string        `json:"location,omitempty"`
+	Time      string        `json:"time,omitempty"`
+	Present   []string      `json:"present,omitempty"`
+	PlotBeats []string      `json:"plot_beats,omitempty"`
+	Recap     *ChapterRecap `json:"recap,omitempty" md:"recap" desc:"Optional structured recap; use only as support, never as replacement for content"`
+}
+
+type ChapterRecap struct {
+	ChapterID       string   `json:"chapter_id,omitempty"`
+	Title           string   `json:"title,omitempty"`
+	Location        string   `json:"location,omitempty"`
+	Time            string   `json:"time,omitempty"`
+	Present         []string `json:"present,omitempty"`
+	PlotBeats       []string `json:"plot_beats,omitempty"`
+	LastLine        string   `json:"last_line,omitempty"`
+	NextOpeningHint string   `json:"next_opening_hint,omitempty"`
 }
 
 // ChapterToDSLOutput is the output containing the DSL content
@@ -105,11 +118,15 @@ func (a *ChapterToDSLAgent) ConvertChapters(ctx context.Context, bookName string
 		chapters = append(chapters, *chapter)
 	}
 
+	return a.ConvertChapterData(ctx, bookName, characters, locations, chapters)
+}
+
+// ConvertChapterData converts already-loaded full chapter data to DSL format.
+func (a *ChapterToDSLAgent) ConvertChapterData(ctx context.Context, bookName string, characters map[string]models.Character, locations map[string]models.Location, chapters []ChapterData) (string, error) {
 	if len(chapters) == 0 {
 		return "", fmt.Errorf("no valid chapters found")
 	}
 
-	// Sort chapters by ID
 	sort.Slice(chapters, func(i, j int) bool {
 		return chapters[i].ChapterID < chapters[j].ChapterID
 	})
@@ -155,11 +172,20 @@ func (a *ChapterToDSLAgent) ConvertChapters(ctx context.Context, bookName string
 	return output.DSLContent, nil
 }
 
-// loadChapterFile loads a single chapter JSON file
+// loadChapterFile loads a single chapter recap JSON or chapter markdown file.
 func (a *ChapterToDSLAgent) loadChapterFile(filePath string) (*ChapterData, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	if strings.EqualFold(filepath.Ext(filePath), ".md") {
+		chapterID := strings.TrimSuffix(strings.TrimPrefix(filepath.Base(filePath), "chapter-"), filepath.Ext(filePath))
+		return &ChapterData{
+			ChapterID: chapterID,
+			Title:     firstMarkdownHeading(string(content), chapterID),
+			Content:   string(content),
+		}, nil
 	}
 
 	var chapter ChapterData
@@ -168,6 +194,16 @@ func (a *ChapterToDSLAgent) loadChapterFile(filePath string) (*ChapterData, erro
 	}
 
 	return &chapter, nil
+}
+
+func firstMarkdownHeading(content, fallback string) string {
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "#") {
+			return strings.TrimSpace(strings.TrimLeft(line, "#"))
+		}
+	}
+	return fallback
 }
 
 // ConvertSingleChapter converts a single chapter to DSL (for testing)

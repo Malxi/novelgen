@@ -12,6 +12,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/rpg/dsl"
 
 	"github.com/spf13/cobra"
 )
@@ -323,6 +324,28 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to improve story setup: %w", err)
 		}
 		setup = improvedSetup
+
+		// Enrich with DSL simulation feedback
+		dslBridge := dsl.NewSimulationBridge()
+		dslAdapter := dsl.NewModelAdapter(setup, nil, nil, nil, nil)
+		if dslIssues, simErr := dslAdapter.Simulate(dsl.PhaseSetup); simErr == nil && len(dslIssues) > 0 {
+			dslBridge.MergeIntoReview(dslIssues, review)
+			logger.Info("DSL simulation enriched review with %d additional issues", len(dslIssues))
+
+			for _, iss := range dslIssues {
+				if iss.Severity == dsl.SeverityCritical {
+					extraInput := agents.SetupImproveInput{
+						ExistingSetup: *improvedSetup,
+						ReviewResult:  *review,
+					}
+					if extraResult, extraErr := agent.Improve(cmd.Context(), extraInput); extraErr == nil {
+						setup = &extraResult.Setup
+						logger.Info("Extra improve pass completed for DSL-critical issues")
+					}
+					break
+				}
+			}
+		}
 
 		// Save improved setup
 		if err := saveStorySetup(setup); err != nil {
