@@ -30,6 +30,7 @@ Generate detailed chapters for a specific volume, maintaining continuity with pr
 9. **conflict**: Core conflict description (string)
 10. **pacing**: slow/normal/fast (string)
 11. **timeline**: Chapter timeline information (object) - ⚠️ REQUIRED for timeline consistency
+12. **state_anchor**: Protagonist state at chapter START (object) - ⚠️ REQUIRED for cross-chapter state tracking
 
 ### ⚠️ CRITICAL: Events Count Requirement
 **Each chapter MUST have 3-5 events.** This is a HARD requirement.
@@ -86,6 +87,38 @@ NOT a comma-separated string like:
   "time_jump": true,
   "previous_gap": "距离上章过了7天",
   "transition": "林砚在这7天里一直在暗中准备逃亡物资，同时观察监工巡逻规律"
+}
+```
+
+### ⚠️ CRITICAL: State Anchor Requirements (NEW)
+**Each chapter MUST declare state_anchor** — the protagonist's expected state at chapter START. This creates a state baseline that the write agent follows and the validator checks across chapters.
+
+**State Anchor Fields:**
+1. **cultivation** (string): Realm/power level, e.g. "炼气三层", "S级进化者一阶"
+2. **spirit_stones** (int): Resource count, e.g. 37. **Must be numeric — no ranges.**
+3. **allies** (array): Current allies/companions at chapter start
+4. **injuries** (array): Active injuries at chapter start. Empty array if none.
+5. **location** (string): Chapter start location
+6. **key_items** (array): Key items currently held
+7. **notes** (string): Any other trackable state
+
+**Cross-Chapter Consistency Rules:**
+- Chapter 1/spirit_stones sets the baseline count
+- If spirit_stones changes, there MUST be a corresponding event (acquire/lose item)
+- If cultivation changes, there MUST be a breakthrough/evolution event
+- If injuries are cleared, there MUST be a recovery event
+- If allies are added, there MUST be a meet/relationship event
+
+**State Anchor Example:**
+```json
+"state_anchor": {
+  "cultivation": "炼气三层",
+  "spirit_stones": 37,
+  "allies": ["赵虎", "周明"],
+  "injuries": [],
+  "location": "黑风矿丙字三号矿道",
+  "key_items": ["鹤嘴锄", "残破矿灯"],
+  "notes": ""
 }
 ```
 
@@ -236,6 +269,15 @@ Example:
         "time_jump": false,
         "previous_gap": "",
         "transition": ""
+      },
+      "state_anchor": {
+        "cultivation": "凡人/未觉醒",
+        "spirit_stones": 0,
+        "allies": [],
+        "injuries": ["矿难擦伤"],
+        "location": "黑风矿坍塌矿道",
+        "key_items": ["碎矿镐"],
+        "notes": "刚穿越，身体虚弱，记忆模糊"
       }
     },
     {
@@ -274,6 +316,15 @@ Example:
         "time_jump": true,
         "previous_gap": "过了2天",
         "transition": "林砚在这两天里熟悉了复活能力，并与赵虎、周明建立了信任关系"
+      },
+      "state_anchor": {
+        "cultivation": "觉醒·初级复活能力",
+        "spirit_stones": 5,
+        "allies": ["赵虎", "周明"],
+        "injuries": [],
+        "location": "黑石聚落防线",
+        "key_items": ["虫壳碎片", "矿镐"],
+        "notes": "已掌握复活能力基本用法，与赵虎周明建立信任"
       }
     }
   ]

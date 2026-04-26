@@ -29,13 +29,24 @@ type StoryVolume struct {
 
 // StoryChapterTimeline 章节时间线信息
 type StoryChapterTimeline struct {
-	Anchor      string `json:"anchor,omitempty"`      // 相对于故事开始的时间点
-	StartTime   string `json:"start_time,omitempty"`  // 章节开始的具体时间
-	EndTime     string `json:"end_time,omitempty"`    // 章节结束的具体时间
-	Duration    string `json:"duration,omitempty"`    // 章节内经过的时间
-	TimeJump    bool   `json:"time_jump,omitempty"`   // 是否时间跳跃
+	Anchor      string `json:"anchor,omitempty"`       // 相对于故事开始的时间点
+	StartTime   string `json:"start_time,omitempty"`   // 章节开始的具体时间
+	EndTime     string `json:"end_time,omitempty"`     // 章节结束的具体时间
+	Duration    string `json:"duration,omitempty"`     // 章节内经过的时间
+	TimeJump    bool   `json:"time_jump,omitempty"`    // 是否时间跳跃
 	PreviousGap string `json:"previous_gap,omitempty"` // 与上一章的时间间隔
-	Transition  string `json:"transition,omitempty"`  // 时间过渡说明
+	Transition  string `json:"transition,omitempty"`   // 时间过渡说明
+}
+
+// StoryStateAnchor 章节开始时的主角状态锚点
+type StoryStateAnchor struct {
+	Cultivation  string   `json:"cultivation,omitempty"`   // 修炼境界/能力等级
+	SpiritStones int      `json:"spirit_stones,omitempty"` // 灵石/资源数量
+	Allies       []string `json:"allies,omitempty"`        // 当前盟友/同伴
+	Injuries     []string `json:"injuries,omitempty"`      // 当前伤势
+	Location     string   `json:"location,omitempty"`      // 章节开始时的位置
+	KeyItems     []string `json:"key_items,omitempty"`     // 当前持有的关键物品
+	Notes        string   `json:"notes,omitempty"`         // 其他值得追踪的状态
 }
 
 // StoryChapter 故事章节
@@ -52,7 +63,8 @@ type StoryChapter struct {
 	StateChange string               `json:"state_change"`
 	Conflict    string               `json:"conflict"`
 	Pacing      string               `json:"pacing"`
-	Timeline    StoryChapterTimeline `json:"timeline,omitempty"` // 时间线信息
+	Timeline    StoryChapterTimeline `json:"timeline,omitempty"`  // 时间线信息
+	StateAnchor StoryStateAnchor     `json:"state_anchor,omitempty"` // 状态锚点
 }
 
 // StoryEvent 故事事件

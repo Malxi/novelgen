@@ -102,8 +102,11 @@ func (ov *OutlineValidator) Validate() *ValidationResult {
 	// 8. 可行性检查（RPG推演角度）
 	ov.validateFeasibility()
 
-	// 9. 时间线一致性检查（新增）
+	// 9. 时间线一致性检查
 	ov.validateTimeline()
+
+	// 10. 状态锚点一致性检查
+	ov.validateStateAnchor()
 
 	return &ValidationResult{
 		IsValid:      len(ov.Issues) == 0,
@@ -618,6 +621,100 @@ func (ov *OutlineValidator) validateTimeline() {
 				}
 
 				prevAnchor = chapter.Timeline.Anchor
+			}
+		}
+	}
+}
+
+func (ov *OutlineValidator) validateStateAnchor() {
+	var prev StoryStateAnchor
+	firstChapter := true
+
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for i, chapter := range volume.Chapters {
+				sa := chapter.StateAnchor
+
+				// Check chapter 1 has baseline
+				if i == 0 && firstChapter {
+					if sa.Cultivation == "" && len(sa.Allies) == 0 && sa.SpiritStones == 0 {
+						ov.Suggestions = append(ov.Suggestions, OutlineSuggestion{
+							Type:      "state_anchor",
+							Location:  chapter.ID,
+							Current:   "缺少初始状态锚点",
+							Suggested: "为第一章设置 state_anchor：修炼境界、资源数量、初始盟友",
+							Reason:    "第一章需要建立状态基准线，后续章节才能对比变化",
+						})
+					}
+					firstChapter = false
+				}
+
+				// Cross-chapter cultivation consistency
+				if !firstChapter && sa.Cultivation != "" && prev.Cultivation != "" {
+					if sa.Cultivation != prev.Cultivation {
+						// Cultivation changed — check if there was a breakthrough event
+						hasBreakthrough := false
+						for _, evt := range chapter.Events {
+							if evt.Type == "status" && (strings.Contains(evt.Change, "突破") ||
+								strings.Contains(evt.Subject, "修为") || strings.Contains(evt.Subject, "境界")) {
+								hasBreakthrough = true
+								break
+							}
+						}
+						if !hasBreakthrough {
+							ov.Warnings = append(ov.Warnings, OutlineWarning{
+								Type:        "state_anchor",
+								Location:    chapter.ID,
+								Description: fmt.Sprintf("修炼境界从 '%s' 变为 '%s'，但本章事件中未发现对应的突破事件", prev.Cultivation, sa.Cultivation),
+								Suggestion:  "添加一个突破相关的事件，或修正 state_anchor",
+							})
+						}
+					}
+				}
+
+				// Resource arithmetic check
+				if !firstChapter && sa.SpiritStones > 0 && prev.SpiritStones > 0 {
+					delta := sa.SpiritStones - prev.SpiritStones
+					if delta < 0 {
+						// Loss — check if there's a spend/give-away event
+						hasSpend := false
+						for _, evt := range chapter.Events {
+							if evt.Type == "item" && (evt.Change == "lost" || evt.Change == "used" || evt.Change == "consumed") {
+								hasSpend = true
+								break
+							}
+						}
+						if !hasSpend {
+							ov.Warnings = append(ov.Warnings, OutlineWarning{
+								Type:        "state_anchor",
+								Location:    chapter.ID,
+								Description: fmt.Sprintf("灵石从 %d 减少到 %d（- %d），但前一章事件中未发现消耗/失去", prev.SpiritStones, sa.SpiritStones, -delta),
+								Suggestion:  "添加灵石消耗事件，或修正 state_anchor 数值",
+							})
+						}
+					}
+				}
+
+				// Injury continuity
+				if len(prev.Injuries) > 0 && len(sa.Injuries) == 0 {
+					hasRecovery := false
+					for _, evt := range chapter.Events {
+						if evt.Type == "status" && (evt.Change == "resolved" || evt.Change == "recovered" || evt.Change == "healed") {
+							hasRecovery = true
+							break
+						}
+					}
+					if !hasRecovery {
+						ov.Warnings = append(ov.Warnings, OutlineWarning{
+							Type:        "state_anchor",
+							Location:    chapter.ID,
+							Description: fmt.Sprintf("上一章存在伤势 %v，本章 state_anchor 却无伤势且无恢复事件", prev.Injuries),
+							Suggestion:  "添加伤势恢复事件，或在 state_anchor 中保留伤势",
+						})
+					}
+				}
+
+				prev = sa
 			}
 		}
 	}

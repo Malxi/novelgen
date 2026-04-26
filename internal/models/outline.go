@@ -39,6 +39,18 @@ type ChapterTimeline struct {
 	Transition  string `json:"transition,omitempty" md:"transition" desc:"时间过渡说明，解释这段时间发生了什么"`
 }
 
+// StateAnchor declares the expected protagonist state at chapter start.
+// Write agent uses this as a target; validator checks cross-chapter consistency.
+type StateAnchor struct {
+	Cultivation string   `json:"cultivation,omitempty" md:"cultivation" desc:"修炼境界/能力等级，如：炼气三层、S级进化者一阶"`
+	SpiritStones int     `json:"spirit_stones,omitempty" md:"spirit_stones" desc:"灵石/资源数量"`
+	Allies      []string `json:"allies,omitempty" md:"allies" desc:"当前盟友/同伴"`
+	Injuries    []string `json:"injuries,omitempty" md:"injuries" desc:"当前伤势"`
+	Location    string   `json:"location,omitempty" md:"location" desc:"章节开始时的位置"`
+	KeyItems    []string `json:"key_items,omitempty" md:"key_items" desc:"当前持有的关键物品"`
+	Notes       string   `json:"notes,omitempty" md:"notes" desc:"其他值得追踪的状态"`
+}
+
 // Chapter represents a single chapter in the story
 type Chapter struct {
 	ID          string          `json:"id" md:"-"` // ID not shown in markdown
@@ -54,6 +66,7 @@ type Chapter struct {
 	Conflict    string          `json:"conflict" md:"conflict"`
 	Pacing      string          `json:"pacing" md:"pacing"`
 	Timeline    ChapterTimeline `json:"timeline,omitempty" md:"timeline" desc:"章节时间线信息"`
+	StateAnchor StateAnchor     `json:"state_anchor,omitempty" md:"state_anchor" desc:"章节开始时的主角状态锚点"`
 }
 
 // Event represents a story event that changes state
