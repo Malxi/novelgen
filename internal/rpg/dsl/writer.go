@@ -470,12 +470,25 @@ func (dw *DSLWriter) writeStep(step Step) error {
 			dw.writeBlock("event", "", func() error {
 				dw.writeField("type", fmt.Sprintf("%q", step.Event.Type))
 
-				if step.Event.Combat != nil {
-					enemyIDs := make([]string, 0, len(step.Event.Combat.Setup.Enemies))
-					for _, spawn := range step.Event.Combat.Setup.Enemies {
-						enemyIDs = append(enemyIDs, spawn.ID)
-					}
-					dw.writeField("enemies", dw.formatStringSlice(enemyIDs))
+				if step.Event.Combat != nil && len(step.Event.Combat.Setup.Enemies) > 0 {
+					dw.writeBlock("combat", "", func() error {
+						parts := make([]string, 0, len(step.Event.Combat.Setup.Enemies))
+						for _, spawn := range step.Event.Combat.Setup.Enemies {
+							fields := fmt.Sprintf("id = %q, count = %d", spawn.ID, spawn.Count)
+							if spawn.Level > 0 {
+								fields += fmt.Sprintf(", level = %d", spawn.Level)
+							}
+							if spawn.Elite {
+								fields += ", elite = true"
+							}
+							if spawn.Boss {
+								fields += ", boss = true"
+							}
+							parts = append(parts, "{"+fields+"}")
+						}
+						dw.writeLine(fmt.Sprintf("enemies = [%s]", strings.Join(parts, ", ")))
+						return nil
+					})
 				}
 				for _, delta := range step.Event.StateDeltas {
 					if err := dw.writeStateDelta(delta); err != nil {

@@ -1359,8 +1359,56 @@ func (p *Parser) toInt(v interface{}) (int, bool) {
 }
 
 func (p *Parser) parseEnemySpawnList(v interface{}) []EnemySpawn {
-	// Simplified for MVP
-	return make([]EnemySpawn, 0)
+	arr, ok := v.([]interface{})
+	if !ok {
+		return make([]EnemySpawn, 0)
+	}
+	result := make([]EnemySpawn, 0, len(arr))
+	for _, item := range arr {
+		obj, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		spawn := EnemySpawn{}
+		if id, ok := obj["id"]; ok {
+			spawn.ID = p.toString(id)
+		}
+		if cnt, ok := obj["count"]; ok {
+			switch v := cnt.(type) {
+			case int:
+				spawn.Count = v
+			case float64:
+				spawn.Count = int(v)
+			case string:
+				if n, err := strconv.Atoi(v); err == nil {
+					spawn.Count = n
+				}
+			}
+		}
+		if lvl, ok := obj["level"]; ok {
+			switch v := lvl.(type) {
+			case int:
+				spawn.Level = v
+			case float64:
+				spawn.Level = int(v)
+			case string:
+				if n, err := strconv.Atoi(v); err == nil {
+					spawn.Level = n
+				}
+			}
+		}
+		if elite, ok := obj["elite"]; ok {
+			spawn.Elite = elite == true || elite == "true"
+		}
+		if boss, ok := obj["boss"]; ok {
+			spawn.Boss = boss == true || boss == "true"
+		}
+		if spawn.Count == 0 {
+			spawn.Count = 1
+		}
+		result = append(result, spawn)
+	}
+	return result
 }
 
 // parseNPC parses an NPC block

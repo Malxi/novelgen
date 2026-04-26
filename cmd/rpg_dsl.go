@@ -519,8 +519,8 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("📚 找到 %d 个章节 markdown 文件\n", len(chapterInputs))
 
-	// 3. 创建 RPG 目录
-	rpgDir := getBookRPGDir(bookName)
+	// 3. 创建 RPG 目录 (use project root, not relative path)
+	rpgDir := filepath.Join(root, "story", "rpg")
 	if err := os.MkdirAll(rpgDir, 0755); err != nil {
 		return fmt.Errorf("创建 RPG 目录失败: %w", err)
 	}
@@ -534,7 +534,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 		llmConfig = nil
 	}
 
-	projectConfigPath := filepath.Join("books", bookName, "novel.json")
+	projectConfigPath := filepath.Join(root, "novel.json")
 	projectConfig, err := models.LoadProjectConfig(projectConfigPath)
 	if err != nil {
 		fmt.Printf("⚠️  加载项目配置失败: %v\n", err)
@@ -564,32 +564,52 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("LLM 客户端不可用，无法执行 AI 章节转 DSL")
 	}
 
-	// 加载章节内容 + 可选 recap
-	chapterData, err := loadWriteRPGDSLChapterData(chapterInputs)
-	if err != nil {
-		return fmt.Errorf("加载章节内容失败: %w", err)
-	}
-	fmt.Printf("📄 加载了 %d 个章节的完整内容\n", len(chapterData))
+	// 分批转换 (5章/batch), 合并到最终 DSL
+	batchSize := 5
+	batches := splitRPGDSLBatchInputs(chapterInputs, batchSize)
+	fmt.Printf("📄 %d 个章节，分 %d 批转换 (每批 %d 章)\n", len(chapterInputs), len(batches), batchSize)
 
-	dslContent, err := agent.ConvertChapterData(cmd.Context(), bookName, characters, locations, chapterData)
-	if err != nil {
-		return fmt.Errorf("AI 转换失败: %w", err)
-	}
-
-	// Parse validation and auto-repair
-	dslContent, err = ensureWriteRPGDSLParseable(cmd.Context(), agent, bookName, dslContent)
-	if err != nil {
-		return fmt.Errorf("DSL 解析/修复失败: %w", err)
+	combined := &dsl.DSL{
+		Metadata:   &dsl.Metadata{},
+		World:      &dsl.World{},
+		Characters: &dsl.Characters{},
+		Storyline:  &dsl.Storyline{},
+		Systems:    &dsl.Systems{},
 	}
 
-	// 5. 保存到 04_chapters.rpg (基于章节内容)
+	for i, batch := range batches {
+		fmt.Printf("\n📦 Batch %d/%d: %s → %s (%d 章)\n",
+			i+1, len(batches), batch[0].ChapterID, batch[len(batch)-1].ChapterID, len(batch))
+		chapterData, err := loadWriteRPGDSLChapterData(batch)
+		if err != nil {
+			return fmt.Errorf("加载批次 %d 章节内容失败: %w", i+1, err)
+		}
+
+		dslContent, err := agent.ConvertChapterData(cmd.Context(), bookName, characters, locations, chapterData)
+		if err != nil {
+			return fmt.Errorf("AI 转换批次 %d 失败: %w", i+1, err)
+		}
+
+		dslContent, err = ensureWriteRPGDSLParseable(cmd.Context(), agent, bookName, dslContent)
+		if err != nil {
+			return fmt.Errorf("DSL 解析/修复失败 batch %d: %w", i+1, err)
+		}
+
+		parsed, err := dsl.NewParser(dslContent).Parse()
+		if err != nil {
+			return fmt.Errorf("解析批 %d DSL 失败: %w", i+1, err)
+		}
+		mergeWriteRPGDSL(combined, parsed)
+		fmt.Printf("  ✓ %d 字符\n", len(dslContent))
+	}
+
 	chaptersFile := filepath.Join(rpgDir, "04_chapters.rpg")
-	if err := os.WriteFile(chaptersFile, []byte(dslContent), 0644); err != nil {
+	if err := os.WriteFile(chaptersFile, []byte(combined.String()), 0644); err != nil {
 		return fmt.Errorf("保存 DSL 文件失败: %w", err)
 	}
 
 	fmt.Printf("\n✅ 转换完成，已保存: %s\n", chaptersFile)
-	fmt.Printf("   DSL 内容长度: %d 字符\n", len(dslContent))
+	fmt.Printf("   合并后 DSL 长度: %d 字符\n", len(combined.String()))
 
 	// 6. 运行模拟（如果启用）
 	if simulateAfterFlag {

@@ -364,19 +364,12 @@ func (v *Validator) validateEvent(field string, event *Event) {
 	switch event.Type {
 	case "spawn":
 		if event.Spawn == nil {
-			v.addError(field, "spawn event requires spawn data")
-		} else {
-			if event.Spawn.Actor == "" {
-				v.addError(field+".actor", "spawn event requires actor")
-			}
-			if event.Spawn.Location == "" {
-				v.addError(field+".location", "spawn event requires location")
-			}
+			v.addWarning(field, "spawn event missing spawn data (treated as narrative-only)")
 		}
 
 	case "move":
 		if event.Move == nil {
-			v.addError(field, "move event requires move data")
+			v.addWarning(field, "move event missing move data (treated as narrative-only)")
 		} else {
 			if event.Move.To == "" {
 				v.addError(field+".to", "move event requires destination")
@@ -443,8 +436,8 @@ func (v *Validator) validateReferences(dsl *DSL) {
 				if event.Combat != nil {
 					for _, enemy := range event.Combat.Setup.Enemies {
 						if !enemyIDs[enemy.ID] {
-							v.addError(fmt.Sprintf("chapter.%s.step.%d", chapter.ID, step.Order),
-								fmt.Sprintf("undefined enemy: %s", enemy.ID))
+							v.addWarning(fmt.Sprintf("chapter.%s.step.%d", chapter.ID, step.Order),
+								fmt.Sprintf("undefined enemy: %s (will be treated as generic)", enemy.ID))
 						}
 					}
 				}

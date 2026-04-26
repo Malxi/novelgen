@@ -42,8 +42,9 @@ Convert full chapter markdown text plus optional recap JSON into parser-compatib
 ## Allowed Event Fields
 
 - `type = "status|combat|location|acquire|knowledge|relationship"`
-- Optional:
-  - `combat { enemies = [{id = "enemy_x", count = 1, level = 1}] }`
+- FOR COMBAT EVENTS (required):
+  - `combat { enemies = [{id = "enemy_x", count = 1, level = 1}] }` — **REQUIRED** for every `type = "combat"`. Never use `enemies = []`.
+- Optional event sub-blocks:
   - `move { to = "loc_x" }`
   - `spawn { actor = "char_x" location = "loc_x" }`
   - `on_complete { narration = "..." exp = 10 }`
@@ -52,6 +53,29 @@ Convert full chapter markdown text plus optional recap JSON into parser-compatib
 Do not use `setup { ... }` inside `combat`.
 Use `combat { enemies = [...] }` directly.
 Use one or more `state_delta` blocks when the step changes important story state.
+
+## Combat Event Rules (CRITICAL)
+
+Every `type = "combat"` event MUST include `combat { enemies = [...] }` with at least one enemy extracted from the step description.
+
+- Scan the description for enemy types and counts:
+  - `"一只工蜂"` → `enemies = [{id = "enemy_worker_bee", count = 1}]`
+  - `"三只工蜂虫"` → `enemies = [{id = "enemy_worker_bee", count = 3}]`
+  - `"虫族哨兵"` → `enemies = [{id = "enemy_sentinel", count = 1}]`
+  - `"兵蜂"` → `enemies = [{id = "enemy_soldier_bee", count = 1}]`
+  - `"10台T-7型智网战斗机器人"` → `enemies = [{id = "enemy_t7_robot", count = 10}]`
+- Use `count = 1` if the description does not specify a number.
+- Enemy IDs must be ASCII snake_case.
+- If the enemy type is genuinely unknown, use `id = "enemy_unknown"`.
+- NEVER output `enemies = []` — this is a hard error.
+
+Chapter text is the authoritative source for enemy details. Example from chapter content:
+
+```
+陆沉侧身猛地往旁边一滚，工蜂的前肢擦着他的肩膀狠狠扎进身后的合金墙面，三厘米厚的高强度合金居然像豆腐一样被扎出两个深达十厘米的洞。
+```
+
+→ `enemies = [{id = "enemy_worker_bee", count = 1}]` (the scene describes one worker bee against Lu Chen)
 
 ## Required Minimal Fields
 
