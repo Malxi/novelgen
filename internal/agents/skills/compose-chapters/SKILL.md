@@ -29,6 +29,7 @@ Generate detailed chapters for a specific volume, maintaining continuity with pr
 8. **closing_beat**: Must equal beats[last] (string)
 9. **conflict**: Core conflict description (string)
 10. **pacing**: slow/normal/fast (string)
+11. **timeline**: Chapter timeline information (object) - ⚠️ REQUIRED for timeline consistency
 
 ### ⚠️ CRITICAL: Events Count Requirement
 **Each chapter MUST have 3-5 events.** This is a HARD requirement.
@@ -55,6 +56,37 @@ The `beats` field MUST be an array of strings:
 NOT a comma-separated string like:
 ```json
 "beats": "beat1, beat2, beat3"  // WRONG!
+```
+
+### ⚠️ CRITICAL: Timeline Requirements (NEW)
+**Each chapter MUST include timeline information** to ensure cross-chapter time consistency and detect timeline issues.
+
+**Timeline Fields:**
+1. **anchor** (string, REQUIRED): Time anchor relative to story start, e.g., "Day 3 evening", "three months later"
+2. **start_time** (string, optional): Specific start time description within the chapter
+3. **end_time** (string, optional): Specific end time description within the chapter  
+4. **duration** (string, optional): Time elapsed within chapter: "same day", "lasts 3 days", "an instant"
+5. **time_jump** (boolean, optional): Whether there's a time jump from previous chapter
+6. **previous_gap** (string, optional): Time gap from previous chapter, e.g., "7 days passed", "next morning"
+7. **transition** (string, REQUIRED if time_jump=true): Explanation of what happened during the time gap
+
+**Timeline Continuity Rules:**
+- Chapter 1 anchor should be "Day 1" or story start time
+- Each subsequent chapter's anchor must be chronologically after previous chapter
+- If time_jump=true, MUST provide transition explaining the gap
+- Duration should match the actual content (don't say "same day" if chapter spans weeks)
+
+**Timeline Example:**
+```json
+"timeline": {
+  "anchor": "第15天黎明",
+  "start_time": "黎明时分",
+  "end_time": "当夜子时",
+  "duration": "当天",
+  "time_jump": true,
+  "previous_gap": "距离上章过了7天",
+  "transition": "林砚在这7天里一直在暗中准备逃亡物资，同时观察监工巡逻规律"
+}
 ```
 
 ### Event Types (⚠️ 推荐新格式)
@@ -195,7 +227,16 @@ Example:
       "opening_beat": "Then, Lin Yan wakes up in the collapsed mine with no memory",
       "closing_beat": "Therefore, Lin Yan resurrects and realizes he has a unique ability",
       "conflict": "Survival in the collapsed mine while discovering his ability",
-      "pacing": "fast"
+      "pacing": "fast",
+      "timeline": {
+        "anchor": "第1天清晨",
+        "start_time": "矿难发生后不久",
+        "end_time": "当日下午",
+        "duration": "当天",
+        "time_jump": false,
+        "previous_gap": "",
+        "transition": ""
+      }
     },
     {
       "title": "First Battle",
@@ -224,7 +265,16 @@ Example:
       "opening_beat": "Then, insect swarm approaches the settlement",
       "closing_beat": "Therefore, they defeat the swarm and secure the settlement",
       "conflict": "Defending settlement from insect swarm",
-      "pacing": "fast"
+      "pacing": "fast",
+      "timeline": {
+        "anchor": "第3天黄昏",
+        "start_time": "日落时分",
+        "end_time": "深夜",
+        "duration": "数个时辰",
+        "time_jump": true,
+        "previous_gap": "过了2天",
+        "transition": "林砚在这两天里熟悉了复活能力，并与赵虎、周明建立了信任关系"
+      }
     }
   ]
 }

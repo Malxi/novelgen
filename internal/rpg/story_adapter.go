@@ -27,20 +27,32 @@ type StoryVolume struct {
 	Chapters []StoryChapter `json:"chapters"`
 }
 
+// StoryChapterTimeline 章节时间线信息
+type StoryChapterTimeline struct {
+	Anchor      string `json:"anchor,omitempty"`      // 相对于故事开始的时间点
+	StartTime   string `json:"start_time,omitempty"`  // 章节开始的具体时间
+	EndTime     string `json:"end_time,omitempty"`    // 章节结束的具体时间
+	Duration    string `json:"duration,omitempty"`    // 章节内经过的时间
+	TimeJump    bool   `json:"time_jump,omitempty"`   // 是否时间跳跃
+	PreviousGap string `json:"previous_gap,omitempty"` // 与上一章的时间间隔
+	Transition  string `json:"transition,omitempty"`  // 时间过渡说明
+}
+
 // StoryChapter 故事章节
 type StoryChapter struct {
-	ID          string       `json:"id"`
-	Title       string       `json:"title"`
-	Summary     string       `json:"summary"`
-	Characters  []string     `json:"characters"`
-	Location    string       `json:"location"`
-	Events      []StoryEvent `json:"events"`
-	Beats       []string     `json:"beats"`
-	OpeningBeat string       `json:"opening_beat"`
-	ClosingBeat string       `json:"closing_beat"`
-	StateChange string       `json:"state_change"`
-	Conflict    string       `json:"conflict"`
-	Pacing      string       `json:"pacing"`
+	ID          string               `json:"id"`
+	Title       string               `json:"title"`
+	Summary     string               `json:"summary"`
+	Characters  []string             `json:"characters"`
+	Location    string               `json:"location"`
+	Events      []StoryEvent         `json:"events"`
+	Beats       []string             `json:"beats"`
+	OpeningBeat string               `json:"opening_beat"`
+	ClosingBeat string               `json:"closing_beat"`
+	StateChange string               `json:"state_change"`
+	Conflict    string               `json:"conflict"`
+	Pacing      string               `json:"pacing"`
+	Timeline    StoryChapterTimeline `json:"timeline,omitempty"` // 时间线信息
 }
 
 // StoryEvent 故事事件

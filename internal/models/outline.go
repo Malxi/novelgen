@@ -28,20 +28,32 @@ type Volume struct {
 	Chapters []Chapter `json:"chapters" md:"chapters"`
 }
 
+// ChapterTimeline represents timeline information for a chapter
+type ChapterTimeline struct {
+	Anchor      string `json:"anchor,omitempty" md:"anchor" desc:"相对于故事开始的时间点，如：第3天傍晚、三个月后"`
+	StartTime   string `json:"start_time,omitempty" md:"start_time" desc:"章节开始的具体时间描述"`
+	EndTime     string `json:"end_time,omitempty" md:"end_time" desc:"章节结束的具体时间描述"`
+	Duration    string `json:"duration,omitempty" md:"duration" desc:"章节内经过的时间：当天、持续3天、一瞬间"`
+	TimeJump    bool   `json:"time_jump,omitempty" md:"time_jump" desc:"是否是时间跳跃（相对于上一章）"`
+	PreviousGap string `json:"previous_gap,omitempty" md:"previous_gap" desc:"与上一章的时间间隔，如：过了7天、次日清晨"`
+	Transition  string `json:"transition,omitempty" md:"transition" desc:"时间过渡说明，解释这段时间发生了什么"`
+}
+
 // Chapter represents a single chapter in the story
 type Chapter struct {
-	ID          string   `json:"id" md:"-"` // ID not shown in markdown
-	Title       string   `json:"title" md:"title"`
-	Summary     string   `json:"summary" md:"heading"`       // 格式: 角色 在 什么地方 发生了 什么事
-	Characters  []string `json:"characters" md:"characters"` // 本章出现的角色名列表
-	Location    string   `json:"location" md:"location"`     // 事情发生的地点
-	Events      []Event  `json:"events" md:"events"`         // 本章发生的事件
-	Beats       []string `json:"beats" md:"beats"`
-	OpeningBeat string   `json:"opening_beat,omitempty" desc:"First beat that continues the previous chapter"`
-	ClosingBeat string   `json:"closing_beat,omitempty" desc:"Final beat/hook that must lead into next chapter"`
-	StateChange string   `json:"state_change,omitempty" desc:"Primary change this chapter causes; must map to Events"`
-	Conflict    string   `json:"conflict" md:"conflict"`
-	Pacing      string   `json:"pacing" md:"pacing"`
+	ID          string          `json:"id" md:"-"` // ID not shown in markdown
+	Title       string          `json:"title" md:"title"`
+	Summary     string          `json:"summary" md:"heading"`       // 格式: 角色 在 什么地方 发生了 什么事
+	Characters  []string        `json:"characters" md:"characters"` // 本章出现的角色名列表
+	Location    string          `json:"location" md:"location"`     // 事情发生的地点
+	Events      []Event         `json:"events" md:"events"`         // 本章发生的事件
+	Beats       []string        `json:"beats" md:"beats"`
+	OpeningBeat string          `json:"opening_beat,omitempty" desc:"First beat that continues the previous chapter"`
+	ClosingBeat string          `json:"closing_beat,omitempty" desc:"Final beat/hook that must lead into next chapter"`
+	StateChange string          `json:"state_change,omitempty" desc:"Primary change this chapter causes; must map to Events"`
+	Conflict    string          `json:"conflict" md:"conflict"`
+	Pacing      string          `json:"pacing" md:"pacing"`
+	Timeline    ChapterTimeline `json:"timeline,omitempty" md:"timeline" desc:"章节时间线信息"`
 }
 
 // Event represents a story event that changes state
