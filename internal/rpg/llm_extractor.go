@@ -328,7 +328,7 @@ func (le *LLMExtractor) convertToSystemFormat(result LLMExtractionResult) *Novel
 			Name:        item.Name,
 			Type:        itemType,
 			Description: item.Description,
-			Rarity:      Rarity(parseRarity(item.Rarity)),
+			Rarity:      Rarity(fmt.Sprintf("%d", parseRarity(item.Rarity))),
 			Weight:      1.0,
 			MaxStack:    99,
 			Value:       100 * parseRarity(item.Rarity),

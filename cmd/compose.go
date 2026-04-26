@@ -15,6 +15,7 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
+	"novelgen/internal/rpg"
 	"novelgen/internal/rpg/dsl"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -29,6 +30,7 @@ var (
 	composeHierarchicalFlag bool
 	composeForceImproveFlag bool
 	composeForceGenFlag     bool
+	composeCheckJSONFlag    bool
 )
 
 var composeCmd = &cobra.Command{
@@ -100,10 +102,32 @@ Examples:
 	RunE: runComposeImprove,
 }
 
+var composeCheckCmd = &cobra.Command{
+	Use:   "check",
+	Short: "Validate outline for structural, continuity, and timeline issues",
+	Long: `Run comprehensive validation against the current outline without calling AI.
+
+Checks include:
+  - Structure: part/volume/chapter completeness
+  - Characters: presence consistency across chapters
+  - Plot logic: events match state changes
+  - Pacing: rhythm and tension distribution
+  - Transitions: location changes and time jumps
+  - Timeline: cross-chapter time consistency (NEW)
+  - State Anchor: protagonist state at chapter boundaries (NEW)
+
+Examples:
+  novelgen compose check                  # Check entire outline
+  novelgen compose check --json           # Output as JSON`,
+	RunE: runComposeCheck,
+}
+
 func init() {
+	composeCheckCmd.Flags().BoolVar(&composeCheckJSONFlag, "json", false, "Output results as JSON")
 	composeCmd.AddCommand(composeGenCmd)
 	composeCmd.AddCommand(composeRegenCmd)
 	composeCmd.AddCommand(composeImproveCmd)
+	composeCmd.AddCommand(composeCheckCmd)
 
 	composeGenCmd.Flags().BoolVar(&composeHierarchicalFlag, "hierarchical", false, "Use hierarchical generation (better quality, slower)")
 	composeGenCmd.Flags().BoolVar(&composeForceGenFlag, "force", false, "Force regeneration even if outline exists (old outline will be backed up)")
@@ -356,6 +380,75 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	fmt.Println("  - Edit story/compose/outline.json to refine your outline")
 	fmt.Println("  - Run 'novelgen craft' to create world elements")
 
+	return nil
+}
+
+func runComposeCheck(cmd *cobra.Command, args []string) error {
+	logger.Section("NOVELGEN COMPOSE CHECK")
+
+	outlinePath := filepath.Join("story", "compose", "outline.json")
+	if _, err := os.Stat(outlinePath); err != nil {
+		return fmt.Errorf("outline not found at %s. Run 'novelgen compose gen' first", outlinePath)
+	}
+
+	data, err := os.ReadFile(outlinePath)
+	if err != nil {
+		return fmt.Errorf("failed to read outline: %w", err)
+	}
+
+	var storyOutline rpg.StoryOutline
+	if err := json.Unmarshal(data, &storyOutline); err != nil {
+		return fmt.Errorf("failed to parse outline: %w", err)
+	}
+
+	validator := rpg.NewOutlineValidator(&storyOutline)
+	result := validator.Validate()
+
+	if composeCheckJSONFlag {
+		output, _ := json.MarshalIndent(result, "", "  ")
+		fmt.Println(string(output))
+		return nil
+	}
+
+	fmt.Printf("\n===== OUTLINE VALIDATION =====\n")
+	if result.IsValid {
+		fmt.Println("✓ Outline passed validation")
+	} else {
+		fmt.Printf("✗ Issues: %d | Warnings: %d | Suggestions: %d\n\n",
+			result.IssueCount, result.WarningCount, len(result.Suggestions))
+	}
+
+	for _, issue := range result.Issues {
+		icon := "✗"
+		if issue.Severity == "critical" {
+			icon = "⛔"
+		}
+		fmt.Printf("  %s [%s/%s] %s: %s\n", icon, issue.Type, issue.Severity, issue.Location, issue.Description)
+		if issue.Fix != "" {
+			fmt.Printf("       Fix: %s\n", issue.Fix)
+		}
+	}
+
+	if len(result.Warnings) > 0 {
+		fmt.Printf("\n  --- Warnings (%d) ---\n", result.WarningCount)
+	}
+	for _, w := range result.Warnings {
+		fmt.Printf("  ⚠ [%s] %s: %s\n", w.Type, w.Location, w.Description)
+		if w.Suggestion != "" {
+			fmt.Printf("     → %s\n", w.Suggestion)
+		}
+	}
+
+	if len(result.Suggestions) > 0 {
+		fmt.Printf("\n  --- Suggestions (%d) ---\n", len(result.Suggestions))
+	}
+	for _, s := range result.Suggestions {
+		fmt.Printf("  💡 [%s] %s\n", s.Type, s.Location)
+		fmt.Printf("     Current: %s\n", s.Current)
+		fmt.Printf("     → %s\n", s.Suggested)
+	}
+
+	fmt.Printf("\n%s\n", result.Summary)
 	return nil
 }
 
