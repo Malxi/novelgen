@@ -49,6 +49,35 @@ type StoryStateAnchor struct {
 	Notes        string   `json:"notes,omitempty"`         // 其他值得追踪的状态
 }
 
+// StoryOutlineEnemy 本章出现的敌人
+type StoryOutlineEnemy struct {
+	Name    string `json:"name"`             // 敌人名称
+	Count   int    `json:"count"`            // 出现数量
+	Level   int    `json:"level,omitempty"`  // 敌人等级
+	IsBoss  bool   `json:"is_boss,omitempty"` // 是否是boss
+	Context string `json:"context,omitempty"` // 出现场景
+}
+
+// StoryResourceLedgerEntry 本章资源变化
+type StoryResourceLedgerEntry struct {
+	Item   string `json:"item"`   // 资源名称
+	Start  int    `json:"start"`  // 开始数量
+	Delta  int    `json:"delta"`  // 变化量
+	End    int    `json:"end"`    // 结束数量
+	Reason string `json:"reason"` // 变化原因
+}
+
+// StoryOutlineScene 章节内场景
+type StoryOutlineScene struct {
+	Order      int      `json:"order"`               // 场景序号
+	POV        string   `json:"pov"`                 // 视角角色
+	Goal       string   `json:"goal"`                // 场景目标
+	Location   string   `json:"location"`            // 场景地点
+	Characters []string `json:"characters"`           // 出场角色
+	Words      int      `json:"words,omitempty"`     // 建议字数
+	Tone       string   `json:"tone,omitempty"`      // 情绪基调
+}
+
 // StoryChapter 故事章节
 type StoryChapter struct {
 	ID          string               `json:"id"`
@@ -63,8 +92,11 @@ type StoryChapter struct {
 	StateChange string               `json:"state_change"`
 	Conflict    string               `json:"conflict"`
 	Pacing      string               `json:"pacing"`
-	Timeline    StoryChapterTimeline `json:"timeline,omitempty"`  // 时间线信息
-	StateAnchor StoryStateAnchor     `json:"state_anchor,omitempty"` // 状态锚点
+	Timeline       StoryChapterTimeline       `json:"timeline,omitempty"`    // 时间线信息
+	StateAnchor    StoryStateAnchor           `json:"state_anchor,omitempty"` // 状态锚点
+	Enemies        []StoryOutlineEnemy        `json:"enemies,omitempty"`      // 敌人清单
+	ResourceLedger []StoryResourceLedgerEntry  `json:"resource_ledger,omitempty"` // 资源账本
+	Scenes         []StoryOutlineScene        `json:"scenes,omitempty"`       // 场景拆分
 }
 
 // StoryEvent 故事事件

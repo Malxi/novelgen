@@ -31,6 +31,9 @@ Generate detailed chapters for a specific volume, maintaining continuity with pr
 10. **pacing**: slow/normal/fast (string)
 11. **timeline**: Chapter timeline information (object) - ⚠️ REQUIRED for timeline consistency
 12. **state_anchor**: Protagonist state at chapter START (object) - ⚠️ REQUIRED for cross-chapter state tracking
+13. **enemies**: Enemy list for this chapter (array) - ⚠️ REQUIRED if chapter has combat
+14. **resource_ledger**: Resource changes this chapter (array) - ⚠️ REQUIRED if resources change
+15. **scenes**: Scene breakdown (array, 2-3 entries) - ⚠️ REQUIRED for focused writing
 
 ### ⚠️ CRITICAL: Events Count Requirement
 **Each chapter MUST have 3-5 events.** This is a HARD requirement.
@@ -120,6 +123,62 @@ NOT a comma-separated string like:
   "key_items": ["鹤嘴锄", "残破矿灯"],
   "notes": ""
 }
+```
+
+### ⚠️ CRITICAL: Enemy List (NEW)
+**Every chapter with combat events MUST declare enemies.** This gives the write agent exact enemy specs to use.
+
+**Enemy Fields:**
+- **name** (string, REQUIRED): 敌人名称，如 "虫族工蜂"
+- **count** (int, REQUIRED): 出现数量
+- **level** (int, optional): 敌人等级
+- **is_boss** (bool, optional): 是否是boss
+- **context** (string, optional): 出现场景，如 "机甲库伏击"
+
+**Example:**
+```json
+"enemies": [
+  {"name": "虫族工蜂", "count": 3, "level": 1, "context": "机甲库伏击"},
+  {"name": "虫族哨兵", "count": 1, "level": 3, "is_boss": true}
+]
+```
+
+### ⚠️ CRITICAL: Resource Ledger (NEW)
+**Track numeric resource changes per chapter.** Validator checks start+delta=end and cross-chapter continuity.
+
+**Ledger Fields:**
+- **item** (string): 资源名称
+- **start** (int): 本章开始时的数量
+- **delta** (int): 变化量（正=获得，负=消耗）
+- **end** (int): 本章结束时的数量（必须 = start + delta）
+- **reason** (string): 变化原因
+
+**Example:**
+```json
+"resource_ledger": [
+  {"item": "灵石", "start": 37, "delta": 3, "end": 40, "reason": "矿道挖掘"},
+  {"item": "灵石", "start": 40, "delta": -2, "end": 38, "reason": "购买丹药"}
+]
+```
+
+### ⚠️ CRITICAL: Scene Splitting (NEW)
+**Each chapter should split into 2-3 scenes.** Scenes give the write agent focused targets.
+
+**Scene Fields:**
+- **order** (int): 序号，从1开始
+- **pov** (string, REQUIRED): 视角角色
+- **goal** (string, REQUIRED): 场景目标（这个场景要推进什么）
+- **location** (string): 场景地点
+- **characters** (array): 本场景角色
+- **words** (int, optional): 建议字数
+- **tone** (string, optional): 情绪基调
+
+**Example:**
+```json
+"scenes": [
+  {"order": 1, "pov": "林野", "goal": "潜入矿道深处挖灵石", "location": "丙字三号矿道", "characters": ["林野", "老陈"], "words": 1200, "tone": "紧张"},
+  {"order": 2, "pov": "林野", "goal": "与赵虎密谋逃跑计划", "location": "矿奴大通铺", "characters": ["林野", "赵虎"], "words": 1800, "tone": "压抑"}
+]
 ```
 
 ### Event Types (⚠️ 推荐新格式)

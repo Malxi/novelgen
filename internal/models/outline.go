@@ -42,31 +42,66 @@ type ChapterTimeline struct {
 // StateAnchor declares the expected protagonist state at chapter start.
 // Write agent uses this as a target; validator checks cross-chapter consistency.
 type StateAnchor struct {
-	Cultivation string   `json:"cultivation,omitempty" md:"cultivation" desc:"修炼境界/能力等级，如：炼气三层、S级进化者一阶"`
-	SpiritStones int     `json:"spirit_stones,omitempty" md:"spirit_stones" desc:"灵石/资源数量"`
-	Allies      []string `json:"allies,omitempty" md:"allies" desc:"当前盟友/同伴"`
-	Injuries    []string `json:"injuries,omitempty" md:"injuries" desc:"当前伤势"`
-	Location    string   `json:"location,omitempty" md:"location" desc:"章节开始时的位置"`
-	KeyItems    []string `json:"key_items,omitempty" md:"key_items" desc:"当前持有的关键物品"`
-	Notes       string   `json:"notes,omitempty" md:"notes" desc:"其他值得追踪的状态"`
+	Cultivation  string   `json:"cultivation,omitempty" md:"cultivation" desc:"修炼境界/能力等级，如：炼气三层、S级进化者一阶"`
+	SpiritStones int      `json:"spirit_stones,omitempty" md:"spirit_stones" desc:"灵石/资源数量"`
+	Allies       []string `json:"allies,omitempty" md:"allies" desc:"当前盟友/同伴"`
+	Injuries     []string `json:"injuries,omitempty" md:"injuries" desc:"当前伤势"`
+	Location     string   `json:"location,omitempty" md:"location" desc:"章节开始时的位置"`
+	KeyItems     []string `json:"key_items,omitempty" md:"key_items" desc:"当前持有的关键物品"`
+	Notes        string   `json:"notes,omitempty" md:"notes" desc:"其他值得追踪的状态"`
+}
+
+// OutlineEnemy declares an enemy that appears in this chapter.
+// Write agent uses this as a reference for combat scenes.
+type OutlineEnemy struct {
+	Name    string `json:"name" md:"name" desc:"敌人名称，如：虫族工蜂、低阶妖兽"`
+	Count   int    `json:"count" md:"count" desc:"出现数量"`
+	Level   int    `json:"level,omitempty" md:"level" desc:"敌人等级"`
+	IsBoss  bool   `json:"is_boss,omitempty" md:"is_boss" desc:"是否是boss级敌人"`
+	Context string `json:"context,omitempty" md:"context" desc:"出现场景/上下文，如：矿道伏击、据点围攻"`
+}
+
+// ResourceLedgerEntry declares expected resource changes in this chapter.
+// Validator checks cross-chapter arithmetic.
+type ResourceLedgerEntry struct {
+	Item   string `json:"item" md:"item" desc:"资源名称，如：灵石、氚晶体"`
+	Start  int    `json:"start" md:"start" desc:"本章开始时的数量"`
+	Delta  int    `json:"delta" md:"delta" desc:"变化量，正数=获得，负数=消耗/失去"`
+	End    int    `json:"end" md:"end" desc:"本章结束时的数量"`
+	Reason string `json:"reason" md:"reason" desc:"变化原因，如：挖矿获得、购买消耗"`
+}
+
+// OutlineScene represents a scene within a chapter.
+// Write agent uses scene specs for focused writing.
+type OutlineScene struct {
+	Order      int      `json:"order" desc:"场景序号，从1开始"`
+	POV        string   `json:"pov" md:"pov" desc:"视角角色"`
+	Goal       string   `json:"goal" md:"goal" desc:"场景目标：这个场景要推进什么"`
+	Location   string   `json:"location" md:"location" desc:"场景地点（可以和章级地点不同）"`
+	Characters []string `json:"characters" md:"characters" desc:"本场景出现的角色"`
+	Words      int      `json:"words,omitempty" md:"words" desc:"建议字数"`
+	Tone       string   `json:"tone,omitempty" md:"tone" desc:"情绪基调：紧张、轻松、悲伤、燃"`
 }
 
 // Chapter represents a single chapter in the story
 type Chapter struct {
-	ID          string          `json:"id" md:"-"` // ID not shown in markdown
-	Title       string          `json:"title" md:"title"`
-	Summary     string          `json:"summary" md:"heading"`       // 格式: 角色 在 什么地方 发生了 什么事
-	Characters  []string        `json:"characters" md:"characters"` // 本章出现的角色名列表
-	Location    string          `json:"location" md:"location"`     // 事情发生的地点
-	Events      []Event         `json:"events" md:"events"`         // 本章发生的事件
-	Beats       []string        `json:"beats" md:"beats"`
-	OpeningBeat string          `json:"opening_beat,omitempty" desc:"First beat that continues the previous chapter"`
-	ClosingBeat string          `json:"closing_beat,omitempty" desc:"Final beat/hook that must lead into next chapter"`
-	StateChange string          `json:"state_change,omitempty" desc:"Primary change this chapter causes; must map to Events"`
-	Conflict    string          `json:"conflict" md:"conflict"`
-	Pacing      string          `json:"pacing" md:"pacing"`
-	Timeline    ChapterTimeline `json:"timeline,omitempty" md:"timeline" desc:"章节时间线信息"`
-	StateAnchor StateAnchor     `json:"state_anchor,omitempty" md:"state_anchor" desc:"章节开始时的主角状态锚点"`
+	ID             string               `json:"id" md:"-"` // ID not shown in markdown
+	Title          string               `json:"title" md:"title"`
+	Summary        string               `json:"summary" md:"heading"`       // 格式: 角色 在 什么地方 发生了 什么事
+	Characters     []string             `json:"characters" md:"characters"` // 本章出现的角色名列表
+	Location       string               `json:"location" md:"location"`     // 事情发生的地点
+	Events         []Event              `json:"events" md:"events"`         // 本章发生的事件
+	Beats          []string             `json:"beats" md:"beats"`
+	OpeningBeat    string               `json:"opening_beat,omitempty" desc:"First beat that continues the previous chapter"`
+	ClosingBeat    string               `json:"closing_beat,omitempty" desc:"Final beat/hook that must lead into next chapter"`
+	StateChange    string               `json:"state_change,omitempty" desc:"Primary change this chapter causes; must map to Events"`
+	Conflict       string               `json:"conflict" md:"conflict"`
+	Pacing         string               `json:"pacing" md:"pacing"`
+	Timeline       ChapterTimeline      `json:"timeline,omitempty" md:"timeline" desc:"章节时间线信息"`
+	StateAnchor    StateAnchor          `json:"state_anchor,omitempty" md:"state_anchor" desc:"章节开始时的主角状态锚点"`
+	Enemies        []OutlineEnemy       `json:"enemies,omitempty" md:"enemies" desc:"本章出现的敌人清单"`
+	ResourceLedger []ResourceLedgerEntry `json:"resource_ledger,omitempty" md:"resource_ledger" desc:"本章资源变化账本"`
+	Scenes         []OutlineScene       `json:"scenes,omitempty" md:"scenes" desc:"章节内场景拆分"`
 }
 
 // Event represents a story event that changes state

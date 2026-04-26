@@ -108,6 +108,15 @@ func (ov *OutlineValidator) Validate() *ValidationResult {
 	// 10. 状态锚点一致性检查
 	ov.validateStateAnchor()
 
+	// 11. 敌人清单检查
+	ov.validateEnemies()
+
+	// 12. 资源账本检查
+	ov.validateResourceLedger()
+
+	// 13. 场景拆分检查
+	ov.validateScenes()
+
 	return &ValidationResult{
 		IsValid:      len(ov.Issues) == 0,
 		IssueCount:   len(ov.Issues),
@@ -715,6 +724,147 @@ func (ov *OutlineValidator) validateStateAnchor() {
 				}
 
 				prev = sa
+			}
+		}
+	}
+}
+
+func (ov *OutlineValidator) validateEnemies() {
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				for _, enemy := range chapter.Enemies {
+					if enemy.Name == "" {
+						ov.Issues = append(ov.Issues, OutlineIssue{
+							Type: "enemy", Severity: "major", Location: chapter.ID,
+							Description: "敌人清单中存在空名称",
+							Fix:         "为每个敌人设置明确的名称",
+						})
+					}
+					if enemy.Count <= 0 {
+						ov.Warnings = append(ov.Warnings, OutlineWarning{
+							Type: "enemy", Location: chapter.ID,
+							Description: fmt.Sprintf("敌人 '%s' 数量为 %d，已自动设为1", enemy.Name, enemy.Count),
+							Suggestion:  "明确敌人的出现数量",
+						})
+					}
+				}
+				// Check: if chapter has combat events but no enemies listed
+				hasCombat := false
+				for _, evt := range chapter.Events {
+					if evt.Type == "combat" || evt.Action == "combat" {
+						hasCombat = true
+						break
+					}
+				}
+				if hasCombat && len(chapter.Enemies) == 0 {
+					ov.Warnings = append(ov.Warnings, OutlineWarning{
+						Type: "enemy", Location: chapter.ID,
+						Description: "章节有 combat 事件但未声明敌人清单",
+						Suggestion:  "在 enemies 中列出本章出现的敌人及其数量",
+					})
+				}
+			}
+		}
+	}
+}
+
+func (ov *OutlineValidator) validateResourceLedger() {
+	var prevLedger map[string]int // item → end count from previous chapter
+
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				if len(chapter.ResourceLedger) == 0 {
+					prevLedger = nil
+					continue
+				}
+				if prevLedger == nil {
+					prevLedger = make(map[string]int)
+				}
+
+				for _, entry := range chapter.ResourceLedger {
+					// Arithmetic check: Start + Delta should equal End
+					expected := entry.Start + entry.Delta
+					if expected != entry.End {
+						ov.Issues = append(ov.Issues, OutlineIssue{
+							Type: "resource_ledger", Severity: "critical",
+							Location:    chapter.ID,
+							Description: fmt.Sprintf("资源 '%s' 账目不对: %d + %d = %d ≠ %d", entry.Item, entry.Start, entry.Delta, expected, entry.End),
+							Fix:         fmt.Sprintf("修正 start/delta/end 使等式成立: %d + %d = %d", entry.Start, entry.Delta, entry.Start+entry.Delta),
+						})
+					}
+
+					// Continuity: this chapter's Start should match previous chapter's End
+					if prevEnd, ok := prevLedger[entry.Item]; ok && prevEnd != entry.Start {
+						ov.Warnings = append(ov.Warnings, OutlineWarning{
+							Type: "resource_ledger", Location: chapter.ID,
+							Description: fmt.Sprintf("资源 '%s' 与上一章不一致: 上一章结束=%d, 本章开始=%d", entry.Item, prevEnd, entry.Start),
+							Suggestion:  fmt.Sprintf("确保本章 start 等于上一章 end (%d)", prevEnd),
+						})
+					}
+					prevLedger[entry.Item] = entry.End
+				}
+			}
+		}
+	}
+}
+
+func (ov *OutlineValidator) validateScenes() {
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				if len(chapter.Scenes) == 0 {
+					ov.Suggestions = append(ov.Suggestions, OutlineSuggestion{
+						Type: "scenes", Location: chapter.ID,
+						Current:   "章节未拆分为场景",
+						Suggested: "将章节拆分为2-3个场景，每个场景指定POV/目标/地点/字数",
+						Reason:    "场景拆分帮助写作者聚焦每个场景的目标，避免跑题或漏角色",
+					})
+					continue
+				}
+
+				// Check scene order continuity
+				for i, scene := range chapter.Scenes {
+					if scene.Order != i+1 {
+						ov.Warnings = append(ov.Warnings, OutlineWarning{
+							Type: "scenes", Location: chapter.ID,
+							Description: fmt.Sprintf("场景序号不连续: 期望 %d, 实际 %d", i+1, scene.Order),
+							Suggestion:  "确保场景序号从1开始递增",
+						})
+					}
+					if scene.POV == "" {
+						ov.Warnings = append(ov.Warnings, OutlineWarning{
+							Type: "scenes", Location: chapter.ID,
+							Description: fmt.Sprintf("场景 %d 缺少POV角色", scene.Order),
+							Suggestion:  "为每个场景指定视角角色",
+						})
+					}
+					if scene.Goal == "" {
+						ov.Warnings = append(ov.Warnings, OutlineWarning{
+							Type: "scenes", Location: chapter.ID,
+							Description: fmt.Sprintf("场景 %d 缺少目标(goal)", scene.Order),
+							Suggestion:  "明确这个场景要推进什么、达成什么",
+						})
+					}
+				}
+
+				// Scene characters should be a subset of chapter characters
+				chapterChars := make(map[string]bool)
+				for _, name := range chapter.Characters {
+					chapterChars[name] = true
+				}
+				for _, scene := range chapter.Scenes {
+					for _, name := range scene.Characters {
+						if !chapterChars[name] {
+							ov.Warnings = append(ov.Warnings, OutlineWarning{
+								Type: "scenes", Location: chapter.ID,
+								Description: fmt.Sprintf("场景角色 '%s' 不在章节角色列表中", name),
+								Suggestion:  fmt.Sprintf("将 '%s' 添加到章节角色列表", name),
+							})
+						}
+					}
+				}
 			}
 		}
 	}
