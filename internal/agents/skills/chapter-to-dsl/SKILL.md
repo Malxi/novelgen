@@ -124,36 +124,68 @@ Chapter text is the authoritative source for enemy details. Example from chapter
   - locations: `loc_*`
   - enemies: `enemy_*`
 
-## State Delta Rules
+## State Delta Rules (CRITICAL — all are REQUIRED)
 
-Add `state_delta` inside the relevant `event { ... }` whenever the chapter states or implies:
+`state_delta` is the simulation's only source of truth. For every state-changing event in the chapter text, emit a `state_delta` inside the relevant `event { ... }`. Missing deltas = undetected bugs.
 
-- protagonist dies or revives:
-  - `kind = "death"` or `kind = "revive"`
-  - `target` should be the character id, usually the player id.
-- cultivation changes:
-  - `kind = "cultivation"`
-  - `field = "level"`
-  - `from = "qi_2"` / `to = "qi_1"` or other stable ASCII values.
-  - `delta` should be numeric if clear, for example `delta = -1`.
-- lifespan changes:
-  - `kind = "lifespan"`
-  - `field = "years"`
-  - `delta = -10` for losing ten years.
-  - If text says no lifespan loss, use `delta = 0` and `cost = "none"`.
-- injury changes:
-  - `kind = "injury"`
-  - `field = "status"`
-  - `to = "injured|severe|recovered|acting_normally|acting_injured"`.
-- resource changes:
-  - `kind = "resource"`
-  - `field = "item"`
-  - `target = "item_or_resource_id"`
-  - `delta` should be positive for gain and negative for consume if clear.
-- time jumps:
-  - `kind = "time"`
-  - `field = "elapsed_days"`
-  - `delta = N`.
+### injury (ALL characters, not just protagonist)
+
+Whenever ANY named character is hurt, injured, or killed in chapter text:
+
+- `kind = "injury"`
+- `target = "character_id"` — use the character's DSL id. Create an NPC entry if the character doesn't exist yet.
+- `field = "status"`
+- `to = "injured"` or `to = "severe"` or `to = "dead"`.
+- If a previously-injured character appears functioning normally without explanation, add: `kind = "injury"`, `to = "acting_normally"` with `note = "no_recovery_explained"`.
+
+Example from chapter text:
+```
+老陈被落石砸中小腿，疼得蹲在地上哀嚎。
+```
+→ `state_delta { target = "char_laochen" kind = "injury" field = "status" to = "injured" note = "落石砸中小腿" }`
+
+```
+老陈扛着锄头走在队伍最前面。
+```
+→ If old injury not resolved: `state_delta { target = "char_laochen" kind = "injury" field = "status" to = "acting_normally" note = "no_recovery_explained" }`
+
+### resource (numeric delta REQUIRED)
+
+Whenever items, currency, or materials are gained, consumed, given away, or lost:
+
+- `kind = "resource"`
+- `target = "item_id"` (e.g. `"spirit_stone"`, `"gold_coin"`)
+- `delta = N` — positive for gain, NEGATIVE for consume/lose/give. **This is mandatory.**
+- `note = "从37块挖了3块变成40块"` — fragment of chapter text showing the arithmetic.
+
+Example:
+```
+他从怀里摸出两块灵石递给老板。
+```
+→ `state_delta { target = "spirit_stone" kind = "resource" field = "item" delta = -2 note = "递给老板2块灵石" }`
+
+### time (timeline markers for cross-chapter consistency)
+
+Whenever the chapter text mentions a specific time offset, deadline, or date:
+
+- `kind = "time"`
+- `field = "timeline_marker"` 
+- `to = "缉厄司_三个月后才到"` or `to = "矿难第3天"`
+- `note = "exact quote"` — copy the exact sentence from chapter text.
+
+This allows the simulator to detect contradictions like "三个月后" vs "三天前就来了".
+
+### age (character age progression)
+
+When a character's age is explicitly stated:
+
+- `kind = "age_progression"`
+- `target = "character_id"`
+- `field = "age"`  
+- `to = "11"` or `delta = 1` if age increased.
+- `note = "第1章说小矿奴11岁"`
+
+### plot_thread (CRITICAL for mystery tracking)
 - explicit transition explanation:
   - `kind = "transition"`
   - `field = "explained"`
