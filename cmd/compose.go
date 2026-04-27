@@ -449,7 +449,82 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("\n%s\n", result.Summary)
+
+	// Cross-module: verify outline consistency with story setup
+	setupPath := filepath.Join("story", "setup", "story_setup.json")
+	if setupData, err := os.ReadFile(setupPath); err == nil {
+		var setup models.StorySetup
+		if json.Unmarshal(setupData, &setup) == nil {
+			crossIssues, crossWarnings := validateSetupOutlineCross(&setup, &storyOutline)
+			if len(crossIssues)+len(crossWarnings) > 0 {
+				fmt.Printf("\n  --- Cross-Module (Setup↔Outline) ---\n")
+				for _, w := range crossWarnings {
+					fmt.Printf("  ⚠ [cross] %s\n", w)
+				}
+				for _, i := range crossIssues {
+					fmt.Printf("  ✗ [cross] %s\n", i)
+				}
+			}
+		}
+	}
+
 	return nil
+}
+
+func validateSetupOutlineCross(setup *models.StorySetup, outline *rpg.StoryOutline) (issues, warnings []string) {
+	// Collect defined faction tiers from setup premises
+	setupFactions := make(map[string]map[string]bool) // faction → tier → true
+	for _, p := range setup.Premises {
+		if p.Category == "" {
+			continue
+		}
+		faction := p.Category
+		if setupFactions[faction] == nil {
+			setupFactions[faction] = make(map[string]bool)
+		}
+		for _, stage := range p.Progression {
+			setupFactions[faction][stage.Name] = true
+		}
+	}
+
+	// Collect defined resources from setup
+	setupResources := make(map[string]bool)
+	for _, r := range setup.WorldResources {
+		setupResources[r.Name] = true
+	}
+
+	// Check outline enemies against setup faction definitions
+	for _, part := range outline.Parts {
+		for _, vol := range part.Volumes {
+			for _, ch := range vol.Chapters {
+				for _, enemy := range ch.Enemies {
+					if enemy.Faction != "" && len(setupFactions) > 0 {
+						if tiers, ok := setupFactions[enemy.Faction]; ok {
+							if enemy.Tier != "" && !tiers[enemy.Tier] {
+								issues = append(issues, fmt.Sprintf(
+									"%s: enemy '%s' tier '%s' not defined in setup faction '%s'",
+									ch.ID, enemy.Name, enemy.Tier, enemy.Faction))
+							}
+						} else {
+							warnings = append(warnings, fmt.Sprintf(
+								"%s: enemy faction '%s' not defined in setup premises",
+								ch.ID, enemy.Faction))
+						}
+					}
+				}
+				for _, entry := range ch.ResourceLedger {
+					if entry.Item != "" && len(setupResources) > 0 {
+						if !setupResources[entry.Item] {
+							warnings = append(warnings, fmt.Sprintf(
+								"%s: resource '%s' not declared in setup.world_resources",
+								ch.ID, entry.Item))
+						}
+					}
+				}
+			}
+		}
+	}
+	return
 }
 
 func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.ProjectConfig) (*models.Outline, error) {

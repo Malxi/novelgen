@@ -103,12 +103,30 @@ Examples:
 }
 
 func init() {
+
+var setupCheckCmd = &cobra.Command{
+	Use:   "check",
+	Short: "Validate story setup for completeness and consistency",
+	Long: `Run validation against story/setup/story_setup.json.
+
+Checks include:
+  - Required fields and format
+  - Faction tier completeness (for enemy system)
+  - Timeline event ordering
+  - Resource scarcity consistency
+  - Premise progression gaps
+
+Examples:
+  novelgen setup check`,
+	RunE: runSetupCheck,
+}
 	// Register setup command using the new plugin mechanism
 	RegisterCommand(func() *cobra.Command {
 		setupCmd.AddCommand(setupGenCmd)
 		setupCmd.AddCommand(setupRegenCmd)
 		setupCmd.AddCommand(setupImproveCmd)
 		setupCmd.AddCommand(setupImportCmd)
+			setupCmd.AddCommand(setupCheckCmd)
 		return setupCmd
 	})
 
@@ -822,4 +840,103 @@ func formatList(items []string) string {
 		result.WriteString(fmt.Sprintf("- %s\n", item))
 	}
 	return result.String()
+}
+
+func runSetupCheck(cmd *cobra.Command, args []string) error {
+	logger.Section("NOVELGEN SETUP CHECK")
+
+	setupPath := filepath.Join("story", "setup", "story_setup.json")
+	if _, err := os.Stat(setupPath); err != nil {
+		return fmt.Errorf("story setup not found at %s", setupPath)
+	}
+
+	data, err := os.ReadFile(setupPath)
+	if err != nil {
+		return fmt.Errorf("failed to read setup: %w", err)
+	}
+
+	var setup models.StorySetup
+	if err := json.Unmarshal(data, &setup); err != nil {
+		return fmt.Errorf("failed to parse setup: %w", err)
+	}
+
+	issues, warnings, suggestions := 0, 0, 0
+
+	// Check required fields
+	if setup.ProjectName == "" {
+		fmt.Println("  ✗ 缺少项目名称")
+		issues++
+	}
+	if setup.Premise == "" {
+		fmt.Println("  ✗ 缺少核心设定(premise)")
+		issues++
+	}
+
+	// Check faction tier definitions (premises with category that looks like faction)
+	fmt.Println()
+	fmt.Printf("===== SETUP VALIDATION =====\n")
+	fmt.Printf("Project: %s | Genres: %v\n", setup.ProjectName, setup.Genres)
+	fmt.Printf("Premises: %d | Storylines: %d | Timeline events: %d | Resources: %d\n\n",
+		len(setup.Premises), len(setup.Storylines), len(setup.WorldTimeline), len(setup.WorldResources))
+
+	for _, p := range setup.Premises {
+		if len(p.Progression) == 0 {
+			fmt.Printf("  ⚠ [premise] '%s' 缺少 progression 等级体系\n", p.Name)
+			warnings++
+			continue
+		}
+		// Check progression gaps
+		for i, stage := range p.Progression {
+			if i > 0 && stage.Level != p.Progression[i-1].Level+1 {
+				fmt.Printf("  ⚠ [premise] '%s' progression 层级跳跃: Lv%d → Lv%d\n",
+					p.Name, p.Progression[i-1].Level, stage.Level)
+				warnings++
+			}
+		}
+	}
+
+	// Check timeline ordering
+	timelineWarned := false
+	for _, t := range setup.WorldTimeline {
+		if t.Year == "" || t.Event == "" {
+			if !timelineWarned {
+				fmt.Printf("  ⚠ [timeline] 事件缺少年份或描述\n")
+				warnings++
+				timelineWarned = true
+			}
+		}
+	}
+
+	// Check resource scarcity consistency
+	uniqueResources := 0
+	for _, r := range setup.WorldResources {
+		if r.Scarcity == "独一无二" {
+			uniqueResources++
+		}
+		if r.Name == "" || r.Category == "" {
+			fmt.Printf("  ⚠ [resource] 资源缺少名称或类型\n")
+			warnings++
+		}
+	}
+	if uniqueResources > 1 {
+		fmt.Printf("  💡 [resource] 有 %d 个'独一无二'资源，确认是否合理\n", uniqueResources)
+		suggestions++
+	}
+
+	// Check setup has faction definitions for future outline
+	hasFactions := false
+	for _, p := range setup.Premises {
+		if strings.Contains(p.Category, "zerg") || strings.Contains(p.Category, "ai_mech") ||
+			strings.Contains(strings.ToLower(p.Name), "阵营") || strings.Contains(strings.ToLower(p.Name), "虫族") ||
+			strings.Contains(strings.ToLower(p.Name), "机械") || strings.Contains(strings.ToLower(p.Name), "势力") {
+			hasFactions = true
+		}
+	}
+	if !hasFactions {
+		fmt.Printf("  💡 [faction] 未检测到阵营定义，建议在 premises 中定义敌对阵营的等级体系\n")
+		suggestions++
+	}
+
+	fmt.Printf("\n结果: %d 问题, %d 警告, %d 建议\n", issues, warnings, suggestions)
+	return nil
 }

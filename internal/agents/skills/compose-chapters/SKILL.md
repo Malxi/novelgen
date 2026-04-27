@@ -402,3 +402,10 @@ Example:
 - A mystery resolved in chapter N must have been planted in some earlier chapter
 - Do NOT plant and resolve in the same chapter (unless it's a minor beat)
 - Unresolved mysteries at the volume's end produce an info-level suggestion
+
+### Using Setup Data (NEW)
+The input includes story setup with faction definitions, world timeline, and resources. Use these to inform your output:
+
+- **Faction tiers from premises**: If setup.premises defines factions (e.g. `category: "zerg"` with progression levels), use those tier names in enemy `faction` and `tier` fields. Do NOT invent new faction names.
+- **World timeline**: Align chapter `timeline.anchor` with setup.world_timeline events. If the setup says "2247年: 休眠", the first chapter's timeline anchor should match.
+- **Resources**: Use resource names from setup.world_resources in `resource_ledger.item`. Do NOT invent resource names that aren't defined.
