@@ -25,15 +25,15 @@ Generate detailed chapters for a specific volume, maintaining continuity with pr
 4. **location**: Primary location (string)
 5. **events**: State change events (array of event objects)
 6. **beats**: 3-5 plot beats (array of strings, NOT comma-separated)
-7. **opening_beat**: Must equal beats[0] (string)
-8. **closing_beat**: Must equal beats[last] (string)
-9. **conflict**: Core conflict description (string)
-10. **pacing**: slow/normal/fast (string)
-11. **timeline**: Chapter timeline information (object) - ⚠️ REQUIRED for timeline consistency
-12. **state_anchor**: Protagonist state at chapter START (object) - ⚠️ REQUIRED for cross-chapter state tracking
-13. **enemies**: Enemy list for this chapter (array) - ⚠️ REQUIRED if chapter has combat
-14. **resource_ledger**: Resource changes this chapter (array) - ⚠️ REQUIRED if resources change
-15. **scenes**: Scene breakdown (array, 2-3 entries) - ⚠️ REQUIRED for focused writing
+
+
+7. **conflict**: Core conflict description (string)
+8. **pacing**: slow/normal/fast (string)
+9. **timeline**: Chapter timeline information (object) - ⚠️ REQUIRED for timeline consistency
+10. **state_anchor**: Protagonist state at chapter START (object) - ⚠️ REQUIRED for cross-chapter state tracking
+11. **enemies**: Enemy list for this chapter (array) - ⚠️ REQUIRED if chapter has combat
+12. **resource_ledger**: Resource changes this chapter (array) - ⚠️ REQUIRED if resources change
+13. **scenes**: Scene breakdown (array, 2-3 entries) - ⚠️ REQUIRED for focused writing
 
 ### ⚠️ CRITICAL: Events Count Requirement
 **Each chapter MUST have 3-5 events.** This is a HARD requirement.
@@ -316,8 +316,6 @@ Example:
         "Then, a second collapse kills them both",
         "Therefore, Lin Yan resurrects and realizes he has a unique ability"
       ],
-      "opening_beat": "Then, Lin Yan wakes up in the collapsed mine with no memory",
-      "closing_beat": "Therefore, Lin Yan resurrects and realizes he has a unique ability",
       "conflict": "Survival in the collapsed mine while discovering his ability",
       "pacing": "fast",
       "timeline": {
@@ -363,8 +361,6 @@ Example:
         "Then, fierce battle begins with Lin Yan facing the boss insect",
         "Therefore, they defeat the swarm and secure the settlement"
       ],
-      "opening_beat": "Then, insect swarm approaches the settlement",
-      "closing_beat": "Therefore, they defeat the swarm and secure the settlement",
       "conflict": "Defending settlement from insect swarm",
       "pacing": "fast",
       "timeline": {
@@ -400,4 +396,4 @@ Example:
 6. **First Chapter Hook**: Chapter 1 must immediately engage the reader
 7. **Last Chapter Cliffhanger**: Final chapter should set up the next volume
 8. **Event Progression**: Events should follow a logical flow: enter/meet → discover/learn → combat/achieve
-9. **⚠️ EVENT COUNT**: Each chapter MUST have 3-5 events. This is a HARD requirement.
+7. **⚠️ EVENT COUNT**: Each chapter MUST have 3-5 events. This is a HARD requirement.

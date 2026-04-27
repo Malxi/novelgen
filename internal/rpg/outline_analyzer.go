@@ -211,7 +211,7 @@ func (oa *OutlineAnalyzer) hasLocationTransition(prevCh, currCh StoryChapter) bo
 	}
 	
 	for _, keyword := range transitionKeywords {
-		if strings.Contains(currCh.OpeningBeat, keyword) {
+		if strings.Contains(currCh.Beats[0], keyword) {
 			return true
 		}
 	}

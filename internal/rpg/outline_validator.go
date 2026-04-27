@@ -233,7 +233,7 @@ func (ov *OutlineValidator) validateStructure() {
 				}
 
 				// 检查关键字段
-				if chapter.OpeningBeat == "" {
+				if len(chapter.Beats) > 0 && chapter.Beats[0] == "" {
 					ov.Warnings = append(ov.Warnings, OutlineWarning{
 						Type:        "content",
 						Location:    location,
@@ -242,7 +242,7 @@ func (ov *OutlineValidator) validateStructure() {
 					})
 				}
 
-				if chapter.ClosingBeat == "" {
+				if chapter.Beats[len(chapter.Beats)-1] == "" {
 					ov.Warnings = append(ov.Warnings, OutlineWarning{
 						Type:        "content",
 						Location:    location,
@@ -356,9 +356,9 @@ func (ov *OutlineValidator) validatePlotLogic() {
 				// 检查状态连续性
 				if ci > 0 && prevState != "" {
 					// 检查当前章节的opening_beat是否承接上一章的closing_beat
-					if !strings.Contains(chapter.OpeningBeat, "继续") &&
-						!strings.Contains(chapter.OpeningBeat, "随后") &&
-						!strings.Contains(chapter.OpeningBeat, "紧接着") {
+					if !strings.Contains(chapter.Beats[0], "继续") &&
+						!strings.Contains(chapter.Beats[0], "随后") &&
+						!strings.Contains(chapter.Beats[0], "紧接着") {
 						// 可能缺少过渡
 						if chapter.StateChange != "" && !strings.Contains(chapter.StateChange, prevState) {
 							ov.Warnings = append(ov.Warnings, OutlineWarning{
@@ -382,16 +382,16 @@ func (ov *OutlineValidator) validatePlotLogic() {
 				}
 
 				// 检查冲突是否解决
-				if chapter.Conflict != "" && chapter.ClosingBeat != "" {
-					if !strings.Contains(chapter.ClosingBeat, "解决") &&
-						!strings.Contains(chapter.ClosingBeat, "结束") &&
-						!strings.Contains(chapter.ClosingBeat, "胜利") &&
-						!strings.Contains(chapter.ClosingBeat, "失败") {
+				if chapter.Conflict != "" && len(chapter.Beats) > 1 {
+					if !strings.Contains(chapter.Beats[len(chapter.Beats)-1], "解决") &&
+						!strings.Contains(chapter.Beats[len(chapter.Beats)-1], "结束") &&
+						!strings.Contains(chapter.Beats[len(chapter.Beats)-1], "胜利") &&
+						!strings.Contains(chapter.Beats[len(chapter.Beats)-1], "失败") {
 						ov.Suggestions = append(ov.Suggestions, OutlineSuggestion{
 							Type:      "logic",
 							Location:  location,
-							Current:   chapter.ClosingBeat,
-							Suggested: chapter.ClosingBeat + "（冲突得到解决或升级）",
+							Current:   chapter.Beats[len(chapter.Beats)-1],
+							Suggested: chapter.Beats[len(chapter.Beats)-1] + "（冲突得到解决或升级）",
 							Reason:    "确保冲突有明确的阶段性结果",
 						})
 					}
@@ -504,9 +504,9 @@ func (ov *OutlineValidator) validateTransitions() {
 				if prevChapter.Location != "" && currChapter.Location != "" &&
 					prevChapter.Location != currChapter.Location {
 					// 地点变化，检查是否有合理的转换
-					if !strings.Contains(currChapter.OpeningBeat, "来到") &&
-						!strings.Contains(currChapter.OpeningBeat, "前往") &&
-						!strings.Contains(currChapter.OpeningBeat, "到达") {
+					if !strings.Contains(currChapter.Beats[0], "来到") &&
+						!strings.Contains(currChapter.Beats[0], "前往") &&
+						!strings.Contains(currChapter.Beats[0], "到达") {
 						ov.Warnings = append(ov.Warnings, OutlineWarning{
 							Type:     "transition",
 							Location: currChapter.ID,

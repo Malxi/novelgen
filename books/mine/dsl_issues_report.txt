@@ -1,0 +1,598 @@
+DSL Simulator Report
+====================
+
+DSL File: story/rpg/04_chapters.rpg
+Total Issues: 148
+
+1. [info/pacing] 
+   建议添加明确的起始章节（序章/苏醒等）
+   Suggestion: 让读者更容易进入故事
+
+2. [info/pacing] 
+   建议添加明确的结尾章节
+   Suggestion: 给故事一个完整的收束
+
+3. [warning/description] 
+   主角缺少背景故事
+   Suggestion: 添加主角的背景故事，让读者更容易产生共鸣
+
+4. [warning/character] 
+   主角缺少性格或动机描述
+   Suggestion: 定义主角的性格特点和行动动机
+
+5. [info/conflict] 
+   缺少明确的反派角色
+   Suggestion: 考虑添加一个反派角色来增加冲突
+
+6. [info/character] 
+   缺少导师/引路人角色
+   Suggestion: 考虑添加一个导师角色来帮助主角成长
+
+7. [info/description] 
+   地点 '黑风灵石矿丁字八号废弃矿道' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+8. [info/description] 
+   地点 '黑风灵石矿西坡废石堆' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+9. [info/description] 
+   地点 '黑风矿矿道入口' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+10. [info/description] 
+   地点 '黑风矿西坡废石堆' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+11. [info/description] 
+   地点 '黑风矿未登记废弃深矿道' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+12. [info/description] 
+   地点 '黑风矿矿奴大通铺' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+13. [info/description] 
+   地点 '黑风矿西岔道' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+14. [info/description] 
+   地点 '黑风矿地下遗迹入口' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+15. [info/description] 
+   地点 '黑风矿地下遗迹外围' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+16. [info/description] 
+   地点 '黑风矿废弃矿道落石陷阱' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+17. [info/description] 
+   地点 '黑风矿废弃矿道岔路口' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+18. [info/description] 
+   地点 '黑风矿西侧废弃支矿道' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+19. [info/description] 
+   地点 '黑风矿隐藏岩洞' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+20. [info/description] 
+   地点 '黑风矿后山隐蔽小路' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+21. [info/description] 
+   地点 '黑松林边缘' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+22. [info/description] 
+   地点 '黑风矿哨塔' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+23. [info/description] 
+   地点 'loc_qing_niu_zhen' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+24. [info/growth] P1-V1-C1 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+25. [warning/description] P1-V2-C1 step 1 
+   步骤 1 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+26. [warning/description] P1-V2-C1 step 2 
+   步骤 2 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+27. [warning/description] P1-V2-C1 step 3 
+   步骤 3 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+28. [warning/description] P1-V2-C1 step 4 
+   步骤 4 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+29. [warning/description] P1-V2-C1 step 5 
+   步骤 5 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+30. [warning/description] P1-V2-C1 step 6 
+   步骤 6 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+31. [warning/description] P1-V2-C1 step 7 
+   步骤 7 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+32. [warning/description] P1-V2-C1 step 8 
+   步骤 8 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+33. [warning/description] P1-V2-C2 step 1 
+   步骤 1 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+34. [warning/description] P1-V2-C2 step 2 
+   步骤 2 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+35. [warning/description] P1-V2-C2 step 3 
+   步骤 3 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+36. [warning/description] P1-V2-C2 step 4 
+   步骤 4 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+37. [warning/description] P1-V2-C2 step 5 
+   步骤 5 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+38. [warning/description] P1-V2-C2 step 6 
+   步骤 6 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+39. [warning/description] P1-V2-C2 step 7 
+   步骤 7 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+40. [warning/description] P1-V2-C2 step 8 
+   步骤 8 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+41. [warning/description] P1-V2-C3 step 1 
+   步骤 1 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+42. [warning/description] P1-V2-C3 step 2 
+   步骤 2 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+43. [warning/description] P1-V2-C3 step 3 
+   步骤 3 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+44. [warning/description] P1-V2-C3 step 4 
+   步骤 4 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+45. [warning/description] P1-V2-C3 step 5 
+   步骤 5 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+46. [warning/description] P1-V2-C3 step 6 
+   步骤 6 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+47. [warning/description] P1-V2-C4 step 1 
+   步骤 1 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+48. [warning/description] P1-V2-C4 step 2 
+   步骤 2 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+49. [warning/description] P1-V2-C4 step 3 
+   步骤 3 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+50. [warning/description] P1-V2-C4 step 4 
+   步骤 4 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+51. [warning/description] P1-V2-C4 step 5 
+   步骤 5 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+52. [warning/description] P1-V2-C4 step 6 
+   步骤 6 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+53. [warning/description] P1-V2-C5 step 1 
+   步骤 1 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+54. [warning/description] P1-V2-C5 step 2 
+   步骤 2 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+55. [warning/description] P1-V2-C5 step 3 
+   步骤 3 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+56. [warning/description] P1-V2-C5 step 4 
+   步骤 4 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+57. [warning/description] P1-V2-C5 step 5 
+   步骤 5 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+58. [warning/description] P1-V2-C5 step 6 
+   步骤 6 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+59. [warning/description] P1-V2-C5 step 7 
+   步骤 7 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+60. [warning/description] P1-V2-C5 step 8 
+   步骤 8 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+61. [warning/description] P1-V2-C5 step 9 
+   步骤 9 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+62. [warning/description] P1-V2-C5 step 10 
+   步骤 10 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+63. [warning/description] P1-V2-C5 step 11 
+   步骤 11 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+64. [warning/description] P1-V2-C6 step 1 
+   步骤 1 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+65. [warning/description] P1-V2-C6 step 2 
+   步骤 2 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+66. [warning/description] P1-V2-C6 step 3 
+   步骤 3 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+67. [warning/description] P1-V2-C6 step 4 
+   步骤 4 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+68. [warning/description] P1-V2-C6 step 5 
+   步骤 5 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+69. [warning/description] P1-V2-C6 step 6 
+   步骤 6 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+70. [warning/description] P1-V2-C6 step 7 
+   步骤 7 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+71. [warning/description] P1-V2-C6 step 8 
+   步骤 8 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+72. [warning/description] P1-V2-C6 step 9 
+   步骤 9 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+73. [warning/description] P1-V2-C7 step 1 
+   步骤 1 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+74. [warning/description] P1-V2-C7 step 2 
+   步骤 2 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+75. [warning/description] P1-V2-C7 step 3 
+   步骤 3 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+76. [warning/description] P1-V2-C7 step 4 
+   步骤 4 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+77. [warning/description] P1-V2-C7 step 5 
+   步骤 5 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+78. [warning/description] P1-V2-C7 step 6 
+   步骤 6 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+79. [warning/description] P1-V2-C7 step 7 
+   步骤 7 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+80. [warning/description] P1-V2-C8 step 1 
+   步骤 1 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+81. [warning/description] P1-V2-C8 step 2 
+   步骤 2 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+82. [warning/description] P1-V2-C8 step 3 
+   步骤 3 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+83. [warning/description] P1-V2-C8 step 4 
+   步骤 4 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+84. [warning/description] P1-V2-C8 step 5 
+   步骤 5 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+85. [warning/description] P1-V2-C8 step 6 
+   步骤 6 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+86. [warning/description] P1-V2-C8 step 7 
+   步骤 7 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+87. [warning/description] P1-V2-C8 step 8 
+   步骤 8 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+88. [warning/description] P1-V2-C8 step 9 
+   步骤 9 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+89. [warning/description] P1-V2-C9 step 1 
+   步骤 1 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+90. [warning/description] P1-V2-C9 step 2 
+   步骤 2 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+91. [warning/description] P1-V2-C9 step 3 
+   步骤 3 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+92. [warning/description] P1-V2-C9 step 4 
+   步骤 4 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+93. [warning/description] P1-V2-C9 step 5 
+   步骤 5 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+94. [warning/description] P1-V2-C9 step 6 
+   步骤 6 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+95. [warning/description] P1-V2-C9 step 7 
+   步骤 7 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+96. [warning/description] P1-V2-C9 step 8 
+   步骤 8 缺少描述
+   Suggestion: 添加详细的步骤描述
+
+97. [info/description] P1-V3-C1 step 5 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+98. [info/growth] P1-V3-C1 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+99. [info/growth] P1-V3-C2 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+100. [info/growth] P1-V3-C3 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+101. [info/description] P1-V3-C4 step 3 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+102. [info/growth] P1-V3-C4 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+103. [info/description] P1-V3-C5 step 5 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+104. [info/growth] P1-V3-C5 step 5 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+105. [info/growth] P1-V3-C5 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+106. [info/description] P1-V3-C6 step 4 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+107. [info/growth] P1-V3-C6 step 4 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+108. [info/description] P1-V3-C6 step 5 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+109. [info/growth] P1-V3-C6 step 5 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+110. [info/description] P1-V3-C6 step 6 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+111. [info/growth] P1-V3-C6 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+112. [info/description] P1-V3-C7 step 4 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+113. [info/growth] P1-V3-C7 step 4 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+114. [info/growth] P1-V3-C7 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+115. [info/description] P1-V3-C8 step 3 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+116. [info/growth] P1-V3-C8 step 3 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+117. [info/description] P1-V3-C8 step 4 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+118. [info/description] P1-V3-C8 step 7 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+119. [info/growth] P1-V3-C8 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+120. [info/description] P1-V3-C9 step 3 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+121. [info/description] P1-V3-C9 step 6 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+122. [info/growth] P1-V3-C9 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+123. [info/growth] P1-V4-C1 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+124. [info/description] P1-V4-C2 step 5 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+125. [info/growth] P1-V4-C2 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+126. [info/growth] P1-V4-C3 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+127. [info/description] P1-V4-C4 step 2 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+128. [info/growth] P1-V4-C4 step 2 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+129. [info/growth] P1-V4-C4 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+130. [info/description] P1-V4-C5 step 3 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+131. [info/growth] P1-V4-C5 step 3 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+132. [info/growth] P1-V4-C5 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+133. [info/description] P1-V4-C6 step 5 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+134. [info/growth] P1-V4-C6 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+135. [info/growth] P1-V4-C7 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+136. [warning/continuity] P1-V2-C9 
+   章节时间跨度约 30 天，但 DSL 未捕捉到明确过渡说明
+   Suggestion: 在章节开头或上一章结尾补充过渡段，说明这段时间的修炼、生存、关系和资源变化
+
+137. [warning/continuity] P1-V3-C1 
+   章节时间跨度约 30 天，但 DSL 未捕捉到明确过渡说明
+   Suggestion: 在章节开头或上一章结尾补充过渡段，说明这段时间的修炼、生存、关系和资源变化
+
+138. [warning/continuity] P1-V3-C4 
+   章节时间跨度约 15 天，但 DSL 未捕捉到明确过渡说明
+   Suggestion: 在章节开头或上一章结尾补充过渡段，说明这段时间的修炼、生存、关系和资源变化
+
+139. [warning/continuity] P1-V3-C6 
+   章节时间跨度约 15 天，但 DSL 未捕捉到明确过渡说明
+   Suggestion: 在章节开头或上一章结尾补充过渡段，说明这段时间的修炼、生存、关系和资源变化
+
+140. [warning/continuity] P1-V4-C5 
+   章节时间跨度约 15 天，但 DSL 未捕捉到明确过渡说明
+   Suggestion: 在章节开头或上一章结尾补充过渡段，说明这段时间的修炼、生存、关系和资源变化
+
+141. [critical/logic] P1-V3-C5 
+   死亡后从练气二层或更高境界跌到练气一层，但未出现寿元代价，和既有底线规则冲突
+   Suggestion: 补充本次免寿元代价的触发条件，或修正为扣寿元版本
+
+142. [warning/logic] 
+   多次死亡代价模式不一致，DSL 状态机观察到修为掉级、寿元折损和无明确代价并存
+   Suggestion: 把复活规则写入 story setup -> RPG DSL，并在每次死亡事件中显式标出触发分支
+
+143. [warning/growth] P1-V2-C4 
+   修为从 P1-V1-C1 的练气2层提升到本章练气9层，但 DSL 未捕捉到明确修炼或恢复过程
+   Suggestion: 补充吐纳、闭关、资源消耗或突破描写，或让 chapter -> DSL 显式输出 cultivation_change
+
+144. [warning/growth] P1-V3-C5 
+   修为从 P1-V2-C7 的练气1层提升到本章练气2层，但 DSL 未捕捉到明确修炼或恢复过程
+   Suggestion: 补充吐纳、闭关、资源消耗或突破描写，或让 chapter -> DSL 显式输出 cultivation_change
+
+145. [info/character] 
+   NPC '周虎' 只在一个章节中出现
+   Suggestion: 考虑让角色在其他章节中也有出现，增强存在感
+
+146. [info/character] 
+   NPC '小石头' 只在一个章节中出现
+   Suggestion: 考虑让角色在其他章节中也有出现，增强存在感
+
+147. [info/conflict] 
+   故事中冲突事件较少
+   Suggestion: 考虑添加更多冲突来增加故事张力
+
+148. [info/growth] 
+   故事较长(26章)但主角成长较少(等级1)，建议增加突破情节
+   Suggestion: 考虑在中期添加境界突破、能力觉醒等成长高潮
+

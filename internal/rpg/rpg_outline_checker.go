@@ -153,10 +153,10 @@ func (orc *OutlineRPGChecker) calculateStructureIntegrity(chapters []StoryChapte
 	// 检查章节完整性
 	for _, ch := range chapters {
 		// 缺少必要字段扣分
-		if ch.OpeningBeat == "" {
+		if ch.Beats[0] == "" {
 			score -= 5
 		}
-		if ch.ClosingBeat == "" {
+		if len(ch.Beats) > 0 && ch.Beats[len(ch.Beats)-1] == "" {
 			score -= 5
 		}
 		if ch.StateChange == "" {
@@ -245,7 +245,7 @@ func (orc *OutlineRPGChecker) calculatePlotCoherence(chapters []StoryChapter) in
 			hasTransition := false
 			transitionKeywords := []string{"回到", "前往", "来到", "进入", "离开", "赶到"}
 			for _, keyword := range transitionKeywords {
-				if strings.Contains(currCh.OpeningBeat, keyword) {
+				if strings.Contains(currCh.Beats[0], keyword) {
 					hasTransition = true
 					break
 				}

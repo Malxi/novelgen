@@ -270,8 +270,6 @@ func convertOutlineSnapshot(snap *StoryOutlineSnapshot) rpg.StoryOutline {
 					Characters:  cs.Characters,
 					Location:    cs.Location,
 					Beats:       cs.Beats,
-					OpeningBeat: cs.OpeningBeat,
-					ClosingBeat: cs.ClosingBeat,
 					StateChange: cs.StateChange,
 					Conflict:    cs.Conflict,
 					Pacing:      cs.Pacing,

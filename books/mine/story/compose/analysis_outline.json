@@ -1,0 +1,1937 @@
+{
+  "config": {
+    "name": "修仙小说大纲分析器",
+    "description": "专门针对修仙小说的战力体系、境界突破等规则检查",
+    "rules": [
+      {
+        "id": "character_consistency",
+        "name": "角色列表一致性",
+        "type": "consistency",
+        "target": "character_list",
+        "condition": {
+          "operator": "",
+          "field": "",
+          "value": null,
+          "pattern": ""
+        },
+        "severity": "warning",
+        "message": "角色出场逻辑不一致",
+        "suggestion": "将角色添加到章节角色列表或修改事件"
+      },
+      {
+        "id": "location_transition",
+        "name": "地点转换过渡",
+        "type": "consistency",
+        "target": "location_transition",
+        "condition": {
+          "operator": "",
+          "field": "",
+          "value": null,
+          "pattern": ""
+        },
+        "severity": "info",
+        "message": "地点转换缺乏过渡描述",
+        "suggestion": "在开场节拍中添加地点转换说明"
+      },
+      {
+        "id": "character_frequency_low",
+        "name": "角色出场频率过低",
+        "type": "frequency",
+        "target": "character_appearances",
+        "condition": {
+          "operator": "lte",
+          "field": "",
+          "value": 1,
+          "pattern": ""
+        },
+        "severity": "info",
+        "message": "角色仅出场一次，可能是工具人",
+        "suggestion": "考虑给角色更多戏份或合并角色"
+      },
+      {
+        "id": "chapter_event_count",
+        "name": "章节事件数量",
+        "type": "threshold",
+        "target": "chapter",
+        "condition": {
+          "operator": "lt",
+          "field": "events_per_chapter",
+          "value": 1,
+          "pattern": ""
+        },
+        "severity": "warning",
+        "message": "章节事件过少",
+        "suggestion": "增加章节内的事件推动剧情"
+      },
+      {
+        "id": "cultivation_change_frequency",
+        "name": "修为变化频率",
+        "type": "frequency",
+        "target": "events",
+        "condition": {
+          "operator": "gt",
+          "field": "",
+          "value": 10,
+          "pattern": "(修为|境界|练气|筑基|金丹|元婴)"
+        },
+        "severity": "warning",
+        "message": "修为变化过于频繁，可能导致战力体系崩坏",
+        "suggestion": "减少修为变化次数，建立稳定的战力预期"
+      },
+      {
+        "id": "breakthrough_pattern",
+        "name": "突破模式检查",
+        "type": "pattern",
+        "target": "events",
+        "condition": {
+          "operator": "exists",
+          "field": "",
+          "value": null,
+          "pattern": "突破.*跌落|跌落.*突破"
+        },
+        "severity": "info",
+        "message": "发现突破-跌落循环模式",
+        "suggestion": "确保每次跌落都有合理的恢复机制"
+      }
+    ],
+    "patterns": null,
+    "thresholds": {
+      "critical_score": 70,
+      "fatal_score": 100,
+      "warning_score": 40
+    },
+    "custom_data": null
+  },
+  "issues": [
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V1-C9",
+      "message": "事件中的角色 '小石头' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V1-C9",
+        "character": "小石头"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V5-C2",
+      "message": "事件中的角色 '陈默' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V5-C2",
+        "character": "陈默"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V6-C1",
+      "message": "事件中的角色 '王伯' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V6-C1",
+        "character": "王伯"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V6-C4",
+      "message": "事件中的角色 '张凯' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V6-C4",
+        "character": "张凯"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V6-C4",
+      "message": "事件中的角色 '书友会全体' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V6-C4",
+        "character": "书友会全体"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V6-C6",
+      "message": "事件中的角色 '赵磊' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V6-C6",
+        "character": "赵磊"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V6-C7",
+      "message": "事件中的角色 '书友会全体' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V6-C7",
+        "character": "书友会全体"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V6-C8",
+      "message": "事件中的角色 '苏晚' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V6-C8",
+        "character": "苏晚"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V7-C4",
+      "message": "事件中的角色 '沈明' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V7-C4",
+        "character": "沈明"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V7-C5",
+      "message": "事件中的角色 '书友会全体' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V7-C5",
+        "character": "书友会全体"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V9-C2",
+      "message": "事件中的角色 '顾衍' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V9-C2",
+        "character": "顾衍"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V9-C2",
+      "message": "事件中的角色 '顾衍' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V9-C2",
+        "character": "顾衍"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V9-C2",
+      "message": "事件中的角色 '顾衍' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V9-C2",
+        "character": "顾衍"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V9-C3",
+      "message": "事件中的角色 '王伯' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V9-C3",
+        "character": "王伯"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V9-C3",
+      "message": "事件中的角色 '小石头' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V9-C3",
+        "character": "小石头"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V9-C4",
+      "message": "事件中的角色 '探险队全体' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V9-C4",
+        "character": "探险队全体"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V9-C5",
+      "message": "事件中的角色 '探险队全体' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V9-C5",
+        "character": "探险队全体"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V9-C6",
+      "message": "事件中的角色 '探险队全体' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V9-C6",
+        "character": "探险队全体"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V9-C8",
+      "message": "事件中的角色 '探险队全体' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V9-C8",
+        "character": "探险队全体"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V9-C9",
+      "message": "事件中的角色 '探险队全体' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V9-C9",
+        "character": "探险队全体"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "character_consistency",
+      "type": "consistency",
+      "severity": "warning",
+      "location": "P1-V9-C10",
+      "message": "事件中的角色 '探险队全体' 不在章节角色列表中",
+      "details": {
+        "chapter": "P1-V9-C10",
+        "character": "探险队全体"
+      },
+      "suggestion": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V1-C3",
+      "message": "地点从 '黑风灵石矿丙字三号矿道' 变为 '黑风灵石矿矿道入口广场' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V1-C3",
+        "from": "黑风灵石矿丙字三号矿道",
+        "to": "黑风灵石矿矿道入口广场"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V1-C4",
+      "message": "地点从 '黑风灵石矿矿道入口广场' 变为 '黑风灵石矿矿奴大通铺' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V1-C4",
+        "from": "黑风灵石矿矿道入口广场",
+        "to": "黑风灵石矿矿奴大通铺"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V1-C5",
+      "message": "地点从 '黑风灵石矿矿奴大通铺' 变为 '黑风灵石矿丙字七号矿道' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V1-C5",
+        "from": "黑风灵石矿矿奴大通铺",
+        "to": "黑风灵石矿丙字七号矿道"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V1-C6",
+      "message": "地点从 '黑风灵石矿丙字七号矿道' 变为 '黑风灵石矿主矿道入口' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V1-C6",
+        "from": "黑风灵石矿丙字七号矿道",
+        "to": "黑风灵石矿主矿道入口"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V1-C7",
+      "message": "地点从 '黑风灵石矿主矿道入口' 变为 '黑风灵石矿矿场广场' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V1-C7",
+        "from": "黑风灵石矿主矿道入口",
+        "to": "黑风灵石矿矿场广场"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V1-C8",
+      "message": "地点从 '黑风灵石矿矿场广场' 变为 '黑风灵石矿废弃矿道' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V1-C8",
+        "from": "黑风灵石矿矿场广场",
+        "to": "黑风灵石矿废弃矿道"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V1-C9",
+      "message": "地点从 '黑风灵石矿废弃矿道' 变为 '黑风灵石矿丁字八号废弃矿道' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V1-C9",
+        "from": "黑风灵石矿废弃矿道",
+        "to": "黑风灵石矿丁字八号废弃矿道"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V1-C10",
+      "message": "地点从 '黑风灵石矿丁字八号废弃矿道' 变为 '黑风灵石矿矿奴大通铺' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V1-C10",
+        "from": "黑风灵石矿丁字八号废弃矿道",
+        "to": "黑风灵石矿矿奴大通铺"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V2-C2",
+      "message": "地点从 '黑风灵石矿废弃矿道入口' 变为 '黑风灵石矿最深废弃矿洞中段' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V2-C2",
+        "from": "黑风灵石矿废弃矿道入口",
+        "to": "黑风灵石矿最深废弃矿洞中段"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V2-C3",
+      "message": "地点从 '黑风灵石矿最深废弃矿洞中段' 变为 '黑风灵石矿地下遗迹入口' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V2-C3",
+        "from": "黑风灵石矿最深废弃矿洞中段",
+        "to": "黑风灵石矿地下遗迹入口"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V2-C4",
+      "message": "地点从 '黑风灵石矿地下遗迹入口' 变为 '黑风灵石矿地下遗迹入口外侧矿道' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V2-C4",
+        "from": "黑风灵石矿地下遗迹入口",
+        "to": "黑风灵石矿地下遗迹入口外侧矿道"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V2-C9",
+      "message": "地点从 '黑风灵石矿地下遗迹入口外侧矿道' 变为 '黑风灵石矿最深废弃矿洞入口' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V2-C9",
+        "from": "黑风灵石矿地下遗迹入口外侧矿道",
+        "to": "黑风灵石矿最深废弃矿洞入口"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V3-C1",
+      "message": "地点从 '黑风灵石矿矿奴大通铺' 变为 '黑风灵石矿废弃矿道隐藏岩洞' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V3-C1",
+        "from": "黑风灵石矿矿奴大通铺",
+        "to": "黑风灵石矿废弃矿道隐藏岩洞"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V3-C2",
+      "message": "地点从 '黑风灵石矿废弃矿道隐藏岩洞' 变为 '黑风灵石矿各主矿道' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V3-C2",
+        "from": "黑风灵石矿废弃矿道隐藏岩洞",
+        "to": "黑风灵石矿各主矿道"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V3-C3",
+      "message": "地点从 '黑风灵石矿各主矿道' 变为 '黑风灵石矿矿道入口广场' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V3-C3",
+        "from": "黑风灵石矿各主矿道",
+        "to": "黑风灵石矿矿道入口广场"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V3-C4",
+      "message": "地点从 '黑风灵石矿矿道入口广场' 变为 '黑风灵石矿矿奴大通铺、主矿道' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V3-C4",
+        "from": "黑风灵石矿矿道入口广场",
+        "to": "黑风灵石矿矿奴大通铺、主矿道"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V3-C5",
+      "message": "地点从 '黑风灵石矿矿奴大通铺、主矿道' 变为 '黑风灵石矿主矿道' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V3-C5",
+        "from": "黑风灵石矿矿奴大通铺、主矿道",
+        "to": "黑风灵石矿主矿道"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V3-C6",
+      "message": "地点从 '黑风灵石矿主矿道' 变为 '黑风灵石矿支矿道' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V3-C6",
+        "from": "黑风灵石矿主矿道",
+        "to": "黑风灵石矿支矿道"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V3-C7",
+      "message": "地点从 '黑风灵石矿支矿道' 变为 '黑风灵石矿废弃矿道附近' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V3-C7",
+        "from": "黑风灵石矿支矿道",
+        "to": "黑风灵石矿废弃矿道附近"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V3-C8",
+      "message": "地点从 '黑风灵石矿废弃矿道附近' 变为 '黑风灵石矿地下遗迹入口附近矿道' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V3-C8",
+        "from": "黑风灵石矿废弃矿道附近",
+        "to": "黑风灵石矿地下遗迹入口附近矿道"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V3-C9",
+      "message": "地点从 '黑风灵石矿地下遗迹入口附近矿道' 变为 '黑风灵石矿废弃矿道隐藏岩洞' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V3-C9",
+        "from": "黑风灵石矿地下遗迹入口附近矿道",
+        "to": "黑风灵石矿废弃矿道隐藏岩洞"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V3-C10",
+      "message": "地点从 '黑风灵石矿废弃矿道隐藏岩洞' 变为 '黑风灵石矿外围山林' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V3-C10",
+        "from": "黑风灵石矿废弃矿道隐藏岩洞",
+        "to": "黑风灵石矿外围山林"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V4-C2",
+      "message": "地点从 '青牛镇城门入口、便民通铺' 变为 '青牛镇坊市百草堂' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V4-C2",
+        "from": "青牛镇城门入口、便民通铺",
+        "to": "青牛镇坊市百草堂"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V4-C3",
+      "message": "地点从 '青牛镇坊市百草堂' 变为 '青牛镇坊市功法阁、便民通铺、黑风矿废弃矿道' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V4-C3",
+        "from": "青牛镇坊市百草堂",
+        "to": "青牛镇坊市功法阁、便民通铺、黑风矿废弃矿道"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V4-C4",
+      "message": "地点从 '青牛镇坊市功法阁、便民通铺、黑风矿废弃矿道' 变为 '便民通铺后小巷' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V4-C4",
+        "from": "青牛镇坊市功法阁、便民通铺、黑风矿废弃矿道",
+        "to": "便民通铺后小巷"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V4-C5",
+      "message": "地点从 '便民通铺后小巷' 变为 '青牛镇城外低阶灵草区、坊市修炼室' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V4-C5",
+        "from": "便民通铺后小巷",
+        "to": "青牛镇城外低阶灵草区、坊市修炼室"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V4-C6",
+      "message": "地点从 '青牛镇城外低阶灵草区、坊市修炼室' 变为 '青牛镇坊市修炼室' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V4-C6",
+        "from": "青牛镇城外低阶灵草区、坊市修炼室",
+        "to": "青牛镇坊市修炼室"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V4-C7",
+      "message": "地点从 '青牛镇坊市修炼室' 变为 '青牛镇坊市出口拐角' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V4-C7",
+        "from": "青牛镇坊市修炼室",
+        "to": "青牛镇坊市出口拐角"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V5-C3",
+      "message": "地点从 '青牛镇坊市灵石交易区' 变为 '青牛镇坊市出口' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V5-C3",
+        "from": "青牛镇坊市灵石交易区",
+        "to": "青牛镇坊市出口"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V6-C5",
+      "message": "地点从 '陈记杂货铺地下密室' 变为 '青牛镇外三十里山林' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V6-C5",
+        "from": "陈记杂货铺地下密室",
+        "to": "青牛镇外三十里山林"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V6-C6",
+      "message": "地点从 '青牛镇外三十里山林' 变为 '陈记杂货铺地下密室' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V6-C6",
+        "from": "青牛镇外三十里山林",
+        "to": "陈记杂货铺地下密室"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V6-C8",
+      "message": "地点从 '陈记杂货铺地下密室' 变为 '陈记杂货铺后院' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V6-C8",
+        "from": "陈记杂货铺地下密室",
+        "to": "陈记杂货铺后院"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V6-C9",
+      "message": "地点从 '陈记杂货铺后院' 变为 '黑风矿西入口外围山林' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V6-C9",
+        "from": "陈记杂货铺后院",
+        "to": "黑风矿西入口外围山林"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V7-C2",
+      "message": "地点从 '陈记杂货铺后院密室' 变为 '陈记杂货铺前店' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V7-C2",
+        "from": "陈记杂货铺后院密室",
+        "to": "陈记杂货铺前店"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V7-C3",
+      "message": "地点从 '陈记杂货铺前店' 变为 '陈记杂货铺地下密室' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V7-C3",
+        "from": "陈记杂货铺前店",
+        "to": "陈记杂货铺地下密室"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V7-C6",
+      "message": "地点从 '陈记杂货铺地下密室' 变为 '青牛镇城西小巷' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V7-C6",
+        "from": "陈记杂货铺地下密室",
+        "to": "青牛镇城西小巷"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V7-C9",
+      "message": "地点从 '陈记杂货铺后门' 变为 '陈记杂货铺地下密室' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V7-C9",
+        "from": "陈记杂货铺后门",
+        "to": "陈记杂货铺地下密室"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V8-C1",
+      "message": "地点从 '陈记杂货铺地下密室' 变为 '黑风矿西入口外围山林' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V8-C1",
+        "from": "陈记杂货铺地下密室",
+        "to": "黑风矿西入口外围山林"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V8-C3",
+      "message": "地点从 '陈记杂货铺门口' 变为 '青牛镇城西山林灵草坡' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V8-C3",
+        "from": "陈记杂货铺门口",
+        "to": "青牛镇城西山林灵草坡"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V8-C4",
+      "message": "地点从 '青牛镇城西山林灵草坡' 变为 '青牛镇后山废弃破庙、南山谷传承洞' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V8-C4",
+        "from": "青牛镇城西山林灵草坡",
+        "to": "青牛镇后山废弃破庙、南山谷传承洞"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V8-C5",
+      "message": "地点从 '青牛镇后山废弃破庙、南山谷传承洞' 变为 '青牛镇东郊山坡' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V8-C5",
+        "from": "青牛镇后山废弃破庙、南山谷传承洞",
+        "to": "青牛镇东郊山坡"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V8-C6",
+      "message": "地点从 '青牛镇东郊山坡' 变为 '陈记杂货铺修炼室' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V8-C6",
+        "from": "青牛镇东郊山坡",
+        "to": "陈记杂货铺修炼室"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V8-C7",
+      "message": "地点从 '陈记杂货铺修炼室' 变为 '黑风矿外围山林' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V8-C7",
+        "from": "陈记杂货铺修炼室",
+        "to": "黑风矿外围山林"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V9-C4",
+      "message": "地点从 '书友会据点地下密室' 变为 '书友会据点后院' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V9-C4",
+        "from": "书友会据点地下密室",
+        "to": "书友会据点后院"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V9-C8",
+      "message": "地点从 '黑风矿西侧悬崖废弃矿道入口' 变为 '黑风矿废弃矿道内部' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V9-C8",
+        "from": "黑风矿西侧悬崖废弃矿道入口",
+        "to": "黑风矿废弃矿道内部"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V9-C9",
+      "message": "地点从 '黑风矿废弃矿道内部' 变为 '黑风矿废弃矿道中段遗迹入口前' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V9-C9",
+        "from": "黑风矿废弃矿道内部",
+        "to": "黑风矿废弃矿道中段遗迹入口前"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "P1-V9-C10",
+      "message": "地点从 '黑风矿废弃矿道中段遗迹入口前' 变为 '黑风矿地下遗迹入口石壁前' 缺乏过渡说明",
+      "details": {
+        "chapter": "P1-V9-C10",
+        "from": "黑风矿废弃矿道中段遗迹入口前",
+        "to": "黑风矿地下遗迹入口石壁前"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "p1-v10-c1",
+      "message": "地点从 '黑风矿地下遗迹入口石壁前' 变为 '黑风矿地下遗迹入口甬道' 缺乏过渡说明",
+      "details": {
+        "chapter": "p1-v10-c1",
+        "from": "黑风矿地下遗迹入口石壁前",
+        "to": "黑风矿地下遗迹入口甬道"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "p1-v10-c2",
+      "message": "地点从 '黑风矿地下遗迹入口甬道' 变为 '黑风矿地下遗迹甬道中段' 缺乏过渡说明",
+      "details": {
+        "chapter": "p1-v10-c2",
+        "from": "黑风矿地下遗迹入口甬道",
+        "to": "黑风矿地下遗迹甬道中段"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "p1-v10-c7",
+      "message": "地点从 '黑风矿地下遗迹甬道中段' 变为 '黑风矿地下遗迹核心区域前密道' 缺乏过渡说明",
+      "details": {
+        "chapter": "p1-v10-c7",
+        "from": "黑风矿地下遗迹甬道中段",
+        "to": "黑风矿地下遗迹核心区域前密道"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "p1-v10-c8",
+      "message": "地点从 '黑风矿地下遗迹核心区域前密道' 变为 '黑风矿地下遗迹核心区域前密道出口' 缺乏过渡说明",
+      "details": {
+        "chapter": "p1-v10-c8",
+        "from": "黑风矿地下遗迹核心区域前密道",
+        "to": "黑风矿地下遗迹核心区域前密道出口"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "p1-v10-c9",
+      "message": "地点从 '黑风矿地下遗迹核心区域前密道出口' 变为 '黑风矿地下遗迹核心区域入口前' 缺乏过渡说明",
+      "details": {
+        "chapter": "p1-v10-c9",
+        "from": "黑风矿地下遗迹核心区域前密道出口",
+        "to": "黑风矿地下遗迹核心区域入口前"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "location_transition",
+      "type": "consistency",
+      "severity": "info",
+      "location": "p1-v10-c10",
+      "message": "地点从 '黑风矿地下遗迹核心区域入口前' 变为 '黑风矿地下遗迹核心区域' 缺乏过渡说明",
+      "details": {
+        "chapter": "p1-v10-c10",
+        "from": "黑风矿地下遗迹核心区域入口前",
+        "to": "黑风矿地下遗迹核心区域"
+      },
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '监工群体' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "监工群体",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '通铺掌柜' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "通铺掌柜",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '王掌柜' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "王掌柜",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '灵石摊老板' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "灵石摊老板",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '缉厄司联络人' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "缉厄司联络人",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '缉厄司俘虏' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "缉厄司俘虏",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '顾衍（三哥）' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "顾衍（三哥）",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '小监工' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "小监工",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '矿奴群体' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "矿奴群体",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '功法阁掌柜' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "功法阁掌柜",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '张凯' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "张凯",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '缉厄司小队成员' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "缉厄司小队成员",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '缉厄司小队' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "缉厄司小队",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '城防军小队长' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "城防军小队长",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '书友会暗线成员陈默' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "书友会暗线成员陈默",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '地痞头目' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "地痞头目",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '城防军士兵' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "城防军士兵",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '材料摊老板' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "材料摊老板",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '缉厄司搜捕队' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "缉厄司搜捕队",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '围观百姓' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "围观百姓",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '赵磊' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "赵磊",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '灵草铺王掌柜' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "灵草铺王掌柜",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '杂货铺王伯' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "杂货铺王伯",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '缉厄司精英小队' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "缉厄司精英小队",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "character_frequency_low",
+      "type": "frequency",
+      "severity": "info",
+      "location": "",
+      "message": "角色 '缉厄司先遣捕快' 角色仅出场一次，可能是工具人 (出场: 1次)",
+      "details": {
+        "character": "缉厄司先遣捕快",
+        "frequency": 1
+      },
+      "suggestion": "考虑给角色更多戏份或合并角色"
+    },
+    {
+      "rule_id": "chapter_event_count",
+      "type": "threshold",
+      "severity": "warning",
+      "location": "",
+      "message": "章节事件过少 (实际: 0, 阈值: 1)",
+      "details": {
+        "threshold": 1,
+        "value": 0
+      },
+      "suggestion": "增加章节内的事件推动剧情"
+    },
+    {
+      "rule_id": "cultivation_change_frequency",
+      "type": "frequency",
+      "severity": "warning",
+      "location": "",
+      "message": "修为变化过于频繁，可能导致战力体系崩坏 (实际: 38)",
+      "details": {
+        "count": 38,
+        "threshold": 10
+      },
+      "suggestion": "减少修为变化次数，建立稳定的战力预期"
+    }
+  ],
+  "metrics": {
+    "total_chapters": 95,
+    "total_characters": 53,
+    "total_locations": 71,
+    "total_events": 190,
+    "character_frequency": {
+      "书友会全体": 3,
+      "书友会暗线成员陈默": 1,
+      "功法阁掌柜": 1,
+      "周玄": 5,
+      "周虎": 6,
+      "围观百姓": 1,
+      "地痞头目": 1,
+      "城防军士兵": 1,
+      "城防军小队长": 1,
+      "小监工": 1,
+      "小石头": 23,
+      "张凯": 1,
+      "张瑾": 2,
+      "探险队全体": 6,
+      "杂货铺王伯": 1,
+      "李源": 26,
+      "材料摊老板": 1,
+      "林砚": 244,
+      "江迟": 50,
+      "沈明": 51,
+      "灵石摊老板": 1,
+      "灵草铺王掌柜": 1,
+      "王伯": 2,
+      "王掌柜": 1,
+      "白晓": 13,
+      "监工群体": 1,
+      "矿奴小石头": 2,
+      "矿奴群体": 1,
+      "矿奴老郑": 3,
+      "矿监周虎": 10,
+      "缉厄司伏兵": 4,
+      "缉厄司俘虏": 1,
+      "缉厄司先遣捕快": 1,
+      "缉厄司小队": 1,
+      "缉厄司小队成员": 1,
+      "缉厄司捕快乙": 2,
+      "缉厄司捕快甲": 2,
+      "缉厄司搜捕队": 1,
+      "缉厄司暗卫": 2,
+      "缉厄司暗卫乙": 10,
+      "缉厄司暗卫甲": 8,
+      "缉厄司暗哨": 2,
+      "缉厄司精英小队": 1,
+      "缉厄司联络人": 1,
+      "苏晚": 34,
+      "赵大": 2,
+      "赵峰": 28,
+      "赵磊": 1,
+      "通铺掌柜": 1,
+      "陆天": 33,
+      "陈默": 70,
+      "顾衍": 9,
+      "顾衍（三哥）": 1
+    },
+    "event_type_counts": {
+      "goal": 24,
+      "item": 23,
+      "premise": 27,
+      "relationship": 18,
+      "status": 98
+    },
+    "location_transitions": [
+      {
+        "from": "黑风灵石矿丙字三号矿道",
+        "to": "黑风灵石矿矿道入口广场",
+        "chapter": "P1-V1-C3",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿矿道入口广场",
+        "to": "黑风灵石矿矿奴大通铺",
+        "chapter": "P1-V1-C4",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿矿奴大通铺",
+        "to": "黑风灵石矿丙字七号矿道",
+        "chapter": "P1-V1-C5",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿丙字七号矿道",
+        "to": "黑风灵石矿主矿道入口",
+        "chapter": "P1-V1-C6",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿主矿道入口",
+        "to": "黑风灵石矿矿场广场",
+        "chapter": "P1-V1-C7",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿矿场广场",
+        "to": "黑风灵石矿废弃矿道",
+        "chapter": "P1-V1-C8",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿废弃矿道",
+        "to": "黑风灵石矿丁字八号废弃矿道",
+        "chapter": "P1-V1-C9",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿丁字八号废弃矿道",
+        "to": "黑风灵石矿矿奴大通铺",
+        "chapter": "P1-V1-C10",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿矿奴大通铺",
+        "to": "黑风灵石矿废弃矿道入口",
+        "chapter": "P1-V2-C1",
+        "has_transition": true
+      },
+      {
+        "from": "黑风灵石矿废弃矿道入口",
+        "to": "黑风灵石矿最深废弃矿洞中段",
+        "chapter": "P1-V2-C2",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿最深废弃矿洞中段",
+        "to": "黑风灵石矿地下遗迹入口",
+        "chapter": "P1-V2-C3",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿地下遗迹入口",
+        "to": "黑风灵石矿地下遗迹入口外侧矿道",
+        "chapter": "P1-V2-C4",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿地下遗迹入口外侧矿道",
+        "to": "黑风灵石矿地下遗迹外围",
+        "chapter": "P1-V2-C7",
+        "has_transition": true
+      },
+      {
+        "from": "黑风灵石矿地下遗迹外围",
+        "to": "黑风灵石矿地下遗迹入口外侧矿道",
+        "chapter": "P1-V2-C8",
+        "has_transition": true
+      },
+      {
+        "from": "黑风灵石矿地下遗迹入口外侧矿道",
+        "to": "黑风灵石矿最深废弃矿洞入口",
+        "chapter": "P1-V2-C9",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿最深废弃矿洞入口",
+        "to": "黑风灵石矿矿奴大通铺",
+        "chapter": "P1-V2-C10",
+        "has_transition": true
+      },
+      {
+        "from": "黑风灵石矿矿奴大通铺",
+        "to": "黑风灵石矿废弃矿道隐藏岩洞",
+        "chapter": "P1-V3-C1",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿废弃矿道隐藏岩洞",
+        "to": "黑风灵石矿各主矿道",
+        "chapter": "P1-V3-C2",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿各主矿道",
+        "to": "黑风灵石矿矿道入口广场",
+        "chapter": "P1-V3-C3",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿矿道入口广场",
+        "to": "黑风灵石矿矿奴大通铺、主矿道",
+        "chapter": "P1-V3-C4",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿矿奴大通铺、主矿道",
+        "to": "黑风灵石矿主矿道",
+        "chapter": "P1-V3-C5",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿主矿道",
+        "to": "黑风灵石矿支矿道",
+        "chapter": "P1-V3-C6",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿支矿道",
+        "to": "黑风灵石矿废弃矿道附近",
+        "chapter": "P1-V3-C7",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿废弃矿道附近",
+        "to": "黑风灵石矿地下遗迹入口附近矿道",
+        "chapter": "P1-V3-C8",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿地下遗迹入口附近矿道",
+        "to": "黑风灵石矿废弃矿道隐藏岩洞",
+        "chapter": "P1-V3-C9",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿废弃矿道隐藏岩洞",
+        "to": "黑风灵石矿外围山林",
+        "chapter": "P1-V3-C10",
+        "has_transition": false
+      },
+      {
+        "from": "黑风灵石矿外围山林",
+        "to": "青牛镇城门入口、便民通铺",
+        "chapter": "P1-V4-C1",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇城门入口、便民通铺",
+        "to": "青牛镇坊市百草堂",
+        "chapter": "P1-V4-C2",
+        "has_transition": false
+      },
+      {
+        "from": "青牛镇坊市百草堂",
+        "to": "青牛镇坊市功法阁、便民通铺、黑风矿废弃矿道",
+        "chapter": "P1-V4-C3",
+        "has_transition": false
+      },
+      {
+        "from": "青牛镇坊市功法阁、便民通铺、黑风矿废弃矿道",
+        "to": "便民通铺后小巷",
+        "chapter": "P1-V4-C4",
+        "has_transition": false
+      },
+      {
+        "from": "便民通铺后小巷",
+        "to": "青牛镇城外低阶灵草区、坊市修炼室",
+        "chapter": "P1-V4-C5",
+        "has_transition": false
+      },
+      {
+        "from": "青牛镇城外低阶灵草区、坊市修炼室",
+        "to": "青牛镇坊市修炼室",
+        "chapter": "P1-V4-C6",
+        "has_transition": false
+      },
+      {
+        "from": "青牛镇坊市修炼室",
+        "to": "青牛镇坊市出口拐角",
+        "chapter": "P1-V4-C7",
+        "has_transition": false
+      },
+      {
+        "from": "青牛镇坊市出口拐角",
+        "to": "青牛镇便民通铺、坊市后破庙外围",
+        "chapter": "P1-V5-C1",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇便民通铺、坊市后破庙外围",
+        "to": "青牛镇坊市灵石交易区",
+        "chapter": "P1-V5-C2",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇坊市灵石交易区",
+        "to": "青牛镇坊市出口",
+        "chapter": "P1-V5-C3",
+        "has_transition": false
+      },
+      {
+        "from": "青牛镇坊市出口",
+        "to": "青牛镇坊市后偏僻小巷",
+        "chapter": "P1-V5-C4",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇坊市后偏僻小巷",
+        "to": "青牛镇便民通铺",
+        "chapter": "P1-V5-C5",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇便民通铺",
+        "to": "青牛镇坊市后破庙周边",
+        "chapter": "P1-V5-C6",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇坊市后破庙周边",
+        "to": "青牛镇坊市后废弃破庙",
+        "chapter": "P1-V5-C7",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇坊市后废弃破庙",
+        "to": "青牛镇便民通铺",
+        "chapter": "P1-V5-C10",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇便民通铺",
+        "to": "青牛镇陈记杂货铺",
+        "chapter": "P1-V6-C1",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇陈记杂货铺",
+        "to": "陈记杂货铺地下密室",
+        "chapter": "P1-V6-C2",
+        "has_transition": true
+      },
+      {
+        "from": "陈记杂货铺地下密室",
+        "to": "青牛镇城门入口",
+        "chapter": "P1-V6-C3",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇城门入口",
+        "to": "陈记杂货铺地下密室",
+        "chapter": "P1-V6-C4",
+        "has_transition": true
+      },
+      {
+        "from": "陈记杂货铺地下密室",
+        "to": "青牛镇外三十里山林",
+        "chapter": "P1-V6-C5",
+        "has_transition": false
+      },
+      {
+        "from": "青牛镇外三十里山林",
+        "to": "陈记杂货铺地下密室",
+        "chapter": "P1-V6-C6",
+        "has_transition": false
+      },
+      {
+        "from": "陈记杂货铺地下密室",
+        "to": "陈记杂货铺后院",
+        "chapter": "P1-V6-C8",
+        "has_transition": false
+      },
+      {
+        "from": "陈记杂货铺后院",
+        "to": "黑风矿西入口外围山林",
+        "chapter": "P1-V6-C9",
+        "has_transition": false
+      },
+      {
+        "from": "黑风矿西入口外围山林",
+        "to": "青牛镇陈记杂货铺后院",
+        "chapter": "P1-V6-C10",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇陈记杂货铺后院",
+        "to": "陈记杂货铺后院密室",
+        "chapter": "P1-V7-C1",
+        "has_transition": true
+      },
+      {
+        "from": "陈记杂货铺后院密室",
+        "to": "陈记杂货铺前店",
+        "chapter": "P1-V7-C2",
+        "has_transition": false
+      },
+      {
+        "from": "陈记杂货铺前店",
+        "to": "陈记杂货铺地下密室",
+        "chapter": "P1-V7-C3",
+        "has_transition": false
+      },
+      {
+        "from": "陈记杂货铺地下密室",
+        "to": "青牛镇东门官道断崖处",
+        "chapter": "P1-V7-C4",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇东门官道断崖处",
+        "to": "陈记杂货铺地下密室",
+        "chapter": "P1-V7-C5",
+        "has_transition": true
+      },
+      {
+        "from": "陈记杂货铺地下密室",
+        "to": "青牛镇城西小巷",
+        "chapter": "P1-V7-C6",
+        "has_transition": false
+      },
+      {
+        "from": "青牛镇城西小巷",
+        "to": "陈记杂货铺后门",
+        "chapter": "P1-V7-C8",
+        "has_transition": true
+      },
+      {
+        "from": "陈记杂货铺后门",
+        "to": "陈记杂货铺地下密室",
+        "chapter": "P1-V7-C9",
+        "has_transition": false
+      },
+      {
+        "from": "陈记杂货铺地下密室",
+        "to": "黑风矿西入口外围山林",
+        "chapter": "P1-V8-C1",
+        "has_transition": false
+      },
+      {
+        "from": "黑风矿西入口外围山林",
+        "to": "陈记杂货铺门口",
+        "chapter": "P1-V8-C2",
+        "has_transition": true
+      },
+      {
+        "from": "陈记杂货铺门口",
+        "to": "青牛镇城西山林灵草坡",
+        "chapter": "P1-V8-C3",
+        "has_transition": false
+      },
+      {
+        "from": "青牛镇城西山林灵草坡",
+        "to": "青牛镇后山废弃破庙、南山谷传承洞",
+        "chapter": "P1-V8-C4",
+        "has_transition": false
+      },
+      {
+        "from": "青牛镇后山废弃破庙、南山谷传承洞",
+        "to": "青牛镇东郊山坡",
+        "chapter": "P1-V8-C5",
+        "has_transition": false
+      },
+      {
+        "from": "青牛镇东郊山坡",
+        "to": "陈记杂货铺修炼室",
+        "chapter": "P1-V8-C6",
+        "has_transition": false
+      },
+      {
+        "from": "陈记杂货铺修炼室",
+        "to": "黑风矿外围山林",
+        "chapter": "P1-V8-C7",
+        "has_transition": false
+      },
+      {
+        "from": "黑风矿外围山林",
+        "to": "陈记杂货铺地下修炼室",
+        "chapter": "P1-V8-C8",
+        "has_transition": true
+      },
+      {
+        "from": "陈记杂货铺地下修炼室",
+        "to": "青牛镇书友会据点地下古籍库",
+        "chapter": "P1-V9-C1",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇书友会据点地下古籍库",
+        "to": "青牛镇城西小巷秘密接头点",
+        "chapter": "P1-V9-C2",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇城西小巷秘密接头点",
+        "to": "书友会据点地下密室",
+        "chapter": "P1-V9-C3",
+        "has_transition": true
+      },
+      {
+        "from": "书友会据点地下密室",
+        "to": "书友会据点后院",
+        "chapter": "P1-V9-C4",
+        "has_transition": false
+      },
+      {
+        "from": "书友会据点后院",
+        "to": "青牛镇通往黑风矿的官道沿线",
+        "chapter": "P1-V9-C5",
+        "has_transition": true
+      },
+      {
+        "from": "青牛镇通往黑风矿的官道沿线",
+        "to": "黑风矿外围山林高处",
+        "chapter": "P1-V9-C6",
+        "has_transition": true
+      },
+      {
+        "from": "黑风矿外围山林高处",
+        "to": "黑风矿西侧悬崖废弃矿道入口",
+        "chapter": "P1-V9-C7",
+        "has_transition": true
+      },
+      {
+        "from": "黑风矿西侧悬崖废弃矿道入口",
+        "to": "黑风矿废弃矿道内部",
+        "chapter": "P1-V9-C8",
+        "has_transition": false
+      },
+      {
+        "from": "黑风矿废弃矿道内部",
+        "to": "黑风矿废弃矿道中段遗迹入口前",
+        "chapter": "P1-V9-C9",
+        "has_transition": false
+      },
+      {
+        "from": "黑风矿废弃矿道中段遗迹入口前",
+        "to": "黑风矿地下遗迹入口石壁前",
+        "chapter": "P1-V9-C10",
+        "has_transition": false
+      },
+      {
+        "from": "黑风矿地下遗迹入口石壁前",
+        "to": "黑风矿地下遗迹入口甬道",
+        "chapter": "p1-v10-c1",
+        "has_transition": false
+      },
+      {
+        "from": "黑风矿地下遗迹入口甬道",
+        "to": "黑风矿地下遗迹甬道中段",
+        "chapter": "p1-v10-c2",
+        "has_transition": false
+      },
+      {
+        "from": "黑风矿地下遗迹甬道中段",
+        "to": "黑风矿地下遗迹核心区域前密道",
+        "chapter": "p1-v10-c7",
+        "has_transition": false
+      },
+      {
+        "from": "黑风矿地下遗迹核心区域前密道",
+        "to": "黑风矿地下遗迹核心区域前密道出口",
+        "chapter": "p1-v10-c8",
+        "has_transition": false
+      },
+      {
+        "from": "黑风矿地下遗迹核心区域前密道出口",
+        "to": "黑风矿地下遗迹核心区域入口前",
+        "chapter": "p1-v10-c9",
+        "has_transition": false
+      },
+      {
+        "from": "黑风矿地下遗迹核心区域入口前",
+        "to": "黑风矿地下遗迹核心区域",
+        "chapter": "p1-v10-c10",
+        "has_transition": false
+      }
+    ],
+    "custom_metrics": {}
+  },
+  "summary": "分析完成: 发现 0 个致命问题, 0 个严重问题, 23 个警告, 78 个建议。风险等级: 极高风险 - 需要重大修改",
+  "risk_level": "极高风险 - 需要重大修改"
+}

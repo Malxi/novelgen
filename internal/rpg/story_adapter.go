@@ -87,8 +87,6 @@ type StoryChapter struct {
 	Location    string               `json:"location"`
 	Events      []StoryEvent         `json:"events"`
 	Beats       []string             `json:"beats"`
-	OpeningBeat string               `json:"opening_beat"`
-	ClosingBeat string               `json:"closing_beat"`
 	StateChange string               `json:"state_change"`
 	Conflict    string               `json:"conflict"`
 	Pacing      string               `json:"pacing"`

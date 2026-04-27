@@ -772,7 +772,7 @@ func (a *ComposeAgent) BuildChapterContext(chapter *models.Chapter, outline *mod
 						if len(prevChap.Beats) > 0 {
 							lastBeat = prevChap.Beats[len(prevChap.Beats)-1]
 						}
-						prevClosing := prevChap.ClosingBeat
+						prevClosing := getClosingBeat(prevChap)
 						if prevClosing == "" {
 							prevClosing = lastBeat
 						}
@@ -794,10 +794,7 @@ func (a *ComposeAgent) BuildChapterContext(chapter *models.Chapter, outline *mod
 						context.WriteString("=== NEXT CHAPTER (What This Chapter Must Lead To) ===\n")
 						context.WriteString(fmt.Sprintf("Next Chapter (%s): %s\n", nextChap.ID, nextChap.Title))
 						context.WriteString(fmt.Sprintf("Summary: %s\n", nextChap.Summary))
-						nextFirstBeat := nextChap.OpeningBeat
-						if len(nextChap.Beats) > 0 {
-							nextFirstBeat = nextChap.Beats[0]
-						}
+						nextFirstBeat := getOpeningBeat(nextChap)
 						context.WriteString(fmt.Sprintf("Opening Beat: %s\n", nextFirstBeat))
 						context.WriteString(fmt.Sprintf("This chapter MUST set up: %s\n\n", nextChap.Summary))
 					}
@@ -876,18 +873,6 @@ func (a *ComposeAgent) validateChapterOutput(chapter *models.Chapter) error {
 	}
 	if len(chapter.Beats) == 0 {
 		return fmt.Errorf("beats are required")
-	}
-	if chapter.OpeningBeat == "" {
-		return fmt.Errorf("opening_beat is required")
-	}
-	if chapter.ClosingBeat == "" {
-		return fmt.Errorf("closing_beat is required")
-	}
-	if chapter.OpeningBeat != chapter.Beats[0] {
-		return fmt.Errorf("opening_beat must match beats[0]")
-	}
-	if chapter.ClosingBeat != chapter.Beats[len(chapter.Beats)-1] {
-		return fmt.Errorf("closing_beat must match beats[last]")
 	}
 	if len(chapter.Events) == 0 {
 		return fmt.Errorf("events are required")
@@ -1094,7 +1079,7 @@ func (a *ComposeAgent) buildHierarchicalContext(outline *models.Outline, partIdx
 				if len(vol.Chapters) > 0 {
 					lastChap := vol.Chapters[len(vol.Chapters)-1]
 					context.WriteString(fmt.Sprintf("  Last chapter: %s - %s\n", lastChap.Title, lastChap.Summary))
-					context.WriteString(fmt.Sprintf("  Closing beat: %s\n", lastChap.ClosingBeat))
+					context.WriteString(fmt.Sprintf("  Closing beat: %s\n", getClosingBeat(lastChap)))
 				}
 				context.WriteString("\n")
 			}
@@ -1118,4 +1103,20 @@ func (a *ComposeAgent) buildHierarchicalContext(outline *models.Outline, partIdx
 	context.WriteString("3. Set up for the next volume (if any)\n")
 
 	return context.String()
+}
+
+// getOpeningBeat returns beats[0] or empty string.
+func getOpeningBeat(chapter models.Chapter) string {
+	if len(chapter.Beats) > 0 {
+		return chapter.Beats[0]
+	}
+	return ""
+}
+
+// getClosingBeat returns beats[last] or empty string.
+func getClosingBeat(chapter models.Chapter) string {
+	if len(chapter.Beats) > 0 {
+		return chapter.Beats[len(chapter.Beats)-1]
+	}
+	return ""
 }

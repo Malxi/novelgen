@@ -92,8 +92,6 @@ type Chapter struct {
 	Location       string               `json:"location" md:"location"`     // 事情发生的地点
 	Events         []Event              `json:"events" md:"events"`         // 本章发生的事件
 	Beats          []string             `json:"beats" md:"beats"`
-	OpeningBeat    string               `json:"opening_beat,omitempty" desc:"First beat that continues the previous chapter"`
-	ClosingBeat    string               `json:"closing_beat,omitempty" desc:"Final beat/hook that must lead into next chapter"`
 	StateChange    string               `json:"state_change,omitempty" desc:"Primary change this chapter causes; must map to Events"`
 	Conflict       string               `json:"conflict" md:"conflict"`
 	Pacing         string               `json:"pacing" md:"pacing"`
@@ -333,12 +331,12 @@ func (c *Chapter) ToMarkdown() string {
 		sb.WriteString("\n")
 	}
 
-	// Continuity anchors
-	if c.OpeningBeat != "" {
-		sb.WriteString(fmt.Sprintf("**Opening Beat:** %s\n\n", c.OpeningBeat))
+	// Continuity anchors (derived from beats)
+	if len(c.Beats) > 0 {
+		sb.WriteString(fmt.Sprintf("**Opening Beat:** %s\n\n", c.Beats[0]))
 	}
-	if c.ClosingBeat != "" {
-		sb.WriteString(fmt.Sprintf("**Closing Beat:** %s\n\n", c.ClosingBeat))
+	if len(c.Beats) > 1 {
+		sb.WriteString(fmt.Sprintf("**Closing Beat:** %s\n\n", c.Beats[len(c.Beats)-1]))
 	}
 	if c.StateChange != "" {
 		sb.WriteString(fmt.Sprintf("**State Change:** %s\n\n", c.StateChange))
