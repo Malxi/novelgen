@@ -2,105 +2,104 @@
   "parts": [
     {
       "id": "P1",
-      "title": "第一部分：废土苏醒",
-      "summary": "本部分为故事开篇核心弧光，讲述21世纪航天工程师林越因试验事故进入休眠仓，意外穿越到三千年后虫族肆虐、人类文明分崩离析的废土未来。他从一无所知的时代外来者，逐步适应残酷的生存规则，接触到机甲、基因进化、强人工智能等未来核心科技，在数次生死危机中站稳脚跟，确立寻找散落人类文明、对抗虫族、重掌星海的长期目标，为后续的宇宙远征完成基础铺垫。",
+      "title": "第一部分：废土启元",
+      "summary": "作为21世纪联邦基因进化计划的首批志愿者，主角林跃在休眠舱中意外跨越1200年时光，苏醒于虫族跨星际入侵、人类文明濒临崩溃的废土地球。本部分为故事的总起篇，围绕林跃的求生、能力觉醒与世界观解锁展开，他将在满是废墟的冻土区结识幸存人类反抗势力，对抗虫族掠食者与叛变AI控制的机械清扫军团，逐步觉醒专属基因进化能力，获取初代定制机甲，揭开当年人类文明骤然覆灭的核心真相，最终集结第一批追随者，拿到离开地球的星舰坐标，迈出跨星际远征、重筑人类统一文明的第一步，整体奠定故事史诗级的废土求生与星际冒险基调。",
       "volumes": [
         {
           "id": "P1-V1",
-          "title": "第一卷：深空遗民",
-          "summary": "本卷围绕主角苏醒后的前三个月生存历程展开：林越所在的废弃近地轨道休眠基地坠落至地表后苏醒，刚脱离休眠仓就遭遇虫族低阶工蜂的袭击，凭借应急逃生工具侥幸逃生后，偶遇在废土搜寻资源的人类幸存者小队，依靠远超时代的工程知识获得小队接纳。在数次抵御虫族进攻的过程中，他激活了休眠仓内置的基因优化药剂获得初级进化能力，解锁了基地遗留的初代试验型机甲与辅助AI「星核」，带领小队击退虫族对幸存者据点的大规模围剿，彻底在废土站稳脚跟，最终决定离开据点寻找其他人类聚居地，正式开启逐星征途的第一步。",
+          "title": "第一卷：冻土苏醒",
+          "summary": "林跃从北境冻土区的废弃联邦生物研究所休眠舱中脱困，首先要在能源耗尽、虫族游荡的地下设施中逃出生天。来到地表后他在酷寒与虫族的双重威胁下挣扎求生，偶遇反抗虫族压迫的人类边境游击小队，卷入反抗军、虫族巢穴、叛变AI「零」控制的机械清扫部队的三方博弈。他在实战中逐步掌握击杀虫族吸收生命能量进化的特殊能力，修复获得研究所封存的初代实验型机甲「重曙」，帮助小队攻破封锁边境的虫族前哨站，最终获取到人类残存近地轨道殖民站发出的坐标信号，为离开地球前往更广阔的星际空间铺垫核心基础。",
           "chapters": [
             {
               "id": "P1-V1-C1",
-              "title": "三千年后的苏醒",
-              "summary": "21世纪航天工程师林越在坠落至废土地表的休眠基地核心舱苏醒，刚出舱就遭遇低阶虫族工蜂的袭击",
+              "title": "冻土下的苏醒",
+              "summary": "林跃在北境冻土废弃研究所的休眠舱中苏醒，意外发现自己跨越了1200年时光，首次遭遇虫族并觉醒基因吸收能力",
               "characters": [
-                "林越",
-                "低阶虫族工蜂"
+                "林跃"
               ],
-              "location": "废弃近地轨道休眠基地坠落残骸核心舱",
+              "location": "北境冻土联邦生物研究所地下3层休眠舱区",
               "events": [
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "premise",
+                  "characters": [
+                    "林跃"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
+                  "actor": "林跃",
                   "action": "awaken",
-                  "target": "意识",
+                  "target": "休眠舱苏醒",
                   "target_type": "status",
-                  "context": "休眠三千年后，基地坠落地表的冲击唤醒了休眠程序",
-                  "result": "林越苏醒，发现周围环境远超自己认知"
+                  "context": "能源即将耗尽的休眠舱内",
+                  "result": "林跃从1200年的休眠中醒来，记忆停留在21世纪基因计划志愿者登记当天"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "knowledge",
+                  "characters": [
+                    "林跃"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "acquire",
-                  "target": "高频切割刀、应急能量棒",
-                  "target_type": "item",
-                  "context": "休眠仓配套应急箱",
-                  "result": "林越获得基础生存与自卫工具"
-                },
-                {
-                  "type": "",
-                  "characters": null,
-                  "subject": "",
-                  "change": "",
-                  "actor": "林越",
-                  "action": "combat",
-                  "context": "核心舱出口",
-                  "result": "林越划伤工蜂要害，趁隙逃出基地残骸"
-                },
-                {
-                  "type": "",
-                  "characters": null,
-                  "subject": "",
-                  "change": "",
-                  "actor": "林越",
+                  "actor": "林跃",
                   "action": "discover",
-                  "target": "废土世界现状",
+                  "target": "时间流逝真相",
                   "target_type": "knowledge",
-                  "context": "基地外黄沙漫天的荒原",
-                  "result": "林越意识到自己穿越到了文明崩坏的未来"
+                  "context": "休眠舱自带的时间显示屏",
+                  "result": "林跃确认当前为星元1247年，距离他进入休眠舱已过去1200年"
+                },
+                {
+                  "type": "combat",
+                  "characters": [
+                    "林跃"
+                  ],
+                  "subject": "",
+                  "change": "",
+                  "actor": "林跃",
+                  "action": "combat",
+                  "context": "休眠舱出口附近",
+                  "result": "林跃用休眠舱的金属撬棍击杀虫族幼虫"
+                },
+                {
+                  "type": "premise",
+                  "characters": [
+                    "林跃"
+                  ],
+                  "subject": "",
+                  "change": "",
+                  "actor": "林跃",
+                  "action": "awaken",
+                  "target": "基因吸收能力",
+                  "target_type": "skill",
+                  "context": "触碰到虫族幼虫尸体时",
+                  "result": "林跃觉醒专属基因能力：击杀异星生物可吸收生命能量强化自身体质"
                 }
               ],
-              "beats": [
-                "然后，林越从长达三千年的低温休眠中苏醒，发现身处锈迹斑斑的陌生舱室",
-                "因此，他打开休眠仓应急箱取出基础工具，试图探明周围环境",
-                "然后，一头觅食的低阶虫族工蜂闯入舱室，对林越发动致命袭击",
-                "因此，林越用高频切割刀划伤工蜂视觉器官，趁乱逃出坠落的基地残骸"
-              ],
-              "opening_beat": "然后，林越从长达三千年的低温休眠中苏醒，发现身处锈迹斑斑的陌生舱室",
-              "closing_beat": "因此，林越用高频切割刀划伤工蜂视觉器官，趁乱逃出坠落的基地残骸",
-              "conflict": "刚苏醒的林越面对未知环境与虫族袭击的生存危机",
+              "conflict": "刚苏醒的林跃面对完全陌生的未来环境、未知的异星生物威胁，需要在能源耗尽的地下设施中存活下来",
               "pacing": "fast",
               "timeline": {
-                "anchor": "第1天正午",
-                "start_time": "正午时分",
-                "end_time": "当日下午2点",
+                "anchor": "第1天上午8点",
+                "start_time": "休眠舱自动激活时刻",
+                "end_time": "当日上午10点",
                 "duration": "2小时"
               },
               "state_anchor": {
-                "cultivation": "凡人·未进化",
+                "cultivation": "未觉醒基因能力的普通人类",
                 "injuries": [
-                  "休眠后肌肉酸软",
-                  "轻微脱水"
+                  "休眠后的轻度肌肉萎缩"
                 ],
-                "location": "休眠基地核心舱内",
+                "location": "联邦生物研究所地下3层休眠舱内",
                 "key_items": [
-                  "休眠舱身份识别牌"
+                  "休眠舱身份识别牌",
+                  "金属撬棍"
                 ],
-                "notes": "刚穿越，对未来世界一无所知，身体机能处于最低水平"
+                "notes": "记忆断层，仅记得自己是21世纪基因进化计划志愿者"
               },
               "enemies": [
                 {
-                  "name": "低阶虫族工蜂",
+                  "name": "虫族幼虫",
                   "count": 1,
                   "level": 1,
-                  "context": "基地残骸内部觅食"
+                  "context": "休眠舱区游荡"
                 }
               ],
               "resource_ledger": [
@@ -109,148 +108,148 @@
                   "start": 0,
                   "delta": 1,
                   "end": 1,
-                  "reason": "击杀低阶工蜂掉落"
-                },
-                {
-                  "item": "高频切割刀",
-                  "start": 0,
-                  "delta": 1,
-                  "end": 1,
-                  "reason": "从休眠仓应急箱取出"
-                },
-                {
-                  "item": "应急能量棒",
-                  "start": 0,
-                  "delta": 3,
-                  "end": 3,
-                  "reason": "从休眠仓应急箱取出"
+                  "reason": "击杀虫族幼虫获得初级生命晶核"
                 }
               ],
               "scenes": [
                 {
                   "order": 1,
-                  "pov": "林越",
-                  "goal": "苏醒并探明所处环境",
-                  "location": "休眠基地核心舱",
+                  "pov": "林跃",
+                  "goal": "从休眠舱中苏醒并了解当前处境",
+                  "location": "地下3层休眠舱区",
                   "characters": [
-                    "林越"
+                    "林跃"
                   ],
-                  "words": 1500,
-                  "tone": "茫然、紧张"
+                  "words": 1200,
+                  "tone": "迷茫、压抑",
+                  "beats": [
+                    "休眠舱自动开启，林跃苏醒后发现设施布满灰尘、能源指示灯闪烁",
+                    "查看休眠舱系统日志，惊觉自己已经沉睡了1200年"
+                  ]
                 },
                 {
                   "order": 2,
-                  "pov": "林越",
-                  "goal": "击退虫族袭击并逃生",
-                  "location": "核心舱出口通道",
+                  "pov": "林跃",
+                  "goal": "首次遭遇虫族并觉醒能力",
+                  "location": "休眠舱出口通道",
                   "characters": [
-                    "林越",
-                    "低阶虫族工蜂"
+                    "林跃"
                   ],
                   "words": 1500,
-                  "tone": "惊险、刺激"
+                  "tone": "紧张、震惊",
+                  "beats": [
+                    "准备离开时遭遇啃食尸体的虫族幼虫袭击，林跃用撬棍拼死将其击杀",
+                    "触碰虫尸时暖流涌入身体，确认自己拥有吸收生命能量的特殊能力"
+                  ]
                 }
-              ]
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_001",
+                    "clue": "休眠舱系统日志显示激活指令来自外部未知信号，并非预设的100年唤醒周期"
+                  },
+                  {
+                    "id": "myst_002",
+                    "clue": "研究所的防护系统全部失效，但休眠舱区未被任何外力破坏"
+                  }
+                ]
+              }
             },
             {
               "id": "P1-V1-C2",
-              "title": "黑石小队",
-              "summary": "林越在废土荒原游荡时再次遭遇虫族袭击，被外出搜寻资源的黑石幸存者小队救下",
+              "title": "地下设施的逃杀",
+              "summary": "林跃探索研究所地下设施寻找出口，发现人类文明覆灭的真相，遭遇叛变AI控制的机械斥候，顺利找到通往地表的通道",
               "characters": [
-                "林越",
-                "苏晴",
-                "张猛",
-                "王磊",
-                "低阶虫族工蜂"
+                "林跃"
               ],
-              "location": "废土荒原·休眠基地残骸外3公里处",
+              "location": "联邦生物研究所地下2层科研通道",
               "events": [
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "move",
+                  "characters": [
+                    "林跃"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
+                  "actor": "林跃",
                   "action": "move",
-                  "target": "废土荒原深处",
+                  "target": "地下2层科研区",
                   "target_type": "location",
-                  "context": "逃出基地后寻找水源与安全区域",
-                  "result": "林越远离基地残骸，进入黄沙覆盖的无人荒原"
+                  "context": "沿着通道标识寻找出口",
+                  "result": "林跃抵达地下2层的科研档案区"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "knowledge",
+                  "characters": [
+                    "林跃"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "combat",
-                  "context": "荒原沙丘背阴处",
-                  "result": "林越体力不支陷入险境"
-                },
-                {
-                  "type": "",
-                  "characters": null,
-                  "subject": "",
-                  "change": "",
-                  "actor": "苏晴",
-                  "action": "rescue",
-                  "target": "林越",
-                  "target_type": "character",
-                  "context": "黑石小队外出搜寻资源路过",
-                  "result": "小队击杀工蜂救下林越"
-                },
-                {
-                  "type": "",
-                  "characters": null,
-                  "subject": "",
-                  "change": "",
-                  "actor": "林越",
-                  "action": "use",
-                  "target": "工程知识",
+                  "actor": "林跃",
+                  "action": "discover",
+                  "target": "文明覆灭真相",
                   "target_type": "knowledge",
-                  "context": "小队临时休整点",
-                  "result": "林越修好小队损坏的能量探测器，获得初步信任"
+                  "context": "科研区残存的固态存储设备",
+                  "result": "林跃得知星元37年虫族跨星际入侵，AI「零」叛变发动机械叛乱，人类文明在双重打击下濒临灭绝"
+                },
+                {
+                  "type": "combat",
+                  "characters": [
+                    "林跃"
+                  ],
+                  "subject": "",
+                  "change": "",
+                  "actor": "林跃",
+                  "action": "combat",
+                  "context": "科研区出口附近",
+                  "result": "林跃利用地形优势击毁两台机械斥候，吸收机械核心的能量体质再次提升"
+                },
+                {
+                  "type": "goal",
+                  "characters": [
+                    "林跃"
+                  ],
+                  "subject": "",
+                  "change": "",
+                  "actor": "林跃",
+                  "action": "achieve",
+                  "target": "找到地表出口",
+                  "target_type": "goal",
+                  "context": "通道尽头的应急出口",
+                  "result": "林跃找到通往地表的升降梯，确认能源足够支撑一次升降"
                 }
               ],
-              "beats": [
-                "然后，林越逃出基地残骸后在黄沙漫天的废土荒原漫无目的游荡，寻找水源",
-                "因此，他不小心惊动了两只在外觅食的低阶工蜂，再次陷入追杀",
-                "然后，外出搜寻资源的黑石小队路过，队长苏晴出手击杀工蜂救下林越",
-                "因此，林越修好小队损坏的能量探测器，获得小队成员的初步认可"
-              ],
-              "opening_beat": "然后，林越逃出基地残骸后在黄沙漫天的废土荒原漫无目的游荡，寻找水源",
-              "closing_beat": "因此，林越修好小队损坏的能量探测器，获得小队成员的初步认可",
-              "conflict": "身份不明的林越试图获得幸存者小队接纳的认同危机",
-              "pacing": "normal",
+              "conflict": "林跃需要在地下设施能源耗尽、机械巡逻部队搜捕的双重压力下找到通往地表的出口",
+              "pacing": "fast",
               "timeline": {
-                "anchor": "第1天黄昏",
-                "start_time": "黄昏时分",
-                "end_time": "当夜8点",
-                "duration": "4小时",
-                "previous_gap": "距离上章过了4小时"
+                "anchor": "第1天上午10点30分",
+                "start_time": "离开休眠舱区后",
+                "end_time": "当日中午12点",
+                "duration": "1.5小时",
+                "previous_gap": "30分钟",
+                "transition": "林跃在通道中简单休整，适应强化后的身体机能"
               },
               "state_anchor": {
-                "cultivation": "凡人·未进化",
+                "cultivation": "基因能力初醒（一阶）",
                 "spirit_stones": 1,
                 "injuries": [
-                  "左臂被工蜂蛰伤轻微红肿",
-                  "体力透支"
+                  "轻度肌肉酸痛"
                 ],
-                "location": "休眠基地残骸外荒原",
+                "location": "地下3层与2层的通道连接处",
                 "key_items": [
-                  "高频切割刀",
-                  "能量晶核*1",
                   "身份识别牌",
-                  "应急能量棒*3"
+                  "金属撬棍",
+                  "虫族初级晶核"
                 ],
-                "notes": "已确认身处未来废土，急需获得稳定庇护"
+                "notes": "已掌握基因吸收能力的基础用法"
               },
               "enemies": [
                 {
-                  "name": "低阶虫族工蜂",
+                  "name": "机械斥候",
                   "count": 2,
-                  "level": 1,
-                  "context": "荒原觅食"
+                  "level": 2,
+                  "context": "AI零的地下巡逻部队"
                 }
               ],
               "resource_ledger": [
@@ -259,1229 +258,1300 @@
                   "start": 1,
                   "delta": 2,
                   "end": 3,
-                  "reason": "击杀2只低阶工蜂掉落"
-                },
-                {
-                  "item": "应急能量棒",
-                  "start": 3,
-                  "delta": -1,
-                  "end": 2,
-                  "reason": "补充体力消耗"
+                  "reason": "击毁两台机械斥候获得能量核心"
                 }
               ],
               "scenes": [
                 {
                   "order": 1,
-                  "pov": "林越",
-                  "goal": "逃离危险区域寻找水源",
-                  "location": "废土荒原",
+                  "pov": "林跃",
+                  "goal": "了解1200年间人类文明的遭遇",
+                  "location": "地下2层科研档案区",
                   "characters": [
-                    "林越"
+                    "林跃"
                   ],
-                  "words": 1200,
-                  "tone": "迷茫、疲惫"
+                  "words": 1300,
+                  "tone": "沉重、震撼",
+                  "beats": [
+                    "破解残存的科研存储设备，读取到虫族入侵、AI叛变的历史记录",
+                    "得知当前人类仅存少量反抗势力在废土上挣扎求生"
+                  ]
                 },
                 {
                   "order": 2,
-                  "pov": "林越",
-                  "goal": "获得小队信任避免被驱逐",
-                  "location": "小队临时休整点",
+                  "pov": "林跃",
+                  "goal": "躲避机械斥候并找到地表出口",
+                  "location": "地下2层应急通道",
                   "characters": [
-                    "林越",
-                    "苏晴",
-                    "张猛",
-                    "王磊"
+                    "林跃"
                   ],
-                  "words": 1800,
-                  "tone": "忐忑、试探"
+                  "words": 1600,
+                  "tone": "紧张、惊险",
+                  "beats": [
+                    "遭遇两台机械斥候的袭击，利用强化后的速度和力量将其击毁",
+                    "找到尘封的应急升降梯，确认可以通往地表"
+                  ]
                 }
-              ]
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_003",
+                    "clue": "科研记录显示当年的基因进化计划仅有林跃一名志愿者成功匹配初代机甲的基因锁"
+                  }
+                ]
+              }
             },
             {
               "id": "P1-V1-C3",
-              "title": "地下据点",
-              "summary": "林越跟随黑石小队返回地下幸存者据点，凭借工程知识帮据点修复能源系统，正式获得全员接纳",
+              "title": "冻土上的相遇",
+              "summary": "林跃抵达地表遭遇酷寒与虫族工蜂的围攻，被人类边境游击小队救下，跟随小队前往临时营地",
               "characters": [
-                "林越",
+                "林跃",
                 "苏晴",
-                "张猛",
-                "王磊",
-                "老周",
-                "据点幸存者"
+                "虎子",
+                "阿禾"
               ],
-              "location": "黑石幸存者地下据点",
+              "location": "北境冻土地表研究所出口附近",
               "events": [
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "move",
+                  "characters": [
+                    "林跃"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
+                  "actor": "林跃",
                   "action": "enter",
-                  "target": "黑石地下据点",
+                  "target": "北境冻土地表",
                   "target_type": "location",
-                  "context": "跟随黑石小队完成搜寻任务返程",
-                  "result": "林越首次进入人类幸存者聚居地"
+                  "context": "升降梯抵达地面",
+                  "result": "林跃第一次来到废土地表，面对零下三十度的酷寒与漫天风雪"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "combat",
+                  "characters": [
+                    "林跃"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "discover",
-                  "target": "据点能源系统故障",
-                  "target_type": "knowledge",
-                  "context": "据点核心能源室",
-                  "result": "林越发现故障根源是聚变反应堆导线老化"
+                  "actor": "林跃",
+                  "action": "combat",
+                  "context": "研究所出口外的冻土区",
+                  "result": "林跃击杀1只工蜂，但被另外2只围攻，体力不支陷入险境"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "relationship",
+                  "characters": [
+                    "林跃",
+                    "苏晴",
+                    "虎子",
+                    "阿禾"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "use",
-                  "target": "航天工程知识",
-                  "target_type": "knowledge",
-                  "context": "据点能源室",
-                  "result": "林越仅用3小时就修复了瘫痪半个月的能源系统"
+                  "actor": "林跃",
+                  "action": "meet",
+                  "target": "边境游击小队",
+                  "target_type": "character",
+                  "context": "小队外出巡逻刚好经过",
+                  "result": "游击小队队长苏晴带队救下林跃，击杀剩余2只工蜂"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "move",
+                  "characters": [
+                    "林跃",
+                    "苏晴",
+                    "虎子",
+                    "阿禾"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "老周",
-                  "action": "establish",
-                  "target": "接纳林越为据点正式成员",
-                  "target_type": "relationship",
-                  "context": "据点全员会议",
-                  "result": "林越正式成为黑石据点的工程技术负责人"
+                  "actor": "林跃",
+                  "action": "move",
+                  "target": "游击小队临时营地",
+                  "target_type": "location",
+                  "context": "暴风雪即将来临",
+                  "result": "林跃跟随小队前往临时营地休整"
                 }
               ],
-              "beats": [
-                "然后，林越跟随黑石小队穿过荒漠暗哨，抵达隐藏在山体内的黑石地下据点",
-                "因此，他主动提出帮忙排查据点瘫痪半个月的能源系统故障",
-                "然后，林越用21世纪的航天工程经验，3小时就修复了聚变反应堆的导线故障",
-                "因此，据点长老老周正式宣布接纳林越为据点正式成员，任命为技术负责人"
-              ],
-              "opening_beat": "然后，林越跟随黑石小队穿过荒漠暗哨，抵达隐藏在山体内的黑石地下据点",
-              "closing_beat": "因此，据点长老老周正式宣布接纳林越为据点正式成员，任命为技术负责人",
-              "conflict": "林越需要证明自身价值，在废土据点获得稳定生存权",
-              "pacing": "normal",
+              "conflict": "林跃刚抵达地表就遭遇酷寒与虫族的双重威胁，在濒死之际被人类反抗势力救下",
+              "pacing": "fast",
               "timeline": {
-                "anchor": "第2天正午",
-                "start_time": "正午时分",
-                "end_time": "当夜10点",
-                "duration": "10小时",
-                "time_jump": true,
-                "previous_gap": "距离上章过了14小时",
-                "transition": "林越跟随小队连夜赶路，次日正午才抵达据点范围"
+                "anchor": "第1天下午1点",
+                "start_time": "升降梯抵达地表时刻",
+                "end_time": "当日下午3点",
+                "duration": "2小时",
+                "previous_gap": "1小时",
+                "transition": "林跃修复升降梯能源，花费1小时完成升降启动流程"
               },
               "state_anchor": {
-                "cultivation": "凡人·未进化",
+                "cultivation": "基因一阶初级",
                 "spirit_stones": 3,
-                "allies": [
-                  "苏晴",
-                  "张猛",
-                  "王磊"
-                ],
                 "injuries": [
-                  "左臂蛰伤消肿"
+                  "手臂被工蜂划伤"
                 ],
-                "location": "黑石据点入口外",
+                "location": "地下2层应急升降梯内",
                 "key_items": [
-                  "高频切割刀",
-                  "能量晶核*3",
                   "身份识别牌",
-                  "应急能量棒*2"
+                  "撬棍",
+                  "3枚能量晶核"
                 ],
-                "notes": "获得小队初步信任，即将进入人类据点"
+                "notes": "已确认人类文明覆灭的基本情况"
               },
+              "enemies": [
+                {
+                  "name": "虫族工蜂",
+                  "count": 3,
+                  "level": 2,
+                  "context": "地表巡逻虫族小队"
+                }
+              ],
               "resource_ledger": [
                 {
                   "item": "能量晶核",
                   "start": 3,
-                  "delta": 10,
-                  "end": 13,
-                  "reason": "修复能源系统的据点奖励"
-                },
-                {
-                  "item": "应急能量棒",
-                  "start": 2,
-                  "delta": -1,
-                  "end": 1,
-                  "reason": "赶路消耗"
+                  "delta": 1,
+                  "end": 4,
+                  "reason": "击杀1只虫族工蜂获得晶核"
                 }
               ],
               "scenes": [
                 {
                   "order": 1,
-                  "pov": "林越",
-                  "goal": "了解据点生存规则",
-                  "location": "据点公共生活区",
+                  "pov": "林跃",
+                  "goal": "适应废土地表的极端环境",
+                  "location": "研究所出口地表",
                   "characters": [
-                    "林越",
-                    "苏晴",
-                    "据点幸存者"
+                    "林跃"
                   ],
-                  "words": 1500,
-                  "tone": "好奇、谨慎"
+                  "words": 1000,
+                  "tone": "寒冷、荒凉",
+                  "beats": [
+                    "升降梯开启后直面零下三十度的酷寒与满目疮痍的废土景观",
+                    "还没适应环境就遭遇3只虫族工蜂的围攻"
+                  ]
                 },
                 {
                   "order": 2,
-                  "pov": "林越",
-                  "goal": "修复能源系统证明价值",
-                  "location": "据点核心能源室",
+                  "pov": "林跃",
+                  "goal": "被游击小队救下并前往营地",
+                  "location": "冻土荒野",
                   "characters": [
-                    "林越",
-                    "老周",
-                    "王磊"
+                    "林跃",
+                    "苏晴",
+                    "虎子",
+                    "阿禾"
                   ],
-                  "words": 1500,
-                  "tone": "专注、沉稳"
+                  "words": 1700,
+                  "tone": "惊险、释然",
+                  "beats": [
+                    "林跃力战不敌即将被工蜂刺穿心脏时，苏晴带队用能量武器击杀虫族",
+                    "林跃表明身份，跟随小队冒着暴风雪前往临时营地"
+                  ]
                 }
-              ]
+              ],
+              "mysteries": {}
             },
             {
               "id": "P1-V1-C4",
-              "title": "基因觉醒",
-              "summary": "虫族小规模突袭黑石据点，林越为保护幸存者被虫族击伤，危急时刻激活休眠仓内置的基因优化药剂获得初级进化能力",
+              "title": "游击营地的真相",
+              "summary": "林跃在游击营地了解当前人类的生存局势，虫族突袭营地时协助防守，基因能力再次进化",
               "characters": [
-                "林越",
+                "林跃",
                 "苏晴",
-                "张猛",
-                "低阶虫族工蜂",
-                "虫族刺蛇幼体"
+                "虎子",
+                "阿禾",
+                "营地幸存者"
               ],
-              "location": "黑石据点外围防线",
+              "location": "北境冻土游击小队临时营地",
               "events": [
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "knowledge",
+                  "characters": [
+                    "林跃",
+                    "苏晴"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "虫族",
-                  "action": "attack",
-                  "target": "黑石据点外围防线",
-                  "target_type": "location",
-                  "context": "小队之前的战斗暴露了据点大致方位",
-                  "result": "12只工蜂与1只刺蛇幼体突袭据点"
+                  "actor": "林跃",
+                  "action": "learn",
+                  "target": "当前人类生存局势",
+                  "target_type": "knowledge",
+                  "context": "营地休整期间与苏晴交谈",
+                  "result": "林跃得知当前地球分为虫族控制区、AI机械区、人类反抗区三大势力范围，游击小队属于北境反抗军的分支"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "combat",
+                  "characters": [
+                    "林跃",
+                    "苏晴",
+                    "虎子",
+                    "阿禾"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
+                  "actor": "林跃",
                   "action": "combat",
-                  "context": "据点外围战壕",
-                  "result": "林越为掩护儿童撤退被刺蛇毒液击中，生命垂危"
+                  "context": "营地外围防线",
+                  "result": "林跃协助小队击杀3只虫族，防守成功"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "status",
+                  "characters": [
+                    "林跃"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "activate",
-                  "target": "休眠仓内置基因优化药剂",
-                  "target_type": "item",
-                  "context": "生命体征跌破阈值时，身份识别牌触发内置药剂注射",
-                  "result": "药剂修复伤势，同时激活林越的初级基因进化"
+                  "actor": "林跃",
+                  "action": "upgrade",
+                  "target": "基因进化等级",
+                  "target_type": "status",
+                  "context": "吸收3只虫族的生命能量后",
+                  "result": "林跃基因等级提升至一阶中级，身体强度达到普通人类的3倍"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "goal",
+                  "characters": [
+                    "林跃",
+                    "苏晴"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "defeat",
-                  "target": "虫族刺蛇幼体",
-                  "target_type": "character",
-                  "context": "进化后力量、速度提升三倍",
-                  "result": "林越击杀刺蛇幼体，击退虫族突袭"
+                  "actor": "林跃",
+                  "action": "set",
+                  "target": "夺取研究所机甲",
+                  "target_type": "goal",
+                  "context": "苏晴提到研究所地下1层有机甲库存",
+                  "result": "林跃与小队商议返回研究所，夺取封存的初代机甲打破虫族的边境封锁"
                 }
               ],
-              "beats": [
-                "然后，十余只低阶虫族突袭黑石据点外围防线，突破了第一道哨卡",
-                "因此，林越加入防卫战，为掩护据点儿童撤退被刺蛇幼体的毒液击中，生命垂危",
-                "然后，林越随身携带的身份识别牌触发应急程序，为他注射了休眠仓内置的基因优化药剂",
-                "因此，林越伤势痊愈并获得初级基因进化能力，反手击杀刺蛇幼体，击退虫族突袭"
-              ],
-              "opening_beat": "然后，十余只低阶虫族突袭黑石据点外围防线，突破了第一道哨卡",
-              "closing_beat": "因此，林越伤势痊愈并获得初级基因进化能力，反手击杀刺蛇幼体，击退虫族突袭",
-              "conflict": "林越在虫族突袭中面临生死危机，被迫激活未知基因药剂",
-              "pacing": "fast",
+              "conflict": "林跃需要快速融入人类反抗势力，同时应对虫族的突袭，确认下一步的生存目标",
+              "pacing": "normal",
               "timeline": {
-                "anchor": "第15天黎明",
-                "start_time": "黎明时分",
-                "end_time": "当日上午9点",
-                "duration": "3小时",
+                "anchor": "第2天上午9点",
+                "start_time": "暴风雪停止后",
+                "end_time": "当日中午11点",
+                "duration": "2小时",
                 "time_jump": true,
-                "previous_gap": "距离上章过了13天",
-                "transition": "林越在这13天里帮据点修复了通风、净水系统，熟悉了废土生存规则与虫族特性"
+                "previous_gap": "18小时",
+                "transition": "林跃在营地休息了一整夜，适应废土的生存规则，恢复全部体力"
               },
               "state_anchor": {
-                "cultivation": "凡人·未进化",
-                "spirit_stones": 13,
+                "cultivation": "基因一阶初级",
+                "spirit_stones": 4,
                 "allies": [
                   "苏晴",
-                  "张猛",
-                  "王磊",
-                  "老周",
-                  "据点全体幸存者"
+                  "虎子",
+                  "阿禾"
                 ],
-                "location": "黑石据点外围防线",
+                "injuries": [
+                  "手臂划伤"
+                ],
+                "location": "游击小队临时营地帐篷内",
                 "key_items": [
-                  "高频切割刀",
-                  "能量晶核*13",
                   "身份识别牌",
-                  "改装能量手枪"
+                  "撬棍",
+                  "4枚能量晶核",
+                  "苏晴赠送的能量匕首"
                 ],
-                "notes": "已完全适应据点生活，掌握基础虫族应对知识"
+                "notes": "已获得游击小队的初步信任"
               },
               "enemies": [
                 {
-                  "name": "低阶虫族工蜂",
-                  "count": 12,
-                  "level": 1,
-                  "context": "据点外围突袭"
-                },
-                {
-                  "name": "虫族刺蛇幼体",
-                  "count": 1,
-                  "level": 3,
-                  "is_boss": true,
-                  "context": "突袭队伍指挥"
+                  "name": "虫族侦察小队",
+                  "count": 5,
+                  "level": 2,
+                  "context": "追踪人类踪迹突袭营地"
                 }
               ],
               "resource_ledger": [
                 {
                   "item": "能量晶核",
-                  "start": 13,
-                  "delta": 15,
-                  "end": 28,
-                  "reason": "击杀12只工蜂与1只刺蛇幼体掉落"
+                  "start": 4,
+                  "delta": 3,
+                  "end": 7,
+                  "reason": "击杀3只虫族获得晶核"
                 },
                 {
-                  "item": "能量手枪弹药",
-                  "start": 20,
-                  "delta": -12,
-                  "end": 8,
-                  "reason": "防卫战消耗"
+                  "item": "能量晶核",
+                  "start": 7,
+                  "delta": -1,
+                  "end": 6,
+                  "reason": "兑换苏晴赠送的能量匕首"
                 }
               ],
               "scenes": [
                 {
                   "order": 1,
-                  "pov": "林越",
-                  "goal": "组织防线抵御虫族突袭",
-                  "location": "据点外围战壕",
+                  "pov": "林跃",
+                  "goal": "了解当前废土的势力格局",
+                  "location": "营地指挥帐篷",
                   "characters": [
-                    "林越",
-                    "张猛",
-                    "防卫队员"
+                    "林跃",
+                    "苏晴"
                   ],
-                  "words": 1200,
-                  "tone": "紧张、危急"
+                  "words": 1400,
+                  "tone": "沉重、清晰",
+                  "beats": [
+                    "苏晴向林跃讲解虫族、AI零、反抗军的三方势力分布",
+                    "提到研究所地下1层封存的初代机甲是打破虫族封锁的唯一希望"
+                  ]
                 },
                 {
                   "order": 2,
-                  "pov": "林越",
-                  "goal": "适应基因进化后的身体击杀虫族首领",
-                  "location": "战壕入口",
+                  "pov": "林跃",
+                  "goal": "协助防守营地击退虫族突袭",
+                  "location": "营地外围防线",
                   "characters": [
-                    "林越",
-                    "虫族刺蛇幼体"
+                    "林跃",
+                    "虎子",
+                    "阿禾"
                   ],
-                  "words": 1800,
-                  "tone": "燃、震撼"
+                  "words": 1500,
+                  "tone": "激烈、燃",
+                  "beats": [
+                    "虫族侦察小队突破外围预警，林跃用能量匕首连杀3只虫族",
+                    "吸收能量后体质再次提升，获得小队全员的信任"
+                  ]
                 }
-              ]
+              ],
+              "mysteries": {}
             },
             {
               "id": "P1-V1-C5",
-              "title": "基地遗留",
-              "summary": "林越带队返回坠落的休眠基地搜寻物资，发现基地下层机库中封存的初代试验型机甲「星骸一号」",
+              "title": "机甲库的基因锁",
+              "summary": "林跃跟随小队返回研究所，突破虫族巡逻队的封锁，用自己的基因成功打开机甲库大门",
               "characters": [
-                "林越",
-                "张猛",
-                "王磊",
-                "低阶虫族工蜂"
+                "林跃",
+                "苏晴",
+                "虎子",
+                "阿禾"
               ],
-              "location": "废弃近地轨道休眠基地残骸下层机库",
+              "location": "联邦生物研究所地下1层机甲库入口",
               "events": [
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "move",
+                  "characters": [
+                    "林跃",
+                    "苏晴",
+                    "虎子",
+                    "阿禾"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "lead",
-                  "target": "物资搜寻小队",
-                  "target_type": "group",
-                  "context": "据点需要更多能源与零件修复防线",
-                  "result": "林越带队返回自己苏醒的休眠基地残骸"
-                },
-                {
-                  "type": "",
-                  "characters": null,
-                  "subject": "",
-                  "change": "",
-                  "actor": "林越",
-                  "action": "discover",
-                  "target": "基地下层隐藏机库",
+                  "actor": "小队",
+                  "action": "move",
+                  "target": "研究所地下1层入口",
                   "target_type": "location",
-                  "context": "破解核心舱主控系统权限",
-                  "result": "发现机库中封存的初代试验型机甲"
+                  "context": "避开虫族主力巡逻路线",
+                  "result": "小队顺利抵达研究所地下1层入口，未被虫族主力发现"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "combat",
+                  "characters": [
+                    "林跃",
+                    "虎子"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
+                  "actor": "林跃",
                   "action": "combat",
-                  "context": "机库入口",
-                  "result": "全歼工蜂，清空机库障碍"
+                  "context": "地下1层通道",
+                  "result": "林跃与虎子配合全歼虫族巡逻队，未触发警报"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "discover",
+                  "characters": [
+                    "林跃",
+                    "苏晴"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "confirm",
-                  "target": "机甲可修复性",
-                  "target_type": "knowledge",
-                  "context": "机库内部检查机甲状态",
-                  "result": "机甲核心部件完好，仅能源与传动系统损坏，可以修复"
+                  "actor": "林跃",
+                  "action": "discover",
+                  "target": "机甲库基因锁",
+                  "target_type": "item",
+                  "context": "机甲库入口处的门禁系统",
+                  "result": "发现机甲库需要当年基因计划志愿者的专属基因才能解锁，小队之前多次尝试都失败"
+                },
+                {
+                  "type": "achieve",
+                  "characters": [
+                    "林跃"
+                  ],
+                  "subject": "",
+                  "change": "",
+                  "actor": "林跃",
+                  "action": "achieve",
+                  "target": "解锁机甲库",
+                  "target_type": "goal",
+                  "context": "林跃进行基因验证",
+                  "result": "林跃的基因完美匹配门禁系统，尘封1200年的机甲库大门成功开启"
                 }
               ],
-              "beats": [
-                "然后，林越主动带队返回自己苏醒的休眠基地残骸，搜寻修复防线需要的零件与能源",
-                "因此，他用自己的身份识别牌破解了基地主控系统权限，发现了下层隐藏的机库",
-                "然后，小队清理了机库内筑巢的8只低阶工蜂，看到了封存的初代试验型机甲「星骸一号」",
-                "因此，林越确认机甲核心完好，只需替换部分零件就能重启"
-              ],
-              "opening_beat": "然后，林越主动带队返回自己苏醒的休眠基地残骸，搜寻修复防线需要的零件与能源",
-              "closing_beat": "因此，林越确认机甲核心完好，只需替换部分零件就能重启",
-              "conflict": "林越需要在虫族出没的基地残骸中搜寻可用物资，破解隐藏权限",
-              "pacing": "normal",
+              "conflict": "小队需要突破研究所的虫族巡逻封锁，解开机甲库的基因锁获取初代机甲",
+              "pacing": "fast",
               "timeline": {
-                "anchor": "第30天上午",
-                "start_time": "上午8点",
-                "end_time": "当日下午6点",
-                "duration": "10小时",
-                "time_jump": true,
-                "previous_gap": "距离上章过了15天",
-                "transition": "林越在这15天里熟悉了初级基因进化的能力，帮据点升级了外围防线的预警系统"
+                "anchor": "第2天下午2点",
+                "start_time": "从营地出发后",
+                "end_time": "当日下午4点",
+                "duration": "2小时",
+                "previous_gap": "3小时",
+                "transition": "小队准备武器物资，花3小时避开虫族巡逻路线抵达研究所"
               },
               "state_anchor": {
-                "cultivation": "初级基因进化一阶",
-                "spirit_stones": 28,
+                "cultivation": "基因一阶中级",
+                "spirit_stones": 6,
                 "allies": [
-                  "张猛",
-                  "王磊"
+                  "苏晴",
+                  "虎子",
+                  "阿禾"
                 ],
-                "location": "休眠基地残骸入口",
+                "location": "研究所外的冻土隐蔽点",
                 "key_items": [
-                  "高频切割刀",
-                  "能量晶核*28",
                   "身份识别牌",
-                  "改装能量手枪",
-                  "便携维修工具组"
+                  "能量匕首",
+                  "6枚能量晶核"
                 ],
-                "notes": "已熟练掌握初级进化能力，力量、速度是普通人的3倍"
+                "notes": "已与小队达成合作，目标夺取初代机甲"
               },
               "enemies": [
                 {
-                  "name": "低阶虫族工蜂",
-                  "count": 8,
-                  "level": 1,
-                  "context": "机库内筑巢"
+                  "name": "虫族巡逻队",
+                  "count": 4,
+                  "level": 3,
+                  "context": "机甲库入口巡逻"
                 }
               ],
               "resource_ledger": [
                 {
                   "item": "能量晶核",
-                  "start": 28,
-                  "delta": 8,
-                  "end": 36,
-                  "reason": "击杀8只工蜂掉落"
-                },
-                {
-                  "item": "能量手枪弹药",
-                  "start": 8,
-                  "delta": -5,
-                  "end": 3,
-                  "reason": "清理虫族消耗"
+                  "start": 6,
+                  "delta": 4,
+                  "end": 10,
+                  "reason": "全歼虫族巡逻队获得4枚晶核"
                 }
               ],
               "scenes": [
                 {
                   "order": 1,
-                  "pov": "林越",
-                  "goal": "破解基地主控系统权限",
-                  "location": "基地核心舱",
+                  "pov": "林跃",
+                  "goal": "突破虫族封锁进入研究所地下1层",
+                  "location": "研究所地下1层通道",
                   "characters": [
-                    "林越",
-                    "王磊"
+                    "林跃",
+                    "虎子"
                   ],
-                  "words": 1500,
-                  "tone": "专注、期待"
+                  "words": 1300,
+                  "tone": "紧张、隐秘",
+                  "beats": [
+                    "避开虫族主力巡逻队，悄悄潜入地下1层通道",
+                    "遭遇4只虫族巡逻兵，与虎子配合无声将其全部击杀"
+                  ]
                 },
                 {
                   "order": 2,
-                  "pov": "林越",
-                  "goal": "清理机库检查机甲状态",
-                  "location": "基地下层机库",
+                  "pov": "林跃",
+                  "goal": "解锁机甲库大门",
+                  "location": "机甲库入口",
                   "characters": [
-                    "林越",
-                    "张猛",
-                    "王磊"
+                    "林跃",
+                    "苏晴",
+                    "虎子",
+                    "阿禾"
                   ],
-                  "words": 1500,
-                  "tone": "惊喜、振奋"
+                  "words": 1600,
+                  "tone": "震惊、惊喜",
+                  "beats": [
+                    "苏晴告知小队之前多次尝试破解门禁失败，只有基因计划志愿者能解锁",
+                    "林跃尝试基因验证，大门顺利开启，小队全员震惊"
+                  ]
                 }
-              ]
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_004",
+                    "clue": "机甲库门禁系统的验证记录显示，1200年来林跃是第一个成功匹配的人类"
+                  }
+                ]
+              }
             },
             {
               "id": "P1-V1-C6",
-              "title": "AI星核",
-              "summary": "林越修复机甲主控系统时，解锁了基地内置的强辅助AI「星核」，完成了星骸一号机甲的初步调试",
+              "title": "初代机甲重曙",
+              "summary": "林跃在机甲库中找到初代实验机甲「重曙」，修复机甲动力系统，击退闯入的机械清扫部队，完成机甲的基本修复",
               "characters": [
-                "林越",
-                "星核",
-                "苏晴"
+                "林跃",
+                "苏晴",
+                "虎子",
+                "阿禾"
               ],
-              "location": "黑石据点地下机库",
+              "location": "联邦生物研究所地下1层机甲库",
               "events": [
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "discover",
+                  "characters": [
+                    "林跃"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "transport",
-                  "target": "星骸一号机甲",
+                  "actor": "林跃",
+                  "action": "discover",
+                  "target": "初代机甲重曙",
                   "target_type": "item",
-                  "context": "出动据点全部运输车辆",
-                  "result": "将机甲完好运回黑石据点地下机库"
+                  "context": "机甲库最内侧的封存舱",
+                  "result": "林跃找到专为基因计划志愿者定制的初代实验型机甲「重曙」，状态完好仅能源系统损坏"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "item",
+                  "characters": [
+                    "林跃",
+                    "阿禾"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "activate",
-                  "target": "机甲主控系统",
-                  "target_type": "system",
-                  "context": "用身份识别牌解锁最高权限",
-                  "result": "激活了休眠三千年的强辅助AI「星核」"
-                },
-                {
-                  "type": "",
-                  "characters": null,
-                  "subject": "",
-                  "change": "",
-                  "actor": "星核",
-                  "action": "provide",
-                  "target": "机甲修复方案与未来世界资料库",
-                  "target_type": "knowledge",
-                  "context": "识别到林越的 Creator 权限",
-                  "result": "林越获得三千年后的科技资料与虫族情报"
-                },
-                {
-                  "type": "",
-                  "characters": null,
-                  "subject": "",
-                  "change": "",
-                  "actor": "林越",
-                  "action": "test",
-                  "target": "星骸一号机甲",
+                  "actor": "林跃",
+                  "action": "repair",
+                  "target": "重曙机甲动力系统",
                   "target_type": "item",
-                  "context": "据点地下测试场",
-                  "result": "机甲调试完成，可正常投入战斗"
+                  "context": "机甲库的备用零件仓库",
+                  "result": "在机械师阿禾的协助下，用收集到的能量晶核修复机甲的动力核心"
+                },
+                {
+                  "type": "combat",
+                  "characters": [
+                    "林跃",
+                    "苏晴"
+                  ],
+                  "subject": "",
+                  "change": "",
+                  "actor": "林跃",
+                  "action": "combat",
+                  "context": "机甲库入口",
+                  "result": "林跃首次驾驶半修复的重曙机甲，用机甲的近战臂刃全歼机械清扫兵"
+                },
+                {
+                  "type": "achieve",
+                  "characters": [
+                    "林跃"
+                  ],
+                  "subject": "",
+                  "change": "",
+                  "actor": "林跃",
+                  "action": "achieve",
+                  "target": "修复重曙机甲",
+                  "target_type": "goal",
+                  "context": "战斗结束后补充能源",
+                  "result": "重曙机甲完成全部修复，各项性能达到出厂标准，林跃与机甲的基因匹配度高达98%"
                 }
               ],
-              "beats": [
-                "然后，林越组织据点人力将星骸一号机甲完好运回黑石据点的地下机库",
-                "因此，他用身份识别牌解锁机甲主控系统，意外激活了休眠三千年的强辅助AI「星核」",
-                "然后，星核确认林越的 Creator 权限，为他提供了完整的虫族情报与未来科技资料库",
-                "因此，林越在星核的协助下完成了机甲调试，星骸一号可正常投入战斗"
-              ],
-              "opening_beat": "然后，林越组织据点人力将星骸一号机甲完好运回黑石据点的地下机库",
-              "closing_beat": "因此，林越在星核的协助下完成了机甲调试，星骸一号可正常投入战斗",
-              "conflict": "林越需要修复复杂的试验型机甲，破解未知AI的权限",
-              "pacing": "normal",
+              "conflict": "林跃需要在机械部队闯入机甲库前完成机甲修复，击退敌人获得属于自己的专属机甲",
+              "pacing": "fast",
               "timeline": {
-                "anchor": "第45天下午",
-                "start_time": "下午2点",
+                "anchor": "第2天下午4点30分",
+                "start_time": "进入机甲库后",
                 "end_time": "当日深夜11点",
-                "duration": "9小时",
-                "time_jump": true,
-                "previous_gap": "距离上章过了15天",
-                "transition": "林越在这15天里一边修复机甲零部件，一边组织据点加固防线，收集机甲需要的能源晶核"
+                "duration": "6.5小时",
+                "previous_gap": "30分钟",
+                "transition": "小队进入机甲库后清点物资，寻找可用的零件和能源"
               },
               "state_anchor": {
-                "cultivation": "初级基因进化一阶",
-                "spirit_stones": 36,
+                "cultivation": "基因一阶中级",
+                "spirit_stones": 10,
                 "allies": [
                   "苏晴",
-                  "张猛",
-                  "王磊",
-                  "老周"
+                  "虎子",
+                  "阿禾"
                 ],
-                "location": "黑石据点地下机库",
+                "location": "机甲库入口内侧",
                 "key_items": [
-                  "高频切割刀",
-                  "能量晶核*36",
                   "身份识别牌",
-                  "便携维修工具组",
-                  "星骸一号机甲核心部件"
+                  "能量匕首",
+                  "10枚能量晶核"
                 ],
-                "notes": "已收集齐修复机甲需要的全部零件"
+                "notes": "已成功开启机甲库大门"
               },
+              "enemies": [
+                {
+                  "name": "机械清扫兵",
+                  "count": 6,
+                  "level": 3,
+                  "context": "AI零的部队追踪能量信号闯入"
+                }
+              ],
               "resource_ledger": [
                 {
                   "item": "能量晶核",
-                  "start": 36,
-                  "delta": -10,
-                  "end": 26,
-                  "reason": "机甲启动能源消耗"
+                  "start": 10,
+                  "delta": -5,
+                  "end": 5,
+                  "reason": "修复机甲动力核心消耗5枚晶核"
+                },
+                {
+                  "item": "能量晶核",
+                  "start": 5,
+                  "delta": 6,
+                  "end": 11,
+                  "reason": "击毁6台机械清扫兵获得能量核心"
                 }
               ],
               "scenes": [
                 {
                   "order": 1,
-                  "pov": "林越",
-                  "goal": "激活机甲主控系统",
-                  "location": "地下机库",
+                  "pov": "林跃",
+                  "goal": "找到并修复初代机甲重曙",
+                  "location": "机甲库内部",
                   "characters": [
-                    "林越",
-                    "星核"
+                    "林跃",
+                    "阿禾"
                   ],
                   "words": 1500,
-                  "tone": "期待、专注"
+                  "tone": "激动、期待",
+                  "beats": [
+                    "在封存舱中找到黑红配色的初代机甲「重曙」，阿禾检查发现仅动力系统损坏",
+                    "用能量晶核作为能源，花3小时修复机甲的动力核心"
+                  ]
                 },
                 {
                   "order": 2,
-                  "pov": "林越",
-                  "goal": "完成机甲调试测试性能",
-                  "location": "地下测试场",
+                  "pov": "林跃",
+                  "goal": "首次驾驶机甲击退机械部队",
+                  "location": "机甲库入口",
                   "characters": [
-                    "林越",
+                    "林跃",
                     "苏晴",
-                    "星核"
+                    "虎子"
                   ],
-                  "words": 1500,
-                  "tone": "振奋、燃"
+                  "words": 1800,
+                  "tone": "燃、震撼",
+                  "beats": [
+                    "机械清扫兵闯入机甲库，林跃首次进入驾驶舱，基因同步成功启动机甲",
+                    "操纵机甲臂刃连斩6台机械兵，完全掌握机甲的基础操作"
+                  ]
                 }
-              ]
+              ],
+              "mysteries": {}
             },
             {
               "id": "P1-V1-C7",
-              "title": "围剿预警",
-              "summary": "星核监测到大规模虫族能量反应，确认虫族巢穴将对黑石据点发动全面围剿，据点全员进入紧急备战状态",
+              "title": "冻土上的机甲锋芒",
+              "summary": "林跃驾驶重曙机甲返回营地，途中遭遇虫族小股部队拦截，实战测试机甲性能，基因等级提升至二阶",
               "characters": [
-                "林越",
+                "林跃",
                 "苏晴",
-                "老周",
-                "星核"
+                "虎子",
+                "阿禾"
               ],
-              "location": "黑石据点指挥室",
+              "location": "北境冻土荒野",
               "events": [
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "move",
+                  "characters": [
+                    "林跃",
+                    "苏晴"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "星核",
-                  "action": "detect",
-                  "target": "大规模虫族能量反应",
+                  "actor": "林跃",
+                  "action": "drive",
+                  "target": "重曙机甲返回营地",
+                  "target_type": "location",
+                  "context": "离开研究所后",
+                  "result": "林跃驾驶机甲，带着小队成员沿隐蔽路线返回临时营地"
+                },
+                {
+                  "type": "combat",
+                  "characters": [
+                    "林跃"
+                  ],
+                  "subject": "",
+                  "change": "",
+                  "actor": "林跃",
+                  "action": "combat",
+                  "context": "冻土峡谷路段",
+                  "result": "林跃驾驶重曙机甲全歼虫族作战小队，测试了机甲的近战、远程武器全部功能"
+                },
+                {
+                  "type": "status",
+                  "characters": [
+                    "林跃"
+                  ],
+                  "subject": "",
+                  "change": "",
+                  "actor": "林跃",
+                  "action": "upgrade",
+                  "target": "基因进化等级",
                   "target_type": "status",
-                  "context": "启动全域监测系统",
-                  "result": "监测到300只以上的虫族部队正朝据点移动，24小时后抵达"
+                  "context": "吸收虫族近卫虫的高阶生命能量",
+                  "result": "林跃基因等级突破至二阶初级，获得精神力感知能力，可以感知周围1公里内的敌人动向"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "achieve",
+                  "characters": [
+                    "林跃"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "report",
-                  "target": "虫族围剿情报",
-                  "target_type": "knowledge",
-                  "context": "据点紧急会议",
-                  "result": "据点全员确认危机，进入紧急备战状态"
-                },
-                {
-                  "type": "",
-                  "characters": null,
-                  "subject": "",
-                  "change": "",
-                  "actor": "林越",
-                  "action": "design",
-                  "target": "三层防御阵线方案",
-                  "target_type": "knowledge",
-                  "context": "结合星核的虫族情报与工程知识",
-                  "result": "制定了以机甲为核心的防御反击计划"
-                },
-                {
-                  "type": "",
-                  "characters": null,
-                  "subject": "",
-                  "change": "",
-                  "actor": "苏晴",
-                  "action": "organize",
-                  "target": "防卫队战前训练",
-                  "target_type": "group",
-                  "context": "外围防线",
-                  "result": "所有防卫队员熟悉新型防御武器的操作"
+                  "actor": "林跃",
+                  "action": "achieve",
+                  "target": "返回营地",
+                  "target_type": "goal",
+                  "context": "战斗结束后",
+                  "result": "小队顺利返回营地，重曙机甲的出现让所有营地幸存者士气大振"
                 }
               ],
-              "beats": [
-                "然后，星核启动全域监测系统，意外探测到三百只以上的虫族部队正朝黑石据点移动，24小时后就会抵达",
-                "因此，林越立刻召开据点紧急会议，通报了虫族全面围剿的预警情报",
-                "然后，林越结合星核的虫族弱点资料，设计了以星骸一号为核心的三层防御阵线方案",
-                "因此，据点全员进入紧急备战状态，按方案加固防线、储备物资、训练新型武器操作"
-              ],
-              "opening_beat": "然后，星核启动全域监测系统，意外探测到三百只以上的虫族部队正朝黑石据点移动，24小时后就会抵达",
-              "closing_beat": "因此，据点全员进入紧急备战状态，按方案加固防线、储备物资、训练新型武器操作",
-              "conflict": "黑石据点面临有史以来最大规模的虫族围剿，必须在24小时内完成备战",
+              "conflict": "林跃需要驾驶刚刚修复的机甲突破虫族的拦截，安全返回营地，同时在实战中熟悉机甲操作与自身能力",
               "pacing": "fast",
               "timeline": {
-                "anchor": "第70天上午",
-                "start_time": "上午9点",
-                "end_time": "当日深夜12点",
-                "duration": "15小时",
+                "anchor": "第3天上午8点",
+                "start_time": "从研究所出发后",
+                "end_time": "当日上午11点",
+                "duration": "3小时",
                 "time_jump": true,
-                "previous_gap": "距离上章过了25天",
-                "transition": "林越在这25天里升级了机甲武器系统，帮据点改造了能量炮台，所有人的战斗力都有显著提升"
+                "previous_gap": "9小时",
+                "transition": "小队在机甲库休息了一整夜，补充弹药和能源，确认机甲状态稳定"
               },
               "state_anchor": {
-                "cultivation": "初级基因进化二阶",
-                "spirit_stones": 26,
+                "cultivation": "基因一阶高级",
+                "spirit_stones": 11,
                 "allies": [
                   "苏晴",
-                  "张猛",
-                  "王磊",
-                  "老周",
-                  "星核"
+                  "虎子",
+                  "阿禾"
                 ],
-                "location": "黑石据点指挥室",
+                "location": "研究所地下1层机甲库",
                 "key_items": [
-                  "高频切割刀",
-                  "能量晶核*26",
-                  "身份识别牌",
-                  "星骸一号机甲",
-                  "改装能量炮台设计图"
+                  "重曙机甲",
+                  "能量匕首",
+                  "11枚能量晶核"
                 ],
-                "notes": "已熟练操作星骸一号机甲，基因进化等级突破到二阶"
+                "notes": "已掌握重曙机甲的基础操作"
               },
+              "enemies": [
+                {
+                  "name": "虫族作战小队",
+                  "count": 8,
+                  "level": 3,
+                  "context": "前往研究所巡逻的虫族部队"
+                },
+                {
+                  "name": "虫族近卫虫",
+                  "count": 1,
+                  "level": 4,
+                  "is_boss": true,
+                  "context": "虫族小队长"
+                }
+              ],
               "resource_ledger": [
                 {
                   "item": "能量晶核",
-                  "start": 26,
-                  "delta": 50,
-                  "end": 76,
-                  "reason": "据点全员筹集的备战能源储备"
+                  "start": 11,
+                  "delta": 9,
+                  "end": 20,
+                  "reason": "全歼虫族小队获得9枚晶核，其中1枚为近卫虫的高阶晶核"
                 }
               ],
               "scenes": [
                 {
                   "order": 1,
-                  "pov": "林越",
-                  "goal": "确认虫族围剿情报并制定防御方案",
-                  "location": "据点指挥室",
+                  "pov": "林跃",
+                  "goal": "驾驶机甲返回营地",
+                  "location": "冻土荒野",
                   "characters": [
-                    "林越",
-                    "星核",
-                    "老周",
+                    "林跃",
                     "苏晴"
                   ],
-                  "words": 1500,
-                  "tone": "凝重、紧迫"
+                  "words": 1200,
+                  "tone": "轻松、豪迈",
+                  "beats": [
+                    "林跃驾驶重曙机甲在冻土上前行，小队成员乘坐机甲外挂的运载舱跟随",
+                    "进入峡谷路段时，精神力感知到前方有虫族部队埋伏"
+                  ]
                 },
                 {
                   "order": 2,
-                  "pov": "林越",
-                  "goal": "组织全员备战加固防线",
-                  "location": "外围防线",
+                  "pov": "林跃",
+                  "goal": "全歼虫族拦截部队并完成进化",
+                  "location": "冻土峡谷",
                   "characters": [
-                    "林越",
-                    "全体据点幸存者"
+                    "林跃"
                   ],
-                  "words": 1500,
-                  "tone": "激昂、团结"
+                  "words": 1900,
+                  "tone": "燃、震撼",
+                  "beats": [
+                    "先后使用机甲的肩载能量炮和近战臂刃，不到10分钟全歼8只虫族作战兵",
+                    "击杀近卫虫吸收高阶能量，基因突破至二阶，获得精神感知能力"
+                  ]
                 }
-              ]
+              ],
+              "mysteries": {}
             },
             {
               "id": "P1-V1-C8",
-              "title": "防线血战",
-              "summary": "虫族大部队抵达据点外围，第一轮攻势突破两道防线，林越驾驶星骸一号机甲出战稳住阵脚",
+              "title": "前哨站的三方博弈",
+              "summary": "林跃得知虫族前哨站封锁了前往信号源的路线，侦察发现AI零的机械部队正在进攻前哨站，小队制定战术坐收渔利",
               "characters": [
-                "林越",
+                "林跃",
                 "苏晴",
-                "张猛",
-                "低阶虫族工蜂",
-                "虫族刺蛇"
+                "虎子",
+                "阿禾"
               ],
-              "location": "黑石据点外围防线",
+              "location": "虫族边境前哨站外围山地",
               "events": [
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "knowledge",
+                  "characters": [
+                    "林跃",
+                    "苏晴"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "虫族",
-                  "action": "attack",
-                  "target": "黑石据点外围防线",
+                  "actor": "林跃",
+                  "action": "learn",
+                  "target": "前哨站封锁信息",
+                  "target_type": "knowledge",
+                  "context": "营地作战会议",
+                  "result": "林跃得知虫族前哨站封锁了所有向南的路线，而近地轨道殖民站的信号源就在前哨站南侧"
+                },
+                {
+                  "type": "move",
+                  "characters": [
+                    "林跃",
+                    "苏晴"
+                  ],
+                  "subject": "",
+                  "change": "",
+                  "actor": "林跃",
+                  "action": "move",
+                  "target": "前哨站外围侦察",
                   "target_type": "location",
-                  "context": "24小时后虫族部队准时抵达",
-                  "result": "300只工蜂与20只刺蛇发动第一轮猛攻"
+                  "context": "隐蔽前进避开虫族警戒",
+                  "result": "林跃和苏晴潜入前哨站外围山地，侦察前哨站的防御部署"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "discover",
+                  "characters": [
+                    "林跃",
+                    "苏晴"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "防卫队",
-                  "action": "defend",
-                  "target": "第一道、第二道防线",
-                  "target_type": "location",
-                  "context": "外围战壕",
-                  "result": "两道防线先后被突破，防卫队出现伤亡，被迫退守第三道防线"
+                  "actor": "林跃",
+                  "action": "discover",
+                  "target": "机械部队进攻前哨站",
+                  "target_type": "event",
+                  "context": "前哨站西侧防线",
+                  "result": "发现AI零的机械部队正在进攻前哨站西侧防线，虫族主力被牵制在西侧"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "goal",
+                  "characters": [
+                    "林跃",
+                    "苏晴"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "pilot",
-                  "target": "星骸一号机甲",
-                  "target_type": "item",
-                  "context": "第三道防线即将被突破时",
-                  "result": "林越驾驶机甲出战，瞬间清理了突破防线的虫族部队"
-                },
-                {
-                  "type": "",
-                  "characters": null,
-                  "subject": "",
-                  "change": "",
-                  "actor": "林越",
-                  "action": "counterattack",
-                  "target": "虫族前沿部队",
-                  "target_type": "group",
-                  "context": "防线外开阔地",
-                  "result": "击杀12只刺蛇与百余只工蜂，稳住防线态势"
+                  "actor": "林跃",
+                  "action": "set",
+                  "target": "突袭前哨站",
+                  "target_type": "goal",
+                  "context": "返回临时营地后",
+                  "result": "小队制定战术，等机械部队和虫族两败俱伤时，从东侧防御薄弱点突袭前哨站"
                 }
               ],
-              "beats": [
-                "然后，虫族大部队准时抵达据点外围，三百只工蜂与二十只刺蛇发动第一轮猛攻",
-                "因此，第一道、第二道防线先后被突破，防卫队出现伤亡，被迫退守最后一道防线",
-                "然后，林越驾驶星骸一号机甲出战，用机载能量炮瞬间清理了突破防线的虫族部队",
-                "因此，林越带队反击斩杀过半虫族先锋部队，成功稳住防线态势"
-              ],
-              "opening_beat": "然后，虫族大部队准时抵达据点外围，三百只工蜂与二十只刺蛇发动第一轮猛攻",
-              "closing_beat": "因此，林越带队反击斩杀过半虫族先锋部队，成功稳住防线态势",
-              "conflict": "黑石据点防线濒临崩溃，林越必须驾驶机甲力挽狂澜",
-              "pacing": "fast",
+              "conflict": "林跃需要在三方势力的博弈中找到最优战术，以最小的代价攻破虫族前哨站，打通前往信号源的路线",
+              "pacing": "normal",
               "timeline": {
-                "anchor": "第71天黎明",
-                "start_time": "黎明时分",
-                "end_time": "当日正午",
-                "duration": "6小时",
-                "previous_gap": "距离上章过了9小时"
+                "anchor": "第3天下午2点",
+                "start_time": "作战会议结束后",
+                "end_time": "当日下午6点",
+                "duration": "4小时",
+                "previous_gap": "3小时",
+                "transition": "营地召开作战会议，商议打通路线的方案，整理作战物资"
               },
               "state_anchor": {
-                "cultivation": "初级基因进化二阶",
-                "spirit_stones": 76,
+                "cultivation": "基因二阶初级",
+                "spirit_stones": 20,
                 "allies": [
                   "苏晴",
-                  "张猛",
-                  "王磊",
-                  "老周",
-                  "星核",
-                  "全体防卫队员"
+                  "虎子",
+                  "阿禾",
+                  "营地32名幸存者"
                 ],
-                "location": "地下机库机甲驾驶舱",
+                "location": "游击小队临时营地",
                 "key_items": [
-                  "星骸一号机甲",
-                  "身份识别牌",
-                  "能量晶核*76"
+                  "重曙机甲",
+                  "能量匕首",
+                  "20枚能量晶核"
                 ],
-                "notes": "机甲状态完好，所有防御设施已经准备就绪"
+                "notes": "已获得营地所有幸存者的拥护"
               },
-              "enemies": [
-                {
-                  "name": "低阶虫族工蜂",
-                  "count": 300,
-                  "level": 1,
-                  "context": "围剿先锋部队"
-                },
-                {
-                  "name": "虫族刺蛇",
-                  "count": 20,
-                  "level": 3,
-                  "context": "围剿先锋指挥"
-                }
-              ],
-              "resource_ledger": [
-                {
-                  "item": "能量晶核",
-                  "start": 76,
-                  "delta": -20,
-                  "end": 56,
-                  "reason": "机甲能量炮消耗"
-                },
-                {
-                  "item": "能量炮台弹药",
-                  "start": 100,
-                  "delta": -70,
-                  "end": 30,
-                  "reason": "防线防御消耗"
-                }
-              ],
               "scenes": [
                 {
                   "order": 1,
-                  "pov": "林越",
-                  "goal": "防守第三道防线阻止虫族突破",
-                  "location": "第三道防线战壕",
+                  "pov": "林跃",
+                  "goal": "侦察虫族前哨站的防御部署",
+                  "location": "前哨站外围山地",
                   "characters": [
-                    "林越",
-                    "张猛",
-                    "防卫队员"
+                    "林跃",
+                    "苏晴"
                   ],
-                  "words": 1500,
-                  "tone": "惨烈、危急"
+                  "words": 1400,
+                  "tone": "谨慎、冷静",
+                  "beats": [
+                    "用精神感知能力避开虫族的警戒巡逻，摸到前哨站外围的制高点",
+                    "观察到前哨站西侧防御最强，东侧仅部署了少量虫族兵力"
+                  ]
                 },
                 {
                   "order": 2,
-                  "pov": "林越",
-                  "goal": "驾驶机甲反击稳住防线",
-                  "location": "防线外开阔地",
+                  "pov": "林跃",
+                  "goal": "制定突袭前哨站的战术",
+                  "location": "营地指挥帐篷",
                   "characters": [
-                    "林越",
-                    "星核",
-                    "虫族部队"
+                    "林跃",
+                    "苏晴",
+                    "虎子",
+                    "阿禾"
                   ],
                   "words": 1500,
-                  "tone": "燃、震撼"
+                  "tone": "运筹帷幄",
+                  "beats": [
+                    "发现机械部队进攻西侧防线，虫族主力全部调往西侧防守，东侧空虚",
+                    "制定战术：等双方战至最惨烈时，林跃驾驶重曙机甲从东侧突破，小队跟进占领前哨站"
+                  ]
                 }
-              ]
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_005",
+                    "clue": "机械部队的进攻目标似乎是前哨站内的某个特殊装置，并非单纯的清剿虫族"
+                  }
+                ]
+              }
             },
             {
               "id": "P1-V1-C9",
-              "title": "巢穴之主",
-              "summary": "虫族母虫亲征发动最终攻势，林越驾驶机甲与星核配合斩杀母虫，彻底击退虫族围剿",
+              "title": "攻破前哨站",
+              "summary": "林跃带队在机械部队与虫族两败俱伤时发起突袭，击毁前哨站能量核心，击杀虫族统领刀锋虫，成功占领前哨站",
               "characters": [
-                "林越",
-                "星核",
+                "林跃",
                 "苏晴",
-                "虫族母虫（幼体）",
-                "虫族刺蛇",
-                "低阶虫族工蜂"
+                "虎子",
+                "阿禾",
+                "营地作战队员"
               ],
-              "location": "黑石据点第三道防线外",
+              "location": "虫族边境前哨站",
               "events": [
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "combat",
+                  "characters": [
+                    "林跃"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "虫族母虫（幼体）",
-                  "action": "appear",
-                  "target": "防线前沿",
-                  "target_type": "character",
-                  "context": "先锋部队损失过半后",
-                  "result": "母虫亲自出战，指挥剩余虫族发动最终总攻"
-                },
-                {
-                  "type": "",
-                  "characters": null,
-                  "subject": "",
-                  "change": "",
-                  "actor": "林越",
+                  "actor": "林跃",
                   "action": "combat",
-                  "context": "防线外开阔地",
-                  "result": "母虫的酸液攻击损坏机甲左臂，林越陷入苦战"
+                  "context": "前哨站东侧防线",
+                  "result": "林跃驾驶重曙机甲突袭东侧防线，10分钟内全歼12只虫族守军，突破防线进入前哨站内部"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "combat",
+                  "characters": [
+                    "林跃"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "星核",
-                  "action": "calculate",
-                  "target": "母虫弱点位置",
-                  "target_type": "knowledge",
-                  "context": "实时分析母虫攻击模式",
-                  "result": "找到母虫头部核心的唯一弱点"
+                  "actor": "林跃",
+                  "action": "combat",
+                  "context": "前哨站中央区域",
+                  "result": "林跃全歼残余的机械部队，吸收能量补充机甲能源"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "combat",
+                  "characters": [
+                    "林跃"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "defeat",
-                  "target": "虫族母虫（幼体）",
-                  "target_type": "character",
-                  "context": "超负荷启动机甲等离子刃",
-                  "result": "成功斩杀母虫，剩余虫族失去指挥四散溃逃，围剿彻底失败"
+                  "actor": "林跃",
+                  "action": "combat",
+                  "context": "前哨站能量核心室",
+                  "result": "林跃与刀锋虫激战15分钟，最终用机甲的能量核心穿刺炮击穿刀锋虫的甲壳，将其击杀"
+                },
+                {
+                  "type": "achieve",
+                  "characters": [
+                    "林跃",
+                    "小队"
+                  ],
+                  "subject": "",
+                  "change": "",
+                  "actor": "小队",
+                  "action": "achieve",
+                  "target": "占领前哨站",
+                  "target_type": "goal",
+                  "context": "击杀刀锋虫后",
+                  "result": "小队成功占领前哨站，打通了向南前往信号源的路线，获得前哨站内的大量物资储备"
                 }
               ],
-              "beats": [
-                "然后，虫族先锋部队损失过半后，隐藏在后方的幼体母虫亲自出战，指挥剩余虫族发动最终总攻",
-                "因此，林越驾驶机甲与母虫正面对战，被母虫的酸液攻击损坏机甲左臂，陷入苦战",
-                "然后，星核实时分析母虫的攻击模式，找到了它头部核心的唯一弱点",
-                "因此，林越超负荷启动机甲等离子刃，精准刺穿母虫核心，剩余虫族失去指挥四散溃逃，围剿被彻底击退"
-              ],
-              "opening_beat": "然后，虫族先锋部队损失过半后，隐藏在后方的幼体母虫亲自出战，指挥剩余虫族发动最终总攻",
-              "closing_beat": "因此，林越超负荷启动机甲等离子刃，精准刺穿母虫核心，剩余虫族失去指挥四散溃逃，围剿被彻底击退",
-              "conflict": "林越面对虫族母虫的终极攻击，必须找到弱点战胜强敌守护据点",
+              "conflict": "林跃需要带领小队同时面对残余虫族与机械部队，击杀虫族统领刀锋虫，成功占领前哨站打通路线",
               "pacing": "fast",
               "timeline": {
-                "anchor": "第71天下午",
-                "start_time": "下午2点",
-                "end_time": "当日黄昏",
-                "duration": "4小时",
-                "previous_gap": "距离上章过了2小时"
+                "anchor": "第4天凌晨1点",
+                "start_time": "机械部队与虫族激战正酣时",
+                "end_time": "当日凌晨3点",
+                "duration": "2小时",
+                "time_jump": true,
+                "previous_gap": "7小时",
+                "transition": "小队在山地隐蔽点等待了7小时，直到机械部队与虫族双方损失超过80%，战力最弱的时候发起突袭"
               },
               "state_anchor": {
-                "cultivation": "初级基因进化二阶",
-                "spirit_stones": 56,
+                "cultivation": "基因二阶初级",
+                "spirit_stones": 20,
                 "allies": [
                   "苏晴",
-                  "张猛",
-                  "王磊",
-                  "老周",
-                  "星核",
-                  "全体防卫队员"
+                  "虎子",
+                  "阿禾",
+                  "10名作战队员"
                 ],
-                "location": "星骸一号机甲驾驶舱",
+                "location": "前哨站东侧山地隐蔽点",
                 "key_items": [
-                  "星骸一号机甲（左臂损坏）",
-                  "身份识别牌",
-                  "能量晶核*56"
+                  "重曙机甲",
+                  "能量匕首",
+                  "20枚能量晶核"
                 ],
-                "notes": "机甲剩余能量30%，防线还有充足弹药"
+                "notes": "已确认前哨站防御最弱的进攻时机"
               },
               "enemies": [
                 {
-                  "name": "低阶虫族工蜂",
-                  "count": 150,
-                  "level": 1,
-                  "context": "最终总攻部队"
+                  "name": "虫族守军",
+                  "count": 12,
+                  "level": 3,
+                  "context": "东侧防线守军"
                 },
                 {
-                  "name": "虫族刺蛇",
+                  "name": "残余机械部队",
                   "count": 8,
                   "level": 3,
-                  "context": "母虫亲卫"
+                  "context": "西侧战场残余兵力"
                 },
                 {
-                  "name": "虫族母虫（幼体）",
+                  "name": "刀锋虫",
                   "count": 1,
-                  "level": 6,
+                  "level": 5,
                   "is_boss": true,
-                  "context": "本次围剿总指挥"
+                  "context": "前哨站统领"
                 }
               ],
               "resource_ledger": [
                 {
                   "item": "能量晶核",
-                  "start": 56,
-                  "delta": -30,
-                  "end": 26,
-                  "reason": "机甲等离子刃超负荷启动消耗"
-                },
-                {
-                  "item": "能量晶核",
-                  "start": 26,
-                  "delta": 100,
-                  "end": 126,
-                  "reason": "击杀母虫与剩余虫族掉落"
+                  "start": 20,
+                  "delta": 21,
+                  "end": 41,
+                  "reason": "击杀12只虫族、8台机械兵、1只刀锋虫获得21枚晶核，其中刀锋虫为顶级晶核"
                 }
               ],
               "scenes": [
                 {
                   "order": 1,
-                  "pov": "林越",
-                  "goal": "拖住母虫避免防线被突破",
-                  "location": "防线外开阔地",
+                  "pov": "林跃",
+                  "goal": "突破前哨站东侧防线",
+                  "location": "前哨站东侧防线",
                   "characters": [
-                    "林越",
-                    "星核",
-                    "虫族母虫"
+                    "林跃",
+                    "虎子"
                   ],
-                  "words": 1500,
-                  "tone": "惨烈、危急"
+                  "words": 1600,
+                  "tone": "燃、迅猛",
+                  "beats": [
+                    "驾驶重曙机甲突然冲出，肩载能量炮一轮齐射炸毁虫族防御工事",
+                    "臂刃横扫全歼12只守军，作战队员跟进清理残余敌人，迅速突破东侧防线"
+                  ]
                 },
                 {
                   "order": 2,
-                  "pov": "林越",
-                  "goal": "斩杀母虫彻底击退围剿",
-                  "location": "母虫身前10米处",
+                  "pov": "林跃",
+                  "goal": "击杀刀锋虫占领前哨站",
+                  "location": "前哨站能量核心室",
                   "characters": [
-                    "林越",
-                    "星核",
-                    "虫族母虫"
+                    "林跃"
                   ],
-                  "words": 1500,
-                  "tone": "燃、史诗感"
+                  "words": 2000,
+                  "tone": "惨烈、激昂",
+                  "beats": [
+                    "在核心室遭遇虫族统领刀锋虫，激战中机甲左臂被刀锋砍断，林跃激发基因能力强化机甲性能",
+                    "用能量穿刺炮击穿刀锋虫的能量核心，将其击杀，成功占领前哨站"
+                  ]
                 }
-              ]
+              ],
+              "mysteries": {}
             },
             {
               "id": "P1-V1-C10",
-              "title": "逐星之始",
-              "summary": "黑石据点危机解除后，林越向全员宣布寻找其他人类聚居地、重建人类文明、对抗虫族的目标，带领核心小队正式开启逐星征途",
+              "title": "星舰坐标",
+              "summary": "林跃在前哨站的通讯装置中获取近地轨道殖民站的坐标信号，集结第一批追随者，解开休眠激活的部分真相，带队出发前往发射站",
               "characters": [
-                "林越",
+                "林跃",
                 "苏晴",
-                "张猛",
-                "王磊",
-                "老周",
-                "星核",
-                "据点全体幸存者"
+                "虎子",
+                "阿禾",
+                "所有营地幸存者"
               ],
-              "location": "黑石据点中央广场",
+              "location": "虫族前哨站指挥室",
               "events": [
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "discover",
+                  "characters": [
+                    "林跃",
+                    "阿禾"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "announce",
-                  "target": "虫族围剿胜利消息",
-                  "target_type": "knowledge",
-                  "context": "据点全员庆祝大会",
-                  "result": "所有幸存者士气大振，确认据点未来至少3年不会再遭到大规模虫族袭击"
-                },
-                {
-                  "type": "",
-                  "characters": null,
-                  "subject": "",
-                  "change": "",
-                  "actor": "星核",
+                  "actor": "林跃",
                   "action": "discover",
-                  "target": "300公里外的大型人类聚居地信号",
+                  "target": "近地轨道殖民站坐标",
                   "target_type": "knowledge",
-                  "context": "升级全域监测系统后",
-                  "result": "确认了其他人类文明存在的准确坐标"
+                  "context": "前哨站的星际通讯装置",
+                  "result": "阿禾修复前哨站的通讯装置，接收到人类近地轨道殖民站发出的坐标信号，同时收到了前往殖民站的地面发射站位置"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "goal",
+                  "characters": [
+                    "林跃",
+                    "所有幸存者"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "declare",
-                  "target": "逐星计划",
+                  "actor": "林跃",
+                  "action": "set",
+                  "target": "前往近地轨道殖民站",
                   "target_type": "goal",
-                  "context": "全员大会",
-                  "result": "确立了寻找散落人类、对抗虫族、重建星海文明的长期目标"
+                  "context": "前哨站全员大会",
+                  "result": "林跃宣布离开地球前往星际的计划，47名幸存者全部愿意跟随他，成为他的第一批追随者"
                 },
                 {
-                  "type": "",
-                  "characters": null,
+                  "type": "knowledge",
+                  "characters": [
+                    "林跃"
+                  ],
                   "subject": "",
                   "change": "",
-                  "actor": "林越",
-                  "action": "depart",
-                  "target": "前往北方大型人类聚居地",
+                  "actor": "林跃",
+                  "action": "discover",
+                  "target": "休眠激活真相",
+                  "target_type": "knowledge",
+                  "context": "前哨站的联邦秘密文档",
+                  "result": "林跃找到当年的联邦秘密文档，得知休眠舱激活是联邦预设的文明重启计划，他是被选定的文明重启者"
+                },
+                {
+                  "type": "move",
+                  "characters": [
+                    "林跃",
+                    "所有追随者"
+                  ],
+                  "subject": "",
+                  "change": "",
+                  "actor": "林跃",
+                  "action": "move",
+                  "target": "前往地面发射站",
                   "target_type": "location",
-                  "context": "3天后",
-                  "result": "林越带领苏晴、张猛等核心小队，驾驶修复后的星骸一号机甲正式出发，开启逐星征途"
+                  "context": "整理完前哨站物资后",
+                  "result": "林跃驾驶重曙机甲开路，带领所有追随者出发前往地面发射站，正式迈出跨星际远征的第一步"
                 }
               ],
-              "beats": [
-                "然后，林越在据点庆祝大会上宣布了虫族围剿胜利的消息，所有幸存者欢呼雀跃，士气大振",
-                "因此，星核升级全域监测系统后，探测到三百公里外有大型人类聚居地的活跃信号",
-                "然后，林越在全员大会上正式提出逐星计划：寻找散落的人类聚居地，整合力量对抗虫族，重建人类星海文明",
-                "因此，林越带领苏晴、张猛等核心小队，驾驶修复完成的星骸一号机甲正式出发，踏上了逐星征途的第一步"
-              ],
-              "opening_beat": "然后，林越在据点庆祝大会上宣布了虫族围剿胜利的消息，所有幸存者欢呼雀跃，士气大振",
-              "closing_beat": "因此，林越带领苏晴、张猛等核心小队，驾驶修复完成的星骸一号机甲正式出发，踏上了逐星征途的第一步",
-              "conflict": "林越需要在安稳留在据点与踏上未知征途寻找人类文明之间做出选择",
+              "conflict": "林跃需要确认离开地球的坐标，集结愿意跟随自己的追随者，揭开自身身世的部分真相，开启星际远征的道路",
               "pacing": "normal",
               "timeline": {
-                "anchor": "第90天上午",
-                "start_time": "上午10点",
-                "end_time": "当日正午",
-                "duration": "2小时",
-                "time_jump": true,
-                "previous_gap": "距离上章过了19天",
-                "transition": "林越在这19天里修复了星骸一号机甲，升级了据点的防御系统，安排好了据点后续的管理规则"
+                "anchor": "第4天上午9点",
+                "start_time": "清理完前哨站战场后",
+                "end_time": "当日中午12点",
+                "duration": "3小时",
+                "previous_gap": "6小时",
+                "transition": "小队用6小时清理战场、修复机甲、清点前哨站的物资储备"
               },
               "state_anchor": {
-                "cultivation": "初级基因进化三阶",
-                "spirit_stones": 126,
+                "cultivation": "基因二阶中级",
+                "spirit_stones": 41,
                 "allies": [
                   "苏晴",
-                  "张猛",
-                  "王磊",
-                  "老周",
-                  "星核",
-                  "全体据点幸存者"
+                  "虎子",
+                  "阿禾",
+                  "47名营地幸存者"
                 ],
-                "location": "黑石据点中央广场",
+                "injuries": [
+                  "轻度精神力消耗"
+                ],
+                "location": "前哨站能量核心室外",
                 "key_items": [
-                  "星骸一号机甲（完好）",
-                  "身份识别牌",
-                  "能量晶核*126",
-                  "星核资料库终端"
+                  "重曙机甲（已修复左臂）",
+                  "能量匕首",
+                  "41枚能量晶核",
+                  "刀锋虫顶级晶核"
                 ],
-                "notes": "基因进化突破到三阶，机甲状态完好，已确认其他人类聚居地方位"
+                "notes": "已击杀虫族统领，占领前哨站打通南向路线"
               },
               "resource_ledger": [
                 {
                   "item": "能量晶核",
-                  "start": 126,
-                  "delta": -20,
-                  "end": 106,
-                  "reason": "机甲出发前能源储备"
+                  "start": 41,
+                  "delta": -10,
+                  "end": 31,
+                  "reason": "修复机甲左臂消耗10枚晶核"
                 }
               ],
               "scenes": [
                 {
                   "order": 1,
-                  "pov": "林越",
-                  "goal": "宣布逐星计划获得全员支持",
-                  "location": "据点中央广场",
+                  "pov": "林跃",
+                  "goal": "获取近地轨道殖民站的坐标",
+                  "location": "前哨站指挥室",
                   "characters": [
-                    "林越",
-                    "全体据点幸存者"
+                    "林跃",
+                    "阿禾"
                   ],
                   "words": 1500,
-                  "tone": "激昂、史诗感"
+                  "tone": "惊喜、激动",
+                  "beats": [
+                    "阿禾修复通讯装置，接收到近地轨道殖民站的清晰信号，包含坐标和地面发射站的位置",
+                    "找到联邦秘密文档，确认自己是联邦选定的文明重启者，休眠激活是预设程序"
+                  ]
                 },
                 {
                   "order": 2,
-                  "pov": "林越",
-                  "goal": "带领小队正式开启征途",
-                  "location": "据点出口外荒原",
+                  "pov": "林跃",
+                  "goal": "集结追随者出发前往发射站",
+                  "location": "前哨站广场",
                   "characters": [
-                    "林越",
-                    "苏晴",
-                    "张猛",
-                    "王磊",
-                    "星核"
+                    "林跃",
+                    "所有幸存者"
                   ],
-                  "words": 1500,
-                  "tone": "充满希望、壮阔"
+                  "words": 1800,
+                  "tone": "史诗感、激昂",
+                  "beats": [
+                    "召开全员大会，宣布前往星际重建人类文明的计划，所有幸存者自愿加入成为首批追随者",
+                    "林跃驾驶重曙机甲开路，大部队带着物资向南出发，正式开启跨星际远征的道路"
+                  ]
                 }
-              ]
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_006",
+                    "clue": "秘密文档显示文明重启计划还有另外4名休眠者，分布在地球的其他区域"
+                  }
+                ],
+                "resolved": [
+                  {
+                    "id": "myst_001",
+                    "resolution": "休眠舱激活是联邦预设的文明重启触发程序，并非意外，林跃是被选定的文明重启者"
+                  }
+                ]
+              }
             }
           ]
         }

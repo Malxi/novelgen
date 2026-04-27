@@ -245,7 +245,7 @@ func (ov *OutlineValidator) validateStructure() {
 					})
 				}
 
-				if chapter.Beats[len(chapter.Beats)-1] == "" {
+				if len(chapter.Beats) > 0 && chapter.Beats[len(chapter.Beats)-1] == "" {
 					ov.Warnings = append(ov.Warnings, OutlineWarning{
 						Type:        "content",
 						Location:    location,
@@ -507,9 +507,13 @@ func (ov *OutlineValidator) validateTransitions() {
 				if prevChapter.Location != "" && currChapter.Location != "" &&
 					prevChapter.Location != currChapter.Location {
 					// 地点变化，检查是否有合理的转换
-					if !strings.Contains(currChapter.Beats[0], "来到") &&
-						!strings.Contains(currChapter.Beats[0], "前往") &&
-						!strings.Contains(currChapter.Beats[0], "到达") {
+					firstBeat := ""
+					if len(currChapter.Beats) > 0 {
+						firstBeat = currChapter.Beats[0]
+					}
+					if !strings.Contains(firstBeat, "来到") &&
+						!strings.Contains(firstBeat, "前往") &&
+						!strings.Contains(firstBeat, "到达") {
 						ov.Warnings = append(ov.Warnings, OutlineWarning{
 							Type:     "transition",
 							Location: currChapter.ID,
