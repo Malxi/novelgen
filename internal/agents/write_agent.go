@@ -333,7 +333,7 @@ func (a *WriteAgent) ReviewVolume(ctx context.Context, volume *models.Volume, ch
 		}
 
 		// Beats are already strings
-		beats := chapter.Beats
+		beats := chapter.GetBeats()
 
 		chapterInputs = append(chapterInputs, VolumeReviewChapterInput{
 			ChapterID:    chapter.ID,

@@ -469,9 +469,9 @@ func buildChapterContentFromOutline(chapter *models.Chapter) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Chapter: %s\n", chapter.ID))
 	sb.WriteString(fmt.Sprintf("Summary: %s\n", chapter.Summary))
-	if len(chapter.Beats) > 0 {
+	if len(chapter.GetBeats()) > 0 {
 		sb.WriteString("Beats:\n")
-		for i, beat := range chapter.Beats {
+		for i, beat := range chapter.GetBeats() {
 			sb.WriteString(fmt.Sprintf("  %d. %s\n", i+1, beat))
 		}
 	}

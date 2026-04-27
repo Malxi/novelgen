@@ -765,12 +765,12 @@ func (a *ComposeAgent) BuildChapterContext(chapter *models.Chapter, outline *mod
 						context.WriteString(fmt.Sprintf("Summary: %s\n", prevChap.Summary))
 						context.WriteString(fmt.Sprintf("Events: %s\n", a.formatEvents(prevChap.Events)))
 						prevBeats := "None"
-						if len(prevChap.Beats) > 0 {
-							prevBeats = strings.Join(prevChap.Beats, "; ")
+						if len(prevChap.GetBeats()) > 0 {
+							prevBeats = strings.Join(prevChap.GetBeats(), "; ")
 						}
 						lastBeat := "None"
-						if len(prevChap.Beats) > 0 {
-							lastBeat = prevChap.Beats[len(prevChap.Beats)-1]
+						if len(prevChap.GetBeats()) > 0 {
+							lastBeat = prevChap.GetBeats()[len(prevChap.GetBeats())-1]
 						}
 						prevClosing := getClosingBeat(prevChap)
 						if prevClosing == "" {
@@ -871,7 +871,7 @@ func (a *ComposeAgent) validateChapterOutput(chapter *models.Chapter) error {
 	if chapter == nil {
 		return fmt.Errorf("chapter is nil")
 	}
-	if len(chapter.Beats) == 0 {
+	if len(chapter.GetBeats()) == 0 {
 		return fmt.Errorf("beats are required")
 	}
 	if len(chapter.Events) == 0 {
@@ -1107,16 +1107,16 @@ func (a *ComposeAgent) buildHierarchicalContext(outline *models.Outline, partIdx
 
 // getOpeningBeat returns beats[0] or empty string.
 func getOpeningBeat(chapter models.Chapter) string {
-	if len(chapter.Beats) > 0 {
-		return chapter.Beats[0]
+	if len(chapter.GetBeats()) > 0 {
+		return chapter.GetBeats()[0]
 	}
 	return ""
 }
 
 // getClosingBeat returns beats[last] or empty string.
 func getClosingBeat(chapter models.Chapter) string {
-	if len(chapter.Beats) > 0 {
-		return chapter.Beats[len(chapter.Beats)-1]
+	if len(chapter.GetBeats()) > 0 {
+		return chapter.GetBeats()[len(chapter.GetBeats())-1]
 	}
 	return ""
 }

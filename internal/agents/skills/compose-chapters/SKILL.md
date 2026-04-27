@@ -24,7 +24,7 @@ Generate detailed chapters for a specific volume, maintaining continuity with pr
 3. **characters**: List of characters appearing (array of strings)
 4. **location**: Primary location (string)
 5. **events**: State change events (array of event objects)
-6. **beats**: 3-5 plot beats (array of strings, NOT comma-separated)
+6. **scenes**: Scene breakdown (array, 2-3 entries). Each scene contains its own `beats` array.
 
 
 7. **conflict**: Core conflict description (string)
@@ -33,7 +33,6 @@ Generate detailed chapters for a specific volume, maintaining continuity with pr
 10. **state_anchor**: Protagonist state at chapter START (object) - ⚠️ REQUIRED for cross-chapter state tracking
 11. **enemies**: Enemy list for this chapter (array) - ⚠️ REQUIRED if chapter has combat
 12. **resource_ledger**: Resource changes this chapter (array) - ⚠️ REQUIRED if resources change
-13. **scenes**: Scene breakdown (array, 2-3 entries) - ⚠️ REQUIRED for focused writing
 
 ### ⚠️ CRITICAL: Events Count Requirement
 **Each chapter MUST have 3-5 events.** This is a HARD requirement.
@@ -46,22 +45,8 @@ Each event represents a distinct plot beat or state change in the chapter:
 
 **DO NOT compress all chapter content into a single event.** Each event should represent one clear action or state change.
 
-### CRITICAL: Beats Format
-The `beats` field MUST be an array of strings. Each beat is one sentence describing a key plot moment. Write in natural {{language}} prose — do NOT prefix with "Then"/"Therefore" or any connector words.
-
-```json
-"beats": [
-  "林越从坍塌矿道中醒来，记忆全无",
-  "搜寻幸存者时发现被压住的老矿工王伯",
-  "二次坍塌导致两人同时死亡",
-  "林越复活后发现自身拥有不死能力"
-]
-```
-
-NOT a comma-separated string like:
-```json
-"beats": "beat1, beat2, beat3"  // WRONG!
-```
+### Beats Live Inside Scenes
+Each scene has its own `beats` array (1-2 beats per scene). Do NOT output a chapter-level `beats` field — beats belong to scenes.
 
 ### ⚠️ CRITICAL: Timeline Requirements (NEW)
 **Each chapter MUST include timeline information** to ensure cross-chapter time consistency and detect timeline issues.
@@ -171,14 +156,15 @@ NOT a comma-separated string like:
 - **goal** (string, REQUIRED): 场景目标（这个场景要推进什么）
 - **location** (string): 场景地点
 - **characters** (array): 本场景角色
+- **beats** (array, REQUIRED): 本场景的1-2个plot beats（自然中文，不要连接词前缀）
 - **words** (int, optional): 建议字数
 - **tone** (string, optional): 情绪基调
 
 **Example:**
 ```json
 "scenes": [
-  {"order": 1, "pov": "林野", "goal": "潜入矿道深处挖灵石", "location": "丙字三号矿道", "characters": ["林野", "老陈"], "words": 1200, "tone": "紧张"},
-  {"order": 2, "pov": "林野", "goal": "与赵虎密谋逃跑计划", "location": "矿奴大通铺", "characters": ["林野", "赵虎"], "words": 1800, "tone": "压抑"}
+  {"order": 1, "pov": "林野", "goal": "潜入矿道深处挖灵石", "location": "丙字三号矿道", "characters": ["林野", "老陈"], "beats": ["用鹤嘴锄敲开矿壁发现三块灵石", "老陈提醒巡逻监工即将经过"], "words": 1200, "tone": "紧张"},
+  {"order": 2, "pov": "林野", "goal": "与赵虎密谋逃跑计划", "location": "矿奴大通铺", "characters": ["林野", "赵虎"], "beats": ["赵虎透露废矿道深处有暗河通往矿场外", "两人约好三天后趁夜行动"], "words": 1800, "tone": "压抑"}
 ]
 ```
 
@@ -311,10 +297,6 @@ Example:
         }
       ],
       "beats": [
-        "林越从坍塌矿道中醒来，记忆全无",
-        "搜寻幸存者时发现被压住的老矿工王伯",
-        "二次坍塌导致两人同时死亡",
-        "林越复活后发现自身拥有不死能力"
       ],
       "conflict": "Survival in the collapsed mine while discovering his ability",
       "pacing": "fast",
@@ -356,10 +338,6 @@ Example:
         }
       ],
       "beats": [
-        "虫群逼近黑石聚落",
-        "林越组织赵虎、周明布置防线",
-        "激战中林越迎战虫族螳螂首领",
-        "全歼虫群守住聚落"
       ],
       "conflict": "Defending settlement from insect swarm",
       "pacing": "fast",

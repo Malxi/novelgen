@@ -799,7 +799,7 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 			chapter.Characters = output.Chapter.Characters
 			chapter.Location = output.Chapter.Location
 			chapter.Events = output.Chapter.Events
-			chapter.Beats = output.Chapter.Beats
+			
 			chapter.Conflict = output.Chapter.Conflict
 			chapter.Pacing = output.Chapter.Pacing
 		}

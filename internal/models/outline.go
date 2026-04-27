@@ -81,6 +81,7 @@ type OutlineScene struct {
 	Characters []string `json:"characters" md:"characters" desc:"本场景出现的角色"`
 	Words      int      `json:"words,omitempty" md:"words" desc:"建议字数"`
 	Tone       string   `json:"tone,omitempty" md:"tone" desc:"情绪基调：紧张、轻松、悲伤、燃"`
+	Beats      []string `json:"beats,omitempty" md:"beats" desc:"本场景的1-2个plot beats"`
 }
 
 // Chapter represents a single chapter in the story
@@ -91,7 +92,6 @@ type Chapter struct {
 	Characters     []string             `json:"characters" md:"characters"` // 本章出现的角色名列表
 	Location       string               `json:"location" md:"location"`     // 事情发生的地点
 	Events         []Event              `json:"events" md:"events"`         // 本章发生的事件
-	Beats          []string             `json:"beats" md:"beats"`
 	StateChange    string               `json:"state_change,omitempty" desc:"Primary change this chapter causes; must map to Events"`
 	Conflict       string               `json:"conflict" md:"conflict"`
 	Pacing         string               `json:"pacing" md:"pacing"`
@@ -322,21 +322,22 @@ func (c *Chapter) ToMarkdown() string {
 		sb.WriteString("\n")
 	}
 
-	// Beats
-	if len(c.Beats) > 0 {
+	// Beats (collected from scenes)
+	beats := c.GetBeats()
+	if len(beats) > 0 {
 		sb.WriteString("**Beats:**\n")
-		for i, beat := range c.Beats {
+		for i, beat := range beats {
 			sb.WriteString(fmt.Sprintf("%d. %s\n", i+1, beat))
 		}
 		sb.WriteString("\n")
 	}
 
-	// Continuity anchors (derived from beats)
-	if len(c.Beats) > 0 {
-		sb.WriteString(fmt.Sprintf("**Opening Beat:** %s\n\n", c.Beats[0]))
+	// Continuity anchors
+	if len(beats) > 0 {
+		sb.WriteString(fmt.Sprintf("**Opening Beat:** %s\n\n", beats[0]))
 	}
-	if len(c.Beats) > 1 {
-		sb.WriteString(fmt.Sprintf("**Closing Beat:** %s\n\n", c.Beats[len(c.Beats)-1]))
+	if len(beats) > 1 {
+		sb.WriteString(fmt.Sprintf("**Closing Beat:** %s\n\n", beats[len(beats)-1]))
 	}
 	if c.StateChange != "" {
 		sb.WriteString(fmt.Sprintf("**State Change:** %s\n\n", c.StateChange))
@@ -501,4 +502,14 @@ func inferTargetTypeFromOldFormat(eventType string) string {
 	default:
 		return ""
 	}
+}
+
+// GetBeats collects beats from all scenes. If scenes have beats, returns those.
+// Falls back to empty slice when no scenes/beats exist.
+func (c *Chapter) GetBeats() []string {
+	var beats []string
+	for _, sc := range c.Scenes {
+		beats = append(beats, sc.Beats...)
+	}
+	return beats
 }

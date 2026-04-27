@@ -235,7 +235,7 @@ func (a *ModelAdapter) buildChaptersFromOutline(dsl *DSL) {
 					steps = append(steps, step)
 				}
 
-				for _, beat := range ch.Beats {
+				for _, beat := range ch.GetBeats() {
 					stepOrder++
 					step := Step{
 						Order:       stepOrder,
