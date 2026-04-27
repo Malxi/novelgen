@@ -16,8 +16,10 @@ type StorySetup struct {
 	Tone           string      `json:"tone" prompt:"基调" desc:"小说基调，一句话，2-4个形容词，逗号分隔"`
 	Tense          string      `json:"tense" prompt:"时态" desc:"过去时或现在时"`
 	POVStyle       string      `json:"pov_style" prompt:"视角" desc:"第一人称、第三人称有限视角或第三人称全知视角"`
-	Storylines     []Storyline `json:"storylines,omitempty" prompt:"故事线" desc:"故事线"`
-	Premises       []Premise   `json:"premises,omitempty" prompt:"设定体系" desc:"设定升级体系"`
+	Storylines     []Storyline         `json:"storylines,omitempty" prompt:"故事线" desc:"故事线"`
+	Premises       []Premise           `json:"premises,omitempty" prompt:"设定体系" desc:"设定升级体系（含阵营定义和主角能力体系）"`
+	WorldTimeline  []WorldTimelineEntry `json:"world_timeline,omitempty" prompt:"世界时间线" desc:"关键历史事件时间线"`
+	WorldResources []WorldResource     `json:"world_resources,omitempty" prompt:"核心资源" desc:"世界中的核心资源定义"`
 }
 
 // Storyline represents a story arc or plot line
@@ -42,6 +44,22 @@ type ProgressionStage struct {
 	Name         string `json:"name" prompt:"Name" desc:"设定体系升级体系名称"`
 	Description  string `json:"description" prompt:"Description" desc:"设定体系升级体系描述"`
 	Requirements string `json:"requirements,omitempty" prompt:"Requirements" desc:"设定体系升级体系要求"`
+}
+
+// WorldTimelineEntry represents a key historical event.
+type WorldTimelineEntry struct {
+	Year       string `json:"year" prompt:"时间" desc:"时间标识，如：公元2247年、星元79年"`
+	Event      string `json:"event" prompt:"事件" desc:"事件简述"`
+	Impact     string `json:"impact,omitempty" prompt:"影响" desc:"对当前世界的影响"`
+	RelatedMystery string `json:"related_mystery,omitempty" prompt:"关联伏笔" desc:"关联的谜题ID，如 myst_timeline_gap"`
+}
+
+// WorldResource defines a core resource in the world.
+type WorldResource struct {
+	Name        string `json:"name" prompt:"名称" desc:"资源名称，如：氚晶体、基因进化药剂"`
+	Category    string `json:"category" prompt:"类型" desc:"能源/消耗品/材料/货币"`
+	Scarcity    string `json:"scarcity" prompt:"稀有度" desc:"常见/稀有/独一无二"`
+	Description string `json:"description" prompt:"描述" desc:"功能与来源简述"`
 }
 
 // Save writes the story setup to a file
