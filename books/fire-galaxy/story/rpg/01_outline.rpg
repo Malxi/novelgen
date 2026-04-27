@@ -27,324 +27,322 @@ world {
 }
 
 storyline {
-  chapter "休眠仓的冷光" {
+  chapter "冻土下的苏醒" {
     id = "P1-V1-C1"
     arc = "P1-V1"
-    objective "休眠仓的冷光" {
+    objective "冻土下的苏醒" {
       id = "obj_P1-V1-C1"
       type = "sequence"
       step 1 {
-        description = "陆沉从持续3000年的意外休眠中苏醒"
+        description = "林跃从1200年的休眠中醒来，记忆停留在21世纪基因计划志愿者登记当天"
         event {
-          type = "status"
+          type = "premise"
         }
       }
       step 2 {
-        description = "陆沉确认休眠中心已被废弃百年，所有工作人员不知所踪"
+        description = "林跃确认当前为星元1247年，距离他进入休眠舱已过去1200年"
         event {
-          type = "storyline"
+          type = "knowledge"
         }
       }
       step 3 {
-        description = "陆沉获得可联网的智能手环，得知当前时间为星元327年"
+        description = "林跃用休眠舱的金属撬棍击杀虫族幼虫"
         event {
-          type = "acquire"
+          type = "combat"
+        }
+      }
+      step 4 {
+        description = "林跃觉醒专属基因能力：击杀异星生物可吸收生命能量强化自身体质"
+        event {
+          type = "premise"
         }
       }
     }
   }
-  chapter "第一头虫影" {
+  chapter "地下设施的逃杀" {
     id = "P1-V1-C2"
     arc = "P1-V1"
-    objective "第一头虫影" {
+    objective "地下设施的逃杀" {
       id = "obj_P1-V1-C2"
       type = "sequence"
       step 1 {
-        description = "陆沉首次遭遇入侵地球的外星虫族，对方主动发起攻击"
+        description = "林跃抵达地下2层的科研档案区"
         event {
-          type = "relationship"
+          type = "move"
         }
       }
       step 2 {
-        description = "陆沉用生锈钢管与工蜂缠斗，小臂被腐蚀液擦中受伤"
+        description = "林跃得知星元37年虫族跨星际入侵，AI「零」叛变发动机械叛乱，人类文明在双重打击下濒临灭绝"
         event {
-          type = "combat"
-          enemies = []
+          type = "knowledge"
         }
       }
       step 3 {
-        description = "陆沉砸爆工蜂的复眼将其击杀，手环自动扫描虫族尸体给出基础数据"
+        description = "林跃利用地形优势击毁两台机械斥候，吸收机械核心的能量体质再次提升"
         event {
           type = "combat"
-          enemies = []
         }
       }
       step 4 {
-        description = "陆沉发现被腐蚀液灼伤的小臂以肉眼可见的速度结痂愈合"
+        description = "林跃找到通往地表的升降梯，确认能源足够支撑一次升降"
         event {
-          type = "status"
+          type = "goal"
         }
       }
     }
   }
-  chapter "基因觉醒" {
+  chapter "冻土上的相遇" {
     id = "P1-V1-C3"
     arc = "P1-V1"
-    objective "基因觉醒" {
+    objective "冻土上的相遇" {
       id = "obj_P1-V1-C3"
       type = "sequence"
       step 1 {
-        description = "陆沉获得了能支持7天生存的基础物资"
+        description = "林跃第一次来到废土地表，面对零下三十度的酷寒与漫天风雪"
         event {
-          type = "acquire"
+          type = "move"
         }
       }
       step 2 {
-        description = "手环检测到陆沉的基因活性是普通人的300%，属于罕见的S级进化体质"
+        description = "林跃击杀1只工蜂，但被另外2只围攻，体力不支陷入险境"
         event {
-          type = "premise"
+          type = "combat"
         }
       }
       step 3 {
-        description = "陆沉从旧广播中接收到断断续续的求救信号，来自发射场外围的幸存者据点"
+        description = "游击小队队长苏晴带队救下林跃，击杀剩余2只工蜂"
         event {
-          type = "knowledge"
+          type = "relationship"
         }
       }
       step 4 {
-        description = "陆沉决定前往求救信号来源地，寻找其他人类同伴"
+        description = "林跃跟随小队前往临时营地休整"
         event {
-          type = "goal"
+          type = "move"
         }
       }
     }
   }
-  chapter "黄沙中的求救" {
+  chapter "游击营地的真相" {
     id = "P1-V1-C4"
     arc = "P1-V1"
-    objective "黄沙中的求救" {
+    objective "游击营地的真相" {
       id = "obj_P1-V1-C4"
       type = "sequence"
       step 1 {
-        description = "陆沉离开休眠中心，沿着求救信号的方向前进"
-        event {
-          type = "location"
-        }
-      }
-      step 2 {
-        description = "陆沉发现小队被三只工蜂虫围堵，队长林野腿部受伤"
-        event {
-          type = "relationship"
-        }
-      }
-      step 3 {
-        description = "陆沉从后方偷袭砍杀一只工蜂，配合林野的枪、阿柚的电击棒解决剩余虫族"
-        event {
-          type = "combat"
-          enemies = []
-        }
-      }
-      step 4 {
-        description = "林野感激陆沉的救命之恩，主动邀请他前往小队的地下据点暂避"
-        event {
-          type = "relationship"
-        }
-      }
-    }
-  }
-  chapter "地下据点的秘密" {
-    id = "P1-V1-C5"
-    arc = "P1-V1"
-    objective "地下据点的秘密" {
-      id = "obj_P1-V1-C5"
-      type = "sequence"
-      step 1 {
-        description = "众人在虫族追来前关上了厚达半米的合金门，成功躲进据点"
-        event {
-          type = "location"
-        }
-      }
-      step 2 {
-        description = "陆沉得知泽格虫族100年前入侵地球，人类联邦主力撤往半人马座阿尔法星，留下的幸存者不仅要防虫族，还要对抗反叛AI集群[智网]的猎杀"
+        description = "林跃得知当前地球分为虫族控制区、AI机械区、人类反抗区三大势力范围，游击小队属于北境反抗军的分支"
         event {
           type = "knowledge"
         }
       }
-      step 3 {
-        description = "老周展示半年前挖出的初代民用机甲，只要修好能源核心就能启动"
-        event {
-          type = "acquire"
-        }
-      }
-      step 4 {
-        description = "作为前航天工程师的陆沉一眼看出机甲的故障是能源线路问题，主动提出帮忙修复"
-        event {
-          type = "goal"
-        }
-      }
-    }
-  }
-  chapter "核电站的魅影" {
-    id = "P1-V1-C6"
-    arc = "P1-V1"
-    objective "核电站的魅影" {
-      id = "obj_P1-V1-C6"
-      type = "sequence"
-      step 1 {
-        description = "三人准备好武器和防护装备，趁着天刚亮虫族活跃度最低的时候出发"
-        event {
-          type = "goal"
-        }
-      }
       step 2 {
-        description = "三人摸到核电站外围，发现周围遍地都是人类和虫族的尸体，布满虫族黏液痕迹"
-        event {
-          type = "location"
-        }
-      }
-      step 3 {
-        description = "阿柚的探测器检测到核电站核心机房存在高能量反应，符合氚晶体的特征，同时检测到大量虫族生命信号"
-        event {
-          type = "knowledge"
-        }
-      }
-      step 4 {
-        description = "一只两米高的虫族哨兵从废墟后跳出来，拦住了三人的去路"
+        description = "林跃协助小队击杀3只虫族，防守成功"
         event {
           type = "combat"
-          enemies = []
-        }
-      }
-    }
-  }
-  chapter "孵化巢的核心" {
-    id = "P1-V1-C7"
-    arc = "P1-V1"
-    objective "孵化巢的核心" {
-      id = "obj_P1-V1-C7"
-      type = "sequence"
-      step 1 {
-        description = "陆沉正面吸引哨兵注意力，林野瞄准复眼射击，阿柚释放电磁脉冲瘫痪哨兵动作，三人配合顺利将其击杀"
-        event {
-          type = "combat"
-          enemies = []
-        }
-      }
-      step 2 {
-        description = "三人顺着通风管道潜入核心机房，避开了外围巡逻的虫族"
-        event {
-          type = "location"
         }
       }
       step 3 {
-        description = "陆沉顺利取下控制台上的氚晶体，装入密封背包"
-        event {
-          type = "acquire"
-        }
-      }
-      step 4 {
-        description = "陆沉发现角落里有一台被虫族撕毁的智网战斗机器人残骸，显示智网也在搜寻氚晶体"
-        event {
-          type = "knowledge"
-        }
-      }
-    }
-  }
-  chapter "死里逃生" {
-    id = "P1-V1-C8"
-    arc = "P1-V1"
-    objective "死里逃生" {
-      id = "obj_P1-V1-C8"
-      type = "sequence"
-      step 1 {
-        description = "危急关头陆沉的基因能力再次升级，力量、速度提升5倍，获得短暂的外骨骼生成能力"
-        event {
-          type = "premise"
-        }
-      }
-      step 2 {
-        description = "陆沉留在后面断后，徒手撕碎了十多只冲进来的工蜂虫，扛住了炸塌的通道缺口"
-        event {
-          type = "combat"
-          enemies = []
-        }
-      }
-      step 3 {
-        description = "三人顺利逃出核电站，林野引爆事先埋好的炸药，封死了追出来的虫族"
-        event {
-          type = "location"
-        }
-      }
-      step 4 {
-        description = "三人确认氚晶体完好无损，成功完成任务"
-        event {
-          type = "goal"
-        }
-      }
-    }
-  }
-  chapter "灰雀的轰鸣" {
-    id = "P1-V1-C9"
-    arc = "P1-V1"
-    objective "灰雀的轰鸣" {
-      id = "obj_P1-V1-C9"
-      type = "sequence"
-      step 1 {
-        description = "陆沉昏迷一天一夜后苏醒，基因能力稳定在一阶进化者水平，身体素质进一步提升"
+        description = "林跃基因等级提升至一阶中级，身体强度达到普通人类的3倍"
         event {
           type = "status"
         }
       }
-      step 2 {
-        description = "陆沉花了三个小时修好机甲的能源线路，插入氚晶体后机甲成功启动"
-        event {
-          type = "acquire"
-        }
-      }
-      step 3 {
-        description = "陆沉坐进驾驶舱测试机甲的移动、武器系统，一切功能正常，可投入实战"
-        event {
-          type = "acquire"
-        }
-      }
       step 4 {
-        description = "据点警报突然响起，10台智网战斗机器人攻破了外门，正在往内部突进"
-        event {
-          type = "combat"
-          enemies = []
-        }
-      }
-    }
-  }
-  chapter "逐星的第一步" {
-    id = "P1-V1-C10"
-    arc = "P1-V1"
-    objective "逐星的第一步" {
-      id = "obj_P1-V1-C10"
-      type = "sequence"
-      step 1 {
-        description = "陆沉驾驶机甲灵活作战，不到十分钟就拆解了所有入侵的机器人，据点零伤亡"
-        event {
-          type = "combat"
-          enemies = []
-        }
-      }
-      step 2 {
-        description = "所有幸存者推举陆沉为领袖，愿意跟随他离开废土，寻找人类联邦的大部队"
-        event {
-          type = "relationship"
-        }
-      }
-      step 3 {
-        description = "陆沉宣布下一个目标是前往南海发射场，找到人类遗留的远征星舰，航向半人马座阿尔法星，统一人类势力对抗虫族和智网"
+        description = "林跃与小队商议返回研究所，夺取封存的初代机甲打破虫族的边境封锁"
         event {
           type = "goal"
         }
       }
-      step 4 {
-        description = "陆沉驾驶机甲走在最前面，带领所有幸存者走出地下据点，朝着南海的方向前进"
+    }
+  }
+  chapter "机甲库的基因锁" {
+    id = "P1-V1-C5"
+    arc = "P1-V1"
+    objective "机甲库的基因锁" {
+      id = "obj_P1-V1-C5"
+      type = "sequence"
+      step 1 {
+        description = "小队顺利抵达研究所地下1层入口，未被虫族主力发现"
         event {
-          type = "storyline"
+          type = "move"
+        }
+      }
+      step 2 {
+        description = "林跃与虎子配合全歼虫族巡逻队，未触发警报"
+        event {
+          type = "combat"
+        }
+      }
+      step 3 {
+        description = "发现机甲库需要当年基因计划志愿者的专属基因才能解锁，小队之前多次尝试都失败"
+        event {
+          type = "discover"
+        }
+      }
+      step 4 {
+        description = "林跃的基因完美匹配门禁系统，尘封1200年的机甲库大门成功开启"
+        event {
+          type = "achieve"
+        }
+      }
+    }
+  }
+  chapter "初代机甲重曙" {
+    id = "P1-V1-C6"
+    arc = "P1-V1"
+    objective "初代机甲重曙" {
+      id = "obj_P1-V1-C6"
+      type = "sequence"
+      step 1 {
+        description = "林跃找到专为基因计划志愿者定制的初代实验型机甲「重曙」，状态完好仅能源系统损坏"
+        event {
+          type = "discover"
+        }
+      }
+      step 2 {
+        description = "在机械师阿禾的协助下，用收集到的能量晶核修复机甲的动力核心"
+        event {
+          type = "acquire"
+        }
+      }
+      step 3 {
+        description = "林跃首次驾驶半修复的重曙机甲，用机甲的近战臂刃全歼机械清扫兵"
+        event {
+          type = "combat"
+        }
+      }
+      step 4 {
+        description = "重曙机甲完成全部修复，各项性能达到出厂标准，林跃与机甲的基因匹配度高达98%"
+        event {
+          type = "achieve"
+        }
+      }
+    }
+  }
+  chapter "冻土上的机甲锋芒" {
+    id = "P1-V1-C7"
+    arc = "P1-V1"
+    objective "冻土上的机甲锋芒" {
+      id = "obj_P1-V1-C7"
+      type = "sequence"
+      step 1 {
+        description = "林跃驾驶机甲，带着小队成员沿隐蔽路线返回临时营地"
+        event {
+          type = "move"
+        }
+      }
+      step 2 {
+        description = "林跃驾驶重曙机甲全歼虫族作战小队，测试了机甲的近战、远程武器全部功能"
+        event {
+          type = "combat"
+        }
+      }
+      step 3 {
+        description = "林跃基因等级突破至二阶初级，获得精神力感知能力，可以感知周围1公里内的敌人动向"
+        event {
+          type = "status"
+        }
+      }
+      step 4 {
+        description = "小队顺利返回营地，重曙机甲的出现让所有营地幸存者士气大振"
+        event {
+          type = "achieve"
+        }
+      }
+    }
+  }
+  chapter "前哨站的三方博弈" {
+    id = "P1-V1-C8"
+    arc = "P1-V1"
+    objective "前哨站的三方博弈" {
+      id = "obj_P1-V1-C8"
+      type = "sequence"
+      step 1 {
+        description = "林跃得知虫族前哨站封锁了所有向南的路线，而近地轨道殖民站的信号源就在前哨站南侧"
+        event {
+          type = "knowledge"
+        }
+      }
+      step 2 {
+        description = "林跃和苏晴潜入前哨站外围山地，侦察前哨站的防御部署"
+        event {
+          type = "move"
+        }
+      }
+      step 3 {
+        description = "发现AI零的机械部队正在进攻前哨站西侧防线，虫族主力被牵制在西侧"
+        event {
+          type = "discover"
+        }
+      }
+      step 4 {
+        description = "小队制定战术，等机械部队和虫族两败俱伤时，从东侧防御薄弱点突袭前哨站"
+        event {
+          type = "goal"
+        }
+      }
+    }
+  }
+  chapter "攻破前哨站" {
+    id = "P1-V1-C9"
+    arc = "P1-V1"
+    objective "攻破前哨站" {
+      id = "obj_P1-V1-C9"
+      type = "sequence"
+      step 1 {
+        description = "林跃驾驶重曙机甲突袭东侧防线，10分钟内全歼12只虫族守军，突破防线进入前哨站内部"
+        event {
+          type = "combat"
+        }
+      }
+      step 2 {
+        description = "林跃全歼残余的机械部队，吸收能量补充机甲能源"
+        event {
+          type = "combat"
+        }
+      }
+      step 3 {
+        description = "林跃与刀锋虫激战15分钟，最终用机甲的能量核心穿刺炮击穿刀锋虫的甲壳，将其击杀"
+        event {
+          type = "combat"
+        }
+      }
+      step 4 {
+        description = "小队成功占领前哨站，打通了向南前往信号源的路线，获得前哨站内的大量物资储备"
+        event {
+          type = "achieve"
+        }
+      }
+    }
+  }
+  chapter "星舰坐标" {
+    id = "P1-V1-C10"
+    arc = "P1-V1"
+    objective "星舰坐标" {
+      id = "obj_P1-V1-C10"
+      type = "sequence"
+      step 1 {
+        description = "阿禾修复前哨站的通讯装置，接收到人类近地轨道殖民站发出的坐标信号，同时收到了前往殖民站的地面发射站位置"
+        event {
+          type = "discover"
+        }
+      }
+      step 2 {
+        description = "林跃宣布离开地球前往星际的计划，47名幸存者全部愿意跟随他，成为他的第一批追随者"
+        event {
+          type = "goal"
+        }
+      }
+      step 3 {
+        description = "林跃找到当年的联邦秘密文档，得知休眠舱激活是联邦预设的文明重启计划，他是被选定的文明重启者"
+        event {
+          type = "knowledge"
+        }
+      }
+      step 4 {
+        description = "林跃驾驶重曙机甲开路，带领所有追随者出发前往地面发射站，正式迈出跨星际远征的第一步"
+        event {
+          type = "move"
         }
       }
     }
