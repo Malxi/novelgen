@@ -47,13 +47,14 @@ Each event represents a distinct plot beat or state change in the chapter:
 **DO NOT compress all chapter content into a single event.** Each event should represent one clear action or state change.
 
 ### CRITICAL: Beats Format
-The `beats` field MUST be an array of strings:
+The `beats` field MUST be an array of strings. Each beat is one sentence describing a key plot moment. Write in natural {{language}} prose — do NOT prefix with "Then"/"Therefore" or any connector words.
+
 ```json
 "beats": [
-  "Then, Lin Yan wakes up in the collapsed mine with no memory",
-  "Therefore, he searches for survivors and finds Old Miner Wang trapped",
-  "Then, a second collapse kills them both",
-  "Therefore, Lin Yan resurrects and realizes he has a unique ability"
+  "林越从坍塌矿道中醒来，记忆全无",
+  "搜寻幸存者时发现被压住的老矿工王伯",
+  "二次坍塌导致两人同时死亡",
+  "林越复活后发现自身拥有不死能力"
 ]
 ```
 
@@ -263,7 +264,6 @@ Example:
 
 ### Beat Continuity
 - Chapter N's closing beat must connect to Chapter N+1's opening
-- Use "Therefore," or "Then," to show causality
 - No time jumps or scene breaks between chapters
 
 ## Output Format Example
@@ -311,10 +311,10 @@ Example:
         }
       ],
       "beats": [
-        "Then, Lin Yan wakes up in the collapsed mine with no memory",
-        "Therefore, he searches for survivors and finds Old Miner Wang trapped",
-        "Then, a second collapse kills them both",
-        "Therefore, Lin Yan resurrects and realizes he has a unique ability"
+        "林越从坍塌矿道中醒来，记忆全无",
+        "搜寻幸存者时发现被压住的老矿工王伯",
+        "二次坍塌导致两人同时死亡",
+        "林越复活后发现自身拥有不死能力"
       ],
       "conflict": "Survival in the collapsed mine while discovering his ability",
       "pacing": "fast",
@@ -356,10 +356,10 @@ Example:
         }
       ],
       "beats": [
-        "Then, insect swarm approaches the settlement",
-        "Therefore, Lin Yan organizes defense with allies",
-        "Then, fierce battle begins with Lin Yan facing the boss insect",
-        "Therefore, they defeat the swarm and secure the settlement"
+        "虫群逼近黑石聚落",
+        "林越组织赵虎、周明布置防线",
+        "激战中林越迎战虫族螳螂首领",
+        "全歼虫群守住聚落"
       ],
       "conflict": "Defending settlement from insect swarm",
       "pacing": "fast",
