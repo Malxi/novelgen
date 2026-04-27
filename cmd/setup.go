@@ -12,6 +12,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/rpg"
 	"novelgen/internal/rpg/dsl"
 
 	"github.com/spf13/cobra"
@@ -365,6 +366,27 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 			}
 		}
 
+		// Enrich with cross-module feedback (compose→setup)
+		if review != nil {
+			crossIssues, crossWarnings := loadAndCrossCheckSetup(improvedSetup)
+			for _, iss := range crossIssues {
+				review.Suggestions = append(review.Suggestions, models.ReviewSuggestion{
+					Category: "cross-module", TargetName: "setup", Issue: iss,
+					Suggestion: "在 story_setup.json 中添加对应的声明", Priority: models.PriorityHigh,
+				})
+			}
+			for _, w := range crossWarnings {
+				review.Suggestions = append(review.Suggestions, models.ReviewSuggestion{
+					Category: "cross-module", TargetName: "setup", Issue: w,
+					Suggestion: "检查是否需要在 story_setup.json 中补充", Priority: models.PriorityMedium,
+				})
+			}
+			if len(crossIssues)+len(crossWarnings) > 0 {
+				logger.Info("Cross-module check added %d issues and %d warnings to review",
+					len(crossIssues), len(crossWarnings))
+			}
+		}
+
 		// Save improved setup
 		if err := saveStorySetup(setup); err != nil {
 			return fmt.Errorf("failed to save improved story setup: %w", err)
@@ -379,6 +401,19 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 	fmt.Printf("📖 Premise: %.100s...\n", setup.Premise)
 
 	return nil
+}
+
+func loadAndCrossCheckSetup(setup *models.StorySetup) (issues, warnings []string) {
+	outlinePath := filepath.Join("story", "compose", "outline.json")
+	data, err := os.ReadFile(outlinePath)
+	if err != nil {
+		return nil, nil // no outline yet, skip
+	}
+	var storyOutline rpg.StoryOutline
+	if json.Unmarshal(data, &storyOutline) != nil {
+		return nil, nil
+	}
+	return validateSetupOutlineCross(setup, &storyOutline)
 }
 
 func runSetupImport(cmd *cobra.Command, args []string) error {
