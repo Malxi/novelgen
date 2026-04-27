@@ -547,9 +547,14 @@ func validateSetupOutlineCross(setup *models.StorySetup, outline *rpg.StoryOutli
 				for _, entry := range ch.ResourceLedger {
 					if entry.Item != "" && len(setupResources) > 0 {
 						if !setupResources[entry.Item] {
-							warnings = append(warnings, fmt.Sprintf(
-								"%s: resource '%s' not declared in setup.world_resources",
-								ch.ID, entry.Item))
+							// Find closest match in setup to suggest
+							closest := findClosestResource(entry.Item, setupResources)
+							hint := fmt.Sprintf("%s: resource '%s' not declared in setup.world_resources",
+								ch.ID, entry.Item)
+							if closest != "" {
+								hint += fmt.Sprintf(" (setup has: '%s' — consider using that name)", closest)
+							}
+							warnings = append(warnings, hint)
 						}
 					}
 				}
@@ -557,6 +562,25 @@ func validateSetupOutlineCross(setup *models.StorySetup, outline *rpg.StoryOutli
 		}
 	}
 	return
+}
+
+func findClosestResource(target string, candidates map[string]bool) string {
+	// Check if any candidate is a substring of target or vice versa
+	targetLower := strings.ToLower(target)
+	for name := range candidates {
+		nameLower := strings.ToLower(name)
+		// Simple shared-character heuristic: if they share >50% of characters
+		shared := 0
+		for _, r := range targetLower {
+			if strings.ContainsRune(nameLower, r) {
+				shared++
+			}
+		}
+		if float64(shared)/float64(len([]rune(targetLower))) > 0.4 {
+			return name
+		}
+	}
+	return ""
 }
 
 func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.ProjectConfig) (*models.Outline, error) {

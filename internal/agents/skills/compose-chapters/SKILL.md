@@ -139,7 +139,7 @@ Each scene has its own `beats` array (1-2 beats per scene). Do NOT output a chap
 **Track numeric resource changes per chapter.** Validator checks start+delta=end and cross-chapter continuity.
 
 **Ledger Fields:**
-- **item** (string): 资源名称
+- **item** (string): 资源名称 — **MUST match a name from setup.world_resources. Do NOT invent new names.**
 - **start** (int): 本章开始时的数量
 - **delta** (int): 变化量（正=获得，负=消耗）
 - **end** (int): 本章结束时的数量（必须 = start + delta）
