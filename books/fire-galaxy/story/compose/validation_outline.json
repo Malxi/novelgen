@@ -1,0 +1,293 @@
+{
+  "is_valid": false,
+  "issue_count": 3,
+  "warning_count": 30,
+  "issues": [
+    {
+      "type": "character",
+      "severity": "major",
+      "location": "P1-V1-C2",
+      "description": "事件中的角色 '虫族工蜂' 不在章节角色列表中",
+      "impact": "角色出场逻辑不一致",
+      "fix": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "type": "character",
+      "severity": "major",
+      "location": "P1-V1-C10",
+      "description": "事件中的角色 '所有幸存者' 不在章节角色列表中",
+      "impact": "角色出场逻辑不一致",
+      "fix": "将角色添加到章节角色列表或修改事件"
+    },
+    {
+      "type": "character",
+      "severity": "major",
+      "location": "P1-V1-C10",
+      "description": "事件中的角色 '所有幸存者' 不在章节角色列表中",
+      "impact": "角色出场逻辑不一致",
+      "fix": "将角色添加到章节角色列表或修改事件"
+    }
+  ],
+  "warnings": [
+    {
+      "type": "content",
+      "location": "Part[0].Volume[0].Chapter[0].P1-V1-C1",
+      "description": "Chapter缺少状态变化",
+      "suggestion": "明确章节带来的状态变化"
+    },
+    {
+      "type": "content",
+      "location": "Part[0].Volume[0].Chapter[1].P1-V1-C2",
+      "description": "Chapter缺少状态变化",
+      "suggestion": "明确章节带来的状态变化"
+    },
+    {
+      "type": "content",
+      "location": "Part[0].Volume[0].Chapter[2].P1-V1-C3",
+      "description": "Chapter缺少状态变化",
+      "suggestion": "明确章节带来的状态变化"
+    },
+    {
+      "type": "content",
+      "location": "Part[0].Volume[0].Chapter[3].P1-V1-C4",
+      "description": "Chapter缺少状态变化",
+      "suggestion": "明确章节带来的状态变化"
+    },
+    {
+      "type": "content",
+      "location": "Part[0].Volume[0].Chapter[4].P1-V1-C5",
+      "description": "Chapter缺少状态变化",
+      "suggestion": "明确章节带来的状态变化"
+    },
+    {
+      "type": "content",
+      "location": "Part[0].Volume[0].Chapter[5].P1-V1-C6",
+      "description": "Chapter缺少状态变化",
+      "suggestion": "明确章节带来的状态变化"
+    },
+    {
+      "type": "content",
+      "location": "Part[0].Volume[0].Chapter[6].P1-V1-C7",
+      "description": "Chapter缺少状态变化",
+      "suggestion": "明确章节带来的状态变化"
+    },
+    {
+      "type": "content",
+      "location": "Part[0].Volume[0].Chapter[7].P1-V1-C8",
+      "description": "Chapter缺少状态变化",
+      "suggestion": "明确章节带来的状态变化"
+    },
+    {
+      "type": "content",
+      "location": "Part[0].Volume[0].Chapter[8].P1-V1-C9",
+      "description": "Chapter缺少状态变化",
+      "suggestion": "明确章节带来的状态变化"
+    },
+    {
+      "type": "content",
+      "location": "Part[0].Volume[0].Chapter[9].P1-V1-C10",
+      "description": "Chapter缺少状态变化",
+      "suggestion": "明确章节带来的状态变化"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C1",
+      "description": "有事件但无状态变化",
+      "suggestion": "明确事件带来的状态变化"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C2",
+      "description": "有事件但无状态变化",
+      "suggestion": "明确事件带来的状态变化"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C3",
+      "description": "有事件但无状态变化",
+      "suggestion": "明确事件带来的状态变化"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C4",
+      "description": "有事件但无状态变化",
+      "suggestion": "明确事件带来的状态变化"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C5",
+      "description": "有事件但无状态变化",
+      "suggestion": "明确事件带来的状态变化"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C6",
+      "description": "有事件但无状态变化",
+      "suggestion": "明确事件带来的状态变化"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C7",
+      "description": "有事件但无状态变化",
+      "suggestion": "明确事件带来的状态变化"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C8",
+      "description": "有事件但无状态变化",
+      "suggestion": "明确事件带来的状态变化"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C9",
+      "description": "有事件但无状态变化",
+      "suggestion": "明确事件带来的状态变化"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C10",
+      "description": "有事件但无状态变化",
+      "suggestion": "明确事件带来的状态变化"
+    },
+    {
+      "type": "pacing",
+      "location": "P1-V1-C7",
+      "description": "连续多个快节奏章节",
+      "suggestion": "插入慢节奏章节让读者喘息"
+    },
+    {
+      "type": "transition",
+      "location": "P1-V1-C2",
+      "description": "地点从 '西昌航天发射场地下休眠中心' 变为 '休眠中心入口通道' 但缺少过渡描述",
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "type": "transition",
+      "location": "P1-V1-C4",
+      "description": "地点从 '休眠中心物资储备室' 变为 '西昌发射场外戈壁废土' 但缺少过渡描述",
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "type": "transition",
+      "location": "P1-V1-C5",
+      "description": "地点从 '西昌发射场外戈壁废土' 变为 '戈壁地下废弃铁路隧道据点' 但缺少过渡描述",
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "type": "transition",
+      "location": "P1-V1-C7",
+      "description": "地点从 '旧凉山核电站废墟外围' 变为 '旧核电站核心机房' 但缺少过渡描述",
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "type": "transition",
+      "location": "P1-V1-C8",
+      "description": "地点从 '旧核电站核心机房' 变为 '核电站通风管道出口' 但缺少过渡描述",
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "type": "transition",
+      "location": "P1-V1-C9",
+      "description": "地点从 '核电站通风管道出口' 变为 '地下据点机甲维修库' 但缺少过渡描述",
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "type": "transition",
+      "location": "P1-V1-C10",
+      "description": "地点从 '地下据点机甲维修库' 变为 '地下据点入口大厅' 但缺少过渡描述",
+      "suggestion": "在开场节拍中添加地点转换说明"
+    },
+    {
+      "type": "redundancy",
+      "location": "P1-V1",
+      "description": "事件类型 'combat' 使用过于频繁(8次)",
+      "suggestion": "增加事件类型多样性"
+    },
+    {
+      "type": "redundancy",
+      "location": "P1-V1",
+      "description": "事件类型 'item' 使用过于频繁(6次)",
+      "suggestion": "增加事件类型多样性"
+    }
+  ],
+  "suggestions": [
+    {
+      "type": "logic",
+      "location": "P1-V1-C1",
+      "current": "休眠中心入口处突然传来怪异的嘶鸣声，顺着通道往内部靠近",
+      "suggested": "休眠中心入口处突然传来怪异的嘶鸣声，顺着通道往内部靠近（冲突得到解决或升级）",
+      "reason": "确保冲突有明确的阶段性结果"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C2",
+      "current": "陆沉低头发现小臂的伤口正在快速愈合，显然自己的身体在长期休眠中发生了未知变异",
+      "suggested": "陆沉低头发现小臂的伤口正在快速愈合，显然自己的身体在长期休眠中发生了未知变异（冲突得到解决或升级）",
+      "reason": "确保冲突有明确的阶段性结果"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C3",
+      "current": "陆沉换上防护服，装好物资，决定前往求救信号的来源地",
+      "suggested": "陆沉换上防护服，装好物资，决定前往求救信号的来源地（冲突得到解决或升级）",
+      "reason": "确保冲突有明确的阶段性结果"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C4",
+      "current": "几人刚要出发，远处传来了更大的虫族嘶吼声，似乎有更高级的虫族被刚才的战斗吸引过来",
+      "suggested": "几人刚要出发，远处传来了更大的虫族嘶吼声，似乎有更高级的虫族被刚才的战斗吸引过来（冲突得到解决或升级）",
+      "reason": "确保冲突有明确的阶段性结果"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C5",
+      "current": "林野告诉陆沉，修复机甲需要的氚晶体只有10公里外的旧核电站废墟里才有，但那里是虫族孵化巢的所在地",
+      "suggested": "林野告诉陆沉，修复机甲需要的氚晶体只有10公里外的旧核电站废墟里才有，但那里是虫族孵化巢的所在地（冲突得到解决或升级）",
+      "reason": "确保冲突有明确的阶段性结果"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C6",
+      "current": "虫族哨兵发出尖锐的嘶鸣，显然已经向巢穴内的其他虫族发送了警报",
+      "suggested": "虫族哨兵发出尖锐的嘶鸣，显然已经向巢穴内的其他虫族发送了警报（冲突得到解决或升级）",
+      "reason": "确保冲突有明确的阶段性结果"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C7",
+      "current": "机房的墙壁突然开始震动，外面传来大批虫族爬动的声音，显然是之前哨兵的警报引来了虫族大部队",
+      "suggested": "机房的墙壁突然开始震动，外面传来大批虫族爬动的声音，显然是之前哨兵的警报引来了虫族大部队（冲突得到解决或升级）",
+      "reason": "确保冲突有明确的阶段性结果"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C8",
+      "current": "陆沉因为过度使用进化能力脱力晕倒，陷入昏迷",
+      "suggested": "陆沉因为过度使用进化能力脱力晕倒，陷入昏迷（冲突得到解决或升级）",
+      "reason": "确保冲突有明确的阶段性结果"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C9",
+      "current": "陆沉驾驶着\"灰雀\"机甲站起来，操控机甲走向据点入口，准备迎战入侵的机器人",
+      "suggested": "陆沉驾驶着\"灰雀\"机甲站起来，操控机甲走向据点入口，准备迎战入侵的机器人（冲突得到解决或升级）",
+      "reason": "确保冲突有明确的阶段性结果"
+    },
+    {
+      "type": "logic",
+      "location": "P1-V1-C10",
+      "current": "陆沉驾驶灰雀走在最前面，带着所有幸存者收拾好物资走出地下据点，远处的星际尘埃中，隐约能看到人类联邦星舰残留的信号灯正在闪烁",
+      "suggested": "陆沉驾驶灰雀走在最前面，带着所有幸存者收拾好物资走出地下据点，远处的星际尘埃中，隐约能看到人类联邦星舰残留的信号灯正在闪烁（冲突得到解决或升级）",
+      "reason": "确保冲突有明确的阶段性结果"
+    },
+    {
+      "type": "conflict",
+      "location": "P1-V1-C4",
+      "current": "刚救下幸存者小队，就引来了更强大的虫族单位，必须尽快撤离",
+      "suggested": "增强冲突强度",
+      "reason": "冲突过于温和，难以驱动剧情"
+    }
+  ],
+  "summary": "大纲验证完成：发现 3 个问题，30 个警告，11 条建议\n  ⚠ 主要问题: 3 个（建议修复）\n"
+}

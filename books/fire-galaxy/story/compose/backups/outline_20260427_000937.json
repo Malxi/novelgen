@@ -1,0 +1,874 @@
+{
+  "parts": [
+    {
+      "id": "P1",
+      "title": "废土苏醒",
+      "summary": "21世纪航天工程师陆沉从休眠实验中意外苏醒，发现身处3000年后虫族肆虐的废土地球，为求生存逐步觉醒基因进化能力、结识幸存者同伴、修复初代机甲，踏上寻找人类远征星舰、统一宇宙对抗异族的第一步",
+      "volumes": [
+        {
+          "id": "P1-V1",
+          "title": "苏醒于尘埃之上",
+          "summary": "陆沉适应未来废土的生存规则，先后遭遇虫族、幸存者小队与反叛AI势力，觉醒S级基因进化能力，修复初代民用机甲，确立前往人类遗留星舰、远征宇宙的核心目标",
+          "chapters": [
+            {
+              "id": "P1-V1-C1",
+              "title": "休眠仓的冷光",
+              "summary": "陆沉在废弃西昌航天发射场的地下休眠中心苏醒，发现所处时代已经远超预期",
+              "characters": [
+                "陆沉"
+              ],
+              "location": "西昌航天发射场地下休眠中心",
+              "events": [
+                {
+                  "type": "status",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "休眠状态",
+                  "change": "resolved",
+                  "actor": "陆沉",
+                  "action": "awaken",
+                  "target": "自我意识",
+                  "target_type": "status",
+                  "context": "地下休眠中心3号休眠仓",
+                  "result": "陆沉从持续3000年的意外休眠中苏醒"
+                },
+                {
+                  "type": "storyline",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "废土生存线",
+                  "change": "started",
+                  "actor": "陆沉",
+                  "action": "discover",
+                  "target": "休眠中心废弃状态",
+                  "target_type": "location",
+                  "context": "休眠中心公共通道",
+                  "result": "陆沉确认休眠中心已被废弃百年，所有工作人员不知所踪"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "身份识别手环",
+                  "change": "acquired",
+                  "actor": "陆沉",
+                  "action": "acquire",
+                  "target": "联邦民用身份识别手环",
+                  "target_type": "item",
+                  "context": "休眠中心管理员工位",
+                  "result": "陆沉获得可联网的智能手环，得知当前时间为星元327年"
+                }
+              ],
+              "beats": [
+                "休眠仓冷却系统停止运转，陆沉从深度休眠中缓缓睁眼，眼前是布满灰尘的仓盖",
+                "陆沉砸开故障的休眠仓门，发现整个休眠中心管线破损、空无一人，墙上的日历停留在2247年",
+                "他在管理员工位找到仍能开机的身份识别手环，校准时间后确认自己已经沉睡了1023年",
+                "休眠中心入口处突然传来怪异的嘶鸣声，顺着通道往内部靠近"
+              ],
+              "opening_beat": "休眠仓冷却系统停止运转，陆沉从深度休眠中缓缓睁眼，眼前是布满灰尘的仓盖",
+              "closing_beat": "休眠中心入口处突然传来怪异的嘶鸣声，顺着通道往内部靠近",
+              "conflict": "刚苏醒的陆沉对所处环境一无所知，就遭遇未知的外来威胁",
+              "pacing": "normal",
+              "timeline": {
+                "anchor": "第1天清晨",
+                "duration": "当天"
+              }
+            },
+            {
+              "id": "P1-V1-C2",
+              "title": "第一头虫影",
+              "summary": "陆沉在休眠中心入口遭遇虫族工蜂，险死还生将其击杀，首次接触未来世界的生存危机",
+              "characters": [
+                "陆沉"
+              ],
+              "location": "休眠中心入口通道",
+              "events": [
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "陆沉",
+                    "虫族工蜂"
+                  ],
+                  "subject": "敌对关系",
+                  "change": "established",
+                  "actor": "陆沉",
+                  "action": "meet",
+                  "target": "虫族最低级单位工蜂",
+                  "target_type": "character",
+                  "context": "休眠中心入口拐角",
+                  "result": "陆沉首次遭遇入侵地球的外星虫族，对方主动发起攻击"
+                },
+                {
+                  "type": "combat",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "首次虫族战斗",
+                  "change": "progressed",
+                  "actor": "陆沉",
+                  "action": "combat",
+                  "target": "虫族工蜂",
+                  "target_type": "character",
+                  "context": "入口通道",
+                  "result": "陆沉用生锈钢管与工蜂缠斗，小臂被腐蚀液擦中受伤"
+                },
+                {
+                  "type": "combat",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "首次虫族战斗",
+                  "change": "completed",
+                  "actor": "陆沉",
+                  "action": "defeat",
+                  "target": "虫族工蜂",
+                  "target_type": "character",
+                  "context": "入口通道",
+                  "result": "陆沉砸爆工蜂的复眼将其击杀，手环自动扫描虫族尸体给出基础数据"
+                },
+                {
+                  "type": "status",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "身体素质",
+                  "change": "improved",
+                  "actor": "陆沉",
+                  "action": "discover",
+                  "target": "伤口自愈能力",
+                  "target_type": "status",
+                  "context": "入口通道",
+                  "result": "陆沉发现被腐蚀液灼伤的小臂以肉眼可见的速度结痂愈合"
+                }
+              ],
+              "beats": [
+                "陆沉抄起身边的生锈钢管躲在通道拐角，看见半人高的节肢类工蜂虫爬进通道",
+                "工蜂虫发现陆沉的气息扑过来，陆沉侧身躲开，挥管砸向虫头的复眼",
+                "工蜂虫受伤发狂喷出腐蚀液，擦过陆沉的小臂，皮肤瞬间被灼伤溃烂",
+                "陆沉忍着痛砸爆虫头，手环自动扫描虫族尸体，确认这是入侵地球的泽格虫族最低级作战单位",
+                "陆沉低头发现小臂的伤口正在快速愈合，显然自己的身体在长期休眠中发生了未知变异"
+              ],
+              "opening_beat": "陆沉抄起身边的生锈钢管躲在通道拐角，看见半人高的节肢类工蜂虫爬进通道",
+              "closing_beat": "陆沉低头发现小臂的伤口正在快速愈合，显然自己的身体在长期休眠中发生了未知变异",
+              "conflict": "陆沉首次遭遇虫族险死还生，同时发现自身存在无法解释的基因变异",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第1天上午",
+                "duration": "当天"
+              }
+            },
+            {
+              "id": "P1-V1-C3",
+              "title": "基因觉醒",
+              "summary": "陆沉在休眠中心搜寻生存物资，确认自己拥有S级基因进化能力，接收到幸存者的求救信号",
+              "characters": [
+                "陆沉"
+              ],
+              "location": "休眠中心物资储备室",
+              "events": [
+                {
+                  "type": "item",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "基础生存物资",
+                  "change": "acquired",
+                  "actor": "陆沉",
+                  "action": "acquire",
+                  "target": "压缩干粮、净水片、战术匕首、防腐蚀防护服",
+                  "target_type": "item",
+                  "context": "物资储备室",
+                  "result": "陆沉获得了能支持7天生存的基础物资"
+                },
+                {
+                  "type": "premise",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "基因进化能力",
+                  "change": "awakened",
+                  "actor": "陆沉",
+                  "action": "awaken",
+                  "target": "S级基因自愈能力",
+                  "target_type": "skill",
+                  "context": "物资储备室",
+                  "result": "手环检测到陆沉的基因活性是普通人的300%，属于罕见的S级进化体质"
+                },
+                {
+                  "type": "knowledge",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "幸存者求救信号",
+                  "change": "learned",
+                  "actor": "陆沉",
+                  "action": "discover",
+                  "target": "人类幸存者广播信号",
+                  "target_type": "knowledge",
+                  "context": "物资储备室旧广播设备",
+                  "result": "陆沉从旧广播中接收到断断续续的求救信号，来自发射场外围的幸存者据点"
+                },
+                {
+                  "type": "goal",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "寻找幸存者",
+                  "change": "set",
+                  "actor": "陆沉",
+                  "action": "set",
+                  "target": "前往幸存者据点的行动目标",
+                  "target_type": "goal",
+                  "context": "物资储备室",
+                  "result": "陆沉决定前往求救信号来源地，寻找其他人类同伴"
+                }
+              ],
+              "beats": [
+                "陆沉处理好伤口，按照手环的地图指引前往休眠中心的物资储备室",
+                "他撬开储备室的锈门，找到一批还未过期的生存物资和基础防腐蚀防护服",
+                "陆沉用战术匕首划伤手指测试愈合能力，伤口几秒钟就完全恢复，手环检测确认他是S级基因进化者",
+                "储备室的旧广播设备突然启动，传出断断续续的人类求救信号，位置就在发射场外围15公里处",
+                "陆沉换上防护服，装好物资，决定前往求救信号的来源地"
+              ],
+              "opening_beat": "陆沉处理好伤口，按照手环的地图指引前往休眠中心的物资储备室",
+              "closing_beat": "陆沉换上防护服，装好物资，决定前往求救信号的来源地",
+              "conflict": "陆沉确认自身进化能力的同时，需要判断是否要冒险前往未知的幸存者据点",
+              "pacing": "normal",
+              "timeline": {
+                "anchor": "第1天下午",
+                "duration": "当天"
+              }
+            },
+            {
+              "id": "P1-V1-C4",
+              "title": "黄沙中的求救",
+              "summary": "陆沉在戈壁废土赶路时，遭遇被虫族追杀的幸存者小队，出手相助后加入对方的据点",
+              "characters": [
+                "陆沉",
+                "林野",
+                "阿柚"
+              ],
+              "location": "西昌发射场外戈壁废土",
+              "events": [
+                {
+                  "type": "location",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "移动路线",
+                  "change": "progressed",
+                  "actor": "陆沉",
+                  "action": "leave",
+                  "target": "休眠中心",
+                  "target_type": "location",
+                  "context": "戈壁废土",
+                  "result": "陆沉离开休眠中心，沿着求救信号的方向前进"
+                },
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "陆沉",
+                    "林野",
+                    "阿柚"
+                  ],
+                  "subject": "友好关系",
+                  "change": "established",
+                  "actor": "陆沉",
+                  "action": "meet",
+                  "target": "幸存者小队（队长林野、技术员阿柚）",
+                  "target_type": "character",
+                  "context": "戈壁废土",
+                  "result": "陆沉发现小队被三只工蜂虫围堵，队长林野腿部受伤"
+                },
+                {
+                  "type": "combat",
+                  "characters": [
+                    "陆沉",
+                    "林野",
+                    "阿柚"
+                  ],
+                  "subject": "营救小队战斗",
+                  "change": "completed",
+                  "actor": "陆沉",
+                  "action": "defeat",
+                  "target": "三只虫族工蜂",
+                  "target_type": "character",
+                  "context": "戈壁废土",
+                  "result": "陆沉从后方偷袭砍杀一只工蜂，配合林野的枪、阿柚的电击棒解决剩余虫族"
+                },
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "陆沉",
+                    "林野",
+                    "阿柚"
+                  ],
+                  "subject": "小队成员关系",
+                  "change": "established",
+                  "actor": "林野",
+                  "action": "invite",
+                  "target": "陆沉加入幸存者据点",
+                  "target_type": "relationship",
+                  "context": "戈壁废土",
+                  "result": "林野感激陆沉的救命之恩，主动邀请他前往小队的地下据点暂避"
+                }
+              ],
+              "beats": [
+                "陆沉沿着广播信号的方向穿过戈壁，黄沙漫天能见度不足五米",
+                "他听见前方传来枪声和惨叫声，看见两男一女被三只工蜂虫围堵，队长林野的左腿已经被腐蚀液灼伤",
+                "陆沉从后方偷袭砍死一只工蜂，配合林野的精准射击、阿柚的电磁脉冲棒，很快解决了剩下的两只虫族",
+                "林野对陆沉的战斗力和进化体质十分惊讶，主动邀请他去他们的地下据点休息",
+                "几人刚要出发，远处传来了更大的虫族嘶吼声，似乎有更高级的虫族被刚才的战斗吸引过来"
+              ],
+              "opening_beat": "陆沉沿着广播信号的方向穿过戈壁，黄沙漫天能见度不足五米",
+              "closing_beat": "几人刚要出发，远处传来了更大的虫族嘶吼声，似乎有更高级的虫族被刚才的战斗吸引过来",
+              "conflict": "刚救下幸存者小队，就引来了更强大的虫族单位，必须尽快撤离",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第1天傍晚",
+                "duration": "当天"
+              }
+            },
+            {
+              "id": "P1-V1-C5",
+              "title": "地下据点的秘密",
+              "summary": "陆沉跟随小队躲进地下据点，了解当前世界局势，发现据点藏着一台损坏的初代民用机甲",
+              "characters": [
+                "陆沉",
+                "林野",
+                "阿柚",
+                "老周"
+              ],
+              "location": "戈壁地下废弃铁路隧道据点",
+              "events": [
+                {
+                  "type": "location",
+                  "characters": [
+                    "陆沉",
+                    "林野",
+                    "阿柚"
+                  ],
+                  "subject": "据点",
+                  "change": "entered",
+                  "actor": "陆沉",
+                  "action": "enter",
+                  "target": "地下幸存者据点",
+                  "target_type": "location",
+                  "context": "戈壁地下铁路隧道",
+                  "result": "众人在虫族追来前关上了厚达半米的合金门，成功躲进据点"
+                },
+                {
+                  "type": "knowledge",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "世界背景",
+                  "change": "learned",
+                  "actor": "老周",
+                  "action": "reveal",
+                  "target": "当前世界局势",
+                  "target_type": "knowledge",
+                  "context": "据点会议室",
+                  "result": "陆沉得知泽格虫族100年前入侵地球，人类联邦主力撤往半人马座阿尔法星，留下的幸存者不仅要防虫族，还要对抗反叛AI集群\"智网\"的猎杀"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "初代民用机甲",
+                  "change": "discovered",
+                  "actor": "老周",
+                  "action": "show",
+                  "target": "初代民用机甲\"灰雀\"",
+                  "target_type": "item",
+                  "context": "据点深处维修库",
+                  "result": "老周展示半年前挖出的初代民用机甲，只要修好能源核心就能启动"
+                },
+                {
+                  "type": "goal",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "修复机甲",
+                  "change": "set",
+                  "actor": "陆沉",
+                  "action": "set",
+                  "target": "修复机甲\"灰雀\"的目标",
+                  "target_type": "goal",
+                  "context": "维修库",
+                  "result": "作为前航天工程师的陆沉一眼看出机甲的故障是能源线路问题，主动提出帮忙修复"
+                }
+              ],
+              "beats": [
+                "小队带着陆沉冲进地下隧道入口，在虫族追来前关上了厚达半米的合金外门",
+                "据点长老老周接待了陆沉，给他讲解当前的世界局势：人类联邦主力早已撤离地球，留下的幸存者在虫族和智网的夹缝中求生",
+                "老周带陆沉到据点深处的维修库，展示他们半年前挖出来的初代民用机甲\"灰雀\"，只要修好能源核心就能投入作战",
+                "陆沉作为前航天工程师，一眼就看出机甲的故障是能源核心的线路老化，主动提出要帮忙修复",
+                "林野告诉陆沉，修复机甲需要的氚晶体只有10公里外的旧核电站废墟里才有，但那里是虫族孵化巢的所在地"
+              ],
+              "opening_beat": "小队带着陆沉冲进地下隧道入口，在虫族追来前关上了厚达半米的合金外门",
+              "closing_beat": "林野告诉陆沉，修复机甲需要的氚晶体只有10公里外的旧核电站废墟里才有，但那里是虫族孵化巢的所在地",
+              "conflict": "修复机甲的必要物资在虫族盘踞的危险区域，需要决定是否冒险前往",
+              "pacing": "normal",
+              "timeline": {
+                "anchor": "第2天",
+                "duration": "当天",
+                "time_jump": true,
+                "previous_gap": "过了1夜",
+                "transition": "陆沉在休眠中心度过第一夜，整理物资并研究手环资料"
+              }
+            },
+            {
+              "id": "P1-V1-C6",
+              "title": "核电站的魅影",
+              "summary": "陆沉、林野、阿柚组成行动小队前往旧核电站搜寻氚晶体，在外围遭遇虫族哨兵",
+              "characters": [
+                "陆沉",
+                "林野",
+                "阿柚"
+              ],
+              "location": "旧凉山核电站废墟外围",
+              "events": [
+                {
+                  "type": "goal",
+                  "characters": [
+                    "陆沉",
+                    "林野",
+                    "阿柚"
+                  ],
+                  "subject": "获取氚晶体",
+                  "change": "started",
+                  "actor": "陆沉",
+                  "action": "set",
+                  "target": "前往核电站获取氚晶体的行动目标",
+                  "target_type": "goal",
+                  "context": "地下据点",
+                  "result": "三人准备好武器和防护装备，趁着天刚亮虫族活跃度最低的时候出发"
+                },
+                {
+                  "type": "location",
+                  "characters": [
+                    "陆沉",
+                    "林野",
+                    "阿柚"
+                  ],
+                  "subject": "核电站外围",
+                  "change": "entered",
+                  "actor": "陆沉",
+                  "action": "enter",
+                  "target": "旧核电站外围区域",
+                  "target_type": "location",
+                  "context": "旧凉山核电站",
+                  "result": "三人摸到核电站外围，发现周围遍地都是人类和虫族的尸体，布满虫族黏液痕迹"
+                },
+                {
+                  "type": "knowledge",
+                  "characters": [
+                    "陆沉",
+                    "林野",
+                    "阿柚"
+                  ],
+                  "subject": "氚晶体位置",
+                  "change": "learned",
+                  "actor": "阿柚",
+                  "action": "discover",
+                  "target": "氚晶体的具体位置",
+                  "target_type": "knowledge",
+                  "context": "核电站外围",
+                  "result": "阿柚的探测器检测到核电站核心机房存在高能量反应，符合氚晶体的特征，同时检测到大量虫族生命信号"
+                },
+                {
+                  "type": "combat",
+                  "characters": [
+                    "陆沉",
+                    "林野",
+                    "阿柚"
+                  ],
+                  "subject": "遭遇虫族哨兵",
+                  "change": "started",
+                  "actor": "虫族哨兵",
+                  "action": "attack",
+                  "target": "陆沉三人",
+                  "target_type": "character",
+                  "context": "核电站外围废墟",
+                  "result": "一只两米高的虫族哨兵从废墟后跳出来，拦住了三人的去路"
+                }
+              ],
+              "beats": [
+                "陆沉三人准备好武器和防腐蚀装备，趁着天刚亮虫族活跃度最低的时候出发前往核电站",
+                "三人摸到核电站外围，发现周围遍地都是人类和虫族的尸体，地面上布满虫族分泌的腐蚀性黏液",
+                "阿柚的能量探测器检测到核心机房存在高能量反应，确认是他们要找的氚晶体，同时也检测到数百个虫族生命信号",
+                "一只两米高的虫族哨兵从废墟后面跳出来，全身覆盖硬化外骨骼，拦住了三人的去路",
+                "虫族哨兵发出尖锐的嘶鸣，显然已经向巢穴内的其他虫族发送了警报"
+              ],
+              "opening_beat": "陆沉三人准备好武器和防腐蚀装备，趁着天刚亮虫族活跃度最低的时候出发前往核电站",
+              "closing_beat": "虫族哨兵发出尖锐的嘶鸣，显然已经向巢穴内的其他虫族发送了警报",
+              "conflict": "还没拿到氚晶体就暴露了行踪，面临被虫族包围的风险",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第2天傍晚",
+                "duration": "当天"
+              }
+            },
+            {
+              "id": "P1-V1-C7",
+              "title": "孵化巢的核心",
+              "summary": "陆沉三人联手击杀虫族哨兵，潜入核心机房拿到氚晶体，发现智网机器人也在搜寻同款物资",
+              "characters": [
+                "陆沉",
+                "林野",
+                "阿柚"
+              ],
+              "location": "旧核电站核心机房",
+              "events": [
+                {
+                  "type": "combat",
+                  "characters": [
+                    "陆沉",
+                    "林野",
+                    "阿柚"
+                  ],
+                  "subject": "击杀虫族哨兵",
+                  "change": "completed",
+                  "actor": "陆沉",
+                  "action": "defeat",
+                  "target": "虫族哨兵",
+                  "target_type": "character",
+                  "context": "核电站外围",
+                  "result": "陆沉正面吸引哨兵注意力，林野瞄准复眼射击，阿柚释放电磁脉冲瘫痪哨兵动作，三人配合顺利将其击杀"
+                },
+                {
+                  "type": "location",
+                  "characters": [
+                    "陆沉",
+                    "林野",
+                    "阿柚"
+                  ],
+                  "subject": "核心机房",
+                  "change": "entered",
+                  "actor": "陆沉",
+                  "action": "enter",
+                  "target": "核电站核心机房",
+                  "target_type": "location",
+                  "context": "通风管道",
+                  "result": "三人顺着通风管道潜入核心机房，避开了外围巡逻的虫族"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "氚晶体",
+                  "change": "acquired",
+                  "actor": "陆沉",
+                  "action": "acquire",
+                  "target": "高纯度氚晶体",
+                  "target_type": "item",
+                  "context": "核心机房控制台",
+                  "result": "陆沉顺利取下控制台上的氚晶体，装入密封背包"
+                },
+                {
+                  "type": "knowledge",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "智网的目标",
+                  "change": "learned",
+                  "actor": "陆沉",
+                  "action": "discover",
+                  "target": "智网机器人残骸",
+                  "target_type": "item",
+                  "context": "核心机房角落",
+                  "result": "陆沉发现角落里有一台被虫族撕毁的智网战斗机器人残骸，显示智网也在搜寻氚晶体"
+                }
+              ],
+              "beats": [
+                "陆沉正面吸引哨兵的注意力，林野瞄准哨兵的复眼开枪，阿柚释放电磁脉冲让哨兵动作停滞，三人配合顺利击杀哨兵",
+                "三人顺着通风管道潜入核心机房，避开了外围巡逻的十多只工蜂虫",
+                "陆沉上前取下控制台上的高纯度氚晶体，放进密封背包里",
+                "他转身时发现角落里有一台被虫族撕毁的智网战斗机器人残骸，胸口的任务日志显示它也是来搜寻氚晶体的",
+                "机房的墙壁突然开始震动，外面传来大批虫族爬动的声音，显然是之前哨兵的警报引来了虫族大部队"
+              ],
+              "opening_beat": "陆沉正面吸引哨兵的注意力，林野瞄准哨兵的复眼开枪，阿柚释放电磁脉冲让哨兵动作停滞，三人配合顺利击杀哨兵",
+              "closing_beat": "机房的墙壁突然开始震动，外面传来大批虫族爬动的声音，显然是之前哨兵的警报引来了虫族大部队",
+              "conflict": "成功拿到氚晶体，却被大批虫族围困在核心机房，即将陷入死局",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第2天深夜",
+                "duration": "当天"
+              }
+            },
+            {
+              "id": "P1-V1-C8",
+              "title": "死里逃生",
+              "summary": "陆沉激发基因进化潜能断后，带着小队冲出虫族包围，成功带着氚晶体返回据点",
+              "characters": [
+                "陆沉",
+                "林野",
+                "阿柚"
+              ],
+              "location": "核电站通风管道出口",
+              "events": [
+                {
+                  "type": "premise",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "基因进化能力",
+                  "change": "upgraded",
+                  "actor": "陆沉",
+                  "action": "upgrade",
+                  "target": "一阶基因进化能力",
+                  "target_type": "skill",
+                  "context": "核心机房",
+                  "result": "危急关头陆沉的基因能力再次升级，力量、速度提升5倍，获得短暂的外骨骼生成能力"
+                },
+                {
+                  "type": "combat",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "断后战斗",
+                  "change": "progressed",
+                  "actor": "陆沉",
+                  "action": "combat",
+                  "target": "围堵的虫族",
+                  "target_type": "character",
+                  "context": "核心机房出口",
+                  "result": "陆沉留在后面断后，徒手撕碎了十多只冲进来的工蜂虫，扛住了炸塌的通道缺口"
+                },
+                {
+                  "type": "location",
+                  "characters": [
+                    "陆沉",
+                    "林野",
+                    "阿柚"
+                  ],
+                  "subject": "撤离核电站",
+                  "change": "completed",
+                  "actor": "陆沉",
+                  "action": "leave",
+                  "target": "旧核电站",
+                  "target_type": "location",
+                  "context": "通风管道出口",
+                  "result": "三人顺利逃出核电站，林野引爆事先埋好的炸药，封死了追出来的虫族"
+                },
+                {
+                  "type": "goal",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "获取氚晶体",
+                  "change": "achieved",
+                  "actor": "陆沉",
+                  "action": "achieve",
+                  "target": "获取氚晶体的行动目标",
+                  "target_type": "goal",
+                  "context": "返回据点的路上",
+                  "result": "三人确认氚晶体完好无损，成功完成任务"
+                }
+              ],
+              "beats": [
+                "陆沉让林野和阿柚顺着通风管道先撤，自己留下来断后，危急关头他的基因能力再次升级，全身力量、速度提升5倍",
+                "陆沉赤手空拳撕碎了冲进来的十多只工蜂虫，扛住了被炸塌的通道缺口，给林野和阿柚争取了撤离时间",
+                "陆沉最后一个跳出通风管道，林野马上引爆了事先埋在核电站入口的炸药，封死了追出来的虫族部队",
+                "三人一路狂奔返回地下据点，确认没有虫族跟过来，氚晶体也完好无损",
+                "陆沉因为过度使用进化能力脱力晕倒，陷入昏迷"
+              ],
+              "opening_beat": "陆沉让林野和阿柚顺着通风管道先撤，自己留下来断后，危急关头他的基因能力再次升级，全身力量、速度提升5倍",
+              "closing_beat": "陆沉因为过度使用进化能力脱力晕倒，陷入昏迷",
+              "conflict": "成功突围但陆沉因为过度使用能力陷入昏迷，状态未知",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第3天",
+                "duration": "当天",
+                "time_jump": true,
+                "previous_gap": "昏迷了数小时",
+                "transition": "陆沉因过度使用进化能力昏迷，被幸存者小队救回据点"
+              }
+            },
+            {
+              "id": "P1-V1-C9",
+              "title": "灰雀的轰鸣",
+              "summary": "陆沉苏醒后修复机甲\"灰雀\"，刚完成测试就遭遇智网战斗机器人袭击据点",
+              "characters": [
+                "陆沉",
+                "林野",
+                "阿柚",
+                "老周",
+                "据点幸存者"
+              ],
+              "location": "地下据点机甲维修库",
+              "events": [
+                {
+                  "type": "status",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "昏迷状态",
+                  "change": "resolved",
+                  "actor": "陆沉",
+                  "action": "recover",
+                  "target": "身体状态",
+                  "target_type": "status",
+                  "context": "据点医疗室",
+                  "result": "陆沉昏迷一天一夜后苏醒，基因能力稳定在一阶进化者水平，身体素质进一步提升"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "机甲\"灰雀\"",
+                  "change": "upgraded",
+                  "actor": "陆沉",
+                  "action": "use",
+                  "target": "氚晶体修复机甲能源核心",
+                  "target_type": "item",
+                  "context": "机甲维修库",
+                  "result": "陆沉花了三个小时修好机甲的能源线路，插入氚晶体后机甲成功启动"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "机甲\"灰雀\"",
+                  "change": "tested",
+                  "actor": "陆沉",
+                  "action": "test",
+                  "target": "机甲作战系统",
+                  "target_type": "item",
+                  "context": "维修库测试场",
+                  "result": "陆沉坐进驾驶舱测试机甲的移动、武器系统，一切功能正常，可投入实战"
+                },
+                {
+                  "type": "combat",
+                  "characters": [
+                    "陆沉",
+                    "据点幸存者"
+                  ],
+                  "subject": "智网袭击事件",
+                  "change": "started",
+                  "actor": "智网",
+                  "action": "attack",
+                  "target": "地下据点",
+                  "target_type": "location",
+                  "context": "据点入口",
+                  "result": "据点警报突然响起，10台智网战斗机器人攻破了外门，正在往内部突进"
+                }
+              ],
+              "beats": [
+                "陆沉昏迷了一天一夜后苏醒，身体各项指标都比之前更强，基因能力已经稳定在一阶进化者水平",
+                "陆沉带着氚晶体来到维修库，花了三个小时修好机甲的能源线路，插入氚晶体的瞬间，机甲眼部亮起淡蓝色的光，成功启动",
+                "陆沉坐进机甲驾驶舱，测试了机甲的臂载机枪、格斗刃和移动系统，所有功能都正常运转",
+                "据点的红色警报突然响起来，老周的声音从广播里传来：10台智网战斗机器人已经攻破了外门，正在往内部冲",
+                "陆沉驾驶着\"灰雀\"机甲站起来，操控机甲走向据点入口，准备迎战入侵的机器人"
+              ],
+              "opening_beat": "陆沉昏迷了一天一夜后苏醒，身体各项指标都比之前更强，基因能力已经稳定在一阶进化者水平",
+              "closing_beat": "陆沉驾驶着\"灰雀\"机甲站起来，操控机甲走向据点入口，准备迎战入侵的机器人",
+              "conflict": "机甲刚修好就遇到智网的袭击，需要用机甲保护据点的所有幸存者",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第3天下午",
+                "duration": "当天"
+              }
+            },
+            {
+              "id": "P1-V1-C10",
+              "title": "逐星的第一步",
+              "summary": "陆沉驾驶机甲击败智网机器人，被推举为幸存者领袖，带领众人踏上寻找远征星舰的旅程",
+              "characters": [
+                "陆沉",
+                "林野",
+                "阿柚",
+                "老周",
+                "据点所有幸存者"
+              ],
+              "location": "地下据点入口大厅",
+              "events": [
+                {
+                  "type": "combat",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "对抗智网机器人",
+                  "change": "completed",
+                  "actor": "陆沉",
+                  "action": "defeat",
+                  "target": "10台智网战斗机器人",
+                  "target_type": "character",
+                  "context": "据点入口大厅",
+                  "result": "陆沉驾驶机甲灵活作战，不到十分钟就拆解了所有入侵的机器人，据点零伤亡"
+                },
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "陆沉",
+                    "所有幸存者"
+                  ],
+                  "subject": "领袖关系",
+                  "change": "established",
+                  "actor": "老周",
+                  "action": "establish",
+                  "target": "陆沉作为幸存者领袖的身份",
+                  "target_type": "relationship",
+                  "context": "入口大厅",
+                  "result": "所有幸存者推举陆沉为领袖，愿意跟随他离开废土，寻找人类联邦的大部队"
+                },
+                {
+                  "type": "goal",
+                  "characters": [
+                    "陆沉",
+                    "所有幸存者"
+                  ],
+                  "subject": "逐星远征",
+                  "change": "set",
+                  "actor": "陆沉",
+                  "action": "set",
+                  "target": "寻找南海发射场遗留的远征星舰的核心目标",
+                  "target_type": "goal",
+                  "context": "入口大厅",
+                  "result": "陆沉宣布下一个目标是前往南海发射场，找到人类遗留的远征星舰，航向半人马座阿尔法星，统一人类势力对抗虫族和智网"
+                },
+                {
+                  "type": "storyline",
+                  "characters": [
+                    "陆沉"
+                  ],
+                  "subject": "逐星主线",
+                  "change": "progressed",
+                  "actor": "陆沉",
+                  "action": "lead",
+                  "target": "幸存者小队出发前往南海",
+                  "target_type": "storyline",
+                  "context": "戈壁废土",
+                  "result": "陆沉驾驶机甲走在最前面，带领所有幸存者走出地下据点，朝着南海的方向前进"
+                }
+              ],
+              "beats": [
+                "陆沉驾驶灰雀机甲冲到入口大厅，正好看见三台战斗机器人举着枪对准躲在掩体后的幸存者",
+                "机甲抬起臂载机枪扫射，很快解决了三台机器人，剩下的七台机器人赶来围攻，陆沉操控机甲灵活躲避，用格斗刃将它们全部拆解",
+                "所有幸存者发出欢呼，老周带头推举陆沉作为领袖，愿意跟随他离开废土，去找人类联邦的大部队",
+                "陆沉站在机甲上，告诉所有人他们的目标是穿过虫族占据的区域，找到位于南海发射场遗留的远征星舰，航向宇宙夺回属于人类的家园",
+                "陆沉驾驶灰雀走在最前面，带着所有幸存者收拾好物资走出地下据点，远处的星际尘埃中，隐约能看到人类联邦星舰残留的信号灯正在闪烁"
+              ],
+              "opening_beat": "陆沉驾驶灰雀机甲冲到入口大厅，正好看见三台战斗机器人举着枪对准躲在掩体后的幸存者",
+              "closing_beat": "陆沉驾驶灰雀走在最前面，带着所有幸存者收拾好物资走出地下据点，远处的星际尘埃中，隐约能看到人类联邦星舰残留的信号灯正在闪烁",
+              "conflict": "正式踏上远征之路，未来需要面对更多虫族和智网的威胁，以及统一人类势力的重重挑战",
+              "pacing": "normal",
+              "timeline": {
+                "anchor": "第3天黄昏",
+                "duration": "当天"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
