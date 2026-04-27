@@ -27,12 +27,14 @@ Generate detailed chapters for a specific volume, maintaining continuity with pr
 6. **scenes**: Scene breakdown (array, 2-3 entries). Each scene contains its own `beats` array.
 
 
-7. **conflict**: Core conflict description (string)
-8. **pacing**: slow/normal/fast (string)
-9. **timeline**: Chapter timeline information (object) - ⚠️ REQUIRED for timeline consistency
-10. **state_anchor**: Protagonist state at chapter START (object) - ⚠️ REQUIRED for cross-chapter state tracking
-11. **enemies**: Enemy list for this chapter (array) - ⚠️ REQUIRED if chapter has combat
-12. **resource_ledger**: Resource changes this chapter (array) - ⚠️ REQUIRED if resources change
+7. **mysteries**: Planted and resolved mysteries (object) - ⚠️ REQUIRED for suspense tracking
+
+8. **conflict**: Core conflict description (string)
+9. **pacing**: slow/normal/fast (string)
+10. **timeline**: Chapter timeline information (object) - ⚠️ REQUIRED for timeline consistency
+11. **state_anchor**: Protagonist state at chapter START (object) - ⚠️ REQUIRED for cross-chapter state tracking
+12. **enemies**: Enemy list for this chapter (array) - ⚠️ REQUIRED if chapter has combat
+13. **resource_ledger**: Resource changes this chapter (array) - ⚠️ REQUIRED if resources change
 
 ### ⚠️ CRITICAL: Events Count Requirement
 **Each chapter MUST have 3-5 events.** This is a HARD requirement.
@@ -375,3 +377,24 @@ Example:
 7. **Last Chapter Cliffhanger**: Final chapter should set up the next volume
 8. **Event Progression**: Events should follow a logical flow: enter/meet → discover/learn → combat/achieve
 7. **⚠️ EVENT COUNT**: Each chapter MUST have 3-5 events. This is a HARD requirement.
+
+### ⚠️ CRITICAL: Mysteries / Suspense Tracking (NEW)
+**Track planted and resolved mysteries across chapters.** Validator checks: unresolved at end, resolved-without-planted, same-chapter plant+resolve.
+
+**Fields:**
+```json
+"mysteries": {
+  "planted": [
+    {"id": "myst_why_woken", "clue": "星核日志显示三天前有人远程发送了激活指令，唤醒不是意外"}
+  ],
+  "resolved": [
+    {"id": "myst_origin_gene", "resolution": "解密休眠基地主控记录：林越的基因适配是联邦秘密计划预设的"}
+  ]
+}
+```
+
+**Rules:**
+- `id` must use `myst_` prefix, unique across the entire volume
+- A mystery resolved in chapter N must have been planted in some earlier chapter
+- Do NOT plant and resolve in the same chapter (unless it's a minor beat)
+- Unresolved mysteries at the volume's end produce an info-level suggestion

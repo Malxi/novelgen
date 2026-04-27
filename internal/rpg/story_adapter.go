@@ -78,6 +78,24 @@ type StoryOutlineScene struct {
 	Tone       string   `json:"tone,omitempty"`      // 情绪基调
 }
 
+// StoryMysteryPlanted 新埋下的线索
+type StoryMysteryPlanted struct {
+	ID   string `json:"id"`
+	Clue string `json:"clue"`
+}
+
+// StoryMysteryResolved 回收的伏笔
+type StoryMysteryResolved struct {
+	ID         string `json:"id"`
+	Resolution string `json:"resolution"`
+}
+
+// StoryChapterMysteries 本章谜题
+type StoryChapterMysteries struct {
+	Planted  []StoryMysteryPlanted  `json:"planted,omitempty"`
+	Resolved []StoryMysteryResolved `json:"resolved,omitempty"`
+}
+
 // StoryChapter 故事章节
 type StoryChapter struct {
 	ID          string               `json:"id"`
@@ -95,6 +113,7 @@ type StoryChapter struct {
 	Enemies        []StoryOutlineEnemy        `json:"enemies,omitempty"`      // 敌人清单
 	ResourceLedger []StoryResourceLedgerEntry  `json:"resource_ledger,omitempty"` // 资源账本
 	Scenes         []StoryOutlineScene        `json:"scenes,omitempty"`       // 场景拆分
+	Mysteries      StoryChapterMysteries      `json:"mysteries,omitempty"`    // 伏笔/谜题
 }
 
 // StoryEvent 故事事件

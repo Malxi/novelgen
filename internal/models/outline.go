@@ -84,6 +84,24 @@ type OutlineScene struct {
 	Beats      []string `json:"beats,omitempty" md:"beats" desc:"本场景的1-2个plot beats"`
 }
 
+// MysteryPlanted declares a new clue or mystery introduced in this chapter.
+type MysteryPlanted struct {
+	ID   string `json:"id" md:"id" desc:"谜题唯一ID，如 myst_why_woken"`
+	Clue string `json:"clue" md:"clue" desc:"本章揭示的线索，如：星核日志显示三天前有人远程激活了休眠舱"`
+}
+
+// MysteryResolved declares a previously planted mystery resolved in this chapter.
+type MysteryResolved struct {
+	ID         string `json:"id" md:"id" desc:"被解决的谜题ID"`
+	Resolution string `json:"resolution" md:"resolution" desc:"解答，如：解密主控记录确认激活指令来自联邦秘密计划"`
+}
+
+// ChapterMysteries tracks planted and resolved mysteries.
+type ChapterMysteries struct {
+	Planted  []MysteryPlanted  `json:"planted,omitempty" md:"planted" desc:"本章新埋下的线索/谜题"`
+	Resolved []MysteryResolved `json:"resolved,omitempty" md:"resolved" desc:"本章回收的伏笔"`
+}
+
 // Chapter represents a single chapter in the story
 type Chapter struct {
 	ID             string               `json:"id" md:"-"` // ID not shown in markdown
@@ -100,6 +118,7 @@ type Chapter struct {
 	Enemies        []OutlineEnemy       `json:"enemies,omitempty" md:"enemies" desc:"本章出现的敌人清单"`
 	ResourceLedger []ResourceLedgerEntry `json:"resource_ledger,omitempty" md:"resource_ledger" desc:"本章资源变化账本"`
 	Scenes         []OutlineScene       `json:"scenes,omitempty" md:"scenes" desc:"章节内场景拆分"`
+	Mysteries      ChapterMysteries     `json:"mysteries,omitempty" md:"mysteries" desc:"本章埋设和回收的谜题/伏笔"`
 }
 
 // Event represents a story event that changes state

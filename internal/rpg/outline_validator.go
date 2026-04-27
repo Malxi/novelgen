@@ -117,6 +117,9 @@ func (ov *OutlineValidator) Validate() *ValidationResult {
 	// 13. 场景拆分检查
 	ov.validateScenes()
 
+	// 14. 伏笔/谜题追踪检查
+	ov.validateMysteries()
+
 	return &ValidationResult{
 		IsValid:      len(ov.Issues) == 0,
 		IssueCount:   len(ov.Issues),
@@ -866,6 +869,71 @@ func (ov *OutlineValidator) validateScenes() {
 					}
 				}
 			}
+		}
+	}
+}
+
+func (ov *OutlineValidator) validateMysteries() {
+	planted := make(map[string]string) // id → chapter where planted
+	resolved := make(map[string]bool)  // id → resolved
+
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				for _, p := range chapter.Mysteries.Planted {
+					if p.ID == "" {
+						ov.Warnings = append(ov.Warnings, OutlineWarning{
+							Type: "mysteries", Location: chapter.ID,
+							Description: "planted谜题缺少ID",
+							Suggestion:  "为每个planted谜题设置唯一ID",
+						})
+						continue
+					}
+					if prevCh, ok := planted[p.ID]; ok {
+						ov.Issues = append(ov.Issues, OutlineIssue{
+							Type: "mysteries", Severity: "major", Location: chapter.ID,
+							Description: fmt.Sprintf("谜题 '%s' 已在 %s 中planted，重复planted", p.ID, prevCh),
+							Fix:         "确认是追加线索还是新谜题，追加线索应使用不同的ID",
+						})
+					}
+					planted[p.ID] = chapter.ID
+				}
+				for _, r := range chapter.Mysteries.Resolved {
+					if r.ID == "" {
+						ov.Warnings = append(ov.Warnings, OutlineWarning{
+							Type: "mysteries", Location: chapter.ID,
+							Description: "resolved谜题缺少ID",
+							Suggestion:  "为每个resolved谜题设置唯一ID",
+						})
+						continue
+					}
+					if _, wasPlanted := planted[r.ID]; !wasPlanted {
+						ov.Warnings = append(ov.Warnings, OutlineWarning{
+							Type: "mysteries", Location: chapter.ID,
+							Description: fmt.Sprintf("谜题 '%s' 被resolved但之前从未被planted", r.ID),
+							Suggestion:  "在前面章节中添加对应的planted，或修改ID",
+						})
+					}
+					resolved[r.ID] = true
+				}
+			}
+		}
+	}
+
+	if len(planted) > 0 {
+		unresolved := make([]string, 0)
+		for id := range planted {
+			if !resolved[id] {
+				unresolved = append(unresolved, id)
+			}
+		}
+		if len(unresolved) > 0 {
+			ov.Suggestions = append(ov.Suggestions, OutlineSuggestion{
+				Type:     "mysteries",
+				Current:  fmt.Sprintf("存在%d个未回收的伏笔", len(unresolved)),
+				Suggested: fmt.Sprintf("确认这些伏笔是否计划在后续章节回收: %s", strings.Join(unresolved, ", ")),
+				Reason:   "未回收的伏笔可能导致读者感觉故事不完整",
+			})
 		}
 	}
 }
