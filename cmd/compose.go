@@ -457,6 +457,38 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 		if json.Unmarshal(setupData, &setup) == nil {
 			crossIssues, crossWarnings := validateSetupOutlineCross(&setup, &storyOutline)
 			if len(crossIssues)+len(crossWarnings) > 0 {
+				// Collect missing resources and auto-patch setup
+				missingResources := make(map[string]bool)
+				for _, part := range storyOutline.Parts {
+					for _, vol := range part.Volumes {
+						for _, ch := range vol.Chapters {
+							for _, entry := range ch.ResourceLedger {
+								found := false
+								for _, r := range setup.WorldResources {
+									if r.Name == entry.Item {
+										found = true
+										break
+									}
+								}
+								if !found && entry.Item != "" {
+									missingResources[entry.Item] = true
+								}
+							}
+						}
+					}
+				}
+				if len(missingResources) > 0 {
+					for name := range missingResources {
+						setup.WorldResources = append(setup.WorldResources, models.WorldResource{
+							Name: name, Category: "通用", Scarcity: "稀有",
+							Description: "(自动添加 — 请手动补充描述)",
+						})
+					}
+					if saveErr := setup.Save(setupPath); saveErr == nil {
+						fmt.Printf("\n  ✓ Auto-patched setup: added %d missing resources\n", len(missingResources))
+					}
+				}
+
 				fmt.Printf("\n  --- Cross-Module (Setup↔Outline) ---\n")
 				for _, w := range crossWarnings {
 					fmt.Printf("  ⚠ [cross] %s\n", w)
