@@ -121,13 +121,15 @@ Each scene has its own `beats` array (1-2 beats per scene). Do NOT output a chap
 - **count** (int, REQUIRED): 出现数量
 - **level** (int, optional): 敌人等级
 - **is_boss** (bool, optional): 是否是boss
+- **boss_id** (string, REQUIRED if is_boss=true): boss唯一ID，跨章追踪用，如 "boss_queen"
+- **status** (string, REQUIRED if is_boss=true): new(首次出场)/engaged(战斗中)/defeated(击败)/escaped(逃脱)
 - **context** (string, optional): 出现场景，如 "机甲库伏击"
 
 **Example:**
 ```json
 "enemies": [
   {"name": "虫族工蜂", "count": 3, "level": 1, "context": "机甲库伏击"},
-  {"name": "虫族哨兵", "count": 1, "level": 3, "is_boss": true}
+  {"name": "虫族母虫", "count": 1, "level": 5, "is_boss": true, "boss_id": "boss_queen", "status": "engaged"}
 ]
 ```
 

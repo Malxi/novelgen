@@ -51,10 +51,12 @@ type StoryStateAnchor struct {
 
 // StoryOutlineEnemy 本章出现的敌人
 type StoryOutlineEnemy struct {
-	Name    string `json:"name"`             // 敌人名称
-	Count   int    `json:"count"`            // 出现数量
-	Level   int    `json:"level,omitempty"`  // 敌人等级
+	Name    string `json:"name"`              // 敌人名称
+	Count   int    `json:"count"`             // 出现数量
+	Level   int    `json:"level,omitempty"`   // 敌人等级
 	IsBoss  bool   `json:"is_boss,omitempty"` // 是否是boss
+	BossID  string `json:"boss_id,omitempty"` // boss唯一ID，跨章追踪
+	Status  string `json:"status,omitempty"`  // new/engaged/defeated/escaped
 	Context string `json:"context,omitempty"` // 出现场景
 }
 

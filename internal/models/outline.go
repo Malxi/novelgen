@@ -58,6 +58,8 @@ type OutlineEnemy struct {
 	Count   int    `json:"count" md:"count" desc:"出现数量"`
 	Level   int    `json:"level,omitempty" md:"level" desc:"敌人等级"`
 	IsBoss  bool   `json:"is_boss,omitempty" md:"is_boss" desc:"是否是boss级敌人"`
+	BossID  string `json:"boss_id,omitempty" md:"boss_id" desc:"boss唯一ID，跨章追踪用，如 boss_queen"`
+	Status  string `json:"status,omitempty" md:"status" desc:"new(首次出场)/engaged(战斗中)/defeated(击败)/escaped(逃脱)"`
 	Context string `json:"context,omitempty" md:"context" desc:"出现场景/上下文，如：矿道伏击、据点围攻"`
 }
 

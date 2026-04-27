@@ -120,6 +120,9 @@ func (ov *OutlineValidator) Validate() *ValidationResult {
 	// 14. 伏笔/谜题追踪检查
 	ov.validateMysteries()
 
+	// 15. Boss跨章连续性检查
+	ov.validateBossContinuity()
+
 	return &ValidationResult{
 		IsValid:      len(ov.Issues) == 0,
 		IssueCount:   len(ov.Issues),
@@ -938,6 +941,63 @@ func (ov *OutlineValidator) validateMysteries() {
 				Suggested: fmt.Sprintf("确认这些伏笔是否计划在后续章节回收: %s", strings.Join(unresolved, ", ")),
 				Reason:   "未回收的伏笔可能导致读者感觉故事不完整",
 			})
+		}
+	}
+}
+
+func (ov *OutlineValidator) validateBossContinuity() {
+	bosses := make(map[string]string) // boss_id → last seen chapter + status
+
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				for _, enemy := range chapter.Enemies {
+					if enemy.BossID == "" {
+						continue
+					}
+					status := enemy.Status
+					if status == "" {
+						status = "engaged"
+					}
+
+					if prev, ok := bosses[enemy.BossID]; ok {
+						parts := strings.SplitN(prev, "|", 2)
+						prevCh, prevStatus := parts[0], ""
+						if len(parts) > 1 {
+							prevStatus = parts[1]
+						}
+
+						// defeated after engaged = normal progression
+						if prevStatus == "defeated" || prevStatus == "escaped" {
+							ov.Issues = append(ov.Issues, OutlineIssue{
+								Type: "boss_continuity", Severity: "major",
+								Location: chapter.ID,
+								Description: fmt.Sprintf("Boss '%s' 在 %s 已 %s，本章不应再出现", enemy.Name, prevCh, prevStatus),
+								Fix:         "如果boss未死，请将状态改为escaped并说明去向；如果死亡，请移除后续章节的出场",
+							})
+						}
+
+						// engaged → engaged without notes = missing transition
+						if prevStatus == "engaged" && status == "engaged" {
+							ov.Warnings = append(ov.Warnings, OutlineWarning{
+								Type: "boss_continuity", Location: chapter.ID,
+								Description: fmt.Sprintf("Boss '%s' 跨章持续战斗中 (%s → %s)，但state_anchor缺少残血说明", enemy.Name, prevCh, chapter.ID),
+								Suggestion:  fmt.Sprintf("在 %s 的 state_anchor.notes 中添加boss当前状态，如：'%s残血，甲壳碎裂'", chapter.ID, enemy.Name),
+							})
+						}
+					} else {
+						if status == "defeated" || status == "escaped" {
+							ov.Warnings = append(ov.Warnings, OutlineWarning{
+								Type: "boss_continuity", Location: chapter.ID,
+								Description: fmt.Sprintf("Boss '%s' 首次出场即 %s，缺少前置 engaged 章节", enemy.Name, status),
+								Suggestion:  "如果是首次出场即被击败，请将status改为new并在前一章或本章前半部分铺垫",
+							})
+						}
+					}
+
+					bosses[enemy.BossID] = chapter.ID + "|" + status
+				}
+			}
 		}
 	}
 }
