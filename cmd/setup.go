@@ -378,7 +378,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 			for _, w := range crossWarnings {
 				review.Suggestions = append(review.Suggestions, models.ReviewSuggestion{
 					Category: "cross-module", TargetName: "setup", Issue: w,
-					Suggestion: "检查是否需要在 story_setup.json 中补充", Priority: models.PriorityMedium,
+					Suggestion: "检查是否需要在 story_setup.json 中补充", Priority: models.PriorityHigh,
 				})
 			}
 			if len(crossIssues)+len(crossWarnings) > 0 {
