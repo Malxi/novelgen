@@ -123,6 +123,9 @@ func (ov *OutlineValidator) Validate() *ValidationResult {
 	// 15. Boss跨章连续性检查
 	ov.validateBossContinuity()
 
+	// 16. 阵营/等级体系检查
+	ov.validateFactionTiers()
+
 	return &ValidationResult{
 		IsValid:      len(ov.Issues) == 0,
 		IssueCount:   len(ov.Issues),
@@ -997,6 +1000,65 @@ func (ov *OutlineValidator) validateBossContinuity() {
 
 					bosses[enemy.BossID] = chapter.ID + "|" + status
 				}
+			}
+		}
+	}
+}
+
+func (ov *OutlineValidator) validateFactionTiers() {
+	// Collect faction→tier→first_appearance mapping
+	type tierInfo struct {
+		chapter  string
+		enemyName string
+	}
+	factions := make(map[string]map[string]tierInfo)
+
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				for _, enemy := range chapter.Enemies {
+					if enemy.Faction == "" {
+						continue
+					}
+					if factions[enemy.Faction] == nil {
+						factions[enemy.Faction] = make(map[string]tierInfo)
+					}
+					if _, seen := factions[enemy.Faction][enemy.Tier]; !seen {
+						factions[enemy.Faction][enemy.Tier] = tierInfo{chapter: chapter.ID, enemyName: enemy.Name}
+					}
+				}
+			}
+		}
+	}
+
+	for faction, tiers := range factions {
+		if len(tiers) == 0 {
+			continue
+		}
+
+		// Suggest defining faction tiers in story setup
+		var tierNames []string
+		for t := range tiers {
+			tierNames = append(tierNames, t)
+		}
+		if len(tierNames) > 1 {
+			ov.Suggestions = append(ov.Suggestions, OutlineSuggestion{
+				Type:     "faction_tier",
+				Location: faction,
+				Current:  fmt.Sprintf("阵营 '%s' 使用了以下tier: %s", faction, strings.Join(tierNames, ", ")),
+				Suggested: fmt.Sprintf("在 story_setup.json 的 premises 中定义 '%s' 阵营的完整等级体系", faction),
+				Reason:   "统一管理阵营等级体系，便于validator做跨章一致性检查",
+			})
+		}
+
+		// Check: enemy name should match [faction]_[tier] pattern for consistency
+		for tier, info := range tiers {
+			if tier == "" {
+				ov.Warnings = append(ov.Warnings, OutlineWarning{
+					Type: "faction_tier", Location: info.chapter,
+					Description: fmt.Sprintf("敌人 '%s' 有faction但没有tier", info.enemyName),
+					Suggestion:  fmt.Sprintf("为该敌人指定tier，如：%s_drone", info.enemyName),
+				})
 			}
 		}
 	}

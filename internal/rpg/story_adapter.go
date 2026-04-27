@@ -52,6 +52,8 @@ type StoryStateAnchor struct {
 // StoryOutlineEnemy 本章出现的敌人
 type StoryOutlineEnemy struct {
 	Name    string `json:"name"`              // 敌人名称
+	Faction string `json:"faction,omitempty"` // 所属阵营
+	Tier    string `json:"tier,omitempty"`    // 阵营内等级标识
 	Count   int    `json:"count"`             // 出现数量
 	Level   int    `json:"level,omitempty"`   // 敌人等级
 	IsBoss  bool   `json:"is_boss,omitempty"` // 是否是boss

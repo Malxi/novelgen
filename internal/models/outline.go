@@ -55,6 +55,8 @@ type StateAnchor struct {
 // Write agent uses this as a reference for combat scenes.
 type OutlineEnemy struct {
 	Name    string `json:"name" md:"name" desc:"敌人名称，如：虫族工蜂、低阶妖兽"`
+	Faction string `json:"faction,omitempty" md:"faction" desc:"所属阵营，如：zerg、ai_mech"`
+	Tier    string `json:"tier,omitempty" md:"tier" desc:"该阵营内的等级标识，如：drone、soldier、elite、queen"`
 	Count   int    `json:"count" md:"count" desc:"出现数量"`
 	Level   int    `json:"level,omitempty" md:"level" desc:"敌人等级"`
 	IsBoss  bool   `json:"is_boss,omitempty" md:"is_boss" desc:"是否是boss级敌人"`

@@ -118,8 +118,10 @@ Each scene has its own `beats` array (1-2 beats per scene). Do NOT output a chap
 
 **Enemy Fields:**
 - **name** (string, REQUIRED): 敌人名称，如 "虫族工蜂"
+- **faction** (string, REQUIRED): 所属阵营ID，如 "zerg"、"ai_mech"。同一阵营的tier应有自然排序
+- **tier** (string, REQUIRED): 阵营内等级标识，如 "drone"、"soldier"、"elite"、"queen"
 - **count** (int, REQUIRED): 出现数量
-- **level** (int, optional): 敌人等级
+- **level** (int, optional): 敌人等级（可从faction tier定义中查表）
 - **is_boss** (bool, optional): 是否是boss
 - **boss_id** (string, REQUIRED if is_boss=true): boss唯一ID，跨章追踪用，如 "boss_queen"
 - **status** (string, REQUIRED if is_boss=true): new(首次出场)/engaged(战斗中)/defeated(击败)/escaped(逃脱)
@@ -128,8 +130,8 @@ Each scene has its own `beats` array (1-2 beats per scene). Do NOT output a chap
 **Example:**
 ```json
 "enemies": [
-  {"name": "虫族工蜂", "count": 3, "level": 1, "context": "机甲库伏击"},
-  {"name": "虫族母虫", "count": 1, "level": 5, "is_boss": true, "boss_id": "boss_queen", "status": "engaged"}
+  {"name": "虫族工蜂", "faction": "zerg", "tier": "drone", "count": 3, "level": 1, "context": "机甲库伏击"},
+  {"name": "虫族母虫", "faction": "zerg", "tier": "queen", "count": 1, "level": 5, "is_boss": true, "boss_id": "boss_queen", "status": "engaged"}
 ]
 ```
 
