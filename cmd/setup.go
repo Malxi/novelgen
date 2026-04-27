@@ -103,8 +103,6 @@ Examples:
 	RunE: runSetupImport,
 }
 
-func init() {
-
 var setupCheckCmd = &cobra.Command{
 	Use:   "check",
 	Short: "Validate story setup for completeness and consistency",
@@ -121,13 +119,15 @@ Examples:
   novelgen setup check`,
 	RunE: runSetupCheck,
 }
+
+func init() {
 	// Register setup command using the new plugin mechanism
 	RegisterCommand(func() *cobra.Command {
 		setupCmd.AddCommand(setupGenCmd)
 		setupCmd.AddCommand(setupRegenCmd)
 		setupCmd.AddCommand(setupImproveCmd)
 		setupCmd.AddCommand(setupImportCmd)
-			setupCmd.AddCommand(setupCheckCmd)
+		setupCmd.AddCommand(setupCheckCmd)
 		return setupCmd
 	})
 
@@ -378,7 +378,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 			for _, w := range crossWarnings {
 				review.Suggestions = append(review.Suggestions, models.ReviewSuggestion{
 					Category: "cross-module", TargetName: "setup", Issue: w,
-					Suggestion: "检查是否需要在 story_setup.json 中补充", Priority: models.PriorityHigh,
+					Suggestion: `在 story_setup.json 的 world_resources 中添加: {"name": "能量晶核", "category": "能源", "scarcity": "稀有", "description": "虫族核心能量结晶"}`, Priority: models.PriorityHigh,
 				})
 			}
 			if len(crossIssues)+len(crossWarnings) > 0 {
