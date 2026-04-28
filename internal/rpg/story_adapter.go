@@ -73,13 +73,14 @@ type StoryResourceLedgerEntry struct {
 
 // StoryOutlineScene 章节内场景
 type StoryOutlineScene struct {
-	Order      int      `json:"order"`               // 场景序号
-	POV        string   `json:"pov"`                 // 视角角色
-	Goal       string   `json:"goal"`                // 场景目标
-	Location   string   `json:"location"`            // 场景地点
-	Characters []string `json:"characters"`           // 出场角色
-	Words      int      `json:"words,omitempty"`     // 建议字数
-	Tone       string   `json:"tone,omitempty"`      // 情绪基调
+	Order      int      `json:"order"`           // 场景序号
+	POV        string   `json:"pov"`             // 视角角色
+	Goal       string   `json:"goal"`            // 场景目标
+	Location   string   `json:"location"`        // 场景地点
+	Characters []string `json:"characters"`      // 出场角色
+	Words      int      `json:"words,omitempty"` // 建议字数
+	Tone       string   `json:"tone,omitempty"`  // 情绪基调
+	Beats      []string `json:"beats,omitempty"` // Scene plot beats
 }
 
 // StoryMysteryPlanted 新埋下的线索
@@ -102,22 +103,22 @@ type StoryChapterMysteries struct {
 
 // StoryChapter 故事章节
 type StoryChapter struct {
-	ID          string               `json:"id"`
-	Title       string               `json:"title"`
-	Summary     string               `json:"summary"`
-	Characters  []string             `json:"characters"`
-	Location    string               `json:"location"`
-	Events      []StoryEvent         `json:"events"`
-	Beats       []string             `json:"beats"`
-	StateChange string               `json:"state_change"`
-	Conflict    string               `json:"conflict"`
-	Pacing      string               `json:"pacing"`
-	Timeline       StoryChapterTimeline       `json:"timeline,omitempty"`    // 时间线信息
-	StateAnchor    StoryStateAnchor           `json:"state_anchor,omitempty"` // 状态锚点
-	Enemies        []StoryOutlineEnemy        `json:"enemies,omitempty"`      // 敌人清单
-	ResourceLedger []StoryResourceLedgerEntry  `json:"resource_ledger,omitempty"` // 资源账本
-	Scenes         []StoryOutlineScene        `json:"scenes,omitempty"`       // 场景拆分
-	Mysteries      StoryChapterMysteries      `json:"mysteries,omitempty"`    // 伏笔/谜题
+	ID             string                     `json:"id"`
+	Title          string                     `json:"title"`
+	Summary        string                     `json:"summary"`
+	Characters     []string                   `json:"characters"`
+	Location       string                     `json:"location"`
+	Events         []StoryEvent               `json:"events"`
+	Beats          []string                   `json:"beats"`
+	StateChange    string                     `json:"state_change"`
+	Conflict       string                     `json:"conflict"`
+	Pacing         string                     `json:"pacing"`
+	Timeline       StoryChapterTimeline       `json:"timeline,omitempty"`        // 时间线信息
+	StateAnchor    StoryStateAnchor           `json:"state_anchor,omitempty"`    // 状态锚点
+	Enemies        []StoryOutlineEnemy        `json:"enemies,omitempty"`         // 敌人清单
+	ResourceLedger []StoryResourceLedgerEntry `json:"resource_ledger,omitempty"` // 资源账本
+	Scenes         []StoryOutlineScene        `json:"scenes,omitempty"`          // 场景拆分
+	Mysteries      StoryChapterMysteries      `json:"mysteries,omitempty"`       // 伏笔/谜题
 }
 
 // StoryEvent 故事事件

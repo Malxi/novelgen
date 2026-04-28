@@ -76,6 +76,18 @@ func NewOutlineValidator(outline *StoryOutline) *OutlineValidator {
 	}
 }
 
+func outlineChapterBeats(chapter StoryChapter) []string {
+	if len(chapter.Beats) > 0 {
+		return chapter.Beats
+	}
+
+	var beats []string
+	for _, scene := range chapter.Scenes {
+		beats = append(beats, scene.Beats...)
+	}
+	return beats
+}
+
 // Validate 执行完整验证
 func (ov *OutlineValidator) Validate() *ValidationResult {
 	// 1. 结构完整性检查
@@ -218,6 +230,7 @@ func (ov *OutlineValidator) validateStructure() {
 
 			for ci, chapter := range volume.Chapters {
 				location := fmt.Sprintf("Part[%d].Volume[%d].Chapter[%d].%s", pi, vi, ci, chapter.ID)
+				beats := outlineChapterBeats(chapter)
 
 				if chapter.ID == "" {
 					ov.Issues = append(ov.Issues, OutlineIssue{
@@ -242,7 +255,7 @@ func (ov *OutlineValidator) validateStructure() {
 				}
 
 				// 检查关键字段
-				if len(chapter.Beats) > 0 && chapter.Beats[0] == "" {
+				if len(beats) > 0 && beats[0] == "" {
 					ov.Warnings = append(ov.Warnings, OutlineWarning{
 						Type:        "content",
 						Location:    location,
@@ -251,7 +264,7 @@ func (ov *OutlineValidator) validateStructure() {
 					})
 				}
 
-				if len(chapter.Beats) > 0 && chapter.Beats[len(chapter.Beats)-1] == "" {
+				if len(beats) > 0 && beats[len(beats)-1] == "" {
 					ov.Warnings = append(ov.Warnings, OutlineWarning{
 						Type:        "content",
 						Location:    location,
@@ -279,7 +292,7 @@ func (ov *OutlineValidator) validateStructure() {
 				}
 
 				// 检查节拍数量
-				if len(chapter.Beats) == 0 {
+				if len(beats) == 0 {
 					ov.Issues = append(ov.Issues, OutlineIssue{
 						Type:        "content",
 						Severity:    "major",
@@ -288,18 +301,18 @@ func (ov *OutlineValidator) validateStructure() {
 						Impact:      "无法进行剧情推演",
 						Fix:         "至少添加一个情节节拍",
 					})
-				} else if len(chapter.Beats) < 3 {
+				} else if len(beats) < 3 {
 					ov.Warnings = append(ov.Warnings, OutlineWarning{
 						Type:        "content",
 						Location:    location,
-						Description: fmt.Sprintf("Chapter节拍过少(%d个)", len(chapter.Beats)),
+						Description: fmt.Sprintf("Chapter节拍过少(%d个)", len(beats)),
 						Suggestion:  "建议至少3-5个节拍以支撑完整场景",
 					})
-				} else if len(chapter.Beats) > 10 {
+				} else if len(beats) > 10 {
 					ov.Warnings = append(ov.Warnings, OutlineWarning{
 						Type:        "content",
 						Location:    location,
-						Description: fmt.Sprintf("Chapter节拍过多(%d个)", len(chapter.Beats)),
+						Description: fmt.Sprintf("Chapter节拍过多(%d个)", len(beats)),
 						Suggestion:  "考虑拆分为多个章节",
 					})
 				}
@@ -361,13 +374,17 @@ func (ov *OutlineValidator) validatePlotLogic() {
 		for _, volume := range part.Volumes {
 			for ci, chapter := range volume.Chapters {
 				location := chapter.ID
+				beats := outlineChapterBeats(chapter)
 
 				// 检查状态连续性
 				if ci > 0 && prevState != "" {
+					if len(beats) == 0 {
+						continue
+					}
 					// 检查当前章节的opening_beat是否承接上一章的closing_beat
-					if !strings.Contains(chapter.Beats[0], "继续") &&
-						!strings.Contains(chapter.Beats[0], "随后") &&
-						!strings.Contains(chapter.Beats[0], "紧接着") {
+					if !strings.Contains(beats[0], "继续") &&
+						!strings.Contains(beats[0], "随后") &&
+						!strings.Contains(beats[0], "紧接着") {
 						// 可能缺少过渡
 						if chapter.StateChange != "" && !strings.Contains(chapter.StateChange, prevState) {
 							ov.Warnings = append(ov.Warnings, OutlineWarning{
@@ -391,16 +408,16 @@ func (ov *OutlineValidator) validatePlotLogic() {
 				}
 
 				// 检查冲突是否解决
-				if chapter.Conflict != "" && len(chapter.Beats) > 1 {
-					if !strings.Contains(chapter.Beats[len(chapter.Beats)-1], "解决") &&
-						!strings.Contains(chapter.Beats[len(chapter.Beats)-1], "结束") &&
-						!strings.Contains(chapter.Beats[len(chapter.Beats)-1], "胜利") &&
-						!strings.Contains(chapter.Beats[len(chapter.Beats)-1], "失败") {
+				if chapter.Conflict != "" && len(beats) > 1 {
+					if !strings.Contains(beats[len(beats)-1], "解决") &&
+						!strings.Contains(beats[len(beats)-1], "结束") &&
+						!strings.Contains(beats[len(beats)-1], "胜利") &&
+						!strings.Contains(beats[len(beats)-1], "失败") {
 						ov.Suggestions = append(ov.Suggestions, OutlineSuggestion{
 							Type:      "logic",
 							Location:  location,
-							Current:   chapter.Beats[len(chapter.Beats)-1],
-							Suggested: chapter.Beats[len(chapter.Beats)-1] + "（冲突得到解决或升级）",
+							Current:   beats[len(beats)-1],
+							Suggested: beats[len(beats)-1] + "（冲突得到解决或升级）",
 							Reason:    "确保冲突有明确的阶段性结果",
 						})
 					}
@@ -514,8 +531,9 @@ func (ov *OutlineValidator) validateTransitions() {
 					prevChapter.Location != currChapter.Location {
 					// 地点变化，检查是否有合理的转换
 					firstBeat := ""
-					if len(currChapter.Beats) > 0 {
-						firstBeat = currChapter.Beats[0]
+					currBeats := outlineChapterBeats(currChapter)
+					if len(currBeats) > 0 {
+						firstBeat = currBeats[0]
 					}
 					if !strings.Contains(firstBeat, "来到") &&
 						!strings.Contains(firstBeat, "前往") &&
@@ -939,10 +957,10 @@ func (ov *OutlineValidator) validateMysteries() {
 		}
 		if len(unresolved) > 0 {
 			ov.Suggestions = append(ov.Suggestions, OutlineSuggestion{
-				Type:     "mysteries",
-				Current:  fmt.Sprintf("存在%d个未回收的伏笔", len(unresolved)),
+				Type:      "mysteries",
+				Current:   fmt.Sprintf("存在%d个未回收的伏笔", len(unresolved)),
 				Suggested: fmt.Sprintf("确认这些伏笔是否计划在后续章节回收: %s", strings.Join(unresolved, ", ")),
-				Reason:   "未回收的伏笔可能导致读者感觉故事不完整",
+				Reason:    "未回收的伏笔可能导致读者感觉故事不完整",
 			})
 		}
 	}
@@ -974,7 +992,7 @@ func (ov *OutlineValidator) validateBossContinuity() {
 						if prevStatus == "defeated" || prevStatus == "escaped" {
 							ov.Issues = append(ov.Issues, OutlineIssue{
 								Type: "boss_continuity", Severity: "major",
-								Location: chapter.ID,
+								Location:    chapter.ID,
 								Description: fmt.Sprintf("Boss '%s' 在 %s 已 %s，本章不应再出现", enemy.Name, prevCh, prevStatus),
 								Fix:         "如果boss未死，请将状态改为escaped并说明去向；如果死亡，请移除后续章节的出场",
 							})
@@ -1008,7 +1026,7 @@ func (ov *OutlineValidator) validateBossContinuity() {
 func (ov *OutlineValidator) validateFactionTiers() {
 	// Collect faction→tier→first_appearance mapping
 	type tierInfo struct {
-		chapter  string
+		chapter   string
 		enemyName string
 	}
 	factions := make(map[string]map[string]tierInfo)
@@ -1043,11 +1061,11 @@ func (ov *OutlineValidator) validateFactionTiers() {
 		}
 		if len(tierNames) > 1 {
 			ov.Suggestions = append(ov.Suggestions, OutlineSuggestion{
-				Type:     "faction_tier",
-				Location: faction,
-				Current:  fmt.Sprintf("阵营 '%s' 使用了以下tier: %s", faction, strings.Join(tierNames, ", ")),
+				Type:      "faction_tier",
+				Location:  faction,
+				Current:   fmt.Sprintf("阵营 '%s' 使用了以下tier: %s", faction, strings.Join(tierNames, ", ")),
 				Suggested: fmt.Sprintf("在 story_setup.json 的 premises 中定义 '%s' 阵营的完整等级体系", faction),
-				Reason:   "统一管理阵营等级体系，便于validator做跨章一致性检查",
+				Reason:    "统一管理阵营等级体系，便于validator做跨章一致性检查",
 			})
 		}
 
