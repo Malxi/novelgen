@@ -11,11 +11,11 @@ import (
 // All constructor parameters are optional — nil values produce a minimal DSL skeleton
 // that the simulator can still run against (producing info-level issues about what's missing).
 type ModelAdapter struct {
-	setup       *models.StorySetup
-	outline     *models.Outline
-	characters  map[string]*models.Character
-	locations   map[string]*models.Location
-	items       map[string]*models.Item
+	setup      *models.StorySetup
+	outline    *models.Outline
+	characters map[string]*models.Character
+	locations  map[string]*models.Location
+	items      map[string]*models.Item
 }
 
 // NewModelAdapter creates a new ModelAdapter. All parameters are optional.
@@ -51,6 +51,7 @@ func (a *ModelAdapter) BuildDSL(phase MergePhase) (*DSL, error) {
 	// Always build base metadata + player
 	a.buildMetadata(dsl)
 	a.buildDefaultPlayer(dsl)
+	a.buildSetupWorld(dsl)
 	a.buildDefaultSystems(dsl)
 
 	switch phase {
@@ -162,14 +163,24 @@ func (a *ModelAdapter) buildDefaultSystems(dsl *DSL) {
 			})
 		}
 		if len(attrs) > 0 {
+			attrs = appendResourceAttributes(attrs, a.setup)
 			dsl.Systems.AttributeSystem = &AttributeSystem{
 				ID:         "custom_attrs",
 				Name:       "Custom Attributes",
 				Attributes: attrs,
 			}
 		}
+	} else if a.setup != nil && len(a.setup.WorldResources) > 0 {
+		dsl.Systems.AttributeSystem = &AttributeSystem{
+			ID:         "custom_attrs",
+			Name:       "Custom Attributes",
+			Attributes: appendResourceAttributes(nil, a.setup),
+		}
 
 		// Build progression systems
+	}
+
+	if a.setup != nil {
 		for _, premise := range a.setup.Premises {
 			if len(premise.Progression) > 0 {
 				var levels []ProgressionLevel
@@ -203,6 +214,14 @@ func (a *ModelAdapter) buildDefaultSystems(dsl *DSL) {
 			{Attribute: "vit", Name: "耐力", Weight: 1},
 		},
 	}
+}
+
+func (a *ModelAdapter) buildSetupWorld(dsl *DSL) {
+	if a.setup == nil || dsl.World == nil {
+		return
+	}
+	dsl.World.Rules = buildRulesFromSetup(a.setup)
+	dsl.World.Items = append(dsl.World.Items, buildWorldResourceItems(a.setup)...)
 }
 
 func (a *ModelAdapter) buildChaptersFromOutline(dsl *DSL) {
@@ -470,4 +489,3 @@ func (a *ModelAdapter) inferPowerSystem() string {
 		return "default_progression_system"
 	}
 }
-

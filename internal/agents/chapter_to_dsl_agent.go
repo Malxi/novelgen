@@ -18,9 +18,29 @@ import (
 type ChapterToDSLInput struct {
 	BookName   string                      `json:"book_name" md:"book_name" desc:"Book name"`
 	StorySetup models.StorySetup           `json:"story_setup" md:"story_setup" desc:"Story setup with premise, genres, themes"`
+	SetupHints ChapterToDSLSetupHints      `json:"setup_dsl_hints" md:"setup_dsl_hints" desc:"Machine-friendly setup resource and progression IDs to reuse in chapter state_delta output"`
 	Characters map[string]models.Character `json:"characters" md:"characters" desc:"Characters from craft"`
 	Locations  map[string]models.Location  `json:"locations" md:"locations" desc:"Locations from craft"`
 	Chapters   []ChapterData               `json:"chapters" md:"chapters" desc:"Chapter full text with optional recap data"`
+}
+
+type ChapterToDSLSetupHints struct {
+	Resources   []ChapterToDSLResourceHint    `json:"resources,omitempty"`
+	Progression []ChapterToDSLProgressionHint `json:"progression,omitempty"`
+}
+
+type ChapterToDSLResourceHint struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Category string `json:"category,omitempty"`
+	Scarcity string `json:"scarcity,omitempty"`
+}
+
+type ChapterToDSLProgressionHint struct {
+	SystemID     string   `json:"system_id"`
+	SystemName   string   `json:"system_name"`
+	MaxLevel     int      `json:"max_level,omitempty"`
+	Requirements []string `json:"requirements,omitempty"`
 }
 
 // ChapterData represents a chapter's full text plus optional recap summary.
@@ -145,7 +165,8 @@ func (a *ChapterToDSLAgent) ConvertChapterData(ctx context.Context, bookName str
 	// Prepare input
 	input := ChapterToDSLInput{
 		BookName:   bookName,
-		StorySetup: *a.setup,
+		StorySetup: derefStorySetup(a.setup),
+		SetupHints: buildChapterToDSLSetupHints(a.setup),
 		Characters: characters,
 		Locations:  locations,
 		Chapters:   chapters,
@@ -218,7 +239,8 @@ func (a *ChapterToDSLAgent) ConvertSingleChapter(ctx context.Context, bookName s
 
 	input := ChapterToDSLInput{
 		BookName:   bookName,
-		StorySetup: *a.setup,
+		StorySetup: derefStorySetup(a.setup),
+		SetupHints: buildChapterToDSLSetupHints(a.setup),
 		Characters: characters,
 		Locations:  locations,
 		Chapters:   []ChapterData{*chapter},
@@ -235,6 +257,71 @@ func (a *ChapterToDSLAgent) ConvertSingleChapter(ctx context.Context, bookName s
 	}
 
 	return output.DSLContent, nil
+}
+
+func buildChapterToDSLSetupHints(setup *models.StorySetup) ChapterToDSLSetupHints {
+	if setup == nil {
+		return ChapterToDSLSetupHints{}
+	}
+	hints := ChapterToDSLSetupHints{}
+	for i, res := range setup.WorldResources {
+		name := strings.TrimSpace(res.Name)
+		if name == "" {
+			name = fmt.Sprintf("resource_%02d", i+1)
+		}
+		hints.Resources = append(hints.Resources, ChapterToDSLResourceHint{
+			ID:       fmt.Sprintf("resource_%02d", i+1),
+			Name:     name,
+			Category: strings.TrimSpace(res.Category),
+			Scarcity: strings.TrimSpace(res.Scarcity),
+		})
+	}
+	for i, premise := range setup.Premises {
+		systemID := fmt.Sprintf("progression_%02d", i+1)
+		if asciiID := asciiSafeHintID(premise.Name); asciiID != "" {
+			systemID = asciiID
+		}
+		hint := ChapterToDSLProgressionHint{
+			SystemID:   systemID,
+			SystemName: strings.TrimSpace(premise.Name),
+		}
+		for _, stage := range premise.Progression {
+			if stage.Level > hint.MaxLevel {
+				hint.MaxLevel = stage.Level
+			}
+			if req := strings.TrimSpace(stage.Requirements); req != "" {
+				hint.Requirements = append(hint.Requirements, fmt.Sprintf("L%d: %s", stage.Level, req))
+			}
+		}
+		hints.Progression = append(hints.Progression, hint)
+	}
+	return hints
+}
+
+func derefStorySetup(setup *models.StorySetup) models.StorySetup {
+	if setup == nil {
+		return models.StorySetup{}
+	}
+	return *setup
+}
+
+func asciiSafeHintID(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	var b strings.Builder
+	lastUnderscore := false
+	for _, r := range value {
+		ok := r >= 'a' && r <= 'z' || r >= '0' && r <= '9'
+		if ok {
+			b.WriteRune(r)
+			lastUnderscore = false
+			continue
+		}
+		if !lastUnderscore && b.Len() > 0 {
+			b.WriteByte('_')
+			lastUnderscore = true
+		}
+	}
+	return strings.Trim(b.String(), "_")
 }
 
 // RepairDSL asks AI to repair an invalid DSL string into parser-compatible DSL.

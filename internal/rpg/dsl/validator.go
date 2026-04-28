@@ -354,8 +354,12 @@ func (v *Validator) validateEvent(field string, event *Event) {
 		return
 	}
 
-	// Validate event type
-	validTypes := []string{"spawn", "move", "combat", "dialogue", "acquire"}
+	// Validate event type. Chapter-to-DSL may emit narrative event types that
+	// are interpreted through state_delta rather than a dedicated sub-block.
+	validTypes := []string{
+		"spawn", "move", "combat", "dialogue", "acquire",
+		"status", "knowledge", "relationship", "location", "transition",
+	}
 	if !contains(validTypes, event.Type) {
 		v.addWarning(field+".type", fmt.Sprintf("unknown event type: %s", event.Type))
 	}
@@ -368,9 +372,7 @@ func (v *Validator) validateEvent(field string, event *Event) {
 		}
 
 	case "move":
-		if event.Move == nil {
-			v.addWarning(field, "move event missing move data (treated as narrative-only)")
-		} else {
+		if event.Move != nil {
 			if event.Move.To == "" {
 				v.addError(field+".to", "move event requires destination")
 			}

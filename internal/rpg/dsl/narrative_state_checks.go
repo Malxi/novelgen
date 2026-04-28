@@ -39,6 +39,12 @@ type narrativeInjuryState struct {
 	Chapter string
 }
 
+type setupResourceProfile struct {
+	Name     string
+	Scarcity string
+	Limited  bool
+}
+
 func (s *Simulator) checkNarrativeStateConsistency() {
 	if s == nil || s.DSL == nil || s.DSL.Storyline == nil {
 		return
@@ -52,9 +58,11 @@ func (s *Simulator) checkNarrativeStateConsistency() {
 	s.checkNarrativeTimeGaps(chapters)
 	s.checkNarrativeResurrectionRules(chapters)
 	s.checkNarrativeCultivationFlow(chapters)
+	s.checkSetupProgressionBounds(chapters)
 	s.checkNarrativeNPCIdentity()
 	s.checkNarrativeInjuryRecovery(chapters)
 	s.checkNarrativeResourceBudget(chapters)
+	s.checkSetupScarceResourceBudget(chapters)
 }
 
 func (s *Simulator) collectNarrativeChapterStates() []narrativeChapterState {
@@ -484,6 +492,23 @@ func (s *Simulator) checkNarrativeCultivationFlow(chapters []narrativeChapterSta
 	}
 }
 
+func (s *Simulator) checkSetupProgressionBounds(chapters []narrativeChapterState) {
+	maxSetupLevel := s.setupMaxProgressionLevel()
+	if maxSetupLevel <= 0 {
+		return
+	}
+	for _, chapter := range chapters {
+		curLevel := maxInt(chapter.Levels)
+		if curLevel <= maxSetupLevel {
+			continue
+		}
+		s.addIssueWithEvidence(IssueGrowth, SeverityCritical, chapter.ID, 0,
+			fmt.Sprintf("Chapter observes progression level %d, above setup max level %d", curLevel, maxSetupLevel),
+			"Either explain a new progression ceiling in story setup -> RPG DSL, or correct the chapter/state delta level.",
+			[]IssueEvidence{chapterEvidence(chapter.ID, "setup_progression_max", fmt.Sprintf("max_level=%d observed_level=%d", maxSetupLevel, curLevel))})
+	}
+}
+
 func (s *Simulator) checkNarrativeNPCIdentity() {
 	if s.DSL.Characters == nil {
 		return
@@ -614,6 +639,173 @@ func (s *Simulator) checkNarrativeResourceBudget(chapters []narrativeChapterStat
 				"给资源设置数量、单次消耗和耗尽状态，避免半块资源无限使用")
 		}
 	}
+}
+
+func (s *Simulator) checkSetupScarceResourceBudget(chapters []narrativeChapterState) {
+	resourceProfiles := s.setupResourceProfiles()
+	if len(resourceProfiles) == 0 {
+		return
+	}
+
+	totalMentions := map[string]int{}
+	consumeCount := map[string]int{}
+	replenished := map[string]bool{}
+
+	for _, chapter := range chapters {
+		for _, delta := range chapter.Deltas {
+			if delta.Kind != "resource" {
+				continue
+			}
+			item := delta.Target
+			if item == "" {
+				item = delta.Field
+			}
+			key := resourceKey(item)
+			if key == "" {
+				continue
+			}
+			totalMentions[key]++
+			if delta.Delta < 0 {
+				consumeCount[key]++
+			}
+			if delta.Delta > 0 {
+				replenished[key] = true
+			}
+		}
+		for item, count := range chapter.ItemMentions {
+			key := resourceKey(item)
+			if key == "" {
+				continue
+			}
+			totalMentions[key] += count
+			if containsAnyNarrative(chapter.Text, narrativeConsumeTerms...) || chapter.HasCultivate {
+				consumeCount[key]++
+			}
+			if containsAnyNarrative(chapter.Text, narrativeReplenishTerms...) {
+				replenished[key] = true
+			}
+		}
+	}
+
+	for key, uses := range consumeCount {
+		profile := resourceProfiles[key]
+		if !profile.Limited || uses < 2 || totalMentions[key] < 2 || replenished[key] {
+			continue
+		}
+		name := profile.Name
+		if name == "" {
+			name = key
+		}
+		s.addIssue(IssueEquipment, SeverityWarning, "", 0,
+			fmt.Sprintf("%s is scarce in setup (%s) and repeatedly consumed, but DSL found no quantity budget or replenishment", name, profile.Scarcity),
+			"Add quantity, per-use cost, depletion, or replenishment state_deltas so scarce setup resources cannot be spent indefinitely.")
+	}
+}
+
+func (s *Simulator) setupMaxProgressionLevel() int {
+	maxLevel := 0
+	if s == nil || s.DSL == nil || s.DSL.Systems == nil {
+		return maxLevel
+	}
+	for _, system := range s.DSL.Systems.ProgressionSystems {
+		if system.ID == "progression_rules" {
+			continue
+		}
+		for _, level := range system.Levels {
+			if level.Level > maxLevel {
+				maxLevel = level.Level
+			}
+		}
+	}
+	for _, rule := range s.setupStructuredRules("progression.max_level") {
+		fields := parseSetupRuleEffect(rule.Effect)
+		if value, err := strconv.Atoi(fields["max_level"]); err == nil && value > maxLevel {
+			maxLevel = value
+		}
+	}
+	return maxLevel
+}
+
+func (s *Simulator) setupResourceProfiles() map[string]setupResourceProfile {
+	profiles := map[string]setupResourceProfile{}
+	if s == nil || s.DSL == nil {
+		return profiles
+	}
+	if s.DSL.World != nil {
+		for _, item := range s.DSL.World.Items {
+			profile := setupResourceProfile{
+				Name:     item.Name,
+				Scarcity: item.Rarity,
+				Limited:  isLimitedScarcity(item.Rarity),
+			}
+			for _, key := range []string{item.ID, item.Name} {
+				if normalized := resourceKey(key); normalized != "" {
+					profiles[normalized] = profile
+				}
+			}
+		}
+	}
+	for _, rule := range s.setupStructuredRules("resource.scarcity") {
+		fields := parseSetupRuleEffect(rule.Effect)
+		resource := fields["resource"]
+		scarcity := fields["scarcity"]
+		profile := setupResourceProfile{
+			Name:     resource,
+			Scarcity: scarcity,
+			Limited:  isLimitedScarcity(scarcity),
+		}
+		if normalized := resourceKey(resource); normalized != "" {
+			profiles[normalized] = profile
+		}
+	}
+	return profiles
+}
+
+func (s *Simulator) setupStructuredRules(trigger string) []Rule {
+	if s == nil || s.DSL == nil || s.DSL.World == nil {
+		return nil
+	}
+	var rules []Rule
+	for _, rule := range s.DSL.World.Rules {
+		if rule.Trigger == trigger {
+			rules = append(rules, rule)
+		}
+	}
+	return rules
+}
+
+func parseSetupRuleEffect(effect string) map[string]string {
+	fields := map[string]string{}
+	for _, part := range strings.Split(effect, ";") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		key, value, ok := strings.Cut(part, "=")
+		if !ok {
+			continue
+		}
+		fields[strings.TrimSpace(key)] = strings.TrimSpace(value)
+	}
+	return fields
+}
+
+func resourceKey(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func isLimitedScarcity(value string) bool {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if value == "" {
+		return false
+	}
+	return strings.Contains(value, "rare") ||
+		strings.Contains(value, "legendary") ||
+		strings.Contains(value, "unique") ||
+		strings.Contains(value, "稀") ||
+		strings.Contains(value, "极") ||
+		strings.Contains(value, "唯一") ||
+		strings.Contains(value, "独一")
 }
 
 func extractNarrativeDeaths(chapterID, text string) []narrativeDeathState {

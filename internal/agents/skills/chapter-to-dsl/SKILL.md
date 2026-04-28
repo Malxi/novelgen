@@ -123,6 +123,11 @@ Chapter text is the authoritative source for enemy details. Example from chapter
   - characters: `char_*`
   - locations: `loc_*`
   - enemies: `enemy_*`
+- Reuse `setup_dsl_hints.resources[].id` for every resource `state_delta.target`.
+- If chapter text mentions a resource by Chinese/localized name, map it to the matching `setup_dsl_hints.resources[].name`.
+- Do not invent a new resource ID when the setup hint already defines that resource.
+- If a setup resource has `scarcity` containing rare/unique/稀/唯一, emit explicit quantity/cost deltas whenever it is gained or consumed.
+- Use `setup_dsl_hints.progression` to keep breakthrough levels within the setup max level and to capture required costs/items.
 
 ## State Delta Rules (CRITICAL — all are REQUIRED)
 

@@ -18,7 +18,7 @@ import (
 	"novelgen/internal/rpg/dsl"
 )
 
-const batchCacheVersion = 2
+const batchCacheVersion = 3
 
 type batchManifest struct {
 	Version    int                 `json:"version"`

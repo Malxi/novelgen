@@ -150,6 +150,8 @@ func (dm *DSLMerger) Merge() (*MergeResult, error) {
 		result.PhasesMerged = append(result.PhasesMerged, fragment.Phase)
 	}
 
+	dm.materializeGenericEnemiesFromCombatRefs(result)
+
 	// Validate placeholders
 	dm.validatePlaceholders(result)
 
@@ -222,6 +224,15 @@ func (dm *DSLMerger) mergeSetup(result *MergeResult, fragment *DSLFragment) erro
 	// Numeric systems baseline.
 	if err := dm.mergeSystems(result, fragment); err != nil {
 		return err
+	}
+
+	if dsl.World != nil {
+		for _, item := range dsl.World.Items {
+			result.DSL.World.Items = dm.mergeItemWithDetails(result.DSL.World.Items, item, result)
+		}
+		for _, rule := range dsl.World.Rules {
+			result.DSL.World.Rules = dm.mergeRuleList(result.DSL.World.Rules, rule)
+		}
 	}
 	return nil
 }
@@ -623,6 +634,76 @@ func (dm *DSLMerger) mergeCounterList(counters []CounterSystem, newCounter Count
 		}
 	}
 	return append(counters, newCounter)
+}
+
+func (dm *DSLMerger) mergeRuleList(rules []Rule, newRule Rule) []Rule {
+	for i, rule := range rules {
+		if rule.Name == newRule.Name && rule.Name != "" {
+			rules[i] = newRule
+			return rules
+		}
+	}
+	return append(rules, newRule)
+}
+
+func (dm *DSLMerger) materializeGenericEnemiesFromCombatRefs(result *MergeResult) {
+	if result == nil || result.DSL == nil || result.DSL.Characters == nil || result.DSL.Storyline == nil {
+		return
+	}
+
+	known := make(map[string]bool)
+	for _, enemy := range result.DSL.Characters.Enemies {
+		if enemy.ID != "" {
+			known[enemy.ID] = true
+		}
+	}
+
+	for _, chapter := range result.DSL.Storyline.Chapters {
+		for _, objective := range chapter.Objectives {
+			for _, step := range objective.Steps {
+				if step.Event.Combat == nil {
+					continue
+				}
+				for _, ref := range step.Event.Combat.Setup.Enemies {
+					if ref.ID == "" || known[ref.ID] {
+						continue
+					}
+					known[ref.ID] = true
+					level := ref.Level
+					if level <= 0 {
+						level = 1
+					}
+					result.DSL.Characters.Enemies = append(result.DSL.Characters.Enemies, Enemy{
+						ID:            ref.ID,
+						Name:          humanizeEnemyID(ref.ID),
+						Type:          "generic",
+						Level:         level,
+						Description:   "Generic enemy materialized from chapter combat reference.",
+						IsPlaceholder: true,
+						Template: EnemyTemplate{
+							BaseLevel: level,
+							HPFormula: fmt.Sprintf("%d", 30+level*20),
+							StatsPerLevel: map[string]int{
+								"str": 5 + level*3,
+								"agi": 5 + level*2,
+								"vit": 5 + level*2,
+							},
+						},
+					})
+				}
+			}
+		}
+	}
+}
+
+func humanizeEnemyID(id string) string {
+	id = strings.TrimPrefix(id, "enemy_")
+	id = strings.ReplaceAll(id, "_", " ")
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return "generic enemy"
+	}
+	return id
 }
 
 // Validation

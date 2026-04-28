@@ -324,6 +324,14 @@ func (dw *DSLWriter) writeWorld(world *World) error {
 			}
 		}
 
+		// Write setup/world rules after concrete resources so they can refer to
+		// resource IDs emitted above.
+		for _, rule := range world.Rules {
+			if err := dw.writeRule(rule); err != nil {
+				return err
+			}
+		}
+
 		return nil
 	})
 
@@ -394,6 +402,24 @@ func (dw *DSLWriter) writeItem(item Item) error {
 		return nil
 	})
 
+	return nil
+}
+
+// writeRule writes a world-level rule.
+func (dw *DSLWriter) writeRule(rule Rule) error {
+	name := rule.Name
+	if name == "" {
+		name = "rule"
+	}
+	dw.writeBlock("rule", fmt.Sprintf("%q", name), func() error {
+		if rule.Trigger != "" {
+			dw.writeField("trigger", fmt.Sprintf("%q", rule.Trigger))
+		}
+		if rule.Effect != "" {
+			dw.writeField("effect", fmt.Sprintf("%q", rule.Effect))
+		}
+		return nil
+	})
 	return nil
 }
 

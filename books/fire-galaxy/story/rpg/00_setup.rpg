@@ -1,0 +1,305 @@
+
+metadata {
+  title = "虫巢远征"
+  genre = ["科幻", "废土", "机甲", "末世"]
+  power_system = "基因进化与火种机甲体系"
+  tone = "热血激昂，硬核科幻，末世苍凉，爽感充足"
+  dsl_version = "0.2.0"
+  phase = "setup"
+}
+
+characters {
+  player "protagonist" {
+    id = "protagonist"
+    class = "adventurer"
+    str = 10
+    agi = 12
+    int = 10
+    vit = 10
+    hp = 120
+    mp = 60
+  }
+}
+
+world {
+  item "虫族晶核" {
+    id = "resource_01"
+    type = "能源/材料"
+    rarity = "legendary"
+    description = "虫族体内生成的能量结晶，是基因进化的核心原料，也可作为能源驱动火种机甲、据点防御设施等设备"
+  }
+  item "基因抑制剂" {
+    id = "resource_02"
+    type = "消耗品"
+    rarity = "rare"
+    description = "由虫族体液搭配地下溶洞特产的蓝星草提取制成，可将基因进化时的崩溃风险降低40%，是各幸存者据点的核心战略物资"
+  }
+  item "旧文明数据芯片" {
+    id = "resource_03"
+    type = "材料"
+    rarity = "rare"
+    description = "散落在地表旧人类遗址中的存储芯片，录入了旧时代的科技、文化资料，解锁与林野的基因等级绑定，低级芯片可解锁基础生产技术，高级芯片可解锁武器、机甲相关的额外功能，能大幅提升据点的生产、防御能力"
+  }
+  item "能量晶核" {
+    id = "resource_04"
+    type = "通用"
+    rarity = "rare"
+    description = "(自动添加 — 请手动补充描述)"
+  }
+  rule "setup_rule_01" {
+    trigger = "always"
+    effect = "虫族核心母巢会释放全域电磁干扰波，压制所有非基因绑定的人类电子设备，只有适配了基因进化系统的火种机甲可不受干扰正常运行；大陨落前人类已经预判到电磁攻击风险，提前在各地下据点储备了大量纯机械武器的生产图纸与原料，百年间幸存者可以自行生产维护这类无电子控制模块的旧式防御武器，普通人可正常操作，该类武器可有效杀伤工虫、作战兵虫，对初级虫将仅能造成轻伤，无法伤害中级以上虫族，战力边界清晰。"
+  }
+  rule "setup_rule_02" {
+    trigger = "always"
+    effect = "火种机甲的最高权限基因锁由林野当年亲自预埋，他是唯一的全权限适配者；除他之外全球仅有不超过5名次一级基因适配者，最高仅能升级至基因等级3级，无法解锁星际航行等高级权限，也无法激活机甲核心数据库。"
+  }
+  rule "setup_rule_03" {
+    trigger = "always"
+    effect = "简化版火种机甲移除了核心数据库与星际航行模块，仅保留基础作战功能，采用次一级基因适配者的基因片段做绑定锁，不受电磁干扰，战力仅为完整版火种机甲的30%，无法升级至更高权限；沈氏百年间仅掌握简化版火种机甲的组装技术，但缺少核心基因编码模块，百年间仅组装出不到10台供家族核心成员使用，批量生产技术只有林野解锁三级基因权限后才能从文明数据库中获取；沈明哲家族当年仅为项目投资方，未掌握核心基因编码技术，因此无法激活机甲核心功能。"
+  }
+  rule "setup_rule_04" {
+    trigger = "always"
+    effect = "基因进化等级越高，可解锁的机甲权限越强，每次升级除需要吸收对应等级的虫族核心能量晶核外，还需解锁一段林野当年研发火种机甲的记忆碎片，逐步揭开当年爆炸事故的真相；进化时基因稳定性低于60%即触发崩溃风险，可通过特制基因抑制剂、同伴精神引导等方式降低崩溃概率。"
+  }
+  rule "setup_rule_05" {
+    trigger = "always"
+    effect = "半人半虫异变者的判定标准为异变时基因稳定性是否高于40%：高于40%可保留人类理智，拥有专属异能，可免疫虫族低阶精神干扰，能在虫族领地内隐蔽活动，还可感知10公里范围内的虫族晶核与虫群动向，是反抗军勘探、渗透行动的核心力量，但因携带不可清除的虫族基因片段，无法适配火种机甲的纯人类基因锁；保留理智的异变者可通过吸收虫族晶核提升异能等级，最高可达到对应虫族初级虫将的战力，异能类型与异变时融合的虫族基因类型绑定，比如融合工虫基因的异变者拥有巨力，融合飞虫基因的异变者拥有短距离飞行能力；低于40%则完全沦为虫族附庸，无自主意识。各幸存者据点均配备基于纯机械原理的基因稳定性检测仪，可在10秒内测出异变者的基因稳定性数值；同时保留理智的异变者瞳孔为淡蓝色，失控异变者瞳孔为深黑色，可通过外观快速初步判定阵营。"
+  }
+  rule "setup_rule_06" {
+    trigger = "always"
+    effect = "虫族种群层级严格，低级晶核对应工虫、作战兵虫，每10只兵虫约产出1枚可用低级晶核；中级晶核对应初级虫将，每百只规模虫群才配置1名初级虫将；高级晶核对应高级虫统领，全星球虫族仅不超过10名，母巢核心晶核唯一；高级虫将拥有不亚于人类的智慧，会针对性设局围剿人类幸存者，甚至会安插内奸渗透人类据点。"
+  }
+  rule "setup_rule_07" {
+    trigger = "always"
+    effect = "普通幸存者大多聚居在青藤据点、磐石堡、黄土沟据点等地下据点，按贡献分配生存资源，对基因进化者既敬畏又排斥，普通人除可操作旧式防御武器、参与后勤保障外，旧文明数据芯片的修复、基因抑制剂的生产、简化版火种机甲的维护都需要普通科研人员、技术工人的参与，仅靠基因进化者无法完成，拥有不可替代的价值。"
+  }
+  rule "setup_rule_08" {
+    trigger = "always"
+    effect = "火种机甲内置的文明数据库隐藏着百年前虫族入侵的完整真相与旧人类星际探索记录、外星文明坐标，只有林野的基因序列可逐层解锁相关内容；旧文明数据芯片的解锁与林野的基因等级绑定，低级芯片可在基因等级1-2级时解锁基础生产技术，高级芯片需要基因等级3级以上才能解锁武器、机甲相关的额外功能。林野当年研发火种机甲时，同步为旧人类文明备份芯片设置了配套的基因权限锁，避免核心科技落入敌对势力手中，因此只有对应基因等级的权限才能解锁对应芯片内容。"
+  }
+  rule "setup_rule_09" {
+    trigger = "always"
+    effect = "沈明哲集团掌握虫族需要的旧人类隐蔽星际星舰坐标数据，该坐标为分段加密格式，只有凑齐9枚散落在不同旧人类遗址的密钥才能完全解锁，沈氏百年间仅找到3枚，因此迟迟无法完成与虫族的交易；沈氏以此为筹码与虫族高级统领达成交易：虫族承诺给予沈明哲及其300名核心成员「虫族基因改造豁免权」，允许他们保留人类意识并获得10%的地球统治权，虫族拿到完整星舰坐标后将前往银河系扩张，不会销毁沈明哲集团核心成员的人类基因，因此不会主动攻击沈明哲的势力。该交易背后有两条强制规则支撑：一是收割者文明给虫族高层下了精神契约，伤害沈氏核心成员会直接触发精神爆亡；二是9枚密钥只有沈氏家族的基因序列可以感应定位，虫族无法自行搜寻，因此必须和沈氏合作；沈氏家族在大陨落后依托留存的军工资源建立了磐石堡据点，逐步垄断基因抑制剂的生产与销售，借此巩固了百年统治地位。"
+  }
+  rule "setup_rule_10" {
+    trigger = "always"
+    effect = "撮合沈氏与虫族交易的第三方外星文明名为「收割者文明」，以诱导低等文明内斗、收割文明成果为生存方式，当年和人类高层交易的条件是用虫族技术换取地球生物基因库，交易失控后仍在暗中观察虫族与人类的战争，在虫族与人类阵营都安插了卧底，会不定期给弱势一方提供技术支持，刻意维持双方战力平衡，方便最终收割胜利方的文明成果，其已在太阳系外围布置了收割舰队，待地球战局明朗后就会发起入侵，是贯穿整个故事的最终反派势力。"
+  }
+  rule "resource_scarcity_resource_01" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_01; scarcity=低级常见、中级稀有、高级极稀有、母巢核心晶核独一无二; category=能源/材料"
+  }
+  rule "resource_scarcity_resource_02" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_02; scarcity=稀有; category=消耗品"
+  }
+  rule "resource_scarcity_resource_03" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_03; scarcity=稀有; category=材料"
+  }
+  rule "resource_scarcity_resource_04" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_04; scarcity=稀有; category=通用"
+  }
+  rule "progression_requirement_基因进化与火种机甲体系_L1" {
+    trigger = "progression.requirement"
+    effect = "system=基因进化与火种机甲体系; level=1; requires=首次接触虫族低级晶核，完成基础基因适配，解锁第一次组装火种机甲核心的记忆碎片"
+  }
+  rule "progression_requirement_基因进化与火种机甲体系_L2" {
+    trigger = "progression.requirement"
+    effect = "system=基因进化与火种机甲体系; level=2; requires=吸收10枚低级虫族晶核，基因稳定性达到70%以上，解锁基因锁模块研发的记忆碎片"
+  }
+  rule "progression_requirement_基因进化与火种机甲体系_L3" {
+    trigger = "progression.requirement"
+    effect = "system=基因进化与火种机甲体系; level=3; requires=吸收1枚中级虫族晶核，扛过基因崩溃的风险，解锁机甲武器模块测试的记忆碎片"
+  }
+  rule "progression_requirement_基因进化与火种机甲体系_L4" {
+    trigger = "progression.requirement"
+    effect = "system=基因进化与火种机甲体系; level=4; requires=吸收3枚高级虫族晶核，完全融合火种系统的核心代码，解锁当年爆炸事故前的最后一段工作记忆碎片"
+  }
+  rule "progression_requirement_基因进化与火种机甲体系_L5" {
+    trigger = "progression.requirement"
+    effect = "system=基因进化与火种机甲体系; level=5; requires=吸收虫族母巢的唯一核心晶核，解锁全部文明数据库，解锁当年被暗害的完整真相记忆碎片"
+  }
+  rule "progression_max_基因进化与火种机甲体系" {
+    trigger = "progression.max_level"
+    effect = "system=基因进化与火种机甲体系; max_level=5"
+  }
+}
+
+storyline {
+}
+
+systems {
+  attribute_system "Core Attributes" {
+    id = "attr_core"
+    description = "Numeric baseline attributes for simulation and continuity checks."
+    attribute "Strength" {
+      id = "str"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "Agility" {
+      id = "agi"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "Intelligence" {
+      id = "int"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "Vitality" {
+      id = "vit"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "HP" {
+      id = "hp"
+      type = "resource"
+      base_value = 100
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "MP" {
+      id = "mp"
+      type = "resource"
+      base_value = 50
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "Gene Potential" {
+      id = "gene"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "虫族晶核" {
+      id = "resource_01"
+      description = "虫族体内生成的能量结晶，是基因进化的核心原料，也可作为能源驱动火种机甲、据点防御设施等设备"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "基因抑制剂" {
+      id = "resource_02"
+      description = "由虫族体液搭配地下溶洞特产的蓝星草提取制成，可将基因进化时的崩溃风险降低40%，是各幸存者据点的核心战略物资"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "旧文明数据芯片" {
+      id = "resource_03"
+      description = "散落在地表旧人类遗址中的存储芯片，录入了旧时代的科技、文化资料，解锁与林野的基因等级绑定，低级芯片可解锁基础生产技术，高级芯片可解锁武器、机甲相关的额外功能，能大幅提升据点的生产、防御能力"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "能量晶核" {
+      id = "resource_04"
+      description = "(自动添加 — 请手动补充描述)"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+  }
+  power_formula "Core Power Formula" {
+    id = "power_core"
+    description = "Deterministic combat power formula for benchmark simulation."
+    base_power = 10
+    formula = "base + sum(attr_i * weight_i)"
+    factor "Strength" {
+      attribute = "str"
+      weight = 2
+    }
+    factor "Agility" {
+      attribute = "agi"
+      weight = 1.2
+    }
+    factor "Intelligence" {
+      attribute = "int"
+      weight = 1.8
+    }
+    factor "Vitality" {
+      attribute = "vit"
+      weight = 1.5
+    }
+    factor "HP" {
+      attribute = "hp"
+      weight = 0.1
+    }
+    factor "MP" {
+      attribute = "mp"
+      weight = 0.2
+    }
+    factor "Gene Potential" {
+      attribute = "gene"
+      weight = 1
+    }
+  }
+  counter "chapter_progress" {
+    track = "story.chapter"
+    description = "Story progression counter"
+    milestone 5 {
+      title = "Arc Warmup"
+    }
+    milestone 10 {
+      title = "Arc Core"
+    }
+  }
+  counter "基因进化与火种机甲体系_progress" {
+    track = "player.progression"
+    description = "Primary progression pace tracker"
+    milestone 1 {
+      title = "System Activated"
+    }
+    milestone 3 {
+      title = "First Breakthrough"
+    }
+    milestone 5 {
+      title = "Mid-Arc Growth"
+    }
+  }
+  progression "基因进化与火种机甲体系" {
+    id = "基因进化与火种机甲体系"
+    level 1 {
+      name = "基因适配者"
+      requirements = "首次接触虫族低级晶核，完成基础基因适配，解锁第一次组装火种机甲核心的记忆碎片"
+      bonuses = ["刚激活系统的初级状态，可操控基础形态的火种机甲，身体素质是普通人类的3倍，可对抗最低级的工虫"]
+    }
+    level 2 {
+      name = "基因强化者"
+      requirements = "吸收10枚低级虫族晶核，基因稳定性达到70%以上，解锁基因锁模块研发的记忆碎片"
+      bonuses = ["可解锁机甲的近战、远程武器模块，身体素质提升至普通人类的10倍，能独立对抗虫族的作战兵虫"]
+    }
+    level 3 {
+      name = "基因觉醒者"
+      requirements = "吸收1枚中级虫族晶核，扛过基因崩溃的风险，解锁机甲武器模块测试的记忆碎片"
+      bonuses = ["可解锁机甲的飞行、能量护盾模块，拥有专属的基因异能，能独立对抗中级虫族与初级虫将，也是次一级基因适配者可达到的最高等级"]
+    }
+    level 4 {
+      name = "基因掌控者"
+      requirements = "吸收3枚高级虫族晶核，完全融合火种系统的核心代码，解锁当年爆炸事故前的最后一段工作记忆碎片"
+      bonuses = ["仅林野可达到的等级，可解锁机甲的星际航行模块，可通过火种机甲的基因链共振向所有适配基因进化系统的用户发送全域加密信息、共享虫群动向数据，该传输不属于电磁波频段，不受虫族电磁干扰影响，仅适配了基因进化系统的用户可接收，获得进化者的天然信服，可对抗虫族的高级统领"]
+    }
+    level 5 {
+      name = "文明火种者"
+      requirements = "吸收虫族母巢的唯一核心晶核，解锁全部文明数据库，解锁当年被暗害的完整真相记忆碎片"
+      bonuses = ["仅林野可达到的等级，可激活机甲的终极星舰形态，释放覆盖全球的基因修复波，一次性修复所有人类因虫族长期辐射导致的基因缺陷与生育率下降问题，无法修改或强化正常人类基因；使用该能力后机甲会损失90%核心能量，一年内无法启动星际航行模块，仅可使用一次，拥有该等级权限者是整个人类文明的法定领袖"]
+    }
+  }
+}

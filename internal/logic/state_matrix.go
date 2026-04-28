@@ -589,6 +589,7 @@ func (m *StateMatrixManager) loadRPGDSLDeltas() map[string][]models.RPGStateDelt
 func (m *StateMatrixManager) rpgDSLPaths() []string {
 	rpgDir := filepath.Join(m.projectRoot, "story", "rpg")
 	candidates := []string{
+		filepath.Join(rpgDir, "00_setup.rpg"),
 		filepath.Join(rpgDir, "01_outline.rpg"),
 		filepath.Join(rpgDir, "02_craft.rpg"),
 		filepath.Join(rpgDir, "03_systems.rpg"),

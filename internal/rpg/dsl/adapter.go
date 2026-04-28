@@ -81,6 +81,11 @@ func (na *NovelgenAdapter) toSetupDSL(dsl *DSL) (*DSL, error) {
 	// Baseline player shell for simulators.
 	dsl.Characters.Player = na.inferBasePlayer()
 
+	// Setup-level world rules and resources are the canonical numerical
+	// constraints that chapter DSL can later spend, violate, or reference.
+	dsl.World.Rules = buildRulesFromSetup(setup)
+	dsl.World.Items = buildWorldResourceItems(setup)
+
 	// Numeric systems.
 	dsl.Systems.AttributeSystem = na.buildAttributeSystem(setup)
 	dsl.Systems.PowerFormula = na.buildPowerFormula(dsl.Systems.AttributeSystem)
@@ -151,6 +156,161 @@ func (na *NovelgenAdapter) loadStorySetup() *models.StorySetup {
 	na.logger.Warn(LogCategorySystem, "Failed to load story setup, using fallback",
 		map[string]interface{}{"paths": candidates, "error": lastErr.Error()})
 	return nil
+}
+
+func buildRulesFromSetup(setup *models.StorySetup) []Rule {
+	if setup == nil {
+		return nil
+	}
+	rules := make([]Rule, 0, len(setup.Rules))
+	for i, text := range setup.Rules {
+		text = strings.TrimSpace(text)
+		if text == "" {
+			continue
+		}
+		rules = append(rules, Rule{
+			Name:    fmt.Sprintf("setup_rule_%02d", i+1),
+			Trigger: "always",
+			Effect:  text,
+		})
+	}
+	rules = append(rules, buildStructuredSetupRules(setup)...)
+	return rules
+}
+
+func buildStructuredSetupRules(setup *models.StorySetup) []Rule {
+	if setup == nil {
+		return nil
+	}
+
+	rules := make([]Rule, 0, len(setup.WorldResources)+len(setup.Premises)*2)
+	for i, res := range setup.WorldResources {
+		name := strings.TrimSpace(res.Name)
+		if name == "" {
+			name = fmt.Sprintf("resource_%02d", i+1)
+		}
+		id := setupResourceID(name, i)
+		effect := fmt.Sprintf("resource=%s; scarcity=%s; category=%s", id, strings.TrimSpace(res.Scarcity), strings.TrimSpace(res.Category))
+		rules = append(rules, Rule{
+			Name:    "resource_scarcity_" + id,
+			Trigger: "resource.scarcity",
+			Effect:  effect,
+		})
+	}
+
+	for i, premise := range setup.Premises {
+		systemID := coalesceID(sanitizeID(strings.TrimSpace(premise.Name)), fmt.Sprintf("premise_%02d", i+1))
+		maxLevel := 0
+		for _, stage := range premise.Progression {
+			if stage.Level > maxLevel {
+				maxLevel = stage.Level
+			}
+			req := strings.TrimSpace(stage.Requirements)
+			if req == "" {
+				continue
+			}
+			rules = append(rules, Rule{
+				Name:    fmt.Sprintf("progression_requirement_%s_L%d", systemID, stage.Level),
+				Trigger: "progression.requirement",
+				Effect:  fmt.Sprintf("system=%s; level=%d; requires=%s", systemID, stage.Level, req),
+			})
+		}
+		if maxLevel > 0 {
+			rules = append(rules, Rule{
+				Name:    "progression_max_" + systemID,
+				Trigger: "progression.max_level",
+				Effect:  fmt.Sprintf("system=%s; max_level=%d", systemID, maxLevel),
+			})
+		}
+	}
+	return rules
+}
+
+func buildWorldResourceItems(setup *models.StorySetup) []Item {
+	if setup == nil {
+		return nil
+	}
+	items := make([]Item, 0, len(setup.WorldResources))
+	for i, res := range setup.WorldResources {
+		name := strings.TrimSpace(res.Name)
+		if name == "" {
+			name = fmt.Sprintf("resource_%02d", i+1)
+		}
+		items = append(items, Item{
+			ID:          setupResourceID(name, i),
+			Name:        name,
+			Type:        coalesceString(strings.TrimSpace(res.Category), "resource"),
+			Rarity:      inferRarityFromScarcity(res.Scarcity),
+			Description: strings.TrimSpace(res.Description),
+		})
+	}
+	return items
+}
+
+func appendResourceAttributes(attrs []AttributeDef, setup *models.StorySetup) []AttributeDef {
+	if setup == nil {
+		return attrs
+	}
+	seen := make(map[string]bool, len(attrs))
+	for _, attr := range attrs {
+		seen[attr.ID] = true
+	}
+	for i, res := range setup.WorldResources {
+		name := strings.TrimSpace(res.Name)
+		if name == "" {
+			name = fmt.Sprintf("resource_%02d", i+1)
+		}
+		id := setupResourceID(name, i)
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		attrs = append(attrs, AttributeDef{
+			ID:          id,
+			Name:        name,
+			Description: strings.TrimSpace(res.Description),
+			Type:        "resource",
+			BaseValue:   0,
+			MinValue:    0,
+			MaxValue:    999999,
+			IsResource:  true,
+		})
+	}
+	return attrs
+}
+
+func setupResourceID(name string, index int) string {
+	return fmt.Sprintf("resource_%02d", index+1)
+}
+
+func inferRarityFromScarcity(scarcity string) string {
+	text := strings.ToLower(strings.TrimSpace(scarcity))
+	switch {
+	case text == "":
+		return ""
+	case strings.Contains(text, "unique"), strings.Contains(text, "唯一"), strings.Contains(text, "独一"):
+		return "legendary"
+	case strings.Contains(text, "极"), strings.Contains(text, "稀"), strings.Contains(text, "rare"):
+		return "rare"
+	case strings.Contains(text, "common"), strings.Contains(text, "常见"):
+		return "common"
+	default:
+		return text
+	}
+}
+
+func coalesceID(value, fallback string) string {
+	if strings.TrimSpace(value) != "" {
+		return value
+	}
+	return fallback
+}
+
+func coalesceString(value, fallback string) string {
+	if strings.TrimSpace(value) != "" {
+		return value
+	}
+	return fallback
 }
 
 func (na *NovelgenAdapter) inferPowerSystem(setup *models.StorySetup) string {
@@ -264,6 +424,7 @@ func (na *NovelgenAdapter) buildAttributeSystem(setup *models.StorySetup) *Attri
 		}
 	}
 
+	sys.Attributes = appendResourceAttributes(sys.Attributes, setup)
 	return sys
 }
 

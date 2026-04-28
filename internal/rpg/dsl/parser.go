@@ -1520,8 +1520,94 @@ func (p *Parser) parseNPC() (*NPC, error) {
 }
 
 // Placeholder methods for unimplemented parsers
-func (p *Parser) parseItem() (*Item, error) { return &Item{}, nil }
-func (p *Parser) parseRule() (*Rule, error) { return &Rule{}, nil }
+func (p *Parser) parseItem() (*Item, error) {
+	name, err := p.parseString()
+	if err != nil {
+		return nil, err
+	}
+
+	item := &Item{Name: name}
+	if err := p.expectChar('{'); err != nil {
+		return nil, err
+	}
+
+	for !p.peekChar('}') {
+		p.skipWhitespace()
+		if p.peekChar('}') {
+			break
+		}
+
+		key, err := p.parseIdentifier()
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectChar('='); err != nil {
+			return nil, err
+		}
+		value, err := p.parseValue()
+		if err != nil {
+			return nil, err
+		}
+
+		switch key {
+		case "id":
+			item.ID = p.toString(value)
+		case "type":
+			item.Type = p.toString(value)
+		case "rarity":
+			item.Rarity = p.toString(value)
+		case "description":
+			item.Description = p.toString(value)
+		}
+	}
+
+	if err := p.expectChar('}'); err != nil {
+		return nil, err
+	}
+	return item, nil
+}
+func (p *Parser) parseRule() (*Rule, error) {
+	name, err := p.parseString()
+	if err != nil {
+		return nil, err
+	}
+
+	rule := &Rule{Name: name}
+	if err := p.expectChar('{'); err != nil {
+		return nil, err
+	}
+
+	for !p.peekChar('}') {
+		p.skipWhitespace()
+		if p.peekChar('}') {
+			break
+		}
+
+		key, err := p.parseIdentifier()
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectChar('='); err != nil {
+			return nil, err
+		}
+		value, err := p.parseValue()
+		if err != nil {
+			return nil, err
+		}
+
+		switch key {
+		case "trigger":
+			rule.Trigger = p.toString(value)
+		case "effect":
+			rule.Effect = p.toString(value)
+		}
+	}
+
+	if err := p.expectChar('}'); err != nil {
+		return nil, err
+	}
+	return rule, nil
+}
 
 // parseAttributeSystem parses the attribute_system block
 func (p *Parser) parseAttributeSystem() (*AttributeSystem, error) {

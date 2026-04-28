@@ -21,7 +21,7 @@ import (
 	rpgdsl "novelgen/internal/rpg/dsl"
 )
 
-const writeRPGDSLCacheVersion = 2
+const writeRPGDSLCacheVersion = 3
 
 type writeRPGDSLResult struct {
 	DSLPath          string

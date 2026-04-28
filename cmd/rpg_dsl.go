@@ -45,8 +45,9 @@ var mergeCmd = &cobra.Command{
 var convertCmd = &cobra.Command{
 	Use:   "convert -b <book_name>",
 	Short: "转换项目为 DSL",
-	Long:  `将 novelgen 项目数据（outline/craft）转换为 DSL 格式。`,
+	Long:  `将 novelgen 项目数据（setup/outline/craft）转换为 DSL 格式。`,
 	Example: `  novelgen rpg-dsl convert -b fire-galaxy
+  novelgen rpg-dsl convert -b fire-galaxy --phase setup
   novelgen rpg-dsl convert -b fire-galaxy --phase outline
   novelgen rpg-dsl convert -b fire-galaxy --phase craft`,
 	RunE: runConvert,
@@ -141,7 +142,7 @@ func init() {
 	dslExportCmd.Flags().StringVarP(&format, "format", "f", "json", "导出格式 (json/yaml)")
 
 	// Phase flag
-	convertCmd.Flags().StringVar(&phase, "phase", "all", "转换阶段 (outline/craft/all)")
+	convertCmd.Flags().StringVar(&phase, "phase", "all", "Convert phase (setup/outline/craft/all)")
 
 	// Simulation flags
 	simulateCmd.Flags().StringVarP(&chapterID, "chapter", "c", "", "章节 ID")
@@ -274,7 +275,24 @@ func runConvert(cmd *cobra.Command, args []string) error {
 
 	// Convert based on phase
 	switch phase {
-	case "outline", "all":
+	case "setup", "all":
+		fmt.Println("Generating Setup/System DSL...")
+		setupDSL, err := adapter.ToDSL(dsl.PhaseSetup)
+		if err != nil {
+			return fmt.Errorf("generate setup DSL failed: %w", err)
+		}
+		setupPath := filepath.Join(outputDir, "00_setup.rpg")
+		if err := setupDSL.WriteToFile(setupPath); err != nil {
+			return fmt.Errorf("write setup DSL failed: %w", err)
+		}
+		fmt.Printf("  OK %s\n", setupPath)
+
+		if phase == "setup" {
+			return nil
+		}
+		fallthrough
+
+	case "outline":
 		fmt.Println("生成 Outline DSL...")
 		outlineDSL, err := adapter.ToDSL(dsl.PhaseOutline)
 		if err != nil {
@@ -665,6 +683,7 @@ func loadDSLFragments(bookName string) ([]*dsl.DSLFragment, error) {
 
 	// Look for DSL files
 	patterns := []string{
+		"00_setup.rpg",
 		"01_outline.rpg",
 		"02_craft.rpg",
 		"03_systems.rpg",
@@ -750,6 +769,9 @@ func loadAndMergeDSL(bookName string) (*dsl.DSL, error) {
 
 func inferPhaseFromFilename(filename string) dsl.MergePhase {
 	lower := strings.ToLower(filename)
+	if strings.Contains(lower, "setup") {
+		return dsl.PhaseSetup
+	}
 	if strings.Contains(lower, "outline") {
 		return dsl.PhaseOutline
 	}
