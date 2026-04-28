@@ -140,7 +140,7 @@ func runBatchMode(ctx context.Context, pipeline *agents.AIRPGPipeline, dirPath, 
 	// 汇总报告
 	fmt.Println("═══════════════════════════════════════════════════════════")
 	fmt.Println("                    批量分析汇总报告")
-	fmt.Println("═══════════════════════════════════════════════════════════\n")
+	fmt.Print("═══════════════════════════════════════════════════════════\n")
 
 	totalIssues := 0
 	for _, result := range results {

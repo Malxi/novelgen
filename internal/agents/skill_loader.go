@@ -5,11 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // SkillLoader loads skill definitions from SKILL.md files
 type SkillLoader struct {
 	skillsDir string
+	mu        sync.RWMutex
 	cache     map[string]string
 }
 
@@ -24,9 +26,12 @@ func NewSkillLoader(skillsDir string) *SkillLoader {
 // Load loads a skill's system prompt from its SKILL.md file
 func (sl *SkillLoader) Load(skillName string) (string, error) {
 	// Check cache first
+	sl.mu.RLock()
 	if prompt, ok := sl.cache[skillName]; ok {
+		sl.mu.RUnlock()
 		return prompt, nil
 	}
+	sl.mu.RUnlock()
 
 	// Load from file
 	skillPath := filepath.Join(sl.skillsDir, skillName, "SKILL.md")
@@ -40,7 +45,9 @@ func (sl *SkillLoader) Load(skillName string) (string, error) {
 	prompt := string(content)
 
 	// Cache it
+	sl.mu.Lock()
 	sl.cache[skillName] = prompt
+	sl.mu.Unlock()
 
 	return prompt, nil
 }
@@ -63,5 +70,7 @@ func (sl *SkillLoader) LoadWithVars(skillName string, vars map[string]string) (s
 
 // ClearCache clears the skill cache
 func (sl *SkillLoader) ClearCache() {
+	sl.mu.Lock()
+	defer sl.mu.Unlock()
 	sl.cache = make(map[string]string)
 }

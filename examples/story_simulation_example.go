@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	fmt.Println("=== 剧情推演示例 ===\n")
+	fmt.Print("=== 剧情推演示例 ===\n")
 
 	// 方法1: 使用示例世界进行推演
 	fmt.Println("【方法1】使用示例世界")
@@ -86,11 +86,11 @@ func outlineSimulation() {
 						Summary: "主角觉醒特殊能力",
 						Chapters: []rpg.StoryChapter{
 							{
-								ID:          "P1-V1-C1",
-								Title:       "穿越觉醒",
-								Summary:     "主角穿越到修仙世界，觉醒系统",
-								Characters:  []string{"林凡", "老者"},
-								Location:    "青云山脉",
+								ID:         "P1-V1-C1",
+								Title:      "穿越觉醒",
+								Summary:    "主角穿越到修仙世界，觉醒系统",
+								Characters: []string{"林凡", "老者"},
+								Location:   "青云山脉",
 								Events: []rpg.StoryEvent{
 									{
 										Type:       "awakening",
@@ -110,11 +110,11 @@ func outlineSimulation() {
 								Pacing:      "normal",
 							},
 							{
-								ID:          "P1-V1-C2",
-								Title:       "初次修炼",
-								Summary:     "主角开始修炼基础功法",
-								Characters:  []string{"林凡"},
-								Location:    "青云山脉-修炼洞窟",
+								ID:         "P1-V1-C2",
+								Title:      "初次修炼",
+								Summary:    "主角开始修炼基础功法",
+								Characters: []string{"林凡"},
+								Location:   "青云山脉-修炼洞窟",
 								Events: []rpg.StoryEvent{
 									{
 										Type:       "cultivation",

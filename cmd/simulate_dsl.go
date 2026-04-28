@@ -91,7 +91,7 @@ func runSimulateDSL(cmd *cobra.Command, args []string) error {
 func printSimulateResult(simulator *dsl.Simulator, issues []dsl.SimulationIssue) {
 	fmt.Println("═══════════════════════════════════════════════════════════")
 	fmt.Println("              DSL 模拟器检测报告")
-	fmt.Println("═══════════════════════════════════════════════════════════\n")
+	fmt.Print("═══════════════════════════════════════════════════════════\n")
 
 	// 统计
 	criticalCount := 0
@@ -121,7 +121,7 @@ func printSimulateResult(simulator *dsl.Simulator, issues []dsl.SimulationIssue)
 		return
 	}
 
-	fmt.Println("🚨 详细问题列表:\n")
+	fmt.Print("🚨 详细问题列表:\n")
 
 	// 按严重程度排序输出
 	for _, issue := range issues {

@@ -2,6 +2,7 @@ package llm
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,7 +14,7 @@ import (
 
 // Client interface for LLM providers
 type Client interface {
-	ChatCompletion(messages []Message, options *ChatOptions) (*ChatResponse, error)
+	ChatCompletion(ctx context.Context, messages []Message, options *ChatOptions) (*ChatResponse, error)
 }
 
 // Message represents a chat message
@@ -128,7 +129,11 @@ type openAIResponse struct {
 }
 
 // ChatCompletion sends a chat completion request to the OpenAI-compatible API
-func (c *OpenAIClient) ChatCompletion(messages []Message, options *ChatOptions) (*ChatResponse, error) {
+func (c *OpenAIClient) ChatCompletion(ctx context.Context, messages []Message, options *ChatOptions) (*ChatResponse, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	model := c.model
 	temperature := 0.7
 	maxTokens := 2000
@@ -170,7 +175,7 @@ func (c *OpenAIClient) ChatCompletion(messages []Message, options *ChatOptions) 
 	}
 
 	url := fmt.Sprintf("%s/chat/completions", c.baseURL)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

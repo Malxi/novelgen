@@ -31,5 +31,5 @@ func finalChapterPath(projectRoot string, chapter *models.Chapter) string {
 	if chapter == nil {
 		return filepath.Join(projectRoot, "chapters")
 	}
-	return filepath.Join(projectRoot, "chapters", "chapter-"+extractChapterNumber(chapter.ID)+".md")
+	return filepath.Join(projectRoot, "chapters", "chapter-"+chapter.ID+".md")
 }

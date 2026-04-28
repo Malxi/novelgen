@@ -235,8 +235,8 @@ func main() {
 	}
 
 	fmt.Printf("\n【事件统计】\n")
-	for eventType, count := range data.Events {
-		fmt.Printf("  - %s: %d次\n", eventType, count)
+	for _, event := range data.Events {
+		fmt.Printf("  - %s\n", event.Name)
 	}
 
 	// 保存到文件

@@ -1,6 +1,7 @@
 package rpg
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -37,7 +38,7 @@ func (c *NovelgenLLMClient) Complete(prompt string, text string) (string, error)
 		},
 	}
 
-	resp, err := c.client.ChatCompletion(messages, c.options)
+	resp, err := c.client.ChatCompletion(context.Background(), messages, c.options)
 	if err != nil {
 		return "", fmt.Errorf("LLM request failed: %w", err)
 	}
@@ -80,11 +81,11 @@ func SimpleExtract(text string) (*NovelRPGData, error) {
 
 // LLMExtractResult 结构化的 LLM 提取结果
 type LLMExtractResult struct {
-	Success   bool           `json:"success"`
-	Data      *NovelRPGData  `json:"data,omitempty"`
-	Error     string         `json:"error,omitempty"`
-	TokenUsed int            `json:"token_used"`
-	Model     string         `json:"model"`
+	Success   bool          `json:"success"`
+	Data      *NovelRPGData `json:"data,omitempty"`
+	Error     string        `json:"error,omitempty"`
+	TokenUsed int           `json:"token_used"`
+	Model     string        `json:"model"`
 }
 
 // ExtractWithDetails 带详细信息的提取
@@ -105,7 +106,7 @@ func ExtractWithDetails(client llm.Client, options *llm.ChatOptions, text string
 		},
 	}
 
-	resp, err := client.ChatCompletion(messages, options)
+	resp, err := client.ChatCompletion(context.Background(), messages, options)
 	if err != nil {
 		result.Error = err.Error()
 		return result, err

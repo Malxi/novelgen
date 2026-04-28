@@ -227,6 +227,7 @@ func cleanMarkdownForTXT(content string) string {
 func loadChapterFile(root, chapterID string) (string, error) {
 	// Try different naming patterns
 	patterns := []string{
+		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapterID)),
 		filepath.Join(root, "chapters", chapterID+".md"),
 		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", extractChapterNumber(chapterID))),
 	}

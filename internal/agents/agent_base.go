@@ -98,7 +98,7 @@ func (a *BaseAgent) Execute(ctx context.Context, params InvokeParams, input inte
 	options := a.config.GetChatOptions(a.projectLLM)
 
 	logger.Info("[%s] Sending request to AI...", a.name)
-	resp, err := a.client.ChatCompletion(messages, options)
+	resp, err := a.client.ChatCompletion(ctx, messages, options)
 	if err != nil {
 		logger.Error("[%s] AI request failed: %v", a.name, err)
 		return fmt.Errorf("AI request failed: %w", err)

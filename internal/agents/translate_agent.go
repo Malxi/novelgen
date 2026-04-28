@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"context"
 	"fmt"
 
 	"novelgen/internal/llm"
@@ -56,7 +57,7 @@ func (a *TranslateAgent) Translate(systemPrompt, userPrompt string) (string, err
 		{Role: "user", Content: userPrompt},
 	}
 
-	response, err := a.client.ChatCompletion(messages, nil)
+	response, err := a.client.ChatCompletion(context.Background(), messages, nil)
 	if err != nil {
 		return "", fmt.Errorf("translation request failed: %w", err)
 	}

@@ -10,6 +10,17 @@ import (
 )
 
 func TestLoadDSLFragments(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd failed: %v", err)
+	}
+	if filepath.Base(wd) == "cmd" {
+		if err := os.Chdir(".."); err != nil {
+			t.Fatalf("failed to chdir to repo root: %v", err)
+		}
+		defer os.Chdir(wd)
+	}
+
 	bookName := "fire-galaxy"
 	rpgDir := filepath.Join("books", bookName, "story", "rpg")
 

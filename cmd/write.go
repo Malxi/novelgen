@@ -373,10 +373,15 @@ func loadChapterContent(chapterID string) string {
 		return loadDraftContent(chapterID)
 	}
 
-	// Check for final chapter
-	finalPath := filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapterID))
-	if data, err := os.ReadFile(finalPath); err == nil {
-		return string(data)
+	// Check for final chapter. Prefer full chapter IDs, but keep the old
+	// numeric filename as a compatibility fallback for existing projects.
+	for _, finalPath := range []string{
+		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapterID)),
+		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", extractChapterNumber(chapterID))),
+	} {
+		if data, err := os.ReadFile(finalPath); err == nil {
+			return string(data)
+		}
 	}
 
 	// Fallback to draft
@@ -490,9 +495,8 @@ func saveFinalChapter(chapter *models.Chapter, content string) error {
 		return fmt.Errorf("failed to create chapters directory: %w", err)
 	}
 
-	// Format: chapter-XXX.md
-	chapterNum := extractChapterNumber(chapter.ID)
-	filename := filepath.Join(chaptersDir, fmt.Sprintf("chapter-%s.md", chapterNum))
+	// Format: chapter-<full-id>.md, e.g. chapter-P1-V1-C1.md.
+	filename := filepath.Join(chaptersDir, fmt.Sprintf("chapter-%s.md", chapter.ID))
 
 	// Check if content already starts with the chapter title (markdown h1)
 	// Avoid adding duplicate title
