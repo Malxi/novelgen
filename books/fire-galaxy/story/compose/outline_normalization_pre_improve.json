@@ -1,0 +1,19 @@
+{
+  "changes": [
+    {
+      "path": "P1-V1-C9.characters",
+      "action": "sync_event_character",
+      "value": "小队"
+    },
+    {
+      "path": "P1-V1-C10.characters",
+      "action": "sync_event_character",
+      "value": "所有幸存者"
+    },
+    {
+      "path": "P1-V1-C10.characters",
+      "action": "sync_event_character",
+      "value": "所有追随者"
+    }
+  ]
+}

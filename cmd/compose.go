@@ -930,7 +930,7 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 			chapter.Characters = output.Chapter.Characters
 			chapter.Location = output.Chapter.Location
 			chapter.Events = output.Chapter.Events
-			
+
 			chapter.Conflict = output.Chapter.Conflict
 			chapter.Pacing = output.Chapter.Pacing
 		}
@@ -1072,6 +1072,8 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 
 	ctx := context.Background()
 
+	applyOutlineNormalization(outline, "pre_improve")
+
 	var improvedOutline *models.Outline
 	var review *models.ReviewResult
 
@@ -1088,6 +1090,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 	}
 
 	// Update the outline with improved version
+	applyOutlineNormalization(improvedOutline, "post_improve")
 	*outline = *improvedOutline
 
 	// Enrich with DSL simulation + outline validator feedback
@@ -1124,15 +1127,23 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 
 		// Force improve if any critical issues found
 		if hasCritical && maxIterations > 0 {
-			logger.Info("Critical issues detected, forcing extra improve iteration")
-			if hierarchical {
-				improvedOutline, _, err = agent.IterateHierarchical(ctx, improvedOutline, 1, 80.0, true, userPrompt, setup)
-			} else {
-				improvedOutline, _, err = agent.Iterate(ctx, improvedOutline, 1, 80.0, true, userPrompt, setup)
+			logger.Info("Critical issues detected, running direct repair pass with enriched review")
+			repairInput := agents.ComposeImproveInput{
+				ExistingOutline: *improvedOutline,
+				ReviewResult:    *review,
+				UserPrompt:      userPrompt,
 			}
-			if err == nil {
+			if setup != nil {
+				repairInput.Setup = *setup
+			}
+			repairOutput, repairErr := agent.Improve(ctx, repairInput)
+			if repairErr == nil {
+				improvedOutline = &repairOutput.Outline
+				applyOutlineNormalization(improvedOutline, "post_repair")
 				*outline = *improvedOutline
-				logger.Info("Extra compose improve pass completed for critical issues")
+				logger.Info("Direct compose repair pass completed for critical issues")
+			} else {
+				logger.Warn("Direct compose repair pass failed: %v", repairErr)
 			}
 		}
 	}
@@ -1146,6 +1157,26 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 	}
 
 	logger.Section("Iteration Complete")
-	logger.Info("Final Review Score: %.1f/100", review.OverallScore)
+	if review != nil {
+		logger.Info("Final Review Score: %.1f/100", review.OverallScore)
+	}
 	return nil
+}
+
+func applyOutlineNormalization(outline *models.Outline, stage string) {
+	report := models.NormalizeOutline(outline)
+	if !report.Changed() {
+		return
+	}
+
+	logger.Info("Outline normalizer applied %d changes at %s", len(report.Changes), stage)
+	reportPath := filepath.Join("story", "compose", fmt.Sprintf("outline_normalization_%s.json", stage))
+	data, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		logger.Warn("Failed to marshal outline normalization report: %v", err)
+		return
+	}
+	if err := os.WriteFile(reportPath, data, 0644); err != nil {
+		logger.Warn("Failed to save outline normalization report: %v", err)
+	}
 }
