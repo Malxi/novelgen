@@ -1,0 +1,448 @@
+# Novelgen Stage Contracts
+
+Last updated: 2026-04-29
+
+This document defines the persistent data contracts between Novelgen workflow
+stages. Treat these contracts as part of the public behavior of the repository:
+when a stage input, output, invariant, file path, or consumer changes, update this
+file in the same change.
+
+## Contract Rules
+
+- A stage output is project state. It must be parsed into typed Go data,
+  normalized when needed, validated deterministically, and only then written to
+  disk.
+- A prompt may request a contract, but Go code owns the contract. Required
+  invariants must be enforced by code, tests, or both.
+- Every contract field needs clear producer and consumer ownership. If a field is
+  optional, consumers must define the default behavior when it is missing.
+- Project files must remain readable by older projects unless the change includes
+  an explicit migration or compatibility fallback.
+- Chapter IDs are stable identifiers. Do not renumber or rename chapter files
+  after downstream files exist unless the change migrates all derived state.
+
+## Persistent Layout
+
+Project root:
+
+- `novel.json`: `models.ProjectConfig`
+- `story/setup/story_setup.json`: `models.StorySetup`
+- `story/compose/outline.json`: `models.Outline`
+- `story/craft/characters.json`: `map[string]models.Character`
+- `story/craft/locations.json`: `map[string]models.Location`
+- `story/craft/items.json`: `map[string]models.Item`
+- `chapters/<chapter_id>.md`: final chapter text
+- `drafts/<chapter_id>.md`: legacy draft text
+- `story/recaps/<chapter_id>.json`: `models.ChapterRecap`
+- `story/reviews/*.json`: review outputs
+- `story/rpg/*.rpg`: RPG-DSL fragments
+
+## Stage Matrix
+
+| Stage | Main producer | Main output | Main consumers |
+| --- | --- | --- | --- |
+| `init.v1` | `novelgen init` | `novel.json`, directory layout | all project commands |
+| `setup.v1` | `novelgen setup` | `story/setup/story_setup.json` | compose, craft, write, RPG |
+| `compose.v1` | `novelgen compose` | `story/compose/outline.json` | craft, write, state matrix, RPG DSL |
+| `craft.v1` | `novelgen craft` | `story/craft/*.json` | write, state matrix, RPG DSL |
+| `write.v1` | `novelgen write` | `chapters/<chapter_id>.md` | recap, review, RPG DSL |
+| `recap.v1` | `novelgen recap`, `write pipeline` | `story/recaps/<chapter_id>.json` | continuity, write |
+| `rpg-dsl.v1` | `novelgen rpg-dsl`, `write pipeline` | `story/rpg/*.rpg` | parser, validator, simulator, state matrix |
+| `draft.v1` | `novelgen draft` | `drafts/<chapter_id>.md` | legacy review/improve only |
+
+## `init.v1`
+
+Producer:
+
+- `cmd/init.go`
+- Command: `novelgen init [book_name]`
+
+Inputs:
+
+- CLI args and flags: book name, chapter count, genre, provider, model, language
+
+Outputs:
+
+- `novel.json`
+- `story/setup/`
+- `story/compose/`
+- `story/craft/`
+- `story/reviews/`
+- `chapters/`
+- `drafts/`
+- `logs/`
+
+Go types:
+
+- `models.ProjectConfig`
+- `models.StoryStructure`
+- `models.ChapterConfig`
+- `models.ProjectLLM`
+
+Required invariants:
+
+- `ProjectConfig.Validate()` passes.
+- `Structure.TargetParts`, `TargetVolumes`, and `TargetChapters` are positive.
+- `ChapterConfig.MinWordsPerChapter <= TargetWordsPerChapter <= MaxWordsPerChapter`.
+- `Language`, `LLM.Provider`, and `LLM.Model` are non-empty.
+- New persistent directories added by later stages must be created here or lazily
+  created by the stage writer.
+
+Consumers:
+
+- Every project command.
+
+Change checklist:
+
+- Update `createProjectStructure` when adding a new persistent directory.
+- Update README and `AGENTS.md` when changing default workflow or defaults.
+- Add config validation tests for new required fields.
+
+## `setup.v1`
+
+Producer:
+
+- `cmd/setup.go`
+- `internal/agents/setup_agent.go`
+- Skills: `setup-gen`, `setup-improve`, `setup-review`
+
+Inputs:
+
+- `novel.json`
+- User idea, imported markdown, or existing `story_setup.json`
+
+Outputs:
+
+- `story/setup/story_setup.json`
+- Optional human-editable setup markdown
+
+Go type:
+
+- `models.StorySetup`
+
+Required invariants:
+
+- `ProjectName`, `Genres`, `Premise`, `Theme`, `Rules`, `TargetAudience`,
+  `Tone`, `Tense`, and `POVStyle` are present for generated setup.
+- `Storylines[].Name` is stable enough for outline `storyline_advances` to
+  reference.
+- `Storylines[].Importance` is in the documented range.
+- `Premises[].Progression` is ordered by level when levels are present.
+- `WorldResources[].Name` is stable enough for outline resource ledgers to
+  reference.
+
+Consumers:
+
+- `compose` uses setup as the source of story intent and structure.
+- `craft` uses setup to generate world elements.
+- `write` uses setup for style, rules, tone, and continuity.
+- RPG/DSL generators use setup for systems, resources, and world rules.
+
+Change checklist:
+
+- Update setup skills when adding/removing fields.
+- Update compose/craft/write inputs if they should consume the field.
+- Add defaults or compatibility handling for old `story_setup.json` files.
+
+## `compose.v1`
+
+Producer:
+
+- `cmd/compose.go`
+- `internal/agents/compose_agent.go`
+- Skills: `compose-gen`, `compose-skeleton`, `compose-chapters`,
+  `compose-regen`, `compose-review`, `compose-improve`,
+  `compose-improve-volume`
+
+Inputs:
+
+- `novel.json`
+- `story/setup/story_setup.json`
+
+Outputs:
+
+- `story/compose/outline.json`
+
+Go types:
+
+- `models.Outline`
+- `models.Part`
+- `models.Volume`
+- `models.Chapter`
+- `models.Event`
+
+Required invariants:
+
+- Part/volume/chapter counts match `ProjectConfig.Structure`.
+- IDs are stable and unique. Preferred chapter format is `P<n>-V<n>-C<n>`.
+- Each chapter has `ID`, `Title`, `Summary`, `Characters`, `Location`,
+  `Conflict`, `Pacing`, and meaningful `Events`.
+- `Events` are consumable through `Event.GetActor`, `GetAction`, `GetTarget`,
+  and `GetTargetType`.
+- Code that consumes events should use accessor methods rather than direct field
+  reads unless it is deliberately handling old-format compatibility.
+- `ResourceLedgerEntry.Start + Delta == End` when a ledger entry is present.
+- `OutlineScene.Order` starts at 1 and is stable within a chapter.
+- Mystery IDs and boss IDs are stable if referenced across chapters.
+- `StorylineAdvance.StorylineName` should match or clearly refer to a setup
+  storyline.
+
+Consumers:
+
+- `craft` extracts character, location, and item targets from the outline.
+- `write` uses chapters, scenes, events, state anchors, enemies, resources, and
+  storyline advances.
+- `logic.StateMatrixManager` folds outline events into continuity state.
+- RPG and RPG-DSL converters derive story structure and state deltas.
+
+Change checklist:
+
+- Update compose skills and output validation together.
+- Update `internal/models/outline_normalizer.go` or add normalization when
+  introducing fields that can drift.
+- Update state matrix, write context builders, and RPG converters for any field
+  that affects continuity or simulation.
+- Add tests for structure validation, event compatibility, or normalization.
+
+## `craft.v1`
+
+Producer:
+
+- `cmd/craft.go`
+- `internal/agents/craft_agent.go`
+- `internal/agents/craft_iteration_agent.go`
+- Skills: `craft-characters`, `craft-locations`, `craft-items`, and matching
+  review/improve skills
+
+Inputs:
+
+- `story/setup/story_setup.json`
+- `story/compose/outline.json`
+- Optional user prompt
+
+Outputs:
+
+- `story/craft/characters.json`
+- `story/craft/locations.json`
+- `story/craft/items.json`
+
+Go types:
+
+- `map[string]models.Character`
+- `map[string]models.Location`
+- `map[string]models.Item`
+
+Required invariants:
+
+- Map keys should be canonical names and should match each element's `Name`
+  field unless a compatibility reason is documented.
+- Names referenced by outline chapters should be present or explicitly handled as
+  unknown/minor elements.
+- `Character.Notes` and `Item.Notes` are strings, not arrays.
+- Alias fields are additive and must not replace canonical names.
+- Location and item references should use names stable enough for write and RPG
+  conversion.
+
+Consumers:
+
+- `write` uses craft data for chapter context and prose grounding.
+- `logic.StateMatrixManager` loads craft data into continuity state.
+- RPG/DSL conversion uses craft data to enrich entities and locations.
+
+Change checklist:
+
+- Update craft generation/review/improve skills.
+- Update any context builders that summarize craft data for writing.
+- Update RPG adapters if the new field maps into simulation.
+- Add fixture or roundtrip tests for changed element shapes.
+
+## `write.v1`
+
+Producer:
+
+- `cmd/write.go`
+- `internal/agents/write_agent.go`
+- `internal/agents/rpg_enhanced_write_agent.go`
+- Skills: `write-generate`, `write-review`, `write-improve`, `volume-review`,
+  plus RPG-enhanced skills when present
+
+Inputs:
+
+- `novel.json`
+- `story/setup/story_setup.json`
+- `story/compose/outline.json`
+- `story/craft/*.json`
+- `story/recaps/<previous_chapter_id>.json`
+- `story/rpg/*.rpg` when RPG checks are enabled
+- Neighboring chapter text when context is requested
+
+Outputs:
+
+- `chapters/<chapter_id>.md`
+- Review files under `story/reviews/`
+- Recaps through the recap stage when running `write pipeline`
+- Optional `story/rpg/04_chapters.rpg`
+
+Go types:
+
+- `agents.ChapterContext`
+- `models.StateMatrix`
+- `models.ReviewResult`
+- `models.ChapterRecap` through recap extraction
+
+Required invariants:
+
+- Chapter filename is based on `models.Chapter.ID`.
+- Generation should use the current chapter, previous recap, nearby context,
+  state matrix, and configured word target.
+- Review/improve should preserve chapter identity and should not silently write
+  results for a different chapter ID.
+- If RPG DSL emission is enabled, generated or repaired DSL must parse and
+  validate before it is treated as usable state.
+- Continuity repairs must be applied as deterministic patches or validated AI
+  outputs, not as unchecked text rewrites.
+
+Consumers:
+
+- `recap` extracts continuity anchors from final chapter text.
+- `rpg-dsl` extracts chapter-level state deltas and simulation data.
+- `export` reads final chapters.
+- Subsequent `write` calls read previous recaps and neighboring chapters.
+
+Change checklist:
+
+- Update write skills when context shape changes.
+- Update continuity helpers when adding new context sources.
+- Update recap expectations when final chapter output format changes.
+- Add focused tests for deterministic patches or RPG validation paths.
+
+## `recap.v1`
+
+Producer:
+
+- `cmd/recap_cmd.go`
+- `internal/agents/recap_agent.go`
+- `cmd/write.go` through `write pipeline`
+- Skill: `recap-extract`
+
+Inputs:
+
+- `chapters/<chapter_id>.md`
+- Chapter ID and title from outline
+- Optional feedback when retrying extraction
+
+Outputs:
+
+- `story/recaps/<chapter_id>.json`
+
+Go type:
+
+- `models.ChapterRecap`
+
+Required invariants:
+
+- `ChapterID` and `Title` match the outline chapter.
+- `Location`, `Present`, `LastLine`, and `NextOpeningHint` are present.
+- `PlotBeats`, `Decisions`, `Reveals`, `Unresolved`, `Promises`, `Items`, and
+  `Status` summarize what actually happened, not what the outline planned.
+- `NextOpeningHint` is short and connects to `LastLine`.
+- `recap.ValidateMinimal` passes before a recap is considered available.
+
+Consumers:
+
+- Continuity helpers read previous recaps.
+- `write` uses recaps as high-signal context for the next chapter.
+
+Change checklist:
+
+- Update `recap-extract` skill and `models.ChapterRecap` together.
+- Update `logic/continuity/recap` validation when required fields change.
+- Update write context loading if recap semantics change.
+
+## `rpg-dsl.v1`
+
+Producer:
+
+- `cmd/rpg_dsl.go`
+- `cmd/write.go` when `--emit-rpg-dsl` is enabled
+- `internal/agents/chapter_to_dsl_agent.go`
+- RPG adapters and converters under `internal/rpg/`
+
+Inputs:
+
+- `story/setup/story_setup.json`
+- `story/compose/outline.json`
+- `story/craft/*.json`
+- `chapters/*.md`
+- `story/recaps/*.json`
+
+Outputs:
+
+- `story/rpg/01_outline.rpg`
+- `story/rpg/02_craft.rpg`
+- `story/rpg/03_systems.rpg`
+- `story/rpg/04_chapters.rpg`
+- Merged or exported RPG data where commands request it
+
+Core packages:
+
+- `internal/rpg/dsl/ast.go`
+- `internal/rpg/dsl/parser*.go`
+- `internal/rpg/dsl/validator.go`
+- `internal/rpg/dsl/converter.go`
+- `internal/rpg/dsl/simulator.go`
+- `internal/rpg/dsl/merger.go`
+
+Required invariants:
+
+- DSL must parse before validation.
+- DSL must validate before conversion/simulation.
+- New constructs require AST, parser, validator, converter, docs, and tests.
+- Runtime constructs require simulator/evaluator/hook tests.
+- Phased DSL fragments must merge without losing stable IDs.
+- AI-generated DSL repair must be re-parsed and re-validated before saving.
+
+Consumers:
+
+- RPG simulator and benchmark tools.
+- `StateMatrixManager` can fold generated RPG state deltas into state.
+- RPG-enhanced write agents use constraints and simulation feedback.
+
+Change checklist:
+
+- Update `docs/RPG_DSL_SPEC.md` and related RPG docs for syntax/semantics.
+- Add parser and validator tests for every new construct.
+- Add simulator/evaluator tests when runtime behavior changes.
+- Verify representative commands still parse/validate merged DSL.
+
+## `draft.v1` Legacy
+
+Producer:
+
+- `cmd/draft.go`
+- `internal/agents/draft_agent.go`
+- Skills: `draft-generate`, `draft-review`, `draft-improve`
+
+Outputs:
+
+- `drafts/<chapter_id>.md`
+
+Contract status:
+
+- Draft is a legacy optional workflow. New features should prefer direct
+  `write pipeline` unless they intentionally support old projects.
+- Do not introduce new persistent dependencies on `drafts/` without documenting
+  why final chapters cannot be used.
+
+## Contract Change Review
+
+Use this checklist before committing a stage-level change:
+
+- Which stage owns the new or changed field?
+- Which commands or agents produce it?
+- Which commands or agents consume it?
+- Is it required or optional?
+- What happens when old project files do not contain it?
+- Is there deterministic validation or normalization?
+- Which skill files need prompt/schema updates?
+- Which tests prove the contract still holds?
