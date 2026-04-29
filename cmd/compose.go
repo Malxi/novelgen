@@ -1040,16 +1040,64 @@ func runOutlineValidatorOnModel(outline *models.Outline) []models.ReviewSuggesti
 		})
 	}
 	for _, s := range result.Suggestions {
-		suggestions = append(suggestions, models.ReviewSuggestion{
-			Category:   s.Type,
-			TargetID:   s.Location,
-			TargetName: s.Location,
-			Issue:      s.Current,
-			Suggestion: s.Suggested,
-			Priority:   models.PriorityLow,
-		})
+		suggestions = append(suggestions, outlineSuggestionToReviewSuggestion(s))
 	}
 	return suggestions
+}
+
+func outlineSuggestionToReviewSuggestion(s rpg.OutlineSuggestion) models.ReviewSuggestion {
+	issue := strings.TrimSpace(s.Reason)
+	if issue == "" {
+		issue = outlineSuggestionIssueFromType(s.Type)
+	}
+	if current := shortEvidence(s.Current, 120); current != "" {
+		issue = fmt.Sprintf("%s；当前表现：%s", issue, current)
+	}
+
+	suggestion := strings.TrimSpace(s.Suggested)
+	if suggestion == "" {
+		suggestion = "按问题原因补充一个具体、可执行的章节调整。"
+	}
+
+	return models.ReviewSuggestion{
+		Category:   s.Type,
+		TargetID:   s.Location,
+		TargetName: s.Location,
+		Issue:      issue,
+		Suggestion: suggestion,
+		Priority:   models.PriorityLow,
+	}
+}
+
+func outlineSuggestionIssueFromType(issueType string) string {
+	switch strings.TrimSpace(issueType) {
+	case "logic":
+		return "章节逻辑需要更明确的因果或阶段性结果"
+	case "conflict":
+		return "章节冲突强度或落点不足"
+	case "pacing":
+		return "章节节奏需要调整"
+	case "timeline":
+		return "时间线锚点或过渡不够清晰"
+	case "state_anchor":
+		return "章节状态锚点缺少可追踪的变化依据"
+	case "storyline_texture":
+		return "故事线推进记录缺少戏剧压力、后果或具体变化"
+	default:
+		return "大纲存在可优化项"
+	}
+}
+
+func shortEvidence(value string, maxRunes int) string {
+	value = strings.TrimSpace(value)
+	if value == "" || strings.HasPrefix(value, "缺少") || strings.HasPrefix(value, "chapter has") || strings.Contains(value, "entry has no") {
+		return value
+	}
+	runes := []rune(value)
+	if maxRunes > 0 && len(runes) > maxRunes {
+		return string(runes[:maxRunes]) + "..."
+	}
+	return value
 }
 
 func severityToPriorityStr(severity string) string {

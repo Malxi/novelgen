@@ -246,6 +246,12 @@ func (p *Parser) parseLocation() (*Location, error) {
 			loc.Type = p.toString(value)
 		case "description":
 			loc.Description = p.toString(value)
+		case "__placeholder__":
+			if isPlaceholder, ok := value.(bool); ok {
+				loc.IsPlaceholder = isPlaceholder
+			}
+		case "__source_phase__":
+			loc.PlaceholderSource = p.toString(value)
 		default:
 			// Store other properties
 			loc.Properties[key] = value
@@ -355,6 +361,12 @@ func (p *Parser) parsePlayer() (*Player, error) {
 		switch key {
 		case "id":
 			player.ID = p.toString(value)
+		case "__placeholder__":
+			if isPlaceholder, ok := value.(bool); ok {
+				player.IsPlaceholder = isPlaceholder
+			}
+		case "__source_phase__":
+			player.PlaceholderSource = p.toString(value)
 		case "class":
 			player.Class = p.toString(value)
 		case "skills":
@@ -428,6 +440,12 @@ func (p *Parser) parseEnemy() (*Enemy, error) {
 		switch key {
 		case "id":
 			enemy.ID = p.toString(value)
+		case "__placeholder__":
+			if isPlaceholder, ok := value.(bool); ok {
+				enemy.IsPlaceholder = isPlaceholder
+			}
+		case "__source_phase__":
+			enemy.PlaceholderSource = p.toString(value)
 		case "type":
 			enemy.Type = p.toString(value)
 		default:
@@ -1449,6 +1467,20 @@ func (p *Parser) parseNPC() (*NPC, error) {
 			}
 			val, _ := p.parseValue()
 			npc.ID = p.toString(val)
+		case "__placeholder__":
+			if err := p.expectChar('='); err != nil {
+				return nil, err
+			}
+			val, _ := p.parseValue()
+			if isPlaceholder, ok := val.(bool); ok {
+				npc.IsPlaceholder = isPlaceholder
+			}
+		case "__source_phase__":
+			if err := p.expectChar('='); err != nil {
+				return nil, err
+			}
+			val, _ := p.parseValue()
+			npc.PlaceholderSource = p.toString(val)
 		case "role":
 			if err := p.expectChar('='); err != nil {
 				return nil, err

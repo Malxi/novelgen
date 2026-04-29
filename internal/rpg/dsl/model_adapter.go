@@ -711,22 +711,48 @@ func (a *ModelAdapter) buildPlaceholderLocations(dsl *DSL) {
 	for _, part := range a.outline.Parts {
 		for _, vol := range part.Volumes {
 			for _, ch := range vol.Chapters {
-				if ch.Location == "" || seen[ch.Location] {
+				locName, locDescription := splitOutlineLocation(ch.Location)
+				if locName == "" {
 					continue
 				}
-				seen[ch.Location] = true
+				locID := sanitizeID(locName)
+				if seen[locID] {
+					continue
+				}
+				seen[locID] = true
 
-				locID := sanitizeID(ch.Location)
+				description := strings.TrimSpace(locDescription)
+				if description == "" {
+					description = fmt.Sprintf("Placeholder for %s from outline", locName)
+				}
 				dsl.World.Locations = append(dsl.World.Locations, Location{
 					ID:            locID,
-					Name:          ch.Location,
+					Name:          locName,
 					Type:          "indoor",
-					Description:   fmt.Sprintf("Placeholder for %s from outline", ch.Location),
+					Description:   description,
+					Atmosphere:    locDescription,
 					IsPlaceholder: true,
 				})
 			}
 		}
 	}
+}
+
+func splitOutlineLocation(raw string) (string, string) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", ""
+	}
+
+	for _, sep := range []string{"：", ":", "\n", " - ", " -- "} {
+		if idx := strings.Index(raw, sep); idx > 0 {
+			name := strings.TrimSpace(raw[:idx])
+			desc := strings.TrimSpace(raw[idx+len(sep):])
+			return name, desc
+		}
+	}
+
+	return raw, ""
 }
 
 func (a *ModelAdapter) buildCharacters(dsl *DSL) {

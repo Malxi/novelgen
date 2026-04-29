@@ -297,6 +297,12 @@ func (ep *EnhancedParser) parseLocationEnhanced() (*Location, error) {
 			loc.Type = ep.toString(value)
 		case "description":
 			loc.Description = ep.toString(value)
+		case "__placeholder__":
+			if isPlaceholder, ok := value.(bool); ok {
+				loc.IsPlaceholder = isPlaceholder
+			}
+		case "__source_phase__":
+			loc.PlaceholderSource = ep.toString(value)
 		default:
 			loc.Properties[key] = value
 		}
@@ -521,6 +527,12 @@ func (ep *EnhancedParser) parsePlayerEnhanced() (*Player, error) {
 		switch key {
 		case "id":
 			player.ID = ep.toString(value)
+		case "__placeholder__":
+			if isPlaceholder, ok := value.(bool); ok {
+				player.IsPlaceholder = isPlaceholder
+			}
+		case "__source_phase__":
+			player.PlaceholderSource = ep.toString(value)
 		case "class":
 			player.Class = ep.toString(value)
 		case "skills":
@@ -596,6 +608,12 @@ func (ep *EnhancedParser) parseEnemyEnhanced() (*Enemy, error) {
 		switch key {
 		case "id":
 			enemy.ID = ep.toString(value)
+		case "__placeholder__":
+			if isPlaceholder, ok := value.(bool); ok {
+				enemy.IsPlaceholder = isPlaceholder
+			}
+		case "__source_phase__":
+			enemy.PlaceholderSource = ep.toString(value)
 		case "type":
 			enemy.Type = ep.toString(value)
 		default:
@@ -659,6 +677,12 @@ func (ep *EnhancedParser) parseNPCEnhanced() (*NPC, error) {
 		switch key {
 		case "id":
 			npc.ID = ep.toString(value)
+		case "__placeholder__":
+			if isPlaceholder, ok := value.(bool); ok {
+				npc.IsPlaceholder = isPlaceholder
+			}
+		case "__source_phase__":
+			npc.PlaceholderSource = ep.toString(value)
 		case "role":
 			npc.Role = ep.toString(value)
 		case "dialogue":

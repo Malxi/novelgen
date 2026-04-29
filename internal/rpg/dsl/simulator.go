@@ -462,6 +462,9 @@ func (s *Simulator) checkLocationSetup() {
 
 	// 检查地点描述
 	for _, loc := range locations {
+		if loc.IsPlaceholder {
+			continue
+		}
 		if strings.TrimSpace(loc.Description) == "" {
 			s.addIssue(IssueDescription, SeverityWarning, "", 0,
 				fmt.Sprintf("地点 '%s' 缺少描述", loc.Name),
