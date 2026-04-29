@@ -633,6 +633,35 @@ func parseStorySetupFromMarkdown(content string) (*models.StorySetup, error) {
 				currentStoryline.Description = strings.TrimSpace(desc)
 				continue
 			}
+			if strings.HasPrefix(trimmed, "- **Desire**:") || strings.HasPrefix(trimmed, "- Desire:") {
+				currentStoryline.Desire = trimMarkdownField(trimmed, "Desire")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Opposition**:") || strings.HasPrefix(trimmed, "- Opposition:") {
+				currentStoryline.Opposition = trimMarkdownField(trimmed, "Opposition")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Stakes**:") || strings.HasPrefix(trimmed, "- Stakes:") {
+				currentStoryline.Stakes = trimMarkdownField(trimmed, "Stakes")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Turn**:") || strings.HasPrefix(trimmed, "- Turn:") {
+				currentStoryline.Turn = trimMarkdownField(trimmed, "Turn")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Payoff**:") || strings.HasPrefix(trimmed, "- Payoff:") {
+				currentStoryline.Payoff = trimMarkdownField(trimmed, "Payoff")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Open Question**:") || strings.HasPrefix(trimmed, "- Open Question:") {
+				currentStoryline.OpenQuestion = trimMarkdownField(trimmed, "Open Question")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Pressure Points**:") || strings.HasPrefix(trimmed, "- Pressure Points:") {
+				points := trimMarkdownField(trimmed, "Pressure Points")
+				currentStoryline.PressurePoints = splitInlineList(points)
+				continue
+			}
 		}
 
 		// Parse premise description
@@ -839,8 +868,61 @@ func formatStorylines(storylines []models.Storyline) string {
 		result.WriteString(fmt.Sprintf("- **Type**: %s\n", s.Type))
 		result.WriteString(fmt.Sprintf("- **Importance**: %d/10\n", s.Importance))
 		result.WriteString(fmt.Sprintf("- **Description**: %s\n", s.Description))
+		if s.Desire != "" {
+			result.WriteString(fmt.Sprintf("- **Desire**: %s\n", s.Desire))
+		}
+		if s.Opposition != "" {
+			result.WriteString(fmt.Sprintf("- **Opposition**: %s\n", s.Opposition))
+		}
+		if s.Stakes != "" {
+			result.WriteString(fmt.Sprintf("- **Stakes**: %s\n", s.Stakes))
+		}
+		if s.Turn != "" {
+			result.WriteString(fmt.Sprintf("- **Turn**: %s\n", s.Turn))
+		}
+		if s.Payoff != "" {
+			result.WriteString(fmt.Sprintf("- **Payoff**: %s\n", s.Payoff))
+		}
+		if s.OpenQuestion != "" {
+			result.WriteString(fmt.Sprintf("- **Open Question**: %s\n", s.OpenQuestion))
+		}
+		if len(s.PressurePoints) > 0 {
+			result.WriteString(fmt.Sprintf("- **Pressure Points**: %s\n", strings.Join(s.PressurePoints, "; ")))
+		}
 	}
 	return result.String()
+}
+
+func trimMarkdownField(line, field string) string {
+	line = strings.TrimPrefix(line, "- **"+field+"**:")
+	line = strings.TrimPrefix(line, "- "+field+":")
+	return strings.TrimSpace(line)
+}
+
+func splitInlineList(value string) []string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+
+	separators := []string{"；", ";", "，", ","}
+	parts := []string{value}
+	for _, sep := range separators {
+		var next []string
+		for _, part := range parts {
+			next = append(next, strings.Split(part, sep)...)
+		}
+		parts = next
+	}
+
+	var result []string
+	for _, part := range parts {
+		part = strings.TrimSpace(strings.TrimPrefix(part, "-"))
+		if part != "" {
+			result = append(result, part)
+		}
+	}
+	return result
 }
 
 func formatPremises(premises []models.Premise) string {
@@ -927,6 +1009,29 @@ func runSetupCheck(cmd *cobra.Command, args []string) error {
 					p.Name, p.Progression[i-1].Level, stage.Level)
 				warnings++
 			}
+		}
+	}
+
+	for _, storyline := range setup.Storylines {
+		texture := 0
+		for _, value := range []string{
+			storyline.Desire,
+			storyline.Opposition,
+			storyline.Stakes,
+			storyline.Turn,
+			storyline.Payoff,
+			storyline.OpenQuestion,
+		} {
+			if strings.TrimSpace(value) != "" {
+				texture++
+			}
+		}
+		if len(storyline.PressurePoints) > 0 {
+			texture++
+		}
+		if texture < 3 {
+			fmt.Printf("  💡 [storyline] '%s' 可补充欲望、阻力、代价、反转或回收提示，让故事线更有压力\n", storyline.Name)
+			suggestions++
 		}
 	}
 

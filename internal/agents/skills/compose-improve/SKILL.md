@@ -33,6 +33,7 @@ Improve a story outline based on review feedback or user guidance.
 - Fix logical inconsistencies
 - Add missing plot points
 - Strengthen cause-effect chains
+- When a storyline feels thin, optionally add or refine `storyline_advances` on chapters that create real pressure, reveal, choice, consequence, reversal, or payoff
 
 ### 5. Engagement Improvements
 - Add hooks and reveals
@@ -47,6 +48,7 @@ Improve a story outline based on review feedback or user guidance.
 4. Keep character and location references consistent
 5. Maintain continuity with previous and following chapters
 6. If `user_prompt` is provided, prioritize the user's specific requests alongside review feedback
+7. Keep storyline tracking flexible: do not add `storyline_advances` to every chapter, and do not convert the outline into a rigid formula
 
 ## Output Requirements
 

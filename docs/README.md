@@ -11,8 +11,8 @@
 | 文档 | 说明 | 适合人群 |
 |------|------|----------|
 | [../README.md](../README.md) | 主文档，命令参考和工作流程 | 所有用户 |
-| [../ARCHITECTURE.md](../ARCHITECTURE.md) | 项目架构总览 | 开发者/架构师 |
-| [../DEVELOPER_GUIDE.md](../DEVELOPER_GUIDE.md) | 开发者指南 | 开发者 |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 项目架构总览 | 开发者/架构师 |
+| [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | 开发者指南 | 开发者 |
 | [RPG_DSL_DOCUMENTATION_INDEX.md](RPG_DSL_DOCUMENTATION_INDEX.md) | RPG-DSL 系统文档索引 | RPG-DSL 用户 |
 
 ### RPG-DSL 系统
@@ -31,8 +31,8 @@
 
 | 文档 | 说明 |
 |------|------|
-| [../IMPROVEMENTS.md](../IMPROVEMENTS.md) | RPG-Compose 集成改进总结 |
-| [../IMPROVEMENT_SUMMARY.md](../IMPROVEMENT_SUMMARY.md) | Novelgen + RPG 集成改进总结 |
+| [compose_improvements.md](compose_improvements.md) | RPG-Compose 集成改进总结 |
+| [setup_improvements.md](setup_improvements.md) | Novelgen + RPG 集成改进总结 |
 
 ---
 
@@ -53,8 +53,8 @@
 
 ### 我想参与开发，应该看什么？
 
-1. 阅读 [../ARCHITECTURE.md](../ARCHITECTURE.md) 了解项目架构
-2. 阅读 [../DEVELOPER_GUIDE.md](../DEVELOPER_GUIDE.md) 了解开发规范
+1. 阅读 [ARCHITECTURE.md](ARCHITECTURE.md) 了解项目架构
+2. 阅读 [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) 了解开发规范
 3. 阅读 [DSL_RPG_INTEGRATION_SPEC.md](DSL_RPG_INTEGRATION_SPEC.md) 了解 DSL 系统设计
 4. 查看源码 `internal/` 目录
 
@@ -74,7 +74,7 @@
 
 面向理解系统设计的架构师和高级开发者：
 
-- [../ARCHITECTURE.md](../ARCHITECTURE.md) - 项目架构
+- [ARCHITECTURE.md](ARCHITECTURE.md) - 项目架构
 - [DSL_RPG_INTEGRATION_SPEC.md](DSL_RPG_INTEGRATION_SPEC.md) - DSL-RPG 集成
 - [DSL_INCREMENTAL_WORKFLOW.md](DSL_INCREMENTAL_WORKFLOW.md) - 渐进式工作流
 
@@ -90,7 +90,7 @@
 
 面向贡献代码的开发者：
 
-- [../DEVELOPER_GUIDE.md](../DEVELOPER_GUIDE.md) - 开发规范
+- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - 开发规范
 - 源码注释 - 各模块实现细节
 
 ---
@@ -100,11 +100,11 @@
 ### 命令行使用
 
 - [../README.md](../README.md) - 完整命令列表和参数
-- [../ARCHITECTURE.md](../ARCHITECTURE.md) §4.1 - CLI 命令系统
+- [ARCHITECTURE.md](ARCHITECTURE.md) §4.1 - CLI 命令系统
 
 ### AI Agent
 
-- [../ARCHITECTURE.md](../ARCHITECTURE.md) §4.2 - Agent 系统
+- [ARCHITECTURE.md](ARCHITECTURE.md) §4.2 - Agent 系统
 - `internal/agents/` - 源码和注释
 
 ### RPG-DSL
@@ -122,11 +122,11 @@
 ### 基准测试
 
 - `internal/rpg/benchmark/` - 基准测试源码
-- [../ARCHITECTURE.md](../ARCHITECTURE.md) §7.1 - 基准测试系统
+- [ARCHITECTURE.md](ARCHITECTURE.md) §7.1 - 基准测试系统
 
 ### 连续性检查
 
-- [../ARCHITECTURE.md](../ARCHITECTURE.md) §4.5 - 连续性系统
+- [ARCHITECTURE.md](ARCHITECTURE.md) §4.5 - 连续性系统
 - `internal/logic/continuity/` - 源码
 
 ---

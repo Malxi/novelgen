@@ -138,6 +138,10 @@ func (ov *OutlineValidator) Validate() *ValidationResult {
 	// 16. 阵营/等级体系检查
 	ov.validateFactionTiers()
 
+	// Optional storyline texture hints. These stay as suggestions only, so the
+	// outline can remain loose when a chapter does not need explicit arc notes.
+	ov.validateStorylineTexture()
+
 	return &ValidationResult{
 		IsValid:      len(ov.Issues) == 0,
 		IssueCount:   len(ov.Issues),
@@ -1077,6 +1081,69 @@ func (ov *OutlineValidator) validateFactionTiers() {
 					Description: fmt.Sprintf("敌人 '%s' 有faction但没有tier", info.enemyName),
 					Suggestion:  fmt.Sprintf("为该敌人指定tier，如：%s_drone", info.enemyName),
 				})
+			}
+		}
+	}
+}
+
+// validateStorylineTexture adds soft hints for chapters that would benefit from
+// clearer arc movement. It never creates issues or warnings.
+func (ov *OutlineValidator) validateStorylineTexture() {
+	if ov.Outline == nil {
+		return
+	}
+
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				hasStorylineEvent := false
+				for _, event := range chapter.Events {
+					if event.Type == "storyline" || event.TargetType == "storyline" {
+						hasStorylineEvent = true
+						break
+					}
+				}
+
+				if hasStorylineEvent && len(chapter.StorylineAdvances) == 0 {
+					ov.Suggestions = append(ov.Suggestions, OutlineSuggestion{
+						Type:      "storyline_texture",
+						Location:  chapter.ID,
+						Current:   "chapter has storyline event but no storyline_advances",
+						Suggested: "Optionally add one storyline_advances entry if the chapter creates a real reveal, pressure, choice, or consequence.",
+						Reason:    "This keeps important story arcs from becoming thin while staying optional for chapters where the event is self-evident.",
+					})
+				}
+
+				for _, advance := range chapter.StorylineAdvances {
+					if strings.TrimSpace(advance.StorylineName) == "" {
+						ov.Suggestions = append(ov.Suggestions, OutlineSuggestion{
+							Type:      "storyline_texture",
+							Location:  chapter.ID,
+							Current:   "storyline_advances entry has no storyline_name",
+							Suggested: "Name the setup storyline being moved, or remove the entry if it does not map to a meaningful arc.",
+							Reason:    "A named arc helps later agents carry pressure and payoff forward without forcing a rigid template.",
+						})
+					}
+					if strings.TrimSpace(advance.Change) == "" {
+						ov.Suggestions = append(ov.Suggestions, OutlineSuggestion{
+							Type:      "storyline_texture",
+							Location:  chapter.ID,
+							Current:   "storyline_advances entry has no change",
+							Suggested: "Describe the concrete shift in the arc, such as a reveal, setback, choice, escalation, or payoff.",
+							Reason:    "A storyline note is useful only when it records an actual dramatic movement.",
+						})
+						continue
+					}
+					if strings.TrimSpace(advance.Consequence) == "" && strings.TrimSpace(advance.Pressure) == "" {
+						ov.Suggestions = append(ov.Suggestions, OutlineSuggestion{
+							Type:      "storyline_texture",
+							Location:  chapter.ID,
+							Current:   advance.Change,
+							Suggested: "If useful, add either consequence or pressure so the change creates forward energy.",
+							Reason:    "Storyline advancement is stronger when it changes what characters risk, know, want, or must do next.",
+						})
+					}
+				}
 			}
 		}
 	}

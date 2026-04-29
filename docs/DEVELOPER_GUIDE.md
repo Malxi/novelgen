@@ -543,7 +543,7 @@ A: 使用 `--concurrency` 参数降低并发数，或在 LLM 配置中调整限�
 
 ## 10. 相关资源
 
-- [ARCHITECTURE.md](../ARCHITECTURE.md) - 项目架构
+- [ARCHITECTURE.md](ARCHITECTURE.md) - 项目架构
 - [docs/RPG_DSL_DOCUMENTATION_INDEX.md](../docs/RPG_DSL_DOCUMENTATION_INDEX.md) - RPG-DSL 文档索引
 - [README.md](../README.md) - 主文档
 - `internal/` - 核心源码

@@ -212,6 +212,25 @@ func (a *SetupAgent) normalizeSetup(setup *models.StorySetup) {
 	setup.Tone = strings.TrimSpace(setup.Tone)
 	setup.Tense = strings.TrimSpace(setup.Tense)
 	setup.POVStyle = strings.TrimSpace(setup.POVStyle)
+	for i := range setup.Storylines {
+		setup.Storylines[i].Name = strings.TrimSpace(setup.Storylines[i].Name)
+		setup.Storylines[i].Description = strings.TrimSpace(setup.Storylines[i].Description)
+		setup.Storylines[i].Type = strings.TrimSpace(setup.Storylines[i].Type)
+		setup.Storylines[i].Desire = strings.TrimSpace(setup.Storylines[i].Desire)
+		setup.Storylines[i].Opposition = strings.TrimSpace(setup.Storylines[i].Opposition)
+		setup.Storylines[i].Stakes = strings.TrimSpace(setup.Storylines[i].Stakes)
+		setup.Storylines[i].Turn = strings.TrimSpace(setup.Storylines[i].Turn)
+		setup.Storylines[i].Payoff = strings.TrimSpace(setup.Storylines[i].Payoff)
+		setup.Storylines[i].OpenQuestion = strings.TrimSpace(setup.Storylines[i].OpenQuestion)
+		var pressurePoints []string
+		for _, point := range setup.Storylines[i].PressurePoints {
+			point = strings.TrimSpace(point)
+			if point != "" {
+				pressurePoints = append(pressurePoints, point)
+			}
+		}
+		setup.Storylines[i].PressurePoints = pressurePoints
+	}
 
 	if setup.ProjectName == "" {
 		logger.Warn("AI did not generate project name, using default")

@@ -106,23 +106,35 @@ type ChapterMysteries struct {
 	Resolved []MysteryResolved `json:"resolved,omitempty" md:"resolved" desc:"本章回收的伏笔"`
 }
 
+// StorylineAdvance is an optional, lightweight note about how a chapter moves a setup storyline.
+// It is intentionally soft: use it for meaningful pressure, choice, reveal, or consequence,
+// not for every minor bit of plot bookkeeping.
+type StorylineAdvance struct {
+	StorylineName string `json:"storyline_name" md:"storyline_name" desc:"对应 setup.storylines.name，可用自然名称"`
+	Stage         string `json:"stage,omitempty" md:"stage" desc:"可选：hook, pressure, reveal, reversal, payoff 等自然阶段"`
+	Change        string `json:"change" md:"change" desc:"本章让这条线发生了什么实质变化"`
+	Consequence   string `json:"consequence,omitempty" md:"consequence" desc:"这个推进造成的新局面、代价或选择"`
+	Pressure      string `json:"pressure,omitempty" md:"pressure" desc:"可选：本章给这条线增加的压力或风险"`
+}
+
 // Chapter represents a single chapter in the story
 type Chapter struct {
-	ID             string               `json:"id" md:"-"` // ID not shown in markdown
-	Title          string               `json:"title" md:"title"`
-	Summary        string               `json:"summary" md:"heading"`       // 格式: 角色 在 什么地方 发生了 什么事
-	Characters     []string             `json:"characters" md:"characters"` // 本章出现的角色名列表
-	Location       string               `json:"location" md:"location"`     // 事情发生的地点
-	Events         []Event              `json:"events" md:"events"`         // 本章发生的事件
-	StateChange    string               `json:"state_change,omitempty" desc:"Primary change this chapter causes; must map to Events"`
-	Conflict       string               `json:"conflict" md:"conflict"`
-	Pacing         string               `json:"pacing" md:"pacing"`
-	Timeline       ChapterTimeline      `json:"timeline,omitempty" md:"timeline" desc:"章节时间线信息"`
-	StateAnchor    StateAnchor          `json:"state_anchor,omitempty" md:"state_anchor" desc:"章节开始时的主角状态锚点"`
-	Enemies        []OutlineEnemy       `json:"enemies,omitempty" md:"enemies" desc:"本章出现的敌人清单"`
-	ResourceLedger []ResourceLedgerEntry `json:"resource_ledger,omitempty" md:"resource_ledger" desc:"本章资源变化账本"`
-	Scenes         []OutlineScene       `json:"scenes,omitempty" md:"scenes" desc:"章节内场景拆分"`
-	Mysteries      ChapterMysteries     `json:"mysteries,omitempty" md:"mysteries" desc:"本章埋设和回收的谜题/伏笔"`
+	ID                string                `json:"id" md:"-"` // ID not shown in markdown
+	Title             string                `json:"title" md:"title"`
+	Summary           string                `json:"summary" md:"heading"`       // 格式: 角色 在 什么地方 发生了 什么事
+	Characters        []string              `json:"characters" md:"characters"` // 本章出现的角色名列表
+	Location          string                `json:"location" md:"location"`     // 事情发生的地点
+	Events            []Event               `json:"events" md:"events"`         // 本章发生的事件
+	StateChange       string                `json:"state_change,omitempty" desc:"Primary change this chapter causes; must map to Events"`
+	Conflict          string                `json:"conflict" md:"conflict"`
+	Pacing            string                `json:"pacing" md:"pacing"`
+	Timeline          ChapterTimeline       `json:"timeline,omitempty" md:"timeline" desc:"章节时间线信息"`
+	StateAnchor       StateAnchor           `json:"state_anchor,omitempty" md:"state_anchor" desc:"章节开始时的主角状态锚点"`
+	Enemies           []OutlineEnemy        `json:"enemies,omitempty" md:"enemies" desc:"本章出现的敌人清单"`
+	ResourceLedger    []ResourceLedgerEntry `json:"resource_ledger,omitempty" md:"resource_ledger" desc:"本章资源变化账本"`
+	Scenes            []OutlineScene        `json:"scenes,omitempty" md:"scenes" desc:"章节内场景拆分"`
+	Mysteries         ChapterMysteries      `json:"mysteries,omitempty" md:"mysteries" desc:"本章埋设和回收的谜题/伏笔"`
+	StorylineAdvances []StorylineAdvance    `json:"storyline_advances,omitempty" md:"storyline_advances" desc:"可选：本章推进了哪些故事线，以及产生了什么后果"`
 }
 
 // Event represents a story event that changes state
@@ -364,6 +376,27 @@ func (c *Chapter) ToMarkdown() string {
 	}
 	if c.StateChange != "" {
 		sb.WriteString(fmt.Sprintf("**State Change:** %s\n\n", c.StateChange))
+	}
+
+	if len(c.StorylineAdvances) > 0 {
+		sb.WriteString("**Storyline Advances:**\n")
+		for _, advance := range c.StorylineAdvances {
+			sb.WriteString(fmt.Sprintf("- **%s**", advance.StorylineName))
+			if advance.Stage != "" {
+				sb.WriteString(fmt.Sprintf(" (%s)", advance.Stage))
+			}
+			if advance.Change != "" {
+				sb.WriteString(fmt.Sprintf(": %s", advance.Change))
+			}
+			if advance.Consequence != "" {
+				sb.WriteString(fmt.Sprintf(" | consequence: %s", advance.Consequence))
+			}
+			if advance.Pressure != "" {
+				sb.WriteString(fmt.Sprintf(" | pressure: %s", advance.Pressure))
+			}
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\n")
 	}
 
 	// Conflict

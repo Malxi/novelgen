@@ -243,7 +243,7 @@ A: 战力崩坏、角色死亡滥用、时间线混乱、节奏失衡、逻辑�
 
 ## 相关资源
 
-- [ARCHITECTURE.md](../ARCHITECTURE.md) - 项目架构总览
+- [ARCHITECTURE.md](ARCHITECTURE.md) - 项目架构总览
 - [README.md](../README.md) - 主文档和命令参考
 - `internal/rpg/dsl/` - DSL 引擎源码
 - `internal/rpg/benchmark/` - 基准测试源码

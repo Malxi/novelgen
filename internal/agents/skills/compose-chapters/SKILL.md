@@ -37,6 +37,20 @@ Generate detailed chapters for a specific volume, maintaining continuity with pr
 13. **resource_ledger**: Resource changes this chapter (array) - ⚠️ REQUIRED if resources change
 
 ### ⚠️ CRITICAL: Events Count Requirement
+### Optional: Storyline Advances
+
+Use `storyline_advances` only when a chapter meaningfully changes a setup storyline. It should mark real pressure, reveal, choice, consequence, reversal, or payoff, not routine plot summary.
+
+Fields:
+- `storyline_name`: Name of the setup storyline being moved
+- `stage`: Optional natural label such as `hook`, `pressure`, `reveal`, `reversal`, or `payoff`
+- `change`: Concrete change created by this chapter
+- `consequence`: Optional new cost, obligation, altered relationship, or changed situation
+- `pressure`: Optional new risk, clock, threat, or unanswered question
+
+Do not add `storyline_advances` to every chapter. Prefer sparse, high-signal entries that help later agents carry emotional pressure forward without locking the AI into a rigid formula.
+
+### Event Count Requirement
 **Each chapter MUST have 3-5 events.** This is a HARD requirement.
 
 Each event represents a distinct plot beat or state change in the chapter:

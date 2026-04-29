@@ -89,3 +89,9 @@
 4. 建议可操作：建议应具备可操作性，而非空泛的评价
 
 ---
+
+## Storyline Texture Review
+
+When setup storylines are available, check whether major chapters clearly move at least some arcs forward. Useful optional signals include chapter `storyline_advances` entries with a concrete `change`, plus `pressure` or `consequence` when that makes the arc more dramatic.
+
+Treat this as a low-pressure craft suggestion. Do not require every chapter to include `storyline_advances`; recommend it only where the arc movement would otherwise feel thin, vague, or easy for later agents to forget.

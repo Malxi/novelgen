@@ -1,2 +1,3 @@
 - improve: Added deterministic outline normalization so event and scene character appearances are synchronized into chapter character lists before and after compose improvement.
 - improve: Changed compose critical repair from a fresh review loop to a direct enriched-review repair pass, preserving DSL and validator findings for the LLM.
+- improve: Added optional chapter storyline advances so outlines can track meaningful pressure, reveal, consequence, or payoff moments without forcing every chapter into a template.

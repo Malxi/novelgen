@@ -101,24 +101,34 @@ type StoryChapterMysteries struct {
 	Resolved []StoryMysteryResolved `json:"resolved,omitempty"`
 }
 
+// StorylineAdvance is an optional note for how a chapter moves a setup storyline.
+type StorylineAdvance struct {
+	StorylineName string `json:"storyline_name"`
+	Stage         string `json:"stage,omitempty"`
+	Change        string `json:"change"`
+	Consequence   string `json:"consequence,omitempty"`
+	Pressure      string `json:"pressure,omitempty"`
+}
+
 // StoryChapter 故事章节
 type StoryChapter struct {
-	ID             string                     `json:"id"`
-	Title          string                     `json:"title"`
-	Summary        string                     `json:"summary"`
-	Characters     []string                   `json:"characters"`
-	Location       string                     `json:"location"`
-	Events         []StoryEvent               `json:"events"`
-	Beats          []string                   `json:"beats"`
-	StateChange    string                     `json:"state_change"`
-	Conflict       string                     `json:"conflict"`
-	Pacing         string                     `json:"pacing"`
-	Timeline       StoryChapterTimeline       `json:"timeline,omitempty"`        // 时间线信息
-	StateAnchor    StoryStateAnchor           `json:"state_anchor,omitempty"`    // 状态锚点
-	Enemies        []StoryOutlineEnemy        `json:"enemies,omitempty"`         // 敌人清单
-	ResourceLedger []StoryResourceLedgerEntry `json:"resource_ledger,omitempty"` // 资源账本
-	Scenes         []StoryOutlineScene        `json:"scenes,omitempty"`          // 场景拆分
-	Mysteries      StoryChapterMysteries      `json:"mysteries,omitempty"`       // 伏笔/谜题
+	ID                string                     `json:"id"`
+	Title             string                     `json:"title"`
+	Summary           string                     `json:"summary"`
+	Characters        []string                   `json:"characters"`
+	Location          string                     `json:"location"`
+	Events            []StoryEvent               `json:"events"`
+	Beats             []string                   `json:"beats"`
+	StateChange       string                     `json:"state_change"`
+	Conflict          string                     `json:"conflict"`
+	Pacing            string                     `json:"pacing"`
+	Timeline          StoryChapterTimeline       `json:"timeline,omitempty"`           // 时间线信息
+	StateAnchor       StoryStateAnchor           `json:"state_anchor,omitempty"`       // 状态锚点
+	Enemies           []StoryOutlineEnemy        `json:"enemies,omitempty"`            // 敌人清单
+	ResourceLedger    []StoryResourceLedgerEntry `json:"resource_ledger,omitempty"`    // 资源账本
+	Scenes            []StoryOutlineScene        `json:"scenes,omitempty"`             // 场景拆分
+	Mysteries         StoryChapterMysteries      `json:"mysteries,omitempty"`          // 伏笔/谜题
+	StorylineAdvances []StorylineAdvance         `json:"storyline_advances,omitempty"` // 故事线推进提示
 }
 
 // StoryEvent 故事事件

@@ -7,6 +7,12 @@
 
 ---
 
+## Storyline Texture Review
+
+When reviewing `storylines`, look for whether important arcs have enough dramatic pressure to guide later outline generation. Optional texture fields include `desire`, `opposition`, `stakes`, `turn`, `payoff`, `open_question`, and `pressure_points`.
+
+Treat these as creative suggestions, not hard requirements. Recommend adding them only when a storyline feels thin, static, or hard to continue. Do not penalize a clean storyline for leaving some optional fields blank.
+
 ## 一、审查维度
 
 ### 1. 根设定审查

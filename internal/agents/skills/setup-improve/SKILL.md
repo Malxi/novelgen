@@ -69,6 +69,7 @@ For each suggestion:
 - Enhance subplot connections
 - Add or refine plot hooks
 - Improve pacing and tension
+- Optionally enrich storylines with `desire`, `opposition`, `stakes`, `turn`, `payoff`, `open_question`, or `pressure_points` when those hints create real pressure or payoff
 
 ### Themes & Tone
 - Clarify thematic elements
@@ -91,6 +92,7 @@ For each suggestion:
 5. **Preserve the core concept** - Don't change the fundamental premise
 6. **Keep valid content** - Don't remove elements that work well
 7. **Ensure completeness** - All required fields must be populated
+8. **Keep storyline texture flexible** - Do not fill every optional storyline field mechanically; choose the few hints that make the arc more alive
 
 ## Output Requirements
 
