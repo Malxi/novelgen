@@ -50,6 +50,10 @@ Fields:
 
 Do not add `storyline_advances` to every chapter. Prefer sparse, high-signal entries that help later agents carry emotional pressure forward without locking the AI into a rigid formula.
 
+### DSL Simulation Execution
+
+Every chapter should leave a trace the simulator can understand. If the chapter has action, combat, travel, or discovery, make sure at least one durable change is visible through `events`, `resource_ledger`, `state_anchor`, `mysteries`, or `storyline_advances`: a cost, clue, injury, relationship shift, resource change, goal update, pressure increase, or payoff.
+
 ### Event Count Requirement
 **Each chapter MUST have 3-5 events.** This is a HARD requirement.
 

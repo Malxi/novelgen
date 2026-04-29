@@ -1,0 +1,266 @@
+DSL Simulator Report
+====================
+
+DSL File: books\fire-galaxy\story\rpg\01_outline.rpg
+Total Issues: 65
+
+1. [info/pacing] 
+   建议添加明确的结尾章节
+   Suggestion: 给故事一个完整的收束
+
+2. [warning/description] 
+   主角缺少背景故事
+   Suggestion: 添加主角的背景故事，让读者更容易产生共鸣
+
+3. [warning/character] 
+   主角缺少性格或动机描述
+   Suggestion: 定义主角的性格特点和行动动机
+
+4. [info/missing_info] 
+   主角缺少职业/修炼体系设定
+   Suggestion: 定义主角的修炼体系或职业类型
+
+5. [info/conflict] 
+   缺少明确的反派角色
+   Suggestion: 考虑添加一个反派角色来增加冲突
+
+6. [info/character] 
+   缺少导师/引路人角色
+   Suggestion: 考虑添加一个导师角色来帮助主角成长
+
+7. [warning/description] 
+   地点 'cryo_facility' 缺少描述
+   Suggestion: 添加地点的详细描述，帮助读者想象场景
+
+8. [info/description] 
+   地点 'cryo_facility' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+9. [warning/description] 
+   地点 'wasteland' 缺少描述
+   Suggestion: 添加地点的详细描述，帮助读者想象场景
+
+10. [info/description] 
+   地点 'wasteland' 缺少氛围描述
+   Suggestion: 添加氛围描述，增强场景感
+
+11. [info/description] P1-V1-C1 step 4 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+12. [info/growth] P1-V1-C1 step 4 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+13. [info/growth] P1-V1-C1 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+14. [warning/balance] P1-V1-C2 step 5 
+   战斗难度较高。建议给主角准备：技能(0个)、道具(0个)、盟友(0个)
+   Suggestion: 增加战斗前的准备：修炼突破、获得新技能、找到强力道具、获得盟友帮助
+
+15. [info/description] P1-V1-C2 step 5 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+16. [info/growth] P1-V1-C2 step 5 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+17. [info/growth] P1-V1-C2 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+18. [warning/balance] P1-V1-C3 step 3 
+   战斗难度过高！主角战力(10)+无盟友支援(0)远低于敌人总战力(30)
+   Suggestion: 降低敌人等级/数量，或给主角增加技能、道具、盟友支援
+
+19. [info/description] P1-V1-C3 step 3 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+20. [info/growth] P1-V1-C3 step 3 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+21. [info/character] P1-V1-C3 step 4 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+22. [info/growth] P1-V1-C3 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+23. [info/character] P1-V1-C4 step 2 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+24. [warning/balance] P1-V1-C4 step 5 
+   战斗难度过高！主角战力(10)+无盟友支援(0)远低于敌人总战力(50)
+   Suggestion: 降低敌人等级/数量，或给主角增加技能、道具、盟友支援
+
+25. [info/description] P1-V1-C4 step 5 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+26. [info/growth] P1-V1-C4 step 5 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+27. [info/growth] P1-V1-C4 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+28. [info/description] P1-V1-C5 step 2 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+29. [info/character] P1-V1-C5 step 3 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+30. [info/growth] P1-V1-C5 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+31. [info/description] P1-V1-C6 step 3 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+32. [warning/balance] P1-V1-C6 step 4 
+   战斗难度过高！主角战力(10)+无盟友支援(0)远低于敌人总战力(60)
+   Suggestion: 降低敌人等级/数量，或给主角增加技能、道具、盟友支援
+
+33. [info/description] P1-V1-C6 step 4 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+34. [info/growth] P1-V1-C6 step 4 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+35. [info/growth] P1-V1-C6 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+36. [info/description] P1-V1-C7 step 2 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+37. [warning/balance] P1-V1-C7 step 3 
+   战斗难度过高！主角战力(10)+无盟友支援(0)远低于敌人总战力(90)
+   Suggestion: 降低敌人等级/数量，或给主角增加技能、道具、盟友支援
+
+38. [info/description] P1-V1-C7 step 3 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+39. [info/growth] P1-V1-C7 step 3 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+40. [warning/balance] P1-V1-C7 step 4 
+   战斗难度过高！主角战力(10)+无盟友支援(0)远低于敌人总战力(90)
+   Suggestion: 降低敌人等级/数量，或给主角增加技能、道具、盟友支援
+
+41. [info/description] P1-V1-C7 step 4 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+42. [info/growth] P1-V1-C7 step 4 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+43. [info/growth] P1-V1-C7 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+44. [info/description] P1-V1-C8 step 3 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+45. [info/growth] P1-V1-C8 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+46. [warning/balance] P1-V1-C9 step 2 
+   战斗难度过高！主角战力(10)+无盟友支援(0)远低于敌人总战力(210)
+   Suggestion: 降低敌人等级/数量，或给主角增加技能、道具、盟友支援
+
+47. [info/description] P1-V1-C9 step 2 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+48. [info/growth] P1-V1-C9 step 2 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+49. [warning/balance] P1-V1-C9 step 3 
+   战斗难度过高！主角战力(10)+无盟友支援(0)远低于敌人总战力(210)
+   Suggestion: 降低敌人等级/数量，或给主角增加技能、道具、盟友支援
+
+50. [info/description] P1-V1-C9 step 3 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+51. [info/growth] P1-V1-C9 step 3 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+52. [warning/balance] P1-V1-C9 step 4 
+   战斗难度过高！主角战力(10)+无盟友支援(0)远低于敌人总战力(210)
+   Suggestion: 降低敌人等级/数量，或给主角增加技能、道具、盟友支援
+
+53. [info/description] P1-V1-C9 step 4 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+54. [info/growth] P1-V1-C9 step 4 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+55. [info/description] P1-V1-C9 step 5 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+56. [info/growth] P1-V1-C9 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+57. [info/description] P1-V1-C10 step 5 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+58. [info/growth] P1-V1-C10 
+   章节内容较多但缺少主角成长
+   Suggestion: 考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素
+
+59. [info/conflict] 
+   故事中冲突事件较少
+   Suggestion: 考虑添加更多冲突来增加故事张力
+
+60. [info/growth] 
+   故事较长(10章)但主角成长较少(等级1)，建议增加突破情节
+   Suggestion: 考虑在中期添加境界突破、能力觉醒等成长高潮
+
+61. [info/plot_hole] 
+   storyline '第二章：青藤据点' promises a payoff but outline DSL has no payoff/resolved movement
+   Suggestion: Either plan a later payoff chapter with storyline_advances.stage=payoff, or soften/remove the setup payoff promise.
+
+62. [info/plot_hole] 
+   storyline '历史真相支线' promises a payoff but outline DSL has no payoff/resolved movement
+   Suggestion: Either plan a later payoff chapter with storyline_advances.stage=payoff, or soften/remove the setup payoff promise.
+
+63. [info/plot_hole] 
+   storyline '势力整合支线' promises a payoff but outline DSL has no payoff/resolved movement
+   Suggestion: Either plan a later payoff chapter with storyline_advances.stage=payoff, or soften/remove the setup payoff promise.
+
+64. [info/pacing] P1-V1-C10 
+   storyline '势力整合支线' goes 7 chapters without visible movement
+   Suggestion: Add a small pressure, clue, consequence, or choice in the gap, or intentionally mark the arc as dormant in outline notes.
+
+65. [info/plot_hole] 
+   存在 12 个未回收的伏笔/剧情线 (提出 12, 回收 0)
+   Suggestion: 确认这些伏笔是否计划在后续章节中回收，或添加对应的 resolved state_delta
+

@@ -28,6 +28,7 @@ var (
 	composeMaxRoundsFlag    int
 	composeConcurrencyFlag  int
 	composeHierarchicalFlag bool
+	composeOneShotFlag      bool
 	composeForceImproveFlag bool
 	composeForceGenFlag     bool
 	composeCheckJSONFlag    bool
@@ -64,8 +65,8 @@ This command reads story/setup/story_setup.json and uses AI to generate
 a hierarchical outline structure based on the predefined structure in novel.json.
 
 Examples:
-  novelgen compose gen                      # Generate full outline (one-shot)
-  novelgen compose gen --hierarchical       # Generate using hierarchical approach (better quality)`,
+  novelgen compose gen                      # Generate using hierarchical approach with progress resume
+  novelgen compose gen --one-shot           # Try one-shot generation, fallback to hierarchical on failure`,
 	RunE: runComposeGen,
 }
 
@@ -96,9 +97,9 @@ This command loads the current outline and runs multiple rounds of AI self-revie
 to identify weaknesses and improve the story structure, pacing, and coherence.
 
 Examples:
-  novelgen compose improve                  # Improve outline with 1 round (one-shot)
-  novelgen compose improve --max-rounds 3   # Run 3 improvement rounds (one-shot)
-  novelgen compose improve --hierarchical   # Use hierarchical improvement (better quality)`,
+  novelgen compose improve                  # Improve outline with hierarchical partial repair
+  novelgen compose improve --max-rounds 3   # Run 3 improvement rounds
+  novelgen compose improve --one-shot       # Try one-shot improvement, fallback to hierarchical on failure`,
 	RunE: runComposeImprove,
 }
 
@@ -130,11 +131,13 @@ func init() {
 	composeCmd.AddCommand(composeCheckCmd)
 
 	composeGenCmd.Flags().BoolVar(&composeHierarchicalFlag, "hierarchical", false, "Use hierarchical generation (better quality, slower)")
+	composeGenCmd.Flags().BoolVar(&composeOneShotFlag, "one-shot", false, "Try one-shot generation first (falls back to hierarchical on failure)")
 	composeGenCmd.Flags().BoolVar(&composeForceGenFlag, "force", false, "Force regeneration even if outline exists (old outline will be backed up)")
 	composeRegenCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Suggestions for regeneration")
 	composeImproveCmd.Flags().IntVar(&composeMaxRoundsFlag, "max-rounds", 1, "Maximum number of improvement rounds")
 	composeImproveCmd.Flags().IntVar(&composeConcurrencyFlag, "concurrency", 3, "Maximum number of concurrent regeneration tasks")
 	composeImproveCmd.Flags().BoolVar(&composeHierarchicalFlag, "hierarchical", false, "Use hierarchical improvement (better quality, slower)")
+	composeImproveCmd.Flags().BoolVar(&composeOneShotFlag, "one-shot", false, "Try one-shot improvement first (falls back to hierarchical on failure)")
 	composeImproveCmd.Flags().BoolVar(&composeForceImproveFlag, "force", false, "Force improvement based on suggestions even if score meets threshold")
 	composeImproveCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional user suggestions for improvement")
 
@@ -215,15 +218,25 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 		fmt.Printf("\n📦 Existing outline backed up to: %s\n\n", backupPath)
 	}
 
-	// AI generation mode
-	var outline *models.Outline
+	if composeHierarchicalFlag && composeOneShotFlag {
+		return fmt.Errorf("--hierarchical and --one-shot cannot be used together")
+	}
 
-	if composeHierarchicalFlag {
+	// AI generation mode. Default to hierarchical generation because it saves
+	// progress per volume and avoids asking the model to emit one huge outline.
+	var outline *models.Outline
+	useHierarchical := !composeOneShotFlag || composeHierarchicalFlag
+
+	if useHierarchical {
 		logger.Info("Using hierarchical generation mode (better quality)")
 		outline, err = generateOutlineHierarchical(setup, projectConfig)
 	} else {
-		logger.Info("Using one-shot generation mode (faster)")
+		logger.Info("Using one-shot generation mode (faster, less stable for long outlines)")
 		outline, err = generateOutlineWithAI(setup, projectConfig)
+		if err != nil {
+			logger.Warn("One-shot outline generation failed; falling back to hierarchical generation: %v", err)
+			outline, err = generateOutlineHierarchical(setup, projectConfig)
+		}
 	}
 	if err != nil {
 		return fmt.Errorf("failed to generate outline with AI: %w", err)
@@ -358,8 +371,17 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	}
 	logger.Info("Loaded existing outline for improvement")
 
+	if composeHierarchicalFlag && composeOneShotFlag {
+		return fmt.Errorf("--hierarchical and --one-shot cannot be used together")
+	}
+
+	// Default to hierarchical partial improvement for stability. --one-shot is
+	// still available for smaller outlines and falls back to hierarchical if it
+	// cannot produce valid output.
+	useHierarchical := !composeOneShotFlag || composeHierarchicalFlag
+
 	// Run improvement
-	if err := iterateOutlineImprovement(outline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, composeHierarchicalFlag, composeForceImproveFlag, composePromptFlag); err != nil {
+	if err := iterateOutlineImprovement(outline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, useHierarchical, composeForceImproveFlag, composePromptFlag); err != nil {
 		logger.Error("Improvement failed: %v", err)
 		return fmt.Errorf("improvement failed: %w", err)
 	}
@@ -1083,6 +1105,10 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 	} else {
 		// Use one-shot iteration
 		improvedOutline, review, err = agent.Iterate(ctx, outline, maxIterations, 80.0, forceImprove, userPrompt, setup)
+		if err != nil {
+			logger.Warn("One-shot outline improve failed; falling back to hierarchical partial improve: %v", err)
+			improvedOutline, review, err = agent.IterateHierarchical(ctx, outline, maxIterations, 80.0, forceImprove, userPrompt, setup)
+		}
 	}
 
 	if err != nil {
@@ -1096,6 +1122,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 	// Enrich with DSL simulation + outline validator feedback
 	if review != nil {
 		hasCritical := false
+		hasDSLFeedback := false
 
 		// DSL simulation
 		dslBridge := dsl.NewSimulationBridge()
@@ -1103,6 +1130,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 		if dslIssues, simErr := dslAdapter.Simulate(dsl.PhaseOutline); simErr == nil && len(dslIssues) > 0 {
 			dslBridge.MergeIntoReview(dslIssues, review)
 			logger.Info("DSL simulation found %d issues for outline", len(dslIssues))
+			hasDSLFeedback = true
 			for _, iss := range dslIssues {
 				if iss.Severity == dsl.SeverityCritical {
 					hasCritical = true
@@ -1125,25 +1153,19 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 			}
 		}
 
-		// Force improve if any critical issues found
-		if hasCritical && maxIterations > 0 {
-			logger.Info("Critical issues detected, running direct repair pass with enriched review")
-			repairInput := agents.ComposeImproveInput{
-				ExistingOutline: *improvedOutline,
-				ReviewResult:    *review,
-				UserPrompt:      userPrompt,
-			}
-			if setup != nil {
-				repairInput.Setup = *setup
-			}
-			repairOutput, repairErr := agent.Improve(ctx, repairInput)
+		// Feed DSL simulation feedback back into outline improve. Critical
+		// findings force repair; softer story-contract findings get one direct
+		// repair pass so the simulation loop can actually improve the outline.
+		if (hasCritical || hasDSLFeedback) && maxIterations > 0 {
+			logger.Info("DSL/validator feedback detected, running partial repair pass with enriched review")
+			repairOutput, repairErr := agent.RepairByReview(ctx, improvedOutline, review, setup)
 			if repairErr == nil {
-				improvedOutline = &repairOutput.Outline
+				improvedOutline = repairOutput
 				applyOutlineNormalization(improvedOutline, "post_repair")
 				*outline = *improvedOutline
-				logger.Info("Direct compose repair pass completed for critical issues")
+				logger.Info("Partial compose repair pass completed for DSL/validator feedback")
 			} else {
-				logger.Warn("Direct compose repair pass failed: %v", repairErr)
+				logger.Warn("Partial compose repair pass failed: %v", repairErr)
 			}
 		}
 	}

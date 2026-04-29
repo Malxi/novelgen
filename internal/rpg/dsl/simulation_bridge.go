@@ -20,7 +20,7 @@ func NewSimulationBridge() *SimulationBridge {
 func severityToPriority(s SeverityLevel) string {
 	switch s {
 	case SeverityCritical:
-		return models.PriorityHigh
+		return models.PriorityCritical
 	case SeverityWarning:
 		return models.PriorityMedium
 	case SeverityInfo:

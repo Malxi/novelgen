@@ -35,7 +35,14 @@ Improve a story outline based on review feedback or user guidance.
 - Strengthen cause-effect chains
 - When a storyline feels thin, optionally add or refine `storyline_advances` on chapters that create real pressure, reveal, choice, consequence, reversal, or payoff
 
-### 5. Engagement Improvements
+### 5. DSL Simulation Feedback
+- Treat review suggestions mentioning DSL, simulation, storyline contracts, durable state change, payoff, resource budget, or progression bounds as structural feedback.
+- If a setup storyline is not advanced, add sparse `storyline_advances` to the most natural key chapters rather than every chapter.
+- If a chapter has activity but no durable state change, clarify what changed: goal, relationship, resource, injury, clue, pressure, consequence, or payoff.
+- If a payoff is promised but not represented, either add a payoff/recovery chapter movement or soften the setup-facing promise through the outline's arc.
+- If resource/progression changes lack support, repair `events`, `resource_ledger`, or `state_anchor` so the simulator can trace the change.
+
+### 6. Engagement Improvements
 - Add hooks and reveals
 - Enhance emotional beats
 - Improve chapter endings

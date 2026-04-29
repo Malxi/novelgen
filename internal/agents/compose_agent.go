@@ -118,6 +118,17 @@ type ComposeImproveVolumeInput struct {
 	Setup        models.StorySetup   `json:"setup,omitempty" md:"setup" desc:"Story setup including premise, genres, themes, rules"`
 }
 
+// composeImproveVolumePromptInput is the compact prompt payload sent to the LLM.
+// The public input above can stay rich for internal routing/checkpoint logic;
+// this shape avoids repeating the full outline, part, volume, and setup in one prompt.
+type composeImproveVolumePromptInput struct {
+	SetupBrief     string              `json:"setup_brief" md:"setup_brief" desc:"Compact story contract: premise, rules, progression limits, resources, storylines"`
+	OutlineContext string              `json:"outline_context" md:"outline_context" desc:"Compact continuity context around the target volume"`
+	TargetVolume   models.Volume       `json:"target_volume" md:"target_volume" desc:"Only this volume should be improved and returned"`
+	ReviewResult   models.ReviewResult `json:"review_result" md:"review_result" desc:"Filtered review/DSL feedback relevant to this volume"`
+	UserPrompt     string              `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for improvement"`
+}
+
 // ComposeImproveVolumeOutput is the output for volume improvement
 type ComposeImproveVolumeOutput struct {
 	Volume models.Volume `json:"volume" md:"volume" desc:"Improved volume with chapters"`
@@ -333,8 +344,13 @@ func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, max
 			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", reviewOutput.Result.OverallScore, qualityThreshold)
 		}
 
-		// Determine if we should improve
-		shouldImprove := !scoreMeetsThreshold || forceImprove
+		// Determine if we should improve. Blocking suggestions override the
+		// numeric score because they represent issues that must still be fixed.
+		hasBlockingSuggestions := reviewOutput.Result.HasBlockingSuggestions()
+		if scoreMeetsThreshold && hasBlockingSuggestions {
+			logger.Info("Quality threshold met, but blocking suggestions exist; continuing improvement")
+		}
+		shouldImprove := !scoreMeetsThreshold || hasBlockingSuggestions || forceImprove
 		if !shouldImprove {
 			break
 		}
@@ -406,7 +422,8 @@ func (a *ComposeAgent) ImproveVolume(ctx context.Context, input ComposeImproveVo
 		Command: "improve the chapters in this volume based on review feedback",
 	}
 
-	if err := a.base.Execute(ctx, params, input, &output.Volume); err != nil {
+	promptInput := a.buildImproveVolumePromptInput(input)
+	if err := a.base.Execute(ctx, params, promptInput, &output.Volume); err != nil {
 		return ComposeImproveVolumeOutput{}, err
 	}
 
@@ -436,6 +453,225 @@ func (a *ComposeAgent) ImproveVolume(ctx context.Context, input ComposeImproveVo
 	logger.Info("✓ Volume improved: %s (%d chapters)", output.Volume.Title, len(output.Volume.Chapters))
 
 	return output, nil
+}
+
+func (a *ComposeAgent) buildImproveVolumePromptInput(input ComposeImproveVolumeInput) composeImproveVolumePromptInput {
+	return composeImproveVolumePromptInput{
+		SetupBrief:     a.buildSetupBrief(&input.Setup),
+		OutlineContext: a.buildVolumeImproveContext(&input.Outline, input.Part.ID, input.Volume.ID),
+		TargetVolume:   input.Volume,
+		ReviewResult:   compactReviewForPrompt(input.ReviewResult),
+		UserPrompt:     input.UserPrompt,
+	}
+}
+
+func (a *ComposeAgent) buildSetupBrief(setup *models.StorySetup) string {
+	if setup == nil || setup.ProjectName == "" {
+		return "No setup provided."
+	}
+
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("Project: %s\n", setup.ProjectName))
+	if len(setup.Genres) > 0 {
+		b.WriteString(fmt.Sprintf("Genres: %s\n", strings.Join(setup.Genres, ", ")))
+	}
+	b.WriteString(fmt.Sprintf("Premise: %s\n", clipForPrompt(setup.Premise, 700)))
+	b.WriteString(fmt.Sprintf("Theme: %s\n", clipForPrompt(setup.Theme, 350)))
+	if setup.Tone != "" {
+		b.WriteString(fmt.Sprintf("Tone: %s\n", clipForPrompt(setup.Tone, 160)))
+	}
+
+	if len(setup.Rules) > 0 {
+		b.WriteString("\nCore Rules:\n")
+		for i, rule := range setup.Rules {
+			if i >= 10 {
+				b.WriteString(fmt.Sprintf("- ... %d more rule(s)\n", len(setup.Rules)-i))
+				break
+			}
+			b.WriteString(fmt.Sprintf("- %s\n", clipForPrompt(rule, 360)))
+		}
+	}
+
+	if len(setup.Storylines) > 0 {
+		b.WriteString("\nStorylines:\n")
+		for _, sl := range setup.Storylines {
+			b.WriteString(fmt.Sprintf("- %s (%s, importance %d): %s\n",
+				sl.Name, sl.Type, sl.Importance, clipForPrompt(sl.Description, 260)))
+			if sl.Desire != "" || sl.Opposition != "" || sl.Payoff != "" {
+				b.WriteString(fmt.Sprintf("  Desire: %s | Opposition: %s | Payoff: %s\n",
+					clipForPrompt(sl.Desire, 160), clipForPrompt(sl.Opposition, 160), clipForPrompt(sl.Payoff, 160)))
+			}
+		}
+	}
+
+	if len(setup.Premises) > 0 {
+		b.WriteString("\nProgression Systems:\n")
+		for _, premise := range setup.Premises {
+			b.WriteString(fmt.Sprintf("- %s (%s): %s\n", premise.Name, premise.Category, clipForPrompt(premise.Description, 280)))
+			for _, stage := range premise.Progression {
+				b.WriteString(fmt.Sprintf("  L%d %s: %s Requirement: %s\n",
+					stage.Level, stage.Name, clipForPrompt(stage.Description, 130), clipForPrompt(stage.Requirements, 130)))
+			}
+		}
+	}
+
+	if len(setup.WorldResources) > 0 {
+		b.WriteString("\nResources:\n")
+		for _, res := range setup.WorldResources {
+			b.WriteString(fmt.Sprintf("- %s (%s, scarcity: %s): %s\n",
+				res.Name, res.Category, res.Scarcity, clipForPrompt(res.Description, 180)))
+		}
+	}
+
+	return b.String()
+}
+
+func (a *ComposeAgent) buildVolumeImproveContext(outline *models.Outline, partID, volumeID string) string {
+	if outline == nil {
+		return "No outline context provided."
+	}
+
+	var b strings.Builder
+	for partIdx, part := range outline.Parts {
+		for volIdx, volume := range part.Volumes {
+			if volume.ID != volumeID {
+				continue
+			}
+
+			b.WriteString(fmt.Sprintf("Current Part: %s (%s)\nSummary: %s\n", part.Title, nonEmpty(part.ID, partID), clipForPrompt(part.Summary, 650)))
+			b.WriteString(fmt.Sprintf("Current Volume: %s (%s), volume %d/%d\nSummary: %s\n",
+				volume.Title, volume.ID, volIdx+1, len(part.Volumes), clipForPrompt(volume.Summary, 650)))
+
+			if volIdx > 0 {
+				prevVol := part.Volumes[volIdx-1]
+				b.WriteString("\nPrevious Volume:\n")
+				b.WriteString(formatVolumeBrief(prevVol))
+			}
+			if volIdx < len(part.Volumes)-1 {
+				nextVol := part.Volumes[volIdx+1]
+				b.WriteString("\nNext Volume:\n")
+				b.WriteString(formatVolumeBrief(nextVol))
+			}
+
+			if len(volume.Chapters) > 0 {
+				b.WriteString("\nTarget Volume Chapter Map:\n")
+				for _, ch := range volume.Chapters {
+					b.WriteString(formatChapterBrief(ch))
+				}
+			}
+
+			if partIdx > 0 {
+				prevPart := outline.Parts[partIdx-1]
+				b.WriteString("\nPrevious Part Summary:\n")
+				b.WriteString(fmt.Sprintf("- %s: %s\n", prevPart.Title, clipForPrompt(prevPart.Summary, 350)))
+			}
+			if partIdx < len(outline.Parts)-1 {
+				nextPart := outline.Parts[partIdx+1]
+				b.WriteString("\nNext Part Summary:\n")
+				b.WriteString(fmt.Sprintf("- %s: %s\n", nextPart.Title, clipForPrompt(nextPart.Summary, 350)))
+			}
+
+			return b.String()
+		}
+	}
+
+	return "Target volume was not found in the outline context."
+}
+
+func formatVolumeBrief(volume models.Volume) string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("- %s (%s): %s\n", volume.Title, volume.ID, clipForPrompt(volume.Summary, 500)))
+	if len(volume.Chapters) > 0 {
+		first := volume.Chapters[0]
+		last := volume.Chapters[len(volume.Chapters)-1]
+		b.WriteString(fmt.Sprintf("  Opens with: %s - %s\n", first.Title, clipForPrompt(first.Summary, 180)))
+		b.WriteString(fmt.Sprintf("  Ends with: %s - %s\n", last.Title, clipForPrompt(last.Summary, 180)))
+	}
+	return b.String()
+}
+
+func formatChapterBrief(ch models.Chapter) string {
+	beats := ch.GetBeats()
+	firstBeat := ""
+	lastBeat := ""
+	if len(beats) > 0 {
+		firstBeat = beats[0]
+		lastBeat = beats[len(beats)-1]
+	}
+	var states []string
+	if ch.StateChange != "" {
+		states = append(states, "state_change="+clipForPrompt(ch.StateChange, 100))
+	}
+	if ch.StateAnchor.Cultivation != "" {
+		states = append(states, "cultivation="+clipForPrompt(ch.StateAnchor.Cultivation, 80))
+	}
+	if len(ch.StateAnchor.Allies) > 0 {
+		states = append(states, "allies="+strings.Join(ch.StateAnchor.Allies, ", "))
+	}
+	stateLine := strings.Join(states, "; ")
+	if stateLine == "" {
+		stateLine = "no explicit state anchor"
+	}
+
+	return fmt.Sprintf("- %s %s: %s | %s | first beat: %s | last beat: %s\n",
+		ch.ID, ch.Title, clipForPrompt(ch.Summary, 240), stateLine, clipForPrompt(firstBeat, 120), clipForPrompt(lastBeat, 120))
+}
+
+func compactReviewForPrompt(review models.ReviewResult) models.ReviewResult {
+	compact := models.ReviewResult{
+		OverallScore: review.OverallScore,
+		Dimensions:   review.Dimensions,
+		Summary:      clipForPrompt(review.Summary, 700),
+		Iteration:    review.Iteration,
+	}
+
+	for _, strength := range review.Strengths {
+		compact.Strengths = append(compact.Strengths, clipForPrompt(strength, 220))
+	}
+	for _, weakness := range review.Weaknesses {
+		compact.Weaknesses = append(compact.Weaknesses, clipForPrompt(weakness, 260))
+	}
+	for _, suggestion := range review.Suggestions {
+		compact.Suggestions = append(compact.Suggestions, models.ReviewSuggestion{
+			Category:   suggestion.Category,
+			TargetID:   suggestion.TargetID,
+			TargetName: clipForPrompt(suggestion.TargetName, 120),
+			Issue:      clipForPrompt(suggestion.Issue, 360),
+			Suggestion: clipForPrompt(suggestion.Suggestion, 420),
+			Priority:   suggestion.Priority,
+		})
+	}
+	for _, issue := range review.ContinuityIssues {
+		compact.ContinuityIssues = append(compact.ContinuityIssues, models.ContinuityIssue{
+			Type:        issue.Type,
+			Location:    clipForPrompt(issue.Location, 160),
+			Description: clipForPrompt(issue.Description, 320),
+			Reason:      clipForPrompt(issue.Reason, 260),
+			Suggestion:  clipForPrompt(issue.Suggestion, 360),
+			Severity:    issue.Severity,
+		})
+	}
+
+	return compact
+}
+
+func clipForPrompt(value string, maxRunes int) string {
+	value = strings.TrimSpace(value)
+	if maxRunes <= 0 || value == "" {
+		return value
+	}
+	runes := []rune(value)
+	if len(runes) <= maxRunes {
+		return value
+	}
+	return string(runes[:maxRunes]) + "..."
+}
+
+func nonEmpty(value, fallback string) string {
+	if strings.TrimSpace(value) != "" {
+		return value
+	}
+	return fallback
 }
 
 // IterateHierarchical runs the hierarchical review-improvement loop with checkpoint support
@@ -480,8 +716,13 @@ func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.
 			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", reviewOutput.Result.OverallScore, qualityThreshold)
 		}
 
-		// Determine if we should improve
-		shouldImprove := !scoreMeetsThreshold || forceImprove
+		// Determine if we should improve. Blocking suggestions override the
+		// numeric score because they represent issues that must still be fixed.
+		hasBlockingSuggestions := reviewOutput.Result.HasBlockingSuggestions()
+		if scoreMeetsThreshold && hasBlockingSuggestions {
+			logger.Info("Quality threshold met, but blocking suggestions exist; continuing improvement")
+		}
+		shouldImprove := !scoreMeetsThreshold || hasBlockingSuggestions || forceImprove
 		if !shouldImprove {
 			break
 		}
@@ -518,6 +759,27 @@ func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.
 	}
 
 	return &currentOutline, finalReview, nil
+}
+
+// RepairByReview applies an existing review result through bounded volume-level
+// repairs. It is intended for validator/DSL feedback after the main review pass,
+// where re-running a full-outline rewrite would be unnecessarily fragile.
+func (a *ComposeAgent) RepairByReview(ctx context.Context, outline *models.Outline, reviewResult *models.ReviewResult, setup *models.StorySetup) (*models.Outline, error) {
+	if outline == nil {
+		return nil, fmt.Errorf("outline is nil")
+	}
+	if reviewResult == nil {
+		return outline, nil
+	}
+
+	volumesToImprove := a.identifyVolumesToImprove(reviewResult)
+	if len(volumesToImprove) == 0 {
+		logger.Info("No specific volume targets in review; repairing all volumes")
+		volumesToImprove = allVolumeIndices(outline)
+	}
+
+	logger.Info("Repairing %d volume(s) from enriched review feedback", len(volumesToImprove))
+	return a.improveVolumesWithCheckpoint(ctx, outline, volumesToImprove, reviewResult, 0, 1, setup)
 }
 
 // improveVolumesWithCheckpoint improves volumes with checkpoint/resume support
@@ -558,6 +820,11 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 	for idx := progress.CurrentVolumeIdx; idx < len(volumesToImprove); idx++ {
 		indices := volumesToImprove[idx]
 		partIdx, volIdx := indices[0], indices[1]
+		if partIdx < 0 || partIdx >= len(currentOutline.Parts) || volIdx < 0 || volIdx >= len(currentOutline.Parts[partIdx].Volumes) {
+			logger.Warn("Skipping invalid volume repair target part=%d volume=%d", partIdx+1, volIdx+1)
+			progress.CurrentVolumeIdx = idx + 1
+			continue
+		}
 		part := &currentOutline.Parts[partIdx]
 		volume := &part.Volumes[volIdx]
 
@@ -607,6 +874,19 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 	logger.Info("✓ Iteration %d complete! Progress file removed.", currentIteration)
 
 	return &currentOutline, nil
+}
+
+func allVolumeIndices(outline *models.Outline) [][2]int {
+	if outline == nil {
+		return nil
+	}
+	var result [][2]int
+	for partIdx := range outline.Parts {
+		for volIdx := range outline.Parts[partIdx].Volumes {
+			result = append(result, [2]int{partIdx, volIdx})
+		}
+	}
+	return result
 }
 
 // loadImproveProgress loads improvement progress from file
@@ -705,7 +985,8 @@ func (a *ComposeAgent) filterReviewForVolume(review *models.ReviewResult, volume
 
 	// Filter suggestions for this volume
 	for _, suggestion := range review.Suggestions {
-		if strings.HasPrefix(suggestion.TargetID, volumeID) {
+		targetID := strings.TrimSpace(suggestion.TargetID)
+		if targetID == "" || strings.EqualFold(targetID, "global") || strings.HasPrefix(targetID, volumeID) {
 			filtered.Suggestions = append(filtered.Suggestions, suggestion)
 		}
 	}
@@ -872,7 +1153,7 @@ func (a *ComposeAgent) validateChapterOutput(chapter *models.Chapter) error {
 		return fmt.Errorf("chapter is nil")
 	}
 	if len(chapter.GetBeats()) == 0 {
-		return fmt.Errorf("beats are required")
+		return fmt.Errorf("scene beats are required")
 	}
 	if len(chapter.Events) == 0 {
 		return fmt.Errorf("events are required")

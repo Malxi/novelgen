@@ -132,6 +132,8 @@ func (p *Parser) parseMetadata() (*Metadata, error) {
 			meta.Tone = p.toString(value)
 		case "dsl_version":
 			meta.DSLVersion = p.toString(value)
+		case "phase":
+			meta.Phase = p.toString(value)
 		case "genre":
 			meta.Genre = p.toStringSlice(value)
 		}

@@ -91,6 +91,8 @@ func (na *NovelgenAdapter) toSetupDSL(dsl *DSL) (*DSL, error) {
 	dsl.Systems.PowerFormula = na.buildPowerFormula(dsl.Systems.AttributeSystem)
 	dsl.Systems.ProgressionSystems = na.buildProgressionSystems(setup)
 	dsl.Systems.Counters = na.buildCounterSystems(setup)
+	(&ModelAdapter{setup: setup}).buildStorylineContracts(dsl)
+	(&ModelAdapter{setup: setup}).buildSetupContractChapters(dsl)
 
 	return dsl, nil
 }
@@ -98,6 +100,23 @@ func (na *NovelgenAdapter) toSetupDSL(dsl *DSL) (*DSL, error) {
 // toOutlineDSL creates outline phase DSL (basic framework)
 func (na *NovelgenAdapter) toOutlineDSL(dsl *DSL) (*DSL, error) {
 	na.logger.Info(LogCategorySystem, "Generating outline DSL")
+
+	setup := na.loadStorySetup()
+	if setup != nil {
+		if strings.TrimSpace(setup.ProjectName) != "" {
+			dsl.Metadata.Title = setup.ProjectName
+		}
+		dsl.Metadata.Genre = append([]string(nil), setup.Genres...)
+		dsl.Metadata.Tone = setup.Tone
+		dsl.Metadata.PowerSystem = na.inferPowerSystem(setup)
+		dsl.World.Rules = buildRulesFromSetup(setup)
+		dsl.World.Items = buildWorldResourceItems(setup)
+		dsl.Systems.AttributeSystem = na.buildAttributeSystem(setup)
+		dsl.Systems.PowerFormula = na.buildPowerFormula(dsl.Systems.AttributeSystem)
+		dsl.Systems.ProgressionSystems = na.buildProgressionSystems(setup)
+		dsl.Systems.Counters = na.buildCounterSystems(setup)
+		(&ModelAdapter{setup: setup}).buildStorylineContracts(dsl)
+	}
 
 	// Convert characters (placeholders only)
 	for name, char := range na.project.Characters {
@@ -183,7 +202,7 @@ func buildStructuredSetupRules(setup *models.StorySetup) []Rule {
 		return nil
 	}
 
-	rules := make([]Rule, 0, len(setup.WorldResources)+len(setup.Premises)*2)
+	rules := make([]Rule, 0, len(setup.WorldResources)+len(setup.Premises)*2+len(setup.Storylines))
 	for i, res := range setup.WorldResources {
 		name := strings.TrimSpace(res.Name)
 		if name == "" {
@@ -223,7 +242,48 @@ func buildStructuredSetupRules(setup *models.StorySetup) []Rule {
 			})
 		}
 	}
+
+	for i, storyline := range setup.Storylines {
+		name := strings.TrimSpace(storyline.Name)
+		if name == "" {
+			name = fmt.Sprintf("storyline_%02d", i+1)
+		}
+		id := coalesceID(sanitizeID(name), fmt.Sprintf("storyline_%02d", i+1))
+		effectParts := []string{
+			"id=" + id,
+			"name=" + sanitizeRuleValue(name),
+			"type=" + sanitizeRuleValue(storyline.Type),
+			fmt.Sprintf("importance=%d", storyline.Importance),
+		}
+		for key, value := range map[string]string{
+			"desire":        storyline.Desire,
+			"opposition":    storyline.Opposition,
+			"stakes":        storyline.Stakes,
+			"turn":          storyline.Turn,
+			"payoff":        storyline.Payoff,
+			"open_question": storyline.OpenQuestion,
+		} {
+			if strings.TrimSpace(value) != "" {
+				effectParts = append(effectParts, key+"="+sanitizeRuleValue(value))
+			}
+		}
+		if len(storyline.PressurePoints) > 0 {
+			effectParts = append(effectParts, "pressure_points="+sanitizeRuleValue(strings.Join(storyline.PressurePoints, " | ")))
+		}
+		rules = append(rules, Rule{
+			Name:    "storyline_contract_" + id,
+			Trigger: "storyline.contract",
+			Effect:  strings.Join(effectParts, "; "),
+		})
+	}
 	return rules
+}
+
+func sanitizeRuleValue(value string) string {
+	value = strings.TrimSpace(value)
+	value = strings.ReplaceAll(value, ";", "，")
+	value = strings.ReplaceAll(value, "\n", " ")
+	return value
 }
 
 func buildWorldResourceItems(setup *models.StorySetup) []Item {
@@ -594,6 +654,13 @@ func (na *NovelgenAdapter) convertOutlineToStoryline(dsl *DSL) error {
 	partNum := 1
 	for _, part := range outline.Parts {
 		for _, volume := range part.Volumes {
+			if strings.TrimSpace(volume.ID) != "" {
+				dsl.Storyline.Arcs = append(dsl.Storyline.Arcs, Arc{
+					ID:       volume.ID,
+					Name:     volume.Title,
+					Position: len(dsl.Storyline.Arcs) + 1,
+				})
+			}
 			for _, chapter := range volume.Chapters {
 				dslChapter := Chapter{
 					ID:       chapter.ID,
@@ -611,12 +678,74 @@ func (na *NovelgenAdapter) convertOutlineToStoryline(dsl *DSL) error {
 
 				// Convert events to steps
 				stepNum := 1
+				for _, advance := range chapter.StorylineAdvances {
+					objective.Steps = append(objective.Steps, Step{
+						Order:       stepNum,
+						Description: storyStorylineAdvanceDescription(advance),
+						Event: Event{
+							Type:        "storyline",
+							StateDeltas: buildStoryStorylineAdvanceDeltas(chapter.ID, advance),
+						},
+					})
+					stepNum++
+				}
+
+				na.addStoryOutlineEnemies(dsl, chapter.Enemies)
 				for _, event := range chapter.Events {
-					step := na.convertEventToStep(event, stepNum)
+					step := na.convertEventToStep(event, chapter.Enemies, stepNum)
 					if step != nil {
 						objective.Steps = append(objective.Steps, *step)
 						stepNum++
 					}
+				}
+
+				for _, entry := range chapter.ResourceLedger {
+					objective.Steps = append(objective.Steps, Step{
+						Order:       stepNum,
+						Description: fmt.Sprintf("%s resource change: %d %+d = %d. %s", entry.Item, entry.Start, entry.Delta, entry.End, entry.Reason),
+						Event: Event{
+							Type: "resource",
+							StateDeltas: []StateDelta{{
+								Target: entry.Item,
+								Kind:   "resource",
+								Field:  "quantity",
+								From:   fmt.Sprintf("%d", entry.Start),
+								To:     fmt.Sprintf("%d", entry.End),
+								Delta:  entry.Delta,
+								Note:   entry.Reason,
+							}},
+						},
+					})
+					stepNum++
+				}
+
+				for _, delta := range buildStoryStateAnchorDeltas(chapter) {
+					objective.Steps = append(objective.Steps, Step{
+						Order:       stepNum,
+						Description: delta.Note,
+						Event: Event{
+							Type:        "status",
+							StateDeltas: []StateDelta{delta},
+						},
+					})
+					stepNum++
+				}
+
+				if chapter.Timeline.TimeJump || strings.TrimSpace(chapter.Timeline.Transition) != "" {
+					objective.Steps = append(objective.Steps, Step{
+						Order:       stepNum,
+						Description: strings.TrimSpace(chapter.Timeline.Transition),
+						Event: Event{
+							Type: "transition",
+							StateDeltas: []StateDelta{{
+								Kind:  "transition",
+								Field: "time_jump",
+								To:    "true",
+								Note:  strings.TrimSpace(chapter.Timeline.PreviousGap + " " + chapter.Timeline.Transition),
+							}},
+						},
+					})
+					stepNum++
 				}
 
 				if len(objective.Steps) > 0 {
@@ -633,10 +762,10 @@ func (na *NovelgenAdapter) convertOutlineToStoryline(dsl *DSL) error {
 }
 
 // convertEventToStep converts an outline event to a storyline step
-func (na *NovelgenAdapter) convertEventToStep(event rpg.StoryEvent, order int) *Step {
+func (na *NovelgenAdapter) convertEventToStep(event rpg.StoryEvent, enemies []rpg.StoryOutlineEnemy, order int) *Step {
 	step := &Step{
 		Order:       order,
-		Description: event.Result,
+		Description: describeStoryEvent(event),
 	}
 
 	// Determine event type and create appropriate event
@@ -647,6 +776,7 @@ func (na *NovelgenAdapter) convertEventToStep(event rpg.StoryEvent, order int) *
 			Combat: &CombatEvent{
 				Setup: CombatSetup{
 					Location: event.Context,
+					Enemies:  storyOutlineEnemySpawns(enemies),
 				},
 			},
 		}
@@ -690,8 +820,212 @@ func (na *NovelgenAdapter) convertEventToStep(event rpg.StoryEvent, order int) *
 			Type: event.Type,
 		}
 	}
+	if strings.TrimSpace(step.Event.Type) == "" {
+		step.Event.Type = eventTypeFromAction(event.Action)
+	}
+	if step.Event.Type == "combat" && step.Event.Combat == nil {
+		step.Event.Combat = &CombatEvent{
+			Setup: CombatSetup{
+				Location: event.Context,
+				Enemies:  storyOutlineEnemySpawns(enemies),
+			},
+		}
+	}
+	step.Event.StateDeltas = append(step.Event.StateDeltas, buildStoryEventStateDeltas(event)...)
 
 	return step
+}
+
+func (na *NovelgenAdapter) addStoryOutlineEnemies(dsl *DSL, enemies []rpg.StoryOutlineEnemy) {
+	if dsl == nil || dsl.Characters == nil {
+		return
+	}
+	seen := make(map[string]bool, len(dsl.Characters.Enemies))
+	for _, enemy := range dsl.Characters.Enemies {
+		seen[enemy.ID] = true
+	}
+	for i, enemy := range enemies {
+		name := strings.TrimSpace(enemy.Name)
+		if name == "" {
+			continue
+		}
+		id := storyOutlineEnemyID(enemy, i)
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		level := enemy.Level
+		if level <= 0 {
+			level = 1
+		}
+		dsl.Characters.Enemies = append(dsl.Characters.Enemies, Enemy{
+			ID:          id,
+			Name:        name,
+			Type:        coalesceString(enemy.Faction, "enemy"),
+			Description: strings.TrimSpace(enemy.Context),
+			Level:       level,
+			Template: EnemyTemplate{
+				BaseLevel: level,
+				HPFormula: fmt.Sprintf("%d", 40+level*20),
+				StatsPerLevel: map[string]int{
+					"str": 6 + level,
+					"agi": 4 + level,
+					"int": 3 + level,
+					"vit": 5 + level,
+				},
+			},
+		})
+	}
+}
+
+func storyOutlineEnemySpawns(enemies []rpg.StoryOutlineEnemy) []EnemySpawn {
+	spawns := make([]EnemySpawn, 0, len(enemies))
+	for i, enemy := range enemies {
+		if strings.TrimSpace(enemy.Name) == "" {
+			continue
+		}
+		count := enemy.Count
+		if count <= 0 {
+			count = 1
+		}
+		spawns = append(spawns, EnemySpawn{
+			ID:    storyOutlineEnemyID(enemy, i),
+			Count: count,
+			Level: enemy.Level,
+			Boss:  enemy.IsBoss,
+		})
+	}
+	return spawns
+}
+
+func storyOutlineEnemyID(enemy rpg.StoryOutlineEnemy, index int) string {
+	if strings.TrimSpace(enemy.BossID) != "" {
+		return sanitizeID(enemy.BossID)
+	}
+	base := strings.TrimSpace(enemy.Faction + "_" + enemy.Tier + "_" + enemy.Name)
+	if strings.TrimSpace(base) == "" {
+		base = fmt.Sprintf("enemy_%02d", index+1)
+	}
+	return coalesceID(sanitizeID(base), fmt.Sprintf("enemy_%02d", index+1))
+}
+
+func describeStoryEvent(event rpg.StoryEvent) string {
+	for _, candidate := range []string{event.Details, event.Result, event.Context} {
+		if strings.TrimSpace(candidate) != "" {
+			return strings.TrimSpace(candidate)
+		}
+	}
+	parts := []string{}
+	for _, value := range []string{event.Actor, event.Action, event.Target, event.Change, event.Subject} {
+		if strings.TrimSpace(value) != "" {
+			parts = append(parts, strings.TrimSpace(value))
+		}
+	}
+	if len(parts) == 0 {
+		return "outline event"
+	}
+	return strings.Join(parts, " -> ")
+}
+
+func buildStoryEventStateDeltas(event rpg.StoryEvent) []StateDelta {
+	var deltas []StateDelta
+	target := strings.TrimSpace(event.Target)
+	if target == "" {
+		target = strings.TrimSpace(event.Subject)
+	}
+	kind := strings.TrimSpace(event.TargetType)
+	if kind == "" {
+		kind = strings.TrimSpace(event.Type)
+	}
+	if kind == "" {
+		kind = eventTypeFromAction(event.Action)
+	}
+	if target != "" || event.Change != "" || event.Result != "" {
+		deltas = append(deltas, StateDelta{
+			Target: target,
+			Kind:   kind,
+			Field:  event.Action,
+			To:     coalesceString(event.Change, event.Result),
+			Note:   describeStoryEvent(event),
+		})
+	}
+	if event.Type == "storyline" || event.TargetType == "storyline" {
+		deltas = append(deltas, StateDelta{
+			Target: target,
+			Kind:   "storyline",
+			Field:  "event",
+			To:     coalesceString(event.Change, event.Action),
+			Note:   describeStoryEvent(event),
+		})
+	}
+	return deltas
+}
+
+func storyStorylineAdvanceDescription(advance rpg.StorylineAdvance) string {
+	parts := []string{advance.StorylineName, advance.Stage, advance.Change, advance.Consequence, advance.Pressure}
+	var out []string
+	for _, part := range parts {
+		if strings.TrimSpace(part) != "" {
+			out = append(out, strings.TrimSpace(part))
+		}
+	}
+	return strings.Join(out, " | ")
+}
+
+func buildStoryStorylineAdvanceDeltas(chapterID string, advance rpg.StorylineAdvance) []StateDelta {
+	stage := strings.ToLower(strings.TrimSpace(advance.Stage))
+	if stage == "" {
+		stage = "progress"
+	}
+	note := fmt.Sprintf("change=%s; consequence=%s; pressure=%s", advance.Change, advance.Consequence, advance.Pressure)
+	deltas := []StateDelta{{
+		Target: strings.TrimSpace(advance.StorylineName),
+		Kind:   "storyline",
+		Field:  "stage",
+		To:     stage,
+		Cost:   strings.TrimSpace(advance.Consequence),
+		Unit:   strings.TrimSpace(advance.Pressure),
+		Note:   note,
+	}}
+	switch stage {
+	case "payoff", "resolve", "resolved", "completion", "completed":
+		deltas = append(deltas, StateDelta{Target: advance.StorylineName, Kind: "plot_thread", Field: "storyline", To: "resolved", Note: "payoff in " + chapterID})
+	case "hook", "pressure", "reveal", "reversal", "twist", "progress":
+		deltas = append(deltas, StateDelta{Target: advance.StorylineName, Kind: "plot_thread", Field: "storyline", To: "raised", Note: "active pressure in " + chapterID})
+	}
+	return deltas
+}
+
+func buildStoryStateAnchorDeltas(chapter rpg.StoryChapter) []StateDelta {
+	var deltas []StateDelta
+	if strings.TrimSpace(chapter.StateAnchor.Cultivation) != "" {
+		deltas = append(deltas, StateDelta{
+			Target: "protagonist",
+			Kind:   "cultivation",
+			Field:  "realm",
+			To:     chapter.StateAnchor.Cultivation,
+			Note:   "chapter start cultivation: " + chapter.StateAnchor.Cultivation,
+		})
+	}
+	if chapter.StateAnchor.SpiritStones > 0 {
+		deltas = append(deltas, StateDelta{
+			Target: "spirit_stones",
+			Kind:   "resource",
+			Field:  "quantity",
+			To:     fmt.Sprintf("%d", chapter.StateAnchor.SpiritStones),
+			Note:   "chapter start spirit stones",
+		})
+	}
+	if len(chapter.StateAnchor.Injuries) > 0 {
+		deltas = append(deltas, StateDelta{
+			Target: "protagonist",
+			Kind:   "injury",
+			Field:  "active",
+			To:     "injured",
+			Note:   "chapter start injuries: " + strings.Join(chapter.StateAnchor.Injuries, ", "),
+		})
+	}
+	return deltas
 }
 
 // convertNovelgenCharacterToPlayer converts novelgen character to DSL player

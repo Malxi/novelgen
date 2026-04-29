@@ -1,0 +1,6 @@
+DSL Simulator Report
+====================
+
+DSL File: books\fire-galaxy\story\rpg\00_setup.rpg
+Total Issues: 0
+

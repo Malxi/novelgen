@@ -175,14 +175,12 @@ func (a *SetupAgent) Iterate(ctx context.Context, setup *models.StorySetup, maxI
 		}
 
 		// Determine if we should improve
-		shouldImprove := !scoreMeetsThreshold || forceImprove
-		if !shouldImprove {
-			break
+		hasBlockingSuggestions := reviewOutput.Result.HasBlockingSuggestions()
+		if scoreMeetsThreshold && hasBlockingSuggestions {
+			logger.Info("Quality threshold met, but blocking suggestions exist; continuing improvement")
 		}
-
-		// Check if this is the last iteration
-		if i == maxIterations {
-			logger.Warn("Max iterations reached, stopping iteration loop")
+		shouldImprove := !scoreMeetsThreshold || hasBlockingSuggestions || forceImprove
+		if !shouldImprove {
 			break
 		}
 
@@ -197,6 +195,11 @@ func (a *SetupAgent) Iterate(ctx context.Context, setup *models.StorySetup, maxI
 		}
 
 		currentSetup = improveOutput.Setup
+		logger.Info("Setup improved based on review suggestions")
+		if i == maxIterations {
+			logger.Warn("Max iterations reached, stopping iteration loop")
+			break
+		}
 		logger.Info("✓ Setup improved based on review suggestions")
 	}
 

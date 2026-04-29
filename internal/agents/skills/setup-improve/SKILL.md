@@ -71,6 +71,12 @@ For each suggestion:
 - Improve pacing and tension
 - Optionally enrich storylines with `desire`, `opposition`, `stakes`, `turn`, `payoff`, `open_question`, or `pressure_points` when those hints create real pressure or payoff
 
+### DSL Simulation Feedback
+- Treat review suggestions from `category: logic`, `plot`, `conflict`, `structure`, or `consistency` as possible DSL simulation feedback.
+- If the feedback says a storyline contract is under-specified, improve the relevant `storylines` entry with 2-4 useful hints: desire, opposition, stakes, open_question, pressure_points, or payoff.
+- If the feedback says setup rules/resources/progression are missing, add or clarify `rules`, `premises.progression`, or `world_resources` so later outline simulation can track costs and state changes.
+- Keep these as creative contracts, not rigid chapter formulas. The setup should give later agents pressure and boundaries while leaving room for invention.
+
 ### Themes & Tone
 - Clarify thematic elements
 - Ensure tone consistency

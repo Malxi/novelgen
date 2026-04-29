@@ -14,6 +14,14 @@
 3. **事件追踪原则**：使用 Events 字段追踪所有状态变化，确保故事线连贯
 4. **角色一致性原则**：角色的情感状态、目标、关系必须自然演变，不能重置
 
+## DSL Simulation Execution Guidance
+
+The outline should be simulatable:
+- Use setup `storylines` as long-running contracts. Add `storyline_advances` only on chapters that create real pressure, reveal, reversal, consequence, or payoff.
+- When a chapter changes resources, growth, injuries, relationships, goals, or knowledge, make that change visible in `events`, `resource_ledger`, `state_anchor`, or `storyline_advances`.
+- Avoid chapters that only move characters or start fights without changing the situation.
+- If setup promises a payoff, make sure the outline plants, escalates, and eventually marks a payoff or resolution. Keep this sparse and natural, not mechanical.
+
 ---
 
 ## 二、输出结构要求

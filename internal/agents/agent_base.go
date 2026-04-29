@@ -95,7 +95,7 @@ func (a *BaseAgent) Execute(ctx context.Context, params InvokeParams, input inte
 		{Role: "user", Content: userPrompt},
 	}
 
-	options := a.config.GetChatOptions(a.projectLLM)
+	options := a.chatOptions()
 
 	logger.Info("[%s] Sending request to AI...", a.name)
 	resp, err := a.client.ChatCompletion(ctx, messages, options)
@@ -113,10 +113,67 @@ func (a *BaseAgent) Execute(ctx context.Context, params InvokeParams, input inte
 
 	// Parse response into output
 	if err := a.parseResponse(resp.Content, output); err != nil {
-		return fmt.Errorf("failed to parse response: %w", err)
+		logger.Warn("[%s] Initial JSON parse failed; attempting JSON repair: %v", a.name, err)
+		if repairErr := a.repairJSONResponse(ctx, resp.Content, output, err); repairErr != nil {
+			return fmt.Errorf("failed to parse response: %w; JSON repair also failed: %v", err, repairErr)
+		}
+		logger.Info("[%s] JSON repair succeeded", a.name)
 	}
 
 	return nil
+}
+
+func (a *BaseAgent) repairJSONResponse(ctx context.Context, malformed string, output interface{}, parseErr error) error {
+	if strings.TrimSpace(malformed) == "" {
+		return fmt.Errorf("cannot repair empty AI response")
+	}
+
+	repairOptions := *a.chatOptions()
+	repairOptions.Temperature = 0.1
+
+	schema := a.buildOutputRequirements(output)
+	systemPrompt := `You are a JSON repair tool.
+Return ONLY valid JSON.
+Preserve the original semantic content and field values as much as possible.
+Do not add markdown fences, explanations, comments, or new creative content.
+The repaired JSON must match the requested structure.`
+
+	userPrompt := fmt.Sprintf("The previous response failed JSON parsing.\n\nParse error:\n%s\n\n%s\n\nMalformed response:\n%s",
+		parseErr.Error(), schema, malformed)
+
+	messages := []llm.Message{
+		{Role: "system", Content: systemPrompt},
+		{Role: "user", Content: userPrompt},
+	}
+
+	logger.Info("[%s] Sending malformed JSON to repair pass...", a.name)
+	resp, err := a.client.ChatCompletion(ctx, messages, &repairOptions)
+	if err != nil {
+		return fmt.Errorf("JSON repair request failed: %w", err)
+	}
+	logger.Info("[%s] JSON repair response received (%d tokens used)", a.name, resp.Usage.TotalTokens)
+	if err := a.saveResponseToFile(a.name+"_JSONRepair", resp.Content); err != nil {
+		logger.Debug("[%s] Failed to save JSON repair response: %v", a.name, err)
+	}
+
+	if err := a.parseResponse(resp.Content, output); err != nil {
+		return fmt.Errorf("repaired response still invalid: %w", err)
+	}
+	return nil
+}
+
+func (a *BaseAgent) chatOptions() *llm.ChatOptions {
+	if a.config == nil {
+		return &llm.ChatOptions{}
+	}
+	if a.projectLLM == nil {
+		return &llm.ChatOptions{}
+	}
+	options := a.config.GetChatOptions(a.projectLLM)
+	if options == nil {
+		return &llm.ChatOptions{}
+	}
+	return options
 }
 
 // loadSystemPromptWithSkills loads the system prompt from specified skills

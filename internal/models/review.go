@@ -1,14 +1,16 @@
 package models
 
+import "strings"
+
 // ReviewSuggestion represents a single improvement suggestion
 // This is the universal suggestion structure used across all review types
 type ReviewSuggestion struct {
-	Category   string `json:"category"`   // Category of the issue (e.g., "logic", "appeal", "consistency")
-	TargetID   string `json:"target_id"`  // ID of the target element (e.g., "P1", "P1-V1-C1")
+	Category   string `json:"category"`    // Category of the issue (e.g., "logic", "appeal", "consistency")
+	TargetID   string `json:"target_id"`   // ID of the target element (e.g., "P1", "P1-V1-C1")
 	TargetName string `json:"target_name"` // Name/title of the target element
-	Issue      string `json:"issue"`      // Description of the problem
-	Suggestion string `json:"suggestion"` // Specific improvement suggestion
-	Priority   string `json:"priority"`   // "high", "medium", "low"
+	Issue      string `json:"issue"`       // Description of the problem
+	Suggestion string `json:"suggestion"`  // Specific improvement suggestion
+	Priority   string `json:"priority"`    // "high", "medium", "low"
 }
 
 // DimensionScore represents a score for a specific review dimension
@@ -20,25 +22,25 @@ type DimensionScore struct {
 
 // ContinuityIssue represents a continuity or abrupt plot issue found during review
 type ContinuityIssue struct {
-	Type        string `json:"type"`         // "abrupt_plot", "timeline", "space", "character_state", "relationship"
-	Location    string `json:"location"`     // Specific location in text (paragraph/sentence)
-	Description string `json:"description"`  // Description of the issue
-	Reason      string `json:"reason"`       // Why it's an issue (lack of setup, logic jump, etc.)
-	Suggestion  string `json:"suggestion"`   // How to fix it
-	Severity    string `json:"severity"`     // "fatal", "serious", "minor"
+	Type        string `json:"type"`        // "abrupt_plot", "timeline", "space", "character_state", "relationship"
+	Location    string `json:"location"`    // Specific location in text (paragraph/sentence)
+	Description string `json:"description"` // Description of the issue
+	Reason      string `json:"reason"`      // Why it's an issue (lack of setup, logic jump, etc.)
+	Suggestion  string `json:"suggestion"`  // How to fix it
+	Severity    string `json:"severity"`    // "fatal", "serious", "minor"
 }
 
 // ReviewResult represents a universal review result structure
 // It can be used for setup review, outline review, chapter review, etc.
 type ReviewResult struct {
-	OverallScore     float64            `json:"overall_score"`      // 0-100
-	Dimensions       []DimensionScore   `json:"dimensions"`         // Detailed scores by dimension
-	Summary          string             `json:"summary"`            // Overall assessment
-	Strengths        []string           `json:"strengths"`          // What's working well
-	Weaknesses       []string           `json:"weaknesses"`         // Areas needing improvement (optional)
-	Suggestions      []ReviewSuggestion `json:"suggestions"`        // Specific improvement suggestions
-	Iteration        int                `json:"iteration"`          // Iteration number (for tracking)
-	ContinuityIssues []ContinuityIssue  `json:"continuity_issues"`  // Abrupt plot and continuity issues
+	OverallScore     float64            `json:"overall_score"`     // 0-100
+	Dimensions       []DimensionScore   `json:"dimensions"`        // Detailed scores by dimension
+	Summary          string             `json:"summary"`           // Overall assessment
+	Strengths        []string           `json:"strengths"`         // What's working well
+	Weaknesses       []string           `json:"weaknesses"`        // Areas needing improvement (optional)
+	Suggestions      []ReviewSuggestion `json:"suggestions"`       // Specific improvement suggestions
+	Iteration        int                `json:"iteration"`         // Iteration number (for tracking)
+	ContinuityIssues []ContinuityIssue  `json:"continuity_issues"` // Abrupt plot and continuity issues
 }
 
 // GetDimensionScore gets the score for a specific dimension by name
@@ -55,11 +57,32 @@ func (r *ReviewResult) GetDimensionScore(name string) (float64, bool) {
 func (r *ReviewResult) GetHighPrioritySuggestions() []ReviewSuggestion {
 	var highPriority []ReviewSuggestion
 	for _, s := range r.Suggestions {
-		if s.Priority == "high" {
+		if normalizeReviewSeverity(s.Priority) == PriorityHigh {
 			highPriority = append(highPriority, s)
 		}
 	}
 	return highPriority
+}
+
+// HasBlockingSuggestions reports whether review feedback should force an
+// improve pass even when the numeric score already meets the threshold.
+func (r *ReviewResult) HasBlockingSuggestions() bool {
+	if r == nil {
+		return false
+	}
+	for _, s := range r.Suggestions {
+		switch normalizeReviewSeverity(s.Priority) {
+		case PriorityCritical, PriorityHigh:
+			return true
+		}
+	}
+	for _, issue := range r.ContinuityIssues {
+		switch normalizeReviewSeverity(issue.Severity) {
+		case PriorityCritical, "fatal", "serious", "blocker":
+			return true
+		}
+	}
+	return false
 }
 
 // GetSuggestionsByCategory returns suggestions filtered by category
@@ -102,11 +125,11 @@ func (r *ReviewResult) CalculateOverallScore() float64 {
 // Common dimension names for different review types
 const (
 	// Setup review dimensions
-	DimRootSetting   = "Root Setting"
-	DimLogicClosure  = "Logic Closure"
-	DimAdaptation    = "Adaptation"
-	DimAppeal        = "Appeal"
-	DimScalability   = "Scalability"
+	DimRootSetting  = "Root Setting"
+	DimLogicClosure = "Logic Closure"
+	DimAdaptation   = "Adaptation"
+	DimAppeal       = "Appeal"
+	DimScalability  = "Scalability"
 
 	// Outline review dimensions
 	DimLogic      = "Logic"
@@ -120,9 +143,10 @@ const (
 	DimOriginality = "Originality"
 
 	// Priority levels
-	PriorityHigh   = "high"
-	PriorityMedium = "medium"
-	PriorityLow    = "low"
+	PriorityCritical = "critical"
+	PriorityHigh     = "high"
+	PriorityMedium   = "medium"
+	PriorityLow      = "low"
 
 	// Suggestion categories
 	CategoryLogic       = "logic"
@@ -132,3 +156,7 @@ const (
 	CategoryCharacter   = "character"
 	CategoryPlot        = "plot"
 )
+
+func normalizeReviewSeverity(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
+}

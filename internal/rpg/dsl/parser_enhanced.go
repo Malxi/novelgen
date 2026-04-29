@@ -172,6 +172,8 @@ func (ep *EnhancedParser) parseMetadataEnhanced() (*Metadata, error) {
 			meta.Tone = ep.toString(value)
 		case "dsl_version":
 			meta.DSLVersion = ep.toString(value)
+		case "phase":
+			meta.Phase = ep.toString(value)
 		case "genre":
 			meta.Genre = ep.toStringSlice(value)
 		default:

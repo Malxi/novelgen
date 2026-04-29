@@ -53,9 +53,11 @@ func (a *ModelAdapter) BuildDSL(phase MergePhase) (*DSL, error) {
 	a.buildDefaultPlayer(dsl)
 	a.buildSetupWorld(dsl)
 	a.buildDefaultSystems(dsl)
+	a.buildStorylineContracts(dsl)
 
 	switch phase {
 	case PhaseSetup:
+		a.buildSetupContractChapters(dsl)
 		return dsl, nil
 	case PhaseOutline:
 		a.buildChaptersFromOutline(dsl)
@@ -232,11 +234,19 @@ func (a *ModelAdapter) buildChaptersFromOutline(dsl *DSL) {
 	pos := 0
 	for _, part := range a.outline.Parts {
 		for _, vol := range part.Volumes {
+			if vol.ID != "" {
+				dsl.Storyline.Arcs = append(dsl.Storyline.Arcs, Arc{
+					ID:       vol.ID,
+					Name:     vol.Title,
+					Position: len(dsl.Storyline.Arcs) + 1,
+				})
+			}
 			for _, ch := range vol.Chapters {
 				pos++
 				chapter := Chapter{
 					ID:       ch.ID,
 					Title:    ch.Title,
+					Arc:      vol.ID,
 					Position: pos,
 				}
 
@@ -244,14 +254,76 @@ func (a *ModelAdapter) buildChaptersFromOutline(dsl *DSL) {
 				var steps []Step
 				stepOrder := 0
 
+				for _, advance := range ch.StorylineAdvances {
+					stepOrder++
+					steps = append(steps, Step{
+						Order:       stepOrder,
+						Description: storylineAdvanceDescription(advance),
+						Event: Event{
+							Type:        "storyline",
+							StateDeltas: buildStorylineAdvanceDeltas(ch.ID, advance),
+						},
+					})
+				}
+
+				a.addOutlineEnemies(dsl, ch.Enemies)
 				for _, evt := range ch.Events {
 					stepOrder++
 					step := Step{
 						Order:       stepOrder,
-						Description: evt.Details,
+						Description: describeModelEvent(evt),
 					}
-					step.Event = a.buildEventFromModel(evt)
+					step.Event = a.buildEventFromModel(evt, ch.Enemies)
 					steps = append(steps, step)
+				}
+
+				for _, entry := range ch.ResourceLedger {
+					stepOrder++
+					steps = append(steps, Step{
+						Order:       stepOrder,
+						Description: fmt.Sprintf("%s resource change: %d %+d = %d. %s", entry.Item, entry.Start, entry.Delta, entry.End, entry.Reason),
+						Event: Event{
+							Type: "resource",
+							StateDeltas: []StateDelta{{
+								Target: entry.Item,
+								Kind:   "resource",
+								Field:  "quantity",
+								From:   fmt.Sprintf("%d", entry.Start),
+								To:     fmt.Sprintf("%d", entry.End),
+								Delta:  entry.Delta,
+								Note:   entry.Reason,
+							}},
+						},
+					})
+				}
+
+				for _, delta := range buildStateAnchorDeltas(ch) {
+					stepOrder++
+					steps = append(steps, Step{
+						Order:       stepOrder,
+						Description: delta.Note,
+						Event: Event{
+							Type:        "status",
+							StateDeltas: []StateDelta{delta},
+						},
+					})
+				}
+
+				if ch.Timeline.TimeJump || strings.TrimSpace(ch.Timeline.Transition) != "" {
+					stepOrder++
+					steps = append(steps, Step{
+						Order:       stepOrder,
+						Description: strings.TrimSpace(ch.Timeline.Transition),
+						Event: Event{
+							Type: "transition",
+							StateDeltas: []StateDelta{{
+								Kind:  "transition",
+								Field: "time_jump",
+								To:    "true",
+								Note:  strings.TrimSpace(ch.Timeline.PreviousGap + " " + ch.Timeline.Transition),
+							}},
+						},
+					})
 				}
 
 				for _, beat := range ch.GetBeats() {
@@ -278,9 +350,13 @@ func (a *ModelAdapter) buildChaptersFromOutline(dsl *DSL) {
 	}
 }
 
-func (a *ModelAdapter) buildEventFromModel(evt models.Event) Event {
+func (a *ModelAdapter) buildEventFromModel(evt models.Event, enemies []models.OutlineEnemy) Event {
 	dslEvent := Event{
-		Type: evt.Type,
+		Type:        evt.Type,
+		StateDeltas: buildEventStateDeltas(evt),
+	}
+	if dslEvent.Type == "" {
+		dslEvent.Type = eventTypeFromAction(evt.Action)
 	}
 
 	switch evt.Action {
@@ -289,6 +365,7 @@ func (a *ModelAdapter) buildEventFromModel(evt models.Event) Event {
 		dslEvent.Combat = &CombatEvent{
 			Setup: CombatSetup{
 				Location: evt.Context,
+				Enemies:  outlineEnemySpawns(enemies),
 			},
 		}
 	case models.ActionMove:
@@ -302,8 +379,299 @@ func (a *ModelAdapter) buildEventFromModel(evt models.Event) Event {
 	case models.ActionMeet:
 		dslEvent.Type = "dialogue"
 	}
+	if dslEvent.Type == "combat" && dslEvent.Combat == nil {
+		dslEvent.Combat = &CombatEvent{
+			Setup: CombatSetup{
+				Location: evt.Context,
+				Enemies:  outlineEnemySpawns(enemies),
+			},
+		}
+	}
 
 	return dslEvent
+}
+
+func (a *ModelAdapter) addOutlineEnemies(dsl *DSL, enemies []models.OutlineEnemy) {
+	if dsl == nil || dsl.Characters == nil {
+		return
+	}
+	seen := make(map[string]bool, len(dsl.Characters.Enemies))
+	for _, enemy := range dsl.Characters.Enemies {
+		seen[enemy.ID] = true
+	}
+	for i, enemy := range enemies {
+		name := strings.TrimSpace(enemy.Name)
+		if name == "" {
+			continue
+		}
+		id := outlineEnemyID(enemy, i)
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		level := enemy.Level
+		if level <= 0 {
+			level = 1
+		}
+		dsl.Characters.Enemies = append(dsl.Characters.Enemies, Enemy{
+			ID:          id,
+			Name:        name,
+			Type:        coalesceString(enemy.Faction, "enemy"),
+			Description: strings.TrimSpace(enemy.Context),
+			Level:       level,
+			Template: EnemyTemplate{
+				BaseLevel: level,
+				HPFormula: fmt.Sprintf("%d", 40+level*20),
+				StatsPerLevel: map[string]int{
+					"str": 6 + level,
+					"agi": 4 + level,
+					"int": 3 + level,
+					"vit": 5 + level,
+				},
+			},
+		})
+	}
+}
+
+func outlineEnemySpawns(enemies []models.OutlineEnemy) []EnemySpawn {
+	spawns := make([]EnemySpawn, 0, len(enemies))
+	for i, enemy := range enemies {
+		if strings.TrimSpace(enemy.Name) == "" {
+			continue
+		}
+		count := enemy.Count
+		if count <= 0 {
+			count = 1
+		}
+		spawns = append(spawns, EnemySpawn{
+			ID:    outlineEnemyID(enemy, i),
+			Count: count,
+			Level: enemy.Level,
+			Boss:  enemy.IsBoss,
+		})
+	}
+	return spawns
+}
+
+func outlineEnemyID(enemy models.OutlineEnemy, index int) string {
+	if strings.TrimSpace(enemy.BossID) != "" {
+		return sanitizeID(enemy.BossID)
+	}
+	base := strings.TrimSpace(enemy.Faction + "_" + enemy.Tier + "_" + enemy.Name)
+	if strings.TrimSpace(base) == "" {
+		base = fmt.Sprintf("enemy_%02d", index+1)
+	}
+	return coalesceID(sanitizeID(base), fmt.Sprintf("enemy_%02d", index+1))
+}
+
+func (a *ModelAdapter) buildStorylineContracts(dsl *DSL) {
+	if a.setup == nil || dsl.Storyline == nil {
+		return
+	}
+	for i, storyline := range a.setup.Storylines {
+		name := strings.TrimSpace(storyline.Name)
+		if name == "" {
+			name = fmt.Sprintf("storyline_%02d", i+1)
+		}
+		id := coalesceID(sanitizeID(name), fmt.Sprintf("storyline_%02d", i+1))
+		dsl.Storyline.Arcs = append(dsl.Storyline.Arcs, Arc{
+			ID:       id,
+			Name:     name,
+			Position: len(dsl.Storyline.Arcs) + 1,
+			CompletionReward: Reward{
+				Title:       storyline.Payoff,
+				Description: storyline.OpenQuestion,
+			},
+		})
+	}
+}
+
+func (a *ModelAdapter) buildSetupContractChapters(dsl *DSL) {
+	if a.setup == nil || dsl.Storyline == nil || len(a.setup.Storylines) == 0 {
+		return
+	}
+	for i, storyline := range a.setup.Storylines {
+		name := strings.TrimSpace(storyline.Name)
+		if name == "" {
+			name = fmt.Sprintf("storyline_%02d", i+1)
+		}
+		id := coalesceID(sanitizeID(name), fmt.Sprintf("storyline_%02d", i+1))
+		step := Step{
+			Order:       1,
+			Description: strings.TrimSpace(storyline.Description),
+			Event: Event{
+				Type: "storyline_contract",
+				StateDeltas: []StateDelta{
+					{Target: name, Kind: "storyline", Field: "contract", To: "promised", Note: storylineContractNote(storyline)},
+					{Target: name, Kind: "plot_thread", Field: "open_question", To: "raised", Note: storyline.OpenQuestion},
+				},
+			},
+		}
+		dsl.Storyline.Chapters = append(dsl.Storyline.Chapters, Chapter{
+			ID:       "setup_" + id,
+			Title:    name,
+			Arc:      id,
+			Position: i + 1,
+			Objectives: []Objective{{
+				ID:    "setup_" + id + "_contract",
+				Name:  "Storyline Contract: " + name,
+				Type:  "sequence",
+				Steps: []Step{step},
+			}},
+		})
+	}
+}
+
+func describeModelEvent(evt models.Event) string {
+	for _, candidate := range []string{evt.Details, evt.Result, evt.Context} {
+		if strings.TrimSpace(candidate) != "" {
+			return strings.TrimSpace(candidate)
+		}
+	}
+	parts := []string{}
+	for _, value := range []string{evt.Actor, evt.Action, evt.Target, evt.Change, evt.Subject} {
+		if strings.TrimSpace(value) != "" {
+			parts = append(parts, strings.TrimSpace(value))
+		}
+	}
+	if len(parts) == 0 {
+		return "outline event"
+	}
+	return strings.Join(parts, " -> ")
+}
+
+func eventTypeFromAction(action string) string {
+	switch action {
+	case models.ActionCombat, models.ActionDefeat, models.ActionEscape:
+		return "combat"
+	case models.ActionMove, models.ActionEnter, models.ActionLeave, models.ActionTeleport:
+		return "move"
+	case models.ActionAcquire, models.ActionUse, models.ActionLose, models.ActionCraft:
+		return "acquire"
+	case models.ActionMeet, models.ActionBefriend, models.ActionBetray, models.ActionReconcile:
+		return "relationship"
+	case models.ActionLearn, models.ActionDiscover, models.ActionReveal:
+		return "knowledge"
+	case models.ActionAwaken, models.ActionUpgrade, models.ActionMaster, models.ActionTransform, models.ActionRecover, models.ActionAfflict:
+		return "status"
+	case models.ActionSet, models.ActionProgress, models.ActionAchieve, models.ActionAbandon:
+		return "goal"
+	default:
+		return "story"
+	}
+}
+
+func buildEventStateDeltas(evt models.Event) []StateDelta {
+	var deltas []StateDelta
+	target := strings.TrimSpace(evt.Target)
+	if target == "" {
+		target = strings.TrimSpace(evt.Subject)
+	}
+	kind := strings.TrimSpace(evt.TargetType)
+	if kind == "" {
+		kind = strings.TrimSpace(evt.Type)
+	}
+	if kind == "" {
+		kind = eventTypeFromAction(evt.Action)
+	}
+	if target != "" || evt.Change != "" || evt.Result != "" {
+		deltas = append(deltas, StateDelta{
+			Target: target,
+			Kind:   kind,
+			Field:  evt.Action,
+			To:     coalesceString(evt.Change, evt.Result),
+			Note:   describeModelEvent(evt),
+		})
+	}
+	if evt.Type == models.EventTypeStoryline || evt.TargetType == models.TargetTypeStoryline {
+		deltas = append(deltas, StateDelta{
+			Target: target,
+			Kind:   "storyline",
+			Field:  "event",
+			To:     coalesceString(evt.Change, evt.Action),
+			Note:   describeModelEvent(evt),
+		})
+	}
+	return deltas
+}
+
+func storylineAdvanceDescription(advance models.StorylineAdvance) string {
+	parts := []string{advance.StorylineName, advance.Stage, advance.Change, advance.Consequence, advance.Pressure}
+	var out []string
+	for _, part := range parts {
+		if strings.TrimSpace(part) != "" {
+			out = append(out, strings.TrimSpace(part))
+		}
+	}
+	return strings.Join(out, " | ")
+}
+
+func buildStorylineAdvanceDeltas(chapterID string, advance models.StorylineAdvance) []StateDelta {
+	stage := strings.ToLower(strings.TrimSpace(advance.Stage))
+	if stage == "" {
+		stage = "progress"
+	}
+	note := fmt.Sprintf("change=%s; consequence=%s; pressure=%s", advance.Change, advance.Consequence, advance.Pressure)
+	deltas := []StateDelta{{
+		Target: strings.TrimSpace(advance.StorylineName),
+		Kind:   "storyline",
+		Field:  "stage",
+		To:     stage,
+		Cost:   strings.TrimSpace(advance.Consequence),
+		Unit:   strings.TrimSpace(advance.Pressure),
+		Note:   note,
+	}}
+	switch stage {
+	case "payoff", "resolve", "resolved", "completion", "completed":
+		deltas = append(deltas, StateDelta{Target: advance.StorylineName, Kind: "plot_thread", Field: "storyline", To: "resolved", Note: "payoff in " + chapterID})
+	case "hook", "pressure", "reveal", "reversal", "twist", "progress":
+		deltas = append(deltas, StateDelta{Target: advance.StorylineName, Kind: "plot_thread", Field: "storyline", To: "raised", Note: "active pressure in " + chapterID})
+	}
+	return deltas
+}
+
+func buildStateAnchorDeltas(ch models.Chapter) []StateDelta {
+	var deltas []StateDelta
+	if strings.TrimSpace(ch.StateAnchor.Cultivation) != "" {
+		deltas = append(deltas, StateDelta{
+			Target: "protagonist",
+			Kind:   "cultivation",
+			Field:  "realm",
+			To:     ch.StateAnchor.Cultivation,
+			Note:   "chapter start cultivation: " + ch.StateAnchor.Cultivation,
+		})
+	}
+	if ch.StateAnchor.SpiritStones > 0 {
+		deltas = append(deltas, StateDelta{
+			Target: "spirit_stones",
+			Kind:   "resource",
+			Field:  "quantity",
+			To:     fmt.Sprintf("%d", ch.StateAnchor.SpiritStones),
+			Note:   "chapter start spirit stones",
+		})
+	}
+	if len(ch.StateAnchor.Injuries) > 0 {
+		deltas = append(deltas, StateDelta{
+			Target: "protagonist",
+			Kind:   "injury",
+			Field:  "active",
+			To:     "injured",
+			Note:   "chapter start injuries: " + strings.Join(ch.StateAnchor.Injuries, ", "),
+		})
+	}
+	return deltas
+}
+
+func storylineContractNote(storyline models.Storyline) string {
+	parts := []string{
+		"desire=" + storyline.Desire,
+		"opposition=" + storyline.Opposition,
+		"stakes=" + storyline.Stakes,
+		"turn=" + storyline.Turn,
+		"payoff=" + storyline.Payoff,
+		"open_question=" + storyline.OpenQuestion,
+	}
+	return strings.Join(parts, "; ")
 }
 
 func (a *ModelAdapter) buildPlaceholderNPCs(dsl *DSL) {

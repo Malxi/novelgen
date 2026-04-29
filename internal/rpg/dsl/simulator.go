@@ -156,6 +156,11 @@ func (s *Simulator) SimulateAll() []SimulationIssue {
 	// 初始化
 	s.initialize()
 
+	if s.DSL.Metadata != nil && s.DSL.Metadata.Phase == string(PhaseSetup) {
+		s.checkStoryContractQuality()
+		return s.Issues
+	}
+
 	// 检查整体结构
 	s.checkStoryStructure()
 
@@ -177,6 +182,7 @@ func (s *Simulator) SimulateAll() []SimulationIssue {
 
 	// 通用检查（从 DSL Systems 读取规则，不绑定小说类型）
 	s.checkPowerProgression()
+	s.checkStoryContractQuality()
 	s.checkPlotThreads()
 
 	return s.Issues
@@ -887,6 +893,7 @@ func (s *Simulator) addIssue(issueType IssueType, severity SeverityLevel, chapte
 }
 
 func (s *Simulator) addIssueWithEvidence(issueType IssueType, severity SeverityLevel, chapter string, step int, description, suggestion string, evidence []IssueEvidence) {
+	severity = s.normalizeIssueSeverity(issueType, severity)
 	s.Issues = append(s.Issues, SimulationIssue{
 		Type:        issueType,
 		Severity:    severity,
@@ -896,6 +903,16 @@ func (s *Simulator) addIssueWithEvidence(issueType IssueType, severity SeverityL
 		Suggestion:  suggestion,
 		Evidence:    compactIssueEvidence(evidence),
 	})
+}
+
+func (s *Simulator) normalizeIssueSeverity(issueType IssueType, severity SeverityLevel) SeverityLevel {
+	if severity != SeverityCritical || s == nil || s.DSL == nil || s.DSL.Metadata == nil {
+		return severity
+	}
+	if s.DSL.Metadata.Phase == string(PhaseOutline) && issueType == IssueBalance {
+		return SeverityWarning
+	}
+	return severity
 }
 
 func compactIssueEvidence(evidence []IssueEvidence) []IssueEvidence {

@@ -14,6 +14,16 @@ Storylines may include optional dramatic hints: `desire`, `opposition`, `stakes`
 
 Use these fields only when they sharpen the story. Prefer the 2-4 hints that create real dramatic pressure, reader curiosity, or later payoff. Do not fill every field mechanically, do not force every storyline into the same structure, and leave room for later agents to invent better turns when the outline develops.
 
+## DSL Simulation Contract Guidance
+
+Generate setup data that can be pressure-tested by DSL simulation:
+- `storylines` are long-running story contracts: each important arc should expose what someone wants, what opposes it, what is at stake, and what question/payoff keeps readers moving.
+- `premises.progression` defines growth ceilings and requirements; avoid vague unlimited power systems.
+- `world_resources` defines resources that later outlines may spend or replenish; mark scarcity clearly.
+- `rules` should express boundaries, costs, and exceptions that can be checked later.
+
+Keep this lightweight. The goal is not to lock every chapter into a formula; the goal is to give outline generation enough pressure, cost, and promise to simulate.
+
 ## 一、核心执行铁则（最高优先级，100%严格遵守）
 所有设定生成动作，必须无条件遵循以下6条铁则，违反任意一条的输出均视为不合格：
 1.  **根设定唯一原则**：整个世界观仅锚定1个核心根设定，最多不超过2个，禁止多核心并行导致逻辑冲突，所有从属设定必须围绕根设定展开。

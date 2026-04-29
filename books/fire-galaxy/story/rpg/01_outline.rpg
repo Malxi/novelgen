@@ -1,11 +1,86 @@
 
 metadata {
-  title = "fire-galaxy"
+  title = "虫巢远征"
+  genre = ["科幻", "废土", "机甲", "末世"]
+  power_system = "基因进化与火种机甲体系"
+  tone = "热血激昂，硬核科幻，末世苍凉，爽感充足"
   dsl_version = "0.2.0"
   phase = "outline"
 }
 
 characters {
+  enemy "虫族幼虫" {
+    id = "虫族_低级_虫族幼虫"
+    type = "虫族"
+    level = 1
+    description = "休眠舱区游荡觅食"
+  }
+  enemy "机械斥候" {
+    id = "叛变ai「零」_低级_机械斥候"
+    type = "叛变AI「零」"
+    level = 2
+    description = "AI零的地下巡逻部队，巡查废弃科研区的能量波动"
+  }
+  enemy "虫族工蜂" {
+    id = "虫族_低级_虫族工蜂"
+    type = "虫族"
+    level = 2
+    description = "地表巡逻虫族小队，为之前袭击游击营地的残余兵力"
+  }
+  enemy "虫族侦察小队" {
+    id = "虫族_低级_虫族侦察小队"
+    type = "虫族"
+    level = 2
+    description = "追踪人类踪迹突袭营地，被林野击杀3只，剩余2只被小队的能量步枪击杀"
+  }
+  enemy "营地叛徒" {
+    id = "人类/沈氏内应_低级_营地叛徒"
+    type = "人类/沈氏内应"
+    level = 1
+    description = "为了粮食打算绑架林野换沈氏的悬赏"
+  }
+  enemy "虫族巡逻队" {
+    id = "虫族_中级_虫族巡逻队"
+    type = "虫族"
+    level = 3
+    description = "机甲库入口巡逻，定期巡查门禁状态"
+  }
+  enemy "机械清扫兵" {
+    id = "叛变ai「零」_中级_机械清扫兵"
+    type = "叛变AI「零」"
+    level = 3
+    description = "AI零的部队追踪机甲库的能量波动闯入"
+  }
+  enemy "虫族作战小队" {
+    id = "虫族_中级_虫族作战小队"
+    type = "虫族"
+    level = 3
+    description = "前往研究所巡逻的虫族部队"
+  }
+  enemy "虫族近卫虫" {
+    id = "虫族_高级_虫族近卫虫"
+    type = "虫族"
+    level = 4
+    description = "虫族小队长，带队巡逻"
+  }
+  enemy "虫族守军" {
+    id = "虫族_中级_虫族守军"
+    type = "虫族"
+    level = 3
+    description = "东侧防线守军，大部分被调往西侧对抗机械部队，已经残血"
+  }
+  enemy "残余机械部队" {
+    id = "叛变ai「零」_中级_残余机械部队"
+    type = "叛变AI「零」"
+    level = 3
+    description = "西侧战场残余兵力，几乎被虫族打残"
+  }
+  enemy "刀锋虫" {
+    id = "虫族_高级_刀锋虫"
+    type = "虫族"
+    level = 5
+    description = "前哨站统领，与机械部队激战多时，能量消耗过半，战力下降30%"
+  }
   npc "protagonist" {
     id = "protagonist"
     __placeholder__ = true
@@ -24,6 +99,140 @@ world {
     __placeholder__ = true
     __source_phase__ = "outline"
   }
+  item "虫族晶核" {
+    id = "resource_01"
+    type = "能源/材料"
+    rarity = "legendary"
+    description = "虫族体内生成的能量结晶，是基因进化的核心原料，也可作为能源驱动火种机甲、据点防御设施等设备"
+  }
+  item "蓝星草" {
+    id = "resource_02"
+    type = "材料"
+    rarity = "rare"
+    description = "仅生长在虫族活动极少的地下溶洞深处，磐石堡周边溶洞产量最高，是制作基因抑制剂的核心原材料，目前被沈氏垄断开采"
+  }
+  item "基因抑制剂" {
+    id = "resource_03"
+    type = "消耗品"
+    rarity = "rare"
+    description = "由虫族体液搭配蓝星草提取制成，可将基因进化时的崩溃风险降低40%，是各幸存者据点的核心战略物资"
+  }
+  item "旧文明数据芯片" {
+    id = "resource_04"
+    type = "材料"
+    rarity = "rare"
+    description = "散落在地表旧人类遗址中的存储芯片，录入了旧时代的科技、文化资料，解锁与林野的基因等级绑定，低级芯片可解锁基础生产技术，高级芯片可解锁武器、机甲相关的额外功能，能大幅提升据点的生产、防御能力"
+  }
+  item "旧人类核聚变晶块" {
+    id = "resource_05"
+    type = "能源"
+    rarity = "common"
+    description = "大陨落前旧人类批量生产的核聚变能量结晶，仅可驱动旧式纯机械武器、据点供电与防御设施，无法用于基因进化与火种机甲供能，是各据点日常运行的通用能源"
+  }
+  rule "setup_rule_01" {
+    trigger = "always"
+    effect = "虫族核心母巢会释放全域电磁干扰波，压制所有非基因绑定的人类电子设备，只有适配了基因进化系统的火种机甲可不受干扰正常运行；大陨落前人类已经预判到电磁攻击风险，提前在各地下据点储备了大量纯机械武器的生产图纸与原料，百年间幸存者可以自行生产维护这类无电子控制模块的旧式防御武器，普通人可正常操作，该类武器可有效杀伤工虫、作战兵虫，对初级虫将仅能造成轻伤，无法伤害中级以上虫族，战力边界清晰。"
+  }
+  rule "setup_rule_02" {
+    trigger = "always"
+    effect = "火种机甲的最高权限基因锁由林野当年亲自预埋，他是唯一的全权限适配者；除他之外全球仅有不超过5名次一级基因适配者，最高仅能升级至基因等级3级，无法解锁星际航行等高级权限，也无法激活机甲核心数据库；次一级基因适配者升级时不会解锁林野的研发记忆碎片，但会触发自身的基因潜能觉醒，解锁专属的个人异能，可适配简化版火种机甲的额外功能，拥有独立成长路径；全球现存的5名次一级基因适配者中，2名属于沈氏核心成员，1名是独立游走的赏金猎人，1名是异变者阵营的隐藏适配者（该隐藏适配者是异变者首领阿蝉的义兄，十年前为掩护异变者族群撤退被沈氏俘虏，目前被关押在磐石堡地下实验室，为后续营救支线预埋钩子），1名是青藤据点护卫队长苏晴，为后续势力合纵连横预留剧情空间。"
+  }
+  rule "setup_rule_03" {
+    trigger = "always"
+    effect = "简化版火种机甲移除了核心数据库与星际航行模块，仅保留基础作战功能，采用次一级基因适配者的基因片段做绑定锁，不受电磁干扰，战力仅为完整版火种机甲的30%，无法升级至更高权限；沈氏百年间仅掌握简化版火种机甲的组装技术，但缺少核心基因编码模块，百年间仅组装出不到10台供家族核心成员使用，批量生产技术只有林野解锁三级基因权限后才能从文明数据库中获取；沈明哲家族当年仅为项目投资方，未掌握核心基因编码技术，因此无法激活机甲核心功能。"
+  }
+  rule "setup_rule_04" {
+    trigger = "always"
+    effect = "基因进化等级越高，可解锁的机甲权限越强，每次升级除需要吸收对应等级的虫族核心能量晶核外，还需解锁一段林野当年研发火种机甲的记忆碎片，逐步揭开当年爆炸事故的真相；进化时基因稳定性低于60%即触发崩溃风险，可通过特制基因抑制剂、同伴精神引导等方式降低崩溃概率；补充基因稳定性阈值规则：只要人类基因稳定性长期保持在60%以上，入侵的虫族基因片段仅会强化身体机能，不会整合到人类核心基因链中，因此林野的全权限火种机甲适配资格不会因基因进化过程中吸收虫族晶核而失效，彻底规避战力逻辑隐患。"
+  }
+  rule "setup_rule_05" {
+    trigger = "always"
+    effect = "半人半虫异变者的判定标准为异变时基因稳定性是否高于40%：高于40%可保留人类理智，拥有专属异能，可免疫虫族低阶精神干扰，能在虫族领地内隐蔽活动，还可感知10公里范围内的虫族晶核与虫群动向，是反抗军勘探、渗透行动的核心力量；异变者携带的虫族基因片段已整合到人类核心基因链中，即使是5级林野的基因修复波也无法清除，仅能抑制其异变倾向，无法使其适配火种机甲的纯人类基因锁；保留理智的异变者人类基因占比普遍在70%以上，可适配仅要求人类基因占比高于60%的简化版火种机甲基因锁，仅无法适配完整版火种机甲的纯人类基因锁；保留理智的异变者因携带虫族基因片段，低阶虫族不会主动对其发起攻击，但中级以上虫将可通过精神波动识别其人类意识身份，会主动发起围剿，既强化异变者的渗透优势，也明确其生存风险；保留理智的异变者可通过吸收虫族晶核提升异能等级，最高可达到对应虫族初级虫将的战力，异能类型与异变时融合的虫族基因类型绑定，比如融合工虫基因的异变者拥有巨力，融合飞虫基因的异变者拥有短距离飞行能力；低于40%则完全沦为虫族附庸，无自主意识。各幸存者据点均配备基于纯机械原理的基因稳定性检测仪，可在10秒内测出异变者的基因稳定性数值；同时保留理智的异变者瞳孔为淡蓝色，失控异变者瞳孔为深黑色，可通过外观快速初步判定阵营。"
+  }
+  rule "setup_rule_06" {
+    trigger = "always"
+    effect = "虫族种群层级严格，低级晶核对应工虫、作战兵虫，每10只兵虫约产出1枚可用低级晶核；中级晶核对应初级虫将，每百只规模虫群才配置1名初级虫将；高级晶核对应高级虫统领，全星球虫族仅不超过10名，母巢核心晶核唯一；高级虫将拥有不亚于人类的智慧，会针对性设局围剿人类幸存者，甚至会安插内奸渗透人类据点。"
+  }
+  rule "setup_rule_07" {
+    trigger = "always"
+    effect = "普通幸存者大多聚居在青藤据点、磐石堡、黄土沟据点等地下据点，按贡献分配生存资源，对基因进化者既敬畏又排斥，普通人除可操作旧式防御武器、参与后勤保障外，旧文明数据芯片的修复、基因抑制剂的生产、简化版火种机甲的维护都需要普通科研人员、技术工人的参与，仅靠基因进化者无法完成，拥有不可替代的价值；普通技工老周将在最终母巢决战时，靠纯机械技术临时修复火种机甲的能量管路，为林野争取到吸收母巢晶核的关键10分钟，凸显普通人的不可替代性。"
+  }
+  rule "setup_rule_08" {
+    trigger = "always"
+    effect = "火种机甲内置的文明数据库隐藏着百年前虫族入侵的完整真相与旧人类星际探索记录、外星文明坐标，只有林野的基因序列可逐层解锁相关内容；旧文明数据芯片的解锁与林野的基因等级绑定，低级芯片可在基因等级1-2级时解锁基础生产技术，高级芯片需要基因等级3级以上才能解锁武器、机甲相关的额外功能。林野当年研发火种机甲时，同步为旧人类文明备份芯片设置了配套的基因权限锁，避免核心科技落入敌对势力手中，因此只有对应基因等级的权限才能解锁对应芯片内容。"
+  }
+  rule "setup_rule_09" {
+    trigger = "always"
+    effect = "沈明哲集团掌握虫族需要的旧人类隐蔽星际星舰坐标数据，该坐标为分段加密格式，9枚密钥是当年沈氏家族参与火种机甲项目时，为保管旧人类星际星舰坐标专门定制的基因绑定存储介质，仅沈氏直系后代的基因可激活感应；9枚密钥分别散落在虫族高级统领的领地、旧人类核心军事禁区（设有纯机械触发的自毁装置，非沈氏基因携带者靠近直接引爆）等极高风险区域，沈氏百年间多次派人搜寻损失惨重，因此仅找到3枚，迟迟无法完成与虫族的交易；沈氏与虫族高级统领的正式交易为近10年才达成，此前百年间双方处于敌对状态，且交易豁免权仅覆盖沈氏登记在册的300名核心成员，外围成员不受保护，低阶虫族未收到指令时也可能误攻外围人员，因此沈氏百年间有上千成员死于虫族突袭，当代家主沈明哲的妻儿也因此丧生；沈氏以此为筹码与虫族高级统领达成交易：虫族承诺给予沈明哲及其300名核心成员「虫族基因改造豁免权」，允许他们保留人类意识并获得10%的地球统治权，虫族拿到完整星舰坐标后将前往银河系扩张，不会销毁沈明哲集团核心成员的人类基因，因此不会主动攻击沈明哲的势力。该交易背后有两条强制规则支撑：一是收割者文明给虫族高层下了精神契约，伤害沈氏核心成员会直接触发精神爆亡；二是9枚密钥只有沈氏家族的基因序列可以感应定位，虫族无法自行搜寻，因此必须和沈氏合作；沈明哲认为普通人类根本不可能对抗虫族，只有通过和虫族交易保留精英火种，后续得知收割者文明收割所有文明成果的终极阴谋后可临阵倒戈，并非纯粹的邪恶反派；沈氏家族在大陨落后依托留存的军工资源建立了磐石堡据点，逐步垄断基因抑制剂的生产与销售，借此巩固了百年统治地位。补充精神契约约束范围：仅禁止虫族主动攻击沈氏登记在册的300名核心成员，沈氏主动攻击虫族时契约不生效；且契约仅在地球大气层范围内有效，离开地球后自动失效，为后续星际剧情中沈氏临阵倒戈预埋伏笔。"
+  }
+  rule "setup_rule_10" {
+    trigger = "always"
+    effect = "撮合沈氏与虫族交易的第三方外星文明名为「收割者文明」，以诱导低等文明内斗、收割文明成果为生存方式，当年和人类高层交易的条件是用虫族技术换取地球生物基因库，交易失控后仍在暗中观察虫族与人类的战争，在虫族与人类阵营都安插了卧底，会不定期给弱势一方提供技术支持，刻意维持双方战力平衡，方便最终收割胜利方的文明成果，其已在太阳系外围布置了收割舰队，待地球战局明朗后就会发起入侵，是贯穿整个故事的最终反派势力；收割者文明单舰战力相当于初级虫将，主力舰战力相当于高级虫统领，收割舰队总战力相当于1.5倍虫族全族战力，林野达到5级后联合全人类战力+虫族残余势力（虫族母巢被毁后残余虫群不愿被收割，会选择和人类临时结盟）可与之对抗，战力边界清晰无后期崩盘风险。"
+  }
+  rule "resource_scarcity_resource_01" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_01; scarcity=低级常见、中级稀有、高级极稀有、母巢核心晶核独一无二; category=能源/材料"
+  }
+  rule "resource_scarcity_resource_02" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_02; scarcity=稀有; category=材料"
+  }
+  rule "resource_scarcity_resource_03" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_03; scarcity=稀有; category=消耗品"
+  }
+  rule "resource_scarcity_resource_04" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_04; scarcity=稀有; category=材料"
+  }
+  rule "resource_scarcity_resource_05" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_05; scarcity=常见; category=能源"
+  }
+  rule "progression_requirement_基因进化与火种机甲体系_L1" {
+    trigger = "progression.requirement"
+    effect = "system=基因进化与火种机甲体系; level=1; requires=首次接触虫族低级晶核，完成基础基因适配，解锁第一次组装火种机甲核心的记忆碎片"
+  }
+  rule "progression_requirement_基因进化与火种机甲体系_L2" {
+    trigger = "progression.requirement"
+    effect = "system=基因进化与火种机甲体系; level=2; requires=吸收10枚低级虫族晶核，基因稳定性达到70%以上，解锁基因锁模块研发的记忆碎片"
+  }
+  rule "progression_requirement_基因进化与火种机甲体系_L3" {
+    trigger = "progression.requirement"
+    effect = "system=基因进化与火种机甲体系; level=3; requires=吸收1枚中级虫族晶核，扛过基因崩溃的风险，解锁机甲武器模块测试的记忆碎片"
+  }
+  rule "progression_requirement_基因进化与火种机甲体系_L4" {
+    trigger = "progression.requirement"
+    effect = "system=基因进化与火种机甲体系; level=4; requires=吸收3枚高级虫族晶核，完全融合火种系统的核心代码，解锁当年爆炸事故前的最后一段工作记忆碎片"
+  }
+  rule "progression_requirement_基因进化与火种机甲体系_L5" {
+    trigger = "progression.requirement"
+    effect = "system=基因进化与火种机甲体系; level=5; requires=吸收虫族母巢的唯一核心晶核，解锁全部文明数据库，解锁当年被暗害的完整真相记忆碎片"
+  }
+  rule "progression_max_基因进化与火种机甲体系" {
+    trigger = "progression.max_level"
+    effect = "system=基因进化与火种机甲体系; max_level=5"
+  }
+  rule "storyline_contract_第一章：荒骨苏醒" {
+    trigger = "storyline.contract"
+    effect = "id=第一章：荒骨苏醒; name=第一章：荒骨苏醒; type=开篇章节; importance=9; open_question=百年间到底发生了什么，为什么曾经的机甲测试场变成了虫族活动的荒地; desire=林野苏醒后第一要务是活下去，搞清楚自己身处的环境与时间; opposition=周围游荡的虫族工虫、首次基因适配带来的反噬风险; stakes=一旦死在这里，人类唯一的全权限机甲适配者就会消失，文明再无翻盘可能"
+  }
+  rule "storyline_contract_第二章：青藤据点" {
+    trigger = "storyline.contract"
+    effect = "id=第二章：青藤据点; name=第二章：青藤据点; type=过渡章节; importance=8; desire=林野要获得据点众人的信任，找到落脚的地方，搞清楚当前人类的生存状态; opposition=据点民众对陌生进化者的排斥、突袭的小规模虫群; stakes=一旦被驱逐，林野孤立无援很可能死在虫族的野外围剿中; payoff=林野首次展露火种机甲战力，获得初步盟友，为后续整合力量打下基础"
+  }
+  rule "storyline_contract_火种远征主线" {
+    trigger = "storyline.contract"
+    effect = "id=火种远征主线; name=火种远征主线; type=主线剧情; importance=10; desire=林野要带领人类夺回母星，对抗收割者文明的终极威胁，为人类争取存续的空间; opposition=虫族的持续围剿、沈氏势力的刻意阻挠、收割者文明对双方战力的平衡操纵; stakes=一旦失败，人类将彻底灭绝，地球文明将成为收割者文明的战利品; turn=虫族母巢被毁后残余虫群不愿被收割，选择和人类临时结盟对抗共同的敌人"
+  }
+  rule "storyline_contract_历史真相支线" {
+    trigger = "storyline.contract"
+    effect = "id=历史真相支线; name=历史真相支线; type=悬念支线; importance=8; payoff=揭露所有阴谋，让人类认清真正的敌人，放弃内斗一致对外; open_question=当年的人类高层还有多少余孽活着，收割者文明的终极目的到底是什么; desire=林野要查清当年遇袭的真相，以及百年前虫族入侵的完整隐情; opposition=沈氏势力对真相的刻意掩盖、收割者文明安插的卧底的暗中阻挠"
+  }
+  rule "storyline_contract_势力整合支线" {
+    trigger = "storyline.contract"
+    effect = "id=势力整合支线; name=势力整合支线; type=成长支线; importance=7; desire=林野要整合所有人类势力，建立统一的反抗联盟，积蓄反攻虫族的足够力量; opposition=各据点之间的历史旧怨、资源分配矛盾、普通人类与异变者的信任裂痕; payoff=建立跨阵营的统一反抗联盟，集齐所有可以团结的力量，为反攻母巢做好充分准备; pressure_points=磐石堡沈氏对其他据点的资源封锁 | 虫潮压力下部分据点为了生存互相掠夺 | 普通幸存者对异变者阵营的排斥情绪 | 营救被沈氏关押的异变者隐藏适配者的紧急需求"
+  }
 }
 
 storyline {
@@ -34,27 +243,194 @@ storyline {
       id = "obj_P1-V1-C1"
       type = "sequence"
       step 1 {
-        description = "林跃从1200年的休眠中醒来，记忆停留在21世纪基因计划志愿者登记当天"
+        description = "第一章：荒骨苏醒 | hook | 林野从百年休眠中苏醒，确认身处2249年的废土世界，觉醒基因吸收能力，解锁沈氏暗害的记忆碎片，最终力竭晕倒 | 他即将被外出勘探的游击小队发现，开启废土生存的第一站 | 地下设施内游荡着虫族，休眠舱剩余能源不足2小时，随时可能彻底断电被困"
         event {
-          type = "premise"
+          type = "storyline"
+          state_delta {
+            target = "第一章：荒骨苏醒"
+            kind = "storyline"
+            field = "stage"
+            to = "hook"
+            unit = "地下设施内游荡着虫族，休眠舱剩余能源不足2小时，随时可能彻底断电被困"
+            cost = "他即将被外出勘探的游击小队发现，开启废土生存的第一站"
+            note = "change=林野从百年休眠中苏醒，确认身处2249年的废土世界，觉醒基因吸收能力，解锁沈氏暗害的记忆碎片，最终力竭晕倒; consequence=他即将被外出勘探的游击小队发现，开启废土生存的第一站; pressure=地下设施内游荡着虫族，休眠舱剩余能源不足2小时，随时可能彻底断电被困"
+          }
+          state_delta {
+            target = "第一章：荒骨苏醒"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V1-C1"
+          }
         }
       }
       step 2 {
-        description = "林跃确认当前为星元1247年，距离他进入休眠舱已过去1200年"
+        description = "历史真相支线 | hook | 林野解锁沈氏暗害自己的首个记忆碎片，拿到沈氏密钥测试样品 | 后续将逐步揭开当年火种项目被夺、自己被暗害的完整真相 | 沈氏势力目前仍在全球搜捕旧时代科研人员与休眠者"
         event {
-          type = "knowledge"
+          type = "storyline"
+          state_delta {
+            target = "历史真相支线"
+            kind = "storyline"
+            field = "stage"
+            to = "hook"
+            unit = "沈氏势力目前仍在全球搜捕旧时代科研人员与休眠者"
+            cost = "后续将逐步揭开当年火种项目被夺、自己被暗害的完整真相"
+            note = "change=林野解锁沈氏暗害自己的首个记忆碎片，拿到沈氏密钥测试样品; consequence=后续将逐步揭开当年火种项目被夺、自己被暗害的完整真相; pressure=沈氏势力目前仍在全球搜捕旧时代科研人员与休眠者"
+          }
+          state_delta {
+            target = "历史真相支线"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V1-C1"
+          }
         }
       }
       step 3 {
-        description = "林跃用休眠舱的金属撬棍击杀虫族幼虫"
+        description = "苏醒后记忆碎片化，留存基因计划志愿者登记、机甲研发的零碎片段，新增沈氏负责人拿枪指着他、叫嚣要夺走火种项目的清晰闪回，误以为自己是基因计划志愿者"
         event {
-          type = "combat"
+          type = "status"
+          state_delta {
+            target = "休眠舱苏醒"
+            kind = "status"
+            field = "awaken"
+            to = "progressed"
+            note = "苏醒后记忆碎片化，留存基因计划志愿者登记、机甲研发的零碎片段，新增沈氏负责人拿枪指着他、叫嚣要夺走火种项目的清晰闪回，误以为自己是基因计划志愿者"
+          }
         }
       }
       step 4 {
-        description = "林跃觉醒专属基因能力：击杀异星生物可吸收生命能量强化自身体质"
+        description = "林野确认当前为公元2249年，距离他进入休眠舱已过去109年，初步意识到事态严重性，同时发现测试场角落的纯机械3D打印设备完好无损，是自己当年预埋的应急生产装置"
+        event {
+          type = "discovery"
+          state_delta {
+            target = "休眠舱时间显示屏"
+            kind = "knowledge"
+            field = "check"
+            to = "completed"
+            note = "林野确认当前为公元2249年，距离他进入休眠舱已过去109年，初步意识到事态严重性，同时发现测试场角落的纯机械3D打印设备完好无损，是自己当年预埋的应急生产装置"
+          }
+        }
+      }
+      step 5 {
+        description = "获得临时近战武器，战力提升至普通人类的1.5倍，刚好能对抗低级虫族"
+        event {
+          type = "acquire"
+          state_delta {
+            target = "临时武器"
+            kind = "equipment"
+            field = "produce"
+            to = "obtained"
+            note = "获得临时近战武器，战力提升至普通人类的1.5倍，刚好能对抗低级虫族"
+          }
+        }
+      }
+      step 6 {
+        description = "林野用外骨骼刃砸烂幼虫头部，右手被利爪划了一道浅伤，力竭之下靠在墙上喘息，对虫族的战力有了初步认知，获得1枚初级能量晶核，战斗后身体酸软，肌肉萎缩症状略有缓解；触碰到虫尸时暖流涌入身体，脑海中出现基因稳定性61%的提示，觉醒基因吸收能力"
+        event {
+          type = "combat"
+          combat {
+            enemies = [{id = "虫族_低级_虫族幼虫", count = 1, level = 1}]
+          }
+          state_delta {
+            target = "虫族幼虫"
+            kind = "enemy"
+            field = "fight"
+            to = "resolved"
+            note = "林野用外骨骼刃砸烂幼虫头部，右手被利爪划了一道浅伤，力竭之下靠在墙上喘息，对虫族的战力有了初步认知，获得1枚初级能量晶核，战斗后身体酸软，肌肉萎缩症状略有缓解；触碰到虫尸时暖流涌入身体，脑海中出现基因稳定性61%的提示，觉醒基因吸收能力"
+          }
+        }
+      }
+      step 7 {
+        description = "林野觉醒专属基因能力：击杀异星生物可吸收生命能量强化自身体质，本次吸收后基因稳定性为61%，刚好达安全阈值，对应state_anchor的基因能力觉醒"
         event {
           type = "premise"
+          state_delta {
+            target = "基因进化系统"
+            kind = "skill"
+            field = "awaken"
+            to = "started"
+            note = "林野觉醒专属基因能力：击杀异星生物可吸收生命能量强化自身体质，本次吸收后基因稳定性为61%，刚好达安全阈值，对应state_anchor的基因能力觉醒"
+          }
+        }
+      }
+      step 8 {
+        description = "林野眼前一黑晕倒在通往上层的通道口，失去意识前仿佛听到了远处人类的说话声，为后续被游击小队救下埋下伏笔，冲突升级为未知人类的身份悬念"
+        event {
+          type = "status"
+          state_delta {
+            target = "晕倒在地"
+            kind = "status"
+            field = "faint"
+            to = "deteriorated"
+            note = "林野眼前一黑晕倒在通往上层的通道口，失去意识前仿佛听到了远处人类的说话声，为后续被游击小队救下埋下伏笔，冲突升级为未知人类的身份悬念"
+          }
+        }
+      }
+      step 9 {
+        description = "初级能量晶核 resource change: 0 +1 = 1. 击杀虫族幼虫获得"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "0"
+            to = "1"
+            delta = 1
+            note = "击杀虫族幼虫获得"
+          }
+        }
+      }
+      step 10 {
+        description = "chapter start cultivation: 未觉醒基因能力的普通人类→基因适配者（一阶初级，刚觉醒暂未稳定）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "未觉醒基因能力的普通人类→基因适配者（一阶初级，刚觉醒暂未稳定）"
+            note = "chapter start cultivation: 未觉醒基因能力的普通人类→基因适配者（一阶初级，刚觉醒暂未稳定）"
+          }
+        }
+      }
+      step 11 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "1"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 12 {
+        description = "chapter start injuries: 长期休眠导致的轻度肌肉萎缩, 右手被虫族幼虫划伤的浅伤"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 长期休眠导致的轻度肌肉萎缩, 右手被虫族幼虫划伤的浅伤"
+          }
+        }
+      }
+      step 13 {
+        description = "地质活动引发的震动停止后，休眠舱的自动解锁程序启动，林野从百年沉睡中苏醒"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "无 地质活动引发的震动停止后，休眠舱的自动解锁程序启动，林野从百年沉睡中苏醒"
+          }
         }
       }
     }
@@ -66,27 +442,172 @@ storyline {
       id = "obj_P1-V1-C2"
       type = "sequence"
       step 1 {
-        description = "林跃抵达地下2层的科研档案区"
+        description = "历史真相支线 | hook | 林野得知大陨落的真相，确认虫族与叛变AI是人类的主要敌人 | 他意识到自己身处的世界远比想象中危险，必须尽快找到其他幸存者 | 地下设施的备用能源即将耗尽，升降梯的预热还需要1小时，随时可能断电被困"
         event {
-          type = "move"
+          type = "storyline"
+          state_delta {
+            target = "历史真相支线"
+            kind = "storyline"
+            field = "stage"
+            to = "hook"
+            unit = "地下设施的备用能源即将耗尽，升降梯的预热还需要1小时，随时可能断电被困"
+            cost = "他意识到自己身处的世界远比想象中危险，必须尽快找到其他幸存者"
+            note = "change=林野得知大陨落的真相，确认虫族与叛变AI是人类的主要敌人; consequence=他意识到自己身处的世界远比想象中危险，必须尽快找到其他幸存者; pressure=地下设施的备用能源即将耗尽，升降梯的预热还需要1小时，随时可能断电被困"
+          }
+          state_delta {
+            target = "历史真相支线"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V1-C2"
+          }
         }
       }
       step 2 {
-        description = "林跃得知星元37年虫族跨星际入侵，AI「零」叛变发动机械叛乱，人类文明在双重打击下濒临灭绝"
+        description = "林野苏醒后简单活动身体，适应了基因强化后的力量，顺着通道往上爬了二十多米，进入地下2层科研区"
         event {
-          type = "knowledge"
+          type = "status"
+          state_delta {
+            target = "从昏迷中苏醒"
+            kind = "status"
+            field = "wake_up"
+            to = "recovered"
+            note = "林野苏醒后简单活动身体，适应了基因强化后的力量，顺着通道往上爬了二十多米，进入地下2层科研区"
+          }
         }
       }
       step 3 {
-        description = "林跃利用地形优势击毁两台机械斥候，吸收机械核心的能量体质再次提升"
+        description = "林野确认地下2层科研区有通往地表的应急升降梯，沿着地图指示的方向前进"
         event {
-          type = "combat"
+          type = "discovery"
+          state_delta {
+            target = "纯金属蚀刻应急通道地图"
+            kind = "item"
+            field = "find"
+            to = "completed"
+            note = "林野确认地下2层科研区有通往地表的应急升降梯，沿着地图指示的方向前进"
+          }
         }
       }
       step 4 {
-        description = "林跃找到通往地表的升降梯，确认能源足够支撑一次升降"
+        description = "林野读取存储设备内容，得知公元2149年虫族跨星际入侵，AI「零」叛变发动机械叛乱，人类文明在双重打击下濒临灭绝，这场灾难史称「大陨落」，这批存储设备因是火种项目专用抗电磁加固型号，完全不受虫族的电磁干扰波影响，因此得以留存；同时得知当前人类仅存少量反抗军在废土上挣扎求生，虫族释放的全域电磁干扰会压制所有非基因绑定的电子设备"
+        event {
+          type = "knowledge"
+          state_delta {
+            target = "火种项目专用抗电磁加固存储设备"
+            kind = "item"
+            field = "read"
+            to = "learned"
+            note = "林野读取存储设备内容，得知公元2149年虫族跨星际入侵，AI「零」叛变发动机械叛乱，人类文明在双重打击下濒临灭绝，这场灾难史称「大陨落」，这批存储设备因是火种项目专用抗电磁加固型号，完全不受虫族的电磁干扰波影响，因此得以留存；同时得知当前人类仅存少量反抗军在废土上挣扎求生，虫族释放的全域电磁干扰会压制所有非基因绑定的电子设备"
+          }
+        }
+      }
+      step 5 {
+        description = "林野利用刚强化的速度躲在立柱后偷袭，先后砸毁两台机械斥候的能量核心，右手的旧伤被扯裂，体能消耗过半，摸索到了吸收机械核心能量的方法，获得2枚初级能量晶核"
+        event {
+          type = "combat"
+          combat {
+            enemies = [{id = "叛变ai「零」_低级_机械斥候", count = 2, level = 2}]
+          }
+          state_delta {
+            target = "两台机械斥候"
+            kind = "enemy"
+            field = "fight"
+            to = "resolved"
+            note = "林野利用刚强化的速度躲在立柱后偷袭，先后砸毁两台机械斥候的能量核心，右手的旧伤被扯裂，体能消耗过半，摸索到了吸收机械核心能量的方法，获得2枚初级能量晶核"
+          }
+        }
+      }
+      step 6 {
+        description = "林野的基因稳定性提升至70%，正式稳定至基因适配者一阶初级，身体素质达到普通人类的3倍，体能快速恢复，对应state_anchor的境界突破，冲突解决：获得足够的力量突破地下设施的封锁"
+        event {
+          type = "status"
+          state_delta {
+            target = "机械斥候能量核心"
+            kind = "item"
+            field = "absorb"
+            to = "upgraded"
+            note = "林野的基因稳定性提升至70%，正式稳定至基因适配者一阶初级，身体素质达到普通人类的3倍，体能快速恢复，对应state_anchor的境界突破，冲突解决：获得足够的力量突破地下设施的封锁"
+          }
+        }
+      }
+      step 7 {
+        description = "林野找到通往地表的升降梯，检查后确认能源足够支撑一次升降，输入记忆中残留的项目通用密码启动预热程序，等待升降梯上升"
         event {
           type = "goal"
+          state_delta {
+            target = "地表应急升降梯"
+            kind = "location"
+            field = "find"
+            to = "completed"
+            note = "林野找到通往地表的升降梯，检查后确认能源足够支撑一次升降，输入记忆中残留的项目通用密码启动预热程序，等待升降梯上升"
+          }
+        }
+      }
+      step 8 {
+        description = "初级能量晶核 resource change: 1 +2 = 3. 击毁两台机械斥候获得能量核心"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "1"
+            to = "3"
+            delta = 2
+            note = "击毁两台机械斥候获得能量核心"
+          }
+        }
+      }
+      step 9 {
+        description = "chapter start cultivation: 基因适配者（一阶初级）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "基因适配者（一阶初级）"
+            note = "chapter start cultivation: 基因适配者（一阶初级）"
+          }
+        }
+      }
+      step 10 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "3"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 11 {
+        description = "chapter start injuries: 右手划伤被扯裂, 轻度肌肉酸痛"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 右手划伤被扯裂, 轻度肌肉酸痛"
+          }
+        }
+      }
+      step 12 {
+        description = "林野在休眠舱出口被通道的冷风冻醒，简单休整适应强化后的身体机能，顺着金属楼梯爬了二十多米进入地下2层科研区"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "30分钟 林野在休眠舱出口被通道的冷风冻醒，简单休整适应强化后的身体机能，顺着金属楼梯爬了二十多米进入地下2层科研区"
+          }
         }
       }
     }
@@ -98,27 +619,161 @@ storyline {
       id = "obj_P1-V1-C3"
       type = "sequence"
       step 1 {
-        description = "林跃第一次来到废土地表，面对零下三十度的酷寒与漫天风雪"
+        description = "势力整合支线 | hook | 林野结识青藤据点的先遣游击小队，获得临时生存机会，但因身份问题被怀疑 | 他必须在营地证明自己的清白，获得小队的信任，才能获得稳定的落脚点 | 沈氏势力在边境大肆搜捕旧科研人员，一旦被认定为沈氏探子就会被当场处决"
         event {
-          type = "move"
+          type = "storyline"
+          state_delta {
+            target = "势力整合支线"
+            kind = "storyline"
+            field = "stage"
+            to = "hook"
+            unit = "沈氏势力在边境大肆搜捕旧科研人员，一旦被认定为沈氏探子就会被当场处决"
+            cost = "他必须在营地证明自己的清白，获得小队的信任，才能获得稳定的落脚点"
+            note = "change=林野结识青藤据点的先遣游击小队，获得临时生存机会，但因身份问题被怀疑; consequence=他必须在营地证明自己的清白，获得小队的信任，才能获得稳定的落脚点; pressure=沈氏势力在边境大肆搜捕旧科研人员，一旦被认定为沈氏探子就会被当场处决"
+          }
+          state_delta {
+            target = "势力整合支线"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V1-C3"
+          }
         }
       }
       step 2 {
-        description = "林跃击杀1只工蜂，但被另外2只围攻，体力不支陷入险境"
+        description = "林野第一次来到废土地表，面对零下三十度的酷寒与漫天风雪，研究所所处区域正是荒骨台核心区域，他激活基因能力抵御低温，体能快速消耗"
         event {
-          type = "combat"
+          type = "status"
+          state_delta {
+            target = "地表出口"
+            kind = "location"
+            field = "exit"
+            to = "adjusted"
+            note = "林野第一次来到废土地表，面对零下三十度的酷寒与漫天风雪，研究所所处区域正是荒骨台核心区域，他激活基因能力抵御低温，体能快速消耗"
+          }
         }
       }
       step 3 {
-        description = "游击小队队长苏晴带队救下林跃，击杀剩余2只工蜂"
+        description = "苏晴在外围用能量步枪精准打击工蜂眼部弱点，牵制了两只工蜂的行动，林野依靠一阶初级的强化身体素质击杀剩余1只工蜂，获得1枚初级能量晶核；但被牵制的两只工蜂突破火力网逼近，他的体能已经消耗过半，被两只工蜂前后夹击，利爪已经逼近他的咽喉，随时可能丧命"
         event {
-          type = "relationship"
+          type = "combat"
+          combat {
+            enemies = [{id = "虫族_低级_虫族工蜂", count = 3, level = 2}]
+          }
+          state_delta {
+            target = "三只虫族工蜂"
+            kind = "enemy"
+            field = "fight"
+            to = "progressed"
+            note = "苏晴在外围用能量步枪精准打击工蜂眼部弱点，牵制了两只工蜂的行动，林野依靠一阶初级的强化身体素质击杀剩余1只工蜂，获得1枚初级能量晶核；但被牵制的两只工蜂突破火力网逼近，他的体能已经消耗过半，被两只工蜂前后夹击，利爪已经逼近他的咽喉，随时可能丧命"
+          }
         }
       }
       step 4 {
-        description = "林跃跟随小队前往临时营地休整"
+        description = "苏晴带队救下林野，虎子用能量步枪精准预判工蜂移动路径，击杀剩余2只工蜂；苏晴发现林野身上的旧时代军工身份牌，提及近期沈氏势力一直在边境搜捕旧时代科研人员，周边还出现淡蓝色瞳孔的异变者无故伤人，沈氏探子和异变者发现就地处决，因此对林野的身份抱有强烈警惕，让虎子暂扣了他身上的3枚能量晶核，要求他跟随小队回营地接受观察，确认不是沈氏探子再归还；苏晴提及家人全被虫族杀害，立志打通边境带幸存者撤离，此次带队是青藤据点派出来的先遣勘探队，苏晴开枪时的预判能力为后续异能觉醒埋下伏笔，冲突升级为林野的身份信任危机"
         event {
-          type = "move"
+          type = "relationship"
+          state_delta {
+            target = "林野"
+            kind = "character"
+            field = "rescue"
+            to = "established"
+            note = "苏晴带队救下林野，虎子用能量步枪精准预判工蜂移动路径，击杀剩余2只工蜂；苏晴发现林野身上的旧时代军工身份牌，提及近期沈氏势力一直在边境搜捕旧时代科研人员，周边还出现淡蓝色瞳孔的异变者无故伤人，沈氏探子和异变者发现就地处决，因此对林野的身份抱有强烈警惕，让虎子暂扣了他身上的3枚能量晶核，要求他跟随小队回营地接受观察，确认不是沈氏探子再归还；苏晴提及家人全被虫族杀害，立志打通边境带幸存者撤离，此次带队是青藤据点派出来的先遣勘探队，苏晴开枪时的预判能力为后续异能觉醒埋下伏笔，冲突升级为林野的身份信任危机"
+          }
+        }
+      }
+      step 5 {
+        description = "林野跟随小队前往临时营地休整，获得了暂时的生存机会"
+        event {
+          type = "goal"
+          state_delta {
+            target = "游击小队"
+            kind = "character"
+            field = "follow"
+            to = "completed"
+            note = "林野跟随小队前往临时营地休整，获得了暂时的生存机会"
+          }
+        }
+      }
+      step 6 {
+        description = "初级能量晶核 resource change: 3 +1 = 4. 击杀1只虫族工蜂获得晶核"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "3"
+            to = "4"
+            delta = 1
+            note = "击杀1只虫族工蜂获得晶核"
+          }
+        }
+      }
+      step 7 {
+        description = "初级能量晶核 resource change: 4 -3 = 1. 被苏晴暂扣3枚晶核用于观察身份"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "4"
+            to = "1"
+            delta = -3
+            note = "被苏晴暂扣3枚晶核用于观察身份"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start cultivation: 基因适配者（一阶初级）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "基因适配者（一阶初级）"
+            note = "chapter start cultivation: 基因适配者（一阶初级）"
+          }
+        }
+      }
+      step 9 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "1"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 10 {
+        description = "chapter start injuries: 右手划伤未愈, 与工蜂战斗导致的多处软组织挫伤"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 右手划伤未愈, 与工蜂战斗导致的多处软组织挫伤"
+          }
+        }
+      }
+      step 11 {
+        description = "林野在地下2层等待升降梯预热完成，输入密码启动升降梯，经过1小时的上升抵达地表，舱门打开时寒风瞬间灌进升降梯"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "1小时 林野在地下2层等待升降梯预热完成，输入密码启动升降梯，经过1小时的上升抵达地表，舱门打开时寒风瞬间灌进升降梯"
+          }
         }
       }
     }
@@ -130,27 +785,202 @@ storyline {
       id = "obj_P1-V1-C4"
       type = "sequence"
       step 1 {
-        description = "林跃得知当前地球分为虫族控制区、AI机械区、人类反抗区三大势力范围，游击小队属于北境反抗军的分支"
+        description = "火种远征主线 | pressure | 林野获得小队信任，定下夺取重曙机甲的计划，人类即将获得对抗虫族的核心战力 | 一旦成功夺取机甲，就能打破虫族的边境封锁，打通前往青藤据点的通道，整合更多反抗力量 | 虫族在研究所周边布置了大量巡逻队，之前三次夺甲行动都以失败告终，7名队员牺牲"
         event {
-          type = "knowledge"
+          type = "storyline"
+          state_delta {
+            target = "火种远征主线"
+            kind = "storyline"
+            field = "stage"
+            to = "pressure"
+            unit = "虫族在研究所周边布置了大量巡逻队，之前三次夺甲行动都以失败告终，7名队员牺牲"
+            cost = "一旦成功夺取机甲，就能打破虫族的边境封锁，打通前往青藤据点的通道，整合更多反抗力量"
+            note = "change=林野获得小队信任，定下夺取重曙机甲的计划，人类即将获得对抗虫族的核心战力; consequence=一旦成功夺取机甲，就能打破虫族的边境封锁，打通前往青藤据点的通道，整合更多反抗力量; pressure=虫族在研究所周边布置了大量巡逻队，之前三次夺甲行动都以失败告终，7名队员牺牲"
+          }
+          state_delta {
+            target = "火种远征主线"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V1-C4"
+          }
         }
       }
       step 2 {
-        description = "林跃协助小队击杀3只虫族，防守成功"
+        description = "头发花白的陈婆拿着消毒药膏过来给林野包扎手上的划伤，念叨着「这伤口再晚处理就要冻坏了，小伙子命大」，陈婆看到林野的军工铭牌后红了眼，说她儿子当年也有一块一模一样的，是林野的助手，大陨落时死在了研究所，她掏出贴身保存的半块和林野同款的铭牌碎片；蹲在旁边修武器的周叔捡过林野变形的外骨骼刃，敲了敲说「这玩意儿材质不错，我帮你整整，下次对付虫子还能用」，周叔认出铭牌上的林家标识，说自己当年是林野父亲的徒弟，见过小时候的林野，两人的善意让林野对营地的归属感大幅提升，周叔作为后续导师角色，将引导林野了解旧人类历史与机甲维护知识"
         event {
-          type = "combat"
+          type = "relationship"
+          state_delta {
+            target = "林野的伤口"
+            kind = "character"
+            field = "treat"
+            to = "established"
+            note = "头发花白的陈婆拿着消毒药膏过来给林野包扎手上的划伤，念叨着「这伤口再晚处理就要冻坏了，小伙子命大」，陈婆看到林野的军工铭牌后红了眼，说她儿子当年也有一块一模一样的，是林野的助手，大陨落时死在了研究所，她掏出贴身保存的半块和林野同款的铭牌碎片；蹲在旁边修武器的周叔捡过林野变形的外骨骼刃，敲了敲说「这玩意儿材质不错，我帮你整整，下次对付虫子还能用」，周叔认出铭牌上的林家标识，说自己当年是林野父亲的徒弟，见过小时候的林野，两人的善意让林野对营地的归属感大幅提升，周叔作为后续导师角色，将引导林野了解旧人类历史与机甲维护知识"
+          }
         }
       }
       step 3 {
-        description = "林跃基因等级提升至一阶中级，身体强度达到普通人类的3倍"
+        description = "苏晴提前巡逻发现异动，当场抓住两人，当着所有营地民众的面处决了叛徒，说「谁要是敢卖自己人换粮食，就是这个下场」，既体现了废土生存的残酷性，也强化了苏晴保下林野的决心，苏晴清点勘探物资时发现原本带的10枚高爆炸药少了2枚，以为是落在路上，实为青藤内奸偷走给虫族报信，为后续前哨站的内奸伏笔埋下线索"
         event {
-          type = "status"
+          type = "conflict"
+          state_delta {
+            target = "两名叛变幸存者"
+            kind = "character"
+            field = "execute"
+            to = "resolved"
+            note = "苏晴提前巡逻发现异动，当场抓住两人，当着所有营地民众的面处决了叛徒，说「谁要是敢卖自己人换粮食，就是这个下场」，既体现了废土生存的残酷性，也强化了苏晴保下林野的决心，苏晴清点勘探物资时发现原本带的10枚高爆炸药少了2枚，以为是落在路上，实为青藤内奸偷走给虫族报信，为后续前哨站的内奸伏笔埋下线索"
+          }
         }
       }
       step 4 {
-        description = "林跃与小队商议返回研究所，夺取封存的初代机甲打破虫族的边境封锁"
+        description = "林野得知当前地球分为虫族控制区、AI机械区、人类反抗区三大势力范围，游击小队属于北境最大的幸存者据点青藤据点的分支；苏晴提及此前三次带队攻打研究所夺取机甲均失败，牺牲了7名队员，对机甲抱有极强执念；外出勘探的队员浑身是伤逃回，讲述遭遇沈氏人员抢夺资源的经历，有营地民众主张把林野交出去换沈氏的粮食，苏晴顶着压力保下了他；队员闲聊时提到苏晴当年为了救被虫族抓伤的妹妹，一直珍藏着半支基因抑制剂，妹妹遇难后就再也没动过"
         event {
-          type = "goal"
+          type = "knowledge"
+          state_delta {
+            target = "勘探队员的汇报"
+            kind = "knowledge"
+            field = "listen"
+            to = "learned"
+            note = "林野得知当前地球分为虫族控制区、AI机械区、人类反抗区三大势力范围，游击小队属于北境最大的幸存者据点青藤据点的分支；苏晴提及此前三次带队攻打研究所夺取机甲均失败，牺牲了7名队员，对机甲抱有极强执念；外出勘探的队员浑身是伤逃回，讲述遭遇沈氏人员抢夺资源的经历，有营地民众主张把林野交出去换沈氏的粮食，苏晴顶着压力保下了他；队员闲聊时提到苏晴当年为了救被虫族抓伤的妹妹，一直珍藏着半支基因抑制剂，妹妹遇难后就再也没动过"
+          }
+        }
+      }
+      step 5 {
+        description = "林野主动要求参与防守，靠着强化的身体素质与敏捷的速度，用周叔修复好的外骨骼刃连杀3只虫族，在战斗中刻意留手不暴露自己的基因吸收能力，避免被当成异变者处决，苏晴带队在外围支援射杀剩余2只，防守成功，营地零伤亡，获得3枚初级能量晶核"
+        event {
+          type = "combat"
+          combat {
+            enemies = [{id = "虫族_低级_虫族侦察小队", count = 5, level = 2}, {id = "人类/沈氏内应_低级_营地叛徒", count = 2, level = 1}]
+          }
+          state_delta {
+            target = "虫族侦察小队"
+            kind = "enemy"
+            field = "fight"
+            to = "resolved"
+            note = "林野主动要求参与防守，靠着强化的身体素质与敏捷的速度，用周叔修复好的外骨骼刃连杀3只虫族，在战斗中刻意留手不暴露自己的基因吸收能力，避免被当成异变者处决，苏晴带队在外围支援射杀剩余2只，防守成功，营地零伤亡，获得3枚初级能量晶核"
+          }
+        }
+      }
+      step 6 {
+        description = "林野基因稳定性提升至75%，正式突破至基因适配者一阶中级，身体强度达到普通人类的5倍，解锁一段机甲零件研发的记忆碎片，对应state_anchor的境界突破；苏晴在远处看到了他吸收能量的全过程，确认他不是异变者（异变者吸收能量时瞳孔会变成淡蓝色，林野瞳孔没有变化），归还了此前暂扣的3枚晶核，还赠送他一支能量匕首作为奖励，营地民众对他的态度大幅好转，冲突解决：林野获得了营地的初步信任"
+        event {
+          type = "status"
+          state_delta {
+            target = "虫族能量晶核"
+            kind = "item"
+            field = "absorb"
+            to = "upgraded"
+            note = "林野基因稳定性提升至75%，正式突破至基因适配者一阶中级，身体强度达到普通人类的5倍，解锁一段机甲零件研发的记忆碎片，对应state_anchor的境界突破；苏晴在远处看到了他吸收能量的全过程，确认他不是异变者（异变者吸收能量时瞳孔会变成淡蓝色，林野瞳孔没有变化），归还了此前暂扣的3枚晶核，还赠送他一支能量匕首作为奖励，营地民众对他的态度大幅好转，冲突解决：林野获得了营地的初步信任"
+          }
+        }
+      }
+      step 7 {
+        description = "林野透露自己有可能破解机甲库的基因锁，与小队商议次日返回研究所，夺取封存的初代机甲打破虫族的边境封锁，获得前往青藤据点的通道"
+        event {
+          type = "premise"
+          state_delta {
+            target = "返回研究所夺取机甲"
+            kind = "plan"
+            field = "propose"
+            to = "established"
+            note = "林野透露自己有可能破解机甲库的基因锁，与小队商议次日返回研究所，夺取封存的初代机甲打破虫族的边境封锁，获得前往青藤据点的通道"
+          }
+        }
+      }
+      step 8 {
+        description = "初级能量晶核 resource change: 1 +3 = 4. 击杀3只虫族获得晶核"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "1"
+            to = "4"
+            delta = 3
+            note = "击杀3只虫族获得晶核"
+          }
+        }
+      }
+      step 9 {
+        description = "初级能量晶核 resource change: 4 +3 = 7. 苏晴归还此前暂扣的3枚晶核"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "4"
+            to = "7"
+            delta = 3
+            note = "苏晴归还此前暂扣的3枚晶核"
+          }
+        }
+      }
+      step 10 {
+        description = "初级能量晶核 resource change: 7 -1 = 6. 兑换苏晴赠送的能量匕首"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "7"
+            to = "6"
+            delta = -1
+            note = "兑换苏晴赠送的能量匕首"
+          }
+        }
+      }
+      step 11 {
+        description = "chapter start cultivation: 基因适配者（一阶中级）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "基因适配者（一阶中级）"
+            note = "chapter start cultivation: 基因适配者（一阶中级）"
+          }
+        }
+      }
+      step 12 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "6"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 13 {
+        description = "chapter start injuries: 右手划伤已包扎, 轻度肌肉酸痛"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 右手划伤已包扎, 轻度肌肉酸痛"
+          }
+        }
+      }
+      step 14 {
+        description = "林野在营地的窝棚里休息了一整夜，适应废土的生存规则，恢复全部体力，期间营地民众对他的身份议论纷纷，苏晴一直顶着压力保他"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "18小时 林野在营地的窝棚里休息了一整夜，适应废土的生存规则，恢复全部体力，期间营地民众对他的身份议论纷纷，苏晴一直顶着压力保他"
+          }
         }
       }
     }
@@ -162,27 +992,143 @@ storyline {
       id = "obj_P1-V1-C5"
       type = "sequence"
       step 1 {
-        description = "小队顺利抵达研究所地下1层入口，未被虫族主力发现"
+        description = "历史真相支线 | reveal | 林野确认自己就是当年基因计划的唯一志愿者，是重曙机甲的唯一合法拥有者 | 他终于拼凑出部分当年的真相，意识到沈氏暗害自己就是为了夺取机甲的控制权 | 机甲库的能量波动已经被叛变AI「零」捕捉到，机械清扫部队正在往这里赶来"
         event {
-          type = "move"
+          type = "storyline"
+          state_delta {
+            target = "历史真相支线"
+            kind = "storyline"
+            field = "stage"
+            to = "reveal"
+            unit = "机甲库的能量波动已经被叛变AI「零」捕捉到，机械清扫部队正在往这里赶来"
+            cost = "他终于拼凑出部分当年的真相，意识到沈氏暗害自己就是为了夺取机甲的控制权"
+            note = "change=林野确认自己就是当年基因计划的唯一志愿者，是重曙机甲的唯一合法拥有者; consequence=他终于拼凑出部分当年的真相，意识到沈氏暗害自己就是为了夺取机甲的控制权; pressure=机甲库的能量波动已经被叛变AI「零」捕捉到，机械清扫部队正在往这里赶来"
+          }
+          state_delta {
+            target = "历史真相支线"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V1-C5"
+          }
         }
       }
       step 2 {
-        description = "林跃与虎子配合全歼虫族巡逻队，未触发警报"
+        description = "小队根据布防图避开虫族主力巡逻路线，沿着山谷的隐蔽路径前进，顺利抵达研究所地下1层入口，未被虫族主力发现"
         event {
-          type = "combat"
+          type = "acquire"
+          state_delta {
+            target = "研究所周边布防图"
+            kind = "item"
+            field = "provide"
+            to = "obtained"
+            note = "小队根据布防图避开虫族主力巡逻路线，沿着山谷的隐蔽路径前进，顺利抵达研究所地下1层入口，未被虫族主力发现"
+          }
         }
       }
       step 3 {
-        description = "发现机甲库需要当年基因计划志愿者的专属基因才能解锁，小队之前多次尝试都失败"
+        description = "虎子手持之前缴获的沈氏特制重型反器材穿甲枪远程打虫族的眼部弱点，林野近身偷袭砸烂虫核，两人配合默契，全歼4只3级虫族巡逻队，未触发警报；战斗间隙虎子掏出半块磨得发亮的粉色儿童发饰发呆，跟阿禾说「我妹八岁生日我给她买的，当年虫族冲进来的时候她还攥着，现在不知道还活着不」，对林野的信任进一步提升，获得4枚初级能量晶核"
         event {
-          type = "discover"
+          type = "relationship"
+          state_delta {
+            target = "虫族巡逻队"
+            kind = "enemy"
+            field = "fight"
+            to = "improved"
+            note = "虎子手持之前缴获的沈氏特制重型反器材穿甲枪远程打虫族的眼部弱点，林野近身偷袭砸烂虫核，两人配合默契，全歼4只3级虫族巡逻队，未触发警报；战斗间隙虎子掏出半块磨得发亮的粉色儿童发饰发呆，跟阿禾说「我妹八岁生日我给她买的，当年虫族冲进来的时候她还攥着，现在不知道还活着不」，对林野的信任进一步提升，获得4枚初级能量晶核"
+          }
         }
       }
       step 4 {
-        description = "林跃的基因完美匹配门禁系统，尘封1200年的机甲库大门成功开启"
+        description = "发现机甲库需要当年基因计划志愿者的专属基因才能解锁，小队之前多次尝试都失败，门禁上的识别方式与林野记忆中自己设置的火种项目核心基因锁完全一致"
         event {
-          type = "achieve"
+          type = "discovery"
+          state_delta {
+            target = "机甲库基因锁门禁"
+            kind = "item"
+            field = "check"
+            to = "completed"
+            note = "发现机甲库需要当年基因计划志愿者的专属基因才能解锁，小队之前多次尝试都失败，门禁上的识别方式与林野记忆中自己设置的火种项目核心基因锁完全一致"
+          }
+        }
+      }
+      step 5 {
+        description = "林野的基因完美匹配门禁系统，尘封109年的机甲库大门成功开启，林野闪过自己当年亲手设置这道基因锁的记忆碎片，小队全员震惊，冲突解决：确认林野是唯一能激活机甲的人"
+        event {
+          type = "goal"
+          state_delta {
+            target = "基因锁识别"
+            kind = "action"
+            field = "verify"
+            to = "completed"
+            note = "林野的基因完美匹配门禁系统，尘封109年的机甲库大门成功开启，林野闪过自己当年亲手设置这道基因锁的记忆碎片，小队全员震惊，冲突解决：确认林野是唯一能激活机甲的人"
+          }
+        }
+      }
+      step 6 {
+        description = "初级能量晶核 resource change: 6 +4 = 10. 全歼虫族巡逻队获得4枚晶核"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "6"
+            to = "10"
+            delta = 4
+            note = "全歼虫族巡逻队获得4枚晶核"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start cultivation: 基因适配者（一阶中级）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "基因适配者（一阶中级）"
+            note = "chapter start cultivation: 基因适配者（一阶中级）"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "10"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 9 {
+        description = "chapter start injuries: 右手划伤未愈"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 右手划伤未愈"
+          }
+        }
+      }
+      step 10 {
+        description = "小队准备武器物资，花3小时避开虫族巡逻路线，顺着之前勘探的隐蔽通风口进入研究所地下1层"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "3小时 小队准备武器物资，花3小时避开虫族巡逻路线，顺着之前勘探的隐蔽通风口进入研究所地下1层"
+          }
         }
       }
     }
@@ -194,27 +1140,161 @@ storyline {
       id = "obj_P1-V1-C6"
       type = "sequence"
       step 1 {
-        description = "林跃找到专为基因计划志愿者定制的初代实验型机甲「重曙」，状态完好仅能源系统损坏"
+        description = "火种远征主线 | pressure | 林野成功修复专属重曙机甲，人类获得了对抗虫族的核心战力，打破边境封锁成为可能 | 接下来可以依靠机甲的战力攻破虫族前哨站，打通前往青藤据点的通道，整合更多反抗力量 | 机甲的能量波动已经传出去，虫族和机械部队很快就会大规模赶来，必须尽快离开研究所"
         event {
-          type = "discover"
+          type = "storyline"
+          state_delta {
+            target = "火种远征主线"
+            kind = "storyline"
+            field = "stage"
+            to = "pressure"
+            unit = "机甲的能量波动已经传出去，虫族和机械部队很快就会大规模赶来，必须尽快离开研究所"
+            cost = "接下来可以依靠机甲的战力攻破虫族前哨站，打通前往青藤据点的通道，整合更多反抗力量"
+            note = "change=林野成功修复专属重曙机甲，人类获得了对抗虫族的核心战力，打破边境封锁成为可能; consequence=接下来可以依靠机甲的战力攻破虫族前哨站，打通前往青藤据点的通道，整合更多反抗力量; pressure=机甲的能量波动已经传出去，虫族和机械部队很快就会大规模赶来，必须尽快离开研究所"
+          }
+          state_delta {
+            target = "火种远征主线"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V1-C6"
+          }
         }
       }
       step 2 {
-        description = "在机械师阿禾的协助下，用收集到的能量晶核修复机甲的动力核心"
+        description = "林野找到自己当年主导研发的初代实验型机甲「重曙」，状态完好仅能源系统损坏，解锁机甲设计的完整记忆碎片，记忆深处闪过陌生的三角形蓝紫色符号与冰冷机械音，他以为是机甲的开机音效没在意；阿禾认出机甲是父亲当年参与研发的机型，机甲胸甲上的编号「ZH-001」与特殊散热纹路是他父亲亲手设计的，坚定了协助林野的决心，阿禾的父亲当年是研究所的机械工程师，大陨落时没能逃出来，重曙是他参与研发的最后一个项目，阿禾的执念是完成父亲的遗愿，让重曙机甲重新上天"
         event {
-          type = "acquire"
+          type = "discovery"
+          state_delta {
+            target = "初代机甲重曙"
+            kind = "item"
+            field = "find"
+            to = "completed"
+            note = "林野找到自己当年主导研发的初代实验型机甲「重曙」，状态完好仅能源系统损坏，解锁机甲设计的完整记忆碎片，记忆深处闪过陌生的三角形蓝紫色符号与冰冷机械音，他以为是机甲的开机音效没在意；阿禾认出机甲是父亲当年参与研发的机型，机甲胸甲上的编号「ZH-001」与特殊散热纹路是他父亲亲手设计的，坚定了协助林野的决心，阿禾的父亲当年是研究所的机械工程师，大陨落时没能逃出来，重曙是他参与研发的最后一个项目，阿禾的执念是完成父亲的遗愿，让重曙机甲重新上天"
+          }
         }
       }
       step 3 {
-        description = "林跃首次驾驶半修复的重曙机甲，用机甲的近战臂刃全歼机械清扫兵"
+        description = "在机械师阿禾的协助下，用收集到的5枚能量晶核修复机甲的动力核心，阿禾主动提出以后当林野的专属机师，完成父亲未完成的遗愿"
         event {
-          type = "combat"
+          type = "acquire"
+          state_delta {
+            target = "重曙机甲动力系统"
+            kind = "item"
+            field = "repair"
+            to = "repaired"
+            note = "在机械师阿禾的协助下，用收集到的5枚能量晶核修复机甲的动力核心，阿禾主动提出以后当林野的专属机师，完成父亲未完成的遗愿"
+          }
         }
       }
       step 4 {
-        description = "重曙机甲完成全部修复，各项性能达到出厂标准，林跃与机甲的基因匹配度高达98%"
+        description = "6台机械清扫兵追踪能量信号闯入机甲库，苏晴带领虎子在外围打掩护吸引3台的火力，林野首次驾驶半修复的重曙机甲，用机甲的近战臂刃全歼3台机械兵，再清掉外围的3台，完全掌握了机甲的基础操作，获得6枚初级能量晶核"
         event {
-          type = "achieve"
+          type = "combat"
+          combat {
+            enemies = [{id = "叛变ai「零」_中级_机械清扫兵", count = 6, level = 3}]
+          }
+          state_delta {
+            target = "机械清扫兵"
+            kind = "enemy"
+            field = "fight"
+            to = "resolved"
+            note = "6台机械清扫兵追踪能量信号闯入机甲库，苏晴带领虎子在外围打掩护吸引3台的火力，林野首次驾驶半修复的重曙机甲，用机甲的近战臂刃全歼3台机械兵，再清掉外围的3台，完全掌握了机甲的基础操作，获得6枚初级能量晶核"
+          }
+        }
+      }
+      step 5 {
+        description = "重曙机甲完成全部修复，各项性能达到出厂标准，林野与机甲的基因匹配度高达98%，可以完全操控机甲的所有功能，冲突解决：获得对抗虫族的核心战力"
+        event {
+          type = "goal"
+          state_delta {
+            target = "重曙机甲全系统"
+            kind = "item"
+            field = "repair"
+            to = "completed"
+            note = "重曙机甲完成全部修复，各项性能达到出厂标准，林野与机甲的基因匹配度高达98%，可以完全操控机甲的所有功能，冲突解决：获得对抗虫族的核心战力"
+          }
+        }
+      }
+      step 6 {
+        description = "初级能量晶核 resource change: 10 -5 = 5. 修复机甲动力核心消耗5枚晶核"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "10"
+            to = "5"
+            delta = -5
+            note = "修复机甲动力核心消耗5枚晶核"
+          }
+        }
+      }
+      step 7 {
+        description = "初级能量晶核 resource change: 5 +6 = 11. 击毁6台机械清扫兵获得能量核心"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "5"
+            to = "11"
+            delta = 6
+            note = "击毁6台机械清扫兵获得能量核心"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start cultivation: 基因适配者（一阶中级）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "基因适配者（一阶中级）"
+            note = "chapter start cultivation: 基因适配者（一阶中级）"
+          }
+        }
+      }
+      step 9 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "11"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 10 {
+        description = "chapter start injuries: 右手划伤已基本愈合"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 右手划伤已基本愈合"
+          }
+        }
+      }
+      step 11 {
+        description = "小队进入机甲库后清点物资，寻找可用的零件和能源，阿禾主动提出协助林野修复机甲"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "30分钟 小队进入机甲库后清点物资，寻找可用的零件和能源，阿禾主动提出协助林野修复机甲"
+          }
         }
       }
     }
@@ -226,27 +1306,162 @@ storyline {
       id = "obj_P1-V1-C7"
       type = "sequence"
       step 1 {
-        description = "林跃驾驶机甲，带着小队成员沿隐蔽路线返回临时营地"
+        description = "火种远征主线 | reveal | 林野基因等级突破至二阶，掌握精神感知能力，重曙机甲的战力完全超出预期，人类对抗虫族的实力大幅提升 | 接下来有足够的战力攻破虫族前哨站，打通前往青藤据点的通道 | 虫族已经在边境前哨站部署了大量兵力，还有虫族统领刀锋虫驻守，战力极强"
         event {
-          type = "move"
+          type = "storyline"
+          state_delta {
+            target = "火种远征主线"
+            kind = "storyline"
+            field = "stage"
+            to = "reveal"
+            unit = "虫族已经在边境前哨站部署了大量兵力，还有虫族统领刀锋虫驻守，战力极强"
+            cost = "接下来有足够的战力攻破虫族前哨站，打通前往青藤据点的通道"
+            note = "change=林野基因等级突破至二阶，掌握精神感知能力，重曙机甲的战力完全超出预期，人类对抗虫族的实力大幅提升; consequence=接下来有足够的战力攻破虫族前哨站，打通前往青藤据点的通道; pressure=虫族已经在边境前哨站部署了大量兵力，还有虫族统领刀锋虫驻守，战力极强"
+          }
+          state_delta {
+            target = "火种远征主线"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V1-C7"
+          }
         }
       }
       step 2 {
-        description = "林跃驾驶重曙机甲全歼虫族作战小队，测试了机甲的近战、远程武器全部功能"
+        description = "林野驾驶机甲，小队成员坐在外挂运载舱里，沿着隐蔽路线返回临时营地，不需要再徒步冒雪赶路"
         event {
-          type = "combat"
+          type = "acquire"
+          state_delta {
+            target = "机甲外挂运载舱"
+            kind = "item"
+            field = "install"
+            to = "installed"
+            note = "林野驾驶机甲，小队成员坐在外挂运载舱里，沿着隐蔽路线返回临时营地，不需要再徒步冒雪赶路"
+          }
         }
       }
       step 3 {
-        description = "林跃基因等级突破至二阶初级，获得精神力感知能力，可以感知周围1公里内的敌人动向"
+        description = "林野驾驶重曙机甲先用肩载能量炮轰掉5只虫族作战兵，再用近战臂刃砍死剩余3只，全歼8只虫族作战兵，先后测试了机甲的肩载能量炮、近战臂刃、能量护盾等全部功能，机甲性能远超预期，战斗零损伤，获得8枚初级能量晶核"
         event {
-          type = "status"
+          type = "combat"
+          combat {
+            enemies = [{id = "虫族_中级_虫族作战小队", count = 8, level = 3}, {id = "虫族_高级_虫族近卫虫", count = 1, level = 4, boss = true}]
+          }
+          state_delta {
+            target = "虫族作战小队"
+            kind = "enemy"
+            field = "fight"
+            to = "resolved"
+            note = "林野驾驶重曙机甲先用肩载能量炮轰掉5只虫族作战兵，再用近战臂刃砍死剩余3只，全歼8只虫族作战兵，先后测试了机甲的肩载能量炮、近战臂刃、能量护盾等全部功能，机甲性能远超预期，战斗零损伤，获得8枚初级能量晶核"
+          }
         }
       }
       step 4 {
-        description = "小队顺利返回营地，重曙机甲的出现让所有营地幸存者士气大振"
+        description = "林野驾驶机甲与近卫虫激战3分钟，用能量穿刺炮击穿其甲壳将其击杀，获得1枚高阶能量晶核；苏晴在运载舱里提前预警左后方偷袭，与林野的精神感知重合，为苏晴的异能觉醒埋下伏笔"
         event {
-          type = "achieve"
+          type = "combat"
+          combat {
+            enemies = [{id = "虫族_中级_虫族作战小队", count = 8, level = 3}, {id = "虫族_高级_虫族近卫虫", count = 1, level = 4, boss = true}]
+          }
+          state_delta {
+            target = "虫族近卫虫"
+            kind = "enemy"
+            field = "fight"
+            to = "resolved"
+            note = "林野驾驶机甲与近卫虫激战3分钟，用能量穿刺炮击穿其甲壳将其击杀，获得1枚高阶能量晶核；苏晴在运载舱里提前预警左后方偷袭，与林野的精神感知重合，为苏晴的异能觉醒埋下伏笔"
+          }
+        }
+      }
+      step 5 {
+        description = "林野基因稳定性提升至80%，正式突破至基因强化者（二阶初级），获得精神感知能力，可以感知周围1公里内的敌人动向，解锁基因锁模块研发的记忆碎片，对应state_anchor的境界突破，对机甲的操控更加流畅，冲突解决：战力进一步提升，足以应对更强的敌人"
+        event {
+          type = "status"
+          state_delta {
+            target = "虫族近卫虫高阶晶核"
+            kind = "item"
+            field = "absorb"
+            to = "upgraded"
+            note = "林野基因稳定性提升至80%，正式突破至基因强化者（二阶初级），获得精神感知能力，可以感知周围1公里内的敌人动向，解锁基因锁模块研发的记忆碎片，对应state_anchor的境界突破，对机甲的操控更加流畅，冲突解决：战力进一步提升，足以应对更强的敌人"
+          }
+        }
+      }
+      step 6 {
+        description = "小队顺利返回营地，重曙机甲的出现让所有营地幸存者士气大振，所有人都看到了活下去的希望"
+        event {
+          type = "goal"
+          state_delta {
+            target = "返回游击营地"
+            kind = "location"
+            field = "drive"
+            to = "completed"
+            note = "小队顺利返回营地，重曙机甲的出现让所有营地幸存者士气大振，所有人都看到了活下去的希望"
+          }
+        }
+      }
+      step 7 {
+        description = "初级能量晶核 resource change: 11 +9 = 20. 全歼虫族小队获得9枚晶核，其中1枚为近卫虫的高阶晶核"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "11"
+            to = "20"
+            delta = 9
+            note = "全歼虫族小队获得9枚晶核，其中1枚为近卫虫的高阶晶核"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start cultivation: 基因强化者（二阶初级）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "基因强化者（二阶初级）"
+            note = "chapter start cultivation: 基因强化者（二阶初级）"
+          }
+        }
+      }
+      step 9 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "20"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 10 {
+        description = "chapter start injuries: 轻度精神力消耗"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 轻度精神力消耗"
+          }
+        }
+      }
+      step 11 {
+        description = "小队在机甲库休息了一整夜，补充弹药和能源，阿禾给机甲安装了外挂运载舱，确认机甲状态稳定后出发返回营地"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "9小时 小队在机甲库休息了一整夜，补充弹药和能源，阿禾给机甲安装了外挂运载舱，确认机甲状态稳定后出发返回营地"
+          }
         }
       }
     }
@@ -258,27 +1473,128 @@ storyline {
       id = "obj_P1-V1-C8"
       type = "sequence"
       step 1 {
-        description = "林跃得知虫族前哨站封锁了所有向南的路线，而近地轨道殖民站的信号源就在前哨站南侧"
+        description = "历史真相支线 | pressure | 林野感知到前哨站内有沈氏密钥的信号，确认沈氏势力近期来过这里，当年的真相就在前哨站内 | 攻破前哨站后就能获得沈氏密钥，揭开更多当年的真相 | 虫族与机械部队的战斗已经进入白热化，必须尽快发起突袭，否则密钥可能被机械部队夺走"
         event {
-          type = "knowledge"
+          type = "storyline"
+          state_delta {
+            target = "历史真相支线"
+            kind = "storyline"
+            field = "stage"
+            to = "pressure"
+            unit = "虫族与机械部队的战斗已经进入白热化，必须尽快发起突袭，否则密钥可能被机械部队夺走"
+            cost = "攻破前哨站后就能获得沈氏密钥，揭开更多当年的真相"
+            note = "change=林野感知到前哨站内有沈氏密钥的信号，确认沈氏势力近期来过这里，当年的真相就在前哨站内; consequence=攻破前哨站后就能获得沈氏密钥，揭开更多当年的真相; pressure=虫族与机械部队的战斗已经进入白热化，必须尽快发起突袭，否则密钥可能被机械部队夺走"
+          }
+          state_delta {
+            target = "历史真相支线"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V1-C8"
+          }
         }
       }
       step 2 {
-        description = "林跃和苏晴潜入前哨站外围山地，侦察前哨站的防御部署"
+        description = "林野得知虫族前哨站封锁了所有向南的路线，而近地轨道殖民站的信号源与青藤据点都在前哨站南侧，必须攻破前哨站才能继续前进"
         event {
-          type = "move"
+          type = "knowledge"
+          state_delta {
+            target = "作战会议内容"
+            kind = "knowledge"
+            field = "listen"
+            to = "learned"
+            note = "林野得知虫族前哨站封锁了所有向南的路线，而近地轨道殖民站的信号源与青藤据点都在前哨站南侧，必须攻破前哨站才能继续前进"
+          }
         }
       }
       step 3 {
-        description = "发现AI零的机械部队正在进攻前哨站西侧防线，虫族主力被牵制在西侧"
+        description = "林野和苏晴潜入前哨站外围山地，用精神感知能力扫描前哨站的防御部署，绘制出详细的布防图，确认前哨站西侧防御最强，东侧仅部署了少量虫族兵力"
         event {
-          type = "discover"
+          type = "acquire"
+          state_delta {
+            target = "前哨站防御部署"
+            kind = "information"
+            field = "scout"
+            to = "drawn"
+            note = "林野和苏晴潜入前哨站外围山地，用精神感知能力扫描前哨站的防御部署，绘制出详细的布防图，确认前哨站西侧防御最强，东侧仅部署了少量虫族兵力"
+          }
         }
       }
       step 4 {
-        description = "小队制定战术，等机械部队和虫族两败俱伤时，从东侧防御薄弱点突袭前哨站"
+        description = "发现AI零的机械部队正在进攻前哨站西侧防线，虫族主力被牵制在西侧；林野解锁一段记忆碎片，得知沈氏密钥会每隔72小时发出特定低频信号，机械部队正是追踪信号而来，他感知到前哨站内有对应信号源的特殊能量反应，同时发现前哨站内有近期人类活动的残留痕迹，应该是沈氏的勘探队来过，还有一丝微弱的人类生命信号"
         event {
-          type = "goal"
+          type = "discovery"
+          state_delta {
+            target = "机械部队进攻动向"
+            kind = "event"
+            field = "perceive"
+            to = "completed"
+            note = "发现AI零的机械部队正在进攻前哨站西侧防线，虫族主力被牵制在西侧；林野解锁一段记忆碎片，得知沈氏密钥会每隔72小时发出特定低频信号，机械部队正是追踪信号而来，他感知到前哨站内有对应信号源的特殊能量反应，同时发现前哨站内有近期人类活动的残留痕迹，应该是沈氏的勘探队来过，还有一丝微弱的人类生命信号"
+          }
+        }
+      }
+      step 5 {
+        description = "虎妞用虫族感知异能实时监控西侧战场的双方战力损耗，待虫族伤亡70%、机械部队剩余30%时，小队在西侧防线布置简易爆炸装置，故意激化双方矛盾；等双方战至最惨烈时，林野驾驶重曙机甲从东侧防御薄弱点突袭，小队跟进占领前哨站，以最小的代价取得胜利，优先救出被俘虏的人类，夺取沈氏密钥，冲突升级为三方混战的战术博弈"
+        event {
+          type = "premise"
+          state_delta {
+            target = "坐收渔利突袭战术"
+            kind = "plan"
+            field = "propose"
+            to = "established"
+            note = "虎妞用虫族感知异能实时监控西侧战场的双方战力损耗，待虫族伤亡70%、机械部队剩余30%时，小队在西侧防线布置简易爆炸装置，故意激化双方矛盾；等双方战至最惨烈时，林野驾驶重曙机甲从东侧防御薄弱点突袭，小队跟进占领前哨站，以最小的代价取得胜利，优先救出被俘虏的人类，夺取沈氏密钥，冲突升级为三方混战的战术博弈"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start cultivation: 基因强化者（二阶初级）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "基因强化者（二阶初级）"
+            note = "chapter start cultivation: 基因强化者（二阶初级）"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "20"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start injuries: 精神力消耗已恢复"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 精神力消耗已恢复"
+          }
+        }
+      }
+      step 9 {
+        description = "营地召开作战会议，商议打通路线的方案，整理作战物资，准备武器弹药，出发向南前往前哨站"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "3小时 营地召开作战会议，商议打通路线的方案，整理作战物资，准备武器弹药，出发向南前往前哨站"
+          }
         }
       }
     }
@@ -290,27 +1606,180 @@ storyline {
       id = "obj_P1-V1-C9"
       type = "sequence"
       step 1 {
-        description = "林跃驾驶重曙机甲突袭东侧防线，10分钟内全歼12只虫族守军，突破防线进入前哨站内部"
+        description = "历史真相支线 | reveal | 林野获得沈氏密钥碎片，解锁沈氏当年暗害自己的记忆碎片，确认沈明哲是现任家主，正在全球寻找其余休眠者，沈氏已经监控到自己的动向，确认青藤据点有内奸 | 他终于明确了自己的仇人，接下来要找到其余休眠者，揭露沈氏的阴谋，揪出内奸 | 沈氏已经在全球部署了大量搜捕力量，其余休眠者随时可能遭遇危险，内奸在暗处随时可能搞破坏"
         event {
-          type = "combat"
+          type = "storyline"
+          state_delta {
+            target = "历史真相支线"
+            kind = "storyline"
+            field = "stage"
+            to = "reveal"
+            unit = "沈氏已经在全球部署了大量搜捕力量，其余休眠者随时可能遭遇危险，内奸在暗处随时可能搞破坏"
+            cost = "他终于明确了自己的仇人，接下来要找到其余休眠者，揭露沈氏的阴谋，揪出内奸"
+            note = "change=林野获得沈氏密钥碎片，解锁沈氏当年暗害自己的记忆碎片，确认沈明哲是现任家主，正在全球寻找其余休眠者，沈氏已经监控到自己的动向，确认青藤据点有内奸; consequence=他终于明确了自己的仇人，接下来要找到其余休眠者，揭露沈氏的阴谋，揪出内奸; pressure=沈氏已经在全球部署了大量搜捕力量，其余休眠者随时可能遭遇危险，内奸在暗处随时可能搞破坏"
+          }
+          state_delta {
+            target = "历史真相支线"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V1-C9"
+          }
         }
       }
       step 2 {
-        description = "林跃全歼残余的机械部队，吸收能量补充机甲能源"
+        description = "林野驾驶重曙机甲突袭东侧防线，肩载能量炮一轮齐射炸毁虫族防御工事，10分钟内全歼12只残血虫族守军，突破防线进入前哨站内部，作战队员跟进清理残余敌人，获得12枚初级能量晶核"
         event {
           type = "combat"
+          combat {
+            enemies = [{id = "虫族_中级_虫族守军", count = 12, level = 3}, {id = "叛变ai「零」_中级_残余机械部队", count = 8, level = 3}, {id = "虫族_高级_刀锋虫", count = 1, level = 5, boss = true}]
+          }
+          state_delta {
+            target = "虫族守军"
+            kind = "enemy"
+            field = "fight"
+            to = "resolved"
+            note = "林野驾驶重曙机甲突袭东侧防线，肩载能量炮一轮齐射炸毁虫族防御工事，10分钟内全歼12只残血虫族守军，突破防线进入前哨站内部，作战队员跟进清理残余敌人，获得12枚初级能量晶核"
+          }
         }
       }
       step 3 {
-        description = "林跃与刀锋虫激战15分钟，最终用机甲的能量核心穿刺炮击穿刀锋虫的甲壳，将其击杀"
+        description = "林野全歼残余的8台机械部队，吸收能量补充机甲能源，获得8枚初级能量晶核；在一台机械兵的核心中发现刻有沈氏家族徽记的微型定位器，还在持续发送信号，说明沈氏已经通过机械部队监控到了林野的动向"
         event {
           type = "combat"
+          combat {
+            enemies = [{id = "虫族_中级_虫族守军", count = 12, level = 3}, {id = "叛变ai「零」_中级_残余机械部队", count = 8, level = 3}, {id = "虫族_高级_刀锋虫", count = 1, level = 5, boss = true}]
+          }
+          state_delta {
+            target = "残余机械部队"
+            kind = "enemy"
+            field = "fight"
+            to = "resolved"
+            note = "林野全歼残余的8台机械部队，吸收能量补充机甲能源，获得8枚初级能量晶核；在一台机械兵的核心中发现刻有沈氏家族徽记的微型定位器，还在持续发送信号，说明沈氏已经通过机械部队监控到了林野的动向"
+          }
         }
       }
       step 4 {
-        description = "小队成功占领前哨站，打通了向南前往信号源的路线，获得前哨站内的大量物资储备"
+        description = "林野与虫族统领刀锋虫激战15分钟，机甲左臂被刀锋砍断后燃烧3枚能量晶核激活重曙机甲过载模式，严格遵守过载模式仅能持续5分钟的设定，在第4分50秒用机甲的能量核心穿刺炮击穿刀锋虫的甲壳将其击杀，机甲过载模式结束后能源消耗过半，获得1枚顶级能量晶核，冲突解决：击杀前哨站最强的敌人"
         event {
-          type = "achieve"
+          type = "combat"
+          combat {
+            enemies = [{id = "虫族_中级_虫族守军", count = 12, level = 3}, {id = "叛变ai「零」_中级_残余机械部队", count = 8, level = 3}, {id = "虫族_高级_刀锋虫", count = 1, level = 5, boss = true}]
+          }
+          state_delta {
+            target = "虫族统领刀锋虫"
+            kind = "enemy"
+            field = "fight"
+            to = "resolved"
+            note = "林野与虫族统领刀锋虫激战15分钟，机甲左臂被刀锋砍断后燃烧3枚能量晶核激活重曙机甲过载模式，严格遵守过载模式仅能持续5分钟的设定，在第4分50秒用机甲的能量核心穿刺炮击穿刀锋虫的甲壳将其击杀，机甲过载模式结束后能源消耗过半，获得1枚顶级能量晶核，冲突解决：击杀前哨站最强的敌人"
+          }
+        }
+      }
+      step 5 {
+        description = "林野发现半块刻有沈氏家族徽记的密钥碎片，通过文档得知此前沈氏勘探队来此寻找密钥被虫族歼灭，碎片被虫族缴获，确认机械部队的进攻目标就是这枚密钥；触碰到密钥时解锁部分记忆碎片，想起当年沈氏家族在火种机甲项目中多次安插眼线窃取资料，为了夺取机甲控制权暗害自己的过往，文档中夹带沈明哲的私人日志片段：「2247年11月，虫族突袭磐石堡外围，妻儿死在虫口下，我知道和虫族交易是与虎谋皮，但只有保住精英火种，人类才有翻盘的可能，我不在乎被骂汉奸」，丰富反派弧光，让沈明哲的行为逻辑更合理；在前哨站的虫族储物洞中发现了之前丢失的2枚印有青藤据点标记的高爆炸药，确认青藤据点有内奸，回收之前的伏笔"
+        event {
+          type = "acquire"
+          state_delta {
+            target = "半块沈氏密钥碎片"
+            kind = "item"
+            field = "find"
+            to = "discovered"
+            note = "林野发现半块刻有沈氏家族徽记的密钥碎片，通过文档得知此前沈氏勘探队来此寻找密钥被虫族歼灭，碎片被虫族缴获，确认机械部队的进攻目标就是这枚密钥；触碰到密钥时解锁部分记忆碎片，想起当年沈氏家族在火种机甲项目中多次安插眼线窃取资料，为了夺取机甲控制权暗害自己的过往，文档中夹带沈明哲的私人日志片段：「2247年11月，虫族突袭磐石堡外围，妻儿死在虫口下，我知道和虫族交易是与虎谋皮，但只有保住精英火种，人类才有翻盘的可能，我不在乎被骂汉奸」，丰富反派弧光，让沈明哲的行为逻辑更合理；在前哨站的虫族储物洞中发现了之前丢失的2枚印有青藤据点标记的高爆炸药，确认青藤据点有内奸，回收之前的伏笔"
+          }
+        }
+      }
+      step 6 {
+        description = "小队成功占领前哨站，打通了向南前往青藤据点与信号源的路线，获得前哨站内的大量物资储备；虎子成功救出被关押的妹妹虎妞，虎妞的基因稳定性为55%，是保留人类理智的异变者，拥有感知10公里内虫族动向的异能，之前被沈氏抓捕送到前哨站当诱饵，被虫族俘虏后关押至今，为后续异变者阵营支线、渗透虫巢的剧情埋下伏笔"
+        event {
+          type = "goal"
+          state_delta {
+            target = "虫族边境前哨站"
+            kind = "location"
+            field = "occupy"
+            to = "completed"
+            note = "小队成功占领前哨站，打通了向南前往青藤据点与信号源的路线，获得前哨站内的大量物资储备；虎子成功救出被关押的妹妹虎妞，虎妞的基因稳定性为55%，是保留人类理智的异变者，拥有感知10公里内虫族动向的异能，之前被沈氏抓捕送到前哨站当诱饵，被虫族俘虏后关押至今，为后续异变者阵营支线、渗透虫巢的剧情埋下伏笔"
+          }
+        }
+      }
+      step 7 {
+        description = "初级能量晶核 resource change: 20 +21 = 41. 击杀12只虫族、8台机械兵、1只刀锋虫获得21枚晶核，其中刀锋虫为顶级晶核"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "20"
+            to = "41"
+            delta = 21
+            note = "击杀12只虫族、8台机械兵、1只刀锋虫获得21枚晶核，其中刀锋虫为顶级晶核"
+          }
+        }
+      }
+      step 8 {
+        description = "初级能量晶核 resource change: 41 -3 = 38. 激活机甲过载模式燃烧3枚晶核"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "41"
+            to = "38"
+            delta = -3
+            note = "激活机甲过载模式燃烧3枚晶核"
+          }
+        }
+      }
+      step 9 {
+        description = "chapter start cultivation: 基因强化者（二阶初级）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "基因强化者（二阶初级）"
+            note = "chapter start cultivation: 基因强化者（二阶初级）"
+          }
+        }
+      }
+      step 10 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "38"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 11 {
+        description = "chapter start injuries: 轻度精神力消耗"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 轻度精神力消耗"
+          }
+        }
+      }
+      step 12 {
+        description = "小队在山地隐蔽点等待了7小时，直到机械部队与虫族双方损失超过80%，战力最弱的时候发起突袭"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "7小时 小队在山地隐蔽点等待了7小时，直到机械部队与虫族双方损失超过80%，战力最弱的时候发起突袭"
+          }
         }
       }
     }
@@ -322,27 +1791,200 @@ storyline {
       id = "obj_P1-V1-C10"
       type = "sequence"
       step 1 {
-        description = "阿禾修复前哨站的通讯装置，接收到人类近地轨道殖民站发出的坐标信号，同时收到了前往殖民站的地面发射站位置"
+        description = "第二章：青藤据点 | hook | 林野感知到青藤据点方向有其他休眠者的基因共振信号与下一枚密钥的方位，怀疑青藤有内奸，集结了第一批追随者，正式出发前往青藤据点 | 接下来将在青藤据点遇到其他休眠者，整合更多反抗力量，同时要应对沈氏安插在青藤据点的内奸，寻找下一枚沈氏密钥 | 沈氏已经知道林野苏醒的消息，正在往青藤据点部署大量兵力，准备抢夺其余休眠者与重曙机甲，内奸在暗处随时可能制造麻烦"
         event {
-          type = "discover"
+          type = "storyline"
+          state_delta {
+            target = "第二章：青藤据点"
+            kind = "storyline"
+            field = "stage"
+            to = "hook"
+            unit = "沈氏已经知道林野苏醒的消息，正在往青藤据点部署大量兵力，准备抢夺其余休眠者与重曙机甲，内奸在暗处随时可能制造麻烦"
+            cost = "接下来将在青藤据点遇到其他休眠者，整合更多反抗力量，同时要应对沈氏安插在青藤据点的内奸，寻找下一枚沈氏密钥"
+            note = "change=林野感知到青藤据点方向有其他休眠者的基因共振信号与下一枚密钥的方位，怀疑青藤有内奸，集结了第一批追随者，正式出发前往青藤据点; consequence=接下来将在青藤据点遇到其他休眠者，整合更多反抗力量，同时要应对沈氏安插在青藤据点的内奸，寻找下一枚沈氏密钥; pressure=沈氏已经知道林野苏醒的消息，正在往青藤据点部署大量兵力，准备抢夺其余休眠者与重曙机甲，内奸在暗处随时可能制造麻烦"
+          }
+          state_delta {
+            target = "第二章：青藤据点"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V1-C10"
+          }
         }
       }
       step 2 {
-        description = "林跃宣布离开地球前往星际的计划，47名幸存者全部愿意跟随他，成为他的第一批追随者"
+        description = "火种远征主线 | reveal | 林野获得近地轨道殖民站的坐标，集结了第一批追随者，人类文明复兴的第一步已经迈出 | 接下来整合完所有势力后，就能前往地面发射站，离开地球前往星际，重建人类文明 | 虫族母巢与沈氏势力都在盯着坐标，收割者文明的舰队已经在太阳系外围待命，随时可能入侵"
         event {
-          type = "goal"
+          type = "storyline"
+          state_delta {
+            target = "火种远征主线"
+            kind = "storyline"
+            field = "stage"
+            to = "reveal"
+            unit = "虫族母巢与沈氏势力都在盯着坐标，收割者文明的舰队已经在太阳系外围待命，随时可能入侵"
+            cost = "接下来整合完所有势力后，就能前往地面发射站，离开地球前往星际，重建人类文明"
+            note = "change=林野获得近地轨道殖民站的坐标，集结了第一批追随者，人类文明复兴的第一步已经迈出; consequence=接下来整合完所有势力后，就能前往地面发射站，离开地球前往星际，重建人类文明; pressure=虫族母巢与沈氏势力都在盯着坐标，收割者文明的舰队已经在太阳系外围待命，随时可能入侵"
+          }
+          state_delta {
+            target = "火种远征主线"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V1-C10"
+          }
         }
       }
       step 3 {
-        description = "林跃找到当年的联邦秘密文档，得知休眠舱激活是联邦预设的文明重启计划，他是被选定的文明重启者"
+        description = "势力整合支线 | progress | 林野集结了第一批追随者，队伍拥有了作战、维修、医疗、侦察的完整配置，具备了整合更大势力的基础 | 接下来将在青藤据点整合更多幸存者与异变者势力，建立统一的人类反抗联盟 | 各幸存者据点之间矛盾重重，普通人类与异变者互相敌视，沈氏在暗中挑拨离间"
         event {
-          type = "knowledge"
+          type = "storyline"
+          state_delta {
+            target = "势力整合支线"
+            kind = "storyline"
+            field = "stage"
+            to = "progress"
+            unit = "各幸存者据点之间矛盾重重，普通人类与异变者互相敌视，沈氏在暗中挑拨离间"
+            cost = "接下来将在青藤据点整合更多幸存者与异变者势力，建立统一的人类反抗联盟"
+            note = "change=林野集结了第一批追随者，队伍拥有了作战、维修、医疗、侦察的完整配置，具备了整合更大势力的基础; consequence=接下来将在青藤据点整合更多幸存者与异变者势力，建立统一的人类反抗联盟; pressure=各幸存者据点之间矛盾重重，普通人类与异变者互相敌视，沈氏在暗中挑拨离间"
+          }
+          state_delta {
+            target = "势力整合支线"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V1-C10"
+          }
         }
       }
       step 4 {
-        description = "林跃驾驶重曙机甲开路，带领所有追随者出发前往地面发射站，正式迈出跨星际远征的第一步"
+        description = "林野吸收刀锋虫的顶级晶核后基因稳定性骤降到52%，出现短暂失控，瞳孔泛黑差点攻击队友，脑海里闪过父母牺牲的过往、队友信任的眼神，同时看到幻觉：太阳系外围漂浮着大量三角形的银色战舰，冰冷的机械音提示「收割倒计时启动：1825天」，强化收割者文明的终极伏笔；他靠意志力硬生生压制住了暴走的能量，血管里的黑纹退下去大半，苏晴拿出自己珍藏了多年的半支基因抑制剂为他注射，注射时苏晴手上发出淡淡的微光，加快了基因稳定的速度，苏晴的治愈异能初步觉醒，为后续异能完全觉醒埋下伏笔；最终林野基因稳定性提升至85%，正式突破至基因强化者二阶中级，精神感知范围扩大至3公里，对应state_anchor的境界突破；林野感知到来自西边青藤据点方向的同源基因共振信号，确认还有其他休眠者存活，同时触碰到沈氏密钥时感知到下一枚密钥也在青藤据点方向"
         event {
-          type = "move"
+          type = "status"
+          state_delta {
+            target = "刀锋虫顶级晶核"
+            kind = "item"
+            field = "absorb"
+            to = "upgraded"
+            note = "林野吸收刀锋虫的顶级晶核后基因稳定性骤降到52%，出现短暂失控，瞳孔泛黑差点攻击队友，脑海里闪过父母牺牲的过往、队友信任的眼神，同时看到幻觉：太阳系外围漂浮着大量三角形的银色战舰，冰冷的机械音提示「收割倒计时启动：1825天」，强化收割者文明的终极伏笔；他靠意志力硬生生压制住了暴走的能量，血管里的黑纹退下去大半，苏晴拿出自己珍藏了多年的半支基因抑制剂为他注射，注射时苏晴手上发出淡淡的微光，加快了基因稳定的速度，苏晴的治愈异能初步觉醒，为后续异能完全觉醒埋下伏笔；最终林野基因稳定性提升至85%，正式突破至基因强化者二阶中级，精神感知范围扩大至3公里，对应state_anchor的境界突破；林野感知到来自西边青藤据点方向的同源基因共振信号，确认还有其他休眠者存活，同时触碰到沈氏密钥时感知到下一枚密钥也在青藤据点方向"
+          }
+        }
+      }
+      step 5 {
+        description = "阿禾与周叔配合修复通讯装置，接收到人类近地轨道殖民站发出的坐标信号，同时收到了前往殖民站的地面发射站位置；还有会制药的老医师陈婆也加入队伍，能制作基础的基因抑制剂与外伤药，为后续势力整合埋下伏笔"
+        event {
+          type = "acquire"
+          state_delta {
+            target = "星际通讯装置"
+            kind = "item"
+            field = "repair"
+            to = "repaired"
+            note = "阿禾与周叔配合修复通讯装置，接收到人类近地轨道殖民站发出的坐标信号，同时收到了前往殖民站的地面发射站位置；还有会制药的老医师陈婆也加入队伍，能制作基础的基因抑制剂与外伤药，为后续势力整合埋下伏笔"
+          }
+        }
+      }
+      step 6 {
+        description = "林野找到当年的联邦秘密文档，得知休眠舱激活是自己当年预埋的地质触发唤醒程序，自己是火种机甲的核心研发工程师与唯一全权限适配者，当年遭沈氏家族暗害才被封入休眠舱；文档同时记载沈氏家族当年背叛人类，与虫族私下交易，如今掌控磐石堡据点垄断基因抑制剂，正在追杀全球其余的4名休眠者；林野发现前哨站的虫族部署刚好卡在他们突袭的时间点，结合之前丢失的2枚高爆炸药，进一步确认青藤据点有内奸"
+        event {
+          type = "knowledge"
+          state_delta {
+            target = "联邦秘密文档"
+            kind = "item"
+            field = "read"
+            to = "discovered"
+            note = "林野找到当年的联邦秘密文档，得知休眠舱激活是自己当年预埋的地质触发唤醒程序，自己是火种机甲的核心研发工程师与唯一全权限适配者，当年遭沈氏家族暗害才被封入休眠舱；文档同时记载沈氏家族当年背叛人类，与虫族私下交易，如今掌控磐石堡据点垄断基因抑制剂，正在追杀全球其余的4名休眠者；林野发现前哨站的虫族部署刚好卡在他们突袭的时间点，结合之前丢失的2枚高爆炸药，进一步确认青藤据点有内奸"
+          }
+        }
+      }
+      step 7 {
+        description = "林野宣布离开地球前往星际、重建人类文明的计划，同时提到还有其他休眠者存活，下一步先前往青藤据点整合势力，47名幸存者全部愿意跟随他，成为他的第一批追随者；虎子主动申请担任开路先锋，虎妞负责侦察虫族动向，阿禾与周叔负责机甲维修，陈婆负责医疗，苏晴负责队伍管理，分工明确；林野重述了父母当年牺牲的过往，自己最初只是想查清真相，现在决定承担起带领人类重建文明的责任，冲突解决：完成第一阶段的势力集结，明确下一阶段目标"
+        event {
+          type = "premise"
+          state_delta {
+            target = "前往星际重建人类文明计划"
+            kind = "plan"
+            field = "propose"
+            to = "established"
+            note = "林野宣布离开地球前往星际、重建人类文明的计划，同时提到还有其他休眠者存活，下一步先前往青藤据点整合势力，47名幸存者全部愿意跟随他，成为他的第一批追随者；虎子主动申请担任开路先锋，虎妞负责侦察虫族动向，阿禾与周叔负责机甲维修，陈婆负责医疗，苏晴负责队伍管理，分工明确；林野重述了父母当年牺牲的过往，自己最初只是想查清真相，现在决定承担起带领人类重建文明的责任，冲突解决：完成第一阶段的势力集结，明确下一阶段目标"
+          }
+        }
+      }
+      step 8 {
+        description = "林野驾驶修复好左臂的重曙机甲开路，带着所有追随者先往西边青藤据点方向出发，正式迈出跨星际远征、整合人类反抗势力的第一步，为第二卷青藤据点的剧情留下钩子：青藤据点内奸身份揭晓、其余休眠者营救、沈氏势力大规模进攻、下一枚密钥争夺"
+        event {
+          type = "goal"
+          state_delta {
+            target = "大部队前往青藤据点"
+            kind = "action"
+            field = "lead"
+            to = "started"
+            note = "林野驾驶修复好左臂的重曙机甲开路，带着所有追随者先往西边青藤据点方向出发，正式迈出跨星际远征、整合人类反抗势力的第一步，为第二卷青藤据点的剧情留下钩子：青藤据点内奸身份揭晓、其余休眠者营救、沈氏势力大规模进攻、下一枚密钥争夺"
+          }
+        }
+      }
+      step 9 {
+        description = "初级能量晶核 resource change: 38 -10 = 28. 修复机甲左臂消耗10枚晶核"
+        event {
+          type = "resource"
+          state_delta {
+            target = "初级能量晶核"
+            kind = "resource"
+            field = "quantity"
+            from = "38"
+            to = "28"
+            delta = -10
+            note = "修复机甲左臂消耗10枚晶核"
+          }
+        }
+      }
+      step 10 {
+        description = "chapter start cultivation: 基因强化者（二阶中级）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "基因强化者（二阶中级）"
+            note = "chapter start cultivation: 基因强化者（二阶中级）"
+          }
+        }
+      }
+      step 11 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "28"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 12 {
+        description = "chapter start injuries: 轻度精神力消耗"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 轻度精神力消耗"
+          }
+        }
+      }
+      step 13 {
+        description = "小队用6小时清理战场、修复机甲、清点前哨站的物资储备，阿禾与周叔用前哨站的金属零件修复了机甲的左臂"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "6小时 小队用6小时清理战场、修复机甲、清点前哨站的物资储备，阿禾与周叔用前哨站的金属零件修复了机甲的左臂"
+          }
         }
       }
     }
@@ -350,4 +1992,182 @@ storyline {
 }
 
 systems {
+  attribute_system "Core Attributes" {
+    id = "attr_core"
+    description = "Numeric baseline attributes for simulation and continuity checks."
+    attribute "Strength" {
+      id = "str"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "Agility" {
+      id = "agi"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "Intelligence" {
+      id = "int"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "Vitality" {
+      id = "vit"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "HP" {
+      id = "hp"
+      type = "resource"
+      base_value = 100
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "MP" {
+      id = "mp"
+      type = "resource"
+      base_value = 50
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "Gene Potential" {
+      id = "gene"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "虫族晶核" {
+      id = "resource_01"
+      description = "虫族体内生成的能量结晶，是基因进化的核心原料，也可作为能源驱动火种机甲、据点防御设施等设备"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "蓝星草" {
+      id = "resource_02"
+      description = "仅生长在虫族活动极少的地下溶洞深处，磐石堡周边溶洞产量最高，是制作基因抑制剂的核心原材料，目前被沈氏垄断开采"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "基因抑制剂" {
+      id = "resource_03"
+      description = "由虫族体液搭配蓝星草提取制成，可将基因进化时的崩溃风险降低40%，是各幸存者据点的核心战略物资"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "旧文明数据芯片" {
+      id = "resource_04"
+      description = "散落在地表旧人类遗址中的存储芯片，录入了旧时代的科技、文化资料，解锁与林野的基因等级绑定，低级芯片可解锁基础生产技术，高级芯片可解锁武器、机甲相关的额外功能，能大幅提升据点的生产、防御能力"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "旧人类核聚变晶块" {
+      id = "resource_05"
+      description = "大陨落前旧人类批量生产的核聚变能量结晶，仅可驱动旧式纯机械武器、据点供电与防御设施，无法用于基因进化与火种机甲供能，是各据点日常运行的通用能源"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+  }
+  power_formula "Core Power Formula" {
+    id = "power_core"
+    description = "Deterministic combat power formula for benchmark simulation."
+    base_power = 10
+    formula = "base + sum(attr_i * weight_i)"
+    factor "Strength" {
+      attribute = "str"
+      weight = 2
+    }
+    factor "Agility" {
+      attribute = "agi"
+      weight = 1.2
+    }
+    factor "Intelligence" {
+      attribute = "int"
+      weight = 1.8
+    }
+    factor "Vitality" {
+      attribute = "vit"
+      weight = 1.5
+    }
+    factor "HP" {
+      attribute = "hp"
+      weight = 0.1
+    }
+    factor "MP" {
+      attribute = "mp"
+      weight = 0.2
+    }
+    factor "Gene Potential" {
+      attribute = "gene"
+      weight = 1
+    }
+  }
+  counter "chapter_progress" {
+    track = "story.chapter"
+    description = "Story progression counter"
+    milestone 5 {
+      title = "Arc Warmup"
+    }
+    milestone 10 {
+      title = "Arc Core"
+    }
+  }
+  counter "基因进化与火种机甲体系_progress" {
+    track = "player.progression"
+    description = "Primary progression pace tracker"
+    milestone 1 {
+      title = "System Activated"
+    }
+    milestone 3 {
+      title = "First Breakthrough"
+    }
+    milestone 5 {
+      title = "Mid-Arc Growth"
+    }
+  }
+  progression "基因进化与火种机甲体系" {
+    id = "基因进化与火种机甲体系"
+    level 1 {
+      name = "基因适配者"
+      requirements = "首次接触虫族低级晶核，完成基础基因适配，解锁第一次组装火种机甲核心的记忆碎片"
+      bonuses = ["刚激活系统的初级状态，可操控基础形态的火种机甲，身体素质是普通人类的3倍，可对抗最低级的工虫"]
+    }
+    level 2 {
+      name = "基因强化者"
+      requirements = "吸收10枚低级虫族晶核，基因稳定性达到70%以上，解锁基因锁模块研发的记忆碎片"
+      bonuses = ["可解锁机甲的近战、远程武器模块，身体素质提升至普通人类的10倍，能独立对抗虫族的作战兵虫"]
+    }
+    level 3 {
+      name = "基因觉醒者"
+      requirements = "吸收1枚中级虫族晶核，扛过基因崩溃的风险，解锁机甲武器模块测试的记忆碎片"
+      bonuses = ["可解锁机甲的飞行、能量护盾模块，拥有专属的基因异能，能独立对抗中级虫族与初级虫将，也是次一级基因适配者可达到的最高等级"]
+    }
+    level 4 {
+      name = "基因掌控者"
+      requirements = "吸收3枚高级虫族晶核，完全融合火种系统的核心代码，解锁当年爆炸事故前的最后一段工作记忆碎片"
+      bonuses = ["仅林野可达到的等级，可解锁机甲的星际航行模块，可通过火种机甲的基因链共振向所有适配基因进化系统的用户发送全域加密信息、共享虫群动向数据，该传输不属于电磁波频段，不受虫族电磁干扰影响，仅适配了基因进化系统的用户可接收，获得进化者的天然信服，可对抗虫族的高级统领"]
+    }
+    level 5 {
+      name = "文明火种者"
+      requirements = "吸收虫族母巢的唯一核心晶核，解锁全部文明数据库，解锁当年被暗害的完整真相记忆碎片"
+      bonuses = ["仅林野可达到的等级，可激活机甲的终极星舰形态，释放覆盖全球的基因修复波，一次性修复所有人类因虫族长期辐射导致的基因缺陷与生育率下降问题，无法修改或强化正常人类基因；使用该能力后机甲会损失90%核心能量，一年内无法启动星际航行模块，仅可使用一次，拥有该等级权限者是整个人类文明的法定领袖"]
+    }
+  }
 }

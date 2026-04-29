@@ -351,17 +351,17 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 			dslBridge.MergeIntoReview(dslIssues, review)
 			logger.Info("DSL simulation enriched review with %d additional issues", len(dslIssues))
 
-			for _, iss := range dslIssues {
-				if iss.Severity == dsl.SeverityCritical {
-					extraInput := agents.SetupImproveInput{
-						ExistingSetup: *improvedSetup,
-						ReviewResult:  *review,
-					}
-					if extraResult, extraErr := agent.Improve(cmd.Context(), extraInput); extraErr == nil {
-						setup = &extraResult.Setup
-						logger.Info("Extra improve pass completed for DSL-critical issues")
-					}
-					break
+			if review != nil {
+				extraInput := agents.SetupImproveInput{
+					ExistingSetup: *improvedSetup,
+					ReviewResult:  *review,
+				}
+				if extraResult, extraErr := agent.Improve(cmd.Context(), extraInput); extraErr == nil {
+					setup = &extraResult.Setup
+					improvedSetup = setup
+					logger.Info("Extra improve pass completed with DSL setup-contract feedback")
+				} else {
+					logger.Warn("Extra improve pass with DSL feedback failed: %v", extraErr)
 				}
 			}
 		}
@@ -393,7 +393,9 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 		}
 
 		fmt.Printf("\n✓ Story setup improved successfully!\n")
-		fmt.Printf("📊 Final Review Score: %.1f/100\n", review.OverallScore)
+		if review != nil {
+			fmt.Printf("📊 Final Review Score: %.1f/100\n", review.OverallScore)
+		}
 	}
 
 	fmt.Printf("\n📚 Project: %s\n", setup.ProjectName)
