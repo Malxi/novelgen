@@ -1,0 +1,190 @@
+DSL Simulator Report
+====================
+
+DSL File: story\rpg\01_outline.rpg
+Total Issues: 46
+
+1. [info/pacing] 
+   建议添加明确的结尾章节
+   Suggestion: 给故事一个完整的收束
+
+2. [warning/description] 
+   主角缺少背景故事
+   Suggestion: 添加主角的背景故事，让读者更容易产生共鸣
+
+3. [warning/character] 
+   主角缺少性格或动机描述
+   Suggestion: 定义主角的性格特点和行动动机
+
+4. [info/missing_info] 
+   主角缺少职业/修炼体系设定
+   Suggestion: 定义主角的修炼体系或职业类型
+
+5. [info/conflict] 
+   缺少明确的反派角色
+   Suggestion: 考虑添加一个反派角色来增加冲突
+
+6. [info/character] 
+   缺少导师/引路人角色
+   Suggestion: 考虑添加一个导师角色来帮助主角成长
+
+7. [info/description] P1-V1-C1 step 10 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+8. [info/growth] P1-V1-C1 step 10 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+9. [info/description] P1-V1-C3 step 8 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+10. [info/description] P1-V1-C3 step 10 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+11. [info/growth] P1-V1-C3 step 10 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+12. [info/description] P1-V1-C4 step 9 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+13. [info/character] P1-V1-C6 step 8 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+14. [info/character] P1-V1-C8 step 8 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+15. [info/description] P1-V1-C9 step 9 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+16. [info/character] P1-V1-C10 step 10 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+17. [info/description] P1-V2-C2 step 7 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+18. [info/growth] P1-V2-C2 step 7 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+19. [info/description] P1-V2-C3 step 8 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+20. [info/character] P1-V2-C3 step 10 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+21. [info/character] P1-V2-C4 step 8 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+22. [info/description] P1-V2-C5 step 9 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+23. [info/description] P1-V2-C5 step 10 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+24. [info/growth] P1-V2-C5 step 10 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+25. [info/character] P1-V2-C6 step 7 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+26. [info/description] P1-V2-C6 step 10 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+27. [info/description] P1-V2-C7 step 8 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+28. [info/growth] P1-V2-C7 step 8 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+29. [info/character] P1-V2-C7 step 9 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+30. [info/description] P1-V2-C7 step 11 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+31. [info/character] P1-V2-C8 step 8 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+32. [info/description] P1-V2-C9 step 6 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+33. [info/description] P1-V2-C9 step 9 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+34. [info/character] P1-V2-C10 step 8 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+35. [info/character] P1-V2-C10 step 9 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+36. [warning/growth] P1-V2-C3 
+   修为从 P1-V2-C2 的练气1层提升到本章练气2层，但 DSL 未捕捉到明确修炼或恢复过程
+   Suggestion: 补充吐纳、闭关、资源消耗或突破描写，或让 chapter -> DSL 显式输出 cultivation_change
+
+37. [info/conflict] 
+   故事中冲突事件较少
+   Suggestion: 考虑添加更多冲突来增加故事张力
+
+38. [info/growth] 
+   故事较长(20章)但主角成长较少(等级2)，建议增加突破情节
+   Suggestion: 考虑在中期添加境界突破、能力觉醒等成长高潮
+
+39. [warning/equipment] 
+   主角拥有的物品(90)超过背包容量(20)
+   Suggestion: 清理不需要的物品、扩容储物空间、或使用/消耗物品
+
+40. [info/conflict] P1-V1-C4 step 6 
+   storyline movement for '百年真相' has no visible cost, pressure, or consequence
+   Suggestion: Add a soft consequence or pressure note when the chapter changes an arc, so outline improve knows what got harder afterward.
+
+41. [info/conflict] P1-V1-C4 step 6 
+   storyline movement for '百年真相' has no visible cost, pressure, or consequence
+   Suggestion: Add a soft consequence or pressure note when the chapter changes an arc, so outline improve knows what got harder afterward.
+
+42. [info/conflict] P1-V1-C8 step 9 
+   storyline movement for '沈氏的消息传递渠道' has no visible cost, pressure, or consequence
+   Suggestion: Add a soft consequence or pressure note when the chapter changes an arc, so outline improve knows what got harder afterward.
+
+43. [info/conflict] P1-V1-C8 step 9 
+   storyline movement for '沈氏的消息传递渠道' has no visible cost, pressure, or consequence
+   Suggestion: Add a soft consequence or pressure note when the chapter changes an arc, so outline improve knows what got harder afterward.
+
+44. [warning/plot_hole] 
+   setup storyline '荒骨苏醒' is not advanced by the outline DSL
+   Suggestion: Add sparse storyline_advances to the key chapters that create pressure, reveal, reversal, or payoff for this setup storyline.
+
+45. [warning/plot_hole] 
+   setup storyline '青藤据点' is not advanced by the outline DSL
+   Suggestion: Add sparse storyline_advances to the key chapters that create pressure, reveal, reversal, or payoff for this setup storyline.
+
+46. [info/plot_hole] 
+   存在 14 个未回收的伏笔/剧情线 (提出 20, 回收 6)
+   Suggestion: 确认这些伏笔是否计划在后续章节中回收，或添加对应的 resolved state_delta
+

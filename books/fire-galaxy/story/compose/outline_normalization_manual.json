@@ -1,0 +1,159 @@
+{
+  "changes": [
+    {
+      "path": "P1-V1-C2.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "苏晴（暂时） -\u003e 苏晴"
+    },
+    {
+      "path": "P1-V1-C2.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "轻微冻伤（已处理） -\u003e 轻微冻伤"
+    },
+    {
+      "path": "P1-V1-C2.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "手部擦伤（已包扎） -\u003e 手部擦伤"
+    },
+    {
+      "path": "P1-V1-C3.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "基因反噬后的轻微精神力撕裂余痛（已缓解） -\u003e 基因反噬后的轻微精神力撕裂余痛"
+    },
+    {
+      "path": "P1-V1-C4.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "右手轻微扭伤（已恢复） -\u003e 右手轻微扭伤"
+    },
+    {
+      "path": "P1-V1-C4.state_anchor.injuries",
+      "action": "remove_resolved_injury",
+      "value": "右手轻微扭伤（已恢复）"
+    },
+    {
+      "path": "P1-V1-C5.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "苏晴（据点内） -\u003e 苏晴"
+    },
+    {
+      "path": "P1-V1-C5.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "老周（据点内） -\u003e 老周"
+    },
+    {
+      "path": "P1-V1-C5.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "左手背轻微划伤（已愈合） -\u003e 左手背轻微划伤"
+    },
+    {
+      "path": "P1-V1-C5.state_anchor.injuries",
+      "action": "remove_resolved_injury",
+      "value": "左手背轻微划伤（已愈合）"
+    },
+    {
+      "path": "P1-V1-C6.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "据点长老吴伯（初步认可） -\u003e 据点长老吴伯"
+    },
+    {
+      "path": "P1-V1-C6.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "左手背轻微划伤（已愈合） -\u003e 左手背轻微划伤"
+    },
+    {
+      "path": "P1-V1-C6.state_anchor.injuries",
+      "action": "remove_resolved_injury",
+      "value": "左手背轻微划伤（已愈合）"
+    },
+    {
+      "path": "P1-V1-C10.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "苏晴（正式盟友） -\u003e 苏晴"
+    },
+    {
+      "path": "P1-V1-C10.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "老周（正式盟友） -\u003e 老周"
+    },
+    {
+      "path": "P1-V1-C10.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "据点长老吴伯（表态支持） -\u003e 据点长老吴伯"
+    },
+    {
+      "path": "P1-V2-C4.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "苏晴（后方） -\u003e 苏晴"
+    },
+    {
+      "path": "P1-V2-C4.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "老周（后方） -\u003e 老周"
+    },
+    {
+      "path": "P1-V2-C4.state_anchor.injuries",
+      "action": "remove_resolved_injury",
+      "value": "左小臂已愈合"
+    },
+    {
+      "path": "P1-V2-C5.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "赵铁柱（暂时性同盟） -\u003e 赵铁柱"
+    },
+    {
+      "path": "P1-V2-C6.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "赵铁柱（正式同盟） -\u003e 赵铁柱"
+    },
+    {
+      "path": "P1-V2-C6.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "苏晴（后方） -\u003e 苏晴"
+    },
+    {
+      "path": "P1-V2-C6.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "老周（后方） -\u003e 老周"
+    },
+    {
+      "path": "P1-V2-C8.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "赵铁柱（同盟） -\u003e 赵铁柱"
+    },
+    {
+      "path": "P1-V2-C8.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "苏晴（后方） -\u003e 苏晴"
+    },
+    {
+      "path": "P1-V2-C8.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "老周（后方） -\u003e 老周"
+    },
+    {
+      "path": "P1-V2-C9.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "赵铁柱（同盟） -\u003e 赵铁柱"
+    },
+    {
+      "path": "P1-V2-C9.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "阿蝉（临时协定） -\u003e 阿蝉"
+    },
+    {
+      "path": "P1-V2-C9.state_anchor.injuries",
+      "action": "remove_resolved_injury",
+      "value": "右手骨裂已基本愈合"
+    },
+    {
+      "path": "P1-V2-C10.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "阿蝉（协定） -\u003e 阿蝉"
+    },
+    {
+      "path": "P1-V2-C10.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "铁鳞（临时） -\u003e 铁鳞"
+    }
+  ]
+}

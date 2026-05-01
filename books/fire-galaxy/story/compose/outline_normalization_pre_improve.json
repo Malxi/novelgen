@@ -1,19 +1,104 @@
 {
   "changes": [
     {
-      "path": "P1-V1-C9.characters",
+      "path": "P1-V1-C2.characters",
       "action": "sync_event_character",
-      "value": "小队"
+      "value": "据点头目吴伯"
+    },
+    {
+      "path": "P1-V1-C2.characters",
+      "action": "sync_scene_character",
+      "value": "据点守门长老吴伯"
+    },
+    {
+      "path": "P1-V1-C2.characters",
+      "action": "sync_scene_character",
+      "value": "林野（昏迷）"
+    },
+    {
+      "path": "P1-V1-C2.characters",
+      "action": "sync_scene_character",
+      "value": "吴伯"
+    },
+    {
+      "path": "P1-V1-C3.characters",
+      "action": "sync_event_character",
+      "value": "据点防守人员"
+    },
+    {
+      "path": "P1-V1-C3.characters",
+      "action": "sync_scene_character",
+      "value": "苏晴（瞭望台上提供指引）"
+    },
+    {
+      "path": "P1-V1-C3.characters",
+      "action": "sync_scene_character",
+      "value": "观测员老刘"
+    },
+    {
+      "path": "P1-V1-C6.characters",
+      "action": "sync_event_character",
+      "value": "吴伯"
+    },
+    {
+      "path": "P1-V1-C8.characters",
+      "action": "sync_event_character",
+      "value": "刘三"
+    },
+    {
+      "path": "P1-V1-C8.characters",
+      "action": "sync_event_character",
+      "value": "马良"
     },
     {
       "path": "P1-V1-C10.characters",
       "action": "sync_event_character",
-      "value": "所有幸存者"
+      "value": "吴伯"
     },
     {
-      "path": "P1-V1-C10.characters",
+      "path": "P1-V2-C3.characters",
       "action": "sync_event_character",
-      "value": "所有追随者"
+      "value": "吴伯"
+    },
+    {
+      "path": "P1-V2-C4.characters",
+      "action": "sync_scene_character",
+      "value": "据点守卫"
+    },
+    {
+      "path": "P1-V2-C4.characters",
+      "action": "sync_scene_character",
+      "value": "赵铁柱"
+    },
+    {
+      "path": "P1-V2-C4.characters",
+      "action": "sync_scene_character",
+      "value": "李峰"
+    },
+    {
+      "path": "P1-V2-C6.characters",
+      "action": "sync_event_character",
+      "value": "苏晴"
+    },
+    {
+      "path": "P1-V2-C6.characters",
+      "action": "sync_scene_character",
+      "value": "通讯兵小陈"
+    },
+    {
+      "path": "P1-V2-C7.characters",
+      "action": "sync_scene_character",
+      "value": "三名侦察兵"
+    },
+    {
+      "path": "P1-V2-C8.characters",
+      "action": "sync_scene_character",
+      "value": "铁鳞"
+    },
+    {
+      "path": "P1-V2-C9.characters",
+      "action": "sync_scene_character",
+      "value": "苏晴"
     }
   ]
 }

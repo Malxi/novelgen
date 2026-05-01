@@ -1,0 +1,24 @@
+{
+  "changes": [
+    {
+      "path": "P1-V1-C4.characters",
+      "action": "sync_scene_character",
+      "value": "赏金猎人"
+    },
+    {
+      "path": "P1-V1-C7.characters",
+      "action": "sync_scene_character",
+      "value": "卧底"
+    },
+    {
+      "path": "P1-V1-C8.characters",
+      "action": "sync_scene_character",
+      "value": "青藤代表"
+    },
+    {
+      "path": "P1-V2-C3.characters",
+      "action": "sync_scene_character",
+      "value": "陈远"
+    }
+  ]
+}

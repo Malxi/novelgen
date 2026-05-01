@@ -1,0 +1,166 @@
+DSL Simulator Report
+====================
+
+DSL File: books\fire-galaxy\story\rpg\01_outline.rpg
+Total Issues: 40
+
+1. [info/pacing] 
+   建议添加明确的结尾章节
+   Suggestion: 给故事一个完整的收束
+
+2. [warning/description] 
+   主角缺少背景故事
+   Suggestion: 添加主角的背景故事，让读者更容易产生共鸣
+
+3. [warning/character] 
+   主角缺少性格或动机描述
+   Suggestion: 定义主角的性格特点和行动动机
+
+4. [info/missing_info] 
+   主角缺少职业/修炼体系设定
+   Suggestion: 定义主角的修炼体系或职业类型
+
+5. [info/conflict] 
+   缺少明确的反派角色
+   Suggestion: 考虑添加一个反派角色来增加冲突
+
+6. [info/character] 
+   缺少导师/引路人角色
+   Suggestion: 考虑添加一个导师角色来帮助主角成长
+
+7. [info/description] P1-V1-C1 step 13 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+8. [info/description] P1-V1-C1 step 14 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+9. [info/growth] P1-V1-C1 step 14 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+10. [info/description] P1-V1-C2 step 9 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+11. [info/description] P1-V1-C2 step 11 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+12. [info/growth] P1-V1-C2 step 11 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+13. [info/description] P1-V1-C3 step 8 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+14. [info/growth] P1-V1-C3 step 8 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+15. [info/character] P1-V1-C3 step 9 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+16. [info/character] P1-V1-C4 step 8 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+17. [info/description] P1-V1-C4 step 11 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+18. [info/growth] P1-V1-C4 step 11 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+19. [info/description] P1-V1-C5 step 10 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+20. [info/character] P1-V1-C5 step 11 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+21. [info/description] P1-V1-C6 step 9 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+22. [info/description] P1-V1-C6 step 10 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+23. [info/growth] P1-V1-C6 step 10 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+24. [info/description] P1-V1-C7 step 8 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+25. [info/description] P1-V1-C7 step 9 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+26. [info/growth] P1-V1-C7 step 9 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+27. [info/description] P1-V1-C7 step 10 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+28. [info/growth] P1-V1-C7 step 10 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+29. [info/description] P1-V1-C8 step 9 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+30. [info/description] P1-V1-C9 step 8 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+31. [info/growth] P1-V1-C9 step 8 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+32. [info/description] P1-V1-C9 step 9 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+33. [info/growth] P1-V1-C9 step 9 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+34. [info/description] P1-V1-C9 step 10 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+35. [info/growth] P1-V1-C9 step 10 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+36. [info/description] P1-V1-C10 step 15 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+37. [info/conflict] 
+   故事中冲突事件较少
+   Suggestion: 考虑添加更多冲突来增加故事张力
+
+38. [warning/equipment] 
+   主角拥有的物品(37)超过背包容量(20)
+   Suggestion: 清理不需要的物品、扩容储物空间、或使用/消耗物品
+
+39. [info/pacing] P1-V1-C10 
+   storyline '势力整合支线' goes 7 chapters without visible movement
+   Suggestion: Add a small pressure, clue, consequence, or choice in the gap, or intentionally mark the arc as dormant in outline notes.
+
+40. [info/plot_hole] 
+   存在 12 个未回收的伏笔/剧情线 (提出 18, 回收 6)
+   Suggestion: 确认这些伏笔是否计划在后续章节中回收，或添加对应的 resolved state_delta
+

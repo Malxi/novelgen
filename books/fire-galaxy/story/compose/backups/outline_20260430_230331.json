@@ -1,0 +1,3636 @@
+{
+  "parts": [
+    {
+      "id": "P1",
+      "title": "第一部分：火种再燃",
+      "summary": "林野从百年沉睡中苏醒，在荒骨台激活火种机甲，被青藤据点收留。他逐步掌握基因进化力量，联合异变者与各方势力，揭开了百年前虫族入侵与自身遇袭的惊天阴谋，从个人复仇的初衷转变为领导人类反抗的信念，为最终的母巢反击与星际远征奠定基础。",
+      "volumes": [
+        {
+          "id": "P1-V1",
+          "title": "第一卷：荒骨苏醒",
+          "summary": "林野在荒骨台苏醒并激活火种机甲，被青藤据点收留后初步获得信任。他逐步掌握基因进化，击退虫族袭击，结识苏晴、老周、阿蝉等关键盟友。沈氏集团势力浮出水面，林野发现自身暗害真相与沈氏有关，在整合青藤据点、黄土沟据点及异变者势力的过程中遭遇沈氏暗算与虫族高级统领伏击，从旧文明数据芯片中获得关键线索，首次面临重大危机。",
+          "chapters": [
+            {
+              "id": "P1-V1-C1",
+              "title": "荒骨苏醒",
+              "summary": "林野被勘探队送入青藤据点医务室，老周花了一夜将带回的零件组装出基础火种机甲。林野因基因波动被检测仪器报警引发众怒，老周用仅剩的半支抑制剂缓解其反噬，苏晴替他担保争取时间。次日虫群突袭据点，老周紧急启动机甲让林野出战，他驾驶基础机甲孤身击退近十只工虫，据点民众初次见证火种机甲的威力，林野初步站稳脚跟。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "老周",
+                "据点战士"
+              ],
+              "location": "青藤据点",
+              "events": [
+                {
+                  "type": "item",
+                  "characters": [
+                    "老周"
+                  ],
+                  "subject": "基础火种机甲",
+                  "change": "组装完成",
+                  "actor": "老周",
+                  "action": "assemble",
+                  "target": "基础火种机甲",
+                  "target_type": "item",
+                  "context": "据点工坊，彻夜工作",
+                  "result": "老周将林野带回的零件组装成完整机甲"
+                },
+                {
+                  "type": "status",
+                  "characters": [
+                    "林野"
+                  ],
+                  "subject": "基因波动报警",
+                  "change": "被检测到异常",
+                  "actor": "林野",
+                  "action": "discover",
+                  "target": "基因波动报警",
+                  "target_type": "status",
+                  "context": "据点医务室检测仪器",
+                  "result": "林野因携带虫族基因波动的残留被仪器报警，引发怀疑"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "老周"
+                  ],
+                  "subject": "基因抑制剂",
+                  "change": "使用",
+                  "actor": "老周",
+                  "action": "use",
+                  "target": "基因抑制剂",
+                  "target_type": "item",
+                  "context": "医务室",
+                  "result": "老周用仅剩的半支抑制剂缓解林野的基因反噬症状"
+                },
+                {
+                  "type": "status",
+                  "characters": [
+                    "林野"
+                  ],
+                  "subject": "战斗结果",
+                  "change": "击退虫群",
+                  "actor": "林野",
+                  "action": "combat",
+                  "context": "据点外墙防线",
+                  "result": "林野驾驶组装完毕的基础机甲击退十只工虫，展现火种机甲战力"
+                }
+              ],
+              "state_change": "林野在据点站稳脚跟，获得初步信任与盟友。",
+              "conflict": "林野必须消除据点民众的疑虑并证明自己的价值，同时抵御突袭的虫群。",
+              "pacing": "normal",
+              "timeline": {
+                "anchor": "第2天",
+                "start_time": "清晨",
+                "end_time": "傍晚",
+                "duration": "当天",
+                "time_jump": true,
+                "previous_gap": "次日",
+                "transition": "勘探队将昏迷的林野连同机甲零件一并带回据点"
+              },
+              "state_anchor": {
+                "cultivation": "一级基因适配者（临时激活，反噬中）",
+                "injuries": [
+                  "基因反噬（已用抑制剂部分缓解）"
+                ],
+                "location": "青藤据点医务室",
+                "key_items": [
+                  "基础火种机甲（未组装）"
+                ]
+              },
+              "enemies": [
+                {
+                  "name": "虫族工虫",
+                  "faction": "zerg",
+                  "tier": "drone",
+                  "count": 10,
+                  "level": 1,
+                  "context": "据点外围袭击"
+                }
+              ],
+              "resource_ledger": [
+                {
+                  "item": "低级虫族晶核",
+                  "start": 0,
+                  "delta": 1,
+                  "end": 1,
+                  "reason": "击杀10只工虫获得1枚低级晶核"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "恢复意识并观察据点环境",
+                  "location": "据点医务室",
+                  "characters": [
+                    "林野",
+                    "老周",
+                    "苏晴"
+                  ],
+                  "words": 1400,
+                  "tone": "压抑紧张",
+                  "beats": [
+                    "林野在冰冷的地板上苏醒，身上盖着破旧的毯子，周围是陌生的据点环境和警惕的民众；老周正在工坊里彻夜组装基础火种机甲，零件碰撞的声音隐约传来",
+                    "基因检测仪突然发出刺耳警报，据点民众情绪激动地质问林野的身份，苏晴站出来喝止骚动，老周用仅剩的半支抑制剂注射进林野体内，反噬症状暂时缓解"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "击退虫群获得信任",
+                  "location": "据点外墙防线",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "据点战士"
+                  ],
+                  "words": 1600,
+                  "tone": "激烈震撼",
+                  "beats": [
+                    "虫群从据点外缘涌来，近十只工虫撞向外墙，防御武器开火但难以阻止突破；老周紧急启动刚组装好的机甲，将林野推进驾驶舱，林野用残存体力驾驶基础机甲冲出外墙防线",
+                    "林野在虫群中连续斩杀工虫，机甲基础近战模块撕裂一只又一只工虫外壳，据点民众在墙头目睹这一幕，从最初的恐惧逐渐转变为震撼与希望；最后一只工虫倒地后，据点战士发出欢呼"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_old_zhou_identity",
+                    "clue": "老周认出林野身上的旧时代军工铭牌，似乎知道火种机甲项目",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "第二章：青藤据点",
+                  "stage": "payoff",
+                  "change": "林野获得据点初步信任，成为据点战力核心",
+                  "consequence": "与老周、苏晴建立初步盟友关系",
+                  "pressure": "击退虫群后，据点面临更大规模虫群报复的风险"
+                }
+              ]
+            },
+            {
+              "id": "P1-V1-C2",
+              "title": "初探遗址",
+              "summary": "林野伤愈后吸收低级虫族晶核稳定基因至1级，与苏晴、老周前往附近旧文明遗址探索，获得一枚旧文明数据芯片，发现沈氏与火种机甲项目相关的模糊线索。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "老周"
+              ],
+              "location": "青藤据点及附近旧工厂遗址",
+              "events": [
+                {
+                  "type": "status",
+                  "characters": [
+                    "林野"
+                  ],
+                  "subject": "基因等级",
+                  "change": "稳定至1级",
+                  "actor": "林野",
+                  "action": "use",
+                  "target": "低级虫族晶核",
+                  "target_type": "item",
+                  "context": "据点训练室",
+                  "result": "林野吸收一枚低级晶核，基因稳定性提升至75%，彻底稳定在1级"
+                },
+                {
+                  "type": "status",
+                  "characters": [
+                    "林野"
+                  ],
+                  "subject": "伤势",
+                  "change": "痊愈",
+                  "actor": "林野",
+                  "action": "recover",
+                  "target": "伤势",
+                  "target_type": "status",
+                  "context": "据点医务室休养三天",
+                  "result": "林野在据点的简单医疗和自身恢复力下，基因反噬症状完全消退"
+                },
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "林野",
+                    "苏晴"
+                  ],
+                  "subject": "互动",
+                  "change": "建立信任",
+                  "actor": "林野",
+                  "action": "meet",
+                  "target": "苏晴",
+                  "target_type": "character",
+                  "context": "据点走廊",
+                  "result": "苏晴主动向他介绍据点历史与当前人类生存状况"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "林野"
+                  ],
+                  "subject": "旧文明数据芯片",
+                  "change": "获得",
+                  "actor": "林野",
+                  "action": "discover",
+                  "target": "旧文明数据芯片",
+                  "target_type": "item",
+                  "context": "旧工厂废墟控制室",
+                  "result": "林野在工厂废墟中发现一枚完好的旧文明数据芯片"
+                },
+                {
+                  "type": "status",
+                  "characters": [],
+                  "subject": "战斗",
+                  "change": "清剿工虫",
+                  "actor": "林野",
+                  "action": "combat",
+                  "context": "工厂废墟车间",
+                  "result": "击杀三只游荡工虫，清理探索区域"
+                }
+              ],
+              "state_change": "林野稳定基因至1级，获得第一枚数据芯片，发现沈氏线索。",
+              "conflict": "林野需要提升自身实力并收集旧文明信息，同时防范废土上的虫族威胁。",
+              "pacing": "normal",
+              "timeline": {
+                "anchor": "第5天",
+                "start_time": "清晨",
+                "end_time": "傍晚",
+                "duration": "当天",
+                "time_jump": true,
+                "previous_gap": "过了3天",
+                "transition": "林野在据点休养了三天，体力恢复并熟练了机甲基本操作"
+              },
+              "state_anchor": {
+                "cultivation": "一级基因适配者（稳定）",
+                "allies": [
+                  "苏晴",
+                  "老周"
+                ],
+                "location": "青藤据点训练室",
+                "key_items": [
+                  "基础火种机甲",
+                  "低级虫族晶核1枚"
+                ]
+              },
+              "enemies": [
+                {
+                  "name": "虫族工虫",
+                  "faction": "zerg",
+                  "tier": "drone",
+                  "count": 3,
+                  "level": 1,
+                  "context": "旧工厂遗址"
+                }
+              ],
+              "resource_ledger": [
+                {
+                  "item": "低级虫族晶核",
+                  "start": 1,
+                  "delta": -1,
+                  "end": 0,
+                  "reason": "吸收用于稳定基因等级"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "稳定基因等级并了解据点情况",
+                  "location": "据点训练室",
+                  "characters": [
+                    "林野",
+                    "苏晴"
+                  ],
+                  "words": 1300,
+                  "tone": "平和交流",
+                  "beats": [
+                    "林野吸收低级晶核，基因稳定性上升到75%，身体机能大幅提升",
+                    "苏晴介绍百年来人类据点的分布与沈氏势力的基本情报"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "探索旧工厂寻找可用物资",
+                  "location": "地表旧工厂遗址",
+                  "characters": [
+                    "林野",
+                    "苏晴"
+                  ],
+                  "words": 1500,
+                  "tone": "谨慎探索",
+                  "beats": [
+                    "进入工厂废墟，清理游荡工虫",
+                    "控制室中发现一枚完好的旧文明数据芯片"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_old_chip_content",
+                    "clue": "芯片碎片显示火种机甲项目背后有沈氏的不正常资金流向",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "历史真相支线",
+                  "stage": "reveal",
+                  "change": "获得关于沈氏与火种机甲项目关联的第一个模糊证据",
+                  "pressure": "芯片信息让林野意识到沈氏可能在百年前就参与了火种机甲项目，暗害自己的迷雾更浓"
+                }
+              ]
+            },
+            {
+              "id": "P1-V1-C3",
+              "title": "虫群压境",
+              "summary": "更大规模的虫群（20工虫+1兵虫）进攻青藤据点，林野与苏晴合力防守，虽击退虫群但据点损失惨重，林野从兵虫体内获得重要晶核。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "老周",
+                "据点民众",
+                "据点战士"
+              ],
+              "location": "青藤据点外墙",
+              "events": [
+                {
+                  "type": "status",
+                  "characters": [],
+                  "subject": "虫群集结",
+                  "change": "发现异常",
+                  "actor": "林野",
+                  "action": "discover",
+                  "target": "虫群异常集结",
+                  "target_type": "status",
+                  "context": "据点瞭望塔",
+                  "result": "侦察兵报告约20只工虫和1只作战兵虫正向据点移动"
+                },
+                {
+                  "type": "status",
+                  "characters": [
+                    "林野",
+                    "苏晴"
+                  ],
+                  "subject": "防守战斗",
+                  "change": "击退虫群",
+                  "actor": "林野",
+                  "action": "combat",
+                  "context": "据点外墙防线",
+                  "result": "林野驾驶机甲与苏晴配合，击杀全部工虫和兵虫，但据点损失5名战士"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "林野"
+                  ],
+                  "subject": "低级虫族晶核",
+                  "change": "获得3枚",
+                  "actor": "林野",
+                  "action": "acquire",
+                  "target": "低级虫族晶核",
+                  "target_type": "item",
+                  "context": "兵虫尸体",
+                  "result": "从作战兵虫体内挖出一枚低级晶核，另从工虫群中获得2枚"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "老周"
+                  ],
+                  "subject": "修理材料",
+                  "change": "使用",
+                  "actor": "老周",
+                  "action": "use",
+                  "target": "修理材料",
+                  "target_type": "item",
+                  "context": "据点工坊",
+                  "result": "老周战后修复了机甲部分损坏的装甲"
+                }
+              ],
+              "state_change": "林野成功防守据点，获得更多晶核，但意识到虫族威胁升级。",
+              "conflict": "据点必须顶住这次集中进攻，否则将失去生存空间。",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第8天",
+                "start_time": "正午",
+                "end_time": "午后",
+                "duration": "数小时",
+                "time_jump": true,
+                "previous_gap": "过了3天",
+                "transition": "林野从旧工厂回来后低调了三天，每日训练机甲操作"
+              },
+              "state_anchor": {
+                "cultivation": "一级基因适配者（稳定）",
+                "allies": [
+                  "苏晴",
+                  "老周"
+                ],
+                "injuries": [
+                  "左臂轻微擦伤"
+                ],
+                "location": "青藤据点外墙",
+                "key_items": [
+                  "基础火种机甲",
+                  "未解锁的数据芯片"
+                ]
+              },
+              "enemies": [
+                {
+                  "name": "虫族工虫",
+                  "faction": "zerg",
+                  "tier": "drone",
+                  "count": 20,
+                  "level": 1,
+                  "context": "据点正面进攻"
+                },
+                {
+                  "name": "虫族作战兵虫",
+                  "faction": "zerg",
+                  "tier": "soldier",
+                  "count": 1,
+                  "level": 2,
+                  "context": "指挥工虫进攻"
+                }
+              ],
+              "resource_ledger": [
+                {
+                  "item": "低级虫族晶核",
+                  "start": 0,
+                  "delta": 3,
+                  "end": 3,
+                  "reason": "击杀20工虫和1兵虫获得3枚低级晶核"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "防御虫群正面进攻",
+                  "location": "据点外墙",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "据点战士"
+                  ],
+                  "words": 1600,
+                  "tone": "激烈战斗",
+                  "beats": [
+                    "虫群涌来，林野驾驶机甲冲出与工虫混战",
+                    "苏晴用旧式狙击枪掩护，击杀多名工虫"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "击败作战兵虫",
+                  "location": "据点大门",
+                  "characters": [
+                    "林野",
+                    "苏晴"
+                  ],
+                  "words": 1400,
+                  "tone": "紧张爆发",
+                  "beats": [
+                    "兵虫破坏大门，林野用机甲冲撞将其击退",
+                    "找到兵虫腹部弱点一击毙命"
+                  ]
+                },
+                {
+                  "order": 3,
+                  "pov": "老周",
+                  "goal": "战后维修评估",
+                  "location": "据点工坊",
+                  "characters": [
+                    "老周",
+                    "林野"
+                  ],
+                  "words": 1000,
+                  "tone": "沉重希望",
+                  "beats": [
+                    "清点损失：5名战士牺牲",
+                    "老周从兵虫体内取出低级晶核交给林野"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_organized_attack",
+                    "clue": "这次攻击有兵虫指挥，并非普通游荡虫群，说明附近可能有更高级的虫族统领",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "火种远征主线",
+                  "stage": "pressure",
+                  "change": "据点面临有组织的虫族攻击，林野意识到需要快速提升实力",
+                  "pressure": "有兵虫指挥的攻击模式暗示虫族正在调整战术，后续威胁只会更严峻"
+                }
+              ]
+            },
+            {
+              "id": "P1-V1-C4",
+              "title": "黄土沟的邀请",
+              "summary": "黄土沟据点派使者提议结盟，林野与苏晴代表青藤准备前往谈判，出发前在据点大门外遭沈氏雇佣的赏金猎人伏击，林野击退伏击并活捉一人审问，从俘虏身上搜出标注有虫族活动区域的旧地图，拼凑出沈氏与虫族有情报往来的线索。随后启程抵达黄土沟，初步达成合作意向。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "黄土沟使者",
+                "沈氏赏金猎人",
+                "黄土沟首领",
+                "赏金猎人（俘虏）",
+                "赏金猎人"
+              ],
+              "location": "青藤据点及前往黄土沟的地表路段",
+              "events": [
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "黄土沟使者",
+                    "林野"
+                  ],
+                  "subject": "结盟提议",
+                  "change": "提出",
+                  "actor": "黄土沟使者",
+                  "action": "propose",
+                  "target": "联盟",
+                  "target_type": "relationship",
+                  "context": "青藤据点会议室",
+                  "result": "黄土沟使者提出共同对抗虫族的结盟意向"
+                },
+                {
+                  "type": "status",
+                  "characters": [],
+                  "subject": "出发前遇袭",
+                  "change": "遭遇伏击",
+                  "actor": "沈氏赏金猎人",
+                  "action": "combat",
+                  "context": "青藤据点大门外一百米处",
+                  "result": "林野与苏晴刚离开据点即遭4名赏金猎人伏击，林野驾驶机甲击退敌人，活捉一人审问"
+                },
+                {
+                  "type": "goal",
+                  "characters": [
+                    "林野"
+                  ],
+                  "subject": "审问俘虏",
+                  "change": "获得情报",
+                  "actor": "林野",
+                  "action": "discover",
+                  "target": "沈氏与虫族勾结证据",
+                  "target_type": "knowledge",
+                  "context": "据点临时审讯室",
+                  "result": "从俘虏身上搜出标注有虫族活动区域的旧地图，发现沈氏与虫族有情报往来"
+                },
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "林野",
+                    "黄土沟首领"
+                  ],
+                  "subject": "结盟谈判",
+                  "change": "初步达成",
+                  "actor": "林野",
+                  "action": "meet",
+                  "target": "黄土沟首领",
+                  "target_type": "character",
+                  "context": "黄土沟据点大厅",
+                  "result": "抵达黄土沟，与首领初步商讨结盟细节，双方同意建立共同防御"
+                }
+              ],
+              "state_change": "林野通过伏击获得沈氏与虫族勾结的间接证据，并与黄土沟结盟。",
+              "conflict": "林野必须在离开据点前就应对沈氏的暗杀，同时确保安全抵达黄土沟完成联盟谈判。",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第12天",
+                "start_time": "清晨出发",
+                "end_time": "深夜抵达",
+                "duration": "约1天路程",
+                "time_jump": true,
+                "previous_gap": "过了4天",
+                "transition": "林野在据点准备了4天，用晶核强化了机甲部分结构"
+              },
+              "state_anchor": {
+                "cultivation": "一级基因适配者（稳定）",
+                "allies": [
+                  "苏晴"
+                ],
+                "location": "青藤据点大门",
+                "key_items": [
+                  "基础火种机甲（已用2枚低级晶核强化）",
+                  "低级虫族晶核1枚（剩余）",
+                  "未解锁的数据芯片"
+                ]
+              },
+              "enemies": [
+                {
+                  "name": "沈氏赏金猎人",
+                  "faction": "human_shen",
+                  "tier": "hunter",
+                  "count": 4,
+                  "level": 2,
+                  "context": "据点大门外伏击"
+                }
+              ],
+              "resource_ledger": [
+                {
+                  "item": "低级虫族晶核",
+                  "start": 3,
+                  "delta": -2,
+                  "end": 1,
+                  "reason": "用于强化机甲零件"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "接受黄土沟结盟提议并出发，出发前遭遇伏击",
+                  "location": "青藤据点大门外",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "赏金猎人"
+                  ],
+                  "words": 1400,
+                  "tone": "紧张紧急",
+                  "beats": [
+                    "黄土沟使者在据点会议室提出结盟，林野决定立刻出发；刚走出据点大门一百米，四名赏金猎人从废墟中突袭",
+                    "林野驾驶机甲与苏晴配合，击杀三人活捉一人"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "审问俘虏并推理沈氏与虫族勾结的证据链",
+                  "location": "青藤据点临时审讯室",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "赏金猎人（俘虏）"
+                  ],
+                  "words": 1000,
+                  "tone": "冷静盘问",
+                  "beats": [
+                    "赏金猎人交代是沈氏雇佣，专盯基因适配者",
+                    "从俘虏身上搜出标注有虫族活动区域的旧地图，林野将地图碎片与据点周边虫群分布对比，推断沈氏可能出卖人类行踪——他意识到这片区域的游荡虫群数量异常，与沈氏标注的路线高度吻合"
+                  ]
+                },
+                {
+                  "order": 3,
+                  "pov": "林野",
+                  "goal": "抵达黄土沟并完成初步谈判",
+                  "location": "黄土沟据点大厅",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "黄土沟首领"
+                  ],
+                  "words": 1200,
+                  "tone": "希望谨慎",
+                  "beats": [
+                    "林野与苏晴重新上路，途中无更多意外",
+                    "黄土沟首领热情接待；双方初步商议建立联盟和共同防御计划"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_shen_zerg_collaboration",
+                    "clue": "从赏金猎人身上搜出的地图显示沈氏标记了虫族活动路线，暗示暗中勾结",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "势力整合支线",
+                  "stage": "pressure",
+                  "change": "林野首次与沈氏势力正面冲突，发现沈氏可能勾结虫族",
+                  "consequence": "黄土沟联盟初步建立，同时暴露了林野的行踪；林野通过地图推理确认沈氏故意将虫群引向人类据点"
+                }
+              ]
+            },
+            {
+              "id": "P1-V1-C5",
+              "title": "异变者之影",
+              "summary": "林野在黄土沟据点得知附近有异变者活动，主动接触异变者首领阿蝉，双方达成合作：林野协助营救被沈氏关押的次一级基因适配者（阿蝉义兄），阿蝉提供情报与力量支持。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "阿蝉",
+                "黄土沟首领"
+              ],
+              "location": "黄土沟据点及附近地下裂谷异变者营地",
+              "events": [
+                {
+                  "type": "premise",
+                  "characters": [
+                    "黄土沟首领"
+                  ],
+                  "subject": "异变者情报",
+                  "change": "告知林野",
+                  "actor": "林野",
+                  "action": "learn",
+                  "target": "异变者情报",
+                  "target_type": "knowledge",
+                  "context": "黄土沟据点情报交流",
+                  "result": "黄土沟首领告知附近裂谷中有保持理智的异变者族群"
+                },
+                {
+                  "type": "status",
+                  "characters": [
+                    "林野",
+                    "苏晴"
+                  ],
+                  "subject": "移动",
+                  "change": "前往裂谷",
+                  "actor": "林野",
+                  "action": "move",
+                  "target": "地下裂谷",
+                  "target_type": "location",
+                  "context": "与苏晴同行",
+                  "result": "林野和苏晴前往裂谷寻找异变者"
+                },
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "林野",
+                    "阿蝉"
+                  ],
+                  "subject": "首次会面",
+                  "change": "建立信任",
+                  "actor": "林野",
+                  "action": "meet",
+                  "target": "阿蝉",
+                  "target_type": "character",
+                  "context": "裂谷深处异变者营地",
+                  "result": "林野与阿蝉首次会面，化解误会建立初步信任"
+                },
+                {
+                  "type": "goal",
+                  "characters": [
+                    "林野",
+                    "阿蝉"
+                  ],
+                  "subject": "联盟",
+                  "change": "达成合作",
+                  "actor": "林野",
+                  "action": "establish",
+                  "target": "与异变者联盟",
+                  "target_type": "relationship",
+                  "context": "阿蝉的洞穴住所",
+                  "result": "阿蝉提出合作条件：营救被沈氏囚禁的义兄（次一级基因适配者），林野同意，双方结盟"
+                }
+              ],
+              "state_change": "林野与异变者结盟，确定营救适配者的目标。",
+              "conflict": "林野需要说服异变者首领相信他的诚意，并评估营救行动的可行性。",
+              "pacing": "slow",
+              "timeline": {
+                "anchor": "第16天",
+                "start_time": "上午",
+                "end_time": "深夜",
+                "duration": "2天",
+                "time_jump": true,
+                "previous_gap": "过了4天",
+                "transition": "林野在黄土沟等待了几天，与首领讨论结盟细节，同时不断训练"
+              },
+              "state_anchor": {
+                "cultivation": "一级基因适配者（稳定）",
+                "allies": [
+                  "苏晴",
+                  "阿蝉（初步盟友）"
+                ],
+                "location": "黄土沟据点",
+                "key_items": [
+                  "基础火种机甲（强化）",
+                  "低级虫族晶核1枚",
+                  "未解锁的数据芯片"
+                ]
+              },
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "获取异变者情报并决定接触",
+                  "location": "黄土沟据点",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "黄土沟首领"
+                  ],
+                  "words": 1100,
+                  "tone": "商议分歧",
+                  "beats": [
+                    "首领介绍异变者情况，警告接触风险",
+                    "林野坚持认为异变者可以成为盟友"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "进入裂谷并与异变者接触",
+                  "location": "地下裂谷异变者营地",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "阿蝉"
+                  ],
+                  "words": 1600,
+                  "tone": "紧张渐缓和",
+                  "beats": [
+                    "遭遇异变者巡逻，险些冲突",
+                    "阿蝉出现阻止战斗，双方展开对话"
+                  ]
+                },
+                {
+                  "order": 3,
+                  "pov": "林野",
+                  "goal": "达成合作协议",
+                  "location": "阿蝉的洞穴住所",
+                  "characters": [
+                    "林野",
+                    "阿蝉",
+                    "苏晴"
+                  ],
+                  "words": 1500,
+                  "tone": "凝重坚定",
+                  "beats": [
+                    "阿蝉讲述义兄被俘经过与沈氏的残酷实验",
+                    "林野承诺优先营救，阿蝉同意提供情报和异变者战力"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_ayi_adapter",
+                    "clue": "阿蝉的义兄是次一级基因适配者，被沈氏囚禁在地下实验室用于基因实验",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "势力整合支线",
+                  "stage": "hook",
+                  "change": "与异变者阵营建立正式合作，明确营救目标",
+                  "pressure": "沈氏地下实验室可能存在更多关于适配者基因锁研究的秘密，林野意识到沈氏在过去百年中可能掌握了部分基因编码技术"
+                }
+              ]
+            },
+            {
+              "id": "P1-V1-C6",
+              "title": "沈氏的暗算",
+              "summary": "林野返回青藤据点途中遭沈氏勾结虫族高级统领设伏，大量兵虫和初级虫将围攻，林野苦战后濒死突破至2级基因，解锁近战模块击退虫族，并从先前获取的情报中拼凑出沈氏与虫族勾结的确凿证据链。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "阿蝉",
+                "虫族高级统领"
+              ],
+              "location": "青藤据点与黄土沟之间的地表废墟走廊",
+              "events": [
+                {
+                  "type": "status",
+                  "characters": [],
+                  "subject": "发现伏击",
+                  "change": "察觉陷阱",
+                  "actor": "林野",
+                  "action": "discover",
+                  "target": "虫群陷阱",
+                  "target_type": "status",
+                  "context": "返回途中废弃建筑群",
+                  "result": "林野发现大量虫族已有预谋地包围了他们，高级统领在远处指挥"
+                },
+                {
+                  "type": "status",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "阿蝉"
+                  ],
+                  "subject": "被围攻",
+                  "change": "陷入苦战",
+                  "actor": "虫族高级统领",
+                  "action": "combat",
+                  "context": "废墟走廊伏击",
+                  "result": "林野小队被围攻，苏晴和阿蝉的异变者受伤，林野机甲严重损坏"
+                },
+                {
+                  "type": "skill",
+                  "characters": [
+                    "林野"
+                  ],
+                  "subject": "基因等级",
+                  "change": "突破至2级",
+                  "actor": "林野",
+                  "action": "transform",
+                  "target": "基因等级2级",
+                  "target_type": "skill",
+                  "context": "生死关头，临时吸收战场上兵虫的晶核",
+                  "result": "林野基因稳定性跌至临界点，但强行突破至2级，解锁近战武器模块"
+                },
+                {
+                  "type": "status",
+                  "characters": [],
+                  "subject": "战斗结局",
+                  "change": "击退虫族",
+                  "actor": "林野",
+                  "action": "combat",
+                  "context": "废墟中心",
+                  "result": "林野用新解锁的近战武器斩杀虫将，高级统领见势撤退，虫群溃散"
+                }
+              ],
+              "state_change": "林野突破至2级基因并获得沈氏勾结证据，但自身代价惨重。",
+              "conflict": "林野必须从沈氏与虫族联合设下的死局中存活并保护同伴。",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第20天",
+                "start_time": "下午",
+                "end_time": "深夜",
+                "duration": "数小时",
+                "time_jump": true,
+                "previous_gap": "过了4天",
+                "transition": "林野与阿蝉商议营救计划后，与苏晴返回青藤据点"
+              },
+              "state_anchor": {
+                "cultivation": "一级基因适配者（稳定）",
+                "allies": [
+                  "苏晴",
+                  "阿蝉（少量异变者同行）"
+                ],
+                "location": "废墟走廊入口",
+                "key_items": [
+                  "基础火种机甲（已用2枚低级晶核强化）",
+                  "低级虫族晶核1枚"
+                ]
+              },
+              "enemies": [
+                {
+                  "name": "虫族工虫",
+                  "faction": "zerg",
+                  "tier": "drone",
+                  "count": 30,
+                  "level": 1,
+                  "context": "伏击包围"
+                },
+                {
+                  "name": "虫族作战兵虫",
+                  "faction": "zerg",
+                  "tier": "soldier",
+                  "count": 5,
+                  "level": 2,
+                  "context": "围杀主力"
+                },
+                {
+                  "name": "虫族初级虫将",
+                  "faction": "zerg",
+                  "tier": "elite",
+                  "count": 1,
+                  "level": 4,
+                  "context": "指挥攻击"
+                },
+                {
+                  "name": "虫族高级统领",
+                  "faction": "zerg",
+                  "tier": "queen",
+                  "count": 1,
+                  "level": 8,
+                  "is_boss": true,
+                  "boss_id": "boss_high_commander_01",
+                  "status": "new",
+                  "context": "设局者，远处督战"
+                }
+              ],
+              "resource_ledger": [
+                {
+                  "item": "低级虫族晶核",
+                  "start": 1,
+                  "delta": 8,
+                  "end": 9,
+                  "reason": "战斗中获得8枚低级晶核（30工虫产出3枚+5兵虫产出5枚）"
+                },
+                {
+                  "item": "中级虫族晶核",
+                  "start": 0,
+                  "delta": 1,
+                  "end": 1,
+                  "reason": "击杀初级虫将获得1枚中级晶核"
+                },
+                {
+                  "item": "低级虫族晶核",
+                  "start": 9,
+                  "delta": -9,
+                  "end": 0,
+                  "reason": "突破至2级基因时全部消耗"
+                },
+                {
+                  "item": "中级虫族晶核",
+                  "start": 1,
+                  "delta": -1,
+                  "end": 0,
+                  "reason": "突破时作为核心能量消耗"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "察觉埋伏并组织防御",
+                  "location": "废墟走廊入口",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "阿蝉"
+                  ],
+                  "words": 1200,
+                  "tone": "紧张突变",
+                  "beats": [
+                    "发现周围虫群异常聚集，数量远超以往",
+                    "高级统领从远处发出精神力波动，指挥虫群合围；林野注意到虫群出现的路径正是赏金猎人地图上沈氏标注的路线，脑中闪过一个念头——这不是巧合，沈氏出卖了他们的行踪"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "在绝境中求生并突破",
+                  "location": "废墟走廊内部",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "阿蝉"
+                  ],
+                  "words": 1800,
+                  "tone": "激烈绝望转希望",
+                  "beats": [
+                    "林野机甲被虫将击穿，左臂受伤",
+                    "苏晴和阿蝉掩护，林野临时吸收兵虫晶核强行进化；基因波动濒临崩溃，但成功突破至2级"
+                  ]
+                },
+                {
+                  "order": 3,
+                  "pov": "林野",
+                  "goal": "击退敌人并撤离",
+                  "location": "废墟中心",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "阿蝉"
+                  ],
+                  "words": 1500,
+                  "tone": "爆发疲惫",
+                  "beats": [
+                    "解锁近战武器模块，斩杀虫将",
+                    "高级统领撤退，虫群失去指挥溃散；林野因基因刚突破体力透支，被苏晴搀扶离开"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_advanced_commander_target",
+                    "clue": "高级统领撤退前用精神力说出'沈氏给出的坐标果然准确'",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "火种远征主线",
+                  "stage": "reversal",
+                  "change": "林野首次面临生死危机后突破至2级，发现沈氏与虫族勾结的确凿证据",
+                  "consequence": "林野实力提升，但也使沈氏和虫族高级统领明确将他视为必须清除的目标"
+                }
+              ]
+            },
+            {
+              "id": "P1-V1-C7",
+              "title": "旧文明的遗物",
+              "summary": "林野伤愈后根据芯片线索与苏晴、老周前往旧军事基地，获得第二枚更高级的数据芯片，揭露了沈氏当年暗害他的关键证据，并擒获沈氏安插在据点的卧底。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "老周",
+                "沈氏卧底",
+                "卧底"
+              ],
+              "location": "青藤据点及旧军事基地废墟",
+              "events": [
+                {
+                  "type": "status",
+                  "characters": [
+                    "林野"
+                  ],
+                  "subject": "伤势",
+                  "change": "痊愈",
+                  "actor": "林野",
+                  "action": "recover",
+                  "target": "伤势",
+                  "target_type": "status",
+                  "context": "据点医务室",
+                  "result": "林野利用基因2级的自愈能力在五天内伤势痊愈，基因稳定性达到75%"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "老周"
+                  ],
+                  "subject": "数据芯片读卡器",
+                  "change": "使用",
+                  "actor": "老周",
+                  "action": "use",
+                  "target": "数据芯片读卡器",
+                  "target_type": "item",
+                  "context": "据点工坊",
+                  "result": "老周尝试破解初级芯片，发现其中指向一个旧军事基地的位置"
+                },
+                {
+                  "type": "item",
+                  "characters": [
+                    "林野"
+                  ],
+                  "subject": "第二枚数据芯片",
+                  "change": "获得",
+                  "actor": "林野",
+                  "action": "discover",
+                  "target": "旧文明数据芯片（高级）",
+                  "target_type": "item",
+                  "context": "旧军事基地地下三层档案室",
+                  "result": "林野到达基地发现沈氏小队也在搜索，先一步夺走了他们已获得的完整芯片"
+                },
+                {
+                  "type": "status",
+                  "characters": [
+                    "沈氏卧底"
+                  ],
+                  "subject": "被捕",
+                  "change": "擒获",
+                  "actor": "林野",
+                  "action": "capture",
+                  "target": "沈氏卧底",
+                  "target_type": "character",
+                  "context": "基地出口",
+                  "result": "潜伏在青藤据点后勤处的卧底试图偷走芯片，被林野擒获，供出沈氏近百年来一直在监控火种机甲适配者信息"
+                }
+              ],
+              "state_change": "林野获得沈氏暗害的直接证据并清除内奸，但暴露了自己等级提升的情报。",
+              "conflict": "林野必须赶在沈氏之前拿到关键芯片，并揪出据点内部的内奸。",
+              "pacing": "normal",
+              "timeline": {
+                "anchor": "第25天",
+                "start_time": "清晨",
+                "end_time": "次日凌晨",
+                "duration": "1天",
+                "time_jump": true,
+                "previous_gap": "过了5天",
+                "transition": "林野伤势恢复后立即投入行动"
+              },
+              "state_anchor": {
+                "cultivation": "二级基因强化者（初稳定）",
+                "allies": [
+                  "苏晴",
+                  "老周"
+                ],
+                "location": "青藤据点工坊",
+                "key_items": [
+                  "火种机甲（已解锁近战模块）",
+                  "初级数据芯片（部分解密）"
+                ]
+              },
+              "enemies": [
+                {
+                  "name": "沈氏战斗员",
+                  "faction": "human_shen",
+                  "tier": "soldier",
+                  "count": 3,
+                  "level": 2,
+                  "context": "旧军事基地搜索"
+                },
+                {
+                  "name": "沈氏卧底",
+                  "faction": "human_shen",
+                  "tier": "spy",
+                  "count": 1,
+                  "level": 1,
+                  "context": "据点内部"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "解读初级芯片并确定下一个目标",
+                  "location": "据点工坊",
+                  "characters": [
+                    "林野",
+                    "老周"
+                  ],
+                  "words": 1200,
+                  "tone": "专注探索",
+                  "beats": [
+                    "老周用据点旧设备尝试读取芯片",
+                    "芯片残余信息显示旧军事基地C区保存着完整实验日志"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "潜入旧军事基地获取完整芯片",
+                  "location": "旧军事基地地下三层",
+                  "characters": [
+                    "林野",
+                    "苏晴"
+                  ],
+                  "words": 1500,
+                  "tone": "紧张战斗",
+                  "beats": [
+                    "进入基地后发现沈氏小队正在撤离",
+                    "林野抢先进入档案室，取得完整芯片；与沈氏三人交火，全部击倒"
+                  ]
+                },
+                {
+                  "order": 3,
+                  "pov": "林野",
+                  "goal": "抓获内奸并收集证据",
+                  "location": "基地出口",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "卧底"
+                  ],
+                  "words": 1300,
+                  "tone": "关键揭露",
+                  "beats": [
+                    "返回途中发现有人尾随",
+                    "突然出手按倒据点后勤员，搜出他与沈氏联络的设备；卧底交代沈氏已收到林野新等级的情报"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "resolved": [
+                  {
+                    "id": "myst_old_chip_content",
+                    "resolution": "完整芯片记录显示，百年前沈氏家族在爆炸前调走了所有安保，并留下了伪装的故障报告，与林野记忆吻合"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "历史真相支线",
+                  "stage": "reveal",
+                  "change": "获得沈氏暗害林野的直接证据，真相接近完整",
+                  "consequence": "林野确认沈氏是百年前暗害自己的元凶，复仇信念更加坚定；但沈氏已掌握他的新等级，双方矛盾白热化"
+                }
+              ]
+            },
+            {
+              "id": "P1-V1-C8",
+              "title": "联盟的裂痕",
+              "summary": "内奸事件引发青藤、黄土沟、异变者三方互不信任，阿蝉负气离开后虫族高级统领趁机分兵攻破黄土沟据点，林野救援不及，联盟濒临崩溃。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "阿蝉",
+                "黄土沟首领",
+                "青藤据点代表",
+                "阿蝉（带领异变者已先行赶到）",
+                "青藤代表"
+              ],
+              "location": "青藤据点及黄土沟据点",
+              "events": [
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "黄土沟首领",
+                    "阿蝉"
+                  ],
+                  "subject": "指控",
+                  "change": "信任破裂",
+                  "actor": "黄土沟首领",
+                  "action": "accuse",
+                  "target": "阿蝉",
+                  "target_type": "character",
+                  "context": "青藤据点会议厅",
+                  "result": "黄土沟首领认为内奸是异变者安插的，要求驱逐所有异变者"
+                },
+                {
+                  "type": "status",
+                  "characters": [
+                    "阿蝉"
+                  ],
+                  "subject": "离开",
+                  "change": "负气离去",
+                  "actor": "阿蝉",
+                  "action": "leave",
+                  "target": "青藤据点",
+                  "target_type": "location",
+                  "context": "会议破裂后",
+                  "result": "阿蝉愤而带异变者返回裂谷，声称不再参与联盟"
+                },
+                {
+                  "type": "status",
+                  "characters": [],
+                  "subject": "虫族攻击",
+                  "change": "分兵攻破黄土沟",
+                  "actor": "虫族高级统领",
+                  "action": "combat",
+                  "context": "分兵同时攻击青藤和黄土沟",
+                  "result": "青藤据点依靠林野防守成功，但黄土沟据点防御薄弱被攻破"
+                },
+                {
+                  "type": "goal",
+                  "characters": [
+                    "林野"
+                  ],
+                  "subject": "救援",
+                  "change": "失败",
+                  "actor": "林野",
+                  "action": "achieve",
+                  "target": "救援黄土沟",
+                  "target_type": "goal",
+                  "context": "击退青藤之敌后立即赶往黄土沟",
+                  "result": "林野赶到时黄土沟已陷落，仅救出少数幸存者，士气跌至谷底"
+                }
+              ],
+              "state_change": "联盟濒临崩溃，黄土沟据点陷落，林野整合计划遭受重挫。",
+              "conflict": "林野必须在内讧和外部攻击的双重压力下尽可能保全联盟。",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第30天",
+                "start_time": "上午",
+                "end_time": "夜间",
+                "duration": "2天",
+                "time_jump": true,
+                "previous_gap": "过了5天",
+                "transition": "林野从旧军事基地回来后组织三方会议"
+              },
+              "state_anchor": {
+                "cultivation": "二级基因强化者",
+                "allies": [
+                  "苏晴",
+                  "老周",
+                  "阿蝉（关系受损）"
+                ],
+                "location": "青藤据点会议厅",
+                "key_items": [
+                  "火种机甲（近战模块）",
+                  "中级数据芯片（未解密）"
+                ]
+              },
+              "enemies": [
+                {
+                  "name": "虫族工虫",
+                  "faction": "zerg",
+                  "tier": "drone",
+                  "count": 50,
+                  "level": 1,
+                  "context": "分兵攻击两据点"
+                },
+                {
+                  "name": "虫族作战兵虫",
+                  "faction": "zerg",
+                  "tier": "soldier",
+                  "count": 10,
+                  "level": 2,
+                  "context": "配合攻击"
+                },
+                {
+                  "name": "虫族初级虫将",
+                  "faction": "zerg",
+                  "tier": "elite",
+                  "count": 2,
+                  "level": 4,
+                  "context": "分别指挥两路攻击"
+                }
+              ],
+              "resource_ledger": [
+                {
+                  "item": "低级虫族晶核",
+                  "start": 0,
+                  "delta": 5,
+                  "end": 5,
+                  "reason": "防守青藤据点击杀部分虫族获得5枚低级晶核"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "协调三方信任危机",
+                  "location": "青藤据点会议厅",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "黄土沟首领",
+                    "阿蝉",
+                    "青藤代表"
+                  ],
+                  "words": 1400,
+                  "tone": "激烈争论",
+                  "beats": [
+                    "黄土沟首领强烈要求驱逐异变者",
+                    "阿蝉反驳并威胁离开；林野调解无效，阿蝉摔门而去"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "应对虫族分兵攻击",
+                  "location": "青藤据点指挥室",
+                  "characters": [
+                    "林野",
+                    "苏晴"
+                  ],
+                  "words": 1000,
+                  "tone": "紧急决策",
+                  "beats": [
+                    "侦查员报告两据点同时遭虫族进攻",
+                    "林野决定优先防守青藤，派少量兵力支援黄土沟"
+                  ]
+                },
+                {
+                  "order": 3,
+                  "pov": "林野",
+                  "goal": "救援黄土沟失败",
+                  "location": "黄土沟据点废墟",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "阿蝉（带领异变者已先行赶到）"
+                  ],
+                  "words": 1500,
+                  "tone": "悲壮沮丧",
+                  "beats": [
+                    "林野赶到时据点已被攻破",
+                    "阿蝉的异变者救出部分幸存者；黄土沟首领战死，林野自责"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_commander_timing",
+                    "clue": "虫族高级统领的攻击时机正好卡在内奸事件之后，仿佛事先知道联盟会内讧",
+                    "horizon": "next_volume",
+                    "status": "open"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "势力整合支线",
+                  "stage": "reversal",
+                  "change": "联盟濒临破裂，黄土沟据点陷落，林野整合计划遭受重挫",
+                  "pressure": "阿蝉失望离去后，林野失去异变者情报支援；黄土沟幸存者涌入青藤据点，资源更加紧张"
+                }
+              ]
+            },
+            {
+              "id": "P1-V1-C9",
+              "title": "风暴前夜",
+              "summary": "林野与阿蝉和解后策划营救被俘适配者，潜入磐石堡地牢联系上目标，被沈明哲发现后激战，临阵突破至3级解锁能量护盾成功突围，沈明哲透露虫族母巢即将总攻，第一卷在危机中结束。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "阿蝉",
+                "沈明哲",
+                "被俘适配者（义兄）",
+                "精英卫队"
+              ],
+              "location": "磐石堡外围地下实验室",
+              "events": [
+                {
+                  "type": "goal",
+                  "characters": [
+                    "林野",
+                    "阿蝉"
+                  ],
+                  "subject": "营救计划",
+                  "change": "制定完成",
+                  "actor": "林野",
+                  "action": "plan",
+                  "target": "营救行动",
+                  "target_type": "goal",
+                  "context": "青藤据点密室",
+                  "result": "林野与阿蝉和解，共同制定潜入磐石堡的详细营救计划"
+                },
+                {
+                  "type": "status",
+                  "characters": [
+                    "林野"
+                  ],
+                  "subject": "潜入",
+                  "change": "成功联系目标",
+                  "actor": "林野",
+                  "action": "move",
+                  "target": "磐石堡地下牢房",
+                  "target_type": "location",
+                  "context": "利用机甲隐蔽功能潜入",
+                  "result": "林野成功绕开沈氏巡逻，进入地下实验室与阿蝉义兄取得联系"
+                },
+                {
+                  "type": "status",
+                  "characters": [
+                    "沈明哲"
+                  ],
+                  "subject": "发现入侵",
+                  "change": "触发警报",
+                  "actor": "沈明哲",
+                  "action": "discover",
+                  "target": "林野潜入",
+                  "target_type": "status",
+                  "context": "地下实验室监控室",
+                  "result": "沈明哲通过预设的生物波动感应器发现林野，触发警报并亲自带领精英卫队合围"
+                },
+                {
+                  "type": "skill",
+                  "characters": [
+                    "林野"
+                  ],
+                  "subject": "基因等级",
+                  "change": "突破至3级",
+                  "actor": "林野",
+                  "action": "combat",
+                  "context": "磐石堡地下入口",
+                  "result": "林野苦战，吸收随身携带的中级晶核强行突破至3级基因，解锁能量护盾，成功突围"
+                },
+                {
+                  "type": "relationship",
+                  "characters": [
+                    "沈明哲",
+                    "林野"
+                  ],
+                  "subject": "交易提议",
+                  "change": "被拒绝",
+                  "actor": "沈明哲",
+                  "action": "propose",
+                  "target": "交易条件",
+                  "target_type": "relationship",
+                  "context": "地表安全距离外，通过扩音器喊话",
+                  "result": "沈明哲透露虫族母巢三天后将集结大军进攻青藤据点，提出用火种机甲核心数据换取林野等人安全的交易，林野拒绝"
+                }
+              ],
+              "state_change": "林野突破至3级基因，救出适配者，但面临母巢总攻的致命威胁。",
+              "conflict": "林野必须在沈氏老巢中救出关键人员并安全撤离，同时面对沈明哲的胁迫和即将到来的灭顶之灾。",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第40天",
+                "start_time": "深夜",
+                "end_time": "黎明",
+                "duration": "一夜",
+                "time_jump": true,
+                "previous_gap": "过了10天",
+                "transition": "林野与阿蝉和解后在青藤据点休整了10天，修复机甲、准备营救，并在最后三天吸收了之前积累的5枚低级晶核和1枚中级晶核预备突破"
+              },
+              "state_anchor": {
+                "cultivation": "二级基因强化者",
+                "allies": [
+                  "苏晴",
+                  "阿蝉"
+                ],
+                "location": "青藤据点大门",
+                "key_items": [
+                  "火种机甲（近战模块）",
+                  "中级数据芯片",
+                  "低级虫族晶核5枚",
+                  "中级虫族晶核1枚"
+                ]
+              },
+              "enemies": [
+                {
+                  "name": "沈氏精英卫队",
+                  "faction": "human_shen",
+                  "tier": "elite",
+                  "count": 6,
+                  "level": 4,
+                  "context": "磐石堡地下牢房守卫"
+                },
+                {
+                  "name": "沈明哲",
+                  "faction": "human_shen",
+                  "tier": "leader",
+                  "count": 1,
+                  "level": 8,
+                  "is_boss": true,
+                  "boss_id": "boss_shen_mingzhe",
+                  "status": "engaged",
+                  "context": "地下层指挥"
+                }
+              ],
+              "resource_ledger": [
+                {
+                  "item": "低级虫族晶核",
+                  "start": 5,
+                  "delta": -5,
+                  "end": 0,
+                  "reason": "全部用于突破至3级基因的辅助能量"
+                },
+                {
+                  "item": "中级虫族晶核",
+                  "start": 1,
+                  "delta": -1,
+                  "end": 0,
+                  "reason": "作为突破核心能量消耗"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "潜入磐石堡地下牢房联系被俘适配者",
+                  "location": "磐石堡地下实验室",
+                  "characters": [
+                    "林野",
+                    "被俘适配者（义兄）"
+                  ],
+                  "words": 1600,
+                  "tone": "紧张低调",
+                  "beats": [
+                    "林野利用机甲隐蔽绕过三层巡逻",
+                    "找到关押的适配者，对方表示愿意配合越狱；义兄透露沈明哲正在研究从适配者血液中提取基因编码"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "被发现后突围",
+                  "location": "地下入口大厅",
+                  "characters": [
+                    "林野",
+                    "沈明哲",
+                    "精英卫队"
+                  ],
+                  "words": 1800,
+                  "tone": "激烈爆发",
+                  "beats": [
+                    "沈明哲出现在监控前，启动地面陷阱",
+                    "六名精英卫队围攻，林野受伤；林野将随身中级晶核植入机甲核心，强行突破至3级，解锁能量护盾"
+                  ]
+                },
+                {
+                  "order": 3,
+                  "pov": "林野",
+                  "goal": "安全撤离并面对警告",
+                  "location": "磐石堡外安全距离",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "阿蝉"
+                  ],
+                  "words": 1400,
+                  "tone": "紧张收尾悬念",
+                  "beats": [
+                    "苏晴和阿蝉在外接应，用炸药制造混乱",
+                    "林野冲出包围与同伴会合；沈明哲扩音喊话：母巢大军三天后踏平青藤，交出数据可保命；林野拒绝，决定回据点组织防御"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_mother_hive_attack",
+                    "clue": "沈明哲宣称虫族母巢将在三日后大举进攻青藤据点，但动机不明",
+                    "horizon": "next_volume",
+                    "status": "open"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "火种远征主线",
+                  "stage": "payoff",
+                  "change": "林野突破至3级基因，救出关键适配者，但面临母巢总攻的威胁",
+                  "consequence": "第一卷在即将到来的决战前夕结束，为第二卷母巢远征铺垫；林野突破后精神透支，亟需恢复"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "P1-V2",
+          "title": "第二卷：母巢远征",
+          "summary": "林野基因等级提升至3级，解锁火种机甲更多功能，联合各方势力组成反抗联盟。他率队营救被俘的异变者适配者，与沈明哲正面交锋，逐渐揭开百年前人类高层与收割者文明交易的完整真相，以及自身遇袭的最终幕后黑手。沈明哲得知收割者文明的终极阴谋后临阵倒戈，与林野联手。最终，林野率领人类联军反攻青藏高原虫族母巢，吸收核心晶核达到5级，释放基因修复波修复人类基因缺陷。虫族残余势力选择结盟，共同对抗太阳系外围的收割者舰队，为星际远征拉开序幕。",
+          "chapters": [
+            {
+              "id": "P1-V2-C1",
+              "title": "风暴将至",
+              "summary": "林野与阿蝉带着营救出的适配者回到青藤据点，与苏晴、老周紧急部署防御，同时尝试读取第二枚旧文明数据芯片，发现其中竟包含一份被切割的旧人类星际星舰坐标密钥信息碎片。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "老周",
+                "阿蝉",
+                "陈远"
+              ],
+              "location": "青藤据点地下指挥室",
+              "events": [
+                {
+                  "type": "status",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "return",
+                  "target": "青藤据点",
+                  "target_type": "location",
+                  "context": "带着受伤的阿蝉和被救的陈远",
+                  "result": "林野一行在天亮前赶回据点，据点民众看到被救出的适配者士气回升"
+                },
+                {
+                  "type": "item",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "老周",
+                  "action": "use",
+                  "target": "中级数据芯片",
+                  "target_type": "item",
+                  "context": "据点工坊，利用旧芯片读卡器和备件修复设备",
+                  "result": "老周维修多日后成功读取部分芯片内容，发现战争前的星舰坐标数据"
+                },
+                {
+                  "type": "item",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "acquire",
+                  "target": "星舰坐标密钥碎片（第4枚定位信息）",
+                  "target_type": "knowledge",
+                  "context": "芯片中的加密数据段",
+                  "result": "林野发现芯片隐藏信息指向荒骨台南部旧军事基地——那里存放着一枚沈氏基因密钥"
+                },
+                {
+                  "type": "relationship",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "陈远",
+                  "action": "meet",
+                  "target": "林野",
+                  "target_type": "character",
+                  "context": "地下指挥室内部",
+                  "result": "陈远告诉林野，沈明哲从他被囚的十年间抽取过多次血液，试图复制适配基因密码但全部失败"
+                }
+              ],
+              "state_change": "林野获得星舰坐标线索，发现密钥所在地，决定主动出击",
+              "conflict": "林野必须在三天内消化刚突破的基因3级能力、整合盟友并获取更多情报，同时面对即将压境的虫族大军。",
+              "pacing": "normal",
+              "timeline": {
+                "anchor": "第41天黎明",
+                "start_time": "天亮时分",
+                "end_time": "当夜",
+                "duration": "当天",
+                "time_jump": true,
+                "previous_gap": "紧接上章，次日清晨",
+                "transition": "林野连夜赶回青藤据点，天亮时抵达"
+              },
+              "state_anchor": {
+                "cultivation": "三级基因觉醒者（初稳定）",
+                "allies": [
+                  "苏晴",
+                  "老周",
+                  "阿蝉",
+                  "陈远（被救适配者）"
+                ],
+                "injuries": [
+                  "左肩战伤（轻伤，已处理）"
+                ],
+                "location": "青藤据点地下指挥室",
+                "key_items": [
+                  "火种机甲（解锁近战模块+能量护盾）",
+                  "中级数据芯片（已部分读取）"
+                ],
+                "notes": "基因稳定性刚稳定至70%，仍需恢复"
+              },
+              "resource_ledger": [
+                {
+                  "item": "虫族晶核",
+                  "start": 0,
+                  "delta": 0,
+                  "end": 0,
+                  "reason": "上一章消耗殆尽（低级）"
+                },
+                {
+                  "item": "虫族晶核",
+                  "start": 0,
+                  "delta": 0,
+                  "end": 0,
+                  "reason": "上一章消耗殆尽（中级）"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "安置陈远并听取情报",
+                  "location": "青藤据点地下指挥室",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "阿蝉",
+                    "陈远"
+                  ],
+                  "words": 1500,
+                  "tone": "紧张交流",
+                  "beats": [
+                    "从磐石堡地下牢房一路狂奔，林野等人带着重伤的陈远在黎明前返回青藤据点，阿蝉亲自为他擦拭伤口，查看伤势",
+                    "陈远详细描述沈明哲的实验内容和地下牢房结构，提及沈明哲抽取十年血液都未能复制适配基因"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "尝试读取重要芯片数据",
+                  "location": "据点工坊",
+                  "characters": [
+                    "林野",
+                    "老周"
+                  ],
+                  "words": 1300,
+                  "tone": "专注兴奋",
+                  "beats": [
+                    "老周修复设备后成功读取第二枚数据芯片的大部分内容，发现一组加密索引",
+                    "芯片中记录了一段旧星际星舰坐标的密钥碎片，模糊指向荒骨台南部旧军事基地"
+                  ]
+                },
+                {
+                  "order": 3,
+                  "pov": "林野",
+                  "goal": "制定三日内反击方案",
+                  "location": "据点地下指挥室",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "阿蝉",
+                    "老周"
+                  ],
+                  "words": 1400,
+                  "tone": "冷静决策",
+                  "beats": [
+                    "林野提议不硬守据点而是提前出击，兵分两路：一路拖延虫族主力的行军速度，另一路趁机前往芯片标注的旧军事基地夺取密钥",
+                    "苏晴认为风险极高，但同意是他的唯一机会"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_key_fragment_2",
+                    "clue": "数据芯片中的加密索引显示荒骨台南部基地藏有一枚沈氏基因密钥",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  },
+                  {
+                    "id": "myst_chenyuan_blood_sample",
+                    "clue": "沈明哲抽取十年血液都无法破解适配密码，可能是方向性错误",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ],
+                "resolved": [
+                  {
+                    "id": "myst_mother_hive_attack",
+                    "resolution": "芯片中零碎信息暗示母巢的攻击不仅是为了消灭林野，更可能是为掩护沈氏去取另一枚密钥"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "火种远征主线",
+                  "stage": "reveal",
+                  "change": "林野获得星际星舰坐标的线索，发现虫族总攻可能与密钥抢夺有关",
+                  "consequence": "计划由被动防御转为主动出击"
+                },
+                {
+                  "storyline_name": "势力整合支线",
+                  "stage": "pressure",
+                  "change": "陈远获救增强了异变者阵营的忠诚度，但也使营救行动暴露",
+                  "pressure": "沈氏可能因救走陈远而提前激活对青藤据点的封锁"
+                }
+              ]
+            },
+            {
+              "id": "P1-V2-C2",
+              "title": "母巢先锋",
+              "summary": "虫族先锋军提前一天抵达青藤外围，林野率队迎击，击杀初级虫将并缴获中级晶核，同时发现虫群中混有变异个体，其晶核结构与普通虫族不同，为收割者干预提供证据。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "阿蝉",
+                "据点战士"
+              ],
+              "location": "青藤据点外围废墟带",
+              "events": [
+                {
+                  "type": "gate",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "侦察兵",
+                  "action": "discover",
+                  "target": "虫族先锋军",
+                  "target_type": "status",
+                  "context": "据点外围3公里观测站",
+                  "result": "侦察兵发现10只兵虫和1名初级虫将提前逼近，虫群中有一单位的甲壳颜色反常"
+                },
+                {
+                  "type": "gate",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "combat",
+                  "target": "虫族先锋军",
+                  "target_type": "status",
+                  "context": "据点外围废墟带",
+                  "result": "林野利用3级能量护盾顶住正面攻击，苏晴用狙击枪点杀变异个体的关节弱点；林野斩杀虫将，虫群败退"
+                },
+                {
+                  "type": "item",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "阿蝉",
+                  "action": "acquire",
+                  "target": "变异虫族的晶核",
+                  "target_type": "item",
+                  "context": "变异个体残骸",
+                  "result": "阿蝉从被击杀的变异虫族体内取出一枚内部带有微型金属结构的异常晶核"
+                },
+                {
+                  "type": "item",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "acquire",
+                  "target": "中级虫族晶核",
+                  "target_type": "item",
+                  "context": "虫将残骸",
+                  "result": "林野获得1枚中级虫族晶核"
+                }
+              ],
+              "state_change": "林野击退提前到来的虫族先锋，缴获中级晶核并发现收割者干预证据",
+              "conflict": "林野必须判断这次提前攻击是母巢的先遣测试，还是真正的总攻开端，同时分析变异虫族背后的意义。",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第42天上午",
+                "start_time": "上午9点左右",
+                "end_time": "中午",
+                "duration": "数小时"
+              },
+              "state_anchor": {
+                "cultivation": "三级基因觉醒者（稳定中）",
+                "allies": [
+                  "苏晴",
+                  "阿蝉",
+                  "陈远"
+                ],
+                "location": "青藤据点外围废墟带",
+                "key_items": [
+                  "火种机甲（近战模块+能量护盾）",
+                  "中级数据芯片"
+                ],
+                "notes": "基因稳定性恢复至70%，机甲能量护盾消耗30%"
+              },
+              "enemies": [
+                {
+                  "name": "虫族作战兵虫",
+                  "faction": "zerg",
+                  "tier": "soldier",
+                  "count": 10,
+                  "level": 2,
+                  "context": "先锋主力"
+                },
+                {
+                  "name": "虫族（变异个体）",
+                  "faction": "zerg",
+                  "tier": "variant",
+                  "count": 1,
+                  "level": 3,
+                  "context": "混在先锋中的异常个体"
+                },
+                {
+                  "name": "虫族初级虫将",
+                  "faction": "zerg",
+                  "tier": "elite",
+                  "count": 1,
+                  "level": 4,
+                  "context": "指挥本次攻击"
+                }
+              ],
+              "resource_ledger": [
+                {
+                  "item": "虫族晶核",
+                  "start": 0,
+                  "delta": 1,
+                  "end": 1,
+                  "reason": "击杀初级虫将获得1枚中级晶核"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "判断虫族动向并部署阵地",
+                  "location": "据点外墙指挥台",
+                  "characters": [
+                    "林野",
+                    "苏晴"
+                  ],
+                  "words": 1200,
+                  "tone": "冷静部署",
+                  "beats": [
+                    "从据点地下指挥室赶往外墙，侦察兵传来急报，林野意识到母巢比预期提前攻击",
+                    "苏晴建议集中火力先消灭虫将"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "正面对抗虫族先锋",
+                  "location": "据点外围废墟带",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "据点战士"
+                  ],
+                  "words": 1800,
+                  "tone": "激烈",
+                  "beats": [
+                    "林野开启能量护盾硬冲兵虫群，用近战模块连斩5只",
+                    "苏晴远距狙击变异个体，发现它在被击中后身体结构呈现出金属化的异常"
+                  ]
+                },
+                {
+                  "order": 3,
+                  "pov": "阿蝉",
+                  "goal": "分析变异晶核",
+                  "location": "据点地下研究区",
+                  "characters": [
+                    "阿蝉",
+                    "林野"
+                  ],
+                  "words": 1000,
+                  "tone": "凝重",
+                  "beats": [
+                    "战斗结束后返回据点，变异晶核内部微型金属结构在显微镜下显现",
+                    "阿蝉指出这种加工精度不是虫族自身的生物进化能实现的"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_mother_hive_precision",
+                    "clue": "变异晶核内部含有微型金属结构，证明有人在通过技术手段操控虫族的个体进化",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "火种远征主线",
+                  "stage": "pressure",
+                  "change": "确认虫族母巢的攻势提前，且背后有收割者文明的技术干预痕迹",
+                  "consequence": "林野加速了前往旧军事基地夺取密钥的计划，只争朝夕"
+                }
+              ]
+            },
+            {
+              "id": "P1-V2-C3",
+              "title": "密钥在握",
+              "summary": "林野与阿蝉、陈远组成精锐小队前往荒骨台南部旧军事基地，击退守卫的虫族和沈氏后勤人员，获取了第4枚基因密钥。返回途中遭遇虫族高级统领的截击，陈远为掩护林野断后受伤，三人险中突围。",
+              "characters": [
+                "林野",
+                "阿蝉",
+                "陈远（被救适配者）",
+                "虫族高级统领",
+                "陈远"
+              ],
+              "location": "荒骨台南部旧军事基地",
+              "events": [
+                {
+                  "type": "status",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "move",
+                  "target": "荒骨台南部旧军事基地",
+                  "target_type": "location",
+                  "context": "利用阿蝉感知虫群动向的能力绕开大部分虫族",
+                  "result": "林野小队耗时一天抵达基地外围"
+                },
+                {
+                  "type": "gate",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "combat",
+                  "target": "旧军事基地守卫",
+                  "target_type": "status",
+                  "context": "旧军事基地B区地下层",
+                  "result": "林野小队突入基地，击退沈氏后勤人员和虫族守卫，进入密钥存放间"
+                },
+                {
+                  "type": "item",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "acquire",
+                  "target": "第4枚沈氏基因密钥",
+                  "target_type": "item",
+                  "context": "B区地下层专用基因锁保险柜",
+                  "result": "林野利用自身基因（非沈氏血统）强行破解保险柜，发现里面的密钥是一个注射型晶体棒——沈氏百年前的基因锁技术原理与火种机甲相同"
+                },
+                {
+                  "type": "gate",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "虫族高级统领",
+                  "action": "combat",
+                  "target": "林野小队",
+                  "target_type": "character",
+                  "context": "旧军事基地出口外拦截",
+                  "result": "高级统领率15只兵虫封住出口，陈远主动断后，用异变者的短距离飞行能力拖住虫群，受伤严重"
+                }
+              ],
+              "state_change": "林野获得第4枚基因密钥，陈远为掩护撤退重伤",
+              "conflict": "林野必须在沈氏和虫族高级统领的双重封锁下夺取密钥并活着返回据点。",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第44天凌晨",
+                "start_time": "凌晨4点",
+                "end_time": "次日正午",
+                "duration": "1天半",
+                "time_jump": true,
+                "previous_gap": "过了2天",
+                "transition": "先锋战后的两天里，林野用芯片内容进行侦查和路线规划"
+              },
+              "state_anchor": {
+                "cultivation": "三级基因觉醒者（稳定）",
+                "allies": [
+                  "阿蝉",
+                  "陈远"
+                ],
+                "location": "青藤据点大门",
+                "key_items": [
+                  "火种机甲（近战+护盾）",
+                  "中级数据芯片",
+                  "虫族晶核（中级）1枚"
+                ],
+                "notes": "基因稳定性70%，机甲能量已补充至80%"
+              },
+              "enemies": [
+                {
+                  "name": "虫族工虫",
+                  "faction": "zerg",
+                  "tier": "drone",
+                  "count": 10,
+                  "level": 1,
+                  "context": "旧基地内游荡守卫"
+                },
+                {
+                  "name": "虫族作战兵虫",
+                  "faction": "zerg",
+                  "tier": "soldier",
+                  "count": 20,
+                  "level": 2,
+                  "context": "5只基地内+15只统领带来的"
+                },
+                {
+                  "name": "沈氏后勤人员",
+                  "faction": "human_shen",
+                  "tier": "logistics",
+                  "count": 3,
+                  "level": 2,
+                  "context": "在基地内维护密钥保险柜"
+                },
+                {
+                  "name": "虫族高级统领",
+                  "faction": "zerg",
+                  "tier": "queen",
+                  "count": 1,
+                  "level": 8,
+                  "is_boss": true,
+                  "boss_id": "boss_high_commander_01",
+                  "status": "engaged",
+                  "context": "基地出口截击"
+                }
+              ],
+              "resource_ledger": [
+                {
+                  "item": "虫族晶核",
+                  "start": 1,
+                  "delta": 0,
+                  "end": 1,
+                  "reason": "未使用（中级）"
+                },
+                {
+                  "item": "沈氏基因密钥",
+                  "start": 0,
+                  "delta": 1,
+                  "end": 1,
+                  "reason": "从基地保险柜中获得第4枚"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "潜入基地并破解保险柜",
+                  "location": "旧军事基地B区地下层",
+                  "characters": [
+                    "林野",
+                    "阿蝉",
+                    "陈远"
+                  ],
+                  "words": 1600,
+                  "tone": "紧张潜入",
+                  "beats": [
+                    "从青藤据点出发，经一天跋涉抵达荒骨台南部基地，阿蝉感应到虫群在基地内的分布，三人避开了主要巡逻路线",
+                    "进入保险柜间，林野用自己的基因血液和火种机甲的能量接口破解了沈氏基因锁"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "对抗高级统领的拦截",
+                  "location": "基地出口",
+                  "characters": [
+                    "林野",
+                    "阿蝉",
+                    "陈远",
+                    "虫族高级统领"
+                  ],
+                  "words": 1800,
+                  "tone": "激烈悲壮",
+                  "beats": [
+                    "虫族高级统领用精神波动锁定林野，二十只兵虫封锁出口",
+                    "陈远主动觉醒异能飞入虫群、引爆随身炸药拖住它们",
+                    "林野和阿蝉趁乱冲出，陈远重伤被林野抱回"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_commander_persistent",
+                    "clue": "高级统领两次精准拦截林野，似乎背后有更高层的指令来源",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ],
+                "resolved": [
+                  {
+                    "id": "myst_key_fragment_2",
+                    "resolution": "荒骨台南部基地中确实存放着一枚完整的基因密钥注射棒"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "火种远征主线",
+                  "stage": "reveal",
+                  "change": "林野获得第4枚基因密钥，距离解锁星际星舰坐标更近一步",
+                  "consequence": "陈远重伤，异变者族群因此对林野更加信任"
+                }
+              ]
+            },
+            {
+              "id": "P1-V2-C4",
+              "title": "沈氏的犹疑",
+              "summary": "陈远重伤后，林野紧急返回据点为他进行基因稳定处理。与此同时，沈明哲暗中派出密使联系林野，提出暂时停战并共同对抗母巢的条件，林野意识到沈明哲可能在收割者威胁面前动摇了立场。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "阿蝉",
+                "老周",
+                "沈氏密使"
+              ],
+              "location": "青藤据点地下医疗区",
+              "events": [
+                {
+                  "type": "status",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "老周",
+                  "action": "use",
+                  "target": "基因抑制剂",
+                  "target_type": "item",
+                  "context": "据点地下手术室，仅剩的半支抑制剂",
+                  "result": "老周用最后半支抑制剂稳定住陈远的基因崩溃倾向，但重伤导致他短期内无法战斗"
+                },
+                {
+                  "type": "relationship",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "沈氏密使",
+                  "action": "enter",
+                  "target": "青藤据点",
+                  "target_type": "location",
+                  "context": "夜间独自步行前来，手持停战白旗",
+                  "result": "密使传达沈明哲的口信：虫族母巢的攻势超出了他原先的预期，沈氏希望与林野当面停战谈判"
+                },
+                {
+                  "type": "relationship",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "meet",
+                  "target": "沈氏密使（沈明哲的堂弟）",
+                  "target_type": "character",
+                  "context": "据点地下密室，排除虫族窃听",
+                  "result": "密使透露沈明哲最近在与收割者文明的外围接触中，发现对方对沈氏的保障承诺并不可靠，有80%概率会在战后被清算"
+                },
+                {
+                  "type": "goal",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "set",
+                  "target": "与沈氏谈判",
+                  "target_type": "goal",
+                  "context": "密室交谈之后",
+                  "result": "林野决定同意谈判，但必须在三天后母巢总攻落地前的时机进行，以保护青藤据点的安全"
+                }
+              ],
+              "state_change": "沈明哲因收割者威胁动摇立场，派密使求和，林野决定与之谈判",
+              "conflict": "林野必须判断沈明哲的诚意是真实动摇还是陷阱，同时考虑利用这一变数整合力量。",
+              "pacing": "normal",
+              "timeline": {
+                "anchor": "第46天深夜",
+                "start_time": "深夜",
+                "end_time": "次日清晨",
+                "duration": "一夜",
+                "time_jump": true,
+                "previous_gap": "过了2天",
+                "transition": "林野从基地返回后忙于救治陈远并重建据点防线"
+              },
+              "state_anchor": {
+                "cultivation": "三级基因觉醒者（稳定）",
+                "allies": [
+                  "苏晴",
+                  "阿蝉",
+                  "老周",
+                  "陈远（重伤恢复中）"
+                ],
+                "location": "青藤据点地下医疗区",
+                "key_items": [
+                  "火种机甲（近战+护盾）",
+                  "中级数据芯片",
+                  "沈氏基因密钥（第4枚）",
+                  "虫族晶核（中级）1枚"
+                ],
+                "notes": "陈远重伤休息，短期无法作战；基因稳定性70%"
+              },
+              "resource_ledger": [
+                {
+                  "item": "基因抑制剂",
+                  "start": 1,
+                  "delta": -1,
+                  "end": 0,
+                  "reason": "用掉最后半支稳住陈远"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "稳定陈远的伤势",
+                  "location": "据点地下医疗区",
+                  "characters": [
+                    "林野",
+                    "老周",
+                    "阿蝉"
+                  ],
+                  "words": 1300,
+                  "tone": "凝重",
+                  "beats": [
+                    "从荒骨台返回后直接冲进医疗区，老周在手术台上连续操作，额头冒汗",
+                    "阿蝉站在门外一言不发，眼眶发红"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "与沈氏密使秘密会谈",
+                  "location": "据点地下密室",
+                  "characters": [
+                    "林野",
+                    "沈氏密使"
+                  ],
+                  "words": 1500,
+                  "tone": "谨慎试探",
+                  "beats": [
+                    "密使直言沈明哲最近发现收割者文明的真正意图是清扫所有知情者，沈明哲在书房独坐整夜后做出决定——密使说家主眼睛红肿，声音沙哑",
+                    "密使提出停战条件：沈氏为林野提供10支基因抑制剂和3箱旧人类核聚变晶块，换取林野在战后不追究沈氏参与暗害的承诺"
+                  ]
+                },
+                {
+                  "order": 3,
+                  "pov": "林野",
+                  "goal": "召集盟友商议对策",
+                  "location": "据点地下指挥室",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "阿蝉"
+                  ],
+                  "words": 1000,
+                  "tone": "凝重决策",
+                  "beats": [
+                    "苏晴认为沈明哲不可信，但资源确实紧缺",
+                    "林野决定答应谈判，同时做好最坏打算"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_shen_reversal_real",
+                    "clue": "沈明哲的堂弟用了一个细节证明诚意：他提到沈明哲的独子在百年前虫族入侵中死亡，沈明哲实际从未从与虫族的合作中获得任何好处",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ],
+                "resolved": [
+                  {
+                    "id": "myst_advanced_commander_target",
+                    "resolution": "沈氏密使确认：高级统领能精准拦截林野是因为沈明哲之前为获取私利向虫族提供了林野的行动路线；现在沈明哲发现了收割者文明的真正计划后，决定停止合作"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "历史真相支线",
+                  "stage": "reversal",
+                  "change": "沈明哲因发现收割者文明的清洗计划开始动摇，沈氏内部出现分裂迹象",
+                  "consequence": "沈氏密使主动联系林野，使双方的敌对关系出现转折可能"
+                }
+              ]
+            },
+            {
+              "id": "P1-V2-C5",
+              "title": "基因真相",
+              "summary": "林野吸收之前获得的中级晶核尝试冲刺3级基因稳定上限，触发了第二段记忆碎片，完整回忆起当年爆炸当天的具体细节——不仅有沈氏，还有收割者文明的卧底也在现场。",
+              "characters": [
+                "林野",
+                "林野（记忆中的年轻版本）",
+                "陌生技术人员"
+              ],
+              "location": "青藤据点训练舱",
+              "events": [
+                {
+                  "type": "premise",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "use",
+                  "target": "中级虫族晶核",
+                  "target_type": "item",
+                  "context": "据点地下训练舱，隔离状态下吸收",
+                  "result": "林野吸收晶核，基因稳定性从70%提升至80%，解锁第二段研发记忆碎片"
+                },
+                {
+                  "type": "memory",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "discover",
+                  "target": "当年爆炸的完整真相",
+                  "target_type": "knowledge",
+                  "context": "记忆碎片呈现的2140年现场",
+                  "result": "林野看到爆炸当天一名穿着非沈氏制服的陌生技术人员在核心模块上安装了异常脉冲装置，面容部分模糊——这是收割者文明的卧底"
+                },
+                {
+                  "type": "storyline",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "learn",
+                  "target": "收割者卧底的存在",
+                  "target_type": "knowledge",
+                  "context": "记忆碎片中的画面",
+                  "result": "林野意识到当年遇害不仅是沈氏的背叛，背后还有外星文明的推动——收割者文明百年前就已在地球安插了卧底"
+                }
+              ],
+              "state_change": "林野基因稳定性提升至80%，发现收割者卧底在百年前就已渗透",
+              "conflict": "林野必须消化这枚重磅信息：收割者文明渗透的时间点比所有人想象得更早，这意味着人类阵营中可能一直存在收割者的眼线。",
+              "pacing": "slow",
+              "timeline": {
+                "anchor": "第47天深夜至次日凌晨",
+                "start_time": "深夜",
+                "end_time": "次日清晨",
+                "duration": "一夜",
+                "transition": "与密使会谈结束后"
+              },
+              "state_anchor": {
+                "cultivation": "三级基因觉醒者（基因稳定性80%）",
+                "allies": [
+                  "苏晴",
+                  "阿蝉",
+                  "老周",
+                  "陈远"
+                ],
+                "location": "青藤据点地下训练舱",
+                "key_items": [
+                  "火种机甲",
+                  "中级数据芯片",
+                  "沈氏基因密钥（第4枚）"
+                ],
+                "notes": "基因稳定性提升至80%，获得记忆碎片"
+              },
+              "resource_ledger": [
+                {
+                  "item": "虫族晶核",
+                  "start": 1,
+                  "delta": -1,
+                  "end": 0,
+                  "reason": "吸收用于稳定基因等级和触发记忆（中级）"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "进入基因进化舱吸收中级晶核",
+                  "location": "据点地下训练舱",
+                  "characters": [
+                    "林野"
+                  ],
+                  "words": 1400,
+                  "tone": "内省紧张",
+                  "beats": [
+                    "林野独自坐在舱内，将中级晶核按入胸口基因接口",
+                    "能量涌入，身体细胞经历新一轮融合"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "解锁记忆碎片",
+                  "location": "训练舱（意识中呈现当年实验室）",
+                  "characters": [
+                    "林野（记忆中的年轻版本）",
+                    "陌生技术人员"
+                  ],
+                  "words": 1600,
+                  "tone": "震惊醒悟",
+                  "beats": [
+                    "记忆画面推进：2140年爆炸前12小时，一名戴眼镜的技术人员操作了核心模块",
+                    "林野从记忆里记起此人的面容——他曾在2148年的废弃视频留档中出现过，是当时项目组的A级外聘专家"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_harvester_plant_before",
+                    "clue": "收割者文明在2140年前就已经渗透火种机甲项目，安排了卧底引爆",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ],
+                "resolved": [
+                  {
+                    "id": "myst_who_caused_explosion",
+                    "resolution": "爆炸的直接执行者是收割者安插在火种机甲项目中的外聘技术人员，沈氏只是协同掩护"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "历史真相支线",
+                  "stage": "payoff",
+                  "change": "林野完整回忆起爆炸前的关键细节：收割者卧底在2140年就已存在",
+                  "consequence": "林野对内鬼的警惕等级提升到最高"
+                }
+              ]
+            },
+            {
+              "id": "P1-V2-C6",
+              "title": "母巢围攻",
+              "summary": "母巢主力如约抵达，超过100只工虫、30只兵虫和3名虫将围攻青藤据点。林野利用3级护盾和近战模块在城墙上拼死防守，苏晴和阿蝉配合击杀两名虫将，但据点外墙被攻破三分之一，三十多名幸存者丧生。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "阿蝉",
+                "老周",
+                "据点战士"
+              ],
+              "location": "青藤据点外墙防线",
+              "events": [
+                {
+                  "type": "gate",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "侦察兵",
+                  "action": "discover",
+                  "target": "虫族大军",
+                  "target_type": "status",
+                  "context": "据点瞭望台",
+                  "result": "侦察兵报告：视野边界出现大量虫族，估算超过80工虫+20兵虫+2虫将"
+                },
+                {
+                  "type": "gate",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "combat",
+                  "target": "虫族主力",
+                  "target_type": "status",
+                  "context": "青藤据点外墙全线",
+                  "result": "林野利用能量护盾在城墙上拦截主力虫群，击杀大量工虫和兵虫；苏晴远程狙击击杀1名虫将，阿蝉近战斩杀1名虫将"
+                },
+                {
+                  "type": "status",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "use",
+                  "target": "能量护盾",
+                  "target_type": "skill",
+                  "context": "城墙上顶住虫潮",
+                  "result": "护盾在连续承受兵虫攻击后能量骤降，林野不得不关闭护盾节省能量"
+                },
+                {
+                  "type": "gate",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "老周",
+                  "action": "use",
+                  "target": "旧式防御武器",
+                  "target_type": "item",
+                  "context": "城墙内第二防线操作台",
+                  "result": "老周启动备用状态的老式加农炮，轰射击杀至少15只工虫"
+                }
+              ],
+              "state_change": "据点外墙被攻破三分之一，三十多人丧生，但成功击退母巢主力围攻",
+              "conflict": "林野必须在敌人数量碾压的情况下守住据点，直到母巢的第三名虫将被击退或击毙。",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第49天清晨",
+                "start_time": "凌晨5点",
+                "end_time": "黄昏时分",
+                "duration": "一整天",
+                "time_jump": true,
+                "previous_gap": "过了2天",
+                "transition": "林野在这两天里与苏晴、阿蝉完善防线布置"
+              },
+              "state_anchor": {
+                "cultivation": "三级基因觉醒者（基因稳定性80%）",
+                "allies": [
+                  "苏晴",
+                  "阿蝉",
+                  "老周",
+                  "陈远（伤愈50%）"
+                ],
+                "location": "青藤据点外墙防线",
+                "key_items": [
+                  "火种机甲（近战+护盾）",
+                  "中级数据芯片",
+                  "沈氏基因密钥（第4枚）",
+                  "虫族晶核（中级）"
+                ],
+                "notes": "护盾满能量100%，但会大量消耗"
+              },
+              "enemies": [
+                {
+                  "name": "虫族工虫",
+                  "faction": "zerg",
+                  "tier": "drone",
+                  "count": 80,
+                  "level": 1,
+                  "context": "主攻城墙"
+                },
+                {
+                  "name": "虫族作战兵虫",
+                  "faction": "zerg",
+                  "tier": "soldier",
+                  "count": 20,
+                  "level": 2,
+                  "context": "工虫群间破墙"
+                },
+                {
+                  "name": "虫族初级虫将",
+                  "faction": "zerg",
+                  "tier": "elite",
+                  "count": 2,
+                  "level": 4,
+                  "context": "分两路指挥"
+                }
+              ],
+              "resource_ledger": [
+                {
+                  "item": "虫族晶核",
+                  "start": 0,
+                  "delta": 8,
+                  "end": 8,
+                  "reason": "击杀80工虫获得8枚低级晶核"
+                },
+                {
+                  "item": "虫族晶核",
+                  "start": 1,
+                  "delta": 1,
+                  "end": 2,
+                  "reason": "击杀1名虫将获得1枚中级晶核（另一名虫将被阿蝉击杀，晶核归她）"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "顶住虫族第一波冲锋",
+                  "location": "青藤据点城墙",
+                  "characters": [
+                    "林野",
+                    "据点战士"
+                  ],
+                  "words": 1500,
+                  "tone": "激烈绝望",
+                  "beats": [
+                    "从训练舱冲出，虫潮涌入城墙根部，林野开启护盾跳入虫群近战",
+                    "连续砍杀二十多只工虫，护盾能量骤降至40%"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "苏晴",
+                  "goal": "狙击虫将",
+                  "location": "城墙东侧狙击位",
+                  "characters": [
+                    "苏晴"
+                  ],
+                  "words": 1100,
+                  "tone": "专注冷静",
+                  "beats": [
+                    "苏晴连续三枪命中一名虫将的弱点关节",
+                    "虫将倒地后虫群短暂混乱"
+                  ]
+                },
+                {
+                  "order": 3,
+                  "pov": "林野",
+                  "goal": "击退最后一名虫将并稳住防线",
+                  "location": "城墙中线缺口",
+                  "characters": [
+                    "林野",
+                    "阿蝉"
+                  ],
+                  "words": 1600,
+                  "tone": "爆发",
+                  "beats": [
+                    "第二名虫将趁林野关闭护盾时突入缺口",
+                    "阿蝉用异能突进缠住虫将，林野从侧面一击斩断其前肢"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_wall_fall_trap",
+                    "clue": "城墙被攻破三分之一不是偶然——虫族有意将林野引到缺口处，似乎为下一阶段的定点攻击做铺垫",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "火种远征主线",
+                  "stage": "pressure",
+                  "change": "青藤据点遭受重大损失，但成功击退母巢主力攻势",
+                  "consequence": "林野整合两枚中级晶核，为下一阶段突破4级储备能量；但据点力量已严重削弱"
+                }
+              ]
+            },
+            {
+              "id": "P1-V2-C7",
+              "title": "收割者的承诺",
+              "summary": "战局刚刚稳住，收合者文明在地球的卧底通过全息通讯主动联系林野，以提供虫族全境兵力分布和沈明哲的完整交易记录为条件，劝说林野放弃抵抗交出火种机甲核心数据，被林野拒绝。卧底暴露身份——正是当年2140年安装爆炸装置的那名外聘专家，他通过收割者技术保持了百年未老。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "阿蝉",
+                "收割者卧底：零点"
+              ],
+              "location": "青藤据点地下指挥室",
+              "events": [
+                {
+                  "type": "relationship",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "收割者卧底：零点",
+                  "action": "communicate",
+                  "target": "林野",
+                  "target_type": "character",
+                  "context": "通过据点内部的旧式显示屏强行接入",
+                  "result": "全息画面中出现了2140年的那名外聘技术人员面孔，自称'零点'，是收割者文明在地球的前哨观察员"
+                },
+                {
+                  "type": "relationship",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "零点",
+                  "action": "propose",
+                  "target": "交易",
+                  "target_type": "relationship",
+                  "context": "通过全息画面提出",
+                  "result": "零点提出用母巢全境兵力部署数据+沈明哲历年与虫族的完整交易记录，换取林野交出火种机甲核心数据链路"
+                },
+                {
+                  "type": "goal",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "refuse",
+                  "target": "交易",
+                  "target_type": "goal",
+                  "context": "当场中断通讯",
+                  "result": "林野拒绝交出核心数据，并切断通讯"
+                },
+                {
+                  "type": "status",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "阿蝉",
+                  "action": "reveal",
+                  "target": "零点可能仍在据点附近",
+                  "target_type": "status",
+                  "context": "通讯切断后，阿蝉用异变者感知能力扫描据点",
+                  "result": "阿蝉感知到据点外围方向有一道与人类不同的生物波动迅速远离——零点本人刚才就潜伏在据点周边"
+                }
+              ],
+              "state_change": "收割者卧底零点公开身份并提出交易被拒，确认潜伏在据点附近",
+              "conflict": "林野必须决定是否冒险从这位不死卧底手中获取情报，不交核心数据意味着失去了知彼知己的可能。",
+              "pacing": "normal",
+              "timeline": {
+                "anchor": "第50天傍晚",
+                "start_time": "黄昏",
+                "end_time": "当晚",
+                "duration": "数小时",
+                "transition": "母巢围攻战刚结束的当天傍晚"
+              },
+              "state_anchor": {
+                "cultivation": "三级基因觉醒者",
+                "allies": [
+                  "苏晴",
+                  "阿蝉",
+                  "老周",
+                  "陈远"
+                ],
+                "injuries": [
+                  "右臂肌肉拉伤（战斗导致）"
+                ],
+                "location": "青藤据点地下指挥室",
+                "key_items": [
+                  "火种机甲（护盾30%能量）",
+                  "中级数据芯片",
+                  "沈氏基因密钥（第4枚）",
+                  "虫族晶核（低级）8枚",
+                  "虫族晶核（中级）2枚"
+                ],
+                "notes": "护盾能量低，需要时间恢复"
+              },
+              "enemies": [
+                {
+                  "name": "收割者卧底：零点",
+                  "faction": "harvester",
+                  "tier": "observer",
+                  "count": 1,
+                  "level": 10,
+                  "is_boss": true,
+                  "boss_id": "boss_zero",
+                  "status": "new",
+                  "context": "首次全息露面"
+                }
+              ],
+              "resource_ledger": [
+                {
+                  "item": "虫族晶核",
+                  "start": 8,
+                  "delta": 0,
+                  "end": 8,
+                  "reason": "未使用（低级）"
+                },
+                {
+                  "item": "虫族晶核",
+                  "start": 2,
+                  "delta": 0,
+                  "end": 2,
+                  "reason": "未使用（中级）"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "应对意外通讯",
+                  "location": "据点地下指挥室",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "阿蝉"
+                  ],
+                  "words": 1200,
+                  "tone": "震惊愤怒",
+                  "beats": [
+                    "战斗结束刚回到指挥室，老旧屏幕自动亮起，零点全息面容出现",
+                    "林野认出了他——记忆碎片中的技术人员"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "拒绝交易并评估风险",
+                  "location": "据点地下指挥室",
+                  "characters": [
+                    "林野",
+                    "苏晴",
+                    "阿蝉"
+                  ],
+                  "words": 1400,
+                  "tone": "坚决冷静",
+                  "beats": [
+                    "零点给出具体筹码：虫族母巢布防图和沈氏百年交易记录",
+                    "林野直接断电中断通讯",
+                    "阿蝉感知到远处有一道快速远离的异种生物能量"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_harvester_can_offer_real",
+                    "clue": "零点手中的虫族布防图可能是真实的，但动机显然是引诱林野交出核心数据",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ],
+                "resolved": [
+                  {
+                    "id": "myst_harvester_plant_before",
+                    "resolution": "零点就是2140年装置爆炸事件的执行者，并且通过外星生物技术保持了百年不老"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "历史真相支线",
+                  "stage": "payoff",
+                  "change": "收割者卧底身份彻底暴露，林野确认袭击是收割者与沈氏协同策划",
+                  "consequence": "零点成为林野的明确猎杀目标"
+                }
+              ]
+            },
+            {
+              "id": "P1-V2-C8",
+              "title": "磐石倒戈",
+              "summary": "沈明哲亲自带队前往青藤据点与林野展开面谈，双方在虫族高级统领的监视下暗中达成停战协议。沈明哲将3枚已获得的基因密钥及沈氏百年秘密备份资料交给林野，作为加入人类联盟的诚意。",
+              "characters": [
+                "林野",
+                "沈明哲",
+                "苏晴",
+                "阿蝉"
+              ],
+              "location": "青藤据点与磐石堡之间的中立废弃气象站",
+              "events": [
+                {
+                  "type": "status",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "沈明哲",
+                  "action": "move",
+                  "target": "中立气象站",
+                  "target_type": "location",
+                  "context": "携带3枚基因密钥和备份资料，仅带一名副手",
+                  "result": "沈明哲如约到达谈判地点，神情沉重"
+                },
+                {
+                  "type": "relationship",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "沈明哲",
+                  "action": "propose",
+                  "target": "正式停战加入联盟",
+                  "target_type": "relationship",
+                  "context": "废弃气象站会面室",
+                  "result": "沈明哲当场拿出3枚基因密钥放在桌上，承认百年前与虫族合作是走投无路的选择，声音沙哑，低头沉思良久后才开口"
+                },
+                {
+                  "type": "item",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "receive",
+                  "target": "3枚密钥和沈氏备份数据",
+                  "target_type": "item",
+                  "context": "谈判桌上",
+                  "result": "林野确认密钥真实，沈明哲提供的数据中包含虫族母巢内部的详细结构图"
+                },
+                {
+                  "type": "relationship",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "agree",
+                  "target": "临时联盟",
+                  "target_type": "relationship",
+                  "context": "气象站内",
+                  "result": "林野与沈明哲达成协议：沈氏为林野提供基因抑制剂生产线和运输车队，林野不再追究沈氏百年前个人恩怨（但保留追究收割者卧底的权利）"
+                }
+              ],
+              "state_change": "沈明哲正式加入人类联盟，林野获得3枚密钥和母巢结构图",
+              "conflict": "林野必须在不被虫族高级统领察觉的情况下完成联盟，并确保沈明哲不是双面间谍。",
+              "pacing": "normal",
+              "timeline": {
+                "anchor": "第52天深夜",
+                "start_time": "子夜",
+                "end_time": "凌晨3点",
+                "duration": "3小时",
+                "time_jump": true,
+                "previous_gap": "过了2天",
+                "transition": "林野与阿蝉利用异变者的屏蔽感知能力，在深夜绕过虫族巡逻与沈明哲碰面"
+              },
+              "state_anchor": {
+                "cultivation": "三级基因觉醒者",
+                "allies": [
+                  "苏晴",
+                  "阿蝉",
+                  "沈明哲（新盟友）"
+                ],
+                "location": "青藤据点地下暗道出口",
+                "key_items": [
+                  "火种机甲（能量已恢复至80%）",
+                  "中级数据芯片",
+                  "沈氏基因密钥1枚（自己获得）",
+                  "虫族晶核（低级）8枚",
+                  "虫族晶核（中级）2枚"
+                ],
+                "notes": "护盾能量恢复至75%"
+              },
+              "resource_ledger": [
+                {
+                  "item": "沈氏基因密钥",
+                  "start": 1,
+                  "delta": 3,
+                  "end": 4,
+                  "reason": "沈明哲交出3枚他此前获得的密钥"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "秘密前往中立气象站",
+                  "location": "地表废墟暗道",
+                  "characters": [
+                    "林野",
+                    "阿蝉"
+                  ],
+                  "words": 1200,
+                  "tone": "谨慎",
+                  "beats": [
+                    "从青藤据点地下暗道出发，阿蝉用异能感应周围10公里内的虫群波动，连续两次绕开夜间巡逻",
+                    "两人从地下暗道的出口进入气象站地下室"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "与沈明哲面谈",
+                  "location": "废弃气象站会面室",
+                  "characters": [
+                    "林野",
+                    "沈明哲"
+                  ],
+                  "words": 1800,
+                  "tone": "紧张但克制",
+                  "beats": [
+                    "沈明哲摊开3枚密钥，双手微微颤抖，承认当年他是被收割者卧底零点怂恿才参与了暗害计划，眼中满是悔恨",
+                    "林野当面检查密钥的真实性，确认它们都是沈氏基因激活的原装制品",
+                    "沈明哲提供一份标注了虫族母巢内部路线的立体地图"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_zero_where_now",
+                    "clue": "沈明哲提到，零点在2140年任务后藏身于地球深海基地，最近才浮出水面",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ],
+                "resolved": [
+                  {
+                    "id": "myst_shen_reversal_real",
+                    "resolution": "沈明哲用自己的密钥和地图证明了诚意，确认他的倒戈是真实的"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "势力整合支线",
+                  "stage": "payoff",
+                  "change": "沈明哲正式加入人类联盟，林野获得3枚额外的基因密钥",
+                  "consequence": "现在林野有4枚密钥在手，距离解锁完整星舰坐标还有5枚未找到"
+                }
+              ]
+            },
+            {
+              "id": "P1-V2-C9",
+              "title": "出征母巢",
+              "summary": "整合所有剩余战力，林野率领160名人类战士（包括苏晴、阿蝉、陈远、沈明哲亲自驾驶简化版火种机甲参战）反攻青藏高原虫族母巢。七天的行军与游击战中，林野累计吸收10枚低级晶核和2枚中级晶核，将基因稳定性推进至90%，临战触发了第三段记忆碎片：当年他在休眠仓关闭前的最后决定。",
+              "characters": [
+                "林野",
+                "苏晴",
+                "阿蝉",
+                "沈明哲",
+                "陈远",
+                "老周"
+              ],
+              "location": "青藏高原虫族母巢外围",
+              "events": [
+                {
+                  "type": "status",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "move",
+                  "target": "青藏高原虫族母巢",
+                  "target_type": "location",
+                  "context": "160名战士分三路行军，利用沈氏提供的路线图绕开虫族主力",
+                  "result": "联军耗时7天抵达母巢外围50公里处，途中遭遇虫族巡逻队6次，损失10名战士"
+                },
+                {
+                  "type": "premise",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "use",
+                  "target": "虫族晶核（10低级+2中级）",
+                  "target_type": "item",
+                  "context": "行军途中休息时逐次吸收",
+                  "result": "林野基因稳定性从80%提升至90%，解锁第三段记忆碎片"
+                },
+                {
+                  "type": "memory",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "discover",
+                  "target": "百年沉睡前的最后记忆",
+                  "target_type": "knowledge",
+                  "context": "行军营地深夜，记忆闪回",
+                  "result": "林野回忆起自己在2140年被封入休眠仓前，曾在火种机甲核心中预装了一段紧急自毁程序——用于防止核心数据落入收割者文明手中"
+                },
+                {
+                  "type": "gate",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "沈明哲",
+                  "action": "combat",
+                  "target": "虫族侦察队",
+                  "target_type": "status",
+                  "context": "行军最后一晚的侦察队遭遇战",
+                  "result": "沈明哲驾驶简化版火种机甲首次参与正面战斗，虽只能发挥30%战力但成功掩护了侦察队突围"
+                }
+              ],
+              "state_change": "联军抵达母巢外围，林野基因稳定性90%，触发自毁程序记忆",
+              "conflict": "林野必须带领疲惫的联军在虫族母巢外围站稳脚跟，同时消化记忆碎片中的自毁程序信息并决定是否公开。",
+              "pacing": "normal",
+              "timeline": {
+                "anchor": "第60天深夜",
+                "start_time": "行军第7天深夜",
+                "end_time": "于母巢外围扎营",
+                "duration": "7天行军",
+                "time_jump": true,
+                "previous_gap": "过了8天",
+                "transition": "谈判后林野用4天集结兵力、分配物资，随后即踏上远征"
+              },
+              "state_anchor": {
+                "cultivation": "三级基因觉醒者（基因稳定性90%）",
+                "allies": [
+                  "苏晴",
+                  "阿蝉",
+                  "沈明哲",
+                  "陈远",
+                  "老周（后方支援）"
+                ],
+                "injuries": [
+                  "左小腿轻微刀伤（行军途中被虫族抓伤）"
+                ],
+                "location": "青藏高原母巢外围营地",
+                "key_items": [
+                  "火种机甲（全部模块可用）",
+                  "沈氏基因密钥4枚",
+                  "中级数据芯片"
+                ],
+                "notes": "基因稳定性90%，接近4级突破门槛"
+              },
+              "enemies": [
+                {
+                  "name": "虫族工虫",
+                  "faction": "zerg",
+                  "tier": "drone",
+                  "count": 12,
+                  "level": 1,
+                  "context": "沿途6次巡逻遭遇综合"
+                },
+                {
+                  "name": "虫族作战兵虫",
+                  "faction": "zerg",
+                  "tier": "soldier",
+                  "count": 8,
+                  "level": 2,
+                  "context": "沿途6次巡逻遭遇综合"
+                },
+                {
+                  "name": "虫族初级虫将",
+                  "faction": "zerg",
+                  "tier": "elite",
+                  "count": 1,
+                  "level": 4,
+                  "context": "一次巡逻遭遇中的指挥"
+                }
+              ],
+              "resource_ledger": [
+                {
+                  "item": "虫族晶核",
+                  "start": 8,
+                  "delta": -8,
+                  "end": 0,
+                  "reason": "吸收用于提升基因稳定性（低级8枚，中级2枚）"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "行军途中指挥和吸收晶核",
+                  "location": "高原冰川峡谷",
+                  "characters": [
+                    "林野",
+                    "苏晴"
+                  ],
+                  "words": 1500,
+                  "tone": "疲惫坚定",
+                  "beats": [
+                    "从青藤据点出发后连续行军数日，每天傍晚林野用1小时逐次吸收晶核，身体表面浮现蓝色基因链纹路",
+                    "苏晴在旁警戒，期间击退一只落单的侦查兵虫"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "解锁第三段记忆碎片",
+                  "location": "营地帐篷",
+                  "characters": [
+                    "林野"
+                  ],
+                  "words": 1200,
+                  "tone": "内心震动",
+                  "beats": [
+                    "吸收最后一枚中级晶核时，记忆闪回画面：年轻林野在休眠仓关闭前的最后10秒，将一枚微型芯片嵌入机甲核心",
+                    "记忆碎片显示：这枚芯片封装了自毁程序的启动密钥"
+                  ]
+                },
+                {
+                  "order": 3,
+                  "pov": "林野",
+                  "goal": "与沈明哲会合制定最终进攻方案",
+                  "location": "母巢外围营地",
+                  "characters": [
+                    "林野",
+                    "沈明哲",
+                    "苏晴",
+                    "阿蝉"
+                  ],
+                  "words": 1400,
+                  "tone": "紧张决断",
+                  "beats": [
+                    "沈明哲展示母巢结构图：核心在巢穴地下500米，有一条备用通风管道可以潜入",
+                    "林野决定由自己、阿蝉和陈远组成精锐小队从通风管道潜入，其余人在地面佯攻牵制"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_self_destruct_code",
+                    "clue": "林野当年在机甲核心中预装了自毁程序——是否意味着他也预见了自己可能会被迫交出核心数据？",
+                    "horizon": "this_volume",
+                    "status": "open"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "火种远征主线",
+                  "stage": "hook",
+                  "change": "联军抵达母巢外围，林野基因稳定性推进至90%",
+                  "consequence": "下一章将展开最终决战"
+                }
+              ]
+            },
+            {
+              "id": "P1-V2-C10",
+              "title": "母巢决战",
+              "summary": "林野率精锐小队从通风管道潜入母巢核心区，与高级虫族女王正面战斗。林野在重伤状态下吸收母巢核心晶核，突破至5级基因，解锁终极星舰形态并用基因修复波覆盖全球。虫族残余势力因母巢被毁选择临时结盟。",
+              "characters": [
+                "林野",
+                "阿蝉",
+                "陈远",
+                "虫族女王",
+                "虫族高级统领",
+                "虫族女王（精神体）",
+                "地面上所有人"
+              ],
+              "location": "青藏高原虫族母巢核心区",
+              "events": [
+                {
+                  "type": "status",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "move",
+                  "target": "母巢核心区",
+                  "target_type": "location",
+                  "context": "通过备用通风管道潜入，阿蝉用异变者感知能力避开了三道虫族防线",
+                  "result": "林野、阿蝉、陈远三人成功抵达核心区外围"
+                },
+                {
+                  "type": "gate",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "虫族女王",
+                  "action": "discover",
+                  "target": "林野潜入",
+                  "target_type": "status",
+                  "context": "核心区入口的精神感应屏障",
+                  "result": "虫族女王通过精神力屏障感应到林野，派高级统领率领25只兵虫和1名虫将封锁入口"
+                },
+                {
+                  "type": "gate",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "combat",
+                  "target": "虫族守卫部队",
+                  "target_type": "status",
+                  "context": "母巢核心区入口大厅",
+                  "result": "阿蝉和陈远拼死掩护，林野重伤情况下击杀高级统领和所有虫族守卫，陈远力竭昏迷"
+                },
+                {
+                  "type": "premise",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "acquire",
+                  "target": "虫族母巢核心晶核",
+                  "target_type": "item",
+                  "context": "核心区深处，裂开的巨型晶核悬浮在母巢能量池上方",
+                  "result": "林野在重伤状态下将手伸入晶核，吸收母巢唯一核心晶核，基因稳定性飙升至100%"
+                },
+                {
+                  "type": "premise",
+                  "characters": null,
+                  "subject": "",
+                  "change": "",
+                  "actor": "林野",
+                  "action": "transform",
+                  "target": "基因5级：文明火种者",
+                  "target_type": "skill",
+                  "context": "核心晶核吸收完毕，机甲自动变形为星舰形态",
+                  "result": "林野突破至5级，火种机甲完全解锁，释放覆盖全球的基因修复波，修复所有人类因虫族长期辐射导致的基因缺陷"
+                }
+              ],
+              "state_change": "林野突破至5级，母巢被毁，全球基因修复波生效，虫族残部结盟",
+              "conflict": "林野必须在虫族女王和高级统领的双重拦截下抵达核心晶核，并承受吸收晶核的致命风险。",
+              "pacing": "fast",
+              "timeline": {
+                "anchor": "第61天正午",
+                "start_time": "正午潜入",
+                "end_time": "次日黎明",
+                "duration": "约15小时",
+                "previous_gap": "紧接上章，休息一夜后的次日"
+              },
+              "state_anchor": {
+                "cultivation": "三级基因觉醒者（基因稳定性90%）",
+                "allies": [
+                  "阿蝉",
+                  "陈远",
+                  "沈明哲",
+                  "苏晴（地面佯攻）"
+                ],
+                "injuries": [
+                  "左小腿伤口（已愈合）"
+                ],
+                "location": "母巢外围通风管道入口",
+                "key_items": [
+                  "火种机甲（全部模块）",
+                  "沈氏基因密钥4枚"
+                ],
+                "notes": "基因稳定性90%，准备突破；虫族高级统领残血，甲壳碎裂"
+              },
+              "enemies": [
+                {
+                  "name": "虫族高级统领",
+                  "faction": "zerg",
+                  "tier": "queen",
+                  "count": 1,
+                  "level": 8,
+                  "is_boss": true,
+                  "boss_id": "boss_high_commander_01",
+                  "status": "engaged",
+                  "context": "核心区入口拦截，残血"
+                },
+                {
+                  "name": "虫族作战兵虫",
+                  "faction": "zerg",
+                  "tier": "soldier",
+                  "count": 20,
+                  "level": 2,
+                  "context": "入口虫群"
+                },
+                {
+                  "name": "虫族初级虫将",
+                  "faction": "zerg",
+                  "tier": "elite",
+                  "count": 1,
+                  "level": 4,
+                  "context": "辅助高级统领"
+                },
+                {
+                  "name": "虫族女王（母巢核心）",
+                  "faction": "zerg",
+                  "tier": "queen_mother",
+                  "count": 1,
+                  "level": 12,
+                  "is_boss": true,
+                  "boss_id": "boss_queen_mother",
+                  "status": "new",
+                  "context": "母巢核心区最终守护者"
+                }
+              ],
+              "resource_ledger": [
+                {
+                  "item": "虫族晶核",
+                  "start": 0,
+                  "delta": 0,
+                  "end": 0,
+                  "reason": "本章未获取，核心战结束后晶核被吸收"
+                },
+                {
+                  "item": "母巢核心晶核",
+                  "start": 0,
+                  "delta": 1,
+                  "end": 1,
+                  "reason": "吸收母巢唯一核心晶核，突破至5级"
+                }
+              ],
+              "scenes": [
+                {
+                  "order": 1,
+                  "pov": "林野",
+                  "goal": "潜入母巢核心区",
+                  "location": "备用通风管道",
+                  "characters": [
+                    "林野",
+                    "阿蝉",
+                    "陈远"
+                  ],
+                  "words": 1400,
+                  "tone": "压抑危险",
+                  "beats": [
+                    "从母巢外围营地出发，三人沿着狭小的管道匍匐前进，中途避开一只巡逻的工虫",
+                    "阿蝉通过水晶感知提前发现精神感应屏障，三人贴紧管壁避开扫描"
+                  ]
+                },
+                {
+                  "order": 2,
+                  "pov": "林野",
+                  "goal": "击败高级统领并进入核心",
+                  "location": "核心区入口大厅",
+                  "characters": [
+                    "林野",
+                    "阿蝉",
+                    "陈远",
+                    "虫族高级统领"
+                  ],
+                  "words": 2000,
+                  "tone": "激烈牺牲",
+                  "beats": [
+                    "阿蝉用异能扛住虫群第一波冲击，陈远从侧面引爆炸药拖延虫将",
+                    "林野在虫群中连斩二十多只兵虫后与高级统领一对一搏杀",
+                    "林野利用护盾残存能量硬抗一击，反手用近战模块贯穿统领头部"
+                  ]
+                },
+                {
+                  "order": 3,
+                  "pov": "林野",
+                  "goal": "吸收母巢核心晶核并释放基因修复波",
+                  "location": "核心区能量池",
+                  "characters": [
+                    "林野",
+                    "虫族女王（精神体）",
+                    "地面上所有人"
+                  ],
+                  "words": 2000,
+                  "tone": "壮烈神圣",
+                  "beats": [
+                    "巨型晶核悬浮在能量池中心，林野跃入池中抓住晶核",
+                    "虫族女王的精神体试图侵蚀林野意识，用百年前人类背叛的记忆动摇他",
+                    "林野咬牙顶住精神攻击，将晶核能量完全吸入体内，基因链彻底重组",
+                    "火种机甲变形为星舰形态，冲破母巢穹顶升空",
+                    "林野启动基因修复波，蓝白色的能量脉冲覆盖全球；地上所有受伤的人类体内基因缺陷在30秒内得到修复"
+                  ]
+                }
+              ],
+              "mysteries": {
+                "planted": [
+                  {
+                    "id": "myst_new_world_order",
+                    "clue": "基因修复波修复了所有人类基因缺陷，但同时使一部分异变者体内的虫族基因加速衰退——阿蝉出现了明显的虚弱症状",
+                    "horizon": "next_volume",
+                    "status": "open"
+                  }
+                ],
+                "resolved": [
+                  {
+                    "id": "myst_mother_hive_precision",
+                    "resolution": "变异晶核的金属结构是收割者文明改造虫族的实验——他们用技术让虫族加速进化，便于收割战利品"
+                  },
+                  {
+                    "id": "myst_self_destruct_code",
+                    "resolution": "林野在核心晶核吸收时触及自毁程序代码，发现那段代码实际上是一个被封印的备用防御协议，在母巢被毁后自动激活了基因修复波"
+                  }
+                ]
+              },
+              "storyline_advances": [
+                {
+                  "storyline_name": "火种远征主线",
+                  "stage": "payoff",
+                  "change": "林野突破至5级，虫族母巢被毁，人类基因缺陷修复",
+                  "consequence": "人类重新获得生育健康后代的能力；虫族残余势力在母巢被毁后放弃抵抗，选择结盟对抗收割者文明"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

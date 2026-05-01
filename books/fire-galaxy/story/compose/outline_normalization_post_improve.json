@@ -1,0 +1,14 @@
+{
+  "changes": [
+    {
+      "path": "P1-V2-C6.characters",
+      "action": "sync_event_character",
+      "value": "苏晴"
+    },
+    {
+      "path": "P1-V2-C7.characters",
+      "action": "sync_scene_character",
+      "value": "三名侦察兵"
+    }
+  ]
+}

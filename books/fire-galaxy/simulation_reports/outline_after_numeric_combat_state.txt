@@ -1,0 +1,126 @@
+DSL Simulator Report
+====================
+
+DSL File: story\rpg\01_outline.rpg
+Total Issues: 30
+
+1. [info/pacing] 
+   建议添加明确的结尾章节
+   Suggestion: 给故事一个完整的收束
+
+2. [info/conflict] 
+   缺少明确的反派角色
+   Suggestion: 考虑添加一个反派角色来增加冲突
+
+3. [info/character] 
+   缺少导师/引路人角色
+   Suggestion: 考虑添加一个导师角色来帮助主角成长
+
+4. [info/description] P1-V1-C1 step 8 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+5. [info/description] P1-V1-C3 step 12 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+6. [info/description] P1-V1-C4 step 12 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+7. [info/description] P1-V1-C5 step 11 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+8. [info/description] P1-V1-C5 step 12 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+9. [info/description] P1-V1-C7 step 11 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+10. [info/description] P1-V1-C7 step 12 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+11. [info/description] P1-V2-C2 step 12 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+12. [info/growth] P1-V2-C2 step 12 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+13. [info/description] P1-V2-C5 step 15 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+14. [info/description] P1-V2-C5 step 16 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+15. [info/growth] P1-V2-C5 step 16 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+16. [info/description] P1-V2-C7 step 15 
+   战斗事件缺少叙事性结果描述
+   Suggestion: 添加战斗结束后发生了什么（受伤、领悟、获得战利品等）
+
+17. [info/growth] P1-V2-C7 step 15 
+   战斗后缺少成长/收获
+   Suggestion: 添加战斗后的感悟、突破、获得经验/技能/道具等
+
+18. [info/description] P1-V2-C9 step 12 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+19. [info/description] P1-V2-C9 step 16 
+   获取事件建议添加结果描述
+   Suggestion: 描述获得了什么以及获得后的感受
+
+20. [info/character] P1-V2-C10 step 15 
+   关系事件建议明确涉及的角色
+   Suggestion: 指明是哪个角色的关系发生变化
+
+21. [info/character] 
+   NPC '沈怀义' 只在一个章节中出现
+   Suggestion: 考虑让角色在其他章节中也有出现，增强存在感
+
+22. [info/character] 
+   NPC '苏晴' 只在一个章节中出现
+   Suggestion: 考虑让角色在其他章节中也有出现，增强存在感
+
+23. [info/character] 
+   NPC '铁鳞' 只在一个章节中出现
+   Suggestion: 考虑让角色在其他章节中也有出现，增强存在感
+
+24. [info/conflict] 
+   故事中冲突事件较少
+   Suggestion: 考虑添加更多冲突来增加故事张力
+
+25. [info/growth] 
+   故事较长(20章)但主角成长较少(等级2)，建议增加突破情节
+   Suggestion: 考虑在中期添加境界突破、能力觉醒等成长高潮
+
+26. [info/conflict] P1-V1-C4 step 9 
+   storyline movement for '百年真相' has no visible cost, pressure, or consequence
+   Suggestion: Add a soft consequence or pressure note when the chapter changes an arc, so outline improve knows what got harder afterward.
+
+27. [info/conflict] P1-V1-C4 step 9 
+   storyline movement for '百年真相' has no visible cost, pressure, or consequence
+   Suggestion: Add a soft consequence or pressure note when the chapter changes an arc, so outline improve knows what got harder afterward.
+
+28. [info/conflict] P1-V1-C8 step 12 
+   storyline movement for '沈氏的消息传递渠道' has no visible cost, pressure, or consequence
+   Suggestion: Add a soft consequence or pressure note when the chapter changes an arc, so outline improve knows what got harder afterward.
+
+29. [info/conflict] P1-V1-C8 step 12 
+   storyline movement for '沈氏的消息传递渠道' has no visible cost, pressure, or consequence
+   Suggestion: Add a soft consequence or pressure note when the chapter changes an arc, so outline improve knows what got harder afterward.
+
+30. [info/plot_hole] 
+   存在 15 个未回收的伏笔/剧情线 (提出 22, 回收 7)
+   Suggestion: 确认这些伏笔是否计划在后续章节中回收，或添加对应的 resolved state_delta
+
