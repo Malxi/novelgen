@@ -3,6 +3,7 @@ package dsl
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -79,7 +80,7 @@ func (na *NovelgenAdapter) toSetupDSL(dsl *DSL) (*DSL, error) {
 	}
 
 	// Baseline player shell for simulators.
-	dsl.Characters.Player = na.inferBasePlayer()
+	dsl.Characters.Player = na.inferBasePlayer(setup)
 
 	// Setup-level world rules and resources are the canonical numerical
 	// constraints that chapter DSL can later spend, violate, or reference.
@@ -118,8 +119,15 @@ func (na *NovelgenAdapter) toOutlineDSL(dsl *DSL) (*DSL, error) {
 		(&ModelAdapter{setup: setup}).buildStorylineContracts(dsl)
 	}
 
+	// Outline DSL should still carry enough setup-derived protagonist data for
+	// simulation before craft has produced rich character sheets.
+	dsl.Characters.Player = na.inferBasePlayer(setup)
+
 	// Convert characters (placeholders only)
 	for name, char := range na.project.Characters {
+		if isProtagonistRole(char.RoleInStory) {
+			continue
+		}
 		npc := NPC{
 			ID:                sanitizeID(name),
 			Name:              name,
@@ -129,6 +137,7 @@ func (na *NovelgenAdapter) toOutlineDSL(dsl *DSL) (*DSL, error) {
 		}
 		dsl.Characters.NPCs = append(dsl.Characters.NPCs, npc)
 	}
+	na.addOutlineCharacterPlaceholders(dsl)
 
 	// Convert locations (placeholders only)
 	for name, loc := range na.project.Locations {
@@ -156,6 +165,47 @@ func (na *NovelgenAdapter) toOutlineDSL(dsl *DSL) (*DSL, error) {
 	}
 
 	return dsl, nil
+}
+
+func (na *NovelgenAdapter) addOutlineCharacterPlaceholders(dsl *DSL) {
+	if dsl == nil || dsl.Characters == nil {
+		return
+	}
+	seen := map[string]bool{}
+	if dsl.Characters.Player != nil {
+		seen[strings.TrimSpace(dsl.Characters.Player.Name)] = true
+		seen[strings.TrimSpace(dsl.Characters.Player.ID)] = true
+	}
+	for _, npc := range dsl.Characters.NPCs {
+		seen[strings.TrimSpace(npc.Name)] = true
+		seen[strings.TrimSpace(npc.ID)] = true
+	}
+
+	for _, part := range na.project.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				for _, rawName := range chapter.Characters {
+					name := canonicalCharacterName(rawName)
+					if name == "" || seen[name] || isGenericProtagonistName(name) {
+						continue
+					}
+					id := coalesceID(sanitizeID(name), fmt.Sprintf("npc_%02d", len(dsl.Characters.NPCs)+1))
+					if seen[id] {
+						continue
+					}
+					dsl.Characters.NPCs = append(dsl.Characters.NPCs, NPC{
+						ID:                id,
+						Name:              name,
+						Role:              "supporting",
+						IsPlaceholder:     true,
+						PlaceholderSource: "outline",
+					})
+					seen[name] = true
+					seen[id] = true
+				}
+			}
+		}
+	}
 }
 
 func (na *NovelgenAdapter) loadStorySetup() *models.StorySetup {
@@ -255,18 +305,7 @@ func buildStructuredSetupRules(setup *models.StorySetup) []Rule {
 			"type=" + sanitizeRuleValue(storyline.Type),
 			fmt.Sprintf("importance=%d", storyline.Importance),
 		}
-		for key, value := range map[string]string{
-			"desire":        storyline.Desire,
-			"opposition":    storyline.Opposition,
-			"stakes":        storyline.Stakes,
-			"turn":          storyline.Turn,
-			"payoff":        storyline.Payoff,
-			"open_question": storyline.OpenQuestion,
-		} {
-			if strings.TrimSpace(value) != "" {
-				effectParts = append(effectParts, key+"="+sanitizeRuleValue(value))
-			}
-		}
+		effectParts = appendStorylineRuleFields(effectParts, storyline)
 		if len(storyline.PressurePoints) > 0 {
 			effectParts = append(effectParts, "pressure_points="+sanitizeRuleValue(strings.Join(storyline.PressurePoints, " | ")))
 		}
@@ -277,6 +316,29 @@ func buildStructuredSetupRules(setup *models.StorySetup) []Rule {
 		})
 	}
 	return rules
+}
+
+func appendStorylineRuleFields(effectParts []string, storyline models.Storyline) []string {
+	ordered := []struct {
+		key   string
+		value string
+	}{
+		{"scope", storyline.Scope},
+		{"payoff_style", storyline.PayoffStyle},
+		{"setup_role", storyline.SetupRole},
+		{"desire", storyline.Desire},
+		{"opposition", storyline.Opposition},
+		{"stakes", storyline.Stakes},
+		{"turn", storyline.Turn},
+		{"payoff", storyline.Payoff},
+		{"open_question", storyline.OpenQuestion},
+	}
+	for _, field := range ordered {
+		if strings.TrimSpace(field.value) != "" {
+			effectParts = append(effectParts, field.key+"="+sanitizeRuleValue(field.value))
+		}
+	}
+	return effectParts
 }
 
 func sanitizeRuleValue(value string) string {
@@ -402,22 +464,36 @@ func (na *NovelgenAdapter) inferPowerSystem(setup *models.StorySetup) string {
 	return strings.Join(parts, " + ")
 }
 
-func (na *NovelgenAdapter) inferBasePlayer() *Player {
+func (na *NovelgenAdapter) inferBasePlayer(setup *models.StorySetup) *Player {
+	player := inferPlayerFromSetup(setup)
+
 	// Prefer explicitly tagged protagonist in craft.
 	for name, c := range na.project.Characters {
-		role := strings.ToLower(strings.TrimSpace(c.RoleInStory))
-		if role == "protagonist" || strings.Contains(role, "涓昏") {
-			return &Player{
-				ID:    sanitizeID(name),
-				Name:  name,
-				Class: inferClassFromCharacter(c),
-				Stats: inferStatsFromCharacter(c),
+		if isProtagonistRole(c.RoleInStory) {
+			craftPlayer := playerFromNovelgenCharacter(name, c)
+			if player == nil {
+				return craftPlayer
 			}
+			if !isGenericProtagonistName(craftPlayer.Name) {
+				player.ID = craftPlayer.ID
+				player.Name = craftPlayer.Name
+			}
+			player.Stats = craftPlayer.Stats
+			if len(craftPlayer.Skills) > 0 {
+				player.Skills = craftPlayer.Skills
+			}
+			if len(craftPlayer.Abilities) > 0 && len(player.Abilities) == 0 {
+				player.Abilities = craftPlayer.Abilities
+			}
+			if len(craftPlayer.Affiliations) > 0 {
+				player.Affiliations = craftPlayer.Affiliations
+			}
+			return player
 		}
 	}
 
 	// Fallback: first character by sorted key for deterministic behavior.
-	if len(na.project.Characters) > 0 {
+	if player == nil && len(na.project.Characters) > 0 {
 		keys := make([]string, 0, len(na.project.Characters))
 		for k := range na.project.Characters {
 			keys = append(keys, k)
@@ -425,12 +501,10 @@ func (na *NovelgenAdapter) inferBasePlayer() *Player {
 		sort.Strings(keys)
 		k := keys[0]
 		c := na.project.Characters[k]
-		return &Player{
-			ID:    sanitizeID(k),
-			Name:  k,
-			Class: inferClassFromCharacter(c),
-			Stats: inferStatsFromCharacter(c),
-		}
+		return playerFromNovelgenCharacter(k, c)
+	}
+	if player != nil {
+		return player
 	}
 
 	return &Player{
@@ -439,6 +513,240 @@ func (na *NovelgenAdapter) inferBasePlayer() *Player {
 		Class: "adventurer",
 		Stats: Stats{STR: 10, AGI: 10, INT: 10, VIT: 10, HP: 100, MP: 50},
 	}
+}
+
+func playerFromNovelgenCharacter(id string, char rpg.NovelgenCharacter) *Player {
+	name := strings.TrimSpace(char.Name)
+	if name == "" {
+		name = id
+	}
+	return &Player{
+		ID:           coalesceID(sanitizeID(id), "protagonist"),
+		Name:         name,
+		Description:  char.Background,
+		Age:          parseAge(char.Age),
+		Gender:       char.Gender,
+		Race:         char.Race,
+		Background:   char.Background,
+		Personality:  char.Personality,
+		Motivation:   char.Motivation,
+		Abilities:    char.Abilities,
+		Affiliations: char.Affiliations,
+		RoleInStory:  coalesceString(char.RoleInStory, "protagonist"),
+		Voice:        char.Voice,
+		Class:        inferClassFromCharacter(char),
+		Skills:       char.Skills,
+		Stats:        inferStatsFromCharacter(char),
+	}
+}
+
+func inferPlayerFromSetup(setup *models.StorySetup) *Player {
+	if setup == nil {
+		return nil
+	}
+	name := inferProtagonistNameFromSetup(setup)
+	if name == "" {
+		name = "主角"
+	}
+	background := firstSentences(setup.Premise, 2)
+	motivation := inferPrimaryMotivation(setup)
+	personality := inferPersonalityFromSetup(setup)
+	class := "adventurer"
+	if setupMentions(setup, "机甲") {
+		class = "mecha_pilot"
+	}
+
+	return &Player{
+		ID:          coalesceID(sanitizeID(name), "protagonist"),
+		Name:        name,
+		Description: background,
+		Background:  background,
+		Personality: personality,
+		Motivation:  motivation,
+		RoleInStory: "protagonist",
+		Class:       class,
+		Skills:      inferPlayerSkillsFromSetup(setup),
+		Abilities:   inferPlayerAbilitiesFromSetup(setup),
+		Stats: Stats{
+			STR: 12,
+			AGI: 11,
+			INT: 14,
+			VIT: 12,
+			HP:  120,
+			MP:  60,
+		},
+	}
+}
+
+func inferProtagonistNameFromSetup(setup *models.StorySetup) string {
+	text := setup.Premise + "\n"
+	for _, storyline := range setup.Storylines {
+		text += storyline.Description + "\n" + storyline.Desire + "\n"
+	}
+	patterns := []*regexp.Regexp{
+		regexp.MustCompile(`(?:主角|研发工程师|工程师|研发人员|适配者)([\p{Han}]{2,4})`),
+		regexp.MustCompile(`([\p{Han}]{2,4})要`),
+		regexp.MustCompile(`([\p{Han}]{2,4})在`),
+	}
+	for _, pattern := range patterns {
+		for _, match := range pattern.FindAllStringSubmatch(text, -1) {
+			if len(match) > 1 && isLikelyCharacterName(match[1]) {
+				return match[1]
+			}
+		}
+	}
+	return ""
+}
+
+func isLikelyCharacterName(value string) bool {
+	value = strings.TrimSpace(value)
+	if len([]rune(value)) < 2 || len([]rune(value)) > 4 {
+		return false
+	}
+	noise := []string{"公元", "人类", "虫族", "沈氏", "主角", "火种", "机甲", "基因", "文明", "地球", "据点", "故事"}
+	for _, word := range noise {
+		if value == word || strings.Contains(value, word) {
+			return false
+		}
+	}
+	return true
+}
+
+func inferPrimaryMotivation(setup *models.StorySetup) string {
+	best := ""
+	bestImportance := -1
+	for _, storyline := range setup.Storylines {
+		desire := strings.TrimSpace(storyline.Desire)
+		if desire == "" {
+			continue
+		}
+		if storyline.Importance > bestImportance {
+			bestImportance = storyline.Importance
+			best = desire
+		}
+	}
+	if best != "" {
+		return best
+	}
+	return firstSentences(setup.Theme, 1)
+}
+
+func inferPersonalityFromSetup(setup *models.StorySetup) []string {
+	re := regexp.MustCompile(`性格([^，。；;]+)`)
+	if match := re.FindStringSubmatch(setup.Premise); len(match) > 1 {
+		traits := splitChineseList(match[1])
+		if len(traits) > 0 {
+			return traits
+		}
+	}
+	return []string{"沉稳务实", "重情重义", "求生意志强"}
+}
+
+func inferPlayerSkillsFromSetup(setup *models.StorySetup) []string {
+	skills := []string{}
+	if setupMentions(setup, "机甲") {
+		skills = append(skills, "火种机甲同步")
+	}
+	if setupMentions(setup, "基因") {
+		skills = append(skills, "基因适配控制")
+	}
+	if setupMentions(setup, "数据库") || setupMentions(setup, "蓝图") {
+		skills = append(skills, "旧文明技术解码")
+	}
+	if len(skills) == 0 {
+		skills = append(skills, "快速学习")
+	}
+	return skills
+}
+
+func inferPlayerAbilitiesFromSetup(setup *models.StorySetup) []string {
+	abilities := []string{}
+	for _, premise := range setup.Premises {
+		text := premise.Name + premise.Category + premise.Description
+		if strings.Contains(text, "主角") || strings.Contains(text, "林野") || strings.Contains(text, "机甲") || strings.Contains(text, "基因") {
+			abilities = append(abilities, strings.TrimSpace(premise.Name))
+		}
+		if len(abilities) >= 4 {
+			break
+		}
+	}
+	return abilities
+}
+
+func setupMentions(setup *models.StorySetup, needle string) bool {
+	if strings.Contains(setup.Premise, needle) || strings.Contains(setup.Theme, needle) {
+		return true
+	}
+	for _, rule := range setup.Rules {
+		if strings.Contains(rule, needle) {
+			return true
+		}
+	}
+	for _, premise := range setup.Premises {
+		if strings.Contains(premise.Name, needle) || strings.Contains(premise.Category, needle) || strings.Contains(premise.Description, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+func firstSentences(text string, max int) string {
+	text = strings.TrimSpace(text)
+	if text == "" || max <= 0 {
+		return text
+	}
+	parts := strings.FieldsFunc(text, func(r rune) bool {
+		return r == '。' || r == '.' || r == '！' || r == '!'
+	})
+	var out []string
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		out = append(out, part)
+		if len(out) >= max {
+			break
+		}
+	}
+	if len(out) == 0 {
+		return text
+	}
+	return strings.Join(out, "。") + "。"
+}
+
+func splitChineseList(text string) []string {
+	raw := strings.FieldsFunc(text, func(r rune) bool {
+		return r == '、' || r == ',' || r == '，' || r == ';' || r == '；'
+	})
+	var out []string
+	for _, item := range raw {
+		item = strings.TrimSpace(item)
+		if item != "" {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+func canonicalCharacterName(raw string) string {
+	name := strings.TrimSpace(raw)
+	for _, marker := range []string{"（", "(", "【", "["} {
+		if idx := strings.Index(name, marker); idx > 0 {
+			name = strings.TrimSpace(name[:idx])
+		}
+	}
+	return name
+}
+
+func isProtagonistRole(role string) bool {
+	role = strings.ToLower(strings.TrimSpace(role))
+	return role == "protagonist" || role == "主角" || strings.Contains(role, "主角")
+}
+
+func isGenericProtagonistName(name string) bool {
+	name = strings.ToLower(strings.TrimSpace(name))
+	return name == "" || name == "主角" || name == "protagonist" || name == "player"
 }
 
 func (na *NovelgenAdapter) buildAttributeSystem(setup *models.StorySetup) *AttributeSystem {
@@ -690,6 +998,24 @@ func (na *NovelgenAdapter) convertOutlineToStoryline(dsl *DSL) error {
 					stepNum++
 				}
 
+				for _, step := range buildStoryMysterySteps(chapter.ID, chapter.Mysteries) {
+					step.Order = stepNum
+					objective.Steps = append(objective.Steps, step)
+					stepNum++
+				}
+
+				for _, delta := range buildStoryStateAnchorDeltas(chapter) {
+					objective.Steps = append(objective.Steps, Step{
+						Order:       stepNum,
+						Description: delta.Note,
+						Event: Event{
+							Type:        "status",
+							StateDeltas: []StateDelta{delta},
+						},
+					})
+					stepNum++
+				}
+
 				na.addStoryOutlineEnemies(dsl, chapter.Enemies)
 				for _, event := range chapter.Events {
 					step := na.convertEventToStep(event, chapter.Enemies, stepNum)
@@ -714,18 +1040,6 @@ func (na *NovelgenAdapter) convertOutlineToStoryline(dsl *DSL) error {
 								Delta:  entry.Delta,
 								Note:   entry.Reason,
 							}},
-						},
-					})
-					stepNum++
-				}
-
-				for _, delta := range buildStoryStateAnchorDeltas(chapter) {
-					objective.Steps = append(objective.Steps, Step{
-						Order:       stepNum,
-						Description: delta.Note,
-						Event: Event{
-							Type:        "status",
-							StateDeltas: []StateDelta{delta},
 						},
 					})
 					stepNum++
@@ -996,6 +1310,53 @@ func buildStoryStorylineAdvanceDeltas(chapterID string, advance rpg.StorylineAdv
 	return deltas
 }
 
+func buildStoryMysterySteps(chapterID string, mysteries rpg.StoryChapterMysteries) []Step {
+	var steps []Step
+	for _, planted := range mysteries.Planted {
+		id := strings.TrimSpace(planted.ID)
+		if id == "" {
+			continue
+		}
+		clue := strings.TrimSpace(planted.Clue)
+		steps = append(steps, Step{
+			Description: fmt.Sprintf("mystery %s planted: %s", id, clue),
+			Event: Event{
+				Type: "mystery",
+				StateDeltas: []StateDelta{{
+					Target: id,
+					Kind:   "plot_thread",
+					Field:  "mystery",
+					To:     "raised",
+					Unit:   strings.TrimSpace(planted.Horizon),
+					Cost:   strings.TrimSpace(planted.Status),
+					Note:   clue,
+				}},
+			},
+		})
+	}
+	for _, resolved := range mysteries.Resolved {
+		id := strings.TrimSpace(resolved.ID)
+		if id == "" {
+			continue
+		}
+		resolution := strings.TrimSpace(resolved.Resolution)
+		steps = append(steps, Step{
+			Description: fmt.Sprintf("mystery %s resolved: %s", id, resolution),
+			Event: Event{
+				Type: "mystery",
+				StateDeltas: []StateDelta{{
+					Target: id,
+					Kind:   "plot_thread",
+					Field:  "mystery",
+					To:     "resolved",
+					Note:   resolution,
+				}},
+			},
+		})
+	}
+	return steps
+}
+
 func buildStoryStateAnchorDeltas(chapter rpg.StoryChapter) []StateDelta {
 	var deltas []StateDelta
 	if strings.TrimSpace(chapter.StateAnchor.Cultivation) != "" {
@@ -1025,6 +1386,29 @@ func buildStoryStateAnchorDeltas(chapter rpg.StoryChapter) []StateDelta {
 			Note:   "chapter start injuries: " + strings.Join(chapter.StateAnchor.Injuries, ", "),
 		})
 	}
+	if len(chapter.StateAnchor.Allies) > 0 {
+		deltas = append(deltas, StateDelta{
+			Target: "protagonist",
+			Kind:   "ally",
+			Field:  "active",
+			To:     strings.Join(chapter.StateAnchor.Allies, ", "),
+			Note:   "chapter start allies: " + strings.Join(chapter.StateAnchor.Allies, ", "),
+		})
+	}
+	if len(chapter.StateAnchor.KeyItems) > 0 {
+		deltas = append(deltas, StateDelta{
+			Target: "protagonist",
+			Kind:   "item",
+			Field:  "key_items",
+			To:     strings.Join(chapter.StateAnchor.KeyItems, ", "),
+			Note:   "chapter start key items: " + strings.Join(chapter.StateAnchor.KeyItems, ", "),
+		})
+	}
+	deltas = append(deltas, buildStructuredProgressionDeltas(
+		chapter.StateAnchor.Cultivation,
+		chapter.StateAnchor.KeyItems,
+		chapter.StateAnchor.Injuries,
+	)...)
 	return deltas
 }
 

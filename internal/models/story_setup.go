@@ -28,6 +28,9 @@ type Storyline struct {
 	Description    string   `json:"description" prompt:"Description" desc:"故事线描述，2-4句话"`
 	Type           string   `json:"type" prompt:"Type" desc:"故事线类型"`                   // main, subplot, character_arc, etc.
 	Importance     int      `json:"importance" prompt:"Importance" desc:"故事线重要性，1-10"` // 1-10, 10 being most important
+	Scope          string   `json:"scope,omitempty" prompt:"Scope" desc:"可选，高层作用域：opening、volume、book、series；不要写具体章节"`
+	PayoffStyle    string   `json:"payoff_style,omitempty" prompt:"Payoff Style" desc:"可选，兑现方式：immediate、staged_reveal、slow_burn、final_turn 等高层方式"`
+	SetupRole      string   `json:"setup_role,omitempty" prompt:"Setup Role" desc:"可选，这条线在故事机器中的高层作用：生存钩子、长期悬念、势力压力、成长驱动等"`
 	Desire         string   `json:"desire,omitempty" prompt:"Desire" desc:"这条故事线中角色或势力最想得到什么"`
 	Opposition     string   `json:"opposition,omitempty" prompt:"Opposition" desc:"阻止这条故事线推进的人、规则、困境或代价"`
 	Stakes         string   `json:"stakes,omitempty" prompt:"Stakes" desc:"如果失败会失去什么，或成功会改变什么"`

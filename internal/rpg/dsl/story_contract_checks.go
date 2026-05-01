@@ -12,6 +12,9 @@ type storylineContract struct {
 	Name           string
 	Type           string
 	Importance     int
+	Scope          string
+	PayoffStyle    string
+	SetupRole      string
 	Desire         string
 	Opposition     string
 	Stakes         string
@@ -71,6 +74,9 @@ func (s *Simulator) storylineContracts() []storylineContract {
 			Name:           name,
 			Type:           fields["type"],
 			Importance:     atoiSafe(fields["importance"]),
+			Scope:          fields["scope"],
+			PayoffStyle:    fields["payoff_style"],
+			SetupRole:      fields["setup_role"],
 			Desire:         fields["desire"],
 			Opposition:     fields["opposition"],
 			Stakes:         fields["stakes"],
@@ -93,6 +99,9 @@ func (s *Simulator) checkSetupStorylineContracts(contracts []storylineContract) 
 			contract.Payoff,
 			contract.OpenQuestion,
 			contract.PressurePoints,
+			contract.Scope,
+			contract.PayoffStyle,
+			contract.SetupRole,
 		)
 		if texture >= 3 {
 			continue
@@ -171,10 +180,15 @@ func (s *Simulator) checkOutlineStorylineCoverage(contracts []storylineContract,
 			continue
 		}
 
-		if contract.Payoff != "" && !hasStage(matched, "payoff", "resolved", "completed", "completion") {
+		if contract.Payoff != "" && !hasStage(matched, "payoff", "resolved", "completed", "completion") && requiresImmediatePayoff(contract) {
 			s.addIssue(IssuePlotHole, SeverityInfo, "", 0,
 				fmt.Sprintf("storyline '%s' promises a payoff but outline DSL has no payoff/resolved movement", contract.Name),
-				"Either plan a later payoff chapter with storyline_advances.stage=payoff, or soften/remove the setup payoff promise.")
+				"Either plan a payoff chapter with storyline_advances.stage=payoff, or mark the setup storyline as staged/long-scope if it should only be seeded here.")
+		}
+		if contract.Payoff != "" && !hasStage(matched, "hook", "pressure", "reveal", "reversal", "twist", "progress", "payoff", "resolved", "completed", "completion") {
+			s.addIssue(IssuePlotHole, SeverityInfo, "", 0,
+				fmt.Sprintf("storyline '%s' promises a payoff but outline DSL has no staged movement", contract.Name),
+				"Add a hook, pressure, reveal, or progress movement now; save the final payoff for the proper scale.")
 		}
 		if contract.Turn != "" && hasStage(matched, "reversal", "twist") && !hasEarlierStageBefore(matched, []string{"reversal", "twist"}, "pressure", "reveal", "hook") {
 			s.addIssue(IssuePlotHole, SeverityInfo, "", 0,
@@ -192,6 +206,25 @@ func (s *Simulator) checkOutlineStorylineCoverage(contracts []storylineContract,
 				prev = movement.Index
 			}
 		}
+	}
+}
+
+func requiresImmediatePayoff(contract storylineContract) bool {
+	scope := strings.ToLower(strings.TrimSpace(contract.Scope))
+	style := strings.ToLower(strings.TrimSpace(contract.PayoffStyle))
+	if style == "immediate" || style == "direct" || style == "same_volume" || style == "current_volume" {
+		return true
+	}
+	if style == "staged_reveal" || style == "slow_burn" || style == "final_turn" || style == "series_payoff" {
+		return false
+	}
+	switch scope {
+	case "current", "current_volume", "this_volume", "volume", "opening":
+		return true
+	case "book", "series", "multi_volume", "long_arc", "long":
+		return false
+	default:
+		return false
 	}
 }
 

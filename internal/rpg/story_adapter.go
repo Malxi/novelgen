@@ -85,8 +85,10 @@ type StoryOutlineScene struct {
 
 // StoryMysteryPlanted 新埋下的线索
 type StoryMysteryPlanted struct {
-	ID   string `json:"id"`
-	Clue string `json:"clue"`
+	ID      string `json:"id"`
+	Clue    string `json:"clue"`
+	Horizon string `json:"horizon,omitempty"`
+	Status  string `json:"status,omitempty"`
 }
 
 // StoryMysteryResolved 回收的伏笔

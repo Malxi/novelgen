@@ -14,6 +14,9 @@ func TestStorylineTextureJSONRoundTrip(t *testing.T) {
 			Description:    "A dormant signal wakes old enemies.",
 			Type:           "main",
 			Importance:     9,
+			Scope:          "series",
+			PayoffStyle:    "staged_reveal",
+			SetupRole:      "long mystery engine",
 			Desire:         "Find who sent the signal.",
 			Opposition:     "The fleet wants to bury the evidence.",
 			Stakes:         "The colony falls if the signal spreads.",
@@ -37,6 +40,9 @@ func TestStorylineTextureJSONRoundTrip(t *testing.T) {
 	storyline := got.Storylines[0]
 	if storyline.Desire != setup.Storylines[0].Desire {
 		t.Fatalf("desire = %q, want %q", storyline.Desire, setup.Storylines[0].Desire)
+	}
+	if storyline.Scope != "series" || storyline.PayoffStyle != "staged_reveal" || storyline.SetupRole != "long mystery engine" {
+		t.Fatalf("storyline contract hints not preserved: %#v", storyline)
 	}
 	if len(storyline.PressurePoints) != 2 || storyline.PressurePoints[1] != "fleet quarantine" {
 		t.Fatalf("pressure_points = %#v", storyline.PressurePoints)

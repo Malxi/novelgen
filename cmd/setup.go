@@ -170,6 +170,8 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate story setup with AI: %w", err)
 	}
 
+	logQualityGateResult("setup", runSetupQualityGate(setup))
+
 	// Save story setup
 	if err := saveStorySetup(setup); err != nil {
 		return fmt.Errorf("failed to save story setup: %w", err)
@@ -233,6 +235,8 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 		logger.Error("Failed to regenerate story setup: %v", err)
 		return fmt.Errorf("failed to regenerate story setup: %w", err)
 	}
+
+	logQualityGateResult("setup", runSetupQualityGate(setup))
 
 	// Save story setup
 	if err := saveStorySetup(setup); err != nil {
@@ -325,6 +329,8 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 		}
 		setup = &improveResult.Setup
 
+		logQualityGateResult("setup", runSetupQualityGate(setup))
+
 		// Save improved setup
 		if err := saveStorySetup(setup); err != nil {
 			return fmt.Errorf("failed to save improved story setup: %w", err)
@@ -386,6 +392,8 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 					len(crossIssues), len(crossWarnings))
 			}
 		}
+
+		logQualityGateResult("setup", runSetupQualityGate(setup))
 
 		// Save improved setup
 		if err := saveStorySetup(setup); err != nil {
@@ -617,6 +625,18 @@ func parseStorySetupFromMarkdown(content string) (*models.StorySetup, error) {
 				typ = strings.TrimPrefix(typ, "- **Type**:")
 				typ = strings.TrimPrefix(typ, "- Type:")
 				currentStoryline.Type = strings.TrimSpace(typ)
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Scope**:") || strings.HasPrefix(trimmed, "- Scope:") {
+				currentStoryline.Scope = trimMarkdownField(trimmed, "Scope")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Payoff Style**:") || strings.HasPrefix(trimmed, "- Payoff Style:") {
+				currentStoryline.PayoffStyle = trimMarkdownField(trimmed, "Payoff Style")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Setup Role**:") || strings.HasPrefix(trimmed, "- Setup Role:") {
+				currentStoryline.SetupRole = trimMarkdownField(trimmed, "Setup Role")
 				continue
 			}
 			if strings.HasPrefix(trimmed, "- **Importance**:") || strings.HasPrefix(trimmed, "- Importance:") {
@@ -869,6 +889,15 @@ func formatStorylines(storylines []models.Storyline) string {
 		result.WriteString(fmt.Sprintf("\n### %s\n", s.Name))
 		result.WriteString(fmt.Sprintf("- **Type**: %s\n", s.Type))
 		result.WriteString(fmt.Sprintf("- **Importance**: %d/10\n", s.Importance))
+		if s.Scope != "" {
+			result.WriteString(fmt.Sprintf("- **Scope**: %s\n", s.Scope))
+		}
+		if s.PayoffStyle != "" {
+			result.WriteString(fmt.Sprintf("- **Payoff Style**: %s\n", s.PayoffStyle))
+		}
+		if s.SetupRole != "" {
+			result.WriteString(fmt.Sprintf("- **Setup Role**: %s\n", s.SetupRole))
+		}
 		result.WriteString(fmt.Sprintf("- **Description**: %s\n", s.Description))
 		if s.Desire != "" {
 			result.WriteString(fmt.Sprintf("- **Desire**: %s\n", s.Desire))
@@ -979,6 +1008,8 @@ func runSetupCheck(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to parse setup: %w", err)
 	}
 
+	logQualityGateResult("setup", runSetupQualityGate(&setup))
+
 	issues, warnings, suggestions := 0, 0, 0
 
 	// Check required fields
@@ -1023,6 +1054,9 @@ func runSetupCheck(cmd *cobra.Command, args []string) error {
 			storyline.Turn,
 			storyline.Payoff,
 			storyline.OpenQuestion,
+			storyline.Scope,
+			storyline.PayoffStyle,
+			storyline.SetupRole,
 		} {
 			if strings.TrimSpace(value) != "" {
 				texture++

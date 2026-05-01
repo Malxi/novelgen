@@ -369,6 +369,30 @@ func (p *Parser) parsePlayer() (*Player, error) {
 			player.PlaceholderSource = p.toString(value)
 		case "class":
 			player.Class = p.toString(value)
+		case "description":
+			player.Description = p.toString(value)
+		case "age":
+			if age, ok := p.toInt(value); ok {
+				player.Age = age
+			}
+		case "gender":
+			player.Gender = p.toString(value)
+		case "race":
+			player.Race = p.toString(value)
+		case "background":
+			player.Background = p.toString(value)
+		case "personality":
+			player.Personality = p.toStringSlice(value)
+		case "motivation":
+			player.Motivation = p.toString(value)
+		case "abilities":
+			player.Abilities = p.toStringSlice(value)
+		case "affiliations":
+			player.Affiliations = p.toStringSlice(value)
+		case "role_in_story":
+			player.RoleInStory = p.toString(value)
+		case "voice":
+			player.Voice = p.toString(value)
 		case "skills":
 			player.Skills = p.toStringSlice(value)
 		default:

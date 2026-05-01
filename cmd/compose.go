@@ -16,7 +16,6 @@ import (
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
 	"novelgen/internal/rpg"
-	"novelgen/internal/rpg/dsl"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -123,12 +122,23 @@ Examples:
 	RunE: runComposeCheck,
 }
 
+var composeNormalizeCmd = &cobra.Command{
+	Use:   "normalize",
+	Short: "Apply deterministic outline cleanups without calling AI",
+	Long: `Apply deterministic, schema-preserving cleanup rules to the current outline.
+
+This does not call AI. It canonicalizes state anchors, syncs generated markdown,
+and writes a normalization report under story/compose/.`,
+	RunE: runComposeNormalize,
+}
+
 func init() {
 	composeCheckCmd.Flags().BoolVar(&composeCheckJSONFlag, "json", false, "Output results as JSON")
 	composeCmd.AddCommand(composeGenCmd)
 	composeCmd.AddCommand(composeRegenCmd)
 	composeCmd.AddCommand(composeImproveCmd)
 	composeCmd.AddCommand(composeCheckCmd)
+	composeCmd.AddCommand(composeNormalizeCmd)
 
 	composeGenCmd.Flags().BoolVar(&composeHierarchicalFlag, "hierarchical", false, "Use hierarchical generation (better quality, slower)")
 	composeGenCmd.Flags().BoolVar(&composeOneShotFlag, "one-shot", false, "Try one-shot generation first (falls back to hierarchical on failure)")
@@ -241,6 +251,8 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to generate outline with AI: %w", err)
 	}
+
+	logQualityGateResult("outline", runOutlineQualityGate(setup, outline))
 
 	// Save outline
 	if err := outline.Save(outlinePath); err != nil {
@@ -386,6 +398,8 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("improvement failed: %w", err)
 	}
 
+	logQualityGateResult("outline", runOutlineQualityGate(setup, outline))
+
 	// Save improved outline
 	if err := outline.Save(outlinePath); err != nil {
 		return fmt.Errorf("failed to save improved outline: %w", err)
@@ -421,6 +435,16 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 	var storyOutline rpg.StoryOutline
 	if err := json.Unmarshal(data, &storyOutline); err != nil {
 		return fmt.Errorf("failed to parse outline: %w", err)
+	}
+
+	var modelOutline models.Outline
+	if err := json.Unmarshal(data, &modelOutline); err == nil {
+		setupPath := filepath.Join("story", "setup", "story_setup.json")
+		var setupForGate *models.StorySetup
+		if loadedSetup, loadErr := models.LoadStorySetup(setupPath); loadErr == nil {
+			setupForGate = loadedSetup
+		}
+		logQualityGateResult("outline", runOutlineQualityGate(setupForGate, &modelOutline))
 	}
 
 	validator := rpg.NewOutlineValidator(&storyOutline)
@@ -525,6 +549,53 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func runComposeNormalize(cmd *cobra.Command, args []string) error {
+	logger.Section("NOVELGEN COMPOSE NORMALIZE")
+
+	outlinePath := filepath.Join("story", "compose", "outline.json")
+	outline, err := models.LoadOutline(outlinePath)
+	if err != nil {
+		return fmt.Errorf("failed to load outline at %s: %w", outlinePath, err)
+	}
+
+	report := models.NormalizeOutline(outline)
+	if !report.Changed() {
+		fmt.Println("✓ Outline already normalized")
+		return nil
+	}
+
+	if err := backupOutlineFiles(); err != nil {
+		return err
+	}
+
+	data, err := json.MarshalIndent(outline, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal normalized outline: %w", err)
+	}
+	if err := os.WriteFile(outlinePath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write normalized outline: %w", err)
+	}
+
+	mdPath := filepath.Join("story", "compose", "outline.md")
+	if err := createOutlineMarkdown(outline, mdPath); err != nil {
+		return fmt.Errorf("failed to save outline markdown: %w", err)
+	}
+
+	reportPath := filepath.Join("story", "compose", "outline_normalization_manual.json")
+	reportData, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal normalization report: %w", err)
+	}
+	if err := os.WriteFile(reportPath, reportData, 0644); err != nil {
+		return fmt.Errorf("failed to write normalization report: %w", err)
+	}
+
+	fmt.Printf("✓ Applied %d deterministic outline cleanup(s)\n", len(report.Changes))
+	fmt.Printf("✓ Updated %s and %s\n", outlinePath, mdPath)
+	fmt.Printf("✓ Report saved to %s\n", reportPath)
+	return nil
+}
+
 func validateSetupOutlineCross(setup *models.StorySetup, outline *rpg.StoryOutline) (issues, warnings []string) {
 	// Collect defined faction tiers from setup premises
 	setupFactions := make(map[string]map[string]bool) // faction → tier → true
@@ -532,12 +603,13 @@ func validateSetupOutlineCross(setup *models.StorySetup, outline *rpg.StoryOutli
 		if p.Category == "" {
 			continue
 		}
-		faction := p.Category
-		if setupFactions[faction] == nil {
-			setupFactions[faction] = make(map[string]bool)
-		}
-		for _, stage := range p.Progression {
-			setupFactions[faction][stage.Name] = true
+		for _, faction := range setupFactionAliases(p.Category) {
+			if setupFactions[faction] == nil {
+				setupFactions[faction] = make(map[string]bool)
+			}
+			for tier := range setupPremiseTierAliases(p, faction) {
+				setupFactions[faction][tier] = true
+			}
 		}
 	}
 
@@ -810,6 +882,78 @@ func savePartialOutline(outline *models.Outline, path string) error {
 	return nil
 }
 
+func setupFactionAliases(category string) []string {
+	category = strings.TrimSpace(category)
+	if category == "" {
+		return nil
+	}
+	seen := map[string]bool{}
+	var aliases []string
+	add := func(value string) {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			return
+		}
+		seen[value] = true
+		aliases = append(aliases, value)
+	}
+	add(category)
+	for _, part := range strings.FieldsFunc(category, func(r rune) bool {
+		return r == '/' || r == '\\' || r == '|' || r == ',' || r == '，' || r == ';' || r == '；' || r == ' '
+	}) {
+		add(part)
+	}
+	return aliases
+}
+
+func setupPremiseTierAliases(p models.Premise, faction string) map[string]bool {
+	tiers := map[string]bool{}
+	add := func(value string) {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			tiers[value] = true
+		}
+	}
+
+	for _, stage := range p.Progression {
+		add(stage.Name)
+		text := stage.Name + " " + stage.Description + " " + stage.Requirements
+		switch {
+		case strings.Contains(text, "工虫"):
+			add("drone")
+		case strings.Contains(text, "兵虫"):
+			add("soldier")
+		case strings.Contains(text, "初级虫将"):
+			add("captain")
+		case strings.Contains(text, "高级虫统领"):
+			add("commander")
+		case strings.Contains(text, "母巢"):
+			add("queen")
+			add("hive")
+		}
+		if strings.Contains(text, "机甲") {
+			add("mech")
+		}
+	}
+
+	switch strings.ToLower(strings.TrimSpace(faction)) {
+	case "zerg":
+		add("drone")
+		add("soldier")
+		add("captain")
+		add("commander")
+		add("queen")
+		add("hive")
+	case "shen":
+		add("agent")
+		add("informant")
+		add("soldier")
+		add("mech")
+	}
+
+	return tiers
+}
+
 // printProgressStatus prints the current generation progress
 func printProgressStatus(outline *models.Outline, structure models.StoryStructure) {
 	totalVolumes := structure.TargetParts * structure.TargetVolumes
@@ -984,6 +1128,36 @@ func getRegenPrompt() (string, error) {
 func createOutlineMarkdown(outline *models.Outline, path string) error {
 	// Use the ToMarkdown method to ensure all fields are included
 	return os.WriteFile(path, []byte(outline.ToMarkdown()), 0644)
+}
+
+func backupOutlineFiles() error {
+	outlinePath := filepath.Join("story", "compose", "outline.json")
+	outlineData, err := os.ReadFile(outlinePath)
+	if err != nil {
+		return fmt.Errorf("failed to read outline for backup: %w", err)
+	}
+
+	backupDir := filepath.Join("story", "compose", "backups")
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		return fmt.Errorf("failed to create backup directory: %w", err)
+	}
+
+	timestamp := time.Now().Format("20060102_150405")
+	backupPath := filepath.Join(backupDir, fmt.Sprintf("outline_%s.json", timestamp))
+	if err := os.WriteFile(backupPath, outlineData, 0644); err != nil {
+		return fmt.Errorf("failed to backup outline: %w", err)
+	}
+
+	mdPath := filepath.Join("story", "compose", "outline.md")
+	if mdData, err := os.ReadFile(mdPath); err == nil {
+		mdBackupPath := filepath.Join(backupDir, fmt.Sprintf("outline_%s.md", timestamp))
+		if err := os.WriteFile(mdBackupPath, mdData, 0644); err != nil {
+			return fmt.Errorf("failed to backup outline markdown: %w", err)
+		}
+	}
+
+	logger.Info("Outline backed up to: %s", backupPath)
+	return nil
 }
 
 func splitLinesAndTrim(s string) []string {
@@ -1167,45 +1341,19 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 	applyOutlineNormalization(improvedOutline, "post_improve")
 	*outline = *improvedOutline
 
-	// Enrich with DSL simulation + outline validator feedback
+	// Enrich with direct model checks + DSL simulation + outline validator feedback.
 	if review != nil {
-		hasCritical := false
-		hasDSLFeedback := false
-
-		// DSL simulation
-		dslBridge := dsl.NewSimulationBridge()
-		dslAdapter := dsl.NewModelAdapter(setup, improvedOutline, nil, nil, nil)
-		if dslIssues, simErr := dslAdapter.Simulate(dsl.PhaseOutline); simErr == nil && len(dslIssues) > 0 {
-			dslBridge.MergeIntoReview(dslIssues, review)
-			logger.Info("DSL simulation found %d issues for outline", len(dslIssues))
-			hasDSLFeedback = true
-			for _, iss := range dslIssues {
-				if iss.Severity == dsl.SeverityCritical {
-					hasCritical = true
-					break
-				}
-			}
-		}
-
-		// Outline validator (timeline, state_anchor, structure, etc.)
-		validatorIssues := runOutlineValidatorOnModel(improvedOutline)
-		if len(validatorIssues) > 0 {
-			review.Suggestions = append(review.Suggestions, validatorIssues...)
-			logger.Info("Outline validator added %d suggestions to review", len(validatorIssues))
-			for _, iss := range validatorIssues {
-				if iss.Priority == models.PriorityHigh {
-					hasCritical = true
-					logger.Info("Validator found critical issue: [%s] %s", iss.Category, iss.Issue)
-					break
-				}
-			}
+		gate := runOutlineQualityGate(setup, improvedOutline)
+		if len(gate.Suggestions) > 0 {
+			review.Suggestions = append(review.Suggestions, gate.Suggestions...)
+			logger.Info("Quality gate added %d suggestions to review", len(gate.Suggestions))
 		}
 
 		// Feed DSL simulation feedback back into outline improve. Critical
 		// findings force repair; softer story-contract findings get one direct
 		// repair pass so the simulation loop can actually improve the outline.
-		if (hasCritical || hasDSLFeedback) && maxIterations > 0 {
-			logger.Info("DSL/validator feedback detected, running partial repair pass with enriched review")
+		if gate.Blocking && maxIterations > 0 {
+			logger.Info("Quality gate blocking feedback detected, running partial repair pass with enriched review")
 			repairOutput, repairErr := agent.RepairByReview(ctx, improvedOutline, review, setup)
 			if repairErr == nil {
 				improvedOutline = repairOutput

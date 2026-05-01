@@ -431,6 +431,16 @@ func (a *ComposeAgent) ImproveVolume(ctx context.Context, input ComposeImproveVo
 	if len(output.Volume.Chapters) == 0 {
 		return ComposeImproveVolumeOutput{}, fmt.Errorf("improved volume has no chapters")
 	}
+	if expected := len(input.Volume.Chapters); expected > 0 && len(output.Volume.Chapters) != expected {
+		logger.Warn("Improved volume returned %d chapters, expected %d; preserving original chapter slots", len(output.Volume.Chapters), expected)
+		if len(output.Volume.Chapters) > expected {
+			output.Volume.Chapters = output.Volume.Chapters[:expected]
+		}
+		for len(output.Volume.Chapters) < expected {
+			idx := len(output.Volume.Chapters)
+			output.Volume.Chapters = append(output.Volume.Chapters, input.Volume.Chapters[idx])
+		}
+	}
 
 	// Validate each chapter
 	for i, chapter := range output.Volume.Chapters {
@@ -495,11 +505,15 @@ func (a *ComposeAgent) buildSetupBrief(setup *models.StorySetup) string {
 	if len(setup.Storylines) > 0 {
 		b.WriteString("\nStorylines:\n")
 		for _, sl := range setup.Storylines {
-			b.WriteString(fmt.Sprintf("- %s (%s, importance %d): %s\n",
-				sl.Name, sl.Type, sl.Importance, clipForPrompt(sl.Description, 260)))
+			scopeNote := compactStorylineScope(sl)
+			b.WriteString(fmt.Sprintf("- %s (%s%s, importance %d): %s\n",
+				sl.Name, sl.Type, scopeNote, sl.Importance, clipForPrompt(sl.Description, 260)))
+			if sl.SetupRole != "" {
+				b.WriteString(fmt.Sprintf("  Role: %s\n", clipForPrompt(sl.SetupRole, 160)))
+			}
 			if sl.Desire != "" || sl.Opposition != "" || sl.Payoff != "" {
-				b.WriteString(fmt.Sprintf("  Desire: %s | Opposition: %s | Payoff: %s\n",
-					clipForPrompt(sl.Desire, 160), clipForPrompt(sl.Opposition, 160), clipForPrompt(sl.Payoff, 160)))
+				b.WriteString(fmt.Sprintf("  Desire: %s | Opposition: %s | Payoff%s: %s\n",
+					clipForPrompt(sl.Desire, 160), clipForPrompt(sl.Opposition, 160), compactPayoffStyle(sl), clipForPrompt(sl.Payoff, 160)))
 			}
 		}
 	}
@@ -524,6 +538,27 @@ func (a *ComposeAgent) buildSetupBrief(setup *models.StorySetup) string {
 	}
 
 	return b.String()
+}
+
+func compactStorylineScope(sl models.Storyline) string {
+	parts := make([]string, 0, 2)
+	if strings.TrimSpace(sl.Scope) != "" {
+		parts = append(parts, "scope "+strings.TrimSpace(sl.Scope))
+	}
+	if strings.TrimSpace(sl.PayoffStyle) != "" {
+		parts = append(parts, "payoff "+strings.TrimSpace(sl.PayoffStyle))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return ", " + strings.Join(parts, ", ")
+}
+
+func compactPayoffStyle(sl models.Storyline) string {
+	if strings.TrimSpace(sl.PayoffStyle) == "" {
+		return ""
+	}
+	return " [" + strings.TrimSpace(sl.PayoffStyle) + "]"
 }
 
 func (a *ComposeAgent) buildVolumeImproveContext(outline *models.Outline, partID, volumeID string) string {
@@ -729,7 +764,7 @@ func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.
 
 		// Step 2: Identify volumes that need improvement from suggestions
 		logger.Section("Step 2: Improving Volumes")
-		volumesToImprove := a.identifyVolumesToImprove(&reviewOutput.Result)
+		volumesToImprove := a.identifyVolumesToImprove(&currentOutline, &reviewOutput.Result)
 
 		if len(volumesToImprove) == 0 {
 			logger.Info("No specific volumes identified for improvement, improving all volumes")
@@ -772,7 +807,7 @@ func (a *ComposeAgent) RepairByReview(ctx context.Context, outline *models.Outli
 		return outline, nil
 	}
 
-	volumesToImprove := a.identifyVolumesToImprove(reviewResult)
+	volumesToImprove := a.identifyVolumesToImprove(outline, reviewResult)
 	if len(volumesToImprove) == 0 {
 		logger.Info("No specific volume targets in review; repairing all volumes")
 		volumesToImprove = allVolumeIndices(outline)
@@ -936,41 +971,76 @@ func (a *ComposeAgent) saveImproveProgress(progress *ImproveProgress, path strin
 }
 
 // identifyVolumesToImprove identifies which volumes need improvement based on suggestions
-func (a *ComposeAgent) identifyVolumesToImprove(review *models.ReviewResult) [][2]int {
-	volumeMap := make(map[string][2]int)
-
-	// Parse suggestion target IDs to identify volumes
-	for _, suggestion := range review.Suggestions {
-		// Target ID format: P1-V1-C1 or P1-V1
-		parts := strings.Split(suggestion.TargetID, "-")
-		if len(parts) >= 2 {
-			// Extract volume ID (e.g., "P1-V1")
-			volumeID := parts[0] + "-" + parts[1]
-			if _, exists := volumeMap[volumeID]; !exists {
-				// Parse part and volume indices from ID
-				var partIdx, volIdx int
-				n, err := fmt.Sscanf(volumeID, "P%d-V%d", &partIdx, &volIdx)
-				if err != nil || n != 2 {
-					logger.Warn("Failed to parse volume ID '%s', skipping", volumeID)
-					continue
-				}
-				// Validate indices are positive
-				if partIdx <= 0 || volIdx <= 0 {
-					logger.Warn("Invalid volume ID '%s' (part=%d, vol=%d), skipping", volumeID, partIdx, volIdx)
-					continue
-				}
-				volumeMap[volumeID] = [2]int{partIdx - 1, volIdx - 1} // Convert to 0-based
-			}
-		}
+func (a *ComposeAgent) identifyVolumesToImprove(outline *models.Outline, review *models.ReviewResult) [][2]int {
+	if outline == nil || review == nil {
+		return nil
 	}
 
-	// Convert map to slice
+	seen := make(map[[2]int]bool)
 	var result [][2]int
-	for _, indices := range volumeMap {
+
+	for _, suggestion := range review.Suggestions {
+		indices, ok := resolveVolumeTarget(outline, suggestion.TargetID)
+		if !ok {
+			continue
+		}
+		if seen[indices] {
+			continue
+		}
+		seen[indices] = true
 		result = append(result, indices)
 	}
 
 	return result
+}
+
+func resolveVolumeTarget(outline *models.Outline, targetID string) ([2]int, bool) {
+	targetID = strings.TrimSpace(targetID)
+	if targetID == "" || strings.EqualFold(targetID, "global") {
+		return [2]int{}, false
+	}
+
+	for partIdx, part := range outline.Parts {
+		for volIdx, volume := range part.Volumes {
+			if targetID == volume.ID || strings.HasPrefix(targetID, volume.ID+"-") {
+				return [2]int{partIdx, volIdx}, true
+			}
+		}
+	}
+
+	parts := strings.Split(targetID, "-")
+	if len(parts) < 2 {
+		return [2]int{}, false
+	}
+	volumeID := parts[0] + "-" + parts[1]
+
+	var partNum, volNum int
+	n, err := fmt.Sscanf(volumeID, "P%d-V%d", &partNum, &volNum)
+	if err != nil || n != 2 {
+		logger.Warn("Failed to parse volume ID '%s', skipping", volumeID)
+		return [2]int{}, false
+	}
+	if partNum <= 0 || volNum <= 0 {
+		logger.Warn("Invalid volume ID '%s' (part=%d, vol=%d), skipping", volumeID, partNum, volNum)
+		return [2]int{}, false
+	}
+
+	partIdx := partNum - 1
+	volIdx := volNum - 1
+	if partIdx >= 0 && partIdx < len(outline.Parts) && volIdx >= 0 && volIdx < len(outline.Parts[partIdx].Volumes) {
+		return [2]int{partIdx, volIdx}, true
+	}
+
+	// Single-part projects are often described by users and LLM review as
+	// "volume 2"; tolerate malformed targets like P2-V2 by resolving the
+	// volume ordinal against the only part instead of silently skipping it.
+	if len(outline.Parts) == 1 && volIdx >= 0 && volIdx < len(outline.Parts[0].Volumes) {
+		logger.Warn("Interpreting malformed single-part volume target '%s' as '%s'", volumeID, outline.Parts[0].Volumes[volIdx].ID)
+		return [2]int{0, volIdx}, true
+	}
+
+	logger.Warn("Skipping invalid volume repair target %s", volumeID)
+	return [2]int{}, false
 }
 
 // filterReviewForVolume filters review results for a specific volume
@@ -1215,22 +1285,99 @@ func (a *ComposeAgent) GenerateChaptersForVolume(ctx context.Context, input Comp
 		return ComposeChaptersOutput{}, err
 	}
 
-	// Validate chapter count
-	if len(output.Chapters) != input.ChaptersPerVol {
-		return ComposeChaptersOutput{}, fmt.Errorf("AI generated %d chapters, but %d were requested",
-			len(output.Chapters), input.ChaptersPerVol)
+	chapters := append([]models.Chapter(nil), output.Chapters...)
+	if len(chapters) > input.ChaptersPerVol {
+		logger.Warn("AI generated %d chapters, but %d were requested; truncating extras", len(chapters), input.ChaptersPerVol)
+		chapters = chapters[:input.ChaptersPerVol]
+	}
+
+	const maxAttempts = 3
+	for attempt := 2; len(chapters) < input.ChaptersPerVol && attempt <= maxAttempts; attempt++ {
+		missing := input.ChaptersPerVol - len(chapters)
+		logger.Warn("AI generated %d/%d chapters; requesting %d missing chapter(s) (attempt %d/%d)",
+			len(chapters), input.ChaptersPerVol, missing, attempt, maxAttempts)
+
+		continueInput := input
+		continueInput.ChaptersPerVol = missing
+		continueInput.Volume.Chapters = append([]models.Chapter(nil), chapters...)
+		continueInput.OutlineContext = buildChapterContinuationContext(input.OutlineContext, chapters, input.ChaptersPerVol)
+
+		continueParams := InvokeParams{
+			Skills:  []string{"compose-chapters"},
+			Command: fmt.Sprintf("continue this volume by generating only the remaining %d chapters; do not repeat existing chapters", missing),
+		}
+
+		var continued ComposeChaptersOutput
+		if err := a.base.Execute(ctx, continueParams, continueInput, &continued); err != nil {
+			return ComposeChaptersOutput{}, err
+		}
+		before := len(chapters)
+		chapters = appendNewChapters(chapters, continued.Chapters)
+		if len(chapters) > input.ChaptersPerVol {
+			logger.Warn("Continuation generated too many chapters; truncating to requested %d", input.ChaptersPerVol)
+			chapters = chapters[:input.ChaptersPerVol]
+		}
+		if len(chapters) == before {
+			return ComposeChaptersOutput{}, fmt.Errorf("AI generated %d chapters, but %d were requested; continuation returned no new chapters",
+				len(chapters), input.ChaptersPerVol)
+		}
+	}
+
+	if len(chapters) != input.ChaptersPerVol {
+		return ComposeChaptersOutput{}, fmt.Errorf("AI generated %d chapters after retries, but %d were requested",
+			len(chapters), input.ChaptersPerVol)
 	}
 
 	// Validate each chapter
-	for i, chapter := range output.Chapters {
+	for i, chapter := range chapters {
 		if err := a.validateChapterOutput(&chapter); err != nil {
 			return ComposeChaptersOutput{}, fmt.Errorf("chapter %d invalid: %w", i+1, err)
 		}
 	}
 
+	output.Chapters = chapters
 	logger.Info("Generated %d chapters for volume", len(output.Chapters))
 
 	return output, nil
+}
+
+func buildChapterContinuationContext(baseContext string, existing []models.Chapter, totalRequested int) string {
+	var b strings.Builder
+	b.WriteString(baseContext)
+	if baseContext != "" && !strings.HasSuffix(baseContext, "\n") {
+		b.WriteString("\n")
+	}
+	b.WriteString("\n=== EXISTING GENERATED CHAPTERS IN THIS VOLUME ===\n")
+	b.WriteString(fmt.Sprintf("The volume must contain %d chapters total. The following %d chapter(s) already exist; continue after them and return only missing chapters.\n",
+		totalRequested, len(existing)))
+	for _, chapter := range existing {
+		b.WriteString(formatChapterBrief(chapter))
+	}
+	return b.String()
+}
+
+func appendNewChapters(existing []models.Chapter, candidates []models.Chapter) []models.Chapter {
+	seen := make(map[string]bool, len(existing))
+	for _, chapter := range existing {
+		seen[chapterIdentity(chapter)] = true
+	}
+	for _, chapter := range candidates {
+		key := chapterIdentity(chapter)
+		if key != "" && seen[key] {
+			continue
+		}
+		existing = append(existing, chapter)
+		seen[key] = true
+	}
+	return existing
+}
+
+func chapterIdentity(chapter models.Chapter) string {
+	key := strings.ToLower(strings.TrimSpace(chapter.Title)) + "|" + strings.ToLower(strings.TrimSpace(chapter.Summary))
+	if key == "|" {
+		return ""
+	}
+	return key
 }
 
 // GenerateOutlineHierarchical generates a complete outline using hierarchical approach

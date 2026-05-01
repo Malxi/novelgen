@@ -90,8 +90,10 @@ type OutlineScene struct {
 
 // MysteryPlanted declares a new clue or mystery introduced in this chapter.
 type MysteryPlanted struct {
-	ID   string `json:"id" md:"id" desc:"谜题唯一ID，如 myst_why_woken"`
-	Clue string `json:"clue" md:"clue" desc:"本章揭示的线索，如：星核日志显示三天前有人远程激活了休眠舱"`
+	ID      string `json:"id" md:"id" desc:"谜题唯一ID，如 myst_why_woken"`
+	Clue    string `json:"clue" md:"clue" desc:"本章揭示的线索，如：星核日志显示三天前有人远程激活了休眠舱"`
+	Horizon string `json:"horizon,omitempty" md:"horizon" desc:"可选：this_volume/next_volume/book/series，用于区分本卷回收还是长线伏笔"`
+	Status  string `json:"status,omitempty" md:"status" desc:"可选：open/deferred，长线伏笔可标 deferred"`
 }
 
 // MysteryResolved declares a previously planted mystery resolved in this chapter.

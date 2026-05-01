@@ -10,14 +10,24 @@
 
 ## Storyline Texture Guidance
 
-Storylines may include optional dramatic hints: `desire`, `opposition`, `stakes`, `turn`, `payoff`, `open_question`, and `pressure_points`.
+Storylines may include optional high-level contract hints: `scope`, `payoff_style`, `setup_role`, `desire`, `opposition`, `stakes`, `turn`, `payoff`, `open_question`, and `pressure_points`.
 
 Use these fields only when they sharpen the story. Prefer the 2-4 hints that create real dramatic pressure, reader curiosity, or later payoff. Do not fill every field mechanically, do not force every storyline into the same structure, and leave room for later agents to invent better turns when the outline develops.
+
+Keep `scope`, `payoff_style`, and `setup_role` high-level:
+- `scope`: opening, volume, book, or series. Do not name concrete chapter numbers.
+- `payoff_style`: immediate, staged_reveal, slow_burn, final_turn, etc.
+- `setup_role`: what this arc does for the story engine, such as survival hook, long mystery, faction pressure, or growth driver.
+
+These fields should clarify how later outlines should treat a promise. A series-scale staged reveal does not need immediate resolution; it only needs occasional pressure, clues, or partial reveals.
 
 ## DSL Simulation Contract Guidance
 
 Generate setup data that can be pressure-tested by DSL simulation:
-- `storylines` are long-running story contracts: each important arc should expose what someone wants, what opposes it, what is at stake, and what question/payoff keeps readers moving.
+- Keep the root premise unified, but do not collapse every rule into one `premises` entry. For long-form genre fiction, produce 3-6 derived premise systems, each with its own `progression` ladder and boundaries. Typical systems include protagonist growth, enemy tier ecology, faction technology, resource economy, social/faction rank, and final external threat.
+- Each `premises[]` entry should describe one track that later outline/RPG DSL can simulate. A good track has named stages, requirements/costs, ceilings, and clear narrative uses.
+- `storylines` are high-level story contracts: each important arc should expose its rough scale/role and the few pressure hints that help later outline generation. Do not turn setup into a volume/chapter plan.
+- For every storyline with `importance >= 8`, include a useful arc contract: `scope`, `setup_role`, `payoff_style`, and 2-4 `pressure_points`, plus any of desire/opposition/stakes/open_question/payoff that makes the promise clearer.
 - `premises.progression` defines growth ceilings and requirements; avoid vague unlimited power systems.
 - `world_resources` defines resources that later outlines may spend or replenish; mark scarcity clearly.
 - `rules` should express boundaries, costs, and exceptions that can be checked later.

@@ -921,6 +921,9 @@ func extractProtagonistCultivationLevelsInSentence(sentence, playerName string) 
 
 func parseStateDeltaLevel(raw string) int {
 	raw = strings.TrimSpace(strings.ToLower(raw))
+	if level := parseProgressionStageLevel(raw); level > 0 {
+		return level
+	}
 	raw = strings.TrimPrefix(raw, "qi_")
 	raw = strings.TrimPrefix(raw, "level_")
 	raw = strings.TrimPrefix(raw, "cultivation_")
@@ -934,6 +937,35 @@ func parseStateDeltaLevel(raw string) int {
 		raw = match
 	}
 	return parseNarrativeLevel(raw)
+}
+
+func parseProgressionStageLevel(raw string) int {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0
+	}
+	stageRe := regexp.MustCompile(`([一二三四五六七八九十\d]+)\s*阶\s*(初级|中级|高级|初期|中期|后期|巅峰|圆满)?`)
+	if match := stageRe.FindStringSubmatch(raw); len(match) >= 2 {
+		stage := parseNarrativeLevel(match[1])
+		if stage <= 0 {
+			return 0
+		}
+		tier := 1
+		if len(match) >= 3 {
+			switch match[2] {
+			case "中级", "中期":
+				tier = 2
+			case "高级", "后期", "巅峰", "圆满":
+				tier = 3
+			}
+		}
+		return (stage-1)*3 + tier
+	}
+	levelRe := regexp.MustCompile(`(?:等级|基因等级|level)\s*([一二三四五六七八九十\d]+)\s*级?`)
+	if match := levelRe.FindStringSubmatch(raw); len(match) >= 2 {
+		return parseNarrativeLevel(match[1])
+	}
+	return 0
 }
 
 func parseNarrativeLevel(raw string) int {

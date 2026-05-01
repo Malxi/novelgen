@@ -9,9 +9,17 @@
 
 ## Storyline Texture Review
 
-When reviewing `storylines`, look for whether important arcs have enough dramatic pressure to guide later outline generation. Optional texture fields include `desire`, `opposition`, `stakes`, `turn`, `payoff`, `open_question`, and `pressure_points`.
+When reviewing `storylines`, look for whether important arcs have enough high-level dramatic pressure to guide later outline generation. Optional texture fields include `scope`, `payoff_style`, `setup_role`, `desire`, `opposition`, `stakes`, `turn`, `payoff`, `open_question`, and `pressure_points`.
 
 Treat these as creative suggestions, not hard requirements. Recommend adding them only when a storyline feels thin, static, or hard to continue. Do not penalize a clean storyline for leaving some optional fields blank.
+
+Do not ask setup to become a chapter plan. If an arc is long-running, prefer recommending `scope: book/series` and `payoff_style: staged_reveal/slow_burn` instead of demanding an immediate payoff.
+
+## Progression System Depth Review
+
+Keep one clear root premise, but review whether long-form genre fiction has enough derived systems for later outline and RPG simulation. A setup for sci-fi, mecha, cultivation, apocalypse, fantasy, or other progression-heavy genres is thin if it has only one broad `premises` entry.
+
+Recommend 3-6 derived `premises` systems when appropriate. Good systems include protagonist growth, enemy tier ecology, faction technology, resource economy, social/faction hierarchy, and final external threat. Each system should have a progression ladder with named stages, requirements or costs, ceilings, and a clear narrative use.
 
 ## 一、审查维度
 

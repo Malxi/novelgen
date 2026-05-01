@@ -790,6 +790,29 @@ event {
 }
 ```
 
+事件可以包含一个或多个 `state_delta` 块，用于把章节文本中的状态变化转成模拟器可折叠的结构化事实。字段均为可选，但生产方应尽量提供 `target`、`kind`、`field`、`to`，数值类状态同时提供 `delta` 与 `unit`。
+
+```dsl
+state_delta {
+  target = "protagonist"
+  kind   = "gene"                    # gene | mech | cultivation | item | injury | resource | plot_thread ...
+  field  = "stability"               # level | stability | form | energy | module | damage ...
+  to     = "65"
+  delta  = 65
+  unit   = "%"
+  note   = "structured gene stability from chapter state anchor"
+}
+```
+
+Outline 转 DSL 时，`state_anchor.cultivation` 和 `state_anchor.key_items` 会额外派生数值化战斗状态：
+
+- `gene.level`：如 `二级基因适配者` -> `to = "2"`。
+- `gene.stability`：如 `基因稳定性65%` -> `to = "65"`, `unit = "%"`.
+- `mech.form` / `mech.level`：如 `基础版火种机甲` -> 机甲形态和推断等级。
+- `mech.energy`：如 `能量40%` -> `to = "40"`, `unit = "%"`.
+- `mech.module` / `mech.module_blueprint`：如 `远程模块可用`、`近战模块蓝图`。
+- `mech.damage`：如 `左腿护甲受损`；修复完成可写为 `to = "none"`。
+
 ### 4.2 事件类型列表
 
 | 类型 | 说明 | 关键字段 |

@@ -57,6 +57,8 @@ For each suggestion:
 - Clarify rule boundaries and limitations
 - Add missing constraints or consequences
 - Strengthen cause-effect relationships
+- Preserve one clear root premise, but expand long-form genre setups into 3-6 derived `premises` systems when they are thin. Do not create unrelated cores; split the same world logic into simulatable tracks such as protagonist growth, enemy tiers, faction technology, resource economy, social/faction hierarchy, and final external threat.
+- Every added or revised `premises[]` system should have a progression ladder with named stages, requirements/costs, ceilings, and a clear story use. Avoid one vague omnipotent upgrade system.
 
 ### Characters
 - Enhance motivation clarity
@@ -69,11 +71,15 @@ For each suggestion:
 - Enhance subplot connections
 - Add or refine plot hooks
 - Improve pacing and tension
-- Optionally enrich storylines with `desire`, `opposition`, `stakes`, `turn`, `payoff`, `open_question`, or `pressure_points` when those hints create real pressure or payoff
+- Optionally enrich storylines with high-level contract hints such as `scope`, `payoff_style`, `setup_role`, `desire`, `opposition`, `stakes`, `turn`, `payoff`, `open_question`, or `pressure_points` when those hints create real pressure or payoff
+- For important storylines (`importance >= 8`), prefer a concrete arc contract: `scope`, `setup_role`, `payoff_style`, 2-4 `pressure_points`, and the most relevant desire/opposition/stakes/open_question/payoff fields
+- Keep `scope` high-level (`opening`, `volume`, `book`, `series`) and avoid chapter-specific planning in setup
+- Use `payoff_style` to distinguish immediate payoff from staged reveals or slow-burn promises
 
 ### DSL Simulation Feedback
 - Treat review suggestions from `category: logic`, `plot`, `conflict`, `structure`, or `consistency` as possible DSL simulation feedback.
 - If the feedback says a storyline contract is under-specified, improve the relevant `storylines` entry with 2-4 useful hints: desire, opposition, stakes, open_question, pressure_points, or payoff.
+- If the feedback says a long-running storyline promises a payoff too early, prefer adding `scope`/`payoff_style`/`setup_role` over turning setup into a detailed outline.
 - If the feedback says setup rules/resources/progression are missing, add or clarify `rules`, `premises.progression`, or `world_resources` so later outline simulation can track costs and state changes.
 - Keep these as creative contracts, not rigid chapter formulas. The setup should give later agents pressure and boundaries while leaving room for invention.
 

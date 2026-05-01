@@ -127,6 +127,14 @@ Required invariants:
 - `Storylines[].Name` is stable enough for outline `storyline_advances` to
   reference.
 - `Storylines[].Importance` is in the documented range.
+- Important `Storylines[]` (`Importance >= 8`) should carry enough high-level
+  arc contract data for downstream planning: `scope`, `setup_role`,
+  `payoff_style`, and pressure hints are preferred, but older projects may omit
+  them and receive quality-gate suggestions rather than parse failures.
+- Long-form genre setups should keep one root `Premise` string while splitting
+  derived world logic into multiple `Premises[]` systems when useful. These
+  systems give RPG/DSL conversion simulatable growth, enemy, faction, resource,
+  social, or external-threat tracks without creating conflicting root premises.
 - `Premises[].Progression` is ordered by level when levels are present.
 - `WorldResources[].Name` is stable enough for outline resource ledgers to
   reference.
@@ -401,6 +409,14 @@ Required invariants:
 - Runtime constructs require simulator/evaluator/hook tests.
 - Phased DSL fragments must merge without losing stable IDs.
 - AI-generated DSL repair must be re-parsed and re-validated before saving.
+- Outline `state_anchor` conversion emits both human-readable state deltas
+  (`cultivation`, `item`, `injury`, etc.) and deterministic numeric deltas for
+  combat-relevant progression when the text contains them:
+  `gene.level`, `gene.stability`, `mech.form`, `mech.level`, `mech.energy`,
+  `mech.module`, `mech.module_blueprint`, and `mech.damage`.
+- The RPG simulator folds numeric `gene` and `mech` deltas into
+  `ProtagonistState` before combat balance checks; text heuristics are only a
+  fallback or tactical modifier, not the only source of mecha/gene power.
 
 Consumers:
 

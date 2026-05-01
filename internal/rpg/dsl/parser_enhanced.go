@@ -535,6 +535,30 @@ func (ep *EnhancedParser) parsePlayerEnhanced() (*Player, error) {
 			player.PlaceholderSource = ep.toString(value)
 		case "class":
 			player.Class = ep.toString(value)
+		case "description":
+			player.Description = ep.toString(value)
+		case "age":
+			if age, ok := ep.toInt(value); ok {
+				player.Age = age
+			}
+		case "gender":
+			player.Gender = ep.toString(value)
+		case "race":
+			player.Race = ep.toString(value)
+		case "background":
+			player.Background = ep.toString(value)
+		case "personality":
+			player.Personality = ep.toStringSlice(value)
+		case "motivation":
+			player.Motivation = ep.toString(value)
+		case "abilities":
+			player.Abilities = ep.toStringSlice(value)
+		case "affiliations":
+			player.Affiliations = ep.toStringSlice(value)
+		case "role_in_story":
+			player.RoleInStory = ep.toString(value)
+		case "voice":
+			player.Voice = ep.toString(value)
 		case "skills":
 			player.Skills = ep.toStringSlice(value)
 		default:

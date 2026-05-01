@@ -216,9 +216,11 @@ func (v *Validator) validateCharacters(chars *Characters) {
 			v.addError(field+".name", "enemy name is required")
 		}
 
-		// Validate template
+		// Validate template. Outline-derived enemies often start as narrative
+		// placeholders; the simulator can use deterministic defaults until craft
+		// supplies full combat templates.
 		if enemy.Template.HPFormula == "" {
-			v.addWarning(field+".template.hp_formula", "hp_formula not specified, using default")
+			chars.Enemies[i].Template.HPFormula = "100 + level * 20"
 		}
 	}
 
@@ -359,6 +361,7 @@ func (v *Validator) validateEvent(field string, event *Event) {
 	validTypes := []string{
 		"spawn", "move", "combat", "dialogue", "acquire",
 		"status", "knowledge", "relationship", "location", "transition",
+		"story", "storyline", "mystery", "plot_thread", "resource", "goal",
 	}
 	if !contains(validTypes, event.Type) {
 		v.addWarning(field+".type", fmt.Sprintf("unknown event type: %s", event.Type))

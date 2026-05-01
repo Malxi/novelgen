@@ -88,6 +88,39 @@ func outlineChapterBeats(chapter StoryChapter) []string {
 	return beats
 }
 
+func outlineChapterHasStateChange(chapter StoryChapter) bool {
+	if strings.TrimSpace(chapter.StateChange) != "" {
+		return true
+	}
+	if len(chapter.ResourceLedger) > 0 || len(chapter.StorylineAdvances) > 0 {
+		return true
+	}
+	if len(chapter.Mysteries.Planted) > 0 || len(chapter.Mysteries.Resolved) > 0 {
+		return true
+	}
+	for _, event := range chapter.Events {
+		if storyEventHasStateChange(event) {
+			return true
+		}
+	}
+	return false
+}
+
+func storyEventHasStateChange(event StoryEvent) bool {
+	if strings.TrimSpace(event.Result) != "" || strings.TrimSpace(event.Change) != "" || strings.TrimSpace(event.Details) != "" {
+		return true
+	}
+
+	switch strings.ToLower(strings.TrimSpace(event.GetAction())) {
+	case "acquire", "use", "lose", "move", "enter", "leave", "combat", "defeat", "escape",
+		"learn", "awaken", "upgrade", "master", "discover", "reveal", "meet", "befriend",
+		"set", "progress", "achieve", "activate", "transform", "recover", "afflict", "establish":
+		return true
+	}
+
+	return false
+}
+
 // Validate 执行完整验证
 func (ov *OutlineValidator) Validate() *ValidationResult {
 	// 1. 结构完整性检查
@@ -277,7 +310,7 @@ func (ov *OutlineValidator) validateStructure() {
 					})
 				}
 
-				if chapter.StateChange == "" {
+				if !outlineChapterHasStateChange(chapter) {
 					ov.Warnings = append(ov.Warnings, OutlineWarning{
 						Type:        "content",
 						Location:    location,
@@ -402,7 +435,7 @@ func (ov *OutlineValidator) validatePlotLogic() {
 				}
 
 				// 检查状态变化是否合理
-				if chapter.StateChange == "" && len(chapter.Events) > 0 {
+				if !outlineChapterHasStateChange(chapter) && len(chapter.Events) > 0 {
 					ov.Warnings = append(ov.Warnings, OutlineWarning{
 						Type:        "logic",
 						Location:    location,
@@ -565,7 +598,14 @@ func (ov *OutlineValidator) validateRedundancy() {
 
 			for _, chapter := range volume.Chapters {
 				for _, event := range chapter.Events {
-					eventTypeCount[event.Type]++
+					eventType := strings.TrimSpace(event.GetAction())
+					if eventType == "" {
+						eventType = strings.TrimSpace(event.Type)
+					}
+					if eventType == "" {
+						continue
+					}
+					eventTypeCount[eventType]++
 				}
 			}
 
@@ -592,7 +632,9 @@ func (ov *OutlineValidator) validateFeasibility() {
 				// 检查战斗场景的可行性
 				combatEvents := 0
 				for _, event := range chapter.Events {
-					if event.Type == "combat" || event.Type == "battle" {
+					action := strings.ToLower(strings.TrimSpace(event.GetAction()))
+					eventType := strings.ToLower(strings.TrimSpace(event.Type))
+					if action == "combat" || action == "defeat" || eventType == "combat" || eventType == "battle" {
 						combatEvents++
 					}
 				}
@@ -1098,7 +1140,7 @@ func (ov *OutlineValidator) validateStorylineTexture() {
 			for _, chapter := range volume.Chapters {
 				hasStorylineEvent := false
 				for _, event := range chapter.Events {
-					if event.Type == "storyline" || event.TargetType == "storyline" {
+					if event.Type == "storyline" || event.GetTargetType() == "storyline" {
 						hasStorylineEvent = true
 						break
 					}

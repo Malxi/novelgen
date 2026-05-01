@@ -266,6 +266,24 @@ func (a *ModelAdapter) buildChaptersFromOutline(dsl *DSL) {
 					})
 				}
 
+				for _, step := range buildMysterySteps(ch.ID, ch.Mysteries) {
+					stepOrder++
+					step.Order = stepOrder
+					steps = append(steps, step)
+				}
+
+				for _, delta := range buildStateAnchorDeltas(ch) {
+					stepOrder++
+					steps = append(steps, Step{
+						Order:       stepOrder,
+						Description: delta.Note,
+						Event: Event{
+							Type:        "status",
+							StateDeltas: []StateDelta{delta},
+						},
+					})
+				}
+
 				a.addOutlineEnemies(dsl, ch.Enemies)
 				for _, evt := range ch.Events {
 					stepOrder++
@@ -293,18 +311,6 @@ func (a *ModelAdapter) buildChaptersFromOutline(dsl *DSL) {
 								Delta:  entry.Delta,
 								Note:   entry.Reason,
 							}},
-						},
-					})
-				}
-
-				for _, delta := range buildStateAnchorDeltas(ch) {
-					stepOrder++
-					steps = append(steps, Step{
-						Order:       stepOrder,
-						Description: delta.Note,
-						Event: Event{
-							Type:        "status",
-							StateDeltas: []StateDelta{delta},
 						},
 					})
 				}
@@ -542,9 +548,9 @@ func describeModelEvent(evt models.Event) string {
 
 func eventTypeFromAction(action string) string {
 	switch action {
-	case models.ActionCombat, models.ActionDefeat, models.ActionEscape:
+	case models.ActionCombat, models.ActionDefeat:
 		return "combat"
-	case models.ActionMove, models.ActionEnter, models.ActionLeave, models.ActionTeleport:
+	case models.ActionMove, models.ActionEnter, models.ActionLeave, models.ActionTeleport, models.ActionEscape:
 		return "move"
 	case models.ActionAcquire, models.ActionUse, models.ActionLose, models.ActionCraft:
 		return "acquire"
@@ -630,6 +636,53 @@ func buildStorylineAdvanceDeltas(chapterID string, advance models.StorylineAdvan
 	return deltas
 }
 
+func buildMysterySteps(chapterID string, mysteries models.ChapterMysteries) []Step {
+	var steps []Step
+	for _, planted := range mysteries.Planted {
+		id := strings.TrimSpace(planted.ID)
+		if id == "" {
+			continue
+		}
+		clue := strings.TrimSpace(planted.Clue)
+		steps = append(steps, Step{
+			Description: fmt.Sprintf("mystery %s planted: %s", id, clue),
+			Event: Event{
+				Type: "mystery",
+				StateDeltas: []StateDelta{{
+					Target: id,
+					Kind:   "plot_thread",
+					Field:  "mystery",
+					To:     "raised",
+					Unit:   strings.TrimSpace(planted.Horizon),
+					Cost:   strings.TrimSpace(planted.Status),
+					Note:   clue,
+				}},
+			},
+		})
+	}
+	for _, resolved := range mysteries.Resolved {
+		id := strings.TrimSpace(resolved.ID)
+		if id == "" {
+			continue
+		}
+		resolution := strings.TrimSpace(resolved.Resolution)
+		steps = append(steps, Step{
+			Description: fmt.Sprintf("mystery %s resolved: %s", id, resolution),
+			Event: Event{
+				Type: "mystery",
+				StateDeltas: []StateDelta{{
+					Target: id,
+					Kind:   "plot_thread",
+					Field:  "mystery",
+					To:     "resolved",
+					Note:   resolution,
+				}},
+			},
+		})
+	}
+	return steps
+}
+
 func buildStateAnchorDeltas(ch models.Chapter) []StateDelta {
 	var deltas []StateDelta
 	if strings.TrimSpace(ch.StateAnchor.Cultivation) != "" {
@@ -659,11 +712,37 @@ func buildStateAnchorDeltas(ch models.Chapter) []StateDelta {
 			Note:   "chapter start injuries: " + strings.Join(ch.StateAnchor.Injuries, ", "),
 		})
 	}
+	if len(ch.StateAnchor.Allies) > 0 {
+		deltas = append(deltas, StateDelta{
+			Target: "protagonist",
+			Kind:   "ally",
+			Field:  "active",
+			To:     strings.Join(ch.StateAnchor.Allies, ", "),
+			Note:   "chapter start allies: " + strings.Join(ch.StateAnchor.Allies, ", "),
+		})
+	}
+	if len(ch.StateAnchor.KeyItems) > 0 {
+		deltas = append(deltas, StateDelta{
+			Target: "protagonist",
+			Kind:   "item",
+			Field:  "key_items",
+			To:     strings.Join(ch.StateAnchor.KeyItems, ", "),
+			Note:   "chapter start key items: " + strings.Join(ch.StateAnchor.KeyItems, ", "),
+		})
+	}
+	deltas = append(deltas, buildStructuredProgressionDeltas(
+		ch.StateAnchor.Cultivation,
+		ch.StateAnchor.KeyItems,
+		ch.StateAnchor.Injuries,
+	)...)
 	return deltas
 }
 
 func storylineContractNote(storyline models.Storyline) string {
 	parts := []string{
+		"scope=" + storyline.Scope,
+		"payoff_style=" + storyline.PayoffStyle,
+		"setup_role=" + storyline.SetupRole,
 		"desire=" + storyline.Desire,
 		"opposition=" + storyline.Opposition,
 		"stakes=" + storyline.Stakes,

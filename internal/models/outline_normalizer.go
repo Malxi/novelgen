@@ -57,6 +57,8 @@ func NormalizeOutline(outline *Outline) OutlineNormalizationReport {
 						addChapterCharacter(chapter, seen, char, "sync_scene_character", &report)
 					}
 				}
+
+				normalizeStateAnchor(chapter, &report)
 			}
 		}
 	}
@@ -77,4 +79,127 @@ func addChapterCharacter(chapter *Chapter, seen map[string]bool, char string, ac
 		Action: action,
 		Value:  char,
 	})
+}
+
+func normalizeStateAnchor(chapter *Chapter, report *OutlineNormalizationReport) {
+	normalizeStateAnchorAllies(chapter, report)
+	normalizeStateAnchorInjuries(chapter, report)
+}
+
+func normalizeStateAnchorAllies(chapter *Chapter, report *OutlineNormalizationReport) {
+	seen := make(map[string]bool, len(chapter.StateAnchor.Allies))
+	allies := chapter.StateAnchor.Allies[:0]
+	for _, ally := range chapter.StateAnchor.Allies {
+		original := strings.TrimSpace(ally)
+		if original == "" {
+			continue
+		}
+
+		canonical, _, ok := splitTrailingQualifier(original)
+		if ok {
+			appendStateAnchorNote(&chapter.StateAnchor, "盟友备注："+original)
+			report.Changes = append(report.Changes, OutlineNormalizationChange{
+				Path:   chapter.ID + ".state_anchor.allies",
+				Action: "canonicalize_ally_name",
+				Value:  original + " -> " + canonical,
+			})
+		} else {
+			canonical = original
+		}
+
+		if canonical == "" || seen[canonical] {
+			continue
+		}
+		seen[canonical] = true
+		allies = append(allies, canonical)
+	}
+	chapter.StateAnchor.Allies = allies
+}
+
+func normalizeStateAnchorInjuries(chapter *Chapter, report *OutlineNormalizationReport) {
+	seen := make(map[string]bool, len(chapter.StateAnchor.Injuries))
+	injuries := chapter.StateAnchor.Injuries[:0]
+	for _, injury := range chapter.StateAnchor.Injuries {
+		original := strings.TrimSpace(injury)
+		if original == "" {
+			continue
+		}
+
+		canonical := original
+		qualifier := ""
+		if base, q, ok := splitTrailingQualifier(original); ok {
+			canonical = base
+			qualifier = q
+			appendStateAnchorNote(&chapter.StateAnchor, "伤势备注："+original)
+			report.Changes = append(report.Changes, OutlineNormalizationChange{
+				Path:   chapter.ID + ".state_anchor.injuries",
+				Action: "canonicalize_injury",
+				Value:  original + " -> " + canonical,
+			})
+		}
+
+		if injuryStatusResolved(original) || injuryStatusResolved(qualifier) {
+			appendStateAnchorNote(&chapter.StateAnchor, "伤势已恢复："+original)
+			report.Changes = append(report.Changes, OutlineNormalizationChange{
+				Path:   chapter.ID + ".state_anchor.injuries",
+				Action: "remove_resolved_injury",
+				Value:  original,
+			})
+			continue
+		}
+
+		if canonical == "" || seen[canonical] {
+			continue
+		}
+		seen[canonical] = true
+		injuries = append(injuries, canonical)
+	}
+	chapter.StateAnchor.Injuries = injuries
+}
+
+func splitTrailingQualifier(value string) (string, string, bool) {
+	value = strings.TrimSpace(value)
+	if strings.HasSuffix(value, "）") {
+		start := strings.LastIndex(value, "（")
+		if start > 0 {
+			base := strings.TrimSpace(value[:start])
+			qualifier := strings.TrimSpace(strings.TrimSuffix(value[start+len("（"):], "）"))
+			return base, qualifier, base != "" && qualifier != ""
+		}
+	}
+	if strings.HasSuffix(value, ")") {
+		start := strings.LastIndex(value, "(")
+		if start > 0 {
+			base := strings.TrimSpace(value[:start])
+			qualifier := strings.TrimSpace(strings.TrimSuffix(value[start+1:], ")"))
+			return base, qualifier, base != "" && qualifier != ""
+		}
+	}
+	return value, "", false
+}
+
+func injuryStatusResolved(value string) bool {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if value == "" {
+		return false
+	}
+	resolvedMarkers := []string{"已愈合", "已恢复", "已痊愈", "已康复", "基本愈合", "healed", "recovered"}
+	for _, marker := range resolvedMarkers {
+		if strings.Contains(value, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func appendStateAnchorNote(anchor *StateAnchor, note string) {
+	note = strings.TrimSpace(note)
+	if note == "" || strings.Contains(anchor.Notes, note) {
+		return
+	}
+	if strings.TrimSpace(anchor.Notes) == "" {
+		anchor.Notes = note
+		return
+	}
+	anchor.Notes = strings.TrimSpace(anchor.Notes) + "；" + note
 }

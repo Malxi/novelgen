@@ -81,6 +81,8 @@ type SimulationContext struct {
 	// 伏笔追踪
 	PlotThreadsRaised   int
 	PlotThreadsResolved int
+	PlotThreadsDeferred int
+	PlotThreadsOpen     map[string]bool
 }
 
 // ProtagonistState 主角状态
@@ -96,6 +98,26 @@ type ProtagonistState struct {
 	Items     []string // 拥有的道具/法宝/装备
 	Allies    []string // 盟友/伙伴
 	Inventory Capacity // 储物空间
+	Gene      GeneState
+	Mech      MechState
+}
+
+// GeneState tracks numeric protagonist gene progression used by combat simulation.
+type GeneState struct {
+	Level     int
+	Stability int
+}
+
+// MechState tracks numeric protagonist mech progression used by combat simulation.
+type MechState struct {
+	Form             string
+	Level            int
+	Energy           int
+	Armor            int
+	Mobility         int
+	Modules          []string
+	ModuleBlueprints []string
+	Damage           []string
 }
 
 // Capacity 储物空间
@@ -142,6 +164,7 @@ func NewSimulator(dsl *DSL) *Simulator {
 			CompletedEvents:  make(map[string]bool),
 			ChapterEvents:    make(map[string][]string),
 			Protagonist:      ProtagonistState{},
+			PlotThreadsOpen:  make(map[string]bool),
 		},
 		characterArc: make(map[string][]string),
 		eventLog:     make([]EventLog, 0),
@@ -535,6 +558,8 @@ func (s *Simulator) simulateStep(chapterID string, step *Step) {
 	s.eventLog = append(s.eventLog, eventLog)
 	s.Context.ChapterEvents[chapterID] = append(s.Context.ChapterEvents[chapterID], step.Description)
 
+	s.applyStateDeltas(step.Event.StateDeltas)
+
 	// 根据事件类型检查
 	switch step.Event.Type {
 	case "combat":
@@ -583,31 +608,45 @@ func (s *Simulator) checkCombatEvent(chapterID string, step *Step) {
 	// 检查战斗平衡性 - 主角能否获胜？
 	enemyTotalPower := 0
 	hasEnemyInfo := false
+	modifierNotes := make([]string, 0)
 	for _, enemy := range step.Event.Combat.Setup.Enemies {
 		// 查找敌人信息
 		enemyInfo := s.findEnemy(enemy.ID)
 		if enemyInfo != nil {
 			hasEnemyInfo = true
-			enemyPower := s.calculateEnemyPower(enemyInfo)
+			enemyPower, notes := s.effectiveEnemyPower(enemyInfo, enemy, step)
 			enemyTotalPower += enemyPower * enemy.Count
+			modifierNotes = append(modifierNotes, notes...)
 		}
 	}
 
 	if hasEnemyInfo {
 		protagonistPower := s.Context.Protagonist.Power
+		structuredBonus, structuredNotes := s.calculateStructuredCombatPowerBonus()
 		allyPower := s.calculateAllyPower()
-		totalPower := protagonistPower + allyPower
+		baseTotalPower := protagonistPower + structuredBonus + allyPower
+		tacticalBonus, tacticalNotes := s.calculateTacticalPowerBonus(baseTotalPower, step)
+		totalPower := baseTotalPower + tacticalBonus
+		modifierNotes = append(modifierNotes, structuredNotes...)
+		modifierNotes = append(modifierNotes, tacticalNotes...)
+		if totalPower <= 0 {
+			totalPower = 1
+		}
+		modifierText := ""
+		if len(modifierNotes) > 0 {
+			modifierText = "；已考虑：" + strings.Join(uniqueStrings(modifierNotes), "、")
+		}
 
 		// 检查战斗难度
 		if enemyTotalPower > totalPower*2 {
 			s.addIssue(IssueBalance, SeverityCritical, chapterID, step.Order,
-				fmt.Sprintf("战斗难度过高！主角战力(%d)+%s支援(%d)远低于敌人总战力(%d)",
-					protagonistPower, s.getAllyDescription(), allyPower, enemyTotalPower),
+				fmt.Sprintf("战斗难度过高！主角基础战力(%d)+成长/机甲修正(%d)+%s支援(%d)+战术修正(%d)仍低于敌人有效战力(%d)%s",
+					protagonistPower, structuredBonus, s.getAllyDescription(), allyPower, tacticalBonus, enemyTotalPower, modifierText),
 				"降低敌人等级/数量，或给主角增加技能、道具、盟友支援")
 		} else if enemyTotalPower > totalPower*3/2 {
 			s.addIssue(IssueBalance, SeverityWarning, chapterID, step.Order,
-				fmt.Sprintf("战斗难度较高。建议给主角准备：技能(%d个)、道具(%d个)、盟友(%d个)",
-					len(s.Context.Protagonist.Skills), len(s.Context.Protagonist.Items), len(s.Context.Protagonist.Allies)),
+				fmt.Sprintf("战斗难度较高。建议给主角准备：技能(%d个)、道具(%d个)、盟友(%d个)、机甲模块(%d个)%s",
+					len(s.Context.Protagonist.Skills), len(s.Context.Protagonist.Items), len(s.Context.Protagonist.Allies), len(s.Context.Protagonist.Mech.Modules), modifierText),
 				"增加战斗前的准备：修炼突破、获得新技能、找到强力道具、获得盟友帮助")
 		}
 	}
@@ -650,6 +689,176 @@ func (s *Simulator) checkGrowthReward(chapterID string, step *Step) {
 		s.Context.Protagonist.MaxHP += 20
 		s.Context.Protagonist.HP = s.Context.Protagonist.MaxHP
 	}
+}
+
+func (s *Simulator) applyStateDeltas(deltas []StateDelta) {
+	for _, delta := range deltas {
+		kind := strings.ToLower(strings.TrimSpace(delta.Kind))
+		field := strings.ToLower(strings.TrimSpace(delta.Field))
+		switch kind {
+		case "ally":
+			s.Context.Protagonist.Allies = mergeNames(s.Context.Protagonist.Allies, splitStateNames(delta.To))
+		case "item", "equipment":
+			candidates := splitStateNames(delta.To)
+			if len(candidates) == 0 && strings.TrimSpace(delta.Target) != "" {
+				candidates = []string{strings.TrimSpace(delta.Target)}
+			}
+			if field == "key_items" {
+				s.Context.Protagonist.Items = candidates
+				s.Context.Protagonist.Inventory.Current = len(candidates)
+			} else {
+				s.Context.Protagonist.Items = mergeNames(s.Context.Protagonist.Items, candidates)
+			}
+		case "resource":
+			if field == "key_item" || strings.Contains(field, "item") {
+				candidates := splitStateNames(delta.To)
+				if len(candidates) == 0 && strings.TrimSpace(delta.Target) != "" {
+					candidates = []string{strings.TrimSpace(delta.Target)}
+				}
+				if field == "key_items" || field == "key_item" {
+					s.Context.Protagonist.Items = candidates
+					s.Context.Protagonist.Inventory.Current = len(candidates)
+				} else {
+					s.Context.Protagonist.Items = mergeNames(s.Context.Protagonist.Items, candidates)
+				}
+			}
+		case "cultivation", "breakthrough", "evolution", "power_change":
+			if level := parseStateDeltaLevel(delta.To); level > s.Context.Protagonist.Level {
+				s.Context.Protagonist.Level = level
+				minPower := 20 + level*20
+				if s.Context.Protagonist.Power < minPower {
+					s.Context.Protagonist.Power = minPower
+				}
+			}
+			if delta.Delta > 0 {
+				s.Context.Protagonist.Power += delta.Delta
+			}
+		case "gene":
+			s.applyGeneDelta(field, delta)
+		case "mech":
+			s.applyMechDelta(field, delta)
+		}
+	}
+}
+
+func (s *Simulator) applyGeneDelta(field string, delta StateDelta) {
+	switch field {
+	case "level", "等级":
+		level := parseStateDeltaInt(delta)
+		if level <= 0 {
+			level = parseStateDeltaLevel(delta.To)
+		}
+		if level <= 0 {
+			return
+		}
+		if level > s.Context.Protagonist.Gene.Level {
+			s.Context.Protagonist.Gene.Level = level
+		}
+		if level > s.Context.Protagonist.Level {
+			s.Context.Protagonist.Level = level
+		}
+		minPower := 25 + level*25
+		if s.Context.Protagonist.Power < minPower {
+			s.Context.Protagonist.Power = minPower
+		}
+	case "stability", "稳定性", "稳定度":
+		if value := parseStateDeltaInt(delta); value > 0 {
+			s.Context.Protagonist.Gene.Stability = clampPercent(value)
+		}
+	}
+}
+
+func (s *Simulator) applyMechDelta(field string, delta StateDelta) {
+	switch field {
+	case "form", "形态":
+		if value := strings.TrimSpace(delta.To); value != "" {
+			s.Context.Protagonist.Mech.Form = value
+			if level := inferMechLevelFromForm(value); level > s.Context.Protagonist.Mech.Level {
+				s.Context.Protagonist.Mech.Level = level
+			}
+		}
+	case "level", "等级":
+		if value := parseStateDeltaInt(delta); value > s.Context.Protagonist.Mech.Level {
+			s.Context.Protagonist.Mech.Level = value
+		}
+	case "energy", "能量":
+		if value := parseStateDeltaInt(delta); value > 0 {
+			s.Context.Protagonist.Mech.Energy = clampPercent(value)
+		}
+	case "armor", "护甲":
+		if value := parseStateDeltaInt(delta); value > 0 {
+			s.Context.Protagonist.Mech.Armor = value
+		}
+	case "mobility", "机动", "机动性":
+		if value := parseStateDeltaInt(delta); value > 0 {
+			s.Context.Protagonist.Mech.Mobility = value
+		}
+	case "module", "模块":
+		candidates := splitStateNames(delta.To)
+		if len(candidates) == 0 && strings.TrimSpace(delta.Target) != "" && delta.Target != "protagonist" {
+			candidates = []string{strings.TrimSpace(delta.Target)}
+		}
+		s.Context.Protagonist.Mech.Modules = mergeNames(s.Context.Protagonist.Mech.Modules, candidates)
+	case "module_blueprint", "blueprint", "模块蓝图":
+		candidates := splitStateNames(delta.To)
+		if len(candidates) == 0 && strings.TrimSpace(delta.Target) != "" && delta.Target != "protagonist" {
+			candidates = []string{strings.TrimSpace(delta.Target)}
+		}
+		s.Context.Protagonist.Mech.ModuleBlueprints = mergeNames(s.Context.Protagonist.Mech.ModuleBlueprints, candidates)
+	case "damage", "损伤":
+		value := strings.TrimSpace(delta.To)
+		if value == "" {
+			return
+		}
+		if value == "none" || containsAnyText(value, "已修复", "修复完成", "无") {
+			s.Context.Protagonist.Mech.Damage = nil
+			return
+		}
+		s.Context.Protagonist.Mech.Damage = mergeNames(s.Context.Protagonist.Mech.Damage, []string{value})
+	}
+}
+
+func splitStateNames(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	replacer := strings.NewReplacer("，", ",", "、", ",", ";", ",", "；", ",", "|", ",", "/", ",")
+	raw = replacer.Replace(raw)
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" && part != "none" && part != "无" {
+			out = append(out, part)
+		}
+	}
+	return out
+}
+
+func mergeNames(existing, incoming []string) []string {
+	if len(incoming) == 0 {
+		return existing
+	}
+	seen := make(map[string]bool, len(existing)+len(incoming))
+	out := make([]string, 0, len(existing)+len(incoming))
+	for _, name := range existing {
+		key := strings.ToLower(strings.TrimSpace(name))
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, strings.TrimSpace(name))
+	}
+	for _, name := range incoming {
+		key := strings.ToLower(strings.TrimSpace(name))
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, strings.TrimSpace(name))
+	}
+	return out
 }
 
 // 检查位置事件
@@ -783,6 +992,10 @@ func (s *Simulator) checkChapterLogic(chapter *Chapter) {
 				hasGrowth = true
 				break
 			}
+			if stepHasGrowthDelta(step) {
+				hasGrowth = true
+				break
+			}
 		}
 		if hasGrowth {
 			break
@@ -794,6 +1007,23 @@ func (s *Simulator) checkChapterLogic(chapter *Chapter) {
 			"章节内容较多但缺少主角成长",
 			"考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素")
 	}
+}
+
+func stepHasGrowthDelta(step Step) bool {
+	for _, delta := range step.Event.StateDeltas {
+		kind := strings.ToLower(strings.TrimSpace(delta.Kind))
+		switch kind {
+		case "cultivation", "breakthrough", "evolution", "power_change", "skill", "item", "equipment", "ally":
+			if delta.To != "" || delta.Delta != 0 || delta.Note != "" {
+				return true
+			}
+		case "resource", "premise":
+			if delta.Delta != 0 || delta.To != "" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // 检查整体一致性
@@ -1023,6 +1253,234 @@ func (s *Simulator) calculateEnemyPower(enemy *Enemy) int {
 	return power + hpBonus/10
 }
 
+func (s *Simulator) effectiveEnemyPower(enemy *Enemy, spawn EnemySpawn, step *Step) (int, []string) {
+	power := s.calculateEnemyPower(enemy)
+	notes := make([]string, 0)
+	if spawn.Elite {
+		power = power * 3 / 2
+		notes = append(notes, "精英敌人")
+	}
+	if spawn.Boss {
+		power *= 2
+		notes = append(notes, "Boss敌人")
+	}
+
+	text := strings.ToLower(enemy.Description + " " + enemy.Name + " " + combatContextText(step))
+	switch {
+	case containsAnyText(text, "血量剩余", "剩余血量"):
+		if pct := firstPercentAfter(text, "血量剩余", "剩余血量"); pct > 0 && pct < 100 {
+			power = power * pct / 100
+			notes = append(notes, fmt.Sprintf("敌人剩余血量%d%%", pct))
+			break
+		}
+		fallthrough
+	case containsAnyText(text, "残血", "打残", "受损", "能量耗尽", "消耗过半", "两败俱伤", "重伤", "残兵"):
+		power = power * 60 / 100
+		notes = append(notes, "敌人受损/残血")
+	case containsAnyText(text, "战力下降"):
+		if pct := firstPercentAfter(text, "战力下降"); pct > 0 && pct < 100 {
+			power = power * (100 - pct) / 100
+			notes = append(notes, fmt.Sprintf("敌人战力下降%d%%", pct))
+		}
+	}
+
+	if power < 1 {
+		power = 1
+	}
+	return power, notes
+}
+
+func (s *Simulator) calculateStructuredCombatPowerBonus() (int, []string) {
+	bonus := 0
+	notes := make([]string, 0)
+
+	gene := s.Context.Protagonist.Gene
+	if gene.Level > 0 {
+		geneBonus := gene.Level * 15
+		bonus += geneBonus
+		notes = append(notes, fmt.Sprintf("基因等级%d(+%d)", gene.Level, geneBonus))
+	}
+	if gene.Stability > 0 {
+		switch {
+		case gene.Stability < 60:
+			bonus -= 30
+			notes = append(notes, fmt.Sprintf("基因稳定性%d%%偏低(-30)", gene.Stability))
+		case gene.Stability >= 85:
+			bonus += 20
+			notes = append(notes, fmt.Sprintf("基因稳定性%d%%(+20)", gene.Stability))
+		case gene.Stability >= 70:
+			bonus += 10
+			notes = append(notes, fmt.Sprintf("基因稳定性%d%%(+10)", gene.Stability))
+		}
+	}
+
+	mech := s.Context.Protagonist.Mech
+	mechLevel := mech.Level
+	if mechLevel <= 0 && mech.Form != "" {
+		mechLevel = inferMechLevelFromForm(mech.Form)
+	}
+	if mech.Form != "" || mechLevel > 0 {
+		mechBonus := 35 + mechLevel*25
+		if mechLevel <= 0 {
+			mechBonus = 35
+		}
+		bonus += mechBonus
+		label := mech.Form
+		if label == "" {
+			label = fmt.Sprintf("机甲等级%d", mechLevel)
+		}
+		notes = append(notes, fmt.Sprintf("%s(+%d)", label, mechBonus))
+	}
+	if len(mech.Modules) > 0 {
+		moduleBonus := 0
+		for _, module := range mech.Modules {
+			switch {
+			case containsAnyText(module, "远程", "近战", "武器", "火箭", "飞行", "重火力"):
+				moduleBonus += 25
+			default:
+				moduleBonus += 15
+			}
+		}
+		bonus += moduleBonus
+		notes = append(notes, fmt.Sprintf("机甲模块%d个(+%d)", len(mech.Modules), moduleBonus))
+	}
+	if mech.Energy > 0 {
+		switch {
+		case mech.Energy < 30:
+			bonus -= 45
+			notes = append(notes, fmt.Sprintf("机甲能量%d%%过低(-45)", mech.Energy))
+		case mech.Energy < 50:
+			bonus -= 20
+			notes = append(notes, fmt.Sprintf("机甲能量%d%%偏低(-20)", mech.Energy))
+		case mech.Energy >= 90:
+			bonus += 20
+			notes = append(notes, fmt.Sprintf("机甲能量%d%%(+20)", mech.Energy))
+		case mech.Energy >= 70:
+			bonus += 10
+			notes = append(notes, fmt.Sprintf("机甲能量%d%%(+10)", mech.Energy))
+		}
+	}
+	activeDamage := 0
+	for _, damage := range mech.Damage {
+		if strings.TrimSpace(damage) != "" && damage != "none" {
+			activeDamage++
+		}
+	}
+	if activeDamage > 0 {
+		penalty := activeDamage * 20
+		bonus -= penalty
+		notes = append(notes, fmt.Sprintf("机甲损伤%d项(-%d)", activeDamage, penalty))
+	}
+
+	return bonus, notes
+}
+
+func (s *Simulator) calculateTacticalPowerBonus(basePower int, step *Step) (int, []string) {
+	if basePower <= 0 {
+		return 0, nil
+	}
+	text := strings.ToLower(combatContextText(step) + " " + strings.Join(s.Context.Protagonist.Items, " "))
+	bonus := 0
+	notes := make([]string, 0)
+	if containsAnyText(text, "机甲", "重曙", "装甲", "火种") {
+		bonus += basePower * 50 / 100
+		notes = append(notes, "机甲/装备支援")
+	}
+	if containsAnyText(text, "伏击", "偷袭", "陷阱", "地形", "高地", "狭道") {
+		bonus += basePower * 25 / 100
+		notes = append(notes, "伏击/地形优势")
+	}
+	if containsAnyText(text, "三方", "混战", "互相消耗", "两败俱伤", "第三方") {
+		bonus += basePower * 30 / 100
+		notes = append(notes, "多方消耗战")
+	}
+	return bonus, notes
+}
+
+func combatContextText(step *Step) string {
+	if step == nil {
+		return ""
+	}
+	parts := []string{step.Description}
+	if step.Event.Combat != nil {
+		parts = append(parts, step.Event.Combat.Setup.Location)
+		for key, value := range step.Event.Combat.Setup.Environment {
+			parts = append(parts, key, fmt.Sprint(value))
+		}
+		for _, phase := range step.Event.Combat.Phases {
+			parts = append(parts, phase.Name, phase.Trigger, phase.Duration, phase.Narration)
+			for key, value := range phase.Modifiers {
+				parts = append(parts, key, fmt.Sprint(value))
+			}
+		}
+		if step.Event.Combat.OnVictory != nil {
+			parts = append(parts, step.Event.Combat.OnVictory.Narration, step.Event.Combat.OnVictory.Result)
+		}
+		if step.Event.Combat.OnDefeat != nil {
+			parts = append(parts, step.Event.Combat.OnDefeat.Narration, step.Event.Combat.OnDefeat.Result)
+		}
+	}
+	if step.Event.OnComplete != nil {
+		parts = append(parts, step.Event.OnComplete.Narration, step.Event.OnComplete.Result)
+	}
+	for _, delta := range step.Event.StateDeltas {
+		parts = append(parts, delta.Target, delta.Kind, delta.Field, delta.From, delta.To, delta.Cost, delta.Note)
+	}
+	return strings.Join(parts, " ")
+}
+
+func containsAnyText(text string, terms ...string) bool {
+	for _, term := range terms {
+		if term != "" && strings.Contains(text, strings.ToLower(term)) {
+			return true
+		}
+	}
+	return false
+}
+
+func firstPercentAfter(text string, terms ...string) int {
+	for _, term := range terms {
+		idx := strings.Index(text, strings.ToLower(term))
+		if idx < 0 {
+			continue
+		}
+		start := idx + len(term)
+		end := start
+		for end < len(text) && end-start < 6 {
+			ch := text[end]
+			if ch < '0' || ch > '9' {
+				if end > start {
+					break
+				}
+				end++
+				start = end
+				continue
+			}
+			end++
+		}
+		if end > start {
+			if pct, err := strconv.Atoi(text[start:end]); err == nil {
+				return pct
+			}
+		}
+	}
+	return 0
+}
+
+func uniqueStrings(values []string) []string {
+	seen := make(map[string]bool, len(values))
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		out = append(out, value)
+	}
+	return out
+}
+
 // getStatFromMap 从map中获取属性值
 func getStatFromMap(stats map[string]int, key string) int {
 	// 尝试小写
@@ -1092,13 +1550,55 @@ func (s *Simulator) trackPlotThreads(chapter *Chapter) {
 				}
 				switch strings.ToLower(delta.To) {
 				case "raised":
-					s.Context.PlotThreadsRaised++
+					if isDeferredPlotThread(delta) {
+						s.Context.PlotThreadsDeferred++
+					} else {
+						key := plotThreadKey(delta)
+						if key == "" || !s.Context.PlotThreadsOpen[key] {
+							s.Context.PlotThreadsRaised++
+						}
+						if key != "" {
+							s.Context.PlotThreadsOpen[key] = true
+						}
+					}
 				case "resolved":
-					s.Context.PlotThreadsResolved++
+					key := plotThreadKey(delta)
+					if key == "" || s.Context.PlotThreadsOpen[key] {
+						s.Context.PlotThreadsResolved++
+					}
+					if key != "" {
+						delete(s.Context.PlotThreadsOpen, key)
+					}
 				}
 			}
 		}
 	}
+}
+
+func plotThreadKey(delta StateDelta) string {
+	target := strings.ToLower(strings.TrimSpace(delta.Target))
+	field := strings.ToLower(strings.TrimSpace(delta.Field))
+	if target == "" {
+		return ""
+	}
+	if field == "" {
+		field = "plot_thread"
+	}
+	return field + ":" + target
+}
+
+func isDeferredPlotThread(delta StateDelta) bool {
+	horizon := strings.ToLower(strings.TrimSpace(delta.Unit))
+	status := strings.ToLower(strings.TrimSpace(delta.Cost))
+	switch horizon {
+	case "next_volume", "next-volume", "next volume", "book", "series", "later", "long", "long_term", "long-term":
+		return true
+	}
+	switch status {
+	case "deferred", "later", "long", "long_term", "long-term":
+		return true
+	}
+	return false
 }
 
 // checkPowerProgression validates that power jumps between chapters are
@@ -1129,6 +1629,9 @@ func (s *Simulator) checkPowerProgression() {
 // checkPlotThreads reports unresolved plot threads at the end of the story.
 func (s *Simulator) checkPlotThreads() {
 	unresolved := s.Context.PlotThreadsRaised - s.Context.PlotThreadsResolved
+	if s.Context.PlotThreadsOpen != nil {
+		unresolved = len(s.Context.PlotThreadsOpen)
+	}
 	if unresolved > 0 {
 		s.addIssue(IssuePlotHole, SeverityInfo, "", 0,
 			fmt.Sprintf("存在 %d 个未回收的伏笔/剧情线 (提出 %d, 回收 %d)",

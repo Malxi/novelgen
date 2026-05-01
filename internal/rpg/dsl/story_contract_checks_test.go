@@ -122,6 +122,82 @@ func TestOutlinePhaseStorylineContractMatchesSanitizedNames(t *testing.T) {
 	}
 }
 
+func TestOutlinePhaseLongScopePayoffAcceptsStagedReveal(t *testing.T) {
+	setup := &models.StorySetup{
+		ProjectName: "Long Scope Contract Test",
+		Storylines: []models.Storyline{{
+			Name:         "Conspiracy Arc",
+			Type:         "subplot",
+			Importance:   8,
+			Scope:        "series",
+			PayoffStyle:  "staged_reveal",
+			Desire:       "decode the conspiracy",
+			Opposition:   "the archives are controlled",
+			Payoff:       "the conspiracy is fully exposed",
+			OpenQuestion: "who controls the archives",
+		}},
+	}
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1", Title: "Part", Volumes: []models.Volume{{
+			ID: "P1-V1", Title: "Volume", Chapters: []models.Chapter{{
+				ID: "P1-V1-C1", Title: "Signal",
+				StorylineAdvances: []models.StorylineAdvance{{
+					StorylineName: "Conspiracy Arc",
+					Stage:         "reveal",
+					Change:        "the first archive is decoded",
+					Consequence:   "the conspiracy looks larger",
+				}},
+			}},
+		}},
+	}}}
+
+	issues, err := NewModelAdapter(setup, outline, nil, nil, nil).Simulate(PhaseOutline)
+	if err != nil {
+		t.Fatalf("simulate outline: %v", err)
+	}
+	if hasIssueContaining(issues, "promises a payoff but outline DSL has no payoff/resolved movement") {
+		t.Fatalf("long-scope staged reveal should not require immediate payoff, got %#v", issues)
+	}
+}
+
+func TestOutlinePhaseImmediatePayoffStillRequiresResolution(t *testing.T) {
+	setup := &models.StorySetup{
+		ProjectName: "Immediate Contract Test",
+		Storylines: []models.Storyline{{
+			Name:         "Rescue Episode",
+			Type:         "episode",
+			Importance:   7,
+			Scope:        "volume",
+			PayoffStyle:  "immediate",
+			Desire:       "rescue the prisoner",
+			Opposition:   "the guards lock down the prison",
+			Payoff:       "the prisoner is rescued",
+			OpenQuestion: "can the team get out alive",
+		}},
+	}
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1", Title: "Part", Volumes: []models.Volume{{
+			ID: "P1-V1", Title: "Volume", Chapters: []models.Chapter{{
+				ID: "P1-V1-C1", Title: "Prison",
+				StorylineAdvances: []models.StorylineAdvance{{
+					StorylineName: "Rescue Episode",
+					Stage:         "pressure",
+					Change:        "the team reaches the prison",
+					Consequence:   "the alarm is raised",
+				}},
+			}},
+		}},
+	}}}
+
+	issues, err := NewModelAdapter(setup, outline, nil, nil, nil).Simulate(PhaseOutline)
+	if err != nil {
+		t.Fatalf("simulate outline: %v", err)
+	}
+	if !hasIssueContaining(issues, "promises a payoff but outline DSL has no payoff/resolved movement") {
+		t.Fatalf("immediate payoff should still require resolution, got %#v", issues)
+	}
+}
+
 func TestOutlinePhaseStorylineContractFlagsTwistWithoutSetup(t *testing.T) {
 	setup := &models.StorySetup{
 		ProjectName: "Twist Contract Test",
