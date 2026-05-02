@@ -890,8 +890,10 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 			return nil, fmt.Errorf("failed to improve volume %d.%d: %w", partIdx+1, volIdx+1, err)
 		}
 
-		// Update the volume in the outline
-		part.Volumes[volIdx] = improveOutput.Volume
+		// Update the volume in the outline, preserving stable identity fields.
+		improvedVolume := improveOutput.Volume
+		preserveImprovedVolumeIdentity(volume, &improvedVolume)
+		part.Volumes[volIdx] = improvedVolume
 		progress.CompletedVolumes = append(progress.CompletedVolumes, volume.ID)
 		progress.CurrentVolumeIdx = idx + 1
 		progress.Outline = currentOutline
@@ -909,6 +911,19 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 	logger.Info("✓ Iteration %d complete! Progress file removed.", currentIteration)
 
 	return &currentOutline, nil
+}
+
+func preserveImprovedVolumeIdentity(original *models.Volume, improved *models.Volume) {
+	if original == nil || improved == nil {
+		return
+	}
+	improved.ID = original.ID
+	for i := range improved.Chapters {
+		if i >= len(original.Chapters) {
+			break
+		}
+		improved.Chapters[i].ID = original.Chapters[i].ID
+	}
 }
 
 func allVolumeIndices(outline *models.Outline) [][2]int {

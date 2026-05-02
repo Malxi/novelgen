@@ -127,6 +127,9 @@ type Chapter struct {
 	Characters        []string              `json:"characters" md:"characters"` // 本章出现的角色名列表
 	Location          string                `json:"location" md:"location"`     // 事情发生的地点
 	Events            []Event               `json:"events" md:"events"`         // 本章发生的事件
+	LegacyBeats       []string              `json:"beats,omitempty" md:"-"`     // 旧版兼容：迁移为 Scenes[].Beats
+	OpeningBeat       string                `json:"opening_beat,omitempty" md:"-"`
+	ClosingBeat       string                `json:"closing_beat,omitempty" md:"-"`
 	StateChange       string                `json:"state_change,omitempty" desc:"Primary change this chapter causes; must map to Events"`
 	Conflict          string                `json:"conflict" md:"conflict"`
 	Pacing            string                `json:"pacing" md:"pacing"`
@@ -563,11 +566,14 @@ func inferTargetTypeFromOldFormat(eventType string) string {
 }
 
 // GetBeats collects beats from all scenes. If scenes have beats, returns those.
-// Falls back to empty slice when no scenes/beats exist.
+// Falls back to legacy chapter-level beats for old outline files.
 func (c *Chapter) GetBeats() []string {
 	var beats []string
 	for _, sc := range c.Scenes {
 		beats = append(beats, sc.Beats...)
+	}
+	if len(beats) == 0 {
+		beats = append(beats, c.LegacyBeats...)
 	}
 	return beats
 }

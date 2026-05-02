@@ -1,0 +1,214 @@
+{
+  "changes": [
+    {
+      "path": "P1-V2-C2.events",
+      "action": "add_state_change_event",
+      "value": "林砚确认最深废弃矿洞存在超出原著设定的未知秘密，符文石壁背后另有空间"
+    },
+    {
+      "path": "P1-V2-C3.events",
+      "action": "add_state_change_event",
+      "value": "林砚打开遗迹入口并确认内部存在金手指同源但更强大的力量，尚未进入便已感知到恐怖"
+    },
+    {
+      "path": "P1-V2-C8.events",
+      "action": "add_state_change_event",
+      "value": "林砚成功应对监工盘问，彻底掩盖了矿难的真实原因，遗迹入口暂时安全"
+    },
+    {
+      "path": "P1-V2-C10.characters",
+      "action": "sync_scene_character",
+      "value": "缉厄司暗卫甲（背景）"
+    },
+    {
+      "path": "P1-V3-C3.events",
+      "action": "add_conflict_event",
+      "value": "计划执行的时间紧迫与被监工盯梢无法行动的矛盾"
+    },
+    {
+      "path": "P1-V3-C8.events",
+      "action": "add_conflict_event",
+      "value": "引动坍塌的时机必须精准，稍有不慎就会把自己也埋在矿道里"
+    },
+    {
+      "path": "P1-V4-C2.characters",
+      "action": "sync_scene_character",
+      "value": "王掌柜"
+    },
+    {
+      "path": "P1-V6-C1.characters",
+      "action": "sync_event_character",
+      "value": "王伯"
+    },
+    {
+      "path": "P1-V6-C8.characters",
+      "action": "sync_scene_character",
+      "value": "沈明"
+    },
+    {
+      "path": "P1-V6-C8.characters",
+      "action": "sync_scene_character",
+      "value": "江迟"
+    },
+    {
+      "path": "p1-v10-c1.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第1章"
+    },
+    {
+      "path": "p1-v10-c2.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第2章"
+    },
+    {
+      "path": "p1-v10-c3.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第3章"
+    },
+    {
+      "path": "p1-v10-c3.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "白晓（可疑） -\u003e 白晓"
+    },
+    {
+      "path": "p1-v10-c4.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第4章"
+    },
+    {
+      "path": "p1-v10-c5.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第5章"
+    },
+    {
+      "path": "p1-v10-c6.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第6章"
+    },
+    {
+      "path": "p1-v10-c7.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第7章"
+    },
+    {
+      "path": "p1-v10-c8.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第8章"
+    },
+    {
+      "path": "p1-v10-c9.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第9章"
+    },
+    {
+      "path": "p1-v10-c9.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "沈明（潜伏） -\u003e 沈明"
+    },
+    {
+      "path": "p1-v10-c10.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第10章"
+    },
+    {
+      "path": "P1-V11-C1.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第1章"
+    },
+    {
+      "path": "P1-V11-C1.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风矿地下遗迹核心封印阵前"
+    },
+    {
+      "path": "P1-V11-C2.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第2章"
+    },
+    {
+      "path": "P1-V11-C2.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "遗迹核心阵法账本石壁"
+    },
+    {
+      "path": "P1-V11-C3.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第3章"
+    },
+    {
+      "path": "P1-V11-C3.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "遗迹核心区养魂草石圃"
+    },
+    {
+      "path": "P1-V11-C4.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第4章"
+    },
+    {
+      "path": "P1-V11-C4.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "禁术封印主阵眼"
+    },
+    {
+      "path": "P1-V11-C5.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第5章"
+    },
+    {
+      "path": "P1-V11-C5.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "禁术封印主阵眼"
+    },
+    {
+      "path": "P1-V11-C6.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第6章"
+    },
+    {
+      "path": "P1-V11-C6.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "遗迹核心区外环甬道"
+    },
+    {
+      "path": "P1-V11-C7.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第7章"
+    },
+    {
+      "path": "P1-V11-C7.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "遗迹核心区塌裂石桥"
+    },
+    {
+      "path": "P1-V11-C8.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第8章"
+    },
+    {
+      "path": "P1-V11-C8.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风矿地下遗迹侧洞出口"
+    },
+    {
+      "path": "P1-V11-C9.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第9章"
+    },
+    {
+      "path": "P1-V11-C9.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风矿外废弃矿棚"
+    },
+    {
+      "path": "P1-V11-C10.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第10章"
+    },
+    {
+      "path": "P1-V11-C10.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇地底暗狱外围"
+    }
+  ]
+}

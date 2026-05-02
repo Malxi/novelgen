@@ -1,0 +1,604 @@
+{
+  "changes": [
+    {
+      "path": "P1-V1-C1.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第1章"
+    },
+    {
+      "path": "P1-V1-C2.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风灵石矿丙字三号矿道"
+    },
+    {
+      "path": "P1-V1-C3.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风灵石矿矿道入口广场"
+    },
+    {
+      "path": "P1-V1-C4.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风灵石矿矿奴大通铺"
+    },
+    {
+      "path": "P1-V1-C5.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风灵石矿丙字七号矿道"
+    },
+    {
+      "path": "P1-V1-C6.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风灵石矿主矿道入口"
+    },
+    {
+      "path": "P1-V1-C7.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风灵石矿矿场广场"
+    },
+    {
+      "path": "P1-V1-C8.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风灵石矿废弃矿道"
+    },
+    {
+      "path": "P1-V1-C9.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风灵石矿丁字八号废弃矿道"
+    },
+    {
+      "path": "P1-V1-C10.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风灵石矿矿奴大通铺"
+    },
+    {
+      "path": "P1-V2-C2.events",
+      "action": "add_state_change_event",
+      "value": "林砚打开遗迹入口并确认内部存在金手指同源但更强大的力量，尚未进入便已感知到恐怖"
+    },
+    {
+      "path": "P1-V2-C5.events",
+      "action": "add_state_change_event",
+      "value": "林砚成功应对监工盘问，彻底掩盖了矿难的真实原因，遗迹入口暂时安全"
+    },
+    {
+      "path": "P1-V2-C6.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "矿奴小石头（弱关联） -\u003e 矿奴小石头"
+    },
+    {
+      "path": "P1-V3-C1.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第1章"
+    },
+    {
+      "path": "P1-V3-C2.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第2章"
+    },
+    {
+      "path": "P1-V3-C3.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第3章"
+    },
+    {
+      "path": "P1-V3-C3.events",
+      "action": "add_state_change_event",
+      "value": "林砚的逃离计划因周虎的盯梢被迫暂缓，执行风险大幅提升，进一步确认「三哥」势力已经渗透到矿场基层"
+    },
+    {
+      "path": "P1-V3-C4.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第4章"
+    },
+    {
+      "path": "P1-V3-C5.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第5章"
+    },
+    {
+      "path": "P1-V3-C6.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第6章"
+    },
+    {
+      "path": "P1-V3-C7.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第7章"
+    },
+    {
+      "path": "P1-V3-C8.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第8章"
+    },
+    {
+      "path": "P1-V3-C8.events",
+      "action": "add_state_change_event",
+      "value": "林砚成功除掉两名缉厄司暗卫，矿场内的所有追兵都已解决，确认「三哥」势力对自己的排查是自上而下的统..."
+    },
+    {
+      "path": "P1-V3-C9.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第9章"
+    },
+    {
+      "path": "P1-V3-C10.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第10章"
+    },
+    {
+      "path": "P1-V4-C1.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第1章"
+    },
+    {
+      "path": "P1-V4-C2.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第2章"
+    },
+    {
+      "path": "P1-V4-C3.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第3章"
+    },
+    {
+      "path": "P1-V4-C4.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第4章"
+    },
+    {
+      "path": "P1-V4-C5.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第5章"
+    },
+    {
+      "path": "P1-V4-C6.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第6章"
+    },
+    {
+      "path": "P1-V4-C6.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "左臂经脉暗伤（轻度） -\u003e 左臂经脉暗伤"
+    },
+    {
+      "path": "P1-V4-C7.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第7章"
+    },
+    {
+      "path": "P1-V4-C7.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "左臂经脉暗伤（轻度） -\u003e 左臂经脉暗伤"
+    },
+    {
+      "path": "P1-V5-C1.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇便民通铺、坊市后破庙外围"
+    },
+    {
+      "path": "P1-V5-C2.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇坊市灵石交易区"
+    },
+    {
+      "path": "P1-V5-C3.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇坊市出口"
+    },
+    {
+      "path": "P1-V5-C4.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇坊市后偏僻小巷"
+    },
+    {
+      "path": "P1-V5-C5.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇便民通铺"
+    },
+    {
+      "path": "P1-V5-C6.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇坊市后破庙周边"
+    },
+    {
+      "path": "P1-V5-C7.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇坊市后废弃破庙"
+    },
+    {
+      "path": "P1-V5-C8.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇坊市后废弃破庙"
+    },
+    {
+      "path": "P1-V5-C9.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇坊市后废弃破庙"
+    },
+    {
+      "path": "P1-V5-C10.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇便民通铺"
+    },
+    {
+      "path": "P1-V7-C1.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第1章"
+    },
+    {
+      "path": "P1-V7-C1.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "陈记杂货铺后院密室"
+    },
+    {
+      "path": "P1-V7-C2.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第2章"
+    },
+    {
+      "path": "P1-V7-C2.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "陈记杂货铺前店"
+    },
+    {
+      "path": "P1-V7-C3.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第3章"
+    },
+    {
+      "path": "P1-V7-C3.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "陈记杂货铺地下密室"
+    },
+    {
+      "path": "P1-V7-C4.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第4章"
+    },
+    {
+      "path": "P1-V7-C4.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇东门官道断崖处"
+    },
+    {
+      "path": "P1-V7-C5.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第5章"
+    },
+    {
+      "path": "P1-V7-C5.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "陈记杂货铺地下密室"
+    },
+    {
+      "path": "P1-V7-C6.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第6章"
+    },
+    {
+      "path": "P1-V7-C6.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇城西小巷"
+    },
+    {
+      "path": "P1-V7-C7.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第7章"
+    },
+    {
+      "path": "P1-V7-C7.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇城西小巷"
+    },
+    {
+      "path": "P1-V7-C8.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第8章"
+    },
+    {
+      "path": "P1-V7-C8.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "陈记杂货铺后门"
+    },
+    {
+      "path": "P1-V7-C9.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第9章"
+    },
+    {
+      "path": "P1-V7-C9.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "陈记杂货铺地下密室"
+    },
+    {
+      "path": "P1-V7-C10.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第10章"
+    },
+    {
+      "path": "P1-V7-C10.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "陈记杂货铺地下密室"
+    },
+    {
+      "path": "P1-V8-C1.characters",
+      "action": "sync_scene_character",
+      "value": "缉厄司俘虏"
+    },
+    {
+      "path": "P1-V9-C1.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第1章"
+    },
+    {
+      "path": "P1-V9-C2.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第2章"
+    },
+    {
+      "path": "P1-V9-C3.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第3章"
+    },
+    {
+      "path": "P1-V9-C3.events",
+      "action": "add_state_change_event",
+      "value": "遗迹探险队正式组建，分工明确，准备启程，苏晚的异常反应为后续内鬼身份揭露埋下伏笔"
+    },
+    {
+      "path": "P1-V9-C4.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第4章"
+    },
+    {
+      "path": "P1-V9-C4.events",
+      "action": "add_state_change_event",
+      "value": "探险队所有物资准备完毕，具备了探索遗迹的基础条件，玉佩的异常颤动为后续三哥持有另一半钥匙的真相埋..."
+    },
+    {
+      "path": "P1-V9-C5.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第5章"
+    },
+    {
+      "path": "P1-V9-C6.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第6章"
+    },
+    {
+      "path": "P1-V9-C6.events",
+      "action": "add_state_change_event",
+      "value": "探险队确认矿场正面封锁严密，确定从废弃矿道潜入的路线，进一步验证了有第三方势力在暗中给他们放行"
+    },
+    {
+      "path": "P1-V9-C7.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第7章"
+    },
+    {
+      "path": "P1-V9-C8.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第8章"
+    },
+    {
+      "path": "P1-V9-C8.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "复活后虚弱（灵力紊乱） -\u003e 复活后虚弱"
+    },
+    {
+      "path": "P1-V9-C9.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第9章"
+    },
+    {
+      "path": "P1-V9-C9.events",
+      "action": "add_state_change_event",
+      "value": "探险队定位到遗迹入口，确认缉厄司已经抢先进入，时间极其紧迫，第三方势力就守在遗迹外等着坐收渔利"
+    },
+    {
+      "path": "P1-V9-C10.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第10章"
+    },
+    {
+      "path": "P1-V9-C10.events",
+      "action": "add_state_change_event",
+      "value": "探险队完成最终部署，正式踏入遗迹，衔接下一卷的埋伏剧情，第三方势力「三哥」的布局完全浮出水面，为..."
+    },
+    {
+      "path": "p1-v10-c1.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第1章"
+    },
+    {
+      "path": "p1-v10-c2.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第2章"
+    },
+    {
+      "path": "p1-v10-c3.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第3章"
+    },
+    {
+      "path": "p1-v10-c4.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第4章"
+    },
+    {
+      "path": "p1-v10-c5.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第5章"
+    },
+    {
+      "path": "p1-v10-c6.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第6章"
+    },
+    {
+      "path": "p1-v10-c7.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第7章"
+    },
+    {
+      "path": "p1-v10-c8.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第8章"
+    },
+    {
+      "path": "p1-v10-c9.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第9章"
+    },
+    {
+      "path": "p1-v10-c10.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第10章"
+    },
+    {
+      "path": "P1-V11-C1.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第1章"
+    },
+    {
+      "path": "P1-V11-C2.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第2章"
+    },
+    {
+      "path": "P1-V11-C2.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "遗迹核心阵法账本石壁"
+    },
+    {
+      "path": "P1-V11-C3.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第3章"
+    },
+    {
+      "path": "P1-V11-C3.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "遗迹核心区养魂草石圃"
+    },
+    {
+      "path": "P1-V11-C4.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第4章"
+    },
+    {
+      "path": "P1-V11-C4.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "禁术封印主阵眼"
+    },
+    {
+      "path": "P1-V11-C5.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第5章"
+    },
+    {
+      "path": "P1-V11-C5.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "禁术封印主阵眼"
+    },
+    {
+      "path": "P1-V11-C6.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第6章"
+    },
+    {
+      "path": "P1-V11-C6.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "遗迹核心区外环甬道"
+    },
+    {
+      "path": "P1-V11-C7.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第7章"
+    },
+    {
+      "path": "P1-V11-C7.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "遗迹核心区塌裂石桥"
+    },
+    {
+      "path": "P1-V11-C8.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第8章"
+    },
+    {
+      "path": "P1-V11-C8.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风矿地下遗迹侧洞出口"
+    },
+    {
+      "path": "P1-V11-C9.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第9章"
+    },
+    {
+      "path": "P1-V11-C9.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "黑风矿外废弃矿棚"
+    },
+    {
+      "path": "P1-V11-C10.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第10章"
+    },
+    {
+      "path": "P1-V11-C10.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇地底暗狱外围"
+    },
+    {
+      "path": "P1-V12-C1.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇地底暗狱入口"
+    },
+    {
+      "path": "P1-V12-C2.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇暗狱人质区"
+    },
+    {
+      "path": "P1-V12-C3.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇暗狱家属牢"
+    },
+    {
+      "path": "P1-V12-C4.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇暗狱交换厅"
+    },
+    {
+      "path": "P1-V12-C5.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "暗狱下层死士廊"
+    },
+    {
+      "path": "P1-V12-C6.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "暗狱下层死士廊阵眼"
+    },
+    {
+      "path": "P1-V12-C7.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇暗狱密门"
+    },
+    {
+      "path": "P1-V12-C8.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇城西废巷"
+    },
+    {
+      "path": "P1-V12-C9.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇黑市暗线据点"
+    },
+    {
+      "path": "P1-V12-C10.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青牛镇外荒山临时据点"
+    }
+  ]
+}

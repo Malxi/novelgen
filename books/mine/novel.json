@@ -6,7 +6,7 @@
   "language": "zh",
   "structure": {
     "target_parts": 1,
-    "target_volumes": 10,
+    "target_volumes": 12,
     "target_chapters": 10
   },
   "chapter_config": {

@@ -1,0 +1,59 @@
+{
+  "changes": [
+    {
+      "path": "P1.volumes[9].id",
+      "action": "canonicalize_volume_id",
+      "value": "part1-volume10 -\u003e P1-V10"
+    },
+    {
+      "path": "P1-V10.chapters[0].id",
+      "action": "canonicalize_chapter_id",
+      "value": "p1-v10-c1 -\u003e P1-V10-C1"
+    },
+    {
+      "path": "P1-V10.chapters[1].id",
+      "action": "canonicalize_chapter_id",
+      "value": "p1-v10-c2 -\u003e P1-V10-C2"
+    },
+    {
+      "path": "P1-V10.chapters[2].id",
+      "action": "canonicalize_chapter_id",
+      "value": "p1-v10-c3 -\u003e P1-V10-C3"
+    },
+    {
+      "path": "P1-V10.chapters[3].id",
+      "action": "canonicalize_chapter_id",
+      "value": "p1-v10-c4 -\u003e P1-V10-C4"
+    },
+    {
+      "path": "P1-V10.chapters[4].id",
+      "action": "canonicalize_chapter_id",
+      "value": "p1-v10-c5 -\u003e P1-V10-C5"
+    },
+    {
+      "path": "P1-V10.chapters[5].id",
+      "action": "canonicalize_chapter_id",
+      "value": "p1-v10-c6 -\u003e P1-V10-C6"
+    },
+    {
+      "path": "P1-V10.chapters[6].id",
+      "action": "canonicalize_chapter_id",
+      "value": "p1-v10-c7 -\u003e P1-V10-C7"
+    },
+    {
+      "path": "P1-V10.chapters[7].id",
+      "action": "canonicalize_chapter_id",
+      "value": "p1-v10-c8 -\u003e P1-V10-C8"
+    },
+    {
+      "path": "P1-V10.chapters[8].id",
+      "action": "canonicalize_chapter_id",
+      "value": "p1-v10-c9 -\u003e P1-V10-C9"
+    },
+    {
+      "path": "P1-V10.chapters[9].id",
+      "action": "canonicalize_chapter_id",
+      "value": "p1-v10-c10 -\u003e P1-V10-C10"
+    }
+  ]
+}

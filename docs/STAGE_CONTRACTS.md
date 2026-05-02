@@ -191,6 +191,9 @@ Required invariants:
   reads unless it is deliberately handling old-format compatibility.
 - `ResourceLedgerEntry.Start + Delta == End` when a ledger entry is present.
 - `OutlineScene.Order` starts at 1 and is stable within a chapter.
+- Older outlines may still contain chapter-level `beats`, `opening_beat`, and
+  `closing_beat`. These are compatibility fields; `compose normalize` preserves
+  them and deterministically migrates them into `scenes` for downstream stages.
 - Mystery IDs and boss IDs are stable if referenced across chapters.
 - `StorylineAdvance.StorylineName` should match or clearly refer to a setup
   storyline.
