@@ -1,0 +1,104 @@
+{
+  "changes": [
+    {
+      "path": "vol1_ch01.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第1章"
+    },
+    {
+      "path": "vol1_ch02.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第2章"
+    },
+    {
+      "path": "vol1_ch02.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "赵虎(初识) -\u003e 赵虎"
+    },
+    {
+      "path": "vol1_ch03.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第3章"
+    },
+    {
+      "path": "vol1_ch04.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第4章"
+    },
+    {
+      "path": "vol1_ch05.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第5章"
+    },
+    {
+      "path": "vol1_ch06.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第6章"
+    },
+    {
+      "path": "vol1_ch06.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "赵虎(重伤) -\u003e 赵虎"
+    },
+    {
+      "path": "vol1_ch07.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第7章"
+    },
+    {
+      "path": "vol1_ch07.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "赵虎(重伤) -\u003e 赵虎"
+    },
+    {
+      "path": "vol1_ch08.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第8章"
+    },
+    {
+      "path": "vol1_ch08.characters",
+      "action": "sync_scene_character",
+      "value": "李元道"
+    },
+    {
+      "path": "vol1_ch08.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "赵虎(藏于通风管道) -\u003e 赵虎"
+    },
+    {
+      "path": "vol1_ch08.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "头部胀痛（新能力冲击） -\u003e 头部胀痛"
+    },
+    {
+      "path": "vol1_ch09.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第9章"
+    },
+    {
+      "path": "vol1_ch09.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "赵虎(跳入暗河) -\u003e 赵虎"
+    },
+    {
+      "path": "vol1_ch10.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第10章"
+    },
+    {
+      "path": "vol1_ch10.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "赵虎(虚弱) -\u003e 赵虎"
+    },
+    {
+      "path": "ch4.characters",
+      "action": "sync_scene_character",
+      "value": "老张（门外交谈）"
+    },
+    {
+      "path": "ch5.characters",
+      "action": "sync_scene_character",
+      "value": "其他成员"
+    }
+  ]
+}

@@ -1506,6 +1506,12 @@ func (a *ComposeAgent) GenerateChaptersHierarchical(ctx context.Context, setup m
 	return outline, nil
 }
 
+// BuildHierarchicalContext exposes the same continuity context used by full
+// hierarchical generation for callers that generate one volume at a time.
+func (a *ComposeAgent) BuildHierarchicalContext(outline *models.Outline, partIdx, volIdx int) string {
+	return a.buildHierarchicalContext(outline, partIdx, volIdx)
+}
+
 // buildHierarchicalContext builds context for hierarchical generation
 func (a *ComposeAgent) buildHierarchicalContext(outline *models.Outline, partIdx, volIdx int) string {
 	var context strings.Builder

@@ -1,0 +1,34 @@
+{
+  "changes": [
+    {
+      "path": "P1-V9-C2.characters",
+      "action": "sync_scene_character",
+      "value": "两名成员"
+    },
+    {
+      "path": "P1-V9-C5.characters",
+      "action": "sync_event_character",
+      "value": "据点成员"
+    },
+    {
+      "path": "P1-V9-C5.characters",
+      "action": "sync_scene_character",
+      "value": "数名成员"
+    },
+    {
+      "path": "P1-V9-C8.characters",
+      "action": "sync_scene_character",
+      "value": "林北辰（传讯）"
+    },
+    {
+      "path": "P1-V9-C8.characters",
+      "action": "sync_scene_character",
+      "value": "张天赐"
+    },
+    {
+      "path": "P1-V9-C9.characters",
+      "action": "sync_scene_character",
+      "value": "全体成员"
+    }
+  ]
+}

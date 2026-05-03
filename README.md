@@ -120,10 +120,13 @@ novelgen setup import story/setup/story_setup.md
 - `regen [id]` - 重新生成特定部分
   - `--prompt` (string) - 重新生成时的建议
 - `improve [--max-rounds]` - 改进现有大纲
+- `pipeline` - 按全局卷序号逐卷执行 skeleton/生成/improve/cross patch
 
 **示例：**
 ```bash
 novelgen compose gen                      # 生成完整大纲
+novelgen compose pipeline --from-volume 1 --to-volume 1
+novelgen compose pipeline --from-volume 2 --to-volume 7 --max-rounds 1
 novelgen compose regen 1_1_1              # 重新生成第1部第1卷第1章
 novelgen compose regen 1_1_1 --prompt "加强冲突"
 novelgen compose improve --max-rounds 3   # 改进大纲3轮
@@ -476,7 +479,10 @@ Constraint System → 约束规则
 
 ```bash
 # 转换小说为 RPG DSL
-novelgen rpg dsl convert -b mine
+novelgen rpg-dsl convert -b mine
+
+# 只转换已生成的某一卷 outline DSL
+novelgen rpg-dsl convert -b mine --phase outline --volume 7
 
 # 运行模拟检测问题
 novelgen simulate-dsl books/mine/story/rpg/final.rpg

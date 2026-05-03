@@ -1,0 +1,3462 @@
+
+metadata {
+  title = "穿越者的天道弈局"
+  genre = ["仙侠", "穿越", "悬疑", "黑暗奇幻"]
+  power_system = "金手指体系：附矿场复活 + 金手指体系：复活爱人 + 金手指体系：情感强制 + 金手指体系：龙傲天 + 金手指体系：异能吞噬 + 金手指体系：轨迹推演 + 金手指体系：话术操控 + 修仙境界体系：修仙 + 金手指体系：命运悲鸣 + 金手指体系：副本生成器 + 金手指体系：剧情强制 + 金手指体系：真实还原 + 金手指体系：知识污染 + 金手指体系：荒诞吸引 + 金手指体系：真实洞察 + 金手指体系：技术预演 + 阵营体系：缉厄司 + 阵营体系：书友会 + 阵营体系：无阵营威胁 + ?????????"
+  tone = "冷峻烧脑，黑暗残酷，悬念迭起，略带黑色幽默"
+  dsl_version = "0.2.0"
+  phase = "outline"
+}
+
+characters {
+  player "幽默的主" {
+    id = "幽默的主"
+    class = "adventurer"
+    description = "专写矿场开局修仙文的网络作者陈东穿越为灵石矿奴，他因常年深耕同类型创作觉醒与写作风格绑定的诡异金手指。修仙界遍布各类题材的穿越作者，以维护天道为名的官方组织「缉厄司」实则猎杀穿越者抽取其体内的天道碎片修补破损天道。"
+    background = "专写矿场开局修仙文的网络作者陈东穿越为灵石矿奴，他因常年深耕同类型创作觉醒与写作风格绑定的诡异金手指。修仙界遍布各类题材的穿越作者，以维护天道为名的官方组织「缉厄司」实则猎杀穿越者抽取其体内的天道碎片修补破损天道。"
+    personality = ["沉稳务实", "重情重义", "求生意志强"]
+    motivation = "逃离矿场死循环"
+    abilities = ["金手指体系：附矿场复活"]
+    role_in_story = "protagonist"
+    str = 12
+    agi = 11
+    int = 14
+    vit = 12
+    hp = 120
+    mp = 60
+    skills = ["快速学习"]
+  }
+  npc "陈东" {
+    id = "陈东"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "赵虎" {
+    id = "赵虎"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "慕容寒" {
+    id = "慕容寒"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "苏婉" {
+    id = "苏婉"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "楚怀远" {
+    id = "楚怀远"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "远古穿越者残影" {
+    id = "远古穿越者残影"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "楚怀远/赵明远" {
+    id = "楚怀远/赵明远"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "赵明远" {
+    id = "赵明远"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "天道意志化身" {
+    id = "天道意志化身"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "记忆中的穿越者们" {
+    id = "记忆中的穿越者们"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "其他穿越者" {
+    id = "其他穿越者"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "被献祭的穿越者残魂" {
+    id = "被献祭的穿越者残魂"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "赵明远残魂" {
+    id = "赵明远残魂"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "宋晴" {
+    id = "宋晴"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "张天赐" {
+    id = "张天赐"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "林北辰" {
+    id = "林北辰"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+}
+
+world {
+  item "灵石" {
+    id = "resource_01"
+    type = "货币/能源"
+    rarity = "common"
+    description = "修仙界基础硬通货，内含可吸收灵气，用于修炼、布阵、驱动法器。低阶灵石易得，高阶灵石稀有。"
+  }
+  item "天道碎片" {
+    id = "resource_02"
+    type = "核心资源"
+    rarity = "legendary"
+    description = "天道破碎后散落于世间的法则碎片，穿越者体内天然携带，缉厄司猎杀穿越者的根本目标。每块碎片蕴含不同规则（如时间、空间、情感），可被吸收或用于修补天道。也是穿越者金手指力量的潜在来源。此类碎片总数有限，其中一枚被内鬼藏匿，原为其父（缉厄司温和派高层）秘密研究的核心样品，与“轨迹推演”金手指产生共鸣，亦被缉厄司视为追踪标记。"
+  }
+  item "静心佩" {
+    id = "resource_03"
+    type = "法器"
+    rarity = "rare"
+    description = "上古流传的宁神法器，可压制精神类金手指的无意识波动，尤其对「剧情强制」等情感操控型能力有显著抑制效果。甜宠文作者佩戴后可将范围压缩至一丈以下。"
+  }
+  item "副本核心（玉简）" {
+    id = "resource_04"
+    type = "消耗品"
+    rarity = "rare"
+    description = "无限流作者生成副本所需的媒介，由特殊玉简雕刻而成，可重复充能使用。其材质与天道碎片存在某种共鸣，暗示两者同源。"
+  }
+  item "禁术封印之物" {
+    id = "resource_05"
+    type = "禁忌遗产"
+    rarity = "legendary"
+    description = "矿场地下遗迹中封印的「死后夺取」金手指本体，以七重上古禁制镇压。陈东在逃离矿场时偶然触发其气息，成为后续探索副本核心。"
+  }
+  item "寿命" {
+    id = "resource_06"
+    type = "通用"
+    rarity = "rare"
+    description = "修仙者每进阶一次，寿命大幅延长。练气期约120年，筑基期约300年，金丹期约500年，元婴期约1000年，化神期约2000年。寿命耗尽则无法续命（除特殊天材地宝）。"
+  }
+  item "干粮及水袋" {
+    id = "resource_07"
+    type = "通用"
+    rarity = "common"
+    description = "修仙界普通干粮与水袋，用于长途跋涉与矿场劳作，无特殊功效，但长期在野外生存必备。"
+  }
+  item "下品灵石" {
+    id = "resource_08"
+    type = "通用"
+    rarity = "common"
+    description = "修仙界最低阶灵石，广泛流通，用于日常交易与低阶修炼。内含灵气稀薄，练气期常用。"
+  }
+  item "百年聚气草" {
+    id = "resource_09"
+    type = "通用"
+    rarity = "common"
+    description = "百年药性的聚气草，可用于炼制聚气丹，或直接吸收加速练气期修炼，价值不高但易获取。"
+  }
+  item "聚气丹" {
+    id = "resource_10"
+    type = "通用"
+    rarity = "common"
+    description = "练气期常用修炼丹药，可加速灵气吸收，提高修炼效率，由聚气草炼制而成。"
+  }
+  item "练气七层突破丹" {
+    id = "resource_11"
+    type = "通用"
+    rarity = "rare"
+    description = "专用于辅助练气六层修士突破至练气七层的丹药，含有精纯灵气与少许破境感悟，较为珍贵。"
+  }
+  item "中品灵石" {
+    id = "resource_12"
+    type = "通用"
+    rarity = "rare"
+    description = "品质高于下品灵石的灵石，内含灵气更精纯，常用于交易高阶物品与金丹期修炼，价值较高。"
+  }
+  item "驱邪符" {
+    id = "resource_13"
+    type = "通用"
+    rarity = "rare"
+    description = "(自动添加 — 请手动补充描述)"
+  }
+  item "蓝色灵石" {
+    id = "resource_14"
+    type = "通用"
+    rarity = "rare"
+    description = "(自动添加 — 请手动补充描述)"
+  }
+  item "凝气草" {
+    id = "resource_15"
+    type = "通用"
+    rarity = "rare"
+    description = "(自动添加 — 请手动补充描述)"
+  }
+  item "静心佩（耐久）" {
+    id = "resource_16"
+    type = "通用"
+    rarity = "rare"
+    description = "(自动添加 — 请手动补充描述)"
+  }
+  item "天道碎片残骸" {
+    id = "resource_17"
+    type = "通用"
+    rarity = "rare"
+    description = "(自动添加 — 请手动补充描述)"
+  }
+  item "禁术种子" {
+    id = "resource_18"
+    type = "通用"
+    rarity = "rare"
+    description = "(自动添加 — 请手动补充描述)"
+  }
+  rule "setup_rule_01" {
+    trigger = "always"
+    effect = "复活能力一旦暴露，必遭缉厄司锁定追杀或被其他穿越者胁迫利用。"
+  }
+  rule "setup_rule_02" {
+    trigger = "always"
+    effect = "金手指力量与作者生前创作题材的专注度和风格鲜明度正相关，断更或转型将导致能力衰退。"
+  }
+  rule "setup_rule_03" {
+    trigger = "always"
+    effect = "存在被封印的禁术级金手指「死后夺取」，曾为悬疑类惊悚作者持有，引发穿越者大屠杀后被缉厄司封印于矿场地下遗迹中，是前期大型探索副本的核心线索。"
+  }
+  rule "setup_rule_04" {
+    trigger = "always"
+    effect = "缉厄司猎杀穿越者的根本目的是剥离其神魂与天道碎片，用以修补早已千疮百孔的天道。"
+  }
+  rule "setup_rule_05" {
+    trigger = "always"
+    effect = "附矿场复活每次复活都会损耗自身修为，损耗下限为练气一层，若处于练气一层时复活将折损10年寿命，寿命归零则彻底死亡；若死亡地点千里范围内无矿场，复活将延迟72小时，且复活后直接处于濒死状态，尸体消失不留痕迹。"
+  }
+  rule "setup_rule_06" {
+    trigger = "always"
+    effect = "「复活爱人」能力的「真心所爱」判定以灵魂本源的情感为唯一依据，外力精神操控、诱导产生的虚假爱意无法触发该能力；且情感强制产生的虚假爱意会完全覆盖目标原本对施术者的任何真实好感，不留痕迹，但若施术者解除强制后，目标可能出现「情感印记残留」——对施术者记忆中模糊矛盾的依赖感，可作为后期反水或识破的线索。"
+  }
+  rule "setup_rule_07" {
+    trigger = "always"
+    effect = "穿越者互助组织「书友会」内部潜伏着缉厄司内鬼，擅长利用信息差制造猜忌与自相残杀。"
+  }
+  rule "setup_rule_08" {
+    trigger = "always"
+    effect = "穿越者的金手指威力与自身本土修仙修为正相关，修为越高金手指的上限越高、副作用越低。"
+  }
+  rule "setup_rule_09" {
+    trigger = "always"
+    effect = "同一目标受多个穿越者金手指作用时，其效果取最高值，不可简单叠加；且修为高出施术者一个大境界及以上者，可降低金手指效果的20%作为天然抗性。"
+  }
+  rule "setup_rule_10" {
+    trigger = "always"
+    effect = "甜宠文作者的金手指「剧情强制」的生效范围（基础半径十丈）与效果强度受作者自身修为影响，且可被高其一个大境界及以上的修士以精神防御法术短暂抵抗（不超过3息）；作者亦可佩戴特制「静心佩」类法器主动将生效范围从十丈压制至一丈以内。"
+  }
+  rule "setup_rule_11" {
+    trigger = "always"
+    effect = "缉厄司内部等级分明：基层缉厄使负责一线猎杀与追踪；司丞统领分队指挥行动；司主掌管区域事务并直接向大司首汇报；大司首为组织最高领袖，仅对天道意志负责。"
+  }
+  rule "setup_rule_12" {
+    trigger = "always"
+    effect = "书友会结构松散却暗藏阶层：普通成员仅知有限信息；骨干成员参与核心决策并掌握若干据点；长老负责统筹资源与情报；会长为穿越者中实力与威望最高者，拥有否决权。"
+  }
+  rule "resource_scarcity_resource_01" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_01; scarcity=常见; category=货币/能源"
+  }
+  rule "resource_scarcity_resource_02" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_02; scarcity=稀有（每块规则独一无二）; category=核心资源"
+  }
+  rule "resource_scarcity_resource_03" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_03; scarcity=稀有; category=法器"
+  }
+  rule "resource_scarcity_resource_04" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_04; scarcity=稀有; category=消耗品"
+  }
+  rule "resource_scarcity_resource_05" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_05; scarcity=独一无二; category=禁忌遗产"
+  }
+  rule "resource_scarcity_resource_06" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_06; scarcity=稀有; category=通用"
+  }
+  rule "resource_scarcity_resource_07" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_07; scarcity=常见; category=通用"
+  }
+  rule "resource_scarcity_resource_08" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_08; scarcity=常见; category=通用"
+  }
+  rule "resource_scarcity_resource_09" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_09; scarcity=常见; category=通用"
+  }
+  rule "resource_scarcity_resource_10" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_10; scarcity=常见; category=通用"
+  }
+  rule "resource_scarcity_resource_11" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_11; scarcity=稀有; category=通用"
+  }
+  rule "resource_scarcity_resource_12" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_12; scarcity=稀有; category=通用"
+  }
+  rule "resource_scarcity_resource_13" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_13; scarcity=稀有; category=通用"
+  }
+  rule "resource_scarcity_resource_14" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_14; scarcity=稀有; category=通用"
+  }
+  rule "resource_scarcity_resource_15" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_15; scarcity=稀有; category=通用"
+  }
+  rule "resource_scarcity_resource_16" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_16; scarcity=稀有; category=通用"
+  }
+  rule "resource_scarcity_resource_17" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_17; scarcity=稀有; category=通用"
+  }
+  rule "resource_scarcity_resource_18" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_18; scarcity=稀有; category=通用"
+  }
+  rule "progression_requirement_金手指体系：附矿场复活_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：附矿场复活; level=1; requires=死亡触发，且复活点为离死亡最近的矿场"
+  }
+  rule "progression_max_金手指体系：附矿场复活" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：附矿场复活; max_level=1"
+  }
+  rule "progression_requirement_金手指体系：复活爱人_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：复活爱人; level=1; requires=需触发两个核心条件——所爱之人死亡，且三哥自身对其怀有灵魂层面的强烈执念与爱意。"
+  }
+  rule "progression_max_金手指体系：复活爱人" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：复活爱人; max_level=1"
+  }
+  rule "progression_requirement_金手指体系：情感强制_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：情感强制; level=1; requires=主动触发，需与目标面对面接触，且自身灵气充足，目标无强烈的精神防御。"
+  }
+  rule "progression_max_金手指体系：情感强制" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：情感强制; max_level=1"
+  }
+  rule "progression_requirement_金手指体系：龙傲天_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：龙傲天; level=1; requires=无主动触发条件，随机被动激活，触发概率与自身气运相关。"
+  }
+  rule "progression_max_金手指体系：龙傲天" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：龙傲天; max_level=1"
+  }
+  rule "progression_requirement_金手指体系：异能吞噬_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：异能吞噬; level=1; requires=死后触发，且杀人者必须是拥有金手指的穿越者或伪穿越者（普通本土修士杀死不触发）。"
+  }
+  rule "progression_max_金手指体系：异能吞噬" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：异能吞噬; max_level=1"
+  }
+  rule "progression_requirement_金手指体系：轨迹推演_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：轨迹推演; level=1; requires=主动触发，需清晰看到目标的面部或感知到其核心气息，且目标修为不超过自身。"
+  }
+  rule "progression_max_金手指体系：轨迹推演" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：轨迹推演; max_level=1"
+  }
+  rule "progression_requirement_金手指体系：话术操控_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：话术操控; level=1; requires=主动触发，需与目标面对面交流，目标无强烈戒备心，且自身消耗少量灵气维持话术效果。"
+  }
+  rule "progression_max_金手指体系：话术操控" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：话术操控; max_level=1"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L1" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=1; requires=灵气入体，成功引天地灵气进入体内，完成第一次灵气循环。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L2" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=2; requires=达到练气一层圆满，积累足够灵气，完成灵气循环的进阶。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L3" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=3; requires=达到练气二层圆满，攒够足够灵气，稳固体内灵气循环。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L4" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=4; requires=达到练气三层圆满，攒够足够灵气，扩充体内灵气池。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L5" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=5; requires=达到练气四层圆满，攒够足够灵气，提纯体内灵气。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L6" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=6; requires=达到练气五层圆满，攒够足够灵气，强化肉身与灵气的联动。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L7" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=7; requires=达到练气六层圆满，攒够足够灵气，提升灵气操控精度。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L8" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=8; requires=达到练气七层圆满，攒够足够灵气，进一步提纯灵气，掌握灵气凝练技巧。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L9" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=9; requires=达到练气八层圆满，攒够足够灵气，稳固灵气与肉身的契合度。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L10" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=10; requires=达到练气九层圆满，攒够足够灵气，冲击练气期瓶颈。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L11" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=11; requires=达到练气十层圆满，吞服筑基丹，借助灵石灵气辅助，成功突破筑基瓶颈。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L12" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=12; requires=达到筑基初期圆满，攒够足够筑基灵力，稳固筑基境界。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L13" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=13; requires=达到筑基中期圆满，攒够足够筑基灵力，冲击筑基后期瓶颈。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L14" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=14; requires=达到筑基后期圆满，攒够足够筑基灵力，做好渡雷劫的准备。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L15" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=15; requires=达到筑基巅峰，成功度过雷劫，将筑基灵力凝聚成金丹。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L16" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=16; requires=达到金丹初期圆满，攒够足够金丹灵力，稳固金丹境界。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L17" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=17; requires=达到金丹中期圆满，攒够足够金丹灵力，扩充金丹容量。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L18" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=18; requires=达到金丹后期圆满，攒够足够金丹灵力，度过心魔劫。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L19" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=19; requires=达到金丹巅峰，成功碎丹化婴，稳固元婴形态。"
+  }
+  rule "progression_requirement_修仙境界体系：修仙_L20" {
+    trigger = "progression.requirement"
+    effect = "system=修仙境界体系：修仙; level=20; requires=达到元婴巅峰，感悟基础天道规则，完成神魂与元婴的融合。"
+  }
+  rule "progression_max_修仙境界体系：修仙" {
+    trigger = "progression.max_level"
+    effect = "system=修仙境界体系：修仙; max_level=20"
+  }
+  rule "progression_requirement_金手指体系：命运悲鸣_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：命运悲鸣; level=1; requires=与目标有深厚情感羁绊，且目标即将遭遇生死危机。"
+  }
+  rule "progression_max_金手指体系：命运悲鸣" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：命运悲鸣; max_level=1"
+  }
+  rule "progression_requirement_金手指体系：副本生成器_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：副本生成器; level=1; requires=需提前准备「副本核心」（如玉简），并消耗大量灵石。"
+  }
+  rule "progression_max_金手指体系：副本生成器" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：副本生成器; max_level=1"
+  }
+  rule "progression_requirement_金手指体系：剧情强制_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：剧情强制; level=1; requires=作者处于情绪波动期（如恋爱中）时无意识触发"
+  }
+  rule "progression_requirement_金手指体系：剧情强制_L2" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：剧情强制; level=2; requires=作者修为达到筑基期，并经历一场足以动摇其情感根基的重大事件（如被背叛、经历生死离别、或目睹挚爱死亡）后觉醒"
+  }
+  rule "progression_max_金手指体系：剧情强制" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：剧情强制; max_level=2"
+  }
+  rule "progression_requirement_金手指体系：真实还原_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：真实还原; level=1; requires=对该历史场景的研究达到专家级别，且消耗大量灵石"
+  }
+  rule "progression_max_金手指体系：真实还原" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：真实还原; max_level=1"
+  }
+  rule "progression_requirement_金手指体系：知识污染_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：知识污染; level=1; requires=创作或思考克苏鲁相关概念时触发"
+  }
+  rule "progression_requirement_金手指体系：知识污染_L2" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：知识污染; level=2; requires=接触克苏鲁作者能力、污染文本或天道异常注视。"
+  }
+  rule "progression_requirement_金手指体系：知识污染_L3" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：知识污染; level=3; requires=污染区、遗迹或天道异常附近自然滋生。"
+  }
+  rule "progression_max_金手指体系：知识污染" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：知识污染; max_level=3"
+  }
+  rule "progression_requirement_金手指体系：荒诞吸引_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：荒诞吸引; level=1; requires=作者处于放松或幽默状态时无意识触发"
+  }
+  rule "progression_max_金手指体系：荒诞吸引" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：荒诞吸引; max_level=1"
+  }
+  rule "progression_requirement_金手指体系：真实洞察_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：真实洞察; level=1; requires=与目标有短暂接触（如眼神交汇），且目标情绪激烈"
+  }
+  rule "progression_max_金手指体系：真实洞察" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：真实洞察; max_level=1"
+  }
+  rule "progression_requirement_金手指体系：技术预演_L1" {
+    trigger = "progression.requirement"
+    effect = "system=金手指体系：技术预演; level=1; requires=主动触发，需触碰目标构造物，消耗对应强度的精神力"
+  }
+  rule "progression_max_金手指体系：技术预演" {
+    trigger = "progression.max_level"
+    effect = "system=金手指体系：技术预演; max_level=1"
+  }
+  rule "progression_requirement_阵营体系：缉厄司_L1" {
+    trigger = "progression.requirement"
+    effect = "system=阵营体系：缉厄司; level=1; requires=筑基以下或练气高阶，需通过天道气息识别训练。"
+  }
+  rule "progression_requirement_阵营体系：缉厄司_L2" {
+    trigger = "progression.requirement"
+    effect = "system=阵营体系：缉厄司; level=2; requires=筑基至金丹，需完成至少一次天道碎片回收。"
+  }
+  rule "progression_requirement_阵营体系：缉厄司_L3" {
+    trigger = "progression.requirement"
+    effect = "system=阵营体系：缉厄司; level=3; requires=金丹至元婴，需获得大司首授权。"
+  }
+  rule "progression_requirement_阵营体系：缉厄司_L4" {
+    trigger = "progression.requirement"
+    effect = "system=阵营体系：缉厄司; level=4; requires=元婴以上或被天道意志选中。"
+  }
+  rule "progression_requirement_阵营体系：缉厄司_L5" {
+    trigger = "progression.requirement"
+    effect = "system=阵营体系：缉厄司; level=5; requires=通过缉厄司审查，能长期隐藏身份并传递情报。"
+  }
+  rule "progression_max_阵营体系：缉厄司" {
+    trigger = "progression.max_level"
+    effect = "system=阵营体系：缉厄司; max_level=5"
+  }
+  rule "progression_requirement_阵营体系：书友会_L1" {
+    trigger = "progression.requirement"
+    effect = "system=阵营体系：书友会; level=1; requires=确认穿越者身份但尚未通过核心信任测试。"
+  }
+  rule "progression_requirement_阵营体系：书友会_L2" {
+    trigger = "progression.requirement"
+    effect = "system=阵营体系：书友会; level=2; requires=完成互助任务并通过至少两名骨干担保。"
+  }
+  rule "progression_requirement_阵营体系：书友会_L3" {
+    trigger = "progression.requirement"
+    effect = "system=阵营体系：书友会; level=3; requires=具备高修为、关键金手指或长期贡献。"
+  }
+  rule "progression_requirement_阵营体系：书友会_L4" {
+    trigger = "progression.requirement"
+    effect = "system=阵营体系：书友会; level=4; requires=获得长老共同承认，并能承担天道碎片级风险。"
+  }
+  rule "progression_max_阵营体系：书友会" {
+    trigger = "progression.max_level"
+    effect = "system=阵营体系：书友会; max_level=4"
+  }
+  rule "progression_requirement_阵营体系：无阵营威胁_L1" {
+    trigger = "progression.requirement"
+    effect = "system=阵营体系：无阵营威胁; level=1; requires=由地形、遗迹或失控规则触发。"
+  }
+  rule "progression_requirement_阵营体系：无阵营威胁_L2" {
+    trigger = "progression.requirement"
+    effect = "system=阵营体系：无阵营威胁; level=2; requires=出现于荒野、遗迹、矿区或污染区。"
+  }
+  rule "progression_requirement_阵营体系：无阵营威胁_L3" {
+    trigger = "progression.requirement"
+    effect = "system=阵营体系：无阵营威胁; level=3; requires=污染区、遗迹或天道异常附近自然滋生。"
+  }
+  rule "progression_requirement_阵营体系：无阵营威胁_L4" {
+    trigger = "progression.requirement"
+    effect = "system=阵营体系：无阵营威胁; level=4; requires=自由行动的低阶至中阶修士。"
+  }
+  rule "progression_max_阵营体系：无阵营威胁" {
+    trigger = "progression.max_level"
+    effect = "system=阵营体系：无阵营威胁; max_level=4"
+  }
+  rule "progression_requirement_?????????_L1" {
+    trigger = "progression.requirement"
+    effect = "system=?????????; level=1; requires=?????????????"
+  }
+  rule "progression_requirement_?????????_L2" {
+    trigger = "progression.requirement"
+    effect = "system=?????????; level=2; requires=?????????????????"
+  }
+  rule "progression_requirement_?????????_L3" {
+    trigger = "progression.requirement"
+    effect = "system=?????????; level=3; requires=??????????????????????"
+  }
+  rule "progression_max_?????????" {
+    trigger = "progression.max_level"
+    effect = "system=?????????; max_level=3"
+  }
+  rule "storyline_contract_矿场死循环" {
+    trigger = "storyline.contract"
+    effect = "id=矿场死循环; name=矿场死循环; type=main; importance=10; scope=opening; payoff_style=immediate; setup_role=核心成长驱动; desire=逃离矿场死循环; opposition=矿难规则与缉厄司监控; stakes=无限复活直至寿命耗尽，或永远困于矿场; open_question=矿场地下究竟封印了什么禁术？为何与陈东的小说开篇高度吻合？; pressure_points=陈东发现复活规律 | 第一次死亡损耗修为 | 矿难规模升级 | 击杀矿场监工暴露金手指"
+  }
+  rule "storyline_contract_本土修仙的破局之路" {
+    trigger = "storyline.contract"
+    effect = "id=本土修仙的破局之路; name=本土修仙的破局之路; type=main; importance=9; scope=series; payoff_style=staged_reveal; setup_role=主角成长主线; desire=提升修为以获取自保与反抗的资本; opposition=缉厄司追杀、天道压制、资源匮乏; stakes=修为停滞则无法解锁高阶金手指，最终被缉厄司猎杀; open_question=修仙体系的金手指增幅上限究竟有多高？能否对抗天道本身？; pressure_points=获得第一本基础功法 | 突破练气五层遭遇瓶颈 | 依靠金手指越级击杀筑基修士 | 发现化神期的金手指可突破天道规则"
+  }
+  rule "storyline_contract_缉厄司的天道阴谋" {
+    trigger = "storyline.contract"
+    effect = "id=缉厄司的天道阴谋; name=缉厄司的天道阴谋; type=subplot; importance=9; scope=series; payoff_style=slow_burn; setup_role=外部压力与世界观层; desire=揭露天道破损的真相，终结穿越者猎杀; opposition=缉厄司两大派系势力、天道的意志; stakes=穿越者灭绝或被天道吞噬; open_question=天道为何破损？修补天道的最终代价是什么？; pressure_points=首次与缉厄司修士交战 | 发现改革派内部也有反对声音 | 获得一份残缺的缉厄司内部档案 | 与缉厄司首领的第一次交锋"
+  }
+  rule "storyline_contract_书友会的内鬼博弈" {
+    trigger = "storyline.contract"
+    effect = "id=书友会的内鬼博弈; name=书友会的内鬼博弈; type=subplot; importance=8; scope=book; payoff_style=staged_reveal; setup_role=内部冲突催化，信任危机压力源; desire=在保全家人的前提下摆脱缉厄司控制; opposition=缉厄司的威胁、陈东团队的警惕、自身良知折磨; stakes=书友会内部崩溃，内鬼反水失败则家人与自身皆亡；反水成功则获得天道碎片与关键情报; turn=内鬼本欲按计划利用天道碎片交换家人自由，却发现碎片本身蕴含其父留下的「缉厄司核心密档」封印，若交出则彻底暴露真相；最终在关键战斗中借陈东之手将碎片毁去，释放密档内容，迫使缉厄司内部分裂; payoff=内鬼以自身性命换来家人获救与缉厄司真相的曝光，陈东从碎片残留信息中窥见天道破损与穿越者起源的秘密; open_question=内鬼手中的天道碎片究竟有何特殊作用？其父当年因何被清洗？; pressure_points=内鬼初入书友会执行任务 | 陈东察觉异常但无证据 | 内鬼与家人的通信被陈东截获 | 内鬼发现碎片与金手指共鸣，推演精度提升但更容易暴露位置 | 内鬼面临最后通牒——选择家人还是反水"
+  }
+  rule "storyline_contract_龙傲天诱饵陷阱" {
+    trigger = "storyline.contract"
+    effect = "id=龙傲天诱饵陷阱; name=龙傲天诱饵陷阱; type=subplot; importance=7; scope=volume; payoff_style=final_turn; setup_role=诱饵与共生关系; desire=利用诱饵陷阱反向提升，并借此追踪缉厄司的布局网络; opposition=缉厄司设下的致命陷阱，以及龙傲天对真实情况的半知半解; stakes=若龙傲天作者牺牲或被捕，陈东将失去通过诱饵反向追溯缉厄司据点的关键机会，无法获取缉厄司内部情报网络; open_question=龙傲天的幸运光环能否彻底摆脱缉厄司的操控？; pressure_points=初次接触龙傲天 | 发现幸运光环被操控 | 利用陷阱反向定位缉厄司据点 | 揭穿缉厄司的诱饵计划"
+  }
+  rule "storyline_contract_悲情作者的厄运诅咒" {
+    trigger = "storyline.contract"
+    effect = "id=悲情作者的厄运诅咒; name=悲情作者的厄运诅咒; type=subplot; importance=6; scope=volume; payoff_style=staged_reveal; setup_role=生存压力与黑色幽默; desire=找到打破厄运循环的方法，保护亲近者免受牵连; opposition=不可更改的命运预知，自身霉运指数级叠加; stakes=亲近者接连死亡或自身精神崩溃，甚至可能拖累陈东团队; open_question=预知与复活能否真正互补？能否利用厄运预知反向设计陷阱？; pressure_points=首次预知陈东的死亡但无法阻止 | 因霉运意外暴露团队位置 | 选择隐瞒预知内容导致危机加深 | 在绝境中主动利用厄运制造机会"
+  }
+  rule "storyline_contract_无限流作者的致命副本" {
+    trigger = "storyline.contract"
+    effect = "id=无限流作者的致命副本; name=无限流作者的致命副本; type=subplot; importance=8; scope=volume; payoff_style=immediate; setup_role=规则碰撞与资源争夺; desire=利用副本规则破解天道碎片谜题; opposition=副本内的死亡规则、缉厄司对副本的觊觎; stakes=副本若被缉厄司夺取，将成为批量猎杀穿越者的武器; open_question=副本生成器能否用于反向修复天道？; pressure_points=第一次被动卷入副本 | 发现副本核心与天道碎片关联 | 书友会内部对副本使用权的争议 | 与缉厄司在副本内决战"
+  }
+  rule "storyline_contract_甜宠文作者的剧情强制" {
+    trigger = "storyline.contract"
+    effect = "id=甜宠文作者的剧情强制; name=甜宠文作者的剧情强制; type=subplot; importance=7; scope=volume; payoff_style=staged_reveal; setup_role=内部猜忌催化剂与黑色幽默来源; desire=控制好自己的能力，不被缉厄司利用或成为团队负担; opposition=无法完全自控的剧情强制效果，书友会成员的不信任; stakes=若能力失控，可能暴露整个组织或造成内部决裂; open_question=能否通过修炼或法器彻底掌控剧情强制，将其变为可控破局手段？; pressure_points=在秘密接头时意外触发强制导致计划暴露 | 被内鬼发现并利用其能力挑拨关系 | 陈东指导她尝试佩戴静心佩观察效果 | 关键时刻主动开启强制制造混乱掩护撤退"
+  }
+  rule "storyline_contract_考据党的自我历史化" {
+    trigger = "storyline.contract"
+    effect = "id=考据党的自我历史化; name=考据党的自我历史化; type=character_arc; importance=8; scope=series; payoff_style=final_turn; setup_role=存在主义拷问与极端解法; desire=在历史还原与自我存续间找到平衡; opposition=不可逆的历史化侵蚀、时间紧迫的压力; stakes=若完全历史化，将丧失现代自我意识，成为另一个时代的人; open_question=历史化是否意味着另一种形式的永生？能否反过来通过「历史化」修复被天道碎片侵蚀的灵魂？; pressure_points=首次使用真实还原破解封印 | 发现外貌开始出现历史特征 | 被迫使用第三次以挽救团队 | 最终选择迎接彻底历史化提供线索"
+  }
+  rule "storyline_contract_不可名状的低语" {
+    trigger = "storyline.contract"
+    effect = "id=不可名状的低语; name=不可名状的低语; type=character_arc; importance=9; scope=series; payoff_style=slow_burn; setup_role=风险与收益的压倒性杠杆; desire=抵抗疯狂，同时利用污染能力击败缉厄司; opposition=低语侵蚀、天道对异常规则的排斥; stakes=若完全疯魔，将成为不分敌我的污染源; open_question=污染能力能否反过来感染天道本身？; pressure_points=首次使用污染造成小规模异象 | 作者开始出现幻觉与偏执 | 陈东在利用与保护之间的艰难抉择 | 最终爆发导致天道异常注视"
+  }
+  rule "storyline_contract_无厘头的逻辑崩坏" {
+    trigger = "storyline.contract"
+    effect = "id=无厘头的逻辑崩坏; name=无厘头的逻辑崩坏; type=subplot; importance=6; scope=volume; payoff_style=staged_reveal; setup_role=混乱战术与天道注视风险; desire=让荒诞能力成为团队的独特战术，而非纯粹笑料; opposition=事件完全随机，无法精确控制，可能适得其反；且频繁使用会引发天道注视; stakes=关键时刻的荒诞事件可能毁灭重要计划或暴露团队，严重时招来天道亲自干预; open_question=这种不可预测的混乱能否被引导成对抗天道的独特武器？; pressure_points=第一次荒诞事件意外拯救团队 | 随之而来更大混乱导致计划延宕 | 团队内部对是否保留他的激烈争议 | 陈东尝试引导荒诞事件出现的规律 | 一次荒诞事件引发天道异常天象"
+  }
+  rule "storyline_contract_真实刺痛的代价" {
+    trigger = "storyline.contract"
+    effect = "id=真实刺痛的代价; name=真实刺痛的代价; type=subplot; importance=8; scope=volume; payoff_style=staged_reveal; setup_role=认知代价的警示; desire=平衡真相的获取与心灵的承受; opposition=情绪反噬积累、对人性越来越绝望; stakes=若过度使用，陈东可能沦为冷漠的观察者，丧失行动意志; open_question=真实洞察能否看到连金手指宿主都不自知的深层真实？; pressure_points=首次使用识破内鬼谎言 | 反噬让陈东情绪低落数日 | 在一次关键审讯中使用后产生心魔 | 与悲情作者的厄运预知产生共鸣，形成极端两难"
+  }
+  rule "storyline_contract_上古科技的理性破解" {
+    trigger = "storyline.contract"
+    effect = "id=上古科技的理性破解; name=上古科技的理性破解; type=subplot; importance=7; scope=volume; payoff_style=staged_reveal; setup_role=科学与玄学的融合; desire=破解上古遗迹的秘密，获取对抗缉厄司的科技力量; opposition=科学思维与玄学环境的冲突，遗迹中的超自然陷阱; stakes=若失败，可能错失关键线索或触发遗迹自毁; open_question=上古科技是否与天道碎片同源？能否用科技手段修复天道？; pressure_points=首次尝试推演发现误差导致危险 | 与修仙者合作时陷入理念冲突 | 发现遗迹核心与天道碎片产生共鸣"
+  }
+}
+
+storyline {
+  chapter "遗迹的召唤" {
+    id = "v7ch01"
+    arc = "volume_7"
+    objective "遗迹的召唤" {
+      id = "obj_v7ch01"
+      type = "sequence"
+      step 1 {
+        description = "考据党的自我历史化 | hook | 陈东发现一处与历史还原相关的遗迹，为后续引入考据党作者埋下伏笔 | 遗迹深处的存在可能会改变陈东对'历史'的认知 | 遗迹共鸣可能引来缉厄司的注意"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "storyline"
+            field = "stage"
+            to = "hook"
+            unit = "遗迹共鸣可能引来缉厄司的注意"
+            cost = "遗迹深处的存在可能会改变陈东对'历史'的认知"
+            note = "change=陈东发现一处与历史还原相关的遗迹，为后续引入考据党作者埋下伏笔; consequence=遗迹深处的存在可能会改变陈东对'历史'的认知; pressure=遗迹共鸣可能引来缉厄司的注意"
+          }
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in v7ch01"
+          }
+        }
+      }
+      step 2 {
+        description = "mystery myst_history_jade planted: 玉简上刻有'历史'二字，内部封存着一段被凝固的时间片段"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_history_jade"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "玉简上刻有'历史'二字，内部封存着一段被凝固的时间片段"
+          }
+        }
+      }
+      step 3 {
+        description = "mystery myst_deep_call planted: 禁术种子对遗迹深处的共鸣比之前任何一次都强烈，仿佛那里有它的源头"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_deep_call"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "禁术种子对遗迹深处的共鸣比之前任何一次都强烈，仿佛那里有它的源头"
+          }
+        }
+      }
+      step 4 {
+        description = "chapter start cultivation: 练气三层"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "练气三层"
+            note = "chapter start cultivation: 练气三层"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "1"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start allies: 赵虎, 苏婉, 慕容寒"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "赵虎, 苏婉, 慕容寒"
+            note = "chapter start allies: 赵虎, 苏婉, 慕容寒"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+            note = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+          }
+        }
+      }
+      step 8 {
+        description = "遗迹入口处的封印与矿场地底的禁术封印同源"
+        event {
+          type = "premise"
+          state_delta {
+            target = "规则洞察"
+            kind = "skill"
+            field = "use"
+            to = "discover"
+            note = "遗迹入口处的封印与矿场地底的禁术封印同源"
+          }
+        }
+      }
+      step 9 {
+        description = "独自进入遗迹入口，石门在身后关闭"
+        event {
+          type = "status"
+          state_delta {
+            target = "遗迹通道"
+            kind = "location"
+            field = "move"
+            to = "move"
+            note = "独自进入遗迹入口，石门在身后关闭"
+          }
+        }
+      }
+      step 10 {
+        description = "在通道石壁上发现一枚嵌着的古老玉简，刻有'历史'二字"
+        event {
+          type = "acquire"
+          state_delta {
+            target = "古老玉简"
+            kind = "item"
+            field = "acquire"
+            to = "add"
+            note = "在通道石壁上发现一枚嵌着的古老玉简，刻有'历史'二字"
+          }
+        }
+      }
+      step 11 {
+        description = "禁术种子与玉简产生共鸣，陈东感知到遗迹深处有更强的存在"
+        event {
+          type = "premise"
+          state_delta {
+            target = "深层共鸣"
+            kind = "knowledge"
+            field = "discover"
+            to = "react"
+            note = "禁术种子与玉简产生共鸣，陈东感知到遗迹深处有更强的存在"
+          }
+        }
+      }
+      step 12 {
+        description = "灵石 resource change: 1 +0 = 1. 无变化"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "1"
+            to = "1"
+            note = "无变化"
+          }
+        }
+      }
+      step 13 {
+        description = "陈东将遗迹入口情报上报林北辰后，决定当夜独自探索"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "次日 陈东将遗迹入口情报上报林北辰后，决定当夜独自探索"
+          }
+        }
+      }
+    }
+  }
+  chapter "时间的回廊" {
+    id = "v7ch02"
+    arc = "volume_7"
+    objective "时间的回廊" {
+      id = "obj_v7ch02"
+      type = "sequence"
+      step 1 {
+        description = "考据党的自我历史化 | hook | 陈东结识楚怀远，并发现他对历史有着超乎寻常的执着 | 楚怀远已在遗迹中研究了三个月，身上开始出现微弱的时代偏移特征 | 楚怀远的'历史化'可能在接触核心密室后加速"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "storyline"
+            field = "stage"
+            to = "hook"
+            unit = "楚怀远的'历史化'可能在接触核心密室后加速"
+            cost = "楚怀远已在遗迹中研究了三个月，身上开始出现微弱的时代偏移特征"
+            note = "change=陈东结识楚怀远，并发现他对历史有着超乎寻常的执着; consequence=楚怀远已在遗迹中研究了三个月，身上开始出现微弱的时代偏移特征; pressure=楚怀远的'历史化'可能在接触核心密室后加速"
+          }
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in v7ch02"
+          }
+        }
+      }
+      step 2 {
+        description = "mystery myst_jade_key planted: 楚怀远确认玉简上记载的核心密室位置，但同时也发现玉简上有一行警示文字——'开启即不可逆'"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_jade_key"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "楚怀远确认玉简上记载的核心密室位置，但同时也发现玉简上有一行警示文字——'开启即不可逆'"
+          }
+        }
+      }
+      step 3 {
+        description = "mystery myst_chu_past planted: 楚怀远在面对一面描绘战争场面的石壁时，眼中闪过一丝痛楚，似乎与那段历史有某种个人关联"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_chu_past"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "楚怀远在面对一面描绘战争场面的石壁时，眼中闪过一丝痛楚，似乎与那段历史有某种个人关联"
+          }
+        }
+      }
+      step 4 {
+        description = "mystery myst_history_jade resolved: 玉简是远古考据者的笔记，记载了核心密室的位置与功能"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_history_jade"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "玉简是远古考据者的笔记，记载了核心密室的位置与功能"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start cultivation: 练气三层"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "练气三层"
+            note = "chapter start cultivation: 练气三层"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "1"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start allies: 楚怀远"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "楚怀远"
+            note = "chapter start allies: 楚怀远"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+            note = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+          }
+        }
+      }
+      step 9 {
+        description = "石壁能映出远古穿越者的生活画面，每幅都凝滞在某一瞬间"
+        event {
+          type = "premise"
+          state_delta {
+            target = "记忆回廊"
+            kind = "location"
+            field = "discover"
+            to = "discover"
+            note = "石壁能映出远古穿越者的生活画面，每幅都凝滞在某一瞬间"
+          }
+        }
+      }
+      step 10 {
+        description = "在回廊尽头遇到正在临摹画面文字的历史考据型作者"
+        event {
+          type = "relationship"
+          state_delta {
+            target = "楚怀远"
+            kind = "character"
+            field = "meet"
+            to = "meet"
+            note = "在回廊尽头遇到正在临摹画面文字的历史考据型作者"
+          }
+        }
+      }
+      step 11 {
+        description = "楚怀远透露这座遗迹记录的是千年前天道裂痕刚出现时的历史"
+        event {
+          type = "premise"
+          state_delta {
+            target = "遗迹的本质"
+            kind = "knowledge"
+            field = "reveal"
+            to = "reveal"
+            note = "楚怀远透露这座遗迹记录的是千年前天道裂痕刚出现时的历史"
+          }
+        }
+      }
+      step 12 {
+        description = "陈东将「历史」玉简交给楚怀远，楚怀远确认这是进入核心区域的钥匙"
+        event {
+          type = "acquire"
+          state_delta {
+            target = "玉简信息"
+            kind = "knowledge"
+            field = "acquire"
+            to = "give"
+            note = "陈东将「历史」玉简交给楚怀远，楚怀远确认这是进入核心区域的钥匙"
+          }
+        }
+      }
+      step 13 {
+        description = "灵石 resource change: 1 +0 = 1. 无变化"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "1"
+            to = "1"
+            note = "无变化"
+          }
+        }
+      }
+      step 14 {
+        description = "陈东在通道中继续深入，经过一段向下的石阶后抵达回廊"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "同上 陈东在通道中继续深入，经过一段向下的石阶后抵达回廊"
+          }
+        }
+      }
+    }
+  }
+  chapter "历史的温度" {
+    id = "v7ch03"
+    arc = "volume_7"
+    objective "历史的温度" {
+      id = "obj_v7ch03"
+      type = "sequence"
+      step 1 {
+        description = "考据党的自我历史化 | pressure | 楚怀远首次在使用能力后短暂显现历史人格，历史化进程启动 | 陈东意识到楚怀远的时间不多了，每次使用能力都在加速不可逆变化 | 核心密室的开启需要楚怀远使用能力，这可能会彻底改变他"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "storyline"
+            field = "stage"
+            to = "pressure"
+            unit = "核心密室的开启需要楚怀远使用能力，这可能会彻底改变他"
+            cost = "陈东意识到楚怀远的时间不多了，每次使用能力都在加速不可逆变化"
+            note = "change=楚怀远首次在使用能力后短暂显现历史人格，历史化进程启动; consequence=陈东意识到楚怀远的时间不多了，每次使用能力都在加速不可逆变化; pressure=核心密室的开启需要楚怀远使用能力，这可能会彻底改变他"
+          }
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in v7ch03"
+          }
+        }
+      }
+      step 2 {
+        description = "mystery myst_same_source planted: 禁术种子对楚怀远的残留灵气产生共鸣，暗示真实还原与禁术同源"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_same_source"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "禁术种子对楚怀远的残留灵气产生共鸣，暗示真实还原与禁术同源"
+          }
+        }
+      }
+      step 3 {
+        description = "mystery myst_zhaomingyuan planted: 楚怀远无意中说出的'赵明远'可能是千年前某位重要穿越者，与天道破损有关"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_zhaomingyuan"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "楚怀远无意中说出的'赵明远'可能是千年前某位重要穿越者，与天道破损有关"
+          }
+        }
+      }
+      step 4 {
+        description = "chapter start cultivation: 练气三层"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "练气三层"
+            note = "chapter start cultivation: 练气三层"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "1"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start allies: 楚怀远"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "楚怀远"
+            note = "chapter start allies: 楚怀远"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+            note = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+          }
+        }
+      }
+      step 8 {
+        description = "使用真实还原因果重现一段远古穿越者开辟灵田的场景"
+        event {
+          type = "premise"
+          state_delta {
+            target = "真实还原"
+            kind = "skill"
+            field = "use"
+            to = "use"
+            note = "使用真实还原因果重现一段远古穿越者开辟灵田的场景"
+          }
+        }
+      }
+      step 9 {
+        description = "使用能力后，楚怀远的嗓音、站姿和眼神短暂变为千年前穿越者的状态"
+        event {
+          type = "premise"
+          state_delta {
+            target = "历史化（初次显化）"
+            kind = "premise"
+            field = "awaken"
+            to = "transform"
+            note = "使用能力后，楚怀远的嗓音、站姿和眼神短暂变为千年前穿越者的状态"
+          }
+        }
+      }
+      step 10 {
+        description = "禁术种子对楚怀远使用能力后的残留灵气产生微弱共鸣"
+        event {
+          type = "premise"
+          state_delta {
+            target = "能力共鸣"
+            kind = "knowledge"
+            field = "discover"
+            to = "discover"
+            note = "禁术种子对楚怀远使用能力后的残留灵气产生微弱共鸣"
+          }
+        }
+      }
+      step 11 {
+        description = "楚怀远透露玉简上记载的核心密室需要'历史气息'才能开启"
+        event {
+          type = "knowledge"
+          state_delta {
+            target = "核心密室开启方法"
+            kind = "knowledge"
+            field = "reveal"
+            to = "learned"
+            note = "楚怀远透露玉简上记载的核心密室需要'历史气息'才能开启"
+          }
+        }
+      }
+      step 12 {
+        description = "灵石 resource change: 1 +0 = 1. 无变化"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "1"
+            to = "1"
+            note = "无变化"
+          }
+        }
+      }
+      step 13 {
+        description = "两人在回廊中休息了一夜，天亮后楚怀远开始演示"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "次日 两人在回廊中休息了一夜，天亮后楚怀远开始演示"
+          }
+        }
+      }
+    }
+  }
+  chapter "古老的契约" {
+    id = "v7ch04"
+    arc = "volume_7"
+    objective "古老的契约" {
+      id = "obj_v7ch04"
+      type = "sequence"
+      step 1 {
+        description = "考据党的自我历史化 | pressure | 楚怀远直接接触天道封印，获得了千年前穿越者的部分记忆 | 他的意识和记忆开始与那位远古穿越者重叠，历史化加速 | 陈东发觉楚怀远在苏醒后说的第一句话不是自己的口吻，而是那位远古穿越者的"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "storyline"
+            field = "stage"
+            to = "pressure"
+            unit = "陈东发觉楚怀远在苏醒后说的第一句话不是自己的口吻，而是那位远古穿越者的"
+            cost = "他的意识和记忆开始与那位远古穿越者重叠，历史化加速"
+            note = "change=楚怀远直接接触天道封印，获得了千年前穿越者的部分记忆; consequence=他的意识和记忆开始与那位远古穿越者重叠，历史化加速; pressure=陈东发觉楚怀远在苏醒后说的第一句话不是自己的口吻，而是那位远古穿越者的"
+          }
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in v7ch04"
+          }
+        }
+      }
+      step 2 {
+        description = "缉厄司的天道阴谋 | reversal | 获知天道破损并非意外，而是千年前穿越者主动选择的结果——天道契约存在 | 陈东之前的所有认知都被颠覆：缉厄司并非在修补天道，而是在执行某种契约条款 | 如果天道破损是主动选择，那修补天道的代价可能远超陈东的预期"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "缉厄司的天道阴谋"
+            kind = "storyline"
+            field = "stage"
+            to = "reversal"
+            unit = "如果天道破损是主动选择，那修补天道的代价可能远超陈东的预期"
+            cost = "陈东之前的所有认知都被颠覆：缉厄司并非在修补天道，而是在执行某种契约条款"
+            note = "change=获知天道破损并非意外，而是千年前穿越者主动选择的结果——天道契约存在; consequence=陈东之前的所有认知都被颠覆：缉厄司并非在修补天道，而是在执行某种契约条款; pressure=如果天道破损是主动选择，那修补天道的代价可能远超陈东的预期"
+          }
+          state_delta {
+            target = "缉厄司的天道阴谋"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in v7ch04"
+          }
+        }
+      }
+      step 3 {
+        description = "mystery myst_treaty_detail planted: 天道契约的具体内容仍不清晰，但楚怀远隐约感知到契约中包含了'定期献祭'的条款"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_treaty_detail"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "天道契约的具体内容仍不清晰，但楚怀远隐约感知到契约中包含了'定期献祭'的条款"
+          }
+        }
+      }
+      step 4 {
+        description = "mystery myst_chu_identity planted: 楚怀远自述自己对天道历史的研究从十年前开始，但他在接触封印时的反应远比一个普通学者准确——仿佛身体有记忆"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_chu_identity"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "楚怀远自述自己对天道历史的研究从十年前开始，但他在接触封印时的反应远比一个普通学者准确——仿佛身体有记忆"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start cultivation: 练气三层"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "练气三层"
+            note = "chapter start cultivation: 练气三层"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "1"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start allies: 楚怀远"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "楚怀远"
+            note = "chapter start allies: 楚怀远"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+            note = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+          }
+        }
+      }
+      step 9 {
+        description = "用玉简定位核心密室入口机关位置"
+        event {
+          type = "premise"
+          state_delta {
+            target = "玉简定位"
+            kind = "item"
+            field = "use"
+            to = "use"
+            note = "用玉简定位核心密室入口机关位置"
+          }
+        }
+      }
+      step 10 {
+        description = "触碰封印后被拉入远古回忆——目睹千年前穿越者签订天道契约的场景"
+        event {
+          type = "premise"
+          state_delta {
+            target = "触碰封印"
+            kind = "status"
+            field = "use"
+            to = "trigger"
+            note = "触碰封印后被拉入远古回忆——目睹千年前穿越者签订天道契约的场景"
+          }
+        }
+      }
+      step 11 {
+        description = "通过规则洞察，陈东在楚怀远被拉入回忆的瞬间看到了相同的画面片段"
+        event {
+          type = "premise"
+          state_delta {
+            target = "规则洞察"
+            kind = "skill"
+            field = "use"
+            to = "witness"
+            note = "通过规则洞察，陈东在楚怀远被拉入回忆的瞬间看到了相同的画面片段"
+          }
+        }
+      }
+      step 12 {
+        description = "从远古记忆中获知：千年前的天道并非被破坏，而是那批穿越者主动参与了天道的重构"
+        event {
+          type = "knowledge"
+          state_delta {
+            target = "天道契约真相"
+            kind = "knowledge"
+            field = "reveal"
+            to = "learned"
+            note = "从远古记忆中获知：千年前的天道并非被破坏，而是那批穿越者主动参与了天道的重构"
+          }
+        }
+      }
+      step 13 {
+        description = "灵石 resource change: 1 +0 = 1. 无变化"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "1"
+            to = "1"
+            note = "无变化"
+          }
+        }
+      }
+      step 14 {
+        description = "陈东在楚怀远演示后开始研究玉简的定位功能，午后找到暗门"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "同日 陈东在楚怀远演示后开始研究玉简的定位功能，午后找到暗门"
+          }
+        }
+      }
+    }
+  }
+  chapter "双重人格" {
+    id = "v7ch05"
+    arc = "volume_7"
+    objective "双重人格" {
+      id = "obj_v7ch05"
+      type = "sequence"
+      step 1 {
+        description = "考据党的自我历史化 | pressure | 楚怀远人格完全与赵明远重叠，出现双重人格状态 | 每一次切换都在加速楚怀远自我意识的消失 | 陈东必须在楚怀远完全变成赵明远之前做出决定——继续深入还是带他离开"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "storyline"
+            field = "stage"
+            to = "pressure"
+            unit = "陈东必须在楚怀远完全变成赵明远之前做出决定——继续深入还是带他离开"
+            cost = "每一次切换都在加速楚怀远自我意识的消失"
+            note = "change=楚怀远人格完全与赵明远重叠，出现双重人格状态; consequence=每一次切换都在加速楚怀远自我意识的消失; pressure=陈东必须在楚怀远完全变成赵明远之前做出决定——继续深入还是带他离开"
+          }
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in v7ch05"
+          }
+        }
+      }
+      step 2 {
+        description = "mystery myst_three_trials planted: 石门后还有三道考验：第一道是'记忆'，第二道是'选择'，第三道是'代价'"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_three_trials"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "石门后还有三道考验：第一道是'记忆'，第二道是'选择'，第三道是'代价'"
+          }
+        }
+      }
+      step 3 {
+        description = "mystery myst_seed_mission planted: 禁术种子是赵明远创造的钥匙，用于打破天道契约，但需要特定的时机和代价"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_seed_mission"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "禁术种子是赵明远创造的钥匙，用于打破天道契约，但需要特定的时机和代价"
+          }
+        }
+      }
+      step 4 {
+        description = "mystery myst_zhaomingyuan resolved: '赵明远'是千年前创造禁术种子的穿越者，与天道破损事件直接相关"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_zhaomingyuan"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "'赵明远'是千年前创造禁术种子的穿越者，与天道破损事件直接相关"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start cultivation: 练气三层"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "练气三层"
+            note = "chapter start cultivation: 练气三层"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "1"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start allies: 楚怀远/赵明远"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "楚怀远/赵明远"
+            note = "chapter start allies: 楚怀远/赵明远"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+            note = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 「历史」玉简"
+          }
+        }
+      }
+      step 9 {
+        description = "人格切换现象出现：清醒与赵明远人格交替显现"
+        event {
+          type = "premise"
+          state_delta {
+            target = "双重人格"
+            kind = "premise"
+            field = "transform"
+            to = "split"
+            note = "人格切换现象出现：清醒与赵明远人格交替显现"
+          }
+        }
+      }
+      step 10 {
+        description = "赵明远人格主动与陈东对话，说出禁术种子的真正来源"
+        event {
+          type = "premise"
+          state_delta {
+            target = "禁术种子的秘密"
+            kind = "knowledge"
+            field = "reveal"
+            to = "meet"
+            note = "赵明远人格主动与陈东对话，说出禁术种子的真正来源"
+          }
+        }
+      }
+      step 11 {
+        description = "得知禁术种子创造的目的——打破天道契约的枷锁"
+        event {
+          type = "premise"
+          state_delta {
+            target = "禁术种子的使命"
+            kind = "knowledge"
+            field = "reveal"
+            to = "learn"
+            note = "得知禁术种子创造的目的——打破天道契约的枷锁"
+          }
+        }
+      }
+      step 12 {
+        description = "楚怀远短暂恢复清醒，告知陈东石门后还有三道考验"
+        event {
+          type = "premise"
+          state_delta {
+            target = "清醒意志"
+            kind = "status"
+            field = "use"
+            to = "regain"
+            note = "楚怀远短暂恢复清醒，告知陈东石门后还有三道考验"
+          }
+        }
+      }
+      step 13 {
+        description = "灵石 resource change: 1 +0 = 1. 无变化"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "1"
+            to = "1"
+            note = "无变化"
+          }
+        }
+      }
+      step 14 {
+        description = "封印开启后不久"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "当夜 封印开启后不久"
+          }
+        }
+      }
+    }
+  }
+  chapter "记忆考验" {
+    id = "v7ch06"
+    arc = "volume_7"
+    objective "记忆考验" {
+      id = "obj_v7ch06"
+      type = "sequence"
+      step 1 {
+        description = "考据党的自我历史化 | reveal | 楚怀远完全接受了赵明远的记忆，两道人格深度融合 | 楚怀远将无法再回到纯粹的自己，历史化进入不可逆阶段 | 接下来的两道考验可能会彻底消耗掉楚怀远的自我意识"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "storyline"
+            field = "stage"
+            to = "reveal"
+            unit = "接下来的两道考验可能会彻底消耗掉楚怀远的自我意识"
+            cost = "楚怀远将无法再回到纯粹的自己，历史化进入不可逆阶段"
+            note = "change=楚怀远完全接受了赵明远的记忆，两道人格深度融合; consequence=楚怀远将无法再回到纯粹的自己，历史化进入不可逆阶段; pressure=接下来的两道考验可能会彻底消耗掉楚怀远的自我意识"
+          }
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in v7ch06"
+          }
+        }
+      }
+      step 2 {
+        description = "mystery myst_first_trial_pass planted: 通过记忆考验的关键不是知道真相，而是选择是否接受真相——陈东通过了，因为他没有逃避"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_first_trial_pass"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "通过记忆考验的关键不是知道真相，而是选择是否接受真相——陈东通过了，因为他没有逃避"
+          }
+        }
+      }
+      step 3 {
+        description = "mystery myst_treaty_detail resolved: 天道契约的核心是每百名穿越者中需献祭三人生命力以维持世界稳定"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_treaty_detail"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "天道契约的核心是每百名穿越者中需献祭三人生命力以维持世界稳定"
+          }
+        }
+      }
+      step 4 {
+        description = "mystery myst_chu_identity resolved: 楚怀远的身体与千年前赵明远存在某种灵魂共鸣，所以他才会被封印吸引"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_chu_identity"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "楚怀远的身体与千年前赵明远存在某种灵魂共鸣，所以他才会被封印吸引"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start cultivation: 练气三层"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "练气三层"
+            note = "chapter start cultivation: 练气三层"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "1"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start injuries: 楚怀远精神冲击"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 楚怀远精神冲击"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start allies: 楚怀远/赵明远"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "楚怀远/赵明远"
+            note = "chapter start allies: 楚怀远/赵明远"
+          }
+        }
+      }
+      step 9 {
+        description = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸"
+            note = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸"
+          }
+        }
+      }
+      step 10 {
+        description = "被拉入千年前天道契约签订现场的记忆空间"
+        event {
+          type = "gate"
+          state_delta {
+            target = "记忆卷轴"
+            kind = "item"
+            field = "use"
+            to = "experienced"
+            note = "被拉入千年前天道契约签订现场的记忆空间"
+          }
+        }
+      }
+      step 11 {
+        description = "记忆中赵明远是唯一反对天道契约的人，他预见到契约的代价"
+        event {
+          type = "premise"
+          state_delta {
+            target = "天道契约的代价"
+            kind = "knowledge"
+            field = "reveal"
+            to = "reveal"
+            note = "记忆中赵明远是唯一反对天道契约的人，他预见到契约的代价"
+          }
+        }
+      }
+      step 12 {
+        description = "天道契约的核心条款：穿越者每月需向天道献祭一定量的生命力以维持世界稳定"
+        event {
+          type = "premise"
+          state_delta {
+            target = "献祭条款"
+            kind = "knowledge"
+            field = "discover"
+            to = "discover"
+            note = "天道契约的核心条款：穿越者每月需向天道献祭一定量的生命力以维持世界稳定"
+          }
+        }
+      }
+      step 13 {
+        description = "看到自己（赵明远）在记忆中的愤怒与无力"
+        event {
+          type = "memory"
+          state_delta {
+            target = "记忆冲击"
+            kind = "status"
+            field = "use"
+            to = "shocked"
+            note = "看到自己（赵明远）在记忆中的愤怒与无力"
+          }
+        }
+      }
+      step 14 {
+        description = "寿命 resource change: 15 -1 = 14. 记忆空间中的时间流动消耗生命力"
+        event {
+          type = "resource"
+          state_delta {
+            target = "寿命"
+            kind = "resource"
+            field = "quantity"
+            from = "15"
+            to = "14"
+            delta = -1
+            note = "记忆空间中的时间流动消耗生命力"
+          }
+        }
+      }
+      step 15 {
+        description = "灵石 resource change: 1 +0 = 1. 无变化"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "1"
+            to = "1"
+            note = "无变化"
+          }
+        }
+      }
+      step 16 {
+        description = "踏入密室后立即触发记忆考验"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "同上 踏入密室后立即触发记忆考验"
+          }
+        }
+      }
+    }
+  }
+  chapter "选择的岔道" {
+    id = "v7ch07"
+    arc = "volume_7"
+    objective "选择的岔道" {
+      id = "obj_v7ch07"
+      type = "sequence"
+      step 1 {
+        description = "考据党的自我历史化 | pressure | 楚怀远的人格融合进一步加深，赵明远的意识开始主导 | 楚怀远的现代记忆开始模糊，时常忘记自己来自何处 | 第三道考验'代价'即将到来，楚怀远可能是代价本身"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "storyline"
+            field = "stage"
+            to = "pressure"
+            unit = "第三道考验'代价'即将到来，楚怀远可能是代价本身"
+            cost = "楚怀远的现代记忆开始模糊，时常忘记自己来自何处"
+            note = "change=楚怀远的人格融合进一步加深，赵明远的意识开始主导; consequence=楚怀远的现代记忆开始模糊，时常忘记自己来自何处; pressure=第三道考验'代价'即将到来，楚怀远可能是代价本身"
+          }
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in v7ch07"
+          }
+        }
+      }
+      step 2 {
+        description = "本土修仙的破局之路 | reversal | 陈东寿命仅剩四年，必须在极短时间内找到对抗天道契约和延长寿命的方法 | 每一刻都在倒计时，陈东的决策变得极端而果断 | 延寿丹可以延寿50年，但陈东在矿场时说过要在真正生死时刻使用——现在就是那个时刻"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "本土修仙的破局之路"
+            kind = "storyline"
+            field = "stage"
+            to = "reversal"
+            unit = "延寿丹可以延寿50年，但陈东在矿场时说过要在真正生死时刻使用——现在就是那个时刻"
+            cost = "每一刻都在倒计时，陈东的决策变得极端而果断"
+            note = "change=陈东寿命仅剩四年，必须在极短时间内找到对抗天道契约和延长寿命的方法; consequence=每一刻都在倒计时，陈东的决策变得极端而果断; pressure=延寿丹可以延寿50年，但陈东在矿场时说过要在真正生死时刻使用——现在就是那个时刻"
+          }
+          state_delta {
+            target = "本土修仙的破局之路"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in v7ch07"
+          }
+        }
+      }
+      step 3 {
+        description = "mystery myst_four_years planted: 陈东只剩四年寿命，但禁术种子仍在加速消耗——他可能连四年都撑不到"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_four_years"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "陈东只剩四年寿命，但禁术种子仍在加速消耗——他可能连四年都撑不到"
+          }
+        }
+      }
+      step 4 {
+        description = "mystery myst_three_trials resolved: 第二道考验是'选择'——需要用个人最重要的东西换取真相"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_three_trials"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "第二道考验是'选择'——需要用个人最重要的东西换取真相"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start cultivation: 练气三层（衰老前兆加剧）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "练气三层（衰老前兆加剧）"
+            note = "chapter start cultivation: 练气三层（衰老前兆加剧）"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "1"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start injuries: 陈东寿命锐减，身体虚弱"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 陈东寿命锐减，身体虚弱"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start allies: 楚怀远/赵明远"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "楚怀远/赵明远"
+            note = "chapter start allies: 楚怀远/赵明远"
+          }
+        }
+      }
+      step 9 {
+        description = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸"
+            note = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸"
+          }
+        }
+      }
+      step 10 {
+        description = "面对两道门的选择：生路（离开）与死路（继续深入但消耗寿命）"
+        event {
+          type = "gate"
+          state_delta {
+            target = "选择考验"
+            kind = "item"
+            field = "use"
+            to = "choice"
+            note = "面对两道门的选择：生路（离开）与死路（继续深入但消耗寿命）"
+          }
+        }
+      }
+      step 11 {
+        description = "选择右门，消耗十年寿命"
+        event {
+          type = "premise"
+          state_delta {
+            target = "真相之路"
+            kind = "status"
+            field = "choose"
+            to = "decide"
+            note = "选择右门，消耗十年寿命"
+          }
+        }
+      }
+      step 12 {
+        description = "寿命从14年减至4年，鬓角白发新增，脸上浮现皱纹"
+        event {
+          type = "status"
+          state_delta {
+            target = "寿命"
+            kind = "status"
+            field = "use"
+            to = "pay"
+            note = "寿命从14年减至4年，鬓角白发新增，脸上浮现皱纹"
+          }
+        }
+      }
+      step 13 {
+        description = "赵明远人格在楚怀远体内对陈东的选择表示赞赏"
+        event {
+          type = "premise"
+          state_delta {
+            target = "赞赏"
+            kind = "status"
+            field = "use"
+            to = "comment"
+            note = "赵明远人格在楚怀远体内对陈东的选择表示赞赏"
+          }
+        }
+      }
+      step 14 {
+        description = "寿命 resource change: 14 -10 = 4. 通过第二道考验消耗"
+        event {
+          type = "resource"
+          state_delta {
+            target = "寿命"
+            kind = "resource"
+            field = "quantity"
+            from = "14"
+            to = "4"
+            delta = -10
+            note = "通过第二道考验消耗"
+          }
+        }
+      }
+      step 15 {
+        description = "灵石 resource change: 1 +0 = 1. 无变化"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "1"
+            to = "1"
+            note = "无变化"
+          }
+        }
+      }
+      step 16 {
+        description = "记忆考验通过后，场景变换为两道门前"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "同日 记忆考验通过后，场景变换为两道门前"
+          }
+        }
+      }
+    }
+  }
+  chapter "代价的真相" {
+    id = "v7ch08"
+    arc = "volume_7"
+    objective "代价的真相" {
+      id = "obj_v7ch08"
+      type = "sequence"
+      step 1 {
+        description = "考据党的自我历史化 | reversal | 陈东代替楚怀远吞噬了天道残骸，楚怀远避免了彻底历史化的命运 | 楚怀远的意识得以保留，但赵明远的残魂被陈东吸入体内，变成了陈东识海中另一个声音 | 陈东体内现在有禁术种子、终极碎片、天道残骸、赵明远残魂——多重力量的冲突随时可能爆发"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "storyline"
+            field = "stage"
+            to = "reversal"
+            unit = "陈东体内现在有禁术种子、终极碎片、天道残骸、赵明远残魂——多重力量的冲突随时可能爆发"
+            cost = "楚怀远的意识得以保留，但赵明远的残魂被陈东吸入体内，变成了陈东识海中另一个声音"
+            note = "change=陈东代替楚怀远吞噬了天道残骸，楚怀远避免了彻底历史化的命运; consequence=楚怀远的意识得以保留，但赵明远的残魂被陈东吸入体内，变成了陈东识海中另一个声音; pressure=陈东体内现在有禁术种子、终极碎片、天道残骸、赵明远残魂——多重力量的冲突随时可能爆发"
+          }
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in v7ch08"
+          }
+        }
+      }
+      step 2 {
+        description = "mystery myst_devour_result planted: 吞噬天道残骸后，陈东的识海中多了一段模糊的记忆——那是李慕云的最后一缕执念"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_devour_result"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "吞噬天道残骸后，陈东的识海中多了一段模糊的记忆——那是李慕云的最后一缕执念"
+          }
+        }
+      }
+      step 3 {
+        description = "mystery myst_seed_mission resolved: 禁术种子是打破天道契约的钥匙，吞噬天道残骸是激活钥匙的方法"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_seed_mission"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "禁术种子是打破天道契约的钥匙，吞噬天道残骸是激活钥匙的方法"
+          }
+        }
+      }
+      step 4 {
+        description = "mystery myst_first_trial_pass resolved: 陈东通过记忆考验的关键是接受真相——他做到了"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_first_trial_pass"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "陈东通过记忆考验的关键是接受真相——他做到了"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start cultivation: 练气三层（衰老加剧）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "练气三层（衰老加剧）"
+            note = "chapter start cultivation: 练气三层（衰老加剧）"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "1"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start injuries: 陈东寿命锐减后虚弱"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 陈东寿命锐减后虚弱"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start allies: 楚怀远/赵明远"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "楚怀远/赵明远"
+            note = "chapter start allies: 楚怀远/赵明远"
+          }
+        }
+      }
+      step 9 {
+        description = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸"
+            note = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸"
+          }
+        }
+      }
+      step 10 {
+        description = "核心中悬浮着一枚心脏大小的天道碎片，碎片中困着一名仍在献祭生命的穿越者残魂"
+        event {
+          type = "premise"
+          state_delta {
+            target = "天道残骸"
+            kind = "item"
+            field = "discover"
+            to = "witness"
+            note = "核心中悬浮着一枚心脏大小的天道碎片，碎片中困着一名仍在献祭生命的穿越者残魂"
+          }
+        }
+      }
+      step 11 {
+        description = "这名被献祭的穿越者是当年签订契约时'献祭条款'的第一批牺牲品"
+        event {
+          type = "premise"
+          state_delta {
+            target = "献祭真相"
+            kind = "knowledge"
+            field = "reveal"
+            to = "learn"
+            note = "这名被献祭的穿越者是当年签订契约时'献祭条款'的第一批牺牲品"
+          }
+        }
+      }
+      step 12 {
+        description = "赵明远的残魂提出用自己的意识替代这名穿越者，以换取陈东获得天道残骸"
+        event {
+          type = "premise"
+          state_delta {
+            target = "替代方案"
+            kind = "knowledge"
+            field = "propose"
+            to = "propose"
+            note = "赵明远的残魂提出用自己的意识替代这名穿越者，以换取陈东获得天道残骸"
+          }
+        }
+      }
+      step 13 {
+        description = "陈东拒绝赵明远的提议，试图用自己的禁术种子吞噬天道残骸以解放被献祭的灵魂"
+        event {
+          type = "status"
+          state_delta {
+            target = "禁术种子"
+            kind = "premise"
+            field = "use"
+            to = "refuse"
+            note = "陈东拒绝赵明远的提议，试图用自己的禁术种子吞噬天道残骸以解放被献祭的灵魂"
+          }
+        }
+      }
+      step 14 {
+        description = "寿命 resource change: 4 +0 = 4. 尚未消耗"
+        event {
+          type = "resource"
+          state_delta {
+            target = "寿命"
+            kind = "resource"
+            field = "quantity"
+            from = "4"
+            to = "4"
+            note = "尚未消耗"
+          }
+        }
+      }
+      step 15 {
+        description = "灵石 resource change: 1 +0 = 1. 无变化"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "1"
+            to = "1"
+            note = "无变化"
+          }
+        }
+      }
+      step 16 {
+        description = "通过选择之门后直达核心"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "当日 通过选择之门后直达核心"
+          }
+        }
+      }
+    }
+  }
+  chapter "苏醒的低语" {
+    id = "v7ch09"
+    arc = "volume_7"
+    objective "苏醒的低语" {
+      id = "obj_v7ch09"
+      type = "sequence"
+      step 1 {
+        description = "考据党的自我历史化 | payoff | 楚怀远虽然保住了自我意识，但外貌和气质永久性历史化，再也无法完全变回原来的自己 | 楚怀远选择留在遗迹中继续研究，不再回归书友会 | 陈东体内多了赵明远的残魂，下次战斗时可能会有不可预知的影响"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "storyline"
+            field = "stage"
+            to = "payoff"
+            unit = "陈东体内多了赵明远的残魂，下次战斗时可能会有不可预知的影响"
+            cost = "楚怀远选择留在遗迹中继续研究，不再回归书友会"
+            note = "change=楚怀远虽然保住了自我意识，但外貌和气质永久性历史化，再也无法完全变回原来的自己; consequence=楚怀远选择留在遗迹中继续研究，不再回归书友会; pressure=陈东体内多了赵明远的残魂，下次战斗时可能会有不可预知的影响"
+          }
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "resolved"
+            note = "payoff in v7ch09"
+          }
+        }
+      }
+      step 2 {
+        description = "缉厄司的天道阴谋 | reversal | 得知天道契约的核心机关在大司首体内，要打破契约必须击败大司首 | 陈东的目标从'躲避缉厄司'变成了'击败缉厄司大司首' | 大司首的实力未知，陈东只剩四年寿命"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "缉厄司的天道阴谋"
+            kind = "storyline"
+            field = "stage"
+            to = "reversal"
+            unit = "大司首的实力未知，陈东只剩四年寿命"
+            cost = "陈东的目标从'躲避缉厄司'变成了'击败缉厄司大司首'"
+            note = "change=得知天道契约的核心机关在大司首体内，要打破契约必须击败大司首; consequence=陈东的目标从'躲避缉厄司'变成了'击败缉厄司大司首'; pressure=大司首的实力未知，陈东只剩四年寿命"
+          }
+          state_delta {
+            target = "缉厄司的天道阴谋"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in v7ch09"
+          }
+        }
+      }
+      step 3 {
+        description = "mystery myst_deep_voice planted: 赵明远的残魂在陈东识海中时，偶尔会流露出不属于他本人的叹息——仿佛还有其他残留意识"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_deep_voice"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "next_volume"
+            cost = "open"
+            note = "赵明远的残魂在陈东识海中时，偶尔会流露出不属于他本人的叹息——仿佛还有其他残留意识"
+          }
+        }
+      }
+      step 4 {
+        description = "mystery myst_devour_result resolved: 被献祭的天道穿越者残魂被陈东吸收，陈东获得了他的部分记忆和力量"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_devour_result"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "被献祭的天道穿越者残魂被陈东吸收，陈东获得了他的部分记忆和力量"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start cultivation: 练气三层（身体衰弱）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "练气三层（身体衰弱）"
+            note = "chapter start cultivation: 练气三层（身体衰弱）"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "1"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start injuries: 陈东寿命锐减后极度虚弱"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "injury"
+            field = "active"
+            to = "injured"
+            note = "chapter start injuries: 陈东寿命锐减后极度虚弱"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start allies: 楚怀远, 赵明远"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "楚怀远, 赵明远"
+            note = "chapter start allies: 楚怀远, 赵明远"
+          }
+        }
+      }
+      step 9 {
+        description = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 天道历史笔记, 延寿丹（未服用）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 天道历史笔记, 延寿丹（未服用）"
+            note = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 天道历史笔记, 延寿丹（未服用）"
+          }
+        }
+      }
+      step 10 {
+        description = "赵明远的残魂在陈东识海中成形，成为第二个'声音'"
+        event {
+          type = "premise"
+          state_delta {
+            target = "残魂意识"
+            kind = "premise"
+            field = "awaken"
+            to = "manifest"
+            note = "赵明远的残魂在陈东识海中成形，成为第二个'声音'"
+          }
+        }
+      }
+      step 11 {
+        description = "告知陈东天道契约的核心机关在大司首体内，击败大司首就能瓦解契约"
+        event {
+          type = "premise"
+          state_delta {
+            target = "大司首的秘密"
+            kind = "knowledge"
+            field = "reveal"
+            to = "reveal"
+            note = "告知陈东天道契约的核心机关在大司首体内，击败大司首就能瓦解契约"
+          }
+        }
+      }
+      step 12 {
+        description = "楚怀远的瞳孔永久保留了一丝金色，外貌开始出现古人的气质特征"
+        event {
+          type = "status"
+          state_delta {
+            target = "历史化残留"
+            kind = "status"
+            field = "use"
+            to = "transform"
+            note = "楚怀远的瞳孔永久保留了一丝金色，外貌开始出现古人的气质特征"
+          }
+        }
+      }
+      step 13 {
+        description = "楚怀远将自己整理的完整天道历史笔记交给陈东"
+        event {
+          type = "acquire"
+          state_delta {
+            target = "天道历史笔记"
+            kind = "item"
+            field = "acquire"
+            to = "give"
+            note = "楚怀远将自己整理的完整天道历史笔记交给陈东"
+          }
+        }
+      }
+      step 14 {
+        description = "灵石 resource change: 1 +0 = 1. 无变化"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "1"
+            to = "1"
+            note = "无变化"
+          }
+        }
+      }
+      step 15 {
+        description = "吞噬天道残骸后不久"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "当日 吞噬天道残骸后不久"
+          }
+        }
+      }
+    }
+  }
+  chapter "存在的重量" {
+    id = "v7ch10"
+    arc = "volume_7"
+    objective "存在的重量" {
+      id = "obj_v7ch10"
+      type = "sequence"
+      step 1 {
+        description = "考据党的自我历史化 | payoff | 楚怀远彻底接受了自己的命运，选择以封印自身的方式继续守护遗迹 | 陈东获得了一个'备用钥匙'——楚怀远驻守的遗迹入口将在决战时刻提供支持 | 楚怀远只有三年时间，三年后他将完全历史化，失去自我"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "storyline"
+            field = "stage"
+            to = "payoff"
+            unit = "楚怀远只有三年时间，三年后他将完全历史化，失去自我"
+            cost = "陈东获得了一个'备用钥匙'——楚怀远驻守的遗迹入口将在决战时刻提供支持"
+            note = "change=楚怀远彻底接受了自己的命运，选择以封印自身的方式继续守护遗迹; consequence=陈东获得了一个'备用钥匙'——楚怀远驻守的遗迹入口将在决战时刻提供支持; pressure=楚怀远只有三年时间，三年后他将完全历史化，失去自我"
+          }
+          state_delta {
+            target = "考据党的自我历史化"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "resolved"
+            note = "payoff in v7ch10"
+          }
+        }
+      }
+      step 2 {
+        description = "缉厄司的天道阴谋 | revelation | 陈东彻底摸清了天道契约的机制，并确认大司首是击败天道的核心目标 | 书友会进入全面备战状态，所有人开始为最终决战做准备 | 缉厄司在大司首的命令下开始全面搜寻陈东的下落，据点再次面临暴露风险"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "缉厄司的天道阴谋"
+            kind = "storyline"
+            field = "stage"
+            to = "revelation"
+            unit = "缉厄司在大司首的命令下开始全面搜寻陈东的下落，据点再次面临暴露风险"
+            cost = "书友会进入全面备战状态，所有人开始为最终决战做准备"
+            note = "change=陈东彻底摸清了天道契约的机制，并确认大司首是击败天道的核心目标; consequence=书友会进入全面备战状态，所有人开始为最终决战做准备; pressure=缉厄司在大司首的命令下开始全面搜寻陈东的下落，据点再次面临暴露风险"
+          }
+        }
+      }
+      step 3 {
+        description = "本土修仙的破局之路 | progress | 陈东服下延寿丹，恢复了行动力，但练气三层的实力仍然不足以对抗大司首 | 必须在短时间内将修为提升到筑基期，以增强金手指的威力 | 大司首的实力至少金丹期以上，练气三层发起的攻击可能连防御都无法突破"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "本土修仙的破局之路"
+            kind = "storyline"
+            field = "stage"
+            to = "progress"
+            unit = "大司首的实力至少金丹期以上，练气三层发起的攻击可能连防御都无法突破"
+            cost = "必须在短时间内将修为提升到筑基期，以增强金手指的威力"
+            note = "change=陈东服下延寿丹，恢复了行动力，但练气三层的实力仍然不足以对抗大司首; consequence=必须在短时间内将修为提升到筑基期，以增强金手指的威力; pressure=大司首的实力至少金丹期以上，练气三层发起的攻击可能连防御都无法突破"
+          }
+          state_delta {
+            target = "本土修仙的破局之路"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in v7ch10"
+          }
+        }
+      }
+      step 4 {
+        description = "mystery myst_chu_seal planted: 楚怀远将自己封印在遗迹入口，但他信中提到'如果三年后你还没来，封印会自动解除'——届时他可能已完全历史化"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_chu_seal"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "next_volume"
+            cost = "open"
+            note = "楚怀远将自己封印在遗迹入口，但他信中提到'如果三年后你还没来，封印会自动解除'——届时他可能已完全历史化"
+          }
+        }
+      }
+      step 5 {
+        description = "mystery myst_dasim首_identity planted: 赵明远残魂透露大司首不是人类，而是天道契约的'活体钥匙'——这意味着击败他可能不是单纯的战斗"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_dasim首_identity"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "next_volume"
+            cost = "open"
+            note = "赵明远残魂透露大司首不是人类，而是天道契约的'活体钥匙'——这意味着击败他可能不是单纯的战斗"
+          }
+        }
+      }
+      step 6 {
+        description = "mystery myst_four_years resolved: 陈东服用延寿丹，寿命从4年延长至54年"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_four_years"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "陈东服用延寿丹，寿命从4年延长至54年"
+          }
+        }
+      }
+      step 7 {
+        description = "mystery myst_same_source resolved: 真实还原因果与禁术同源，都是赵明远当年创造的天道对抗工具"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_same_source"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "真实还原因果与禁术同源，都是赵明远当年创造的天道对抗工具"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start cultivation: 练气三层（延寿后恢复巅峰状态）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "练气三层（延寿后恢复巅峰状态）"
+            note = "chapter start cultivation: 练气三层（延寿后恢复巅峰状态）"
+          }
+        }
+      }
+      step 9 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "1"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 10 {
+        description = "chapter start allies: 赵虎, 苏婉, 慕容寒, 宋晴, 张天赐, 林北辰, 赵明远"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "赵虎, 苏婉, 慕容寒, 宋晴, 张天赐, 林北辰, 赵明远"
+            note = "chapter start allies: 赵虎, 苏婉, 慕容寒, 宋晴, 张天赐, 林北辰, 赵明远"
+          }
+        }
+      }
+      step 11 {
+        description = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 天道历史笔记, 延寿丹（已服用）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 天道历史笔记, 延寿丹（已服用）"
+            note = "chapter start key items: 灵气追踪, 终极天道碎片, 规则洞察, 天道碎片残骸, 天道历史笔记, 延寿丹（已服用）"
+          }
+        }
+      }
+      step 12 {
+        description = "向核心成员公开天道契约和缉厄司大司首的秘密"
+        event {
+          type = "premise"
+          state_delta {
+            target = "天道契约真相"
+            kind = "knowledge"
+            field = "reveal"
+            to = "reveal"
+            note = "向核心成员公开天道契约和缉厄司大司首的秘密"
+          }
+        }
+      }
+      step 13 {
+        description = "服下延寿丹，寿命延长五十年"
+        event {
+          type = "status"
+          state_delta {
+            target = "延寿丹"
+            kind = "item"
+            field = "use"
+            to = "use"
+            note = "服下延寿丹，寿命延长五十年"
+          }
+        }
+      }
+      step 14 {
+        description = "最后一封书信通过遗迹回廊的机关送至据点"
+        event {
+          type = "acquire"
+          state_delta {
+            target = "遗迹传信机关"
+            kind = "item"
+            field = "use"
+            to = "send"
+            note = "最后一封书信通过遗迹回廊的机关送至据点"
+          }
+        }
+      }
+      step 15 {
+        description = "林北辰决定加速整合书友会内部力量，准备对缉厄司发起总攻"
+        event {
+          type = "status"
+          state_delta {
+            target = "总攻计划"
+            kind = "status"
+            field = "decide"
+            to = "decide"
+            note = "林北辰决定加速整合书友会内部力量，准备对缉厄司发起总攻"
+          }
+        }
+      }
+      step 16 {
+        description = "寿命 resource change: 4 +50 = 54. 服用延寿丹"
+        event {
+          type = "resource"
+          state_delta {
+            target = "寿命"
+            kind = "resource"
+            field = "quantity"
+            from = "4"
+            to = "54"
+            delta = 50
+            note = "服用延寿丹"
+          }
+        }
+      }
+      step 17 {
+        description = "灵石 resource change: 1 +0 = 1. 无变化"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "1"
+            to = "1"
+            note = "无变化"
+          }
+        }
+      }
+      step 18 {
+        description = "陈东在遗迹中与楚怀远告别后返回据点"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "过了1天 陈东在遗迹中与楚怀远告别后返回据点"
+          }
+        }
+      }
+    }
+  }
+}
+
+systems {
+  attribute_system "Core Attributes" {
+    id = "attr_core"
+    description = "Numeric baseline attributes for simulation and continuity checks."
+    attribute "Strength" {
+      id = "str"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "Agility" {
+      id = "agi"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "Intelligence" {
+      id = "int"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "Vitality" {
+      id = "vit"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "HP" {
+      id = "hp"
+      type = "resource"
+      base_value = 100
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "MP" {
+      id = "mp"
+      type = "resource"
+      base_value = 50
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "Qi" {
+      id = "qi"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "灵石" {
+      id = "resource_01"
+      description = "修仙界基础硬通货，内含可吸收灵气，用于修炼、布阵、驱动法器。低阶灵石易得，高阶灵石稀有。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "天道碎片" {
+      id = "resource_02"
+      description = "天道破碎后散落于世间的法则碎片，穿越者体内天然携带，缉厄司猎杀穿越者的根本目标。每块碎片蕴含不同规则（如时间、空间、情感），可被吸收或用于修补天道。也是穿越者金手指力量的潜在来源。此类碎片总数有限，其中一枚被内鬼藏匿，原为其父（缉厄司温和派高层）秘密研究的核心样品，与“轨迹推演”金手指产生共鸣，亦被缉厄司视为追踪标记。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "静心佩" {
+      id = "resource_03"
+      description = "上古流传的宁神法器，可压制精神类金手指的无意识波动，尤其对「剧情强制」等情感操控型能力有显著抑制效果。甜宠文作者佩戴后可将范围压缩至一丈以下。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "副本核心（玉简）" {
+      id = "resource_04"
+      description = "无限流作者生成副本所需的媒介，由特殊玉简雕刻而成，可重复充能使用。其材质与天道碎片存在某种共鸣，暗示两者同源。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "禁术封印之物" {
+      id = "resource_05"
+      description = "矿场地下遗迹中封印的「死后夺取」金手指本体，以七重上古禁制镇压。陈东在逃离矿场时偶然触发其气息，成为后续探索副本核心。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "寿命" {
+      id = "resource_06"
+      description = "修仙者每进阶一次，寿命大幅延长。练气期约120年，筑基期约300年，金丹期约500年，元婴期约1000年，化神期约2000年。寿命耗尽则无法续命（除特殊天材地宝）。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "干粮及水袋" {
+      id = "resource_07"
+      description = "修仙界普通干粮与水袋，用于长途跋涉与矿场劳作，无特殊功效，但长期在野外生存必备。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "下品灵石" {
+      id = "resource_08"
+      description = "修仙界最低阶灵石，广泛流通，用于日常交易与低阶修炼。内含灵气稀薄，练气期常用。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "百年聚气草" {
+      id = "resource_09"
+      description = "百年药性的聚气草，可用于炼制聚气丹，或直接吸收加速练气期修炼，价值不高但易获取。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "聚气丹" {
+      id = "resource_10"
+      description = "练气期常用修炼丹药，可加速灵气吸收，提高修炼效率，由聚气草炼制而成。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "练气七层突破丹" {
+      id = "resource_11"
+      description = "专用于辅助练气六层修士突破至练气七层的丹药，含有精纯灵气与少许破境感悟，较为珍贵。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "中品灵石" {
+      id = "resource_12"
+      description = "品质高于下品灵石的灵石，内含灵气更精纯，常用于交易高阶物品与金丹期修炼，价值较高。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "驱邪符" {
+      id = "resource_13"
+      description = "(自动添加 — 请手动补充描述)"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "蓝色灵石" {
+      id = "resource_14"
+      description = "(自动添加 — 请手动补充描述)"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "凝气草" {
+      id = "resource_15"
+      description = "(自动添加 — 请手动补充描述)"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "静心佩（耐久）" {
+      id = "resource_16"
+      description = "(自动添加 — 请手动补充描述)"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "天道碎片残骸" {
+      id = "resource_17"
+      description = "(自动添加 — 请手动补充描述)"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "禁术种子" {
+      id = "resource_18"
+      description = "(自动添加 — 请手动补充描述)"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+  }
+  power_formula "Core Power Formula" {
+    id = "power_core"
+    description = "Deterministic combat power formula for benchmark simulation."
+    base_power = 10
+    formula = "base + sum(attr_i * weight_i)"
+    factor "Strength" {
+      attribute = "str"
+      weight = 2
+    }
+    factor "Agility" {
+      attribute = "agi"
+      weight = 1.2
+    }
+    factor "Intelligence" {
+      attribute = "int"
+      weight = 1.8
+    }
+    factor "Vitality" {
+      attribute = "vit"
+      weight = 1.5
+    }
+    factor "HP" {
+      attribute = "hp"
+      weight = 0.1
+    }
+    factor "MP" {
+      attribute = "mp"
+      weight = 0.2
+    }
+    factor "Qi" {
+      attribute = "qi"
+      weight = 1
+    }
+  }
+  counter "chapter_progress" {
+    track = "story.chapter"
+    description = "Story progression counter"
+    milestone 5 {
+      title = "Arc Warmup"
+    }
+    milestone 10 {
+      title = "Arc Core"
+    }
+  }
+  counter "金手指体系：附矿场复活_progress" {
+    track = "player.progression"
+    description = "Primary progression pace tracker"
+    milestone 1 {
+      title = "System Activated"
+    }
+    milestone 3 {
+      title = "First Breakthrough"
+    }
+    milestone 5 {
+      title = "Mid-Arc Growth"
+    }
+  }
+  progression "金手指体系：附矿场复活" {
+    id = "金手指体系：附矿场复活"
+    level 1 {
+      name = "基础复活"
+      requirements = "死亡触发，且复活点为离死亡最近的矿场"
+      bonuses = ["死亡后在最近的矿场随机地点复活，身体仅恢复至死亡前一刻的「粗修复状态」（伤口闭合，但身体极度虚弱，灵力紊乱），且每次复活都会损耗部分自身修为，修为损耗下限为练气一层，练气一层复活折损10年寿命，千里无矿场时复活延迟72小时且复活后濒死，尸体会消失"]
+    }
+  }
+  progression "金手指体系：复活爱人" {
+    id = "金手指体系：复活爱人"
+    level 1 {
+      name = "基础爱人复活"
+      requirements = "需触发两个核心条件——所爱之人死亡，且三哥自身对其怀有灵魂层面的强烈执念与爱意。"
+      bonuses = ["可复活自己灵魂本源层面真心所爱的人，复活后目标身体恢复至死亡前的健康状态，但会消耗三哥自身的部分修为，且复活次数越多，修为损耗越大，甚至可能导致自身修为倒退。外力操控产生的虚假爱意无法触发该能力；若目标修为高于三哥一个大境界及以上，可降低该能力20%效果。"]
+    }
+  }
+  progression "金手指体系：情感强制" {
+    id = "金手指体系：情感强制"
+    level 1 {
+      name = "基础情感诱导"
+      requirements = "主动触发，需与目标面对面接触，且自身灵气充足，目标无强烈的精神防御。"
+      bonuses = ["主动催动灵气，可让单个目标对自己产生强烈的爱意与无条件的保护欲，操控效果持续时间随灵气消耗而定，目标修为越低，操控效果越稳定。该能力催生的爱意为虚假情感，会完全覆盖目标原本对施术者的任何真实好感，不留痕迹，因此无法触发「复活爱人」能力；但若施术者解除强制后，目标可能出现「情感印记残留」——对施术者记忆中模糊矛盾的依赖感，可作为后期反水或识破的线索。若目标修为高于施术者一个大境界及以上，可降低该能力20%效果。"]
+    }
+  }
+  progression "金手指体系：龙傲天" {
+    id = "金手指体系：龙傲天"
+    level 1 {
+      name = "基础幸运加成"
+      requirements = "无主动触发条件，随机被动激活，触发概率与自身气运相关。"
+      bonuses = ["被动触发，日常活动中（如行走、打坐、历练）会随机获得各类对应自身修为等级的修仙机缘，包括高阶灵草、修炼功法、上古传承、灵气宝地等，机缘可能伴随危险或引来觊觎者。若觊觎者修为高于宿主一个大境界及以上，可降低该金手指的机缘吸引力效果20%。"]
+    }
+  }
+  progression "金手指体系：异能吞噬" {
+    id = "金手指体系：异能吞噬"
+    level 1 {
+      name = "基础死亡反击"
+      requirements = "死后触发，且杀人者必须是拥有金手指的穿越者或伪穿越者（普通本土修士杀死不触发）。"
+      bonuses = ["被拥有金手指的目标杀死后，可在原地复活，同时剥夺杀人者的金手指，将其据为己有，杀人者则会永久失去该能力；复活后身体处于虚弱状态，需短暂调息才能恢复。若杀人者修为高于宿主一个大境界及以上，可降低该能力20%的剥夺成功率。"]
+    }
+  }
+  progression "金手指体系：轨迹推演" {
+    id = "金手指体系：轨迹推演"
+    level 1 {
+      name = "基础轨迹推演"
+      requirements = "主动触发，需清晰看到目标的面部或感知到其核心气息，且目标修为不超过自身。"
+      bonuses = ["主动消耗少量灵气，可推演单个目标1炷香内的行动轨迹，或破解一个简单的隐藏秘密（如是否携带武器、是否撒谎、是否隐藏修为），推演结果存在10%的误差，目标修为越高，误差越大；若目标修为高于宿主一个大境界及以上，可降低该能力20%的推演精度。"]
+    }
+  }
+  progression "金手指体系：话术操控" {
+    id = "金手指体系：话术操控"
+    level 1 {
+      name = "基础话术诱导"
+      requirements = "主动触发，需与目标面对面交流，目标无强烈戒备心，且自身消耗少量灵气维持话术效果。"
+      bonuses = ["主动触发话术能力，通过语言诱导，让修为低于自身（练气五层及以下）的目标做出简单行为（如放下武器、说出基础信息、暂时放弃攻击），操控持续时间为10息，目标事后会残留模糊记忆，容易对自身行为产生怀疑。若目标修为高于宿主一个大境界及以上，可降低该能力20%效果。"]
+    }
+  }
+  progression "修仙境界体系：修仙" {
+    id = "修仙境界体系：修仙"
+    level 1 {
+      name = "练气一层"
+      requirements = "灵气入体，成功引天地灵气进入体内，完成第一次灵气循环。"
+      bonuses = ["修仙入门境界，可初步吸纳天地灵气入体，摆脱凡人肉身限制，拥有微弱的灵气攻击力。练气期基础寿命约120年。"]
+    }
+    level 2 {
+      name = "练气二层"
+      requirements = "达到练气一层圆满，积累足够灵气，完成灵气循环的进阶。"
+      bonuses = ["灵气在体内形成稳定循环，肉身强度略有提升，可熟练操控少量灵气进行基础攻击与防御。"]
+    }
+    level 3 {
+      name = "练气三层"
+      requirements = "达到练气二层圆满，攒够足够灵气，稳固体内灵气循环。"
+      bonuses = ["灵气储量大幅增加，可将灵气附着于拳脚或简单法器上，攻击力显著提升。"]
+    }
+    level 4 {
+      name = "练气四层"
+      requirements = "达到练气三层圆满，攒够足够灵气，扩充体内灵气池。"
+      bonuses = ["灵气在体内形成小型灵气池，可连续释放灵气攻击，续航能力提升。"]
+    }
+    level 5 {
+      name = "练气五层"
+      requirements = "达到练气四层圆满，攒够足够灵气，提纯体内灵气。"
+      bonuses = ["灵气纯度提升，可初步感知周边灵气分布，对低阶法器的操控更加熟练。"]
+    }
+    level 6 {
+      name = "练气六层"
+      requirements = "达到练气五层圆满，攒够足够灵气，强化肉身与灵气的联动。"
+      bonuses = ["肉身强度进一步提升，可抵御低阶灵气攻击，灵气攻击范围扩大。"]
+    }
+    level 7 {
+      name = "练气七层"
+      requirements = "达到练气六层圆满，攒够足够灵气，提升灵气操控精度。"
+      bonuses = ["灵气池进一步扩大，可同时操控多道灵气攻击，战斗灵活性提升。"]
+    }
+    level 8 {
+      name = "练气八层"
+      requirements = "达到练气七层圆满，攒够足够灵气，进一步提纯灵气，掌握灵气凝练技巧。"
+      bonuses = ["灵气纯度大幅提升，可释放凝练的灵气刃，攻击力大幅增强。"]
+    }
+    level 9 {
+      name = "练气九层"
+      requirements = "达到练气八层圆满，攒够足够灵气，稳固灵气与肉身的契合度。"
+      bonuses = ["灵气池达到饱和，肉身与灵气达到完美契合，可应对中低阶修士的攻击。"]
+    }
+    level 10 {
+      name = "练气十层"
+      requirements = "达到练气九层圆满，攒够足够灵气，冲击练气期瓶颈。"
+      bonuses = ["练气期巅峰境界，灵气池达到极限，需突破瓶颈才能进入筑基期。"]
+    }
+    level 11 {
+      name = "筑基初期"
+      requirements = "达到练气十层圆满，吞服筑基丹，借助灵石灵气辅助，成功突破筑基瓶颈。"
+      bonuses = ["正式踏入修仙门槛，灵气转化为筑基灵力，肉身强度、灵气储量与操控力大幅飞跃，可御使低阶法器飞行。筑基期基础寿命约300年。金手指能力增幅上限提升100%。"]
+    }
+    level 12 {
+      name = "筑基中期"
+      requirements = "达到筑基初期圆满，攒够足够筑基灵力，稳固筑基境界。"
+      bonuses = ["筑基灵力进一步凝练，御使法器的速度与精度提升，可施展基础筑基期法术。"]
+    }
+    level 13 {
+      name = "筑基后期"
+      requirements = "达到筑基中期圆满，攒够足够筑基灵力，冲击筑基后期瓶颈。"
+      bonuses = ["筑基灵力达到饱和，肉身强度媲美中阶法器，可施展高阶筑基期法术，战斗力大幅提升。"]
+    }
+    level 14 {
+      name = "筑基巅峰"
+      requirements = "达到筑基后期圆满，攒够足够筑基灵力，做好渡雷劫的准备。"
+      bonuses = ["筑基期最终境界，灵力纯度与储量达到极致，需度过雷劫才能突破至金丹期。"]
+    }
+    level 15 {
+      name = "金丹初期"
+      requirements = "达到筑基巅峰，成功度过雷劫，将筑基灵力凝聚成金丹。"
+      bonuses = ["修仙界中阶境界，筑基灵力凝聚成金丹，灵力储存量与操控力呈几何级提升，可御使中阶法器，寿命延长至约500年。金手指能力增幅上限提升300%。"]
+    }
+    level 16 {
+      name = "金丹中期"
+      requirements = "达到金丹初期圆满，攒够足够金丹灵力，稳固金丹境界。"
+      bonuses = ["金丹进一步凝练，灵力纯度提升，可施展金丹期核心法术，战斗力远超筑基期修士。"]
+    }
+    level 17 {
+      name = "金丹后期"
+      requirements = "达到金丹中期圆满，攒够足够金丹灵力，扩充金丹容量。"
+      bonuses = ["金丹体积膨胀，灵力储量翻倍，可同时施展多门金丹期核心法术，肉身强度可抵御低阶法宝攻击。"]
+    }
+    level 18 {
+      name = "金丹巅峰"
+      requirements = "达到金丹后期圆满，攒够足够金丹灵力，度过心魔劫。"
+      bonuses = ["金丹凝练至极致，表面浮现道纹，灵力纯度达到元婴前阈值，需度过心魔劫突破至元婴期。金手指能力增幅上限提升500%。"]
+    }
+    level 19 {
+      name = "元婴初期"
+      requirements = "达到金丹巅峰，成功碎丹化婴，稳固元婴形态。"
+      bonuses = ["金丹破碎化为元婴，神魂与元婴绑定，即使肉身被毁也可元婴出逃夺舍重生，寿命延长至约1000年，可御使高阶法宝。金手指能力增幅上限提升1000%。"]
+    }
+    level 20 {
+      name = "化神初期"
+      requirements = "达到元婴巅峰，感悟基础天道规则，完成神魂与元婴的融合。"
+      bonuses = ["元婴与神魂彻底融合，可神魂出窍遨游天地，初步接触天道规则，寿命延长至约2000年，是修仙界高阶战力的门槛。金手指可突破部分天道规则限制。"]
+    }
+  }
+  progression "金手指体系：命运悲鸣" {
+    id = "金手指体系：命运悲鸣"
+    level 1 {
+      name = "基础厄运感知"
+      requirements = "与目标有深厚情感羁绊，且目标即将遭遇生死危机。"
+      bonuses = ["被动感知自身或亲近者24小时内即将面临的重大灾难（死亡、重伤等），画面模糊，仅持续瞬间。自身产生轻微不适，伴随低概率轻微霉运事件，无法改变灾难结果。若灾难相关目标修为高于宿主一个大境界及以上，可降低该能力20%的预知清晰度。"]
+    }
+  }
+  progression "金手指体系：副本生成器" {
+    id = "金手指体系：副本生成器"
+    level 1 {
+      name = "基础试炼副本"
+      requirements = "需提前准备「副本核心」（如玉简），并消耗大量灵石。"
+      bonuses = ["可在静室或小型空地生成「试炼副本」，持续1炷香，规则简单（如「不可飞行」），怪物为低阶幻影，杀伤力低。消耗大。若副本内目标修为高于宿主一个大境界及以上，可降低该能力20%的规则强制力。"]
+    }
+  }
+  progression "金手指体系：剧情强制" {
+    id = "金手指体系：剧情强制"
+    level 1 {
+      name = "基础情感渲染"
+      requirements = "作者处于情绪波动期（如恋爱中）时无意识触发"
+      bonuses = ["半径十丈内，轻微情感渲染，使异性间产生短暂好感，行为轻微偏差（如多看一眼、脸红）。作者无法主动控制。低阶修士可凭坚定意志短暂抵抗（需消耗精神力，抵抗时间不超过3息）。若强行抵抗，会遭受轻微精神反噬（头痛、眩晕片刻）。若目标修为高于作者一个大境界及以上，可实现完全免疫。"]
+    }
+    level 2 {
+      name = "可控情感场域"
+      requirements = "作者修为达到筑基期，并经历一场足以动摇其情感根基的重大事件（如被背叛、经历生死离别、或目睹挚爱死亡）后觉醒"
+      bonuses = ["作者修为达到筑基期后，可通过灵气引导主动开启或关闭情感渲染场域，范围可缩小至周身三尺，且效果可定向作用于特定目标。目标修为若高于作者一个大境界及以上，可实现完全免疫。高阶修士亦可凭精神防御法术将抵抗时间延长至10息。"]
+    }
+  }
+  progression "金手指体系：真实还原" {
+    id = "金手指体系：真实还原"
+    level 1 {
+      name = "基础场景还原"
+      requirements = "对该历史场景的研究达到专家级别，且消耗大量灵石"
+      bonuses = ["重现单一场景（如「某朝某市集」），持续半炷香，自身获得该时代基础常识与口音。外貌、记忆与思维永久性向该历史时期偏移，但通过高修为（金丹及以上）可暂时压制表层变化。若场景中有修为高于宿主一个大境界及以上的古代强者残影，可降低该能力20%的还原度。"]
+    }
+  }
+  progression "金手指体系：知识污染" {
+    id = "金手指体系：知识污染"
+    level 1 {
+      name = "基础异象生成"
+      requirements = "创作或思考克苏鲁相关概念时触发"
+      bonuses = ["书写时，周围出现轻微异象（如阴影蠕动、低语回声），仅限于作者感知。自身做相关噩梦，无对外杀伤力。若受影响目标修为高于宿主一个大境界及以上，可降低该能力20%的污染渗透力。"]
+    }
+    level 2 {
+      name = "污染征兆"
+      requirements = "接触克苏鲁作者能力、污染文本或天道异常注视。"
+      bonuses = ["受知识污染影响的修士或环境开始出现低语、幻视、灵气扭曲等可观测征兆。"]
+    }
+    level 3 {
+      name = "低级畸变体"
+      requirements = "污染区、遗迹或天道异常附近自然滋生。"
+      bonuses = ["受知识污染或异常灵气扭曲而生的初级怪物，行动混乱但具备环境侵蚀性。"]
+    }
+  }
+  progression "金手指体系：荒诞吸引" {
+    id = "金手指体系：荒诞吸引"
+    level 1 {
+      name = "基础滑稽事件触发"
+      requirements = "作者处于放松或幽默状态时无意识触发"
+      bonuses = ["引发小型滑稽事件（如天空掉下香蕉皮、重要符咒变成纸鹤），无伤害，纯搞笑，但可能干扰精细操作，偶尔带来意外转机。每次触发会轻微加深天道对该区域的注视，若在当前区域累计触发三次以上，下一次事件将变为中等规模意外。若受影响目标修为高于宿主一个大境界及以上，可降低该事件20%的触发概率。"]
+    }
+  }
+  progression "金手指体系：真实洞察" {
+    id = "金手指体系：真实洞察"
+    level 1 {
+      name = "基础情绪感知"
+      requirements = "与目标有短暂接触（如眼神交汇），且目标情绪激烈"
+      bonuses = ["感知目标当前强烈情绪（如愤怒、悲伤），获得简单画面片段（如童年创伤场景）。自身承受相应情绪波动。若目标修为高于宿主一个大境界及以上，可降低该能力20%的感知深度。"]
+    }
+  }
+  progression "金手指体系：技术预演" {
+    id = "金手指体系：技术预演"
+    level 1 {
+      name = "基础结构解析"
+      requirements = "主动触发，需触碰目标构造物，消耗对应强度的精神力"
+      bonuses = ["触碰构造物即可感知其内部结构，瞬间知晓简单机械（如锁具、机关）的结构弱点与最佳开启方式，消耗精神力随构造物复杂程度提升，低阶时仅可解析简单构造物。若构造物蕴含天道规则或修为高于宿主一个大境界及以上的修士打造，可降低该能力20%的推演准确度。"]
+    }
+  }
+  progression "阵营体系：缉厄司" {
+    id = "阵营体系：缉厄司"
+    level 1 {
+      name = "缉厄使"
+      requirements = "筑基以下或练气高阶，需通过天道气息识别训练。"
+      bonuses = ["基层追踪与猎杀人员，负责矿场、坊市、荒原等一线监控，掌握识别穿越者异常的基础法器。"]
+    }
+    level 2 {
+      name = "司丞"
+      requirements = "筑基至金丹，需完成至少一次天道碎片回收。"
+      bonuses = ["分队指挥者，调度缉厄使、封锁区域、调用审讯与封印资源，是陈东前中期主要敌对压力。"]
+    }
+    level 3 {
+      name = "司主"
+      requirements = "金丹至元婴，需获得大司首授权。"
+      bonuses = ["区域最高负责人，掌握暗狱、档案与碎片转运路线，可代表保守派或改革派推进不同策略。"]
+    }
+    level 4 {
+      name = "大司首"
+      requirements = "元婴以上或被天道意志选中。"
+      bonuses = ["缉厄司最高领袖，直接对天道意志负责，知晓天道破损与穿越者来源的核心秘密，是终局真相的守门人。"]
+    }
+    level 5 {
+      name = "潜伏者"
+      requirements = "通过缉厄司审查，能长期隐藏身份并传递情报。"
+      bonuses = ["缉厄司安插在书友会、散修组织或地方据点中的隐秘线人，负责长期收集穿越者弱点与路线。"]
+    }
+  }
+  progression "阵营体系：书友会" {
+    id = "阵营体系：书友会"
+    level 1 {
+      name = "普通成员"
+      requirements = "确认穿越者身份但尚未通过核心信任测试。"
+      bonuses = ["只掌握单线联络暗号与少量据点信息，负责交换生存情报、资源与金手指副作用经验。"]
+    }
+    level 2 {
+      name = "骨干成员"
+      requirements = "完成互助任务并通过至少两名骨干担保。"
+      bonuses = ["参与行动计划与局部决策，掌握若干据点和成员能力档案，也是内鬼最容易制造猜忌的位置。"]
+    }
+    level 3 {
+      name = "长老"
+      requirements = "具备高修为、关键金手指或长期贡献。"
+      bonuses = ["统筹资源、情报与避难路线，负责处理高危金手指、成员争端和缉厄司渗透。"]
+    }
+    level 4 {
+      name = "会长"
+      requirements = "获得长老共同承认，并能承担天道碎片级风险。"
+      bonuses = ["穿越者中实力与威望最高者，拥有重大行动否决权，既是组织凝聚核心，也是缉厄司重点猎杀目标。"]
+    }
+  }
+  progression "阵营体系：无阵营威胁" {
+    id = "阵营体系：无阵营威胁"
+    level 1 {
+      name = "环境威胁"
+      requirements = "由地形、遗迹或失控规则触发。"
+      bonuses = ["塌方、符阵、陷阱、落石等无主危险。"]
+    }
+    level 2 {
+      name = "野生妖物"
+      requirements = "出现于荒野、遗迹、矿区或污染区。"
+      bonuses = ["低阶妖兽或污染生物，通常因灵气异常被吸引。"]
+    }
+    level 3 {
+      name = "低级畸变体"
+      requirements = "污染区、遗迹或天道异常附近自然滋生。"
+      bonuses = ["受知识污染或异常灵气扭曲而生的初级怪物，行动混乱但具备环境侵蚀性。"]
+    }
+    level 4 {
+      name = "散修"
+      requirements = "自由行动的低阶至中阶修士。"
+      bonuses = ["不属于书友会或缉厄司的本土修士，可能因利益、误会或被操控卷入冲突。"]
+    }
+  }
+  progression "?????????" {
+    id = "?????????"
+    level 1 {
+      name = "???"
+      requirements = "?????????????"
+      bonuses = ["????????????????????????"]
+    }
+    level 2 {
+      name = "???"
+      requirements = "?????????????????"
+      bonuses = ["???????????????????????????????????"]
+    }
+    level 3 {
+      name = "???"
+      requirements = "??????????????????????"
+      bonuses = ["?????????????????????????????"]
+    }
+  }
+}

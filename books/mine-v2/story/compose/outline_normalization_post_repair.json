@@ -1,0 +1,164 @@
+{
+  "changes": [
+    {
+      "path": "P1-V1-C2.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "刚复活虚弱（已部分恢复） -\u003e 刚复活虚弱"
+    },
+    {
+      "path": "P1-V2-C1.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第1章"
+    },
+    {
+      "path": "P1-V2-C2.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第2章"
+    },
+    {
+      "path": "P1-V2-C3.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第3章"
+    },
+    {
+      "path": "P1-V2-C4.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第4章"
+    },
+    {
+      "path": "P1-V2-C4.characters",
+      "action": "sync_scene_character",
+      "value": "老张（门外交谈）"
+    },
+    {
+      "path": "P1-V2-C4.characters",
+      "action": "sync_scene_character",
+      "value": "沈毅"
+    },
+    {
+      "path": "P1-V2-C5.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第5章"
+    },
+    {
+      "path": "P1-V2-C6.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第6章"
+    },
+    {
+      "path": "P1-V2-C7.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第7章"
+    },
+    {
+      "path": "P1-V2-C8.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第8章"
+    },
+    {
+      "path": "P1-V2-C9.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第9章"
+    },
+    {
+      "path": "P1-V2-C10.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第10章"
+    },
+    {
+      "path": "P1-V3-C4.characters",
+      "action": "sync_event_character",
+      "value": "石甲兽"
+    },
+    {
+      "path": "P1-V4-C4.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "陈东左臂刀伤（新伤） -\u003e 陈东左臂刀伤"
+    },
+    {
+      "path": "P1-V4-C5.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "陈东手臂瘀伤（旧伤） -\u003e 陈东手臂瘀伤"
+    },
+    {
+      "path": "P1-V4-C5.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "宋晴精神力透支昏迷（新进展） -\u003e 宋晴精神力透支昏迷"
+    },
+    {
+      "path": "P1-V4-C6.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "陈东手臂瘀伤（已愈） -\u003e 陈东手臂瘀伤"
+    },
+    {
+      "path": "P1-V4-C6.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "赵虎骨折休养（未愈） -\u003e 赵虎骨折休养"
+    },
+    {
+      "path": "P1-V5-C5.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "陈东轻伤（探索中受的擦伤） -\u003e 陈东轻伤"
+    },
+    {
+      "path": "P1-V6-C2.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "精神力尚未完全恢复（上一章精神力损耗） -\u003e 精神力尚未完全恢复"
+    },
+    {
+      "path": "P1-V6-C7.characters",
+      "action": "sync_event_character",
+      "value": "测试法阵"
+    },
+    {
+      "path": "P1-V6-C9.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "陈东精力尚未完全恢复（上一章精力极差） -\u003e 陈东精力尚未完全恢复"
+    },
+    {
+      "path": "P1-V6-C10.characters",
+      "action": "sync_event_character",
+      "value": "据点"
+    },
+    {
+      "path": "P1-V7-C6.characters",
+      "action": "sync_scene_character",
+      "value": "记忆中的穿越者们"
+    },
+    {
+      "path": "P1-V8-C10.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "陈东精神冲击（目睹楚江自爆） -\u003e 陈东精神冲击"
+    },
+    {
+      "path": "P1-V9-C2.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "轻微精神创伤（楚江牺牲后遗症） -\u003e 轻微精神创伤"
+    },
+    {
+      "path": "P1-V9-C5.characters",
+      "action": "sync_event_character",
+      "value": "据点成员"
+    },
+    {
+      "path": "P1-V9-C8.characters",
+      "action": "sync_event_character",
+      "value": "林北辰"
+    },
+    {
+      "path": "P1-V10-C6.characters",
+      "action": "sync_scene_character",
+      "value": "五名守卫"
+    },
+    {
+      "path": "P1-V10-C9.characters",
+      "action": "sync_scene_character",
+      "value": "沈毅的母亲"
+    },
+    {
+      "path": "P1-V10-C9.characters",
+      "action": "sync_scene_character",
+      "value": "沈毅的幼妹"
+    }
+  ]
+}

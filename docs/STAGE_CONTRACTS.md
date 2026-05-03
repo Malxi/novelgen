@@ -1,6 +1,6 @@
 # Novelgen Stage Contracts
 
-Last updated: 2026-04-29
+Last updated: 2026-05-02
 
 This document defines the persistent data contracts between Novelgen workflow
 stages. Treat these contracts as part of the public behavior of the repository:
@@ -170,6 +170,16 @@ Inputs:
 Outputs:
 
 - `story/compose/outline.json`
+  - During hierarchical generation this file is the canonical incremental
+    state: skeleton generation writes all parts/volumes with empty
+    `Volume.Chapters`, and each completed volume updates the same file.
+  - `compose pipeline` uses the same file as its only compose checkpoint:
+    it creates or loads the skeleton, optionally generates one global volume
+    range, improves each generated volume in isolation, then merges it back
+    into `outline.json`.
+  - Older interrupted projects may still have
+    `story/compose/outline_progress.json`; `compose gen` treats it as a legacy
+    resume source and migrates it into `outline.json`.
 
 Go types:
 
@@ -181,7 +191,24 @@ Go types:
 
 Required invariants:
 
-- Part/volume/chapter counts match `ProjectConfig.Structure`.
+- Part and volume counts match `ProjectConfig.Structure`.
+- Complete outlines have each volume's chapter count matching
+  `ProjectConfig.Structure.TargetChapters`.
+- In-progress hierarchical outlines may have empty `Volume.Chapters` for
+  not-yet-generated volumes. Downstream stages that require chapters must skip
+  or reject those empty volumes; `compose improve` improves only generated
+  volumes and merges them back without filling empty volumes. When
+  `--volume`, `--from-volume`, or `--to-volume` is supplied, `compose improve`
+  narrows that generated-volume view to the selected 1-based global volume
+  index range before improving.
+- `compose pipeline --from-volume A --to-volume B` addresses volumes by the
+  same 1-based global volume index. It must not generate or improve volumes
+  outside the selected range, and it preserves empty future volumes unless
+  `--force` is explicitly used on an already generated selected volume.
+- After each pipeline volume, the setup/outline cross check may deterministically
+  add missing `WorldResources[]` entries referenced by generated resource
+  ledgers. These placeholders are setup state, not outline state, and should be
+  refined by a later setup-improve pass.
 - IDs are stable and unique. Preferred chapter format is `P<n>-V<n>-C<n>`.
 - Each chapter has `ID`, `Title`, `Summary`, `Characters`, `Location`,
   `Conflict`, `Pacing`, and meaningful `Events`.
@@ -390,6 +417,8 @@ Inputs:
 Outputs:
 
 - `story/rpg/01_outline.rpg`
+- `story/rpg/01_outline_vNN.rpg` when `rpg-dsl convert --phase outline
+  --volume N` converts a single generated global outline volume
 - `story/rpg/02_craft.rpg`
 - `story/rpg/03_systems.rpg`
 - `story/rpg/04_chapters.rpg`
@@ -411,6 +440,9 @@ Required invariants:
 - New constructs require AST, parser, validator, converter, docs, and tests.
 - Runtime constructs require simulator/evaluator/hook tests.
 - Phased DSL fragments must merge without losing stable IDs.
+- Outline-only conversion must not require craft files. A single-volume outline
+  conversion must reject empty future volumes instead of emitting placeholder
+  chapters.
 - AI-generated DSL repair must be re-parsed and re-validated before saving.
 - Outline `state_anchor` conversion emits both human-readable state deltas
   (`cultivation`, `item`, `injury`, etc.) and deterministic numeric deltas for

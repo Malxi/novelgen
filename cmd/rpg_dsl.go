@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -118,6 +119,7 @@ var (
 	chaptersFlag      string
 	allVolumesFlag    bool
 	simulateAfterFlag bool
+	outlineVolumeFlag int
 )
 
 func init() {
@@ -143,6 +145,7 @@ func init() {
 
 	// Phase flag
 	convertCmd.Flags().StringVar(&phase, "phase", "all", "Convert phase (setup/outline/craft/all)")
+	convertCmd.Flags().IntVar(&outlineVolumeFlag, "volume", 0, "Convert one 1-based global outline volume (only with --phase outline)")
 
 	// Simulation flags
 	simulateCmd.Flags().StringVarP(&chapterID, "chapter", "c", "", "章节 ID")
@@ -259,11 +262,20 @@ func runMerge(cmd *cobra.Command, args []string) error {
 
 func runConvert(cmd *cobra.Command, args []string) error {
 	fmt.Printf("🔄 转换项目为 DSL: %s\n\n", bookName)
+	if outlineVolumeFlag > 0 && phase != "outline" {
+		return fmt.Errorf("--volume is only supported with --phase outline")
+	}
 
 	// Load novelgen project
-	project, err := loadNovelgenProject(bookName)
+	project, err := loadNovelgenProjectForConvert(bookName, phase)
 	if err != nil {
 		return fmt.Errorf("加载项目失败: %w", err)
+	}
+	if outlineVolumeFlag > 0 {
+		if err := selectOutlineVolume(project, outlineVolumeFlag); err != nil {
+			return err
+		}
+		fmt.Printf("只转换第 %d 卷 outline DSL\n", outlineVolumeFlag)
 	}
 
 	// Create adapter
@@ -299,6 +311,9 @@ func runConvert(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("生成 outline DSL 失败: %w", err)
 		}
 		outlinePath := filepath.Join(outputDir, "01_outline.rpg")
+		if outlineVolumeFlag > 0 {
+			outlinePath = filepath.Join(outputDir, fmt.Sprintf("01_outline_v%02d.rpg", outlineVolumeFlag))
+		}
 		if err := outlineDSL.WriteToFile(outlinePath); err != nil {
 			return fmt.Errorf("写入 outline DSL 失败: %w", err)
 		}
@@ -676,6 +691,60 @@ func getBookRPGDir(bookName string) string {
 
 func loadNovelgenProject(bookName string) (*rpg.NovelgenProject, error) {
 	return rpg.LoadNovelgenProject(".", bookName)
+}
+
+func loadNovelgenProjectForConvert(bookName, phase string) (*rpg.NovelgenProject, error) {
+	if phase == "outline" || phase == "setup" {
+		project := &rpg.NovelgenProject{
+			ProjectPath: ".",
+			BookName:    bookName,
+			Characters:  map[string]rpg.NovelgenCharacter{},
+			Items:       map[string]rpg.NovelgenItem{},
+			Locations:   map[string]rpg.NovelgenLocation{},
+		}
+		if phase == "outline" {
+			outlinePath := filepath.Join("books", bookName, "story", "compose", "outline.json")
+			data, err := os.ReadFile(outlinePath)
+			if err != nil {
+				return nil, fmt.Errorf("读取大纲失败: %w", err)
+			}
+			if err := json.Unmarshal(data, &project.Outline); err != nil {
+				return nil, fmt.Errorf("解析大纲失败: %w", err)
+			}
+		}
+		return project, nil
+	}
+	return loadNovelgenProject(bookName)
+}
+
+func selectOutlineVolume(project *rpg.NovelgenProject, volumeIndex int) error {
+	if project == nil {
+		return fmt.Errorf("project is nil")
+	}
+	if volumeIndex <= 0 {
+		return fmt.Errorf("volume index must be positive")
+	}
+
+	selected := rpg.StoryOutline{}
+	globalVolume := 0
+	for _, part := range project.Outline.Parts {
+		partCopy := part
+		partCopy.Volumes = nil
+		for _, volume := range part.Volumes {
+			globalVolume++
+			if globalVolume != volumeIndex {
+				continue
+			}
+			if len(volume.Chapters) == 0 {
+				return fmt.Errorf("volume %d has no chapters; generate it before converting outline DSL", volumeIndex)
+			}
+			partCopy.Volumes = append(partCopy.Volumes, volume)
+			selected.Parts = append(selected.Parts, partCopy)
+			project.Outline = selected
+			return nil
+		}
+	}
+	return fmt.Errorf("volume %d not found", volumeIndex)
 }
 
 func loadDSLFragments(bookName string) ([]*dsl.DSLFragment, error) {

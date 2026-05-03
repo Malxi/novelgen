@@ -1,0 +1,49 @@
+{
+  "changes": [
+    {
+      "path": "P1-V8-C4.characters",
+      "action": "sync_scene_character",
+      "value": "其他长老"
+    },
+    {
+      "path": "P1-V8-C4.characters",
+      "action": "sync_scene_character",
+      "value": "楚江"
+    },
+    {
+      "path": "P1-V8-C6.characters",
+      "action": "sync_scene_character",
+      "value": "受影响的成员"
+    },
+    {
+      "path": "P1-V8-C7.characters",
+      "action": "sync_scene_character",
+      "value": "全体成员"
+    },
+    {
+      "path": "P1-V8-C7.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "陈东精神力中度损耗（连续使用规则洞察） -\u003e 陈东精神力中度损耗"
+    },
+    {
+      "path": "P1-V8-C9.characters",
+      "action": "sync_scene_character",
+      "value": "楚江"
+    },
+    {
+      "path": "P1-V8-C9.characters",
+      "action": "sync_scene_character",
+      "value": "楚江（女性人格）"
+    },
+    {
+      "path": "P1-V8-C9.characters",
+      "action": "sync_scene_character",
+      "value": "楚江（本我）"
+    },
+    {
+      "path": "P1-V8-C10.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "陈东精神冲击（目睹楚江自爆） -\u003e 陈东精神冲击"
+    }
+  ]
+}

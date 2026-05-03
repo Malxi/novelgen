@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -22,15 +23,25 @@ import (
 )
 
 var (
-	composeIDFlag           string
-	composePromptFlag       string
-	composeMaxRoundsFlag    int
-	composeConcurrencyFlag  int
-	composeHierarchicalFlag bool
-	composeOneShotFlag      bool
-	composeForceImproveFlag bool
-	composeForceGenFlag     bool
-	composeCheckJSONFlag    bool
+	composeIDFlag              string
+	composePromptFlag          string
+	composeMaxRoundsFlag       int
+	composeConcurrencyFlag     int
+	composeHierarchicalFlag    bool
+	composeOneShotFlag         bool
+	composeForceImproveFlag    bool
+	composeForceGenFlag        bool
+	composeCheckJSONFlag       bool
+	composeImproveVolume       int
+	composeImproveFromVol      int
+	composeImproveToVol        int
+	composePipelineFromVol     int
+	composePipelineToVol       int
+	composePipelineMaxRounds   int
+	composePipelineForce       bool
+	composePipelineSkipGen     bool
+	composePipelineSkipImprove bool
+	composePipelineSkipCross   bool
 )
 
 var composeCmd = &cobra.Command{
@@ -52,7 +63,8 @@ This command reads story/setup/story_setup.json and generates story/compose/outl
 Subcommands:
   gen     - Generate new outline
   regen   - Regenerate specific part/volume/chapter
-  improve - Improve existing outline through AI review`,
+  improve - Improve existing outline through AI review
+  pipeline - Run checkpointed per-volume compose workflow`,
 }
 
 var composeGenCmd = &cobra.Command{
@@ -132,6 +144,24 @@ and writes a normalization report under story/compose/.`,
 	RunE: runComposeNormalize,
 }
 
+var composePipelineCmd = &cobra.Command{
+	Use:   "pipeline",
+	Short: "Run checkpointed compose generation one volume at a time",
+	Long: `Run the compose workflow as a resumable per-volume pipeline.
+
+The pipeline keeps story/compose/outline.json as the canonical state:
+  1. create or load the outline skeleton
+  2. normalize the skeleton/state checkpoint
+  3. generate one selected empty volume
+  4. improve that generated volume
+  5. apply deterministic setup/outline cross patches
+
+Examples:
+  novelgen compose pipeline --from-volume 1 --to-volume 1
+  novelgen compose pipeline --from-volume 2 --to-volume 7 --max-rounds 1`,
+	RunE: runComposePipeline,
+}
+
 func init() {
 	composeCheckCmd.Flags().BoolVar(&composeCheckJSONFlag, "json", false, "Output results as JSON")
 	composeCmd.AddCommand(composeGenCmd)
@@ -139,6 +169,7 @@ func init() {
 	composeCmd.AddCommand(composeImproveCmd)
 	composeCmd.AddCommand(composeCheckCmd)
 	composeCmd.AddCommand(composeNormalizeCmd)
+	composeCmd.AddCommand(composePipelineCmd)
 
 	composeGenCmd.Flags().BoolVar(&composeHierarchicalFlag, "hierarchical", false, "Use hierarchical generation (better quality, slower)")
 	composeGenCmd.Flags().BoolVar(&composeOneShotFlag, "one-shot", false, "Try one-shot generation first (falls back to hierarchical on failure)")
@@ -150,6 +181,16 @@ func init() {
 	composeImproveCmd.Flags().BoolVar(&composeOneShotFlag, "one-shot", false, "Try one-shot improvement first (falls back to hierarchical on failure)")
 	composeImproveCmd.Flags().BoolVar(&composeForceImproveFlag, "force", false, "Force improvement based on suggestions even if score meets threshold")
 	composeImproveCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional user suggestions for improvement")
+	composeImproveCmd.Flags().IntVar(&composeImproveVolume, "volume", 0, "Improve one 1-based global volume index")
+	composeImproveCmd.Flags().IntVar(&composeImproveFromVol, "from-volume", 0, "Improve from this 1-based global volume index")
+	composeImproveCmd.Flags().IntVar(&composeImproveToVol, "to-volume", 0, "Improve through this 1-based global volume index")
+	composePipelineCmd.Flags().IntVar(&composePipelineFromVol, "from-volume", 1, "Start at this 1-based global volume index")
+	composePipelineCmd.Flags().IntVar(&composePipelineToVol, "to-volume", 0, "Stop at this 1-based global volume index (default: all volumes)")
+	composePipelineCmd.Flags().IntVar(&composePipelineMaxRounds, "max-rounds", 1, "Maximum improvement rounds per generated volume")
+	composePipelineCmd.Flags().BoolVar(&composePipelineForce, "force", false, "Force regeneration/improvement of selected volumes")
+	composePipelineCmd.Flags().BoolVar(&composePipelineSkipGen, "skip-gen", false, "Skip volume chapter generation")
+	composePipelineCmd.Flags().BoolVar(&composePipelineSkipImprove, "skip-improve", false, "Skip per-volume improvement")
+	composePipelineCmd.Flags().BoolVar(&composePipelineSkipCross, "skip-cross", false, "Skip deterministic setup/outline cross patch")
 
 	// Register compose command using the new plugin mechanism
 	RegisterCommand(func() *cobra.Command {
@@ -188,44 +229,48 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
 
-	// Check if outline already exists
+	// Check if outline already exists. Hierarchical generation can resume from
+	// an incomplete outline.json whose later volumes still have empty chapters.
 	outlinePath := filepath.Join("story", "compose", "outline.json")
 	if _, err := os.Stat(outlinePath); err == nil {
-		if !composeForceGenFlag {
+		if !composeForceGenFlag && !composeOneShotFlag && canResumeOutlineGeneration(outlinePath, projectConfig.Structure) {
+			logger.Info("Found incomplete outline at %s; resuming chapter generation", outlinePath)
+		} else if !composeForceGenFlag {
 			return fmt.Errorf("outline already exists at %s. Use 'novelgen compose regen' to regenerate, 'novelgen compose improve' to improve, or add --force to regenerate with backup", outlinePath)
+		} else {
+
+			// Backup existing outline
+			logger.Info("Outline exists, creating backup...")
+			backupDir := filepath.Join("story", "compose", "backups")
+			if err := os.MkdirAll(backupDir, 0755); err != nil {
+				return fmt.Errorf("failed to create backup directory: %w", err)
+			}
+
+			// Generate backup filename with timestamp
+			timestamp := time.Now().Format("20060102_150405")
+			backupPath := filepath.Join(backupDir, fmt.Sprintf("outline_%s.json", timestamp))
+
+			// Read and backup current outline
+			outlineData, err := os.ReadFile(outlinePath)
+			if err != nil {
+				return fmt.Errorf("failed to read existing outline for backup: %w", err)
+			}
+
+			if err := os.WriteFile(backupPath, outlineData, 0644); err != nil {
+				return fmt.Errorf("failed to backup outline: %w", err)
+			}
+
+			// Also backup markdown if exists
+			mdPath := filepath.Join("story", "compose", "outline.md")
+			if _, err := os.Stat(mdPath); err == nil {
+				mdData, _ := os.ReadFile(mdPath)
+				mdBackupPath := filepath.Join(backupDir, fmt.Sprintf("outline_%s.md", timestamp))
+				os.WriteFile(mdBackupPath, mdData, 0644)
+			}
+
+			logger.Info("Outline backed up to: %s", backupPath)
+			fmt.Printf("\n📦 Existing outline backed up to: %s\n\n", backupPath)
 		}
-
-		// Backup existing outline
-		logger.Info("Outline exists, creating backup...")
-		backupDir := filepath.Join("story", "compose", "backups")
-		if err := os.MkdirAll(backupDir, 0755); err != nil {
-			return fmt.Errorf("failed to create backup directory: %w", err)
-		}
-
-		// Generate backup filename with timestamp
-		timestamp := time.Now().Format("20060102_150405")
-		backupPath := filepath.Join(backupDir, fmt.Sprintf("outline_%s.json", timestamp))
-
-		// Read and backup current outline
-		outlineData, err := os.ReadFile(outlinePath)
-		if err != nil {
-			return fmt.Errorf("failed to read existing outline for backup: %w", err)
-		}
-
-		if err := os.WriteFile(backupPath, outlineData, 0644); err != nil {
-			return fmt.Errorf("failed to backup outline: %w", err)
-		}
-
-		// Also backup markdown if exists
-		mdPath := filepath.Join("story", "compose", "outline.md")
-		if _, err := os.Stat(mdPath); err == nil {
-			mdData, _ := os.ReadFile(mdPath)
-			mdBackupPath := filepath.Join(backupDir, fmt.Sprintf("outline_%s.md", timestamp))
-			os.WriteFile(mdBackupPath, mdData, 0644)
-		}
-
-		logger.Info("Outline backed up to: %s", backupPath)
-		fmt.Printf("\n📦 Existing outline backed up to: %s\n\n", backupPath)
 	}
 
 	if composeHierarchicalFlag && composeOneShotFlag {
@@ -382,6 +427,9 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load existing outline: %w", err)
 	}
 	logger.Info("Loaded existing outline for improvement")
+	if countGeneratedVolumes(outline) == 0 {
+		return fmt.Errorf("outline has no generated volumes to improve; run 'novelgen compose gen' first")
+	}
 
 	if composeHierarchicalFlag && composeOneShotFlag {
 		return fmt.Errorf("--hierarchical and --one-shot cannot be used together")
@@ -392,10 +440,25 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	// cannot produce valid output.
 	useHierarchical := !composeOneShotFlag || composeHierarchicalFlag
 
+	improveOutline := outline
+	if composeImproveVolume > 0 || composeImproveFromVol > 0 || composeImproveToVol > 0 {
+		improveOutline, err = outlineWithImproveVolumeSelection(outline, composeImproveVolume, composeImproveFromVol, composeImproveToVol)
+		if err != nil {
+			return err
+		}
+		logger.Info("Improving selected generated volumes only")
+	} else if countEmptyVolumes(outline) > 0 {
+		logger.Info("Outline contains empty volumes; improving only generated volumes")
+		improveOutline = outlineWithGeneratedVolumes(outline)
+	}
+
 	// Run improvement
-	if err := iterateOutlineImprovement(outline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, useHierarchical, composeForceImproveFlag, composePromptFlag); err != nil {
+	if err := iterateOutlineImprovement(improveOutline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, useHierarchical, composeForceImproveFlag, composePromptFlag); err != nil {
 		logger.Error("Improvement failed: %v", err)
 		return fmt.Errorf("improvement failed: %w", err)
+	}
+	if improveOutline != outline {
+		mergeGeneratedVolumes(outline, improveOutline)
 	}
 
 	logQualityGateResult("outline", runOutlineQualityGate(setup, outline))
@@ -432,19 +495,33 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to read outline: %w", err)
 	}
 
-	var storyOutline rpg.StoryOutline
-	if err := json.Unmarshal(data, &storyOutline); err != nil {
+	var modelOutline models.Outline
+	if err := json.Unmarshal(data, &modelOutline); err != nil {
 		return fmt.Errorf("failed to parse outline: %w", err)
 	}
 
-	var modelOutline models.Outline
-	if err := json.Unmarshal(data, &modelOutline); err == nil {
+	checkOutline := &modelOutline
+	partialCheck := countGeneratedVolumes(&modelOutline) > 0 && countEmptyVolumes(&modelOutline) > 0
+	if partialCheck {
+		checkOutline = outlineWithGeneratedVolumes(&modelOutline)
+	}
+
+	checkData, err := json.Marshal(checkOutline)
+	if err != nil {
+		return fmt.Errorf("failed to prepare outline for validation: %w", err)
+	}
+	var storyOutline rpg.StoryOutline
+	if err := json.Unmarshal(checkData, &storyOutline); err != nil {
+		return fmt.Errorf("failed to parse outline: %w", err)
+	}
+
+	if checkOutline != nil {
 		setupPath := filepath.Join("story", "setup", "story_setup.json")
 		var setupForGate *models.StorySetup
 		if loadedSetup, loadErr := models.LoadStorySetup(setupPath); loadErr == nil {
 			setupForGate = loadedSetup
 		}
-		logQualityGateResult("outline", runOutlineQualityGate(setupForGate, &modelOutline))
+		logQualityGateResult("outline", runOutlineQualityGate(setupForGate, checkOutline))
 	}
 
 	validator := rpg.NewOutlineValidator(&storyOutline)
@@ -457,6 +534,10 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("\n===== OUTLINE VALIDATION =====\n")
+	if partialCheck {
+		fmt.Printf("Partial outline: checking %d generated volume(s), skipping %d empty future volume(s).\n",
+			countGeneratedVolumes(&modelOutline), countEmptyVolumes(&modelOutline))
+	}
 	if result.IsValid {
 		fmt.Println("✓ Outline passed validation")
 	} else {
@@ -594,6 +675,294 @@ func runComposeNormalize(cmd *cobra.Command, args []string) error {
 	fmt.Printf("✓ Updated %s and %s\n", outlinePath, mdPath)
 	fmt.Printf("✓ Report saved to %s\n", reportPath)
 	return nil
+}
+
+func runComposePipeline(cmd *cobra.Command, args []string) error {
+	logger.SetDefault(logger.New(logger.DebugLevel))
+	logger.Section("NOVELGEN COMPOSE PIPELINE")
+
+	if _, err := os.Stat("novel.json"); err != nil {
+		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first")
+	}
+
+	projectConfig, err := models.LoadProjectConfig("novel.json")
+	if err != nil {
+		return fmt.Errorf("failed to load novel.json: %w", err)
+	}
+	setupPath := filepath.Join("story", "setup", "story_setup.json")
+	setup, err := models.LoadStorySetup(setupPath)
+	if err != nil {
+		return fmt.Errorf("failed to load story setup at %s: %w", setupPath, err)
+	}
+
+	totalVolumes := projectConfig.Structure.TargetParts * projectConfig.Structure.TargetVolumes
+	if totalVolumes <= 0 {
+		return fmt.Errorf("project structure must define positive part and volume counts")
+	}
+	fromVolume := composePipelineFromVol
+	toVolume := composePipelineToVol
+	if toVolume == 0 {
+		toVolume = totalVolumes
+	}
+	if fromVolume < 1 || toVolume < 1 || fromVolume > toVolume || toVolume > totalVolumes {
+		return fmt.Errorf("invalid volume range %d..%d; valid range is 1..%d", fromVolume, toVolume, totalVolumes)
+	}
+	if composePipelineMaxRounds < 1 && !composePipelineSkipImprove {
+		return fmt.Errorf("--max-rounds must be at least 1 unless --skip-improve is set")
+	}
+
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load LLM config: %w", err)
+	}
+	client := cfg.CreateClient(&projectConfig.LLM)
+	if client == nil {
+		return fmt.Errorf("failed to create LLM client")
+	}
+	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
+	agent.SetLanguage(projectConfig.Language)
+
+	ctx := context.Background()
+	outlinePath := filepath.Join("story", "compose", "outline.json")
+	outline, err := ensureComposePipelineSkeleton(ctx, agent, setup, projectConfig, outlinePath)
+	if err != nil {
+		return err
+	}
+	if err := saveComposePipelineOutline(outline, outlinePath); err != nil {
+		return err
+	}
+	fmt.Printf("Pipeline range: volumes %d..%d (%d total)\n", fromVolume, toVolume, totalVolumes)
+
+	for globalVolume := fromVolume; globalVolume <= toVolume; globalVolume++ {
+		partIdx, volIdx, err := outlineVolumePosition(outline, globalVolume)
+		if err != nil {
+			return err
+		}
+		volume := &outline.Parts[partIdx].Volumes[volIdx]
+		fmt.Printf("\n=== Pipeline volume %d: %s ===\n", globalVolume, volume.Title)
+
+		if !composePipelineSkipGen {
+			if len(volume.Chapters) > 0 && !composePipelineForce {
+				fmt.Printf("Generation skipped: volume already has %d chapter(s)\n", len(volume.Chapters))
+			} else {
+				if err := generateComposePipelineVolume(ctx, agent, setup, projectConfig, outline, partIdx, volIdx, globalVolume, totalVolumes); err != nil {
+					return err
+				}
+				if err := saveComposePipelineOutline(outline, outlinePath); err != nil {
+					return err
+				}
+				fmt.Printf("Saved after generation: %s\n", outlinePath)
+			}
+		}
+
+		if !composePipelineSkipImprove {
+			if len(volume.Chapters) == 0 {
+				return fmt.Errorf("volume %d has no chapters to improve; generate it first or remove --skip-gen", globalVolume)
+			}
+			improveOutline, err := outlineWithImproveVolumeSelection(outline, globalVolume, 0, 0)
+			if err != nil {
+				return err
+			}
+			if err := iterateOutlineImprovement(improveOutline, setup, projectConfig, composePipelineMaxRounds, 1, true, composePipelineForce, composePromptFlag); err != nil {
+				return fmt.Errorf("failed to improve volume %d: %w", globalVolume, err)
+			}
+			mergeGeneratedVolumes(outline, improveOutline)
+			if err := saveComposePipelineOutline(outline, outlinePath); err != nil {
+				return err
+			}
+			fmt.Printf("Saved after improve: %s\n", outlinePath)
+		}
+
+		if !composePipelineSkipCross {
+			patched, issues, warnings, err := applySetupOutlineCrossPatch(setupPath, setup, outline)
+			if err != nil {
+				return err
+			}
+			if patched > 0 {
+				fmt.Printf("Cross setup patch: added %d missing resource(s)\n", patched)
+			}
+			if len(issues)+len(warnings) > 0 {
+				fmt.Printf("Cross check: %d issue(s), %d warning(s)\n", len(issues), len(warnings))
+			}
+		}
+	}
+
+	logQualityGateResult("outline", runOutlineQualityGate(setup, outline))
+	fmt.Printf("\nPipeline complete. Current outline: %s\n", outlinePath)
+	fmt.Printf("Generated volumes: %d, empty future volumes: %d\n", countGeneratedVolumes(outline), countEmptyVolumes(outline))
+	return nil
+}
+
+func ensureComposePipelineSkeleton(ctx context.Context, agent *agents.ComposeAgent, setup *models.StorySetup, projectConfig *models.ProjectConfig, outlinePath string) (*models.Outline, error) {
+	if _, err := os.Stat(outlinePath); err == nil {
+		outline, err := models.LoadOutline(outlinePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load existing outline: %w", err)
+		}
+		applyOutlineNormalization(outline, "pipeline_skeleton")
+		return outline, nil
+	}
+
+	legacyProgressPath := filepath.Join("story", "compose", "outline_progress.json")
+	if _, err := os.Stat(legacyProgressPath); err == nil {
+		outline, err := loadPartialOutline(legacyProgressPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load legacy outline progress: %w", err)
+		}
+		applyOutlineNormalization(outline, "pipeline_skeleton")
+		return outline, nil
+	}
+
+	fmt.Println("No outline.json found; generating compose skeleton")
+	skeletonOutput, err := agent.GenerateSkeleton(ctx, agents.ComposeSkeletonInput{
+		Setup:     *setup,
+		Structure: projectConfig.Structure,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate skeleton: %w", err)
+	}
+	outline := &models.Outline{Parts: skeletonOutput.Parts}
+	logic.NewIDManager(outline).AssignIDsToOutline()
+	applyOutlineNormalization(outline, "pipeline_skeleton")
+	return outline, nil
+}
+
+func generateComposePipelineVolume(ctx context.Context, agent *agents.ComposeAgent, setup *models.StorySetup, projectConfig *models.ProjectConfig, outline *models.Outline, partIdx, volIdx, globalVolume, totalVolumes int) error {
+	if outline == nil || setup == nil || projectConfig == nil {
+		return fmt.Errorf("pipeline generation requires setup, project config, and outline")
+	}
+	volume := &outline.Parts[partIdx].Volumes[volIdx]
+	var outlineContext string
+	if partIdx > 0 || volIdx > 0 {
+		outlineContext = agent.BuildHierarchicalContext(outline, partIdx, volIdx)
+	}
+
+	var previousVolume *models.Volume
+	if volIdx > 0 {
+		previousVolume = &outline.Parts[partIdx].Volumes[volIdx-1]
+	} else if partIdx > 0 {
+		prevPart := outline.Parts[partIdx-1]
+		if len(prevPart.Volumes) > 0 {
+			previousVolume = &prevPart.Volumes[len(prevPart.Volumes)-1]
+		}
+	}
+
+	output, err := agent.GenerateChaptersForVolume(ctx, agents.ComposeChaptersInput{
+		Setup:          *setup,
+		Part:           outline.Parts[partIdx],
+		Volume:         *volume,
+		VolumeIndex:    globalVolume,
+		TotalVolumes:   totalVolumes,
+		ChaptersPerVol: projectConfig.Structure.TargetChapters,
+		PreviousVolume: previousVolume,
+		OutlineContext: outlineContext,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to generate chapters for volume %d: %w", globalVolume, err)
+	}
+
+	volume.Chapters = output.Chapters
+	logic.NewIDManager(outline).AssignIDsToOutline()
+	applyOutlineNormalization(outline, fmt.Sprintf("pipeline_gen_v%02d", globalVolume))
+	return nil
+}
+
+func saveComposePipelineOutline(outline *models.Outline, outlinePath string) error {
+	if err := savePartialOutline(outline, outlinePath); err != nil {
+		return err
+	}
+	mdPath := filepath.Join("story", "compose", "outline.md")
+	if err := createOutlineMarkdown(outline, mdPath); err != nil {
+		return fmt.Errorf("failed to save outline markdown: %w", err)
+	}
+	return nil
+}
+
+func outlineVolumePosition(outline *models.Outline, globalVolume int) (int, int, error) {
+	if outline == nil {
+		return 0, 0, fmt.Errorf("outline is nil")
+	}
+	if globalVolume < 1 {
+		return 0, 0, fmt.Errorf("volume index must be positive")
+	}
+	current := 0
+	for partIdx := range outline.Parts {
+		for volIdx := range outline.Parts[partIdx].Volumes {
+			current++
+			if current == globalVolume {
+				return partIdx, volIdx, nil
+			}
+		}
+	}
+	return 0, 0, fmt.Errorf("volume %d not found in outline (%d volume(s) available)", globalVolume, current)
+}
+
+func applySetupOutlineCrossPatch(setupPath string, setup *models.StorySetup, outline *models.Outline) (int, []string, []string, error) {
+	if setup == nil || outline == nil {
+		return 0, nil, nil, nil
+	}
+	checkOutline := outlineWithGeneratedVolumes(outline)
+	if countGeneratedVolumes(checkOutline) == 0 {
+		checkOutline = outline
+	}
+	checkData, err := json.Marshal(checkOutline)
+	if err != nil {
+		return 0, nil, nil, fmt.Errorf("failed to prepare outline for cross check: %w", err)
+	}
+	var storyOutline rpg.StoryOutline
+	if err := json.Unmarshal(checkData, &storyOutline); err != nil {
+		return 0, nil, nil, fmt.Errorf("failed to parse outline for cross check: %w", err)
+	}
+
+	issues, warnings := validateSetupOutlineCross(setup, &storyOutline)
+	missingResources := missingSetupResources(setup, &storyOutline)
+	if len(missingResources) == 0 {
+		return 0, issues, warnings, nil
+	}
+	for _, name := range missingResources {
+		setup.WorldResources = append(setup.WorldResources, models.WorldResource{
+			Name:        name,
+			Category:    "general",
+			Scarcity:    "rare",
+			Description: "Auto-added by compose pipeline cross check; refine manually.",
+		})
+	}
+	if err := setup.Save(setupPath); err != nil {
+		return 0, issues, warnings, fmt.Errorf("failed to save cross-patched setup: %w", err)
+	}
+	return len(missingResources), issues, warnings, nil
+}
+
+func missingSetupResources(setup *models.StorySetup, outline *rpg.StoryOutline) []string {
+	if setup == nil || outline == nil {
+		return nil
+	}
+	defined := map[string]bool{}
+	for _, resource := range setup.WorldResources {
+		name := strings.TrimSpace(resource.Name)
+		if name != "" {
+			defined[name] = true
+		}
+	}
+	missing := map[string]bool{}
+	for _, part := range outline.Parts {
+		for _, vol := range part.Volumes {
+			for _, ch := range vol.Chapters {
+				for _, entry := range ch.ResourceLedger {
+					name := strings.TrimSpace(entry.Item)
+					if name != "" && !defined[name] {
+						missing[name] = true
+					}
+				}
+			}
+		}
+	}
+	names := make([]string, 0, len(missing))
+	for name := range missing {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 func validateSetupOutlineCross(setup *models.StorySetup, outline *rpg.StoryOutline) (issues, warnings []string) {
@@ -741,22 +1110,35 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 		projectConfig.Structure.TotalChapters())
 	fmt.Println()
 
-	// Check for existing partial outline (for resume)
-	progressPath := filepath.Join("story", "compose", "outline_progress.json")
+	outlinePath := filepath.Join("story", "compose", "outline.json")
+	legacyProgressPath := filepath.Join("story", "compose", "outline_progress.json")
 
 	var outline *models.Outline
 	var resumeMode bool
 
-	if _, err := os.Stat(progressPath); err == nil {
-		// Found progress file, try to resume
-		fmt.Println("📂 Found existing progress file. Resuming generation...")
-		outline, err = loadPartialOutline(progressPath)
+	if _, err := os.Stat(outlinePath); err == nil && !composeForceGenFlag {
+		fmt.Println("📂 Found existing outline.json. Resuming empty-volume chapter generation...")
+		outline, err = loadPartialOutline(outlinePath)
 		if err != nil {
-			fmt.Printf("⚠️  Failed to load progress: %v\n", err)
+			fmt.Printf("⚠️  Failed to load outline: %v\n", err)
 			fmt.Println("   Starting fresh generation...")
 		} else {
 			resumeMode = true
-			fmt.Println("✓ Resumed from saved progress")
+			fmt.Println("✓ Resumed from outline.json")
+			printProgressStatus(outline, projectConfig.Structure)
+		}
+	} else if _, err := os.Stat(legacyProgressPath); err == nil && !composeForceGenFlag {
+		fmt.Println("📂 Found legacy outline_progress.json. Migrating to outline.json and resuming...")
+		outline, err = loadPartialOutline(legacyProgressPath)
+		if err != nil {
+			fmt.Printf("⚠️  Failed to load legacy progress: %v\n", err)
+			fmt.Println("   Starting fresh generation...")
+		} else {
+			resumeMode = true
+			if err := savePartialOutline(outline, outlinePath); err != nil {
+				return nil, fmt.Errorf("failed to migrate legacy progress to outline.json: %w", err)
+			}
+			fmt.Println("✓ Migrated legacy progress to outline.json")
 			printProgressStatus(outline, projectConfig.Structure)
 		}
 	}
@@ -773,10 +1155,10 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 
 	// Save callback for incremental saves (used in both fresh and resume modes)
 	onVolumeComplete := func(o *models.Outline, partIdx, volIdx, volumeCount int) {
-		if err := savePartialOutline(o, progressPath); err != nil {
-			logger.GetLogger().Warn("Failed to save progress: %v", err)
+		if err := savePartialOutline(o, outlinePath); err != nil {
+			logger.GetLogger().Warn("Failed to save outline progress: %v", err)
 		} else {
-			fmt.Printf("💾 Progress saved (%d volumes completed)\n", volumeCount)
+			fmt.Printf("💾 outline.json saved (%d volumes completed)\n", volumeCount)
 		}
 	}
 
@@ -802,25 +1184,24 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 			Parts: skeletonOutput.Parts,
 		}
 
-		// Save skeleton as initial progress
-		if err := savePartialOutline(outline, progressPath); err != nil {
-			logger.GetLogger().Warn("Failed to save initial progress: %v", err)
+		// Save skeleton as initial outline with empty chapter arrays.
+		if err := savePartialOutline(outline, outlinePath); err != nil {
+			logger.GetLogger().Warn("Failed to save initial outline: %v", err)
 		}
-		fmt.Println("💾 Skeleton saved")
+		fmt.Println("💾 Skeleton saved to outline.json")
 
-		// Generate chapters with progress saving
+		// Generate chapters with incremental outline.json saves.
 		outline, err = agent.GenerateChaptersHierarchical(ctx, *setup, projectConfig.Structure, outline, onVolumeComplete)
 		if err != nil {
-			// Save progress even on error
-			if saveErr := savePartialOutline(outline, progressPath); saveErr != nil {
-				logger.GetLogger().Warn("Failed to save progress on error: %v", saveErr)
+			// Save outline even on error
+			if saveErr := savePartialOutline(outline, outlinePath); saveErr != nil {
+				logger.GetLogger().Warn("Failed to save outline on error: %v", saveErr)
 			}
 			return nil, err
 		}
 
-		// Remove progress file on successful completion
-		os.Remove(progressPath)
-		fmt.Println("\n✓ Generation complete! Progress file removed.")
+		os.Remove(legacyProgressPath)
+		fmt.Println("\n✓ Generation complete! outline.json is the canonical state.")
 	} else {
 		// Resume generation - continue from where we left off
 		fmt.Println("Continuing chapter generation...")
@@ -828,16 +1209,15 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 
 		outline, err = agent.GenerateChaptersHierarchical(ctx, *setup, projectConfig.Structure, outline, onVolumeComplete)
 		if err != nil {
-			// Save progress even on error
-			if saveErr := savePartialOutline(outline, progressPath); saveErr != nil {
-				logger.GetLogger().Warn("Failed to save progress on error: %v", saveErr)
+			// Save outline even on error
+			if saveErr := savePartialOutline(outline, outlinePath); saveErr != nil {
+				logger.GetLogger().Warn("Failed to save outline on error: %v", saveErr)
 			}
 			return nil, err
 		}
 
-		// Remove progress file on successful completion
-		os.Remove(progressPath)
-		fmt.Println("\n✓ Generation complete! Progress file removed.")
+		os.Remove(legacyProgressPath)
+		fmt.Println("\n✓ Generation complete! outline.json is the canonical state.")
 	}
 
 	return outline, nil
@@ -880,6 +1260,161 @@ func savePartialOutline(outline *models.Outline, path string) error {
 	}
 
 	return nil
+}
+
+func canResumeOutlineGeneration(path string, structure models.StoryStructure) bool {
+	outline, err := loadPartialOutline(path)
+	if err != nil {
+		logger.GetLogger().Warn("Failed to inspect existing outline for resume: %v", err)
+		return false
+	}
+	if len(outline.Parts) == 0 {
+		return false
+	}
+	expectedVolumes := structure.TargetParts * structure.TargetVolumes
+	actualVolumes := 0
+	for _, part := range outline.Parts {
+		actualVolumes += len(part.Volumes)
+	}
+	if expectedVolumes > 0 && actualVolumes != expectedVolumes {
+		return false
+	}
+	return countEmptyVolumes(outline) > 0
+}
+
+func countGeneratedVolumes(outline *models.Outline) int {
+	if outline == nil {
+		return 0
+	}
+	count := 0
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			if len(volume.Chapters) > 0 {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+func countEmptyVolumes(outline *models.Outline) int {
+	if outline == nil {
+		return 0
+	}
+	count := 0
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			if len(volume.Chapters) == 0 {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+func outlineWithGeneratedVolumes(outline *models.Outline) *models.Outline {
+	if outline == nil {
+		return nil
+	}
+	filtered := &models.Outline{}
+	for _, part := range outline.Parts {
+		nextPart := part
+		nextPart.Volumes = nil
+		for _, volume := range part.Volumes {
+			if len(volume.Chapters) > 0 {
+				nextPart.Volumes = append(nextPart.Volumes, volume)
+			}
+		}
+		if len(nextPart.Volumes) > 0 {
+			filtered.Parts = append(filtered.Parts, nextPart)
+		}
+	}
+	return filtered
+}
+
+func outlineWithImproveVolumeSelection(outline *models.Outline, volume, fromVolume, toVolume int) (*models.Outline, error) {
+	if outline == nil {
+		return nil, fmt.Errorf("outline is nil")
+	}
+	if volume > 0 && (fromVolume > 0 || toVolume > 0) {
+		return nil, fmt.Errorf("--volume cannot be combined with --from-volume or --to-volume")
+	}
+	if volume < 0 || fromVolume < 0 || toVolume < 0 {
+		return nil, fmt.Errorf("volume indexes must be positive")
+	}
+
+	start, end := fromVolume, toVolume
+	if volume > 0 {
+		start, end = volume, volume
+	}
+	if start == 0 {
+		start = 1
+	}
+	if end == 0 {
+		end = start
+	}
+	if start > end {
+		return nil, fmt.Errorf("--from-volume must be less than or equal to --to-volume")
+	}
+
+	filtered := &models.Outline{}
+	globalVolume := 0
+	selected := 0
+	for _, part := range outline.Parts {
+		nextPart := part
+		nextPart.Volumes = nil
+		for _, vol := range part.Volumes {
+			globalVolume++
+			if globalVolume < start || globalVolume > end || len(vol.Chapters) == 0 {
+				continue
+			}
+			nextPart.Volumes = append(nextPart.Volumes, vol)
+			selected++
+		}
+		if len(nextPart.Volumes) > 0 {
+			filtered.Parts = append(filtered.Parts, nextPart)
+		}
+	}
+	if selected == 0 {
+		return nil, fmt.Errorf("selected range has no generated volumes to improve")
+	}
+	return filtered, nil
+}
+
+func mergeGeneratedVolumes(target *models.Outline, improved *models.Outline) {
+	if target == nil || improved == nil {
+		return
+	}
+	byID := map[string]models.Volume{}
+	for _, part := range improved.Parts {
+		for _, volume := range part.Volumes {
+			if strings.TrimSpace(volume.ID) != "" {
+				byID[volume.ID] = volume
+			}
+		}
+	}
+	for partIdx := range target.Parts {
+		for volIdx := range target.Parts[partIdx].Volumes {
+			volume := &target.Parts[partIdx].Volumes[volIdx]
+			if improvedVolume, ok := byID[volume.ID]; ok {
+				preserveImprovedVolumeIdentityCmd(volume, &improvedVolume)
+				target.Parts[partIdx].Volumes[volIdx] = improvedVolume
+			}
+		}
+	}
+}
+
+func preserveImprovedVolumeIdentityCmd(original *models.Volume, improved *models.Volume) {
+	if original == nil || improved == nil {
+		return
+	}
+	improved.ID = original.ID
+	for i := range improved.Chapters {
+		if i >= len(original.Chapters) {
+			break
+		}
+		improved.Chapters[i].ID = original.Chapters[i].ID
+	}
 }
 
 func setupFactionAliases(category string) []string {

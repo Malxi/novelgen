@@ -1,0 +1,39 @@
+{
+  "changes": [
+    {
+      "path": "v5ch01.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "禁术种子侵蚀（每十日消耗1年寿命） -\u003e 禁术种子侵蚀"
+    },
+    {
+      "path": "v5ch04.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "林北辰（轻伤） -\u003e 林北辰"
+    },
+    {
+      "path": "v5ch05.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "林砚轻伤（探索中受的擦伤） -\u003e 林砚轻伤"
+    },
+    {
+      "path": "v5ch08.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "林砚生命力严重损耗（寿命减至20年） -\u003e 林砚生命力严重损耗"
+    },
+    {
+      "path": "v6ch05.characters",
+      "action": "sync_scene_character",
+      "value": "陈岩"
+    },
+    {
+      "path": "v6ch06.characters",
+      "action": "sync_scene_character",
+      "value": "墨渊"
+    },
+    {
+      "path": "v6ch06.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "林砚情绪反噬（头痛、噩梦持续数日） -\u003e 林砚情绪反噬"
+    }
+  ]
+}

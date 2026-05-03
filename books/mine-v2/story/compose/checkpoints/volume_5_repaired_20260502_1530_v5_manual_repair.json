@@ -1,0 +1,2045 @@
+{
+  "chapters": [
+    {
+      "id": "v5ch01",
+      "title": "噩梦前兆",
+      "summary": "林砚在安全屋中休整，禁术种子的侵蚀让他夜不能寐。无限流作者陈默带着一件神秘的玉简来到据点，声称自己发现了一个‘完美试炼场’，林砚隐约感到不安。",
+      "characters": [
+        "林砚",
+        "赵虎",
+        "苏婉",
+        "陈默"
+      ],
+      "location": "落霞城内·书友会安全屋",
+      "events": [
+        {
+          "type": "status",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "恶化",
+          "actor": "林砚",
+          "action": "discover",
+          "target": "禁术种子侵蚀",
+          "target_type": "status",
+          "context": "失眠时内视丹田",
+          "result": "发现灰色死气已蔓延至经脉，每十日便吞噬一年寿命的节奏在加快"
+        },
+        {
+          "type": "relationship",
+          "characters": [
+            "林砚",
+            "陈默"
+          ],
+          "subject": "林砚",
+          "change": "meet",
+          "actor": "林砚",
+          "action": "meet",
+          "target": "陈默",
+          "target_type": "character",
+          "context": "陈默主动找到安全屋，自称无限流作者",
+          "result": "陈默向林砚展示了一块刻满复杂符文的玉简，声称它是‘副本核心’"
+        },
+        {
+          "type": "premise",
+          "characters": [
+            "陈默"
+          ],
+          "subject": "陈默",
+          "change": "reveal",
+          "actor": "陈默",
+          "action": "use",
+          "target": "副本生成器（演示）",
+          "target_type": "skill",
+          "context": "安全屋外的小院，陈默激活玉简",
+          "result": "方圆三丈被一层淡蓝色光膜笼罩，光膜内出现几只低阶幻影妖兽，片刻后消散"
+        },
+        {
+          "type": "status",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "感知",
+          "actor": "林砚",
+          "action": "discover",
+          "target": "副本核心的异样",
+          "target_type": "knowledge",
+          "context": "陈默展示副本时，禁术种子突然剧烈一跳",
+          "result": "林砚感到副本核心与丹田中的黑色雾团产生了短暂的共鸣"
+        }
+      ],
+      "conflict": "林砚一方面要压制禁术种子的侵蚀，一方面要判断陈默的意图——他带来的副本核心是否又是一个陷阱。",
+      "pacing": "slow",
+      "timeline": {
+        "anchor": "第66天夜深",
+        "start_time": "亥时",
+        "end_time": "子时",
+        "duration": "当天",
+        "time_jump": true,
+        "previous_gap": "过了1天",
+        "transition": "林砚在安全屋休整了一整天，试图用聚气诀压制禁术种子的侵蚀，收效甚微。"
+      },
+      "state_anchor": {
+        "cultivation": "练气三层",
+        "spirit_stones": 3,
+        "allies": [
+          "赵虎",
+          "苏婉",
+          "张天赐",
+          "宋晴",
+          "慕容寒"
+        ],
+        "injuries": [
+          "禁术种子侵蚀（每十日消耗1年寿命）"
+        ],
+        "location": "落霞城内·书友会安全屋",
+        "key_items": [
+          "灵气追踪",
+          "中品灵石×3",
+          "终极天道碎片",
+          "延寿丹"
+        ],
+        "notes": "寿命剩余30年，禁术种子活性55%"
+      },
+      "enemies": [],
+      "resource_ledger": [
+        {
+          "item": "寿命",
+          "start": 30,
+          "delta": 0,
+          "end": 30,
+          "reason": "距上次消耗不足十日"
+        },
+        {
+          "item": "灵石",
+          "start": 3,
+          "delta": 0,
+          "end": 3,
+          "reason": "无变化"
+        }
+      ],
+      "scenes": [
+        {
+          "order": 1,
+          "pov": "林砚",
+          "goal": "检查自身状态并压制侵蚀",
+          "location": "安全屋内室",
+          "characters": [
+            "林砚"
+          ],
+          "words": 1000,
+          "tone": "低沉焦虑",
+          "beats": [
+            "林砚盘坐调息，灵气刚触碰丹田便被灰色死气弹开，侵蚀速度比预想更快",
+            "他睁开眼，看着手背浮现的一丝灰气，自言自语：最多三年……"
+          ]
+        },
+        {
+          "order": 2,
+          "pov": "林砚",
+          "goal": "接触陈默并评估副本核心",
+          "location": "安全屋大厅",
+          "characters": [
+            "林砚",
+            "陈默"
+          ],
+          "words": 1500,
+          "tone": "警惕审视",
+          "beats": [
+            "陈默热情地介绍自己的金手指，称其能将现实区域改造成遵循规则的‘副本’",
+            "林砚接过玉简，指尖触碰的瞬间，禁术种子猛地一跳，一股寒意从玉简传入识海"
+          ]
+        },
+        {
+          "order": 3,
+          "pov": "陈默",
+          "goal": "展示副本能力并拉拢林砚",
+          "location": "安全屋外小院",
+          "characters": [
+            "陈默",
+            "林砚"
+          ],
+          "words": 800,
+          "tone": "激动炫耀",
+          "beats": [
+            "陈默激活玉简，蓝色光膜展开，三只幻影妖兽凭空出现又被他一剑斩杀",
+            "他眼中闪着狂热的光：如果把这个据点改造成副本，我们就是规则的制定者！"
+          ]
+        }
+      ],
+      "mysteries": {
+        "planted": [
+          {
+            "id": "myst_chenmo_origin",
+            "clue": "陈默的玉简散发出一种与矿场地下封印相似的腐朽气息，暗示它可能与禁术同源",
+            "horizon": "this_volume",
+            "status": "open"
+          },
+          {
+            "id": "myst_dungeon_resonance",
+            "clue": "禁术种子对副本核心产生共鸣，说明副本生成器与天道碎片之间可能存在某种深层联系",
+            "horizon": "this_volume",
+            "status": "open"
+          }
+        ],
+        "resolved": []
+      },
+      "storyline_advances": [
+        {
+          "storyline_name": "副本失控",
+          "stage": "hook",
+          "change": "无限流作者陈默带着副本核心出现，引发了林砚的警觉",
+          "consequence": "林砚决定暗中观察陈默，同时阻止他在据点内滥用副本能力",
+          "pressure": "副本核心与禁术种子的共鸣暗示着潜在的失控风险"
+        }
+      ]
+    },
+    {
+      "id": "v5ch02",
+      "title": "试炼的代价",
+      "summary": "陈默说服林北辰在据点地下开辟一间‘试炼室’，用于训练成员。陈默在第一次试炼中成功击杀幻影怪物，但林砚发现每次启动副本都会消耗玉简上的灵气，且玉简表面的裂纹在扩大。",
+      "characters": [
+        "林砚",
+        "陈默",
+        "林北辰",
+        "赵虎",
+        "数名骨干"
+      ],
+      "location": "落霞城·书友会据点地下试炼室",
+      "events": [
+        {
+          "type": "status",
+          "characters": [
+            "林北辰"
+          ],
+          "subject": "林北辰",
+          "change": "决策",
+          "actor": "林北辰",
+          "action": "decide",
+          "target": "陈默的试炼计划",
+          "target_type": "status",
+          "context": "长老会议，陈默展示能力",
+          "result": "林北辰同意开辟一间废弃储藏室作为试炼场地"
+        },
+        {
+          "type": "item",
+          "characters": [
+            "陈默"
+          ],
+          "subject": "陈默",
+          "change": "progressed",
+          "actor": "陈默",
+          "action": "use",
+          "target": "副本核心",
+          "target_type": "item",
+          "context": "第一次正式激活试炼副本",
+          "result": "三名骨干成员进入副本，成功击败两只低阶妖兽，但玉简表面出现一道新的裂纹"
+        },
+        {
+          "type": "status",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "发现",
+          "actor": "林砚",
+          "action": "discover",
+          "target": "玉简的损耗",
+          "target_type": "knowledge",
+          "context": "陈默收起玉简时，林砚用灵气追踪感知到玉简内部灵气逸散",
+          "result": "林砚确认副本核心并非无限使用，每一次激活都在损耗其本体"
+        },
+        {
+          "type": "status",
+          "characters": [
+            "赵虎"
+          ],
+          "subject": "赵虎",
+          "change": "参与",
+          "actor": "赵虎",
+          "action": "use",
+          "target": "试炼副本",
+          "target_type": "status",
+          "context": "赵虎尝试进入副本并成功击杀一只妖兽",
+          "result": "赵虎感叹副本内灵气充裕，修炼效率比外界高两倍"
+        }
+      ],
+      "conflict": "陈默的试炼室看似是提升实力的福音，但玉简的损耗让林砚担忧持续性。赵虎的正面反馈与林砚的疑虑形成对比。",
+      "pacing": "medium",
+      "timeline": {
+        "anchor": "第67天上午至傍晚",
+        "start_time": "辰时",
+        "end_time": "酉时",
+        "duration": "当天",
+        "time_jump": true,
+        "previous_gap": "次日",
+        "transition": "经过一夜讨论，林北辰在次日清晨召集长老会审议陈默的提议。"
+      },
+      "state_anchor": {
+        "cultivation": "练气三层",
+        "spirit_stones": 3,
+        "allies": [
+          "赵虎",
+          "苏婉",
+          "张天赐",
+          "宋晴",
+          "慕容寒",
+          "林北辰"
+        ],
+        "injuries": [
+          "禁术种子侵蚀"
+        ],
+        "location": "落霞城·书友会据点",
+        "key_items": [
+          "灵气追踪",
+          "中品灵石×3",
+          "终极天道碎片",
+          "延寿丹"
+        ],
+        "notes": "寿命剩余29年（又过一日，距上次消耗剩余9日），禁术种子活性56%"
+      },
+      "enemies": [],
+      "resource_ledger": [
+        {
+          "item": "寿命",
+          "start": 30,
+          "delta": 0,
+          "end": 30,
+          "reason": "距上次消耗未满十日"
+        },
+        {
+          "item": "灵石",
+          "start": 3,
+          "delta": 0,
+          "end": 3,
+          "reason": "无变化"
+        }
+      ],
+      "scenes": [
+        {
+          "order": 1,
+          "pov": "林砚",
+          "goal": "旁听长老会议并观察陈默",
+          "location": "据点会议厅",
+          "characters": [
+            "林砚",
+            "林北辰",
+            "陈默",
+            "其他长老"
+          ],
+          "words": 1200,
+          "tone": "审慎观察",
+          "beats": [
+            "陈默慷慨陈词，描绘副本训练将如何提升据点的整体战力",
+            "林北辰与其他长老低声交流后，点头同意开辟试炼室，但要求林砚全程监督"
+          ]
+        },
+        {
+          "order": 2,
+          "pov": "林砚",
+          "goal": "观察第一次试炼并发现隐患",
+          "location": "地下试炼室",
+          "characters": [
+            "林砚",
+            "陈默",
+            "赵虎",
+            "三名骨干"
+          ],
+          "words": 1500,
+          "tone": "紧张专注",
+          "beats": [
+            "陈默激活玉简，蓝色光膜覆盖整间废弃储藏室，内部凭空出现两只低阶妖兽",
+            "三名骨干联手击杀妖兽后兴奋不已，但林砚注意到玉简边缘多了一道细小的裂缝"
+          ]
+        },
+        {
+          "order": 3,
+          "pov": "赵虎",
+          "goal": "体验副本并分享感受",
+          "location": "地下试炼室",
+          "characters": [
+            "赵虎",
+            "林砚"
+          ],
+          "words": 800,
+          "tone": "兴奋中带一丝警觉",
+          "beats": [
+            "赵虎进入副本，感受到浓郁的灵气，全力击杀妖兽后赞叹：这里修炼效率翻倍",
+            "他走出副本时对林砚说：但我觉得里面的灵气不对劲，像是……有股吸力"
+          ]
+        }
+      ],
+      "mysteries": {
+        "planted": [
+          {
+            "id": "myst_dungeon_cost",
+            "clue": "玉简上的裂缝每次使用都在扩大，且陈默对此讳莫如深，似乎知道什么却不愿说",
+            "horizon": "this_volume",
+            "status": "open"
+          },
+          {
+            "id": "myst_absorbing_force",
+            "clue": "赵虎感觉副本内有股难以察觉的吸力，仿佛在抽取试炼者的某种东西",
+            "horizon": "this_volume",
+            "status": "open"
+          }
+        ],
+        "resolved": []
+      },
+      "storyline_advances": [
+        {
+          "storyline_name": "副本失控",
+          "stage": "pressure",
+          "change": "副本核心玉简出现裂缝，暗示其使用上限有限，但陈默隐瞒了这个事实",
+          "consequence": "林砚对陈默的信任降低，开始暗中监控副本的每一次激活",
+          "pressure": "若玉简在使用中完全碎裂，副本内的成员可能被永远困住"
+        }
+      ]
+    },
+    {
+      "id": "v5ch03",
+      "title": "失控的入口",
+      "summary": "陈默在夜间独自尝试扩大副本范围以吸引更多灵气，意外触发玉简核心崩解，整个据点被拉入一个巨大的死亡副本。所有出入口被封锁，内部出现随机刷新的怪物。",
+      "characters": [
+        "林砚",
+        "陈默",
+        "林北辰",
+        "赵虎",
+        "苏婉",
+        "张天赐",
+        "宋晴",
+        "慕容寒",
+        "其他成员"
+      ],
+      "location": "落霞城·书友会据点（被副本覆盖）",
+      "events": [
+        {
+          "type": "status",
+          "characters": [
+            "陈默"
+          ],
+          "subject": "陈默",
+          "change": "动作",
+          "actor": "陈默",
+          "action": "use",
+          "target": "副本核心（超限激活）",
+          "target_type": "skill",
+          "context": "深夜，陈默在空置的试炼室中试图将副本扩展至整座据点",
+          "result": "玉简承受不住压力，当场崩解，碎片四溅"
+        },
+        {
+          "type": "premise",
+          "characters": [
+            "林砚",
+            "陈默"
+          ],
+          "subject": "副本生成器",
+          "change": "失控",
+          "actor": "陈默",
+          "action": "awaken",
+          "target": "失控副本",
+          "target_type": "premise",
+          "context": "玉简崩解后，一道无形的波纹以试炼室为中心扩散",
+          "result": "整个据点被淡蓝色光膜吞没，所有门窗、密道都被一层半透明的能量壁封死"
+        },
+        {
+          "type": "gate",
+          "characters": [
+            "林砚",
+            "赵虎"
+          ],
+          "subject": "林砚",
+          "change": "遭遇",
+          "actor": "未知",
+          "action": "combat",
+          "target": "林砚",
+          "target_type": "status",
+          "context": "副本刚刚形成时，大厅中凭空出现三只石甲兽，开始攻击最近的成员",
+          "result": "两名练气期的成员反应不及，被石甲兽撞飞，重伤倒地"
+        },
+        {
+          "type": "gate",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "trial",
+          "actor": "林砚",
+          "action": "combat",
+          "target": "随机刷出的妖兽",
+          "target_type": "status",
+          "context": "林砚以练气三层修为迎战一只石甲兽",
+          "result": "勉强击杀，但手臂被爪击划伤"
+        }
+      ],
+      "conflict": "副本失控将所有人都困在其中，随机刷新的怪物和未知的规则让据点陷入混乱，林砚必须在混乱中稳住局面。",
+      "pacing": "fast",
+      "timeline": {
+        "anchor": "第68天深夜",
+        "start_time": "戊时三刻",
+        "end_time": "亥时",
+        "duration": "一个时辰",
+        "time_jump": true,
+        "previous_gap": "过了1天",
+        "transition": "白天里陈默一直在研读玉简上的符文，入夜后独自进入试炼室试图突破限制。"
+      },
+      "state_anchor": {
+        "cultivation": "练气三层",
+        "spirit_stones": 3,
+        "allies": [
+          "赵虎",
+          "苏婉",
+          "张天赐",
+          "宋晴",
+          "慕容寒",
+          "林北辰"
+        ],
+        "injuries": [
+          "林砚左臂抓伤"
+        ],
+        "location": "落霞城·书友会据点（被副本覆盖）",
+        "key_items": [
+          "灵气追踪",
+          "中品灵石×3",
+          "终极天道碎片",
+          "延寿丹"
+        ],
+        "notes": "寿命剩余29年（距上次消耗剩余8日），禁术种子活性56%。陈默的玉简已毁，副本来源不明。"
+      },
+      "enemies": [
+        {
+          "name": "石甲兽",
+          "faction": "副本生物",
+          "tier": "试炼级",
+          "count": 5,
+          "level": 2,
+          "context": "副本失控后在大厅、走廊等刷新的第一批怪物"
+        }
+      ],
+      "resource_ledger": [
+        {
+          "item": "灵石",
+          "start": 3,
+          "delta": 0,
+          "end": 3,
+          "reason": "无变化"
+        }
+      ],
+      "scenes": [
+        {
+          "order": 1,
+          "pov": "陈默",
+          "goal": "尝试扩大副本以证明自己的能力",
+          "location": "地下试炼室",
+          "characters": [
+            "陈默"
+          ],
+          "words": 1000,
+          "tone": "狂热中带着焦急",
+          "beats": [
+            "陈默输入大量灵力试图扩张副本范围，玉简剧烈颤抖，表面裂纹密布",
+            "他咬牙催动更多灵力，玉简发出一声脆响，炸成碎片"
+          ]
+        },
+        {
+          "order": 2,
+          "pov": "林砚",
+          "goal": "应对副本失控的冲击",
+          "location": "据点大厅",
+          "characters": [
+            "林砚",
+            "赵虎",
+            "苏婉",
+            "其他成员"
+          ],
+          "words": 1500,
+          "tone": "紧张混乱",
+          "beats": [
+            "蓝色光膜突如其来的笼罩让所有人措手不及，出入口被封死",
+            "三只石甲兽凭空出现在人群中间，一名成员被掀飞，林砚立刻冲上去迎战"
+          ]
+        },
+        {
+          "order": 3,
+          "pov": "慕容寒",
+          "goal": "猎杀副本怪物并探索规则",
+          "location": "据点走廊",
+          "characters": [
+            "慕容寒",
+            "林砚"
+          ],
+          "words": 1000,
+          "tone": "冷冽果断",
+          "beats": [
+            "慕容寒追杀一只石甲兽至走廊尽头，发现其死后尸体化作光点消失",
+            "他对赶来的林砚说：这不是普通的幻影，每次击杀都在消耗副本的能量。若能量耗尽……我们或许就出不去了。"
+          ]
+        }
+      ],
+      "mysteries": {
+        "planted": [
+          {
+            "id": "myst_dungeon_source",
+            "clue": "玉简崩解时，林砚感到终极天道碎片剧烈震动，似乎与副本的生成有直接关联",
+            "horizon": "this_volume",
+            "status": "open"
+          },
+          {
+            "id": "myst_exit_condition",
+            "clue": "慕容寒击杀石甲兽后尸体化作光点消散，副本能量在缓慢减少——但必须找到核心才能彻底破解",
+            "horizon": "this_volume",
+            "status": "open"
+          }
+        ],
+        "resolved": [
+          {
+            "id": "myst_dungeon_cost",
+            "resolution": "陈默试图超限激活，导致副本核心玉简崩解，副本失控"
+          }
+        ]
+      },
+      "storyline_advances": [
+        {
+          "storyline_name": "副本失控",
+          "stage": "reversal",
+          "change": "陈默的副本核心彻底失控，整座据点被转化为死亡副本",
+          "consequence": "所有人被困在副本内，必须寻找破解规则或核心的方法才能逃生",
+          "pressure": "副本内随机刷新怪物，每次击杀都在消耗副本能量，但不确定能量耗尽后会发生什么"
+        }
+      ]
+    },
+    {
+      "id": "v5ch04",
+      "title": "规则初现",
+      "summary": "林砚在混乱中击杀数只怪物后，发现副本内部弥漫着一种‘规则压迫力’——禁止飞行、禁止使用超过练气级别的法术。他意识到副本有一套必须遵守的底层规则。",
+      "characters": [
+        "林砚",
+        "慕容寒",
+        "赵虎",
+        "苏婉",
+        "林北辰"
+      ],
+      "location": "落霞城·书友会据点（被副本覆盖）",
+      "events": [
+        {
+          "type": "gate",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "trial",
+          "actor": "林砚",
+          "action": "use",
+          "target": "练气三层全力一击",
+          "target_type": "skill",
+          "context": "试图用最强一招秒杀一只精英怪物",
+          "result": "灵气刚凝聚到一半便被一股无形的力量强行压制，威力只剩三成，险些被怪物反杀"
+        },
+        {
+          "type": "premise",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "discover",
+          "actor": "林砚",
+          "action": "discover",
+          "target": "副本规则",
+          "target_type": "knowledge",
+          "context": "连续三次施法被压制后，林砚停下观察周围灵气流动",
+          "result": "林砚在空气中捕捉到一道若隐若现的符文轨迹，确认副本包含‘禁空’、‘灵压’等规则"
+        },
+        {
+          "type": "status",
+          "characters": [
+            "慕容寒"
+          ],
+          "subject": "慕容寒",
+          "change": "action",
+          "actor": "慕容寒",
+          "action": "use",
+          "target": "死亡反击（试探）",
+          "target_type": "skill",
+          "context": "慕容寒猜测规则也压制他的金手指",
+          "result": "他发现自己的死亡反击在副本内仍然有效，但复活后虚弱时间延长了一倍"
+        },
+        {
+          "type": "premise",
+          "characters": [
+            "林北辰"
+          ],
+          "subject": "林北辰",
+          "change": "reveal",
+          "actor": "林北辰",
+          "action": "use",
+          "target": "金丹期神识",
+          "target_type": "skill",
+          "context": "林北辰试图用金丹期神识扫描副本全貌",
+          "result": "神识触碰副本边界时被反弹，林北辰闷哼一声，嘴角溢血——副本连金丹期修士的神识都能压制"
+        }
+      ],
+      "conflict": "林砚发现副本的规则压制了所有人的修为，必须在低配状态下找出破解之法。林北辰受伤，说明高阶修士也无法以力破局。",
+      "pacing": "medium",
+      "timeline": {
+        "anchor": "第69天清晨至午时",
+        "start_time": "卯时",
+        "end_time": "午时",
+        "duration": "数个时辰",
+        "time_jump": true,
+        "previous_gap": "当夜",
+        "transition": "副本失控后的第一夜，所有人勉强清理了第一批怪物，在走廊和房间内扎营。"
+      },
+      "state_anchor": {
+        "cultivation": "练气三层（被副本压制至练气二层巅峰）",
+        "spirit_stones": 2,
+        "allies": [
+          "赵虎",
+          "苏婉",
+          "张天赐",
+          "宋晴",
+          "慕容寒",
+          "林北辰（轻伤）"
+        ],
+        "injuries": [
+          "林北辰神识反噬轻伤",
+          "林砚左臂抓伤已结痂"
+        ],
+        "location": "据点走廊临时防御点",
+        "key_items": [
+          "灵气追踪（效果减半）",
+          "中品灵石×2",
+          "终极天道碎片",
+          "延寿丹"
+        ],
+        "notes": "寿命剩余29年，副本内无法离开"
+      },
+      "enemies": [
+        {
+          "name": "精英石甲兽",
+          "faction": "副本生物",
+          "tier": "精英级",
+          "count": 1,
+          "level": 3,
+          "context": "被副本规则强化，拥有反灵气压制特性"
+        }
+      ],
+      "resource_ledger": [
+        {
+          "item": "中品灵石",
+          "start": 3,
+          "delta": -1,
+          "end": 2,
+          "reason": "林北辰试图突破副本边界时消耗一块灵石补充灵气"
+        },
+        {
+          "item": "灵石",
+          "start": 3,
+          "delta": 0,
+          "end": 3,
+          "reason": "无变化"
+        }
+      ],
+      "scenes": [
+        {
+          "order": 1,
+          "pov": "林砚",
+          "goal": "测试副本内的战斗限制",
+          "location": "据点大厅废墟",
+          "characters": [
+            "林砚",
+            "精英石甲兽"
+          ],
+          "words": 1300,
+          "tone": "紧张研究",
+          "beats": [
+            "林砚试图全力释放灵气凝剑，但灵力刚聚到一半便被无形压力打散",
+            "精英石甲兽趁机扑来，林砚狼狈翻滚躲开，忽然注意到它的动作也有某种规律——像是被同样的规则束缚"
+          ]
+        },
+        {
+          "order": 2,
+          "pov": "林砚",
+          "goal": "确认规则并告知同伴",
+          "location": "走廊临时防御点",
+          "characters": [
+            "林砚",
+            "赵虎",
+            "慕容寒",
+            "苏婉"
+          ],
+          "words": 1200,
+          "tone": "凝重分析",
+          "beats": [
+            "林砚用树枝在地上画出他观察到的符文轨迹：这是一个‘公平试炼’型副本",
+            "慕容寒补充：我的死亡反击仍然有效，但复活后的虚弱期翻倍了——说明副本知道我的能力"
+          ]
+        },
+        {
+          "order": 3,
+          "pov": "林北辰",
+          "goal": "尝试以金丹修为破局并受挫",
+          "location": "据点大厅",
+          "characters": [
+            "林北辰",
+            "林砚"
+          ],
+          "words": 1000,
+          "tone": "挫败中带着震惊",
+          "beats": [
+            "林北辰盘坐，释放神识试图扫描副本边界",
+            "一道无形的波纹将神识弹回，林北辰面色一白，嘴角溢血：这个副本的核心……至少是元婴级的力量"
+          ]
+        }
+      ],
+      "mysteries": {
+        "planted": [
+          {
+            "id": "myst_rune_pattern",
+            "clue": "林砚在地上画出的符文轨迹与矿场地底封印的符文有七成相似，暗示副本生成器与禁术同源",
+            "horizon": "this_volume",
+            "status": "open"
+          }
+        ],
+        "resolved": []
+      },
+      "storyline_advances": [
+        {
+          "storyline_name": "副本失控",
+          "stage": "reveal",
+          "change": "确认副本的底层规则（禁空、灵压、公平试炼），连金丹期修士也无法以力破局",
+          "consequence": "所有人必须在规则框架内寻找破解方法，林砚的灵气追踪和复活能力成为探索优势",
+          "pressure": "林北辰受伤后，据点的最高战力受挫，士气低迷"
+        }
+      ]
+    },
+    {
+      "id": "v5ch05",
+      "title": "核心的召唤",
+      "summary": "林砚在探索副本边界时，禁术种子与终极天道碎片同时共鸣，将他引向据点地下深处——那里悬浮着一枚与陈默玉简核心一模一样的蓝色晶体，副本的真正源头。",
+      "characters": [
+        "林砚",
+        "慕容寒",
+        "陈默",
+        "苏婉"
+      ],
+      "location": "据点地下·隐藏密室（副本核心所在）",
+      "events": [
+        {
+          "type": "premise",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "use",
+          "actor": "林砚",
+          "action": "discover",
+          "target": "禁术种子与碎片的共鸣",
+          "target_type": "knowledge",
+          "context": "在副本中行走时，丹田内黑色雾团与掌心中的终极碎片同时发热",
+          "result": "两股力量交汇，在林砚的识海中形成一条清晰的路径——通往地下"
+        },
+        {
+          "type": "location",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "move",
+          "actor": "林砚",
+          "action": "move",
+          "target": "地下隐藏密室",
+          "target_type": "location",
+          "context": "顺着共鸣的指引，他找到一条被封死的密道，用中品灵石炸开石门",
+          "result": "进入密室，中央悬浮着一枚拳头大小的蓝色晶体，与陈默的玉核一模一样"
+        },
+        {
+          "type": "premise",
+          "characters": [
+            "陈默"
+          ],
+          "subject": "陈默",
+          "change": "reveal",
+          "actor": "陈默",
+          "action": "meet",
+          "target": "林砚",
+          "target_type": "character",
+          "context": "陈默尾随林砚进入密室，看到蓝色晶体后脸色苍白",
+          "result": "陈默坦白：这枚晶体是他在一处上古遗迹中发现的，他复制了一块玉简作为‘子核’，没想到子核碎裂后激活了真正的母核"
+        },
+        {
+          "type": "premise",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "discover",
+          "actor": "林砚",
+          "action": "discover",
+          "target": "副本核心的本质",
+          "target_type": "knowledge",
+          "context": "靠近蓝色晶体时，它的表面浮现出天道碎片的纹路",
+          "result": "林砚确认这枚晶体本身就是一个‘无主的天道碎片’，副本生成器只是它的一个功能"
+        }
+      ],
+      "conflict": "林砚发现了副本的核心，但陈默隐瞒了其真正来源。核心是天道碎片的事实让局势变得复杂——是摧毁它、利用它、还是与书友会共享？",
+      "pacing": "slow",
+      "timeline": {
+        "anchor": "第70天深夜",
+        "start_time": "子时",
+        "end_time": "丑时",
+        "duration": "一个时辰",
+        "time_jump": true,
+        "previous_gap": "次日",
+        "transition": "林砚花了一整天探索副本边界，终于在夜间找到了共鸣最强的方向。"
+      },
+      "state_anchor": {
+        "cultivation": "练气三层（被压制至练气二层巅峰）",
+        "spirit_stones": 2,
+        "allies": [
+          "慕容寒",
+          "陈默",
+          "苏婉"
+        ],
+        "injuries": [
+          "林砚轻伤（探索中受的擦伤）"
+        ],
+        "location": "据点地下·隐藏密室",
+        "key_items": [
+          "灵气追踪（效果减半）",
+          "中品灵石×1",
+          "终极天道碎片",
+          "延寿丹"
+        ],
+        "notes": "寿命剩余29年"
+      },
+      "enemies": [],
+      "resource_ledger": [
+        {
+          "item": "中品灵石",
+          "start": 2,
+          "delta": -1,
+          "end": 1,
+          "reason": "炸开地下密室石门"
+        },
+        {
+          "item": "灵石",
+          "start": 3,
+          "delta": 0,
+          "end": 3,
+          "reason": "无变化"
+        }
+      ],
+      "scenes": [
+        {
+          "order": 1,
+          "pov": "林砚",
+          "goal": "顺着共鸣寻找副本核心",
+          "location": "据点地下通道",
+          "characters": [
+            "林砚",
+            "慕容寒"
+          ],
+          "words": 1400,
+          "tone": "紧张专注",
+          "beats": [
+            "林砚闭眼感知两股热源的交汇方向，慕容寒持刀护卫后方",
+            "两人合力推开一堵伪装的石墙，露出一条向下的阶梯，尽头传来微弱的蓝光"
+          ]
+        },
+        {
+          "order": 2,
+          "pov": "林砚",
+          "goal": "发现蓝色晶体并确认其本质",
+          "location": "地下密室",
+          "characters": [
+            "林砚",
+            "陈默"
+          ],
+          "words": 1200,
+          "tone": "震惊中带着冷静",
+          "beats": [
+            "林砚伸手触碰蓝色晶体，终极碎片与禁术种子同时发光，二者在掌心与丹田间搭起一道桥梁",
+            "晶体表面浮现天道碎片纹路，林砚确认它就是副本的核心，也是一枚无主的天道碎片"
+          ]
+        },
+        {
+          "order": 3,
+          "pov": "陈默",
+          "goal": "坦白真相",
+          "location": "地下密室",
+          "characters": [
+            "陈默",
+            "林砚"
+          ],
+          "words": 800,
+          "tone": "愧疚中带着恐惧",
+          "beats": [
+            "陈默低头承认自己是从一处上古遗迹中偷走了这枚晶体",
+            "他声音颤抖：我不知道它是天道碎片……我只想利用它来提升我们的实力"
+          ]
+        }
+      ],
+      "mysteries": {
+        "planted": [
+          {
+            "id": "myst_crystal_master",
+            "clue": "蓝色晶体表面除了天道碎片纹路，还有一行极小的文字——‘第七号试验体’，暗示它不是天然形成的",
+            "horizon": "series",
+            "status": "open"
+          }
+        ],
+        "resolved": [
+          {
+            "id": "myst_dungeon_source",
+            "resolution": "副本核心是一枚有天道碎片的蓝色晶体，陈默的玉简只是它的子核"
+          }
+        ]
+      },
+      "storyline_advances": [
+        {
+          "storyline_name": "副本失控",
+          "stage": "reveal",
+          "change": "发现副本核心是一枚无主的天道碎片，与禁术种子和终极碎片产生共鸣",
+          "consequence": "林砚可以通过吸收这枚碎片来增强自己的实力，但也可能引发更大的异变",
+          "pressure": "晶体的事一旦被书友会其他成员知道，必然引发对使用权的激烈争夺"
+        }
+      ]
+    },
+    {
+      "id": "v5ch06",
+      "title": "争夺的影子",
+      "summary": "林砚决定暂时隐瞒蓝色晶体的消息，但书友会内部的激进派长老李沧暗中发现了密室的痕迹，开始串联其他成员准备夺取晶体。林砚面临内外夹击。",
+      "characters": [
+        "林砚",
+        "林北辰",
+        "李沧",
+        "赵虎",
+        "苏婉",
+        "慕容寒",
+        "陈默"
+      ],
+      "location": "落霞城·书友会据点（副本内）",
+      "events": [
+        {
+          "type": "relationship",
+          "characters": [
+            "林砚",
+            "林北辰"
+          ],
+          "subject": "林砚",
+          "change": "沟通",
+          "actor": "林砚",
+          "action": "meet",
+          "target": "林北辰（私下）",
+          "target_type": "character",
+          "context": "林砚将晶体的事告诉了林北辰，但请求他暂时保密",
+          "result": "林北辰皱眉，但仍同意等待更好的时机"
+        },
+        {
+          "type": "status",
+          "characters": [
+            "李沧"
+          ],
+          "subject": "李沧",
+          "change": "started",
+          "actor": "李沧（激进派长老）",
+          "action": "discover",
+          "target": "密室的痕迹",
+          "target_type": "knowledge",
+          "context": "李沧在巡逻时发现了被炸开的石门残骸",
+          "result": "李沧暗中召集了三名心腹成员，准备强行打开密室"
+        },
+        {
+          "type": "gate",
+          "characters": [
+            "林砚",
+            "李沧"
+          ],
+          "subject": "李沧",
+          "change": "对峙",
+          "actor": "李沧",
+          "action": "combat",
+          "target": "林砚",
+          "target_type": "character",
+          "context": "李沧带人堵在密室入口，要求林砚交出晶体",
+          "result": "双方剑拔弩张，慕容寒挡在林砚身前，局势一触即发"
+        },
+        {
+          "type": "status",
+          "characters": [
+            "副本"
+          ],
+          "subject": "副本",
+          "change": "恶化",
+          "actor": "未知",
+          "action": "use",
+          "target": "副本能量",
+          "target_type": "status",
+          "context": "就在双方对峙时，整座据点剧烈震动——副本内的怪物刷新速度开始加快",
+          "result": "原本一天只刷新一次怪物，现在每两个时辰就刷新一次"
+        }
+      ],
+      "conflict": "林砚必须在内部纷争和外部怪物双重压力下维持平衡。李沧的激进派虎视眈眈，而副本的异变让时间更加紧迫。",
+      "pacing": "fast",
+      "timeline": {
+        "anchor": "第71天清晨至午时",
+        "start_time": "卯时",
+        "end_time": "午时",
+        "duration": "数个时辰",
+        "time_jump": true,
+        "previous_gap": "次日",
+        "transition": "发现晶体的次日清晨，林砚刚刚与林北辰达成默契，李沧的人就到了。"
+      },
+      "state_anchor": {
+        "cultivation": "练气三层（被压制至练气二层巅峰）",
+        "spirit_stones": 1,
+        "allies": [
+          "赵虎",
+          "苏婉",
+          "慕容寒",
+          "陈默",
+          "林北辰"
+        ],
+        "injuries": [],
+        "location": "据点地下·密室入口",
+        "key_items": [
+          "灵气追踪（效果减半）",
+          "中品灵石×1",
+          "终极天道碎片",
+          "延寿丹"
+        ],
+        "notes": "寿命剩余29年，禁术种子活性57%"
+      },
+      "enemies": [
+        {
+          "name": "李沧（激进派长老）",
+          "faction": "书友会（激进派）",
+          "tier": "长老",
+          "count": 1,
+          "level": 5,
+          "is_boss": true,
+          "boss_id": "boss_licang",
+          "status": "engaged",
+          "context": "企图夺取天道碎片副本核心"
+        },
+        {
+          "name": "李沧心腹",
+          "faction": "书友会（激进派）",
+          "tier": "骨干",
+          "count": 3,
+          "level": 3,
+          "context": "跟随李沧的追随者"
+        }
+      ],
+      "resource_ledger": [
+        {
+          "item": "中品灵石",
+          "start": 1,
+          "delta": 0,
+          "end": 1,
+          "reason": "无变化"
+        },
+        {
+          "item": "灵石",
+          "start": 3,
+          "delta": 0,
+          "end": 3,
+          "reason": "无变化"
+        }
+      ],
+      "scenes": [
+        {
+          "order": 1,
+          "pov": "林砚",
+          "goal": "与林北辰商议晶体处理方案",
+          "location": "据点隐蔽角落",
+          "characters": [
+            "林砚",
+            "林北辰"
+          ],
+          "words": 1200,
+          "tone": "低声密谈",
+          "beats": [
+            "林砚描述蓝色晶体的特性：它能与我的禁术种子共鸣，或许可以用来破解副本",
+            "林北辰让他小心行事：李沧一直在盯着我，你若暴露，他必会动手"
+          ]
+        },
+        {
+          "order": 2,
+          "pov": "李沧",
+          "goal": "发现密室并逼迫林砚",
+          "location": "地下室入口",
+          "characters": [
+            "李沧",
+            "林砚",
+            "慕容寒"
+          ],
+          "words": 1500,
+          "tone": "嚣张强势",
+          "beats": [
+            "李沧带人堵住通道，冷笑：小友，你偷偷摸摸找到了好东西，不打算跟大家分享一下？",
+            "慕容寒拔刀挡在林砚身前，声音冰冷：想要晶体，先过我这一关"
+          ]
+        },
+        {
+          "order": 3,
+          "pov": "林砚",
+          "goal": "利用副本异变转移焦点",
+          "location": "地下室入口",
+          "characters": [
+            "林砚",
+            "李沧",
+            "慕容寒",
+            "闻声赶来的成员"
+          ],
+          "words": 1000,
+          "tone": "冷静应对",
+          "beats": [
+            "正在双方对峙时，整座据点猛烈一震，墙壁上的符文闪烁不止",
+            "林砚大声道：副本的怪物刷新加速了！再争下去谁也活不了！李沧脸色阴沉，暂时退让"
+          ]
+        }
+      ],
+      "mysteries": {
+        "planted": [
+          {
+            "id": "myst_dungeon_acceleration",
+            "clue": "副本异变发生在林砚发现晶体之后，仿佛晶体被触碰激活了副本的某种‘防御机制’",
+            "horizon": "this_volume",
+            "status": "open"
+          }
+        ],
+        "resolved": []
+      },
+      "storyline_advances": [
+        {
+          "storyline_name": "副本失控",
+          "stage": "pressure",
+          "change": "书友会内部因晶体出现分裂，激进派与林砚形成对峙",
+          "consequence": "副本异变加速，让所有人必须在更短时间内找到破解方法",
+          "pressure": "怪物刷新速度翻倍，练气二层的成员已经难以应对"
+        }
+      ]
+    },
+    {
+      "id": "v5ch07",
+      "title": "绝望的阶梯",
+      "summary": "怪物刷新速度持续加快，多名成员受伤。林砚被迫在密室中公开蓝色晶体的存在，提出一个冒险计划：利用禁术种子吸收晶体，换取一次‘副本重置’以拯救所有人。",
+      "characters": [
+        "林砚",
+        "林北辰",
+        "李沧",
+        "赵虎",
+        "苏婉",
+        "慕容寒",
+        "张天赐",
+        "宋晴",
+        "陈默"
+      ],
+      "location": "据点地下·密室（临时议事厅）",
+      "events": [
+        {
+          "type": "status",
+          "characters": [
+            "宋晴"
+          ],
+          "subject": "宋晴",
+          "change": "use",
+          "actor": "宋晴",
+          "action": "use",
+          "target": "命运悲鸣",
+          "target_type": "skill",
+          "context": "怪物刷新加速后，宋晴感知到更大的灾难预兆",
+          "result": "宋晴预知：若不在十二个时辰内破解副本，蓝色晶体会因能量过载而爆炸，将整座据点夷为平地"
+        },
+        {
+          "type": "premise",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "decision",
+          "actor": "林砚",
+          "action": "decide",
+          "target": "吸收晶体的计划",
+          "target_type": "knowledge",
+          "context": "面对所有人的目光，林砚平静地提出唯一方案",
+          "result": "林砚表示自己可以用禁术种子吸收蓝色晶体，副本可能会因此重置或崩溃"
+        },
+        {
+          "type": "relationship",
+          "characters": [
+            "林砚",
+            "李沧"
+          ],
+          "subject": "林砚",
+          "change": "对峙",
+          "actor": "李沧",
+          "action": "use",
+          "target": "权力施压",
+          "target_type": "status",
+          "context": "李沧质疑林砚的动机，认为他想独吞天道碎片",
+          "result": "林砚以死亡相胁——若李沧阻止，他便立刻引爆丹田，让所有人一起死"
+        },
+        {
+          "type": "status",
+          "characters": [
+            "赵虎"
+          ],
+          "subject": "赵虎",
+          "change": "support",
+          "actor": "赵虎",
+          "action": "use",
+          "target": "声援",
+          "target_type": "status",
+          "context": "赵虎带头表态支持林砚",
+          "result": "在赵虎的带动下，大部分普通成员倒向林砚，李沧被迫同意"
+        }
+      ],
+      "conflict": "林砚要在所有成员面前公开蓝晶的秘密，并说服他们接受一个极度冒险的方案。李沧的阻挠让局势几度失控。",
+      "pacing": "medium",
+      "timeline": {
+        "anchor": "第72天午时至傍晚",
+        "start_time": "午时",
+        "end_time": "酉时",
+        "duration": "当天",
+        "time_jump": true,
+        "previous_gap": "次日",
+        "transition": "副本异变持续恶化，又一夜过去，有三名成员在战斗中重伤。"
+      },
+      "state_anchor": {
+        "cultivation": "练气三层（被压制至练气二层巅峰）",
+        "spirit_stones": 1,
+        "allies": [
+          "赵虎",
+          "苏婉",
+          "慕容寒",
+          "张天赐",
+          "宋晴",
+          "陈默",
+          "林北辰"
+        ],
+        "injuries": [
+          "林砚多处小伤"
+        ],
+        "location": "据点地下·密室",
+        "key_items": [
+          "灵气追踪",
+          "中品灵石×1",
+          "终极天道碎片",
+          "延寿丹"
+        ],
+        "notes": "寿命剩余29年，禁术种子活性58%"
+      },
+      "enemies": [],
+      "resource_ledger": [
+        {
+          "item": "中品灵石",
+          "start": 1,
+          "delta": 0,
+          "end": 1,
+          "reason": "无变化"
+        },
+        {
+          "item": "灵石",
+          "start": 3,
+          "delta": 0,
+          "end": 3,
+          "reason": "无变化"
+        }
+      ],
+      "scenes": [
+        {
+          "order": 1,
+          "pov": "林砚",
+          "goal": "召集所有人说明情况",
+          "location": "密室",
+          "characters": [
+            "林砚",
+            "林北辰",
+            "李沧",
+            "赵虎",
+            "苏婉",
+            "慕容寒",
+            "张天赐",
+            "宋晴",
+            "陈默"
+          ],
+          "words": 1600,
+          "tone": "沉重坚定",
+          "beats": [
+            "宋晴的预知让所有人心头一沉，十二个时辰的倒计时形同死刑",
+            "林砚深吸一口气：我可以用我的禁术种子吸收蓝色晶体，副本的核心就断了"
+          ]
+        },
+        {
+          "order": 2,
+          "pov": "林砚",
+          "goal": "说服李沧放弃阻挠",
+          "location": "密室",
+          "characters": [
+            "林砚",
+            "李沧"
+          ],
+          "words": 1200,
+          "tone": "针锋相对",
+          "beats": [
+            "李沧冷笑：你死了，那些碎片落在谁手里？",
+            "林砚反问：我死了，你能活着出去？李沧语塞"
+          ]
+        },
+        {
+          "order": 3,
+          "pov": "赵虎",
+          "goal": "调动舆论支持林砚",
+          "location": "密室",
+          "characters": [
+            "赵虎",
+            "其他成员"
+          ],
+          "words": 800,
+          "tone": "热血激昂",
+          "beats": [
+            "赵虎站起来：我和林砚一路从矿场杀出来的，他不是那种自私的人！",
+            "他环视四周：我信他！你们呢？陆续有人跟着举手表示支持"
+          ]
+        }
+      ],
+      "mysteries": {
+        "planted": [],
+        "resolved": [
+          {
+            "id": "myst_dungeon_acceleration",
+            "resolution": "林砚触碰晶体激活了副本的防御机制，导致怪物刷新加速"
+          }
+        ]
+      },
+      "storyline_advances": [
+        {
+          "storyline_name": "副本失控",
+          "stage": "pressure",
+          "change": "所有人同意林砚的冒险方案，但必须在十二个时辰内执行",
+          "consequence": "林砚的性命和晶体的去向成为唯一焦点",
+          "pressure": "吸收天道碎片可能导致禁术种子暴走，林砚的寿命可能再次锐减"
+        }
+      ]
+    },
+    {
+      "id": "v5ch08",
+      "title": "吸收与异变",
+      "summary": "林砚在所有人的注视下触碰蓝色晶体，禁术种子与晶体产生了剧烈的融合反应。副本开始崩塌，但林砚的身体也发生异变——黑色雾团与晶体融合后，诞生了一种全新的能力。",
+      "characters": [
+        "林砚",
+        "蓝色晶体",
+        "赵虎",
+        "慕容寒",
+        "林北辰",
+        "苏婉",
+        "宋晴",
+        "其他成员"
+      ],
+      "location": "据点地下·密室",
+      "events": [
+        {
+          "type": "premise",
+          "characters": [
+            "林砚",
+            "蓝色晶体"
+          ],
+          "subject": "林砚",
+          "change": "absorb",
+          "actor": "林砚",
+          "action": "use",
+          "target": "禁术种子吸收蓝色晶体",
+          "target_type": "premise",
+          "context": "林砚将手掌按在蓝色晶体上，催动丹田内的黑色雾团",
+          "result": "晶体化作流光涌入林砚体内，黑色雾团膨胀至原来三倍大小"
+        },
+        {
+          "type": "status",
+          "characters": [
+            "副本"
+          ],
+          "subject": "副本",
+          "change": "崩解",
+          "actor": "未知",
+          "action": "use",
+          "target": "副本能量",
+          "target_type": "status",
+          "context": "蓝色晶体被吸收后，笼罩据点的淡蓝色光膜开始破碎",
+          "result": "副本内的怪物化作光点消散，出入口的封锁逐一解除"
+        },
+        {
+          "type": "premise",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "transform",
+          "actor": "林砚",
+          "action": "awaken",
+          "target": "新能力·规则洞察",
+          "target_type": "premise",
+          "context": "黑色雾泉与晶体碎片融合后，林砚的识海中涌现出大量符文碎片",
+          "result": "林砚觉醒了一个被动能力——能够感知并理解周围三丈内存在的规则或禁制"
+        },
+        {
+          "type": "status",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "deteriorate",
+          "actor": "林砚",
+          "action": "use",
+          "target": "禁术种子副作用",
+          "target_type": "status",
+          "context": "新能力的诞生伴随着剧烈的副作用",
+          "result": "林砚的寿命锐减10年（剩余20年），鬓角白发增多"
+        }
+      ],
+      "conflict": "吸收成功带走了副本，但林砚的寿命再次缩减。新能力虽然强大，却需要一个‘规则的支配者’才能发挥正常——而林砚距离那个境界还很远。",
+      "pacing": "fast",
+      "timeline": {
+        "anchor": "第73天子夜",
+        "start_time": "子时",
+        "end_time": "丑时",
+        "duration": "一个时辰",
+        "time_jump": true,
+        "previous_gap": "当夜",
+        "transition": "经过白天的激烈争论，所有人达成一致，深夜执行吸收计划。"
+      },
+      "state_anchor": {
+        "cultivation": "练气三层→练气三层（新能力刚觉醒，尚未稳定）",
+        "spirit_stones": 1,
+        "allies": [
+          "赵虎",
+          "慕容寒",
+          "苏婉",
+          "张天赐",
+          "宋晴",
+          "林北辰",
+          "陈默"
+        ],
+        "injuries": [
+          "林砚生命力严重损耗（寿命减至20年）"
+        ],
+        "location": "据点地下·密室",
+        "key_items": [
+          "灵气追踪",
+          "中品灵石×1",
+          "终极天道碎片",
+          "延寿丹",
+          "规则洞察（被动）"
+        ],
+        "notes": "寿命剩余20年，禁术种子活性70%（融合后暂时稳定），新能力'规则洞察'范围三丈"
+      },
+      "enemies": [],
+      "resource_ledger": [
+        {
+          "item": "寿命",
+          "start": 29,
+          "delta": -9,
+          "end": 20,
+          "reason": "融合蓝色晶体时禁术种子爆发，一次性消耗9年寿命"
+        },
+        {
+          "item": "中品灵石",
+          "start": 1,
+          "delta": 0,
+          "end": 1,
+          "reason": "无变化"
+        },
+        {
+          "item": "灵石",
+          "start": 3,
+          "delta": 0,
+          "end": 3,
+          "reason": "无变化"
+        }
+      ],
+      "scenes": [
+        {
+          "order": 1,
+          "pov": "林砚",
+          "goal": "执行吸收晶体",
+          "location": "密室",
+          "characters": [
+            "林砚",
+            "蓝色晶体",
+            "赵虎",
+            "慕容寒",
+            "林北辰",
+            "其他成员"
+          ],
+          "words": 1400,
+          "tone": "紧张壮烈",
+          "beats": [
+            "林砚深吸一口气，将手掌按在蓝色晶体上",
+            "晶体表面裂开一道缝，流光顺着林砚的手臂涌入丹田，他的脸上瞬间布满黑色经络"
+          ]
+        },
+        {
+          "order": 2,
+          "pov": "林砚",
+          "goal": "承受融合的痛苦并觉醒新能力",
+          "location": "密室",
+          "characters": [
+            "林砚"
+          ],
+          "words": 1200,
+          "tone": "痛苦失声",
+          "beats": [
+            "黑色雾团在丹田中暴涨，几乎撑裂经脉，林砚咬紧牙关",
+            "同时他感到识海中涌入无数符文碎片，瞬间知道了墙壁上那道禁制如何解开——‘规则洞察’觉醒"
+          ]
+        },
+        {
+          "order": 3,
+          "pov": "慕容寒",
+          "goal": "观察林砚状态并确认副本解除",
+          "location": "密室",
+          "characters": [
+            "慕容寒",
+            "赵虎",
+            "林砚"
+          ],
+          "words": 700,
+          "tone": "冷冽中带着一丝担忧",
+          "beats": [
+            "蓝色光膜消散的瞬间，慕容寒感到空气流动恢复正常",
+            "他看向林砚，发现其鬓角多了几缕白发，心中暗叹"
+          ]
+        }
+      ],
+      "mysteries": {
+        "planted": [
+          {
+            "id": "myst_new_ability_limit",
+            "clue": "规则洞察虽然强大，但每次使用都会消耗寿命——林砚刚刚觉醒就感到寿命在缓慢流失",
+            "horizon": "next_volume",
+            "status": "open"
+          }
+        ],
+        "resolved": [
+          {
+            "id": "myst_rune_pattern",
+            "resolution": "副本符文与禁术同源的猜测被证实——蓝色晶体是禁术体系的一部分"
+          }
+        ]
+      },
+      "storyline_advances": [
+        {
+          "storyline_name": "副本失控",
+          "stage": "payoff",
+          "change": "林砚成功吸收蓝色晶体，副本被破解，所有人都安全了",
+          "consequence": "但林砚的寿命再次锐减至20年，新能力'规则洞察'的代价尚不清楚",
+          "pressure": "晶体被融合后，书友会内部对'天道碎片的使用权'的争夺暂时平息，但激进派的不满仍在积蓄"
+        }
+      ]
+    },
+    {
+      "id": "v5ch09",
+      "title": "余波中的暗流",
+      "summary": "副本解除后，据点恢复秩序。但激进派长老李沧暗中串联其他成员，以‘林砚私吞天道碎片’为由发起弹劾。林砚在长老会上展示规则洞察，勉强稳住局面。",
+      "characters": [
+        "林砚",
+        "林北辰",
+        "李沧",
+        "赵虎",
+        "苏婉",
+        "张天赐",
+        "慕容寒",
+        "陈默",
+        "其他长老"
+      ],
+      "location": "落霞城·书友会据点大厅",
+      "events": [
+        {
+          "type": "status",
+          "characters": [
+            "李沧"
+          ],
+          "subject": "李沧",
+          "change": "started",
+          "actor": "李沧",
+          "action": "discover",
+          "target": "林砚寿命锐减",
+          "target_type": "knowledge",
+          "context": "李沧在忙碌的人群中观察到林砚鬓角的白发和虚弱的气息",
+          "result": "李沧确认林砚在吸收晶体后实力大损，决定趁机动员其他长老弹劾"
+        },
+        {
+          "type": "gate",
+          "characters": [
+            "林砚",
+            "李沧"
+          ],
+          "subject": "李沧",
+          "change": "对峙",
+          "actor": "李沧",
+          "action": "use",
+          "target": "弹劾动议",
+          "target_type": "status",
+          "context": "长老会上，李沧要求林砚交出体内吸收的天道碎片，否则以叛徒论处",
+          "result": "现场气氛紧张，数名骨干成员站在李沧身后"
+        },
+        {
+          "type": "premise",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "use",
+          "actor": "林砚",
+          "action": "use",
+          "target": "规则洞察",
+          "target_type": "skill",
+          "context": "林砚走上前，将手按在会议桌上，催动新能力",
+          "result": "桌面上浮现出一道隐藏的符文——那是陈默之前留下的微弱禁制，林砚当众将其抹除"
+        },
+        {
+          "type": "status",
+          "characters": [
+            "林北辰"
+          ],
+          "subject": "林北辰",
+          "change": "decision",
+          "actor": "林北辰",
+          "action": "decide",
+          "target": "力保林砚",
+          "target_type": "status",
+          "context": "林北辰看到规则洞察的展示后，当众宣布支持林砚",
+          "result": "李沧的弹劾动议被暂时压制，但仇恨的种子已种下"
+        }
+      ],
+      "conflict": "林砚在寿命锐减的不利条件下，依靠新能力'规则洞察'在长老会上赢得喘息，但李沧的敌意并未消除。据点内部的裂痕反而加深了。",
+      "pacing": "medium",
+      "timeline": {
+        "anchor": "第75天午时",
+        "start_time": "午时",
+        "end_time": "酉时",
+        "duration": "当天",
+        "time_jump": true,
+        "previous_gap": "过了2天",
+        "transition": "副本解除后的两天里，林砚一直在休养，试图稳定丹田中的黑色雾团。两天后，李沧便发难。"
+      },
+      "state_anchor": {
+        "cultivation": "练气三层",
+        "spirit_stones": 1,
+        "allies": [
+          "赵虎",
+          "慕容寒",
+          "苏婉",
+          "张天赐",
+          "宋晴",
+          "林北辰",
+          "陈默"
+        ],
+        "injuries": [
+          "林砚寿命锐减20年，身体虚弱"
+        ],
+        "location": "落霞城·书友会据点大厅",
+        "key_items": [
+          "灵气追踪",
+          "延寿丹（未服用）",
+          "终极天道碎片",
+          "规则洞察"
+        ],
+        "notes": "寿命剩余20年，禁术种子活性70%，新能力稳定但代价未知。陈默被剥夺了所有职务，临时隔离。"
+      },
+      "enemies": [],
+      "resource_ledger": [
+        {
+          "item": "中品灵石",
+          "start": 1,
+          "delta": 0,
+          "end": 1,
+          "reason": "无变化"
+        },
+        {
+          "item": "灵石",
+          "start": 3,
+          "delta": 0,
+          "end": 3,
+          "reason": "无变化"
+        }
+      ],
+      "scenes": [
+        {
+          "order": 1,
+          "pov": "林砚",
+          "goal": "在长老会上应对弹劾",
+          "location": "据点大厅",
+          "characters": [
+            "林砚",
+            "林北辰",
+            "李沧",
+            "其他长老"
+          ],
+          "words": 1500,
+          "tone": "紧张对峙",
+          "beats": [
+            "李沧率先发难：林砚私吞天道碎片，我们凭什么信任他？",
+            "林砚平静回应：没有我吸收那块晶体，你们都已经死在副本里了"
+          ]
+        },
+        {
+          "order": 2,
+          "pov": "林砚",
+          "goal": "展示规则洞察以证明价值",
+          "location": "据点大厅",
+          "characters": [
+            "林砚",
+            "林北辰",
+            "李沧"
+          ],
+          "words": 1200,
+          "tone": "冷静展示",
+          "beats": [
+            "林砚走到会议桌前，将手掌按在桌面，催动规则洞察",
+            "一道淡蓝色的符文轨迹浮现在木材纹理中——是陈默当初测试副本时留下的微弱禁制，林砚随手将其抹去"
+          ]
+        },
+        {
+          "order": 3,
+          "pov": "林北辰",
+          "goal": "出面调解并作出裁决",
+          "location": "据点大厅",
+          "characters": [
+            "林北辰",
+            "林砚",
+            "李沧"
+          ],
+          "words": 800,
+          "tone": "威严裁决",
+          "beats": [
+            "林北辰起身：林砚的能力对据点至关重要，我以长老的身份支持他",
+            "李沧冷哼一声，拂袖而去"
+          ]
+        }
+      ],
+      "mysteries": {
+        "planted": [
+          {
+            "id": "myst_licheng_backing",
+            "clue": "李沧虽然暂时退让，但他的眼神中带着一股有恃无恐的笃定——仿佛背后另有靠山",
+            "horizon": "next_volume",
+            "status": "open"
+          }
+        ],
+        "resolved": []
+      },
+      "storyline_advances": [
+        {
+          "storyline_name": "副本失控",
+          "stage": "payoff",
+          "change": "李沧的弹劾被压制，林砚暂时稳住了据点的控制权",
+          "consequence": "但李沧并未真正认输，且据点内部的裂痕已经公开化",
+          "pressure": "林砚的寿命只剩下20年，禁术种子活性过高，随时可能再次暴走"
+        }
+      ]
+    },
+    {
+      "id": "v5ch10",
+      "title": "新生的代价",
+      "summary": "林砚在安顿好据点事务后，独自修炼巩固新能力。他发现规则洞察不仅能感知禁制，还能读懂天道碎片的‘真名’——而终极天道碎片的真名揭示了一个惊天秘密：天道并非自然诞生，而是被创造出来的。",
+      "characters": [
+        "林砚",
+        "终极天道碎片（残像）"
+      ],
+      "location": "落霞城·书友会据点密室",
+      "events": [
+        {
+          "type": "premise",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "use",
+          "actor": "林砚",
+          "action": "use",
+          "target": "规则洞察（自我试验）",
+          "target_type": "skill",
+          "context": "林砚在密室中闭关，试图理解规则洞察的完整用法",
+          "result": "他发现规则洞察可以让他的视觉穿透物体的表面，直接看到其内部蕴含的'规则本质'"
+        },
+        {
+          "type": "premise",
+          "characters": [
+            "林砚",
+            "终极天道碎片"
+          ],
+          "subject": "终极天道碎片",
+          "change": "reveal",
+          "actor": "林砚",
+          "action": "discover",
+          "target": "碎片的真名",
+          "target_type": "knowledge",
+          "context": "林砚将规则洞察对准掌心中的终极天道碎片",
+          "result": "碎片的纹路在他眼中展开，浮现出三个古字——‘造物之基’"
+        },
+        {
+          "type": "premise",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "discover",
+          "actor": "林砚",
+          "action": "reveal",
+          "target": "天道的起源",
+          "target_type": "knowledge",
+          "context": "真名浮现的瞬间，大量信息涌入林砚的识海",
+          "result": "林砚得知：天道并非世界的自然规律，而是由远古大能创造的一套'维持系统'。破损的天道意味着系统的崩溃，而碎片则是系统的备份文件"
+        },
+        {
+          "type": "status",
+          "characters": [
+            "林砚"
+          ],
+          "subject": "林砚",
+          "change": "衰弱",
+          "actor": "林砚",
+          "action": "use",
+          "target": "规则洞察消耗寿命",
+          "target_type": "status",
+          "context": "读取终极碎片的信息消耗了林砚大量生命力",
+          "result": "林砚感到一阵头晕，寿命又消耗了半年（剩余19.5年）"
+        }
+      ],
+      "conflict": "林砚获得了世界真相的碎片，但这个真相过于惊世骇俗——天道是被人为创造的。他将带着这个秘密进入第五卷的结局与第六卷的开端。",
+      "pacing": "slow",
+      "timeline": {
+        "anchor": "第78天深夜至第79天清晨",
+        "start_time": "亥时",
+        "end_time": "寅时",
+        "duration": "一夜",
+        "time_jump": true,
+        "previous_gap": "过了3天",
+        "transition": "弹劾事件后的三天里，林砚谢绝所有访客，独自在密室中研究新能力。"
+      },
+      "state_anchor": {
+        "cultivation": "练气三层",
+        "spirit_stones": 1,
+        "allies": [
+          "赵虎",
+          "慕容寒",
+          "苏婉",
+          "张天赐",
+          "宋晴"
+        ],
+        "injuries": [
+          "林砚精神力严重损耗"
+        ],
+        "location": "落霞城·书友会据点密室",
+        "key_items": [
+          "灵气追踪",
+          "延寿丹（未服用）",
+          "终极天道碎片",
+          "规则洞察"
+        ],
+        "notes": "寿命剩余19.5年（又消耗半年），禁术种子活性72%，已耗尽10日的安全周期"
+      },
+      "enemies": [],
+      "resource_ledger": [
+        {
+          "item": "寿命",
+          "start": 20,
+          "delta": -0.5,
+          "end": 19.5,
+          "reason": "使用规则洞察读取终极碎片真名消耗半年寿命"
+        },
+        {
+          "item": "中品灵石",
+          "start": 1,
+          "delta": 0,
+          "end": 1,
+          "reason": "无变化"
+        },
+        {
+          "item": "灵石",
+          "start": 3,
+          "delta": 0,
+          "end": 3,
+          "reason": "无变化"
+        }
+      ],
+      "scenes": [
+        {
+          "order": 1,
+          "pov": "林砚",
+          "goal": "闭关研究规则洞察",
+          "location": "密室",
+          "characters": [
+            "林砚"
+          ],
+          "words": 1600,
+          "tone": "专注探索",
+          "beats": [
+            "林砚盘坐，催动规则洞察，视线穿透墙壁看到墙后的灵石矿脉",
+            "他又将视线转向自己的丹田，看到黑色雾团内部正在与终极碎片缓慢融合"
+          ]
+        },
+        {
+          "order": 2,
+          "pov": "林砚",
+          "goal": "读取终极碎片的真名",
+          "location": "密室",
+          "characters": [
+            "林砚",
+            "终极天道碎片"
+          ],
+          "words": 1200,
+          "tone": "震撼顿悟",
+          "beats": [
+            "林砚将规则洞察聚焦于掌心的碎片，三个古字在眼前浮现——‘造物之基’",
+            "大量的信息洪流冲入识海：天道是创造出来的系统，穿越者是系统的‘补丁’，而缉厄司则是系统的防火墙工程师"
+          ]
+        },
+        {
+          "order": 3,
+          "pov": "林砚",
+          "goal": "消化信息并计划下一步",
+          "location": "密室",
+          "characters": [
+            "林砚"
+          ],
+          "words": 800,
+          "tone": "沉重坚定",
+          "beats": [
+            "林砚睁开眼，额头上布满冷汗，但眼神却异常明亮",
+            "他自言自语：如果天道是造出来的……那它的创造者，一定还留下了什么"
+          ]
+        }
+      ],
+      "mysteries": {
+        "planted": [
+          {
+            "id": "myst_system_creator",
+            "clue": "‘造物之基’这个真名暗示天道并非自然产物，而远古大能创造天道的目的可能与穿越者的存在直接相关",
+            "horizon": "series",
+            "status": "open"
+          }
+        ],
+        "resolved": [
+          {
+            "id": "myst_dungeon_source",
+            "resolution": "陈默的副本核心是天道碎片‘造物之基’的一部分，其真正功能不是生成副本，而是测试世界的规则稳定性"
+          }
+        ]
+      },
+      "storyline_advances": [
+        {
+          "storyline_name": "副本失控",
+          "stage": "payoff",
+          "change": "林砚成功吸收了副本核心（天道碎片），并从中读取到天道的起源秘密",
+          "consequence": "林砚获得了超越现有认知的信息：天道是人工产物，缉厄司的本质是系统维护者",
+          "pressure": "这个秘密一旦泄露，整个书友会都可能分崩离析；但林砚的寿命已经不足20年，必须尽快找到对抗天道系统的突破口"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "changes": [
+    {
+      "path": "P1-V2-C4.characters",
+      "action": "sync_event_character",
+      "value": "沈毅"
+    },
+    {
+      "path": "P1-V2-C4.characters",
+      "action": "sync_scene_character",
+      "value": "老张（门外交谈）"
+    },
+    {
+      "path": "P1-V3-C7.characters",
+      "action": "sync_event_character",
+      "value": "林北辰"
+    },
+    {
+      "path": "P1-V6-C10.characters",
+      "action": "sync_event_character",
+      "value": "据点"
+    },
+    {
+      "path": "P1-V6-C10.characters",
+      "action": "sync_scene_character",
+      "value": "宋晴"
+    },
+    {
+      "path": "P1-V7-C6.characters",
+      "action": "sync_event_character",
+      "value": "楚怀远"
+    },
+    {
+      "path": "P1-V7-C6.characters",
+      "action": "sync_event_character",
+      "value": "赵明远"
+    },
+    {
+      "path": "P1-V7-C6.characters",
+      "action": "sync_scene_character",
+      "value": "其他穿越者"
+    },
+    {
+      "path": "P1-V7-C7.characters",
+      "action": "sync_event_character",
+      "value": "楚怀远"
+    },
+    {
+      "path": "P1-V7-C8.characters",
+      "action": "sync_event_character",
+      "value": "楚怀远"
+    },
+    {
+      "path": "P1-V8-C5.characters",
+      "action": "sync_event_character",
+      "value": "缉厄使"
+    },
+    {
+      "path": "P1-V8-C6.characters",
+      "action": "sync_event_character",
+      "value": "普通成员甲"
+    },
+    {
+      "path": "P1-V8-C6.characters",
+      "action": "sync_scene_character",
+      "value": "受影响的成员"
+    },
+    {
+      "path": "P1-V8-C9.characters",
+      "action": "sync_event_character",
+      "value": "楚江（女性人格）"
+    },
+    {
+      "path": "P1-V8-C9.characters",
+      "action": "sync_scene_character",
+      "value": "楚江（本我）"
+    },
+    {
+      "path": "P1-V9-C1.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第1章"
+    },
+    {
+      "path": "P1-V9-C2.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第2章"
+    },
+    {
+      "path": "P1-V9-C3.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第3章"
+    },
+    {
+      "path": "P1-V9-C4.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第4章"
+    },
+    {
+      "path": "P1-V9-C5.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第5章"
+    },
+    {
+      "path": "P1-V9-C5.characters",
+      "action": "sync_event_character",
+      "value": "据点成员"
+    },
+    {
+      "path": "P1-V9-C6.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第6章"
+    },
+    {
+      "path": "P1-V9-C7.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第7章"
+    },
+    {
+      "path": "P1-V9-C8.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第8章"
+    },
+    {
+      "path": "P1-V9-C8.characters",
+      "action": "sync_event_character",
+      "value": "林北辰"
+    },
+    {
+      "path": "P1-V9-C9.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第9章"
+    },
+    {
+      "path": "P1-V9-C10.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第10章"
+    },
+    {
+      "path": "P1-V10-C6.characters",
+      "action": "sync_scene_character",
+      "value": "五名守卫"
+    }
+  ]
+}

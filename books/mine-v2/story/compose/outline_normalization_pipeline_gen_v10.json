@@ -1,0 +1,14 @@
+{
+  "changes": [
+    {
+      "path": "P1-V10-C7.characters",
+      "action": "sync_scene_character",
+      "value": "五名守卫"
+    },
+    {
+      "path": "P1-V10-C9.characters",
+      "action": "sync_scene_character",
+      "value": "张天赐"
+    }
+  ]
+}
