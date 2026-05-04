@@ -37,8 +37,9 @@ The review result must include:
 3. Assess significance - does each item serve a story purpose?
 4. Look for uniqueness - avoid generic magic items
 5. Consider usability - do writers have enough detail to work with?
-6. Provide specific, actionable suggestions
-7. Prioritize high-impact issues
+6. Check RPG/DSL metadata: item type, rarity, power level, quantity tracking, tags, and state effects should match outline usage/resource ledgers
+7. Provide specific, actionable suggestions
+8. Prioritize high-impact issues
 
 ## Output Format Example
 

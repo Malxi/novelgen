@@ -37,8 +37,9 @@ The review result must include:
 3. Assess atmosphere - is the mood clear and evocative?
 4. Look for uniqueness - avoid generic settings
 5. Consider usability - do writers have enough sensory detail?
-6. Provide specific, actionable suggestions
-7. Prioritize high-impact issues
+6. Check RPG/DSL metadata: `rpg_map_type`, `danger_level`, encounter/resource tags, and state effects should be conservative and simulatable
+7. Provide specific, actionable suggestions
+8. Prioritize high-impact issues
 
 ## Output Format Example
 

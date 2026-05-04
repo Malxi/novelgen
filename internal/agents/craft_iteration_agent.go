@@ -234,6 +234,10 @@ func (a *CraftIterationAgent) ImproveCharacters(ctx context.Context, characters 
 	if err := a.base.Execute(ctx, params, input, &output.Characters); err != nil {
 		return nil, err
 	}
+	for name, char := range output.Characters {
+		char.NormalizeForCraft(name)
+		output.Characters[name] = char
+	}
 
 	logger.Info("✓ Improved %d characters", len(output.Characters))
 	return output.Characters, nil
@@ -262,6 +266,10 @@ func (a *CraftIterationAgent) ImproveLocations(ctx context.Context, locations ma
 	if err := a.base.Execute(ctx, params, input, &output.Locations); err != nil {
 		return nil, err
 	}
+	for name, loc := range output.Locations {
+		loc.NormalizeForCraft(name)
+		output.Locations[name] = loc
+	}
 
 	logger.Info("✓ Improved %d locations", len(output.Locations))
 	return output.Locations, nil
@@ -289,6 +297,10 @@ func (a *CraftIterationAgent) ImproveItems(ctx context.Context, items map[string
 
 	if err := a.base.Execute(ctx, params, input, &output.Items); err != nil {
 		return nil, err
+	}
+	for name, item := range output.Items {
+		item.NormalizeForCraft(name)
+		output.Items[name] = item
 	}
 
 	logger.Info("✓ Improved %d items", len(output.Items))

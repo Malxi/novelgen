@@ -140,6 +140,7 @@ func (na *NovelgenAdapter) toOutlineDSL(dsl *DSL) (*DSL, error) {
 	na.addOutlineCharacterPlaceholders(dsl)
 
 	// Convert locations (placeholders only)
+	seenLocations := make(map[string]bool)
 	for name, loc := range na.project.Locations {
 		location := Location{
 			ID:                sanitizeID(name),
@@ -157,7 +158,9 @@ func (na *NovelgenAdapter) toOutlineDSL(dsl *DSL) (*DSL, error) {
 		}
 
 		dsl.World.Locations = append(dsl.World.Locations, location)
+		seenLocations[location.ID] = true
 	}
+	na.addOutlineLocationPlaceholders(dsl, seenLocations)
 
 	// Convert outline to storyline
 	if err := na.convertOutlineToStoryline(dsl); err != nil {
@@ -186,7 +189,7 @@ func (na *NovelgenAdapter) addOutlineCharacterPlaceholders(dsl *DSL) {
 			for _, chapter := range volume.Chapters {
 				for _, rawName := range chapter.Characters {
 					name := canonicalCharacterName(rawName)
-					if name == "" || seen[name] || isGenericProtagonistName(name) {
+					if name == "" || seen[name] || isGenericProtagonistName(name) || characterReferenceMatchesPlayer(name, dsl.Characters.Player) {
 						continue
 					}
 					id := coalesceID(sanitizeID(name), fmt.Sprintf("npc_%02d", len(dsl.Characters.NPCs)+1))
@@ -206,6 +209,47 @@ func (na *NovelgenAdapter) addOutlineCharacterPlaceholders(dsl *DSL) {
 			}
 		}
 	}
+}
+
+func (na *NovelgenAdapter) addOutlineLocationPlaceholders(dsl *DSL, seen map[string]bool) {
+	if dsl == nil || dsl.World == nil {
+		return
+	}
+	if seen == nil {
+		seen = make(map[string]bool)
+		for _, loc := range dsl.World.Locations {
+			seen[loc.ID] = true
+		}
+	}
+	for _, part := range na.project.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				na.addOutlineLocationPlaceholder(dsl, seen, chapter.Location)
+				na.addOutlineLocationPlaceholder(dsl, seen, chapter.StateAnchor.Location)
+			}
+		}
+	}
+}
+
+func (na *NovelgenAdapter) addOutlineLocationPlaceholder(dsl *DSL, seen map[string]bool, raw string) {
+	name, description := splitOutlineLocation(raw)
+	if name == "" {
+		return
+	}
+	id := coalesceID(sanitizeID(name), fmt.Sprintf("location_%02d", len(dsl.World.Locations)+1))
+	if seen[id] {
+		return
+	}
+	seen[id] = true
+	dsl.World.Locations = append(dsl.World.Locations, Location{
+		ID:                id,
+		Name:              name,
+		Type:              inferMapTypeFromName(name),
+		Description:       coalesceString(description, fmt.Sprintf("Placeholder for %s from outline", name)),
+		Atmosphere:        description,
+		IsPlaceholder:     true,
+		PlaceholderSource: "outline",
+	})
 }
 
 func (na *NovelgenAdapter) loadStorySetup() *models.StorySetup {
@@ -584,6 +628,8 @@ func inferProtagonistNameFromSetup(setup *models.StorySetup) string {
 		text += storyline.Description + "\n" + storyline.Desire + "\n"
 	}
 	patterns := []*regexp.Regexp{
+		regexp.MustCompile(`(?:网络作者|作者|主角|矿奴|研发工程师|工程师|研发人员|适配者)([\p{Han}]{2,4})(?:穿越|觉醒|发现|逃离|需要|需|要|在)`),
+		regexp.MustCompile(`([\p{Han}]{2,4})(?:穿越为|穿越到|穿越成|觉醒|逃离|需在|需要)`),
 		regexp.MustCompile(`(?:主角|研发工程师|工程师|研发人员|适配者)([\p{Han}]{2,4})`),
 		regexp.MustCompile(`([\p{Han}]{2,4})要`),
 		regexp.MustCompile(`([\p{Han}]{2,4})在`),
@@ -603,7 +649,7 @@ func isLikelyCharacterName(value string) bool {
 	if len([]rune(value)) < 2 || len([]rune(value)) > 4 {
 		return false
 	}
-	noise := []string{"公元", "人类", "虫族", "沈氏", "主角", "火种", "机甲", "基因", "文明", "地球", "据点", "故事"}
+	noise := []string{"公元", "人类", "虫族", "沈氏", "主角", "火种", "机甲", "基因", "文明", "地球", "据点", "故事", "幽默", "黑色", "如何", "读者", "开局", "矿场", "修仙", "网络", "作者", "穿越"}
 	for _, word := range noise {
 		if value == word || strings.Contains(value, word) {
 			return false
@@ -739,6 +785,26 @@ func canonicalCharacterName(raw string) string {
 	return name
 }
 
+func characterReferenceMatchesPlayer(name string, player *Player) bool {
+	if player == nil {
+		return false
+	}
+	name = canonicalCharacterName(name)
+	if name == "" {
+		return false
+	}
+	for _, candidate := range []string{player.Name, player.ID} {
+		candidate = canonicalCharacterName(candidate)
+		if candidate == "" {
+			continue
+		}
+		if name == candidate {
+			return true
+		}
+	}
+	return false
+}
+
 func isProtagonistRole(role string) bool {
 	role = strings.ToLower(strings.TrimSpace(role))
 	return role == "protagonist" || role == "主角" || strings.Contains(role, "主角")
@@ -747,6 +813,40 @@ func isProtagonistRole(role string) bool {
 func isGenericProtagonistName(name string) bool {
 	name = strings.ToLower(strings.TrimSpace(name))
 	return name == "" || name == "主角" || name == "protagonist" || name == "player"
+}
+
+func normalizeOutlineEventType(eventType, action, targetType string) string {
+	eventType = strings.ToLower(strings.TrimSpace(eventType))
+	action = strings.ToLower(strings.TrimSpace(action))
+	targetType = strings.ToLower(strings.TrimSpace(targetType))
+
+	switch eventType {
+	case "combat", "battle":
+		return "combat"
+	case "dialogue", "talk", "meet":
+		return "dialogue"
+	case "acquire", "item":
+		return "acquire"
+	case "move", "reach":
+		return "move"
+	case "status", "relationship", "goal", "storyline", "mystery", "plot_thread", "resource", "location", "transition":
+		return eventType
+	case "premise", "skill":
+		return eventTypeFromAction(action)
+	case "gate", "decision", "reversal":
+		return "story"
+	case "memory", "discover", "learn", "reveal", "witness", "prophecy":
+		return "knowledge"
+	case "use":
+		if targetType == "item" || targetType == "resource" {
+			return "resource"
+		}
+		return eventTypeFromAction(action)
+	}
+	if action != "" {
+		return eventTypeFromAction(action)
+	}
+	return "story"
 }
 
 func (na *NovelgenAdapter) buildAttributeSystem(setup *models.StorySetup) *AttributeSystem {
@@ -1081,10 +1181,11 @@ func (na *NovelgenAdapter) convertEventToStep(event rpg.StoryEvent, enemies []rp
 		Order:       order,
 		Description: describeStoryEvent(event),
 	}
+	eventType := normalizeOutlineEventType(event.Type, event.GetAction(), event.GetTargetType())
 
 	// Determine event type and create appropriate event
-	switch event.Type {
-	case "combat", "battle":
+	switch eventType {
+	case "combat":
 		step.Event = Event{
 			Type: "combat",
 			Combat: &CombatEvent{
@@ -1095,7 +1196,7 @@ func (na *NovelgenAdapter) convertEventToStep(event rpg.StoryEvent, enemies []rp
 			},
 		}
 
-	case "dialogue", "talk":
+	case "dialogue":
 		step.Event = Event{
 			Type: "dialogue",
 			Dialogue: &DialogueEvent{
@@ -1104,7 +1205,7 @@ func (na *NovelgenAdapter) convertEventToStep(event rpg.StoryEvent, enemies []rp
 			},
 		}
 
-	case "acquire", "item":
+	case "acquire":
 		step.Event = Event{
 			Type: "acquire",
 			Acquire: &AcquireEvent{
@@ -1114,7 +1215,7 @@ func (na *NovelgenAdapter) convertEventToStep(event rpg.StoryEvent, enemies []rp
 			},
 		}
 
-	case "move", "reach":
+	case "move":
 		step.Event = Event{
 			Type: "move",
 			Move: &MoveEvent{
@@ -1123,19 +1224,15 @@ func (na *NovelgenAdapter) convertEventToStep(event rpg.StoryEvent, enemies []rp
 			},
 		}
 
-	case "status":
+	case "status", "knowledge", "relationship", "location", "transition", "story", "storyline", "mystery", "plot_thread", "resource", "goal":
 		step.Event = Event{
-			Type: "status",
+			Type: eventType,
 		}
 
 	default:
-		// Generic event
 		step.Event = Event{
-			Type: event.Type,
+			Type: "story",
 		}
-	}
-	if strings.TrimSpace(step.Event.Type) == "" {
-		step.Event.Type = eventTypeFromAction(event.Action)
 	}
 	if step.Event.Type == "combat" && step.Event.Combat == nil {
 		step.Event.Combat = &CombatEvent{
@@ -1480,6 +1577,7 @@ func (na *NovelgenAdapter) convertNovelgenLocationToLocation(name string, loc rp
 		Events:         loc.Events,
 		IsPlaceholder:  false,
 	}
+	location.Properties = novelgenLocationProperties(loc)
 
 	// Add connections
 	for _, connected := range loc.ConnectedLocs {
@@ -1498,8 +1596,8 @@ func (na *NovelgenAdapter) convertNovelgenItemToItem(name string, item rpg.Novel
 		Name:        name,
 		Description: item.Description,
 		Type:        inferItemTypeFromNovelgen(item),
-		Rarity:      inferRarityFromSignificance(item.Significance),
-		Effects:     convertPowersToEffects(item.Powers),
+		Rarity:      coalesceString(item.Rarity, inferRarityFromSignificance(item.Significance)),
+		Effects:     novelgenItemEffects(item),
 	}
 }
 
@@ -1524,6 +1622,9 @@ func parseAge(age string) int {
 }
 
 func inferClassFromCharacter(char rpg.NovelgenCharacter) string {
+	if strings.TrimSpace(char.CombatRole) != "" {
+		return strings.TrimSpace(char.CombatRole)
+	}
 	// Infer RPG class from character info
 	for _, skill := range char.Skills {
 		skillLower := strings.ToLower(skill)
@@ -1549,6 +1650,9 @@ func inferStatsFromCharacter(char rpg.NovelgenCharacter) Stats {
 		AGI: 10,
 		INT: 10,
 		VIT: 10,
+	}
+	if char.RPGStats != nil {
+		return statsFromCraft(char.RPGStats, stats)
 	}
 
 	// Adjust based on skills
@@ -1589,6 +1693,9 @@ func inferMapTypeFromName(name string) string {
 }
 
 func inferMapTypeFromLocation(loc rpg.NovelgenLocation) string {
+	if strings.TrimSpace(loc.RPGMapType) != "" {
+		return strings.TrimSpace(loc.RPGMapType)
+	}
 	nameLower := strings.ToLower(loc.Name)
 	if strings.Contains(nameLower, "城") || strings.Contains(nameLower, "镇") || strings.Contains(nameLower, "据点") {
 		return "city"
@@ -1603,6 +1710,9 @@ func inferMapTypeFromLocation(loc rpg.NovelgenLocation) string {
 }
 
 func inferItemTypeFromNovelgen(item rpg.NovelgenItem) string {
+	if strings.TrimSpace(item.RPGItemType) != "" {
+		return strings.TrimSpace(item.RPGItemType)
+	}
 	typeLower := strings.ToLower(item.Type)
 	if strings.Contains(typeLower, "消耗") || strings.Contains(typeLower, "药") {
 		return "consumable"
@@ -1631,6 +1741,49 @@ func convertPowersToEffects(powers []string) map[string]interface{} {
 	effects := make(map[string]interface{})
 	for _, power := range powers {
 		effects[sanitizeID(power)] = power
+	}
+	return effects
+}
+
+func novelgenLocationProperties(loc rpg.NovelgenLocation) map[string]interface{} {
+	props := make(map[string]interface{})
+	if loc.DangerLevel > 0 {
+		props["danger_level"] = loc.DangerLevel
+	}
+	if len(loc.EncounterTags) > 0 {
+		props["encounter_tags"] = append([]string(nil), loc.EncounterTags...)
+	}
+	if len(loc.ResourceTags) > 0 {
+		props["resource_tags"] = append([]string(nil), loc.ResourceTags...)
+	}
+	if len(loc.DSLTags) > 0 {
+		props["dsl_tags"] = append([]string(nil), loc.DSLTags...)
+	}
+	if len(loc.StateEffects) > 0 {
+		props["state_effects"] = craftStateEffects(loc.StateEffects)
+	}
+	if len(props) == 0 {
+		return nil
+	}
+	return props
+}
+
+func novelgenItemEffects(item rpg.NovelgenItem) map[string]interface{} {
+	effects := convertPowersToEffects(item.Powers)
+	if item.PowerLevel > 0 {
+		effects["power_level"] = item.PowerLevel
+	}
+	if item.QuantityTracking {
+		effects["quantity_tracking"] = true
+	}
+	if len(item.DSLTags) > 0 {
+		effects["dsl_tags"] = append([]string(nil), item.DSLTags...)
+	}
+	if len(item.StateEffects) > 0 {
+		effects["state_effects"] = craftStateEffects(item.StateEffects)
+	}
+	if len(effects) == 0 {
+		return nil
 	}
 	return effects
 }

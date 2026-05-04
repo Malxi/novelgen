@@ -103,6 +103,7 @@ func (a *ModelAdapter) buildMetadata(dsl *DSL) {
 func (a *ModelAdapter) buildDefaultPlayer(dsl *DSL) {
 	playerName := "主角"
 	playerID := "protagonist"
+	playerStats := Stats{STR: 10, AGI: 10, INT: 10, VIT: 10, HP: 100, MP: 50}
 
 	if a.setup != nil && a.setup.ProjectName != "" {
 		playerID = sanitizeID(a.setup.ProjectName + "_protagonist")
@@ -114,22 +115,16 @@ func (a *ModelAdapter) buildDefaultPlayer(dsl *DSL) {
 			if ch.RoleInStory == "protagonist" || ch.RoleInStory == "主角" {
 				playerName = ch.Name
 				playerID = id
+				playerStats = statsFromCraft(ch.RPGStats, playerStats)
 				break
 			}
 		}
 	}
 
 	dsl.Characters.Player = &Player{
-		ID:   playerID,
-		Name: playerName,
-		Stats: Stats{
-			STR: 10,
-			AGI: 10,
-			INT: 10,
-			VIT: 10,
-			HP:  100,
-			MP:  50,
-		},
+		ID:          playerID,
+		Name:        playerName,
+		Stats:       playerStats,
 		Description: "主角",
 		RoleInStory: "protagonist",
 	}
@@ -358,7 +353,7 @@ func (a *ModelAdapter) buildChaptersFromOutline(dsl *DSL) {
 
 func (a *ModelAdapter) buildEventFromModel(evt models.Event, enemies []models.OutlineEnemy) Event {
 	dslEvent := Event{
-		Type:        evt.Type,
+		Type:        normalizeOutlineEventType(evt.Type, evt.Action, evt.TargetType),
 		StateDeltas: buildEventStateDeltas(evt),
 	}
 	if dslEvent.Type == "" {
@@ -759,14 +754,22 @@ func (a *ModelAdapter) buildPlaceholderNPCs(dsl *DSL) {
 	}
 
 	seen := make(map[string]bool)
+	if dsl.Characters != nil && dsl.Characters.Player != nil {
+		seen[strings.TrimSpace(dsl.Characters.Player.Name)] = true
+		seen[strings.TrimSpace(dsl.Characters.Player.ID)] = true
+	}
 	for _, part := range a.outline.Parts {
 		for _, vol := range part.Volumes {
 			for _, ch := range vol.Chapters {
-				for _, name := range ch.Characters {
+				for _, rawName := range ch.Characters {
+					name := canonicalCharacterName(rawName)
 					if seen[name] {
 						continue
 					}
 					seen[name] = true
+					if name == "" || isGenericProtagonistName(name) || characterReferenceMatchesPlayer(name, dsl.Characters.Player) {
+						continue
+					}
 
 					npcID := sanitizeID(name)
 					dsl.Characters.NPCs = append(dsl.Characters.NPCs, NPC{
@@ -787,34 +790,43 @@ func (a *ModelAdapter) buildPlaceholderLocations(dsl *DSL) {
 	}
 
 	seen := make(map[string]bool)
+	for _, loc := range dsl.World.Locations {
+		seen[loc.ID] = true
+	}
 	for _, part := range a.outline.Parts {
 		for _, vol := range part.Volumes {
 			for _, ch := range vol.Chapters {
-				locName, locDescription := splitOutlineLocation(ch.Location)
-				if locName == "" {
-					continue
-				}
-				locID := sanitizeID(locName)
-				if seen[locID] {
-					continue
-				}
-				seen[locID] = true
-
-				description := strings.TrimSpace(locDescription)
-				if description == "" {
-					description = fmt.Sprintf("Placeholder for %s from outline", locName)
-				}
-				dsl.World.Locations = append(dsl.World.Locations, Location{
-					ID:            locID,
-					Name:          locName,
-					Type:          "indoor",
-					Description:   description,
-					Atmosphere:    locDescription,
-					IsPlaceholder: true,
-				})
+				addModelOutlineLocationPlaceholder(dsl, seen, ch.Location)
+				addModelOutlineLocationPlaceholder(dsl, seen, ch.StateAnchor.Location)
 			}
 		}
 	}
+}
+
+func addModelOutlineLocationPlaceholder(dsl *DSL, seen map[string]bool, raw string) {
+	locName, locDescription := splitOutlineLocation(raw)
+	if locName == "" {
+		return
+	}
+	locID := coalesceID(sanitizeID(locName), fmt.Sprintf("location_%02d", len(dsl.World.Locations)+1))
+	if seen[locID] {
+		return
+	}
+	seen[locID] = true
+
+	description := strings.TrimSpace(locDescription)
+	if description == "" {
+		description = fmt.Sprintf("Placeholder for %s from outline", locName)
+	}
+	dsl.World.Locations = append(dsl.World.Locations, Location{
+		ID:                locID,
+		Name:              locName,
+		Type:              inferMapTypeFromName(locName),
+		Description:       description,
+		Atmosphere:        locDescription,
+		IsPlaceholder:     true,
+		PlaceholderSource: "outline",
+	})
 }
 
 func splitOutlineLocation(raw string) (string, string) {
@@ -839,10 +851,8 @@ func (a *ModelAdapter) buildCharacters(dsl *DSL) {
 		return
 	}
 
-	first := true
 	for id, ch := range a.characters {
-		if first && (ch.RoleInStory == "protagonist" || ch.RoleInStory == "主角") {
-			// Replace default player with crafted character
+		if isCraftProtagonist(ch) {
 			dsl.Characters.Player = &Player{
 				ID:           id,
 				Name:         ch.Name,
@@ -857,21 +867,44 @@ func (a *ModelAdapter) buildCharacters(dsl *DSL) {
 				Affiliations: ch.Affiliations,
 				RoleInStory:  ch.RoleInStory,
 				Voice:        ch.Voice,
-				Stats: Stats{
-					STR: 10,
-					AGI: 10,
-					INT: 10,
-					VIT: 10,
-					HP:  100,
-					MP:  50,
-				},
+				Class:        coalesceString(ch.CombatRole, "adventurer"),
+				Skills:       ch.Skills,
+				Stats:        statsFromCraft(ch.RPGStats, Stats{STR: 10, AGI: 10, INT: 10, VIT: 10, HP: 100, MP: 50}),
+				Traits:       traitsFromTags(ch.DSLTags),
 			}
-			first = false
+		} else if isCraftEnemy(ch) {
+			level := ch.PowerLevel
+			if level <= 0 && ch.RPGStats != nil {
+				level = ch.RPGStats.Level
+			}
+			if level <= 0 {
+				level = 1
+			}
+			stats := statsFromCraft(ch.RPGStats, Stats{STR: 6 + level, AGI: 4 + level, INT: 3 + level, VIT: 5 + level, HP: 40 + level*20, MP: 20 + level*10})
+			dsl.Characters.Enemies = append(dsl.Characters.Enemies, Enemy{
+				ID:          id,
+				Name:        ch.Name,
+				Type:        coalesceString(ch.RPGRole, coalesceString(ch.CombatRole, "enemy")),
+				Description: ch.Background,
+				Appearance:  ch.Appearance,
+				Abilities:   append([]string(nil), ch.Abilities...),
+				Level:       level,
+				Template: EnemyTemplate{
+					BaseLevel: level,
+					HPFormula: fmt.Sprintf("%d", stats.HP),
+					StatsPerLevel: map[string]int{
+						"str": maxPairInt(1, stats.STR),
+						"agi": maxPairInt(1, stats.AGI),
+						"int": maxPairInt(1, stats.INT),
+						"vit": maxPairInt(1, stats.VIT),
+					},
+				},
+			})
 		} else {
 			dsl.Characters.NPCs = append(dsl.Characters.NPCs, NPC{
 				ID:           id,
 				Name:         ch.Name,
-				Role:         ch.RoleInStory,
+				Role:         coalesceString(ch.RPGRole, ch.RoleInStory),
 				Description:  ch.Background,
 				Age:          parseAge(ch.Age),
 				Gender:       ch.Gender,
@@ -896,7 +929,7 @@ func (a *ModelAdapter) buildLocations(dsl *DSL) {
 		dslLoc := Location{
 			ID:          id,
 			Name:        loc.Name,
-			Type:        loc.Type,
+			Type:        coalesceString(loc.RPGMapType, loc.Type),
 			Description: loc.Description,
 			Appearance:  loc.Appearance,
 			Atmosphere:  loc.Atmosphere,
@@ -904,6 +937,7 @@ func (a *ModelAdapter) buildLocations(dsl *DSL) {
 			Inhabitants: loc.Inhabitants,
 			Events:      loc.Events,
 			Secrets:     loc.Secrets,
+			Properties:  craftLocationProperties(loc),
 		}
 
 		for _, connName := range loc.ConnectedLocations {
@@ -933,10 +967,142 @@ func (a *ModelAdapter) buildItems(dsl *DSL) {
 		dsl.World.Items = append(dsl.World.Items, Item{
 			ID:          id,
 			Name:        item.Name,
-			Type:        item.Type,
+			Type:        coalesceString(item.RPGItemType, item.Type),
+			Rarity:      item.Rarity,
 			Description: item.Description,
+			Effects:     craftItemEffects(item),
 		})
 	}
+}
+
+func isCraftProtagonist(ch *models.Character) bool {
+	if ch == nil {
+		return false
+	}
+	role := strings.ToLower(strings.TrimSpace(ch.RoleInStory + " " + ch.RPGRole))
+	return strings.Contains(role, "protagonist") || strings.Contains(role, "player") || strings.Contains(role, "主角")
+}
+
+func isCraftEnemy(ch *models.Character) bool {
+	if ch == nil {
+		return false
+	}
+	role := strings.ToLower(strings.TrimSpace(ch.RoleInStory + " " + ch.RPGRole))
+	return strings.Contains(role, "enemy") || strings.Contains(role, "boss") || strings.Contains(role, "antagonist") || strings.Contains(role, "反派")
+}
+
+func statsFromCraft(stats *models.CraftRPGStats, fallback Stats) Stats {
+	if stats == nil {
+		return fallback
+	}
+	out := fallback
+	if stats.STR > 0 {
+		out.STR = stats.STR
+	}
+	if stats.AGI > 0 {
+		out.AGI = stats.AGI
+	}
+	if stats.INT > 0 {
+		out.INT = stats.INT
+	}
+	if stats.VIT > 0 {
+		out.VIT = stats.VIT
+	}
+	if stats.HP > 0 {
+		out.HP = stats.HP
+	}
+	if stats.MP > 0 {
+		out.MP = stats.MP
+	}
+	return out
+}
+
+func traitsFromTags(tags []string) map[string]Trait {
+	if len(tags) == 0 {
+		return nil
+	}
+	traits := make(map[string]Trait, len(tags))
+	for _, tag := range tags {
+		id := sanitizeID(strings.TrimSpace(tag))
+		if id == "" {
+			continue
+		}
+		traits[id] = Trait{Unlocked: true, Trigger: "craft_tag"}
+	}
+	return traits
+}
+
+func craftLocationProperties(loc *models.Location) map[string]interface{} {
+	props := make(map[string]interface{})
+	if loc.DangerLevel > 0 {
+		props["danger_level"] = loc.DangerLevel
+	}
+	if len(loc.EncounterTags) > 0 {
+		props["encounter_tags"] = append([]string(nil), loc.EncounterTags...)
+	}
+	if len(loc.ResourceTags) > 0 {
+		props["resource_tags"] = append([]string(nil), loc.ResourceTags...)
+	}
+	if len(loc.DSLTags) > 0 {
+		props["dsl_tags"] = append([]string(nil), loc.DSLTags...)
+	}
+	if len(loc.StateEffects) > 0 {
+		props["state_effects"] = craftStateEffects(loc.StateEffects)
+	}
+	if len(props) == 0 {
+		return nil
+	}
+	return props
+}
+
+func craftItemEffects(item *models.Item) map[string]interface{} {
+	effects := make(map[string]interface{})
+	for _, power := range item.Powers {
+		if strings.TrimSpace(power) != "" {
+			effects[sanitizeID(power)] = power
+		}
+	}
+	if item.PowerLevel > 0 {
+		effects["power_level"] = item.PowerLevel
+	}
+	if item.QuantityTracking {
+		effects["quantity_tracking"] = true
+	}
+	if len(item.DSLTags) > 0 {
+		effects["dsl_tags"] = append([]string(nil), item.DSLTags...)
+	}
+	if len(item.StateEffects) > 0 {
+		effects["state_effects"] = craftStateEffects(item.StateEffects)
+	}
+	if len(effects) == 0 {
+		return nil
+	}
+	return effects
+}
+
+func craftStateEffects(effects []models.CraftStateEffect) []StateDelta {
+	deltas := make([]StateDelta, 0, len(effects))
+	for _, effect := range effects {
+		deltas = append(deltas, StateDelta{
+			Target: effect.Target,
+			Kind:   effect.Kind,
+			Field:  effect.Field,
+			From:   effect.From,
+			To:     effect.To,
+			Delta:  effect.Delta,
+			Unit:   effect.Unit,
+			Cost:   effect.Cost,
+			Note:   effect.Note,
+		})
+	}
+	return deltas
+}
+
+func maxPairInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func (a *ModelAdapter) inferPowerSystem() string {

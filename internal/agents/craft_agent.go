@@ -12,11 +12,14 @@ import (
 
 // CraftStorySetupSummary is a lightweight version of StorySetup for craft generation
 type CraftStorySetupSummary struct {
-	ProjectName string   `json:"project_name" md:"project_name" desc:"Name of the novel project"`
-	Genres      []string `json:"genres" md:"genres" desc:"List of story genres"`
-	Premise     string   `json:"premise" md:"premise" desc:"Story premise and core concept"`
-	Theme       string   `json:"theme" md:"theme" desc:"Central theme of the story"`
-	Rules       []string `json:"rules" md:"rules" desc:"Story world rules and constraints"`
+	ProjectName    string   `json:"project_name" md:"project_name" desc:"Name of the novel project"`
+	Genres         []string `json:"genres" md:"genres" desc:"List of story genres"`
+	Premise        string   `json:"premise" md:"premise" desc:"Story premise and core concept"`
+	Theme          string   `json:"theme" md:"theme" desc:"Central theme of the story"`
+	Rules          []string `json:"rules" md:"rules" desc:"Story world rules and constraints"`
+	Premises       []string `json:"premises,omitempty" md:"premises,omitempty" desc:"Ability/world systems with progression hints"`
+	WorldResources []string `json:"world_resources,omitempty" md:"world_resources,omitempty" desc:"Core resources and scarcity constraints"`
+	Storylines     []string `json:"storylines,omitempty" md:"storylines,omitempty" desc:"High-level story contracts and pressures"`
 }
 
 // CraftOutlineSummary is a lightweight version of Outline for craft generation
@@ -40,18 +43,35 @@ type CraftVolumeSummary struct {
 
 // CraftChapterSummary is a lightweight chapter summary
 type CraftChapterSummary struct {
-	ID         string   `json:"id" md:"id" desc:"Chapter ID"`
-	Title      string   `json:"title" md:"title" desc:"Chapter title"`
-	Summary    string   `json:"summary" md:"summary" desc:"Chapter summary"`
-	Characters []string `json:"characters" md:"characters" desc:"Characters appearing in this chapter"`
-	Location   string   `json:"location" md:"location" desc:"Primary location of this chapter"`
+	ID                string              `json:"id" md:"id" desc:"Chapter ID"`
+	Title             string              `json:"title" md:"title" desc:"Chapter title"`
+	Summary           string              `json:"summary" md:"summary" desc:"Chapter summary"`
+	Characters        []string            `json:"characters" md:"characters" desc:"Characters appearing in this chapter"`
+	Location          string              `json:"location" md:"location" desc:"Primary location of this chapter"`
+	StateAnchor       string              `json:"state_anchor,omitempty" md:"state_anchor,omitempty" desc:"Start-of-chapter protagonist state"`
+	Events            []CraftEventSummary `json:"events,omitempty" md:"events,omitempty" desc:"Typed events and state changes"`
+	SceneLocations    []string            `json:"scene_locations,omitempty" md:"scene_locations,omitempty" desc:"Scene-level locations"`
+	SceneCharacters   []string            `json:"scene_characters,omitempty" md:"scene_characters,omitempty" desc:"Scene-level characters"`
+	Enemies           []string            `json:"enemies,omitempty" md:"enemies,omitempty" desc:"Enemy names and levels"`
+	ResourceLedger    []string            `json:"resource_ledger,omitempty" md:"resource_ledger,omitempty" desc:"Tracked resource changes"`
+	StorylineAdvances []string            `json:"storyline_advances,omitempty" md:"storyline_advances,omitempty" desc:"Storyline state advances"`
+}
+
+// CraftEventSummary is a compact event representation for craft prompts.
+type CraftEventSummary struct {
+	Actor      string `json:"actor,omitempty" md:"actor,omitempty" desc:"Event actor"`
+	Action     string `json:"action,omitempty" md:"action,omitempty" desc:"Event action"`
+	Target     string `json:"target,omitempty" md:"target,omitempty" desc:"Event target"`
+	TargetType string `json:"target_type,omitempty" md:"target_type,omitempty" desc:"Target type for DSL state"`
+	Context    string `json:"context,omitempty" md:"context,omitempty" desc:"Event context"`
+	Result     string `json:"result,omitempty" md:"result,omitempty" desc:"Event result"`
 }
 
 // CraftGenCharactersInput is the input for character generation
 type CraftGenCharactersInput struct {
 	StorySetup       CraftStorySetupSummary `json:"story_setup" md:"story_setup" desc:"Story setup summary with premise, genres, theme, rules"`
 	Outline          CraftOutlineSummary    `json:"outline" md:"outline" desc:"Outline summary with parts, volumes, chapters"`
-	RelevantChapters []string               `json:"relevant_chapters" md:"relevant_chapters" desc:"Chapters where these characters appear"`
+	RelevantChapters []CraftChapterSummary  `json:"relevant_chapters" md:"relevant_chapters" desc:"Chapters where these characters appear"`
 	Characters       []string               `json:"characters" md:"characters" desc:"List of character names to generate"`
 	CustomPrompt     string                 `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional custom prompt for generation"`
 }
@@ -65,7 +85,7 @@ type CraftGenCharactersOutput struct {
 type CraftGenLocationsInput struct {
 	StorySetup       CraftStorySetupSummary `json:"story_setup" md:"story_setup" desc:"Story setup summary with premise, genres, theme, rules"`
 	Outline          CraftOutlineSummary    `json:"outline" md:"outline" desc:"Outline summary with parts, volumes, chapters"`
-	RelevantChapters []string               `json:"relevant_chapters" md:"relevant_chapters" desc:"Chapters where these locations appear"`
+	RelevantChapters []CraftChapterSummary  `json:"relevant_chapters" md:"relevant_chapters" desc:"Chapters where these locations appear"`
 	Locations        []string               `json:"locations" md:"locations" desc:"List of location names to generate"`
 	CustomPrompt     string                 `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional custom prompt for generation"`
 }
@@ -79,7 +99,7 @@ type CraftGenLocationsOutput struct {
 type CraftGenItemsInput struct {
 	StorySetup       CraftStorySetupSummary `json:"story_setup" md:"story_setup" desc:"Story setup summary with premise, genres, theme, rules"`
 	Outline          CraftOutlineSummary    `json:"outline" md:"outline" desc:"Outline summary with parts, volumes, chapters"`
-	RelevantChapters []string               `json:"relevant_chapters" md:"relevant_chapters" desc:"Chapters where these items appear"`
+	RelevantChapters []CraftChapterSummary  `json:"relevant_chapters" md:"relevant_chapters" desc:"Chapters where these items appear"`
 	Items            []string               `json:"items" md:"items" desc:"List of item names to generate"`
 	CustomPrompt     string                 `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional custom prompt for generation"`
 }
@@ -121,13 +141,41 @@ func (a *CraftAgent) SetLanguage(language string) {
 
 // buildStorySetupSummary creates a lightweight summary of StorySetup
 func (a *CraftAgent) buildStorySetupSummary() CraftStorySetupSummary {
-	return CraftStorySetupSummary{
+	summary := CraftStorySetupSummary{
 		ProjectName: a.setup.ProjectName,
 		Genres:      a.setup.Genres,
 		Premise:     a.setup.Premise,
 		Theme:       a.setup.Theme,
 		Rules:       a.setup.Rules,
 	}
+	for _, premise := range a.setup.Premises {
+		parts := []string{premise.Name, premise.Category, premise.Description}
+		if len(premise.Progression) > 0 {
+			parts = append(parts, fmt.Sprintf("progression_levels=%d", len(premise.Progression)))
+		}
+		summary.Premises = append(summary.Premises, joinNonEmpty(parts, " | "))
+	}
+	for _, resource := range a.setup.WorldResources {
+		summary.WorldResources = append(summary.WorldResources, joinNonEmpty([]string{
+			resource.Name,
+			resource.Category,
+			resource.Scarcity,
+			resource.Description,
+		}, " | "))
+	}
+	for _, storyline := range a.setup.Storylines {
+		summary.Storylines = append(summary.Storylines, joinNonEmpty([]string{
+			storyline.Name,
+			storyline.Type,
+			fmt.Sprintf("importance=%d", storyline.Importance),
+			storyline.SetupRole,
+			storyline.Desire,
+			storyline.Opposition,
+			storyline.Stakes,
+			storyline.OpenQuestion,
+		}, " | "))
+	}
+	return summary
 }
 
 // buildOutlineSummary creates a lightweight summary of Outline
@@ -144,14 +192,7 @@ func (a *CraftAgent) buildOutlineSummary() CraftOutlineSummary {
 				Summary: vol.Summary,
 			}
 			for _, ch := range vol.Chapters {
-				chSummary := CraftChapterSummary{
-					ID:         ch.ID,
-					Title:      ch.Title,
-					Summary:    ch.Summary,
-					Characters: ch.Characters,
-					Location:   ch.Location,
-				}
-				volSummary.Chapters = append(volSummary.Chapters, chSummary)
+				volSummary.Chapters = append(volSummary.Chapters, buildCraftChapterSummary(ch))
 			}
 			partSummary.Volumes = append(partSummary.Volumes, volSummary)
 		}
@@ -188,13 +229,7 @@ func (a *CraftAgent) GenerateCharacters(ctx context.Context, names []string, cus
 		return nil, err
 	}
 
-	// Validate and normalize
-	for name, char := range output.Characters {
-		if char.Name == "" {
-			char.Name = name
-		}
-		output.Characters[name] = char
-	}
+	output.Characters = normalizeGeneratedCharacters(names, output.Characters)
 
 	logger.Info("✓ Generated %d characters", len(output.Characters))
 	return output.Characters, nil
@@ -228,13 +263,7 @@ func (a *CraftAgent) GenerateLocations(ctx context.Context, names []string, cust
 		return nil, err
 	}
 
-	// Validate and normalize
-	for name, loc := range output.Locations {
-		if loc.Name == "" {
-			loc.Name = name
-		}
-		output.Locations[name] = loc
-	}
+	output.Locations = normalizeGeneratedLocations(names, output.Locations)
 
 	logger.Info("✓ Generated %d locations", len(output.Locations))
 	return output.Locations, nil
@@ -268,25 +297,19 @@ func (a *CraftAgent) GenerateItems(ctx context.Context, names []string, customPr
 		return nil, err
 	}
 
-	// Validate and normalize
-	for name, item := range output.Items {
-		if item.Name == "" {
-			item.Name = name
-		}
-		output.Items[name] = item
-	}
+	output.Items = normalizeGeneratedItems(names, output.Items)
 
 	logger.Info("✓ Generated %d items", len(output.Items))
 	return output.Items, nil
 }
 
-// findChaptersWithCharacters finds chapters that mention the given characters
-func (a *CraftAgent) findChaptersWithCharacters(characterNames []string) []string {
+// findChaptersWithCharacters finds chapters that mention the given characters.
+func (a *CraftAgent) findChaptersWithCharacters(characterNames []string) []CraftChapterSummary {
 	if a.outline == nil {
 		return nil
 	}
 
-	var relevantChapters []string
+	var relevantChapters []CraftChapterSummary
 	nameSet := make(map[string]bool)
 	for _, name := range characterNames {
 		nameSet[name] = true
@@ -295,24 +318,8 @@ func (a *CraftAgent) findChaptersWithCharacters(characterNames []string) []strin
 	for _, part := range a.outline.Parts {
 		for _, vol := range part.Volumes {
 			for _, ch := range vol.Chapters {
-				// Check if any character appears in this chapter's character list
-				for _, char := range ch.Characters {
-					if nameSet[char] {
-						chapterInfo := fmt.Sprintf("Chapter %s: %s\nSummary: %s", ch.ID, ch.Title, ch.Summary)
-						relevantChapters = append(relevantChapters, chapterInfo)
-						break
-					}
-				}
-
-				// Also check in events
-				for _, event := range ch.Events {
-					for _, char := range event.Characters {
-						if nameSet[char] {
-							chapterInfo := fmt.Sprintf("Chapter %s: %s\nSummary: %s", ch.ID, ch.Title, ch.Summary)
-							relevantChapters = append(relevantChapters, chapterInfo)
-							break
-						}
-					}
+				if chapterHasCharacter(ch, nameSet) {
+					relevantChapters = append(relevantChapters, buildCraftChapterSummary(ch))
 				}
 			}
 		}
@@ -322,12 +329,12 @@ func (a *CraftAgent) findChaptersWithCharacters(characterNames []string) []strin
 }
 
 // findChaptersWithLocations finds chapters that mention the given locations
-func (a *CraftAgent) findChaptersWithLocations(locationNames []string) []string {
+func (a *CraftAgent) findChaptersWithLocations(locationNames []string) []CraftChapterSummary {
 	if a.outline == nil {
 		return nil
 	}
 
-	var relevantChapters []string
+	var relevantChapters []CraftChapterSummary
 	nameSet := make(map[string]bool)
 	for _, name := range locationNames {
 		nameSet[name] = true
@@ -336,21 +343,8 @@ func (a *CraftAgent) findChaptersWithLocations(locationNames []string) []string 
 	for _, part := range a.outline.Parts {
 		for _, vol := range part.Volumes {
 			for _, ch := range vol.Chapters {
-				// Check if location matches
-				if nameSet[ch.Location] {
-					chapterInfo := fmt.Sprintf("Chapter %s: %s\nSummary: %s", ch.ID, ch.Title, ch.Summary)
-					relevantChapters = append(relevantChapters, chapterInfo)
-					continue
-				}
-
-				// Also check in summary and title
-				content := ch.Title + " " + ch.Summary
-				for name := range nameSet {
-					if strings.Contains(content, name) {
-						chapterInfo := fmt.Sprintf("Chapter %s: %s\nSummary: %s", ch.ID, ch.Title, ch.Summary)
-						relevantChapters = append(relevantChapters, chapterInfo)
-						break
-					}
+				if chapterHasLocation(ch, nameSet) {
+					relevantChapters = append(relevantChapters, buildCraftChapterSummary(ch))
 				}
 			}
 		}
@@ -360,12 +354,12 @@ func (a *CraftAgent) findChaptersWithLocations(locationNames []string) []string 
 }
 
 // findChaptersWithItems finds chapters that mention the given items
-func (a *CraftAgent) findChaptersWithItems(itemNames []string) []string {
+func (a *CraftAgent) findChaptersWithItems(itemNames []string) []CraftChapterSummary {
 	if a.outline == nil {
 		return nil
 	}
 
-	var relevantChapters []string
+	var relevantChapters []CraftChapterSummary
 	nameSet := make(map[string]bool)
 	for _, name := range itemNames {
 		nameSet[name] = true
@@ -374,32 +368,296 @@ func (a *CraftAgent) findChaptersWithItems(itemNames []string) []string {
 	for _, part := range a.outline.Parts {
 		for _, vol := range part.Volumes {
 			for _, ch := range vol.Chapters {
-				// Check in events for item-related events
-				found := false
-				for _, event := range ch.Events {
-					if nameSet[event.Subject] {
-						chapterInfo := fmt.Sprintf("Chapter %s: %s\nSummary: %s", ch.ID, ch.Title, ch.Summary)
-						relevantChapters = append(relevantChapters, chapterInfo)
-						found = true
-						break
-					}
-				}
-				if found {
-					continue
-				}
-
-				// Also check in summary and title
-				content := ch.Title + " " + ch.Summary
-				for name := range nameSet {
-					if strings.Contains(content, name) {
-						chapterInfo := fmt.Sprintf("Chapter %s: %s\nSummary: %s", ch.ID, ch.Title, ch.Summary)
-						relevantChapters = append(relevantChapters, chapterInfo)
-						break
-					}
+				if chapterHasItem(ch, nameSet) {
+					relevantChapters = append(relevantChapters, buildCraftChapterSummary(ch))
 				}
 			}
 		}
 	}
 
 	return relevantChapters
+}
+
+func buildCraftChapterSummary(ch models.Chapter) CraftChapterSummary {
+	summary := CraftChapterSummary{
+		ID:         ch.ID,
+		Title:      ch.Title,
+		Summary:    ch.Summary,
+		Characters: append([]string(nil), ch.Characters...),
+		Location:   ch.Location,
+	}
+	summary.StateAnchor = formatStateAnchor(ch.StateAnchor)
+	for _, event := range ch.Events {
+		summary.Events = append(summary.Events, CraftEventSummary{
+			Actor:      event.GetActor(),
+			Action:     event.GetAction(),
+			Target:     event.GetTarget(),
+			TargetType: event.GetTargetType(),
+			Context:    event.Context,
+			Result:     coalesceText(event.Result, event.Change, event.Details),
+		})
+	}
+	for _, scene := range ch.Scenes {
+		if scene.Location != "" {
+			summary.SceneLocations = append(summary.SceneLocations, scene.Location)
+		}
+		summary.SceneCharacters = append(summary.SceneCharacters, scene.Characters...)
+	}
+	for _, enemy := range ch.Enemies {
+		summary.Enemies = append(summary.Enemies, joinNonEmpty([]string{
+			enemy.Name,
+			enemy.Faction,
+			enemy.Tier,
+			fmt.Sprintf("level=%d", enemy.Level),
+			fmt.Sprintf("count=%d", enemy.Count),
+		}, " | "))
+	}
+	for _, entry := range ch.ResourceLedger {
+		summary.ResourceLedger = append(summary.ResourceLedger,
+			fmt.Sprintf("%s: %d %+d = %d (%s)", entry.Item, entry.Start, entry.Delta, entry.End, entry.Reason))
+	}
+	for _, advance := range ch.StorylineAdvances {
+		summary.StorylineAdvances = append(summary.StorylineAdvances, joinNonEmpty([]string{
+			advance.StorylineName,
+			advance.Stage,
+			advance.Change,
+			advance.Consequence,
+			advance.Pressure,
+		}, " | "))
+	}
+	summary.SceneLocations = compactStrings(summary.SceneLocations)
+	summary.SceneCharacters = compactStrings(summary.SceneCharacters)
+	return summary
+}
+
+func chapterHasCharacter(ch models.Chapter, names map[string]bool) bool {
+	for _, name := range ch.Characters {
+		if names[name] {
+			return true
+		}
+	}
+	for _, scene := range ch.Scenes {
+		for _, name := range scene.Characters {
+			if names[name] {
+				return true
+			}
+		}
+		if names[scene.POV] {
+			return true
+		}
+	}
+	for _, event := range ch.Events {
+		if names[event.GetActor()] || (event.GetTargetType() == models.TargetTypeCharacter && names[event.GetTarget()]) {
+			return true
+		}
+		for _, name := range event.Characters {
+			if names[name] {
+				return true
+			}
+		}
+	}
+	for _, ally := range ch.StateAnchor.Allies {
+		if names[ally] {
+			return true
+		}
+	}
+	for _, enemy := range ch.Enemies {
+		if names[enemy.Name] {
+			return true
+		}
+	}
+	return false
+}
+
+func chapterHasLocation(ch models.Chapter, names map[string]bool) bool {
+	if names[ch.Location] || names[ch.StateAnchor.Location] {
+		return true
+	}
+	for _, scene := range ch.Scenes {
+		if names[scene.Location] {
+			return true
+		}
+	}
+	for _, event := range ch.Events {
+		if event.GetTargetType() == models.TargetTypeLocation && names[event.GetTarget()] {
+			return true
+		}
+		if names[event.Context] {
+			return true
+		}
+	}
+	content := ch.Title + " " + ch.Summary
+	for name := range names {
+		if strings.Contains(content, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func chapterHasItem(ch models.Chapter, names map[string]bool) bool {
+	for _, item := range ch.StateAnchor.KeyItems {
+		if names[item] {
+			return true
+		}
+	}
+	for _, entry := range ch.ResourceLedger {
+		if names[entry.Item] {
+			return true
+		}
+	}
+	for _, event := range ch.Events {
+		if event.GetTargetType() == models.TargetTypeItem && names[event.GetTarget()] {
+			return true
+		}
+		if event.Type == models.EventTypeItem && names[event.GetTarget()] {
+			return true
+		}
+	}
+	content := ch.Title + " " + ch.Summary
+	for name := range names {
+		if strings.Contains(content, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizeGeneratedCharacters(requested []string, generated map[string]models.Character) map[string]models.Character {
+	out := make(map[string]models.Character, len(generated))
+	for _, name := range requested {
+		char, ok := generated[name]
+		if !ok {
+			for key, candidate := range generated {
+				if candidate.Name == name {
+					char = candidate
+					delete(generated, key)
+					ok = true
+					break
+				}
+			}
+		}
+		if !ok {
+			continue
+		}
+		char.NormalizeForCraft(name)
+		out[name] = char
+	}
+	if len(out) > 0 {
+		return out
+	}
+	for name, char := range generated {
+		char.NormalizeForCraft(name)
+		out[name] = char
+	}
+	return out
+}
+
+func normalizeGeneratedLocations(requested []string, generated map[string]models.Location) map[string]models.Location {
+	out := make(map[string]models.Location, len(generated))
+	for _, name := range requested {
+		loc, ok := generated[name]
+		if !ok {
+			for key, candidate := range generated {
+				if candidate.Name == name {
+					loc = candidate
+					delete(generated, key)
+					ok = true
+					break
+				}
+			}
+		}
+		if !ok {
+			continue
+		}
+		loc.NormalizeForCraft(name)
+		out[name] = loc
+	}
+	if len(out) > 0 {
+		return out
+	}
+	for name, loc := range generated {
+		loc.NormalizeForCraft(name)
+		out[name] = loc
+	}
+	return out
+}
+
+func normalizeGeneratedItems(requested []string, generated map[string]models.Item) map[string]models.Item {
+	out := make(map[string]models.Item, len(generated))
+	for _, name := range requested {
+		item, ok := generated[name]
+		if !ok {
+			for key, candidate := range generated {
+				if candidate.Name == name {
+					item = candidate
+					delete(generated, key)
+					ok = true
+					break
+				}
+			}
+		}
+		if !ok {
+			continue
+		}
+		item.NormalizeForCraft(name)
+		out[name] = item
+	}
+	if len(out) > 0 {
+		return out
+	}
+	for name, item := range generated {
+		item.NormalizeForCraft(name)
+		out[name] = item
+	}
+	return out
+}
+
+func formatStateAnchor(anchor models.StateAnchor) string {
+	return joinNonEmpty([]string{
+		"cultivation=" + anchor.Cultivation,
+		fmt.Sprintf("spirit_stones=%d", anchor.SpiritStones),
+		"location=" + anchor.Location,
+		"allies=" + strings.Join(anchor.Allies, ", "),
+		"injuries=" + strings.Join(anchor.Injuries, ", "),
+		"key_items=" + strings.Join(anchor.KeyItems, ", "),
+		anchor.Notes,
+	}, "; ")
+}
+
+func joinNonEmpty(values []string, sep string) string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" && value != "level=0" && value != "count=0" && value != "spirit_stones=0" {
+			out = append(out, value)
+		}
+	}
+	return strings.Join(out, sep)
+}
+
+func compactStrings(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	seen := map[string]bool{}
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		out = append(out, value)
+	}
+	return out
+}
+
+func coalesceText(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }

@@ -30,6 +30,12 @@ Each item must include:
 - **related_items**: Array of related item names (optional)
 - **secrets**: Hidden aspects of this item (optional)
 - **notes**: Additional notes for writers (optional)
+- **rpg_item_type**: Optional RPG item type: `weapon`, `armor`, `consumable`, `artifact`, `document`, `resource`, `key`, or `material`
+- **rarity**: Optional RPG rarity: `common`, `uncommon`, `rare`, `epic`, `legendary`, or `unique`
+- **power_level**: Optional non-negative integer power level for simulation
+- **quantity_tracking**: Optional boolean; true only for countable resources/currencies/consumables
+- **dsl_tags**: Optional stable tags for RPG-DSL conversion
+- **state_effects**: Optional array of static state effects with `target`, `kind`, `field`, `from`, `to`, `delta`, `unit`, `cost`, `note`
 
 ## Guidelines
 
@@ -38,8 +44,10 @@ Each item must include:
 3. Items should fit the story's genre and style
 4. **Use relevant_chapters to understand item context** - these chapters show how the item is used in the story
 5. **Align item function and significance with events in relevant chapters** - the item should serve a clear purpose
-6. Include details about appearance, function, and importance
-7. Keep all content in the specified language
+6. Use resource ledgers and item events to set RPG type, rarity, quantity tracking, and state effects
+7. Keep state effects deterministic and numeric when possible; do not invent future ownership changes beyond the outline
+8. Include details about appearance, function, and importance
+9. Keep all content in the specified language
 
 ## Output Format Example
 
@@ -59,6 +67,14 @@ Each item must include:
     "significance": "Key to defeating the Dark Lord",
     "related_items": ["Shield of Dawn", "Armor of Light"],
     "secrets": "Contains a fragment of a god's soul",
+    "rpg_item_type": "weapon",
+    "rarity": "legendary",
+    "power_level": 8,
+    "quantity_tracking": false,
+    "dsl_tags": ["artifact", "anti_dark_lord"],
+    "state_effects": [
+      {"target": "protagonist", "kind": "equipment", "field": "weapon", "to": "Item Name", "note": "Equipped when acquired"}
+    ],
     "notes": "Glows brighter when near evil"
   }
 }

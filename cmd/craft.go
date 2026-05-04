@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"novelgen/internal/agents"
@@ -36,9 +37,9 @@ var craftCmd = &cobra.Command{
 
 This command scans the outline and setup to identify all story elements and generates
 detailed profiles for each:
-  - Characters: appearance, personality, background, motivation, goals, relationships, affiliations
-  - Locations: description, atmosphere, sensory details, history, significance
-  - Items: appearance, function, origin, powers, limitations, significance
+  - Characters: appearance, personality, background, motivation, affiliations, RPG/DSL roles and stats
+  - Locations: description, atmosphere, sensory details, history, significance, RPG/DSL map metadata
+  - Items: appearance, function, origin, powers, limitations, significance, RPG/DSL item metadata
   - Organizations: factions, guilds, empires with goals, structure, relationships
   - Races: species with biology, culture, society, abilities
   - Ability Systems: magic, cultivation, technology systems with mechanics
@@ -290,27 +291,50 @@ func (e *ElementExtractor) Extract() *ExtractedElements {
 	for _, part := range e.outline.Parts {
 		for _, volume := range part.Volumes {
 			for _, chapter := range volume.Chapters {
-				// Extract characters
 				for _, char := range chapter.Characters {
-					if !charMap[char] {
-						charMap[char] = true
-						result.Characters = append(result.Characters, char)
+					addExtractedName(char, charMap, &result.Characters)
+				}
+				for _, ally := range chapter.StateAnchor.Allies {
+					addExtractedName(ally, charMap, &result.Characters)
+				}
+				for _, enemy := range chapter.Enemies {
+					addExtractedName(enemy.Name, charMap, &result.Characters)
+				}
+
+				addExtractedName(chapter.Location, locMap, &result.Locations)
+				addExtractedName(chapter.StateAnchor.Location, locMap, &result.Locations)
+
+				for _, item := range chapter.StateAnchor.KeyItems {
+					addExtractedName(item, itemMap, &result.Items)
+				}
+				for _, entry := range chapter.ResourceLedger {
+					addExtractedName(entry.Item, itemMap, &result.Items)
+				}
+				for _, scene := range chapter.Scenes {
+					addExtractedName(scene.POV, charMap, &result.Characters)
+					for _, char := range scene.Characters {
+						addExtractedName(char, charMap, &result.Characters)
 					}
+					addExtractedName(scene.Location, locMap, &result.Locations)
 				}
-
-				// Extract location
-				if chapter.Location != "" && !locMap[chapter.Location] {
-					locMap[chapter.Location] = true
-					result.Locations = append(result.Locations, chapter.Location)
-				}
-
-				// Extract items from events
 				for _, event := range chapter.Events {
-					if event.Type == models.EventTypeItem && event.Subject != "" {
-						if !itemMap[event.Subject] {
-							itemMap[event.Subject] = true
-							result.Items = append(result.Items, event.Subject)
-						}
+					addExtractedName(event.GetActor(), charMap, &result.Characters)
+					switch event.GetTargetType() {
+					case models.TargetTypeItem:
+						addExtractedName(event.GetTarget(), itemMap, &result.Items)
+					case models.TargetTypeLocation:
+						addExtractedName(event.GetTarget(), locMap, &result.Locations)
+					case models.TargetTypeCharacter:
+						addExtractedName(event.GetTarget(), charMap, &result.Characters)
+					}
+					if event.Type == models.EventTypeItem {
+						addExtractedName(event.GetTarget(), itemMap, &result.Items)
+					}
+					if isItemAction(event.GetAction()) && event.GetTarget() != "" && event.GetTargetType() == "" {
+						addExtractedName(event.GetTarget(), itemMap, &result.Items)
+					}
+					if event.Context != "" {
+						addExtractedName(event.Context, locMap, &result.Locations)
 					}
 				}
 			}
@@ -345,6 +369,38 @@ func (e *ElementExtractor) Extract() *ExtractedElements {
 	return result
 }
 
+func addExtractedName(name string, seen map[string]bool, out *[]string) {
+	name = cleanExtractedName(name)
+	if name == "" || seen[name] {
+		return
+	}
+	seen[name] = true
+	*out = append(*out, name)
+}
+
+func cleanExtractedName(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return ""
+	}
+	for _, sep := range []string{"：", ":", "\n", " - ", " -- "} {
+		if idx := strings.Index(name, sep); idx > 0 {
+			name = strings.TrimSpace(name[:idx])
+			break
+		}
+	}
+	return name
+}
+
+func isItemAction(action string) bool {
+	switch action {
+	case models.ActionAcquire, models.ActionUse, models.ActionLose, models.ActionCraft:
+		return true
+	default:
+		return false
+	}
+}
+
 func filterElementsByChapter(elements *ExtractedElements, chapterID string, outline *models.Outline) *ExtractedElements {
 	result := &ExtractedElements{
 		Characters: make([]string, 0),
@@ -357,34 +413,8 @@ func filterElementsByChapter(elements *ExtractedElements, chapterID string, outl
 		return result
 	}
 
-	// Get characters from this chapter
-	charMap := make(map[string]bool)
-	for _, char := range chapter.Characters {
-		charMap[char] = true
-	}
-	for _, char := range elements.Characters {
-		if charMap[char] {
-			result.Characters = append(result.Characters, char)
-		}
-	}
-
-	// Get location from this chapter
-	if chapter.Location != "" {
-		result.Locations = append(result.Locations, chapter.Location)
-	}
-
-	// Get items from this chapter's events
-	itemMap := make(map[string]bool)
-	for _, event := range chapter.Events {
-		if event.Type == models.EventTypeItem && event.Subject != "" {
-			itemMap[event.Subject] = true
-		}
-	}
-	for _, item := range elements.Items {
-		if itemMap[item] {
-			result.Items = append(result.Items, item)
-		}
-	}
+	charMap, locMap, itemMap := collectChapterElementSets(*chapter)
+	filterElementSet(elements, result, charMap, locMap, itemMap)
 
 	return result
 }
@@ -406,34 +436,13 @@ func filterElementsByVolume(elements *ExtractedElements, volumeID string, outlin
 	itemMap := make(map[string]bool)
 
 	for _, chapter := range volume.Chapters {
-		for _, char := range chapter.Characters {
-			charMap[char] = true
-		}
-		if chapter.Location != "" {
-			locMap[chapter.Location] = true
-		}
-		for _, event := range chapter.Events {
-			if event.Type == models.EventTypeItem && event.Subject != "" {
-				itemMap[event.Subject] = true
-			}
-		}
+		chChars, chLocs, chItems := collectChapterElementSets(chapter)
+		mergeBoolMap(charMap, chChars)
+		mergeBoolMap(locMap, chLocs)
+		mergeBoolMap(itemMap, chItems)
 	}
 
-	for _, char := range elements.Characters {
-		if charMap[char] {
-			result.Characters = append(result.Characters, char)
-		}
-	}
-	for _, loc := range elements.Locations {
-		if locMap[loc] {
-			result.Locations = append(result.Locations, loc)
-		}
-	}
-	for _, item := range elements.Items {
-		if itemMap[item] {
-			result.Items = append(result.Items, item)
-		}
-	}
+	filterElementSet(elements, result, charMap, locMap, itemMap)
 
 	return result
 }
@@ -456,44 +465,103 @@ func filterElementsByPart(elements *ExtractedElements, partID string, outline *m
 
 	for _, volume := range part.Volumes {
 		for _, chapter := range volume.Chapters {
-			for _, char := range chapter.Characters {
-				charMap[char] = true
-			}
-			if chapter.Location != "" {
-				locMap[chapter.Location] = true
-			}
-			for _, event := range chapter.Events {
-				if event.Type == models.EventTypeItem && event.Subject != "" {
-					itemMap[event.Subject] = true
-				}
-			}
+			chChars, chLocs, chItems := collectChapterElementSets(chapter)
+			mergeBoolMap(charMap, chChars)
+			mergeBoolMap(locMap, chLocs)
+			mergeBoolMap(itemMap, chItems)
 		}
 	}
 
-	for _, char := range elements.Characters {
-		if charMap[char] {
-			result.Characters = append(result.Characters, char)
-		}
-	}
-	for _, loc := range elements.Locations {
-		if locMap[loc] {
-			result.Locations = append(result.Locations, loc)
-		}
-	}
-	for _, item := range elements.Items {
-		if itemMap[item] {
-			result.Items = append(result.Items, item)
-		}
-	}
+	filterElementSet(elements, result, charMap, locMap, itemMap)
 
 	return result
 }
 
+func collectChapterElementSets(chapter models.Chapter) (map[string]bool, map[string]bool, map[string]bool) {
+	charMap := make(map[string]bool)
+	locMap := make(map[string]bool)
+	itemMap := make(map[string]bool)
+	addToSet := func(value string, target map[string]bool) {
+		value = cleanExtractedName(value)
+		if value != "" {
+			target[value] = true
+		}
+	}
+	for _, char := range chapter.Characters {
+		addToSet(char, charMap)
+	}
+	for _, ally := range chapter.StateAnchor.Allies {
+		addToSet(ally, charMap)
+	}
+	for _, enemy := range chapter.Enemies {
+		addToSet(enemy.Name, charMap)
+	}
+	addToSet(chapter.Location, locMap)
+	addToSet(chapter.StateAnchor.Location, locMap)
+	for _, item := range chapter.StateAnchor.KeyItems {
+		addToSet(item, itemMap)
+	}
+	for _, entry := range chapter.ResourceLedger {
+		addToSet(entry.Item, itemMap)
+	}
+	for _, scene := range chapter.Scenes {
+		addToSet(scene.POV, charMap)
+		for _, char := range scene.Characters {
+			addToSet(char, charMap)
+		}
+		addToSet(scene.Location, locMap)
+	}
+	for _, event := range chapter.Events {
+		addToSet(event.GetActor(), charMap)
+		switch event.GetTargetType() {
+		case models.TargetTypeItem:
+			addToSet(event.GetTarget(), itemMap)
+		case models.TargetTypeLocation:
+			addToSet(event.GetTarget(), locMap)
+		case models.TargetTypeCharacter:
+			addToSet(event.GetTarget(), charMap)
+		}
+		if event.Type == models.EventTypeItem || isItemAction(event.GetAction()) {
+			addToSet(event.GetTarget(), itemMap)
+		}
+		addToSet(event.Context, locMap)
+	}
+	return charMap, locMap, itemMap
+}
+
+func filterElementSet(elements, result *ExtractedElements, charMap, locMap, itemMap map[string]bool) {
+	for _, char := range elements.Characters {
+		if charMap[cleanExtractedName(char)] {
+			result.Characters = append(result.Characters, char)
+		}
+	}
+	for _, loc := range elements.Locations {
+		if locMap[cleanExtractedName(loc)] {
+			result.Locations = append(result.Locations, loc)
+		}
+	}
+	for _, item := range elements.Items {
+		if itemMap[cleanExtractedName(item)] {
+			result.Items = append(result.Items, item)
+		}
+	}
+}
+
+func mergeBoolMap(dst, src map[string]bool) {
+	for key := range src {
+		dst[key] = true
+	}
+}
+
 func loadGeneratedElements() *GeneratedElements {
 	result := &GeneratedElements{
-		Characters: make(map[string]bool),
-		Locations:  make(map[string]bool),
-		Items:      make(map[string]bool),
+		Characters:     make(map[string]bool),
+		Locations:      make(map[string]bool),
+		Items:          make(map[string]bool),
+		Organizations:  make(map[string]bool),
+		Races:          make(map[string]bool),
+		AbilitySystems: make(map[string]bool),
+		WorldLore:      make(map[string]bool),
 	}
 
 	root, err := findProjectRoot()
@@ -825,6 +893,10 @@ func generateItems(ctx context.Context, agent *agents.CraftAgent, items []string
 }
 
 func saveCharacters(characters map[string]models.Character) error {
+	for name, char := range characters {
+		char.NormalizeForCraft(name)
+		characters[name] = char
+	}
 	root, err := findProjectRoot()
 	if err != nil {
 		return err
@@ -834,6 +906,10 @@ func saveCharacters(characters map[string]models.Character) error {
 }
 
 func saveLocations(locations map[string]models.Location) error {
+	for name, loc := range locations {
+		loc.NormalizeForCraft(name)
+		locations[name] = loc
+	}
 	root, err := findProjectRoot()
 	if err != nil {
 		return err
@@ -843,6 +919,10 @@ func saveLocations(locations map[string]models.Location) error {
 }
 
 func saveItems(items map[string]models.Item) error {
+	for name, item := range items {
+		item.NormalizeForCraft(name)
+		items[name] = item
+	}
 	root, err := findProjectRoot()
 	if err != nil {
 		return err

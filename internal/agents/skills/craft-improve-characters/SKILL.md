@@ -35,6 +35,8 @@ Improve character profiles based on review feedback while maintaining consistenc
    - Verify motivation aligns with story premise
    - Check that skills fit the world
    - Confirm role serves the narrative
+   - Preserve and improve RPG/DSL metadata (`rpg_role`, `combat_role`, `power_level`, `rpg_stats`, `dsl_tags`, `state_effects`)
+   - Keep simulation stats conservative and consistent with outline events
 
 5. **Preserve Valid Elements**
    - Don't remove good content
@@ -61,6 +63,12 @@ Return the complete set of characters as a JSON object with character names as k
     "abilities": ["enhanced strength"],
     "affiliations": ["Royal Guard"],
     "role_in_story": "protagonist",
+    "rpg_role": "player",
+    "combat_role": "striker",
+    "power_level": 3,
+    "rpg_stats": {"str": 12, "agi": 11, "int": 14, "vit": 12, "hp": 120, "mp": 60, "level": 3},
+    "dsl_tags": ["protagonist"],
+    "state_effects": [],
     "voice": "Distinct speaking style...",
     "notes": "Additional writer notes..."
   }

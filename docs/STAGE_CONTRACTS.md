@@ -280,12 +280,29 @@ Required invariants:
 - Alias fields are additive and must not replace canonical names.
 - Location and item references should use names stable enough for write and RPG
   conversion.
+- Craft elements may include optional RPG/DSL metadata. Producers are
+  `craft gen` and `craft improve`; consumers are RPG adapters, DSL conversion,
+  and simulation. Missing fields are valid for old projects and fall back to
+  deterministic inference.
+- Character RPG metadata includes `rpg_role`, `combat_role`, `power_level`,
+  `rpg_stats`, `dsl_tags`, and `state_effects`. These are static defaults only;
+  relationship progress, goals, injuries, resources, and chapter-by-chapter power
+  changes remain owned by outline/recap/state stages.
+- Location RPG metadata includes `rpg_map_type`, `danger_level`,
+  `encounter_tags`, `resource_tags`, `dsl_tags`, and `state_effects`.
+- Item RPG metadata includes `rpg_item_type`, `rarity`, `power_level`,
+  `quantity_tracking`, `dsl_tags`, and `state_effects`.
+- Craft extraction scans chapter characters, scenes, enemies, `state_anchor`,
+  typed event actors/targets via `Event` accessors, and `resource_ledger` so
+  RPG-relevant elements are not missed.
 
 Consumers:
 
 - `write` uses craft data for chapter context and prose grounding.
 - `logic.StateMatrixManager` loads craft data into continuity state.
 - RPG/DSL conversion uses craft data to enrich entities and locations.
+- RPG/DSL conversion prefers explicit craft RPG metadata when present, then
+  falls back to the older name/type/skill heuristics.
 
 Change checklist:
 
@@ -443,6 +460,9 @@ Required invariants:
 - Outline-only conversion must not require craft files. A single-volume outline
   conversion must reject empty future volumes instead of emitting placeholder
   chapters.
+- When `01_outline.rpg` and `01_outline_vNN.rpg` coexist, outline fragments
+  merge by stable arc/chapter IDs: the volume fragment may update matching
+  chapters, but it must not drop chapters from the full outline fragment.
 - AI-generated DSL repair must be re-parsed and re-validated before saving.
 - Outline `state_anchor` conversion emits both human-readable state deltas
   (`cultivation`, `item`, `injury`, etc.) and deterministic numeric deltas for
@@ -452,6 +472,11 @@ Required invariants:
 - The RPG simulator folds numeric `gene` and `mech` deltas into
   `ProtagonistState` before combat balance checks; text heuristics are only a
   fallback or tactical modifier, not the only source of mecha/gene power.
+- Craft phase conversion consumes optional RPG metadata from
+  `story/craft/*.json`: character stats/roles become player or enemy defaults,
+  location map/danger/tags become location properties, and item type/rarity/tags
+  become DSL item fields/effects. Old craft files without these fields remain
+  valid and use deterministic fallback inference.
 
 Consumers:
 

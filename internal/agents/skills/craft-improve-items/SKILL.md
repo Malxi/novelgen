@@ -35,6 +35,8 @@ Improve item descriptions based on review feedback while maintaining consistency
    - Verify function fits the world
    - Check power level consistency
    - Confirm role in narrative
+   - Preserve and improve RPG/DSL metadata (`rpg_item_type`, `rarity`, `power_level`, `quantity_tracking`, tags, `state_effects`)
+   - Keep state effects deterministic and grounded in outline item events/resource ledgers
 
 5. **Preserve Valid Elements**
    - Don't remove good content
@@ -61,6 +63,12 @@ Return the complete set of items as a JSON object with item names as keys. All i
     "significance": "Strong story purpose...",
     "related_items": ["Item 1", "Item 2"],
     "secrets": "Hidden aspects...",
+    "rpg_item_type": "artifact",
+    "rarity": "rare",
+    "power_level": 4,
+    "quantity_tracking": false,
+    "dsl_tags": ["stable_tag"],
+    "state_effects": [],
     "notes": "Writer notes..."
   }
 }

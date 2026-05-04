@@ -31,6 +31,12 @@ Each character must include:
 - **role_in_story**: Character's role (protagonist/antagonist/supporting/mentor/etc)
 - **voice**: Speaking style and mannerisms (optional)
 - **notes**: Additional notes for writers (optional)
+- **rpg_role**: Optional RPG role: `player`, `npc`, `ally`, `enemy`, `boss`, `mentor`, `vendor`, or `quest_giver`
+- **combat_role**: Optional combat function, such as `striker`, `tank`, `support`, `controller`, `scout`, or `noncombat`
+- **power_level**: Optional non-negative integer starting power level for simulation
+- **rpg_stats**: Optional object with numeric `str`, `agi`, `int`, `vit`, `hp`, `mp`, `level`
+- **dsl_tags**: Optional stable tags for RPG-DSL conversion, such as factions, systems, archetypes, or encounter roles
+- **state_effects**: Optional array of static state effects with `target`, `kind`, `field`, `from`, `to`, `delta`, `unit`, `cost`, `note`
 
 ## Guidelines
 
@@ -41,7 +47,9 @@ Each character must include:
 5. **Align character motivation with their role in relevant chapters** - the character's actions should make sense given their motivation
 6. Include specific details that can be referenced in writing
 7. Focus on STATIC attributes only - do NOT include dynamic story elements
-8. Keep all content in the specified language
+8. Use outline events, state anchors, enemies, and resource ledgers to set RPG/DSL metadata conservatively
+9. Keep `rpg_stats` balanced; use small integers for early characters and only high values when the outline clearly supports them
+10. Keep all content in the specified language
 
 ## IMPORTANT - DO NOT INCLUDE
 
@@ -49,6 +57,7 @@ Each character must include:
 - **goals**: Character goals change throughout the story
 - **character_arc**: Character development happens during the story
 - **fears**: Fears may be revealed or change during the story
+- Do not put future relationship/goal/arc progress into `state_effects`; only include static effects that are true when the character is introduced
 
 ## Output Format Example
 
@@ -68,6 +77,14 @@ Each character must include:
     "abilities": ["enhanced strength"],
     "affiliations": ["Royal Guard"],
     "role_in_story": "protagonist",
+    "rpg_role": "player",
+    "combat_role": "striker",
+    "power_level": 3,
+    "rpg_stats": {"str": 12, "agi": 11, "int": 14, "vit": 12, "hp": 120, "mp": 60, "level": 3},
+    "dsl_tags": ["protagonist", "survival", "mecha_pilot"],
+    "state_effects": [
+      {"target": "protagonist", "kind": "status", "field": "identity", "to": "newly_awakened", "note": "Initial static identity for DSL simulation"}
+    ],
     "voice": "Speaks formally but with occasional dry humor",
     "notes": "Has a mysterious scar on his left arm"
   }

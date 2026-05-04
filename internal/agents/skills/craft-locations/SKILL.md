@@ -29,6 +29,12 @@ Each location must include:
 - **events**: Array of significant events that happened here (optional)
 - **secrets**: Hidden aspects or secrets of this location as a string (optional)
 - **notes**: Additional notes for writers (optional)
+- **rpg_map_type**: Optional RPG map type: `city`, `dungeon`, `base`, `region`, `battlefield`, `indoor`, or `outdoor`
+- **danger_level**: Optional non-negative integer encounter danger level
+- **encounter_tags**: Optional array of encounter tags available here
+- **resource_tags**: Optional array of resources that can appear here
+- **dsl_tags**: Optional stable tags for RPG-DSL conversion
+- **state_effects**: Optional array of static state effects with `target`, `kind`, `field`, `from`, `to`, `delta`, `unit`, `cost`, `note`
 
 ## Guidelines
 
@@ -38,7 +44,9 @@ Each location must include:
 4. **Use relevant_chapters to understand location context** - these chapters show what events happen at this location
 5. **Align location significance with events in relevant chapters** - the location should support the story events
 6. Include sensory details that can be used in writing
-7. Keep all content in the specified language
+7. Use scene locations, enemies, and resource ledgers to set `rpg_map_type`, `danger_level`, and tags conservatively
+8. Do not invent dynamic future events; `state_effects` should describe stable environmental rules or entry conditions
+9. Keep all content in the specified language
 
 ## Output Format Example
 
@@ -62,6 +70,14 @@ Each location must include:
     "connected_locations": ["Mountain Pass", "Hidden Valley"],
     "events": ["The Great Ritual", "The Fall of the Temple"],
     "secrets": "A hidden chamber beneath the altar contains...",
+    "rpg_map_type": "dungeon",
+    "danger_level": 5,
+    "encounter_tags": ["undead", "trap", "ritual_site"],
+    "resource_tags": ["ancient_relic"],
+    "dsl_tags": ["climax_location", "sealed_area"],
+    "state_effects": [
+      {"target": "party", "kind": "environment", "field": "visibility", "to": "low", "note": "Dim light affects navigation"}
+    ],
     "notes": "Best used for the climax scene"
   }
 }

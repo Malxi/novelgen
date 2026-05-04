@@ -18,6 +18,15 @@ type Character struct {
 	RoleInStory  string   `json:"role_in_story" desc:"Character's role in the story (protagonist/antagonist/supporting/etc)"`
 	Voice        string   `json:"voice,omitempty" desc:"Speaking style and mannerisms"`
 	Notes        string   `json:"notes,omitempty" desc:"Additional notes for writers (string, NOT array)"`
+
+	// Optional RPG/DSL metadata. These fields describe static simulation defaults;
+	// dynamic progress is still owned by outline events, recaps, and StateMatrix.
+	RPGRole      string             `json:"rpg_role,omitempty" desc:"RPG role: player/npc/ally/enemy/boss/mentor/vendor/quest_giver"`
+	CombatRole   string             `json:"combat_role,omitempty" desc:"Combat function such as striker/tank/support/controller/noncombat"`
+	PowerLevel   int                `json:"power_level,omitempty" desc:"Approximate starting power level for simulation"`
+	RPGStats     *CraftRPGStats     `json:"rpg_stats,omitempty" desc:"Optional RPG stat defaults for DSL simulation"`
+	DSLTags      []string           `json:"dsl_tags,omitempty" desc:"Stable tags used by RPG DSL conversion"`
+	StateEffects []CraftStateEffect `json:"state_effects,omitempty" desc:"Static state effects this character implies when introduced"`
 }
 
 // Location represents a detailed location description
@@ -35,6 +44,13 @@ type Location struct {
 	Events             []string        `json:"events,omitempty"`
 	Secrets            string          `json:"secrets,omitempty"`
 	Notes              string          `json:"notes,omitempty"`
+
+	RPGMapType    string             `json:"rpg_map_type,omitempty" desc:"DSL map type: city/dungeon/base/region/battlefield/indoor/outdoor"`
+	DangerLevel   int                `json:"danger_level,omitempty" desc:"Approximate encounter danger level for simulation"`
+	EncounterTags []string           `json:"encounter_tags,omitempty" desc:"Encounter tags available in this location"`
+	ResourceTags  []string           `json:"resource_tags,omitempty" desc:"Resource tags available in this location"`
+	DSLTags       []string           `json:"dsl_tags,omitempty" desc:"Stable tags used by RPG DSL conversion"`
+	StateEffects  []CraftStateEffect `json:"state_effects,omitempty" desc:"Static state effects this location implies when entered"`
 }
 
 // SensoryDetails contains sensory information about a location
@@ -61,6 +77,120 @@ type Item struct {
 	RelatedItems []string   `json:"related_items,omitempty" desc:"Related items (array of strings)"`
 	Secrets      StringList `json:"secrets,omitempty" desc:"Secrets about the item (array of strings)"`
 	Notes        string     `json:"notes,omitempty" desc:"Additional notes (string, NOT array)"`
+
+	RPGItemType      string             `json:"rpg_item_type,omitempty" desc:"DSL item type: weapon/armor/consumable/artifact/document/resource/key/material"`
+	Rarity           string             `json:"rarity,omitempty" desc:"RPG rarity: common/uncommon/rare/epic/legendary/unique"`
+	PowerLevel       int                `json:"power_level,omitempty" desc:"Approximate item power level for simulation"`
+	QuantityTracking bool               `json:"quantity_tracking,omitempty" desc:"Whether the item should be tracked as a quantity/resource"`
+	DSLTags          []string           `json:"dsl_tags,omitempty" desc:"Stable tags used by RPG DSL conversion"`
+	StateEffects     []CraftStateEffect `json:"state_effects,omitempty" desc:"State effects caused when the item is acquired or used"`
+}
+
+// CraftRPGStats contains optional static stat defaults for RPG/DSL conversion.
+type CraftRPGStats struct {
+	STR   int `json:"str,omitempty" desc:"Strength"`
+	AGI   int `json:"agi,omitempty" desc:"Agility"`
+	INT   int `json:"int,omitempty" desc:"Intelligence"`
+	VIT   int `json:"vit,omitempty" desc:"Vitality"`
+	HP    int `json:"hp,omitempty" desc:"Hit points"`
+	MP    int `json:"mp,omitempty" desc:"Mind/energy/mana points"`
+	Level int `json:"level,omitempty" desc:"Starting level"`
+}
+
+// CraftStateEffect is a compact, DSL-compatible state delta emitted by craft.
+type CraftStateEffect struct {
+	Target string `json:"target,omitempty" desc:"State target, e.g. protagonist, item id, faction"`
+	Kind   string `json:"kind,omitempty" desc:"State kind, e.g. item, resource, cultivation, relationship"`
+	Field  string `json:"field,omitempty" desc:"State field affected"`
+	From   string `json:"from,omitempty" desc:"Previous value if known"`
+	To     string `json:"to,omitempty" desc:"New value or state"`
+	Delta  int    `json:"delta,omitempty" desc:"Numeric delta when applicable"`
+	Unit   string `json:"unit,omitempty" desc:"Unit for delta/value"`
+	Cost   string `json:"cost,omitempty" desc:"Cost or limitation"`
+	Note   string `json:"note,omitempty" desc:"Short explanation"`
+}
+
+// NormalizeForCraft clamps optional simulation metadata while preserving old JSON.
+func (c *Character) NormalizeForCraft(name string) {
+	if c.Name == "" {
+		c.Name = name
+	}
+	c.PowerLevel = clampNonNegative(c.PowerLevel)
+	normalizeRPGStats(c.RPGStats)
+	c.DSLTags = compactStringList(c.DSLTags)
+	c.StateEffects = compactStateEffects(c.StateEffects)
+}
+
+// NormalizeForCraft clamps optional simulation metadata while preserving old JSON.
+func (l *Location) NormalizeForCraft(name string) {
+	if l.Name == "" {
+		l.Name = name
+	}
+	l.DangerLevel = clampNonNegative(l.DangerLevel)
+	l.EncounterTags = compactStringList(l.EncounterTags)
+	l.ResourceTags = compactStringList(l.ResourceTags)
+	l.DSLTags = compactStringList(l.DSLTags)
+	l.StateEffects = compactStateEffects(l.StateEffects)
+}
+
+// NormalizeForCraft clamps optional simulation metadata while preserving old JSON.
+func (i *Item) NormalizeForCraft(name string) {
+	if i.Name == "" {
+		i.Name = name
+	}
+	i.PowerLevel = clampNonNegative(i.PowerLevel)
+	i.DSLTags = compactStringList(i.DSLTags)
+	i.StateEffects = compactStateEffects(i.StateEffects)
+}
+
+func normalizeRPGStats(stats *CraftRPGStats) {
+	if stats == nil {
+		return
+	}
+	stats.STR = clampNonNegative(stats.STR)
+	stats.AGI = clampNonNegative(stats.AGI)
+	stats.INT = clampNonNegative(stats.INT)
+	stats.VIT = clampNonNegative(stats.VIT)
+	stats.HP = clampNonNegative(stats.HP)
+	stats.MP = clampNonNegative(stats.MP)
+	stats.Level = clampNonNegative(stats.Level)
+}
+
+func clampNonNegative(value int) int {
+	if value < 0 {
+		return 0
+	}
+	return value
+}
+
+func compactStringList(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(values))
+	seen := map[string]bool{}
+	for _, value := range values {
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		out = append(out, value)
+	}
+	return out
+}
+
+func compactStateEffects(effects []CraftStateEffect) []CraftStateEffect {
+	if len(effects) == 0 {
+		return nil
+	}
+	out := make([]CraftStateEffect, 0, len(effects))
+	for _, effect := range effects {
+		if effect.Target == "" && effect.Kind == "" && effect.Field == "" && effect.To == "" && effect.Delta == 0 {
+			continue
+		}
+		out = append(out, effect)
+	}
+	return out
 }
 
 // Organization represents a faction, guild, or organization in the story

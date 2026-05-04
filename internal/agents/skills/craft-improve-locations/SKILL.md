@@ -35,6 +35,8 @@ Improve location descriptions based on review feedback while maintaining consist
    - Verify significance to plot
    - Check historical consistency
    - Confirm connections to events
+   - Preserve and improve RPG/DSL metadata (`rpg_map_type`, `danger_level`, tags, `state_effects`)
+   - Keep danger and state effects conservative and supported by the outline
 
 5. **Preserve Valid Elements**
    - Don't remove good content
@@ -65,6 +67,12 @@ Return the complete set of locations as a JSON object with location names as key
     "connected_locations": ["Place 1", "Place 2"],
     "events": ["Event 1", "Event 2"],
     "secrets": "Hidden aspects...",
+    "rpg_map_type": "dungeon",
+    "danger_level": 5,
+    "encounter_tags": ["tag 1"],
+    "resource_tags": ["resource 1"],
+    "dsl_tags": ["stable_tag"],
+    "state_effects": [],
     "notes": "Writer notes..."
   }
 }

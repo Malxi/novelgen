@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"novelgen/internal/models"
 	"path/filepath"
 	"strings"
 )
@@ -12,7 +13,7 @@ import (
 type NovelgenProject struct {
 	ProjectPath string
 	BookName    string
-	
+
 	// 数据文件
 	Characters map[string]NovelgenCharacter `json:"-"`
 	Items      map[string]NovelgenItem      `json:"-"`
@@ -22,54 +23,72 @@ type NovelgenProject struct {
 
 // NovelgenCharacter novelgen角色结构
 type NovelgenCharacter struct {
-	Name          string   `json:"name"`
-	Aliases       []string `json:"aliases"`
-	Age           string   `json:"age"`
-	Gender        string   `json:"gender"`
-	Race          string   `json:"race"`
-	Appearance    string   `json:"appearance"`
-	Background    string   `json:"background"`
-	Personality   []string `json:"personality"`
-	Motivation    string   `json:"motivation"`
-	Skills        []string `json:"skills"`
-	Abilities     []string `json:"abilities"`
-	Affiliations  []string `json:"affiliations"`
-	RoleInStory   string   `json:"role_in_story"`
-	Voice         string   `json:"voice"`
-	Notes         string   `json:"notes"`
+	Name         string                    `json:"name"`
+	Aliases      []string                  `json:"aliases"`
+	Age          string                    `json:"age"`
+	Gender       string                    `json:"gender"`
+	Race         string                    `json:"race"`
+	Appearance   string                    `json:"appearance"`
+	Background   string                    `json:"background"`
+	Personality  []string                  `json:"personality"`
+	Motivation   string                    `json:"motivation"`
+	Skills       []string                  `json:"skills"`
+	Abilities    []string                  `json:"abilities"`
+	Affiliations []string                  `json:"affiliations"`
+	RoleInStory  string                    `json:"role_in_story"`
+	Voice        string                    `json:"voice"`
+	Notes        string                    `json:"notes"`
+	RPGRole      string                    `json:"rpg_role,omitempty"`
+	CombatRole   string                    `json:"combat_role,omitempty"`
+	PowerLevel   int                       `json:"power_level,omitempty"`
+	RPGStats     *models.CraftRPGStats     `json:"rpg_stats,omitempty"`
+	DSLTags      []string                  `json:"dsl_tags,omitempty"`
+	StateEffects []models.CraftStateEffect `json:"state_effects,omitempty"`
 }
 
 // NovelgenItem novelgen物品结构
 type NovelgenItem struct {
-	Name          string   `json:"name"`
-	Description   string   `json:"description"`
-	Appearance    string   `json:"appearance"`
-	Function      string   `json:"function"`
-	Origin        string   `json:"origin"`
-	History       string   `json:"history"`
-	Owner         string   `json:"owner"`
-	Type          string   `json:"type"`
-	Powers        []string `json:"powers"`
-	Limitations   []string `json:"limitations"`
-	RelatedItems  []string `json:"related_items"`
-	Secrets       []string `json:"secrets"`
-	Significance  string   `json:"significance"`
-	Notes         string   `json:"notes"`
+	Name             string                    `json:"name"`
+	Description      string                    `json:"description"`
+	Appearance       string                    `json:"appearance"`
+	Function         string                    `json:"function"`
+	Origin           string                    `json:"origin"`
+	History          string                    `json:"history"`
+	Owner            string                    `json:"owner"`
+	Type             string                    `json:"type"`
+	Powers           []string                  `json:"powers"`
+	Limitations      []string                  `json:"limitations"`
+	RelatedItems     []string                  `json:"related_items"`
+	Secrets          []string                  `json:"secrets"`
+	Significance     string                    `json:"significance"`
+	Notes            string                    `json:"notes"`
+	RPGItemType      string                    `json:"rpg_item_type,omitempty"`
+	Rarity           string                    `json:"rarity,omitempty"`
+	PowerLevel       int                       `json:"power_level,omitempty"`
+	QuantityTracking bool                      `json:"quantity_tracking,omitempty"`
+	DSLTags          []string                  `json:"dsl_tags,omitempty"`
+	StateEffects     []models.CraftStateEffect `json:"state_effects,omitempty"`
 }
 
 // NovelgenLocation novelgen地点结构
 type NovelgenLocation struct {
-	Name             string                 `json:"name"`
-	Description      string                 `json:"description"`
-	Appearance       string                 `json:"appearance"`
-	Atmosphere       string                 `json:"atmosphere"`
-	History          string                 `json:"history"`
-	Inhabitants      []string               `json:"inhabitants"`
-	ConnectedLocs    []string               `json:"connected_locations"`
-	Events           []string               `json:"events"`
-	Secrets          string                 `json:"secrets"`
-	Notes            string                 `json:"notes"`
-	SensoryDetails   map[string][]string    `json:"sensory_details"`
+	Name           string                    `json:"name"`
+	Description    string                    `json:"description"`
+	Appearance     string                    `json:"appearance"`
+	Atmosphere     string                    `json:"atmosphere"`
+	History        string                    `json:"history"`
+	Inhabitants    []string                  `json:"inhabitants"`
+	ConnectedLocs  []string                  `json:"connected_locations"`
+	Events         []string                  `json:"events"`
+	Secrets        string                    `json:"secrets"`
+	Notes          string                    `json:"notes"`
+	SensoryDetails map[string][]string       `json:"sensory_details"`
+	RPGMapType     string                    `json:"rpg_map_type,omitempty"`
+	DangerLevel    int                       `json:"danger_level,omitempty"`
+	EncounterTags  []string                  `json:"encounter_tags,omitempty"`
+	ResourceTags   []string                  `json:"resource_tags,omitempty"`
+	DSLTags        []string                  `json:"dsl_tags,omitempty"`
+	StateEffects   []models.CraftStateEffect `json:"state_effects,omitempty"`
 }
 
 // LoadNovelgenProject 加载novelgen项目
@@ -164,11 +183,11 @@ func (np *NovelgenProject) convertCharacters(world *GameWorld) error {
 	for name, char := range np.Characters {
 		// 推断角色类型
 		charType := np.inferCharacterType(char)
-		
+
 		// 推断属性
 		baseStats := np.inferStatsFromCharacter(char)
 		growthStats := np.inferGrowthFromCharacter(char)
-		
+
 		// 创建角色模板
 		template := &CharacterTemplate{
 			ID:          sanitizeID(name),
@@ -204,7 +223,7 @@ func (np *NovelgenProject) convertItems(world *GameWorld) error {
 	for name, item := range np.Items {
 		// 推断物品类型
 		itemType := np.inferItemType(item)
-		
+
 		// 创建物品
 		rpgItem := &Item{
 			ID:          sanitizeID(name),
@@ -236,7 +255,7 @@ func (np *NovelgenProject) convertLocations(world *GameWorld) error {
 	for name, loc := range np.Locations {
 		// 推断地图类型
 		mapType := np.inferMapTypeFromLocation(loc)
-		
+
 		// 创建地图
 		gameMap := &Map{
 			ID:          sanitizeID(name),
@@ -320,7 +339,7 @@ func (np *NovelgenProject) inferGrowthFromCharacter(char NovelgenCharacter) Grow
 			Magic: 3, Resistance: 2, Speed: 2, Luck: 1,
 		}
 	}
-	
+
 	return GrowthStats{
 		HP: 8, MP: 4, Attack: 2, Defense: 1.5,
 		Magic: 1.5, Resistance: 1.5, Speed: 1, Luck: 0.5,
@@ -367,39 +386,39 @@ func (np *NovelgenProject) inferItemType(item NovelgenItem) ItemType {
 func (np *NovelgenProject) inferItemValue(item NovelgenItem) int {
 	// 根据重要性推断价值
 	baseValue := 100
-	
+
 	if strings.Contains(item.Significance, "核心") {
 		baseValue = 10000
 	} else if strings.Contains(item.Significance, "重要") {
 		baseValue = 1000
 	}
-	
+
 	// 根据能力数量调整
 	baseValue += len(item.Powers) * 100
-	
+
 	return baseValue
 }
 
 func (np *NovelgenProject) inferSkills(skills []string) []string {
 	rpgSkills := make([]string, 0)
-	
+
 	for _, skill := range skills {
 		// 简化处理，实际应该映射到具体的技能ID
 		rpgSkills = append(rpgSkills, sanitizeID(skill))
 	}
-	
+
 	return rpgSkills
 }
 
 func (np *NovelgenProject) convertPowersToEffects(powers []string) []ConsumableEffect {
 	effects := make([]ConsumableEffect, 0)
-	
+
 	for _, power := range powers {
 		effect := ConsumableEffect{
 			Type:   ConsumableEffectBuff,
 			Target: "self",
 		}
-		
+
 		// 根据能力描述推断效果
 		switch {
 		case strings.Contains(power, "治疗") || strings.Contains(power, "恢复"):
@@ -412,10 +431,10 @@ func (np *NovelgenProject) convertPowersToEffects(powers []string) []ConsumableE
 			effect.Type = ConsumableEffectRevive
 			effect.Value = 50
 		}
-		
+
 		effects = append(effects, effect)
 	}
-	
+
 	return effects
 }
 
@@ -437,11 +456,11 @@ func (np *NovelgenProject) inferMapTypeFromLocation(loc NovelgenLocation) MapTyp
 // GetProjectSummary 获取项目摘要
 func (np *NovelgenProject) GetProjectSummary() map[string]interface{} {
 	return map[string]interface{}{
-		"book_name":    np.BookName,
-		"characters":   len(np.Characters),
-		"items":        len(np.Items),
-		"locations":    len(np.Locations),
-		"parts":        len(np.Outline.Parts),
+		"book_name":  np.BookName,
+		"characters": len(np.Characters),
+		"items":      len(np.Items),
+		"locations":  len(np.Locations),
+		"parts":      len(np.Outline.Parts),
 	}
 }
 

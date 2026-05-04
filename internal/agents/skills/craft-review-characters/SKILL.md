@@ -37,8 +37,9 @@ The review result must include:
 3. Assess depth - are characters multi-dimensional?
 4. Look for uniqueness - avoid clichés and stereotypes
 5. Consider usability - do writers have enough detail to work with?
-6. Provide specific, actionable suggestions
-7. Prioritize high-impact issues
+6. Check RPG/DSL metadata: `rpg_role`, `combat_role`, `power_level`, `rpg_stats`, `dsl_tags`, and `state_effects` should be consistent with outline events and not overpowered
+7. Provide specific, actionable suggestions
+8. Prioritize high-impact issues
 
 ## Output Format Example
 
