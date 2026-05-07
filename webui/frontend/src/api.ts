@@ -1,4 +1,4 @@
-import type { APIResponse, Project, Task, Outline, StorySetup, Character, Location, Item, AICallSummary, AICallDetail, TemplateLibrary } from './types';
+import type { APIResponse, Project, Task, Outline, StorySetup, Character, Location, Item, AICallSummary, AICallDetail, TemplateLibrary, FileVersion } from './types';
 
 const API_BASE = '/api';
 
@@ -69,6 +69,15 @@ export const restoreOutlineVersion = (filename: string, project?: string) =>
   fetchAPI<{ message: string }>(`/content/outline/restore${project ? `?project=${encodeURIComponent(project)}` : ''}`, {
     method: 'POST',
     body: JSON.stringify({ filename }),
+  });
+
+export const listFileVersions = (path: string, project?: string) =>
+  fetchAPI<FileVersion[]>(`/versions?path=${encodeURIComponent(path)}${project ? `&project=${encodeURIComponent(project)}` : ''}`);
+
+export const restoreFileVersion = (path: string, filename: string, project?: string) =>
+  fetchAPI<{ message: string }>(`/versions/restore${project ? `?project=${encodeURIComponent(project)}` : ''}`, {
+    method: 'POST',
+    body: JSON.stringify({ path, filename }),
   });
 
 export const getStorySetup = (project?: string) =>

@@ -129,6 +129,12 @@ type AICallDetail struct {
 	ResponsePath string   `json:"response_path,omitempty"`
 }
 
+type FileVersion struct {
+	Filename  string `json:"filename"`
+	CreatedAt string `json:"created_at"`
+	Size      int64  `json:"size"`
+}
+
 type aiCallLogFile struct {
 	ID           string    `json:"id"`
 	Agent        string    `json:"agent"`
@@ -750,56 +756,45 @@ func getOutline(c *gin.Context) {
 
 // backupOutline creates a backup of the current outline with timestamp
 func backupOutline(projectPath string) (string, error) {
-	outlinePath := filepath.Join(projectPath, "story", "compose", "outline.json")
-
-	// Check if outline exists
-	if _, err := os.Stat(outlinePath); os.IsNotExist(err) {
-		return "", nil // No outline to backup
-	}
-
-	// Create backups directory
-	backupsDir := filepath.Join(projectPath, "story", "compose", "backups")
-	if err := os.MkdirAll(backupsDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create backups directory: %w", err)
-	}
-
-	// Generate backup filename with timestamp
-	timestamp := time.Now().Format("20060102_150405")
-	backupFilename := fmt.Sprintf("outline_%s.json", timestamp)
-	backupPath := filepath.Join(backupsDir, backupFilename)
-
-	// Read current outline
-	data, err := os.ReadFile(outlinePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read outline: %w", err)
-	}
-
-	// Write backup
-	if err := os.WriteFile(backupPath, data, 0644); err != nil {
-		return "", fmt.Errorf("failed to write backup: %w", err)
-	}
-
-	return backupFilename, nil
+	return backupFile(projectPath, "story/compose/outline.json")
 }
 
 func backupStorySetup(projectPath string) (string, error) {
-	setupPath := filepath.Join(projectPath, "story", "setup", "story_setup.json")
-	if _, err := os.Stat(setupPath); os.IsNotExist(err) {
+	return backupFile(projectPath, "story/setup/story_setup.json")
+}
+
+func backupFile(projectPath, contentPath string) (string, error) {
+	cleanPath, err := cleanContentPath(contentPath)
+	if err != nil {
+		return "", err
+	}
+
+	sourcePath := filepath.Join(projectPath, cleanPath)
+	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
 		return "", nil
 	}
 
-	backupsDir := filepath.Join(projectPath, "story", "setup", "backups")
+	backupsDir := filepath.Join(projectPath, filepath.Dir(cleanPath), "backups")
 	if err := os.MkdirAll(backupsDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create backups directory: %w", err)
 	}
 
+	ext := filepath.Ext(cleanPath)
+	base := strings.TrimSuffix(filepath.Base(cleanPath), ext)
 	timestamp := time.Now().Format("20060102_150405")
-	backupFilename := fmt.Sprintf("story_setup_%s.json", timestamp)
+	backupFilename := fmt.Sprintf("%s_%s%s", base, timestamp, ext)
 	backupPath := filepath.Join(backupsDir, backupFilename)
+	for suffix := 2; ; suffix++ {
+		if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+			break
+		}
+		backupFilename = fmt.Sprintf("%s_%s_%d%s", base, timestamp, suffix, ext)
+		backupPath = filepath.Join(backupsDir, backupFilename)
+	}
 
-	data, err := os.ReadFile(setupPath)
+	data, err := os.ReadFile(sourcePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to read story setup: %w", err)
+		return "", fmt.Errorf("failed to read file: %w", err)
 	}
 	if err := os.WriteFile(backupPath, data, 0644); err != nil {
 		return "", fmt.Errorf("failed to write backup: %w", err)
@@ -808,62 +803,32 @@ func backupStorySetup(projectPath string) (string, error) {
 	return backupFilename, nil
 }
 
-func listOutlineVersions(c *gin.Context) {
+func cleanContentPath(path string) (string, error) {
+	cleanPath := filepath.Clean(strings.TrimPrefix(path, "/"))
+	if cleanPath == "." || strings.HasPrefix(cleanPath, "..") || filepath.IsAbs(cleanPath) {
+		return "", fmt.Errorf("invalid path")
+	}
+	return cleanPath, nil
+}
+
+func projectPathFromQuery(c *gin.Context) string {
 	projectPath := c.Query("project")
 	if projectPath == "" {
-		projectPath = "."
+		return "."
 	}
+	return projectPath
+}
 
-	backupsDir := filepath.Join(projectPath, "story", "compose", "backups")
-
-	// Check if backups directory exists
-	if _, err := os.Stat(backupsDir); os.IsNotExist(err) {
-		c.JSON(http.StatusOK, APIResponse{Success: true, Data: []map[string]interface{}{}})
-		return
-	}
-
-	entries, err := os.ReadDir(backupsDir)
+func listOutlineVersions(c *gin.Context) {
+	versions, err := fileVersions(projectPathFromQuery(c), "story/compose/outline.json")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: err.Error()})
 		return
 	}
-
-	versions := []map[string]interface{}{}
-	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasPrefix(entry.Name(), "outline_") && strings.HasSuffix(entry.Name(), ".json") {
-			info, err := entry.Info()
-			if err != nil {
-				continue
-			}
-
-			// Parse timestamp from filename
-			filename := entry.Name()
-			var createdAt string
-			if len(filename) > 14 {
-				// Extract timestamp: outline_20060102_150405.json
-				timestampStr := filename[8 : len(filename)-5]
-				if t, err := time.Parse("20060102_150405", timestampStr); err == nil {
-					createdAt = t.Format("2006-01-02 15:04:05")
-				}
-			}
-
-			versions = append(versions, map[string]interface{}{
-				"filename":   filename,
-				"created_at": createdAt,
-				"size":       info.Size(),
-			})
-		}
-	}
-
 	c.JSON(http.StatusOK, APIResponse{Success: true, Data: versions})
 }
 
 func restoreOutlineVersion(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
-
 	var req struct {
 		Filename string `json:"filename"`
 	}
@@ -873,42 +838,129 @@ func restoreOutlineVersion(c *gin.Context) {
 		return
 	}
 
-	// Security: prevent directory traversal
-	if strings.Contains(req.Filename, "..") || strings.Contains(req.Filename, "/") || strings.Contains(req.Filename, "\\") {
-		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Invalid filename"})
-		return
-	}
-
-	backupPath := filepath.Join(projectPath, "story", "compose", "backups", req.Filename)
-	outlinePath := filepath.Join(projectPath, "story", "compose", "outline.json")
-
-	// Check if backup exists
-	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
-		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "Backup not found"})
-		return
-	}
-
-	// Backup current outline first (if exists)
-	if _, err := os.Stat(outlinePath); err == nil {
-		if _, err := backupOutline(projectPath); err != nil {
-			c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: "Failed to backup current outline: " + err.Error()})
-			return
-		}
-	}
-
-	// Copy backup to outline
-	data, err := os.ReadFile(backupPath)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: err.Error()})
-		return
-	}
-
-	if err := os.WriteFile(outlinePath, data, 0644); err != nil {
+	if err := restoreVersion(projectPathFromQuery(c), "story/compose/outline.json", req.Filename); err != nil {
 		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, APIResponse{Success: true, Data: map[string]string{"message": "Outline restored successfully"}})
+}
+
+func listFileVersions(c *gin.Context) {
+	contentPath := c.Query("path")
+	versions, err := fileVersions(projectPathFromQuery(c), contentPath)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, APIResponse{Success: true, Data: versions})
+}
+
+func restoreFileVersion(c *gin.Context) {
+	var req struct {
+		Path     string `json:"path"`
+		Filename string `json:"filename"`
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	if err := restoreVersion(projectPathFromQuery(c), req.Path, req.Filename); err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, APIResponse{Success: true, Data: map[string]string{"message": "Version restored successfully"}})
+}
+
+func fileVersions(projectPath, contentPath string) ([]FileVersion, error) {
+	cleanPath, err := cleanContentPath(contentPath)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := filepath.Ext(cleanPath)
+	base := strings.TrimSuffix(filepath.Base(cleanPath), ext)
+	backupsDir := filepath.Join(projectPath, filepath.Dir(cleanPath), "backups")
+	if _, err := os.Stat(backupsDir); os.IsNotExist(err) {
+		return []FileVersion{}, nil
+	}
+
+	entries, err := os.ReadDir(backupsDir)
+	if err != nil {
+		return nil, err
+	}
+
+	versions := []FileVersion{}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasPrefix(entry.Name(), base+"_") || !strings.HasSuffix(entry.Name(), ext) {
+			continue
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+
+		versions = append(versions, FileVersion{
+			Filename:  entry.Name(),
+			CreatedAt: versionCreatedAt(base, ext, entry.Name(), info.ModTime()),
+			Size:      info.Size(),
+		})
+	}
+
+	sort.Slice(versions, func(i, j int) bool {
+		return versions[i].Filename > versions[j].Filename
+	})
+	return versions, nil
+}
+
+func restoreVersion(projectPath, contentPath, filename string) error {
+	cleanPath, err := cleanContentPath(contentPath)
+	if err != nil {
+		return err
+	}
+	if !safeLogName(filename) {
+		return fmt.Errorf("invalid filename")
+	}
+
+	ext := filepath.Ext(cleanPath)
+	base := strings.TrimSuffix(filepath.Base(cleanPath), ext)
+	if !strings.HasPrefix(filename, base+"_") || !strings.HasSuffix(filename, ext) {
+		return fmt.Errorf("backup does not match target file")
+	}
+
+	backupPath := filepath.Join(projectPath, filepath.Dir(cleanPath), "backups", filename)
+	targetPath := filepath.Join(projectPath, cleanPath)
+	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		return fmt.Errorf("backup not found")
+	}
+
+	if _, err := backupFile(projectPath, cleanPath); err != nil {
+		return fmt.Errorf("failed to backup current file: %w", err)
+	}
+
+	data, err := os.ReadFile(backupPath)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(targetPath, data, 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
+func versionCreatedAt(base, ext, filename string, fallback time.Time) string {
+	timestampStr := strings.TrimSuffix(strings.TrimPrefix(filename, base+"_"), ext)
+	if len(timestampStr) > len("20060102_150405") {
+		timestampStr = timestampStr[:len("20060102_150405")]
+	}
+	if t, err := time.Parse("20060102_150405", timestampStr); err == nil {
+		return t.Format("2006-01-02 15:04:05")
+	}
+	return fallback.Format("2006-01-02 15:04:05")
 }
 
 func getStorySetup(c *gin.Context) {
@@ -1591,8 +1643,8 @@ func saveFile(c *gin.Context) {
 		return
 	}
 
-	cleanPath := filepath.Clean(strings.TrimPrefix(path, "/"))
-	if cleanPath == "." || strings.HasPrefix(cleanPath, "..") || filepath.IsAbs(cleanPath) {
+	cleanPath, err := cleanContentPath(path)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Invalid path"})
 		return
 	}
@@ -1602,14 +1654,7 @@ func saveFile(c *gin.Context) {
 		return
 	}
 
-	var backupName string
-	var err error
-	switch filepath.ToSlash(cleanPath) {
-	case "story/compose/outline.json":
-		backupName, err = backupOutline(projectPath)
-	case "story/setup/story_setup.json":
-		backupName, err = backupStorySetup(projectPath)
-	}
+	backupName, err := backupFile(projectPath, cleanPath)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: "Failed to backup existing file: " + err.Error()})
 		return

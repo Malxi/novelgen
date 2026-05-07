@@ -13,6 +13,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import { createTask, getStorySetup, getTask, getTemplates, saveJSONFile } from '../api';
+import { VersionHistory } from './VersionHistory';
 import type { Premise, PremiseProgression, StorySetup, Storyline, Task, TemplateLibrary, WorldResource } from '../types';
 
 interface StorySetupWorkbenchProps {
@@ -564,6 +565,13 @@ export function StorySetupWorkbench({ projectPath }: StorySetupWorkbenchProps) {
               <p className="text-xs text-[var(--text-muted)]">核心资源</p>
             </div>
           </section>
+
+          <VersionHistory
+            projectPath={projectPath}
+            filePath="story/setup/story_setup.json"
+            label="设定 / story_setup.json"
+            onRestored={loadSetup}
+          />
         </aside>
 
         <main className="min-w-0">

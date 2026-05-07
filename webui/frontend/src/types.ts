@@ -31,6 +31,12 @@ export interface Task {
   updated_at: string;
 }
 
+export interface FileVersion {
+  filename: string;
+  created_at: string;
+  size: number;
+}
+
 export interface AICallSummary {
   id: string;
   agent: string;

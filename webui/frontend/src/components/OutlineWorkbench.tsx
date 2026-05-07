@@ -13,6 +13,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import { createTask, getOutline, getTask, saveJSONFile } from '../api';
+import { VersionHistory } from './VersionHistory';
 import type { Chapter, Outline, Part, Task, Volume } from '../types';
 
 interface OutlineWorkbenchProps {
@@ -413,6 +414,13 @@ export function OutlineWorkbench({ projectPath }: OutlineWorkbenchProps) {
               <button className="btn btn-secondary text-sm" onClick={() => scrollToSection('outline-volumes')}>卷工作台</button>
             </div>
           </section>
+
+          <VersionHistory
+            projectPath={projectPath}
+            filePath="story/compose/outline.json"
+            label="大纲 / outline.json"
+            onRestored={loadOutline}
+          />
         </aside>
 
         <main className="min-w-0">
