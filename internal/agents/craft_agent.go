@@ -109,6 +109,20 @@ type CraftGenItemsOutput struct {
 	Items map[string]models.Item `json:"items" md:"items" desc:"Generated item descriptions keyed by name"`
 }
 
+// CraftGenOrganizationsInput is the input for organization generation
+type CraftGenOrganizationsInput struct {
+	StorySetup       CraftStorySetupSummary `json:"story_setup" md:"story_setup" desc:"Story setup summary with premise, genres, theme, rules"`
+	Outline          CraftOutlineSummary    `json:"outline" md:"outline" desc:"Outline summary with parts, volumes, chapters"`
+	RelevantChapters []CraftChapterSummary  `json:"relevant_chapters" md:"relevant_chapters" desc:"Chapters where these organizations appear or exert pressure"`
+	Organizations    []string               `json:"organizations" md:"organizations" desc:"List of organization or faction names to generate"`
+	CustomPrompt     string                 `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional custom prompt for generation"`
+}
+
+// CraftGenOrganizationsOutput is the output for organization generation
+type CraftGenOrganizationsOutput struct {
+	Organizations map[string]models.Organization `json:"organizations" md:"organizations" desc:"Generated organization descriptions keyed by name"`
+}
+
 // CraftAgent generates detailed story elements (characters, locations, items)
 // It wraps BaseAgent to provide type-safe methods
 type CraftAgent struct {
@@ -303,6 +317,39 @@ func (a *CraftAgent) GenerateItems(ctx context.Context, names []string, customPr
 	return output.Items, nil
 }
 
+// GenerateOrganizations generates detailed organization descriptions
+func (a *CraftAgent) GenerateOrganizations(ctx context.Context, names []string, customPrompt string) (map[string]models.Organization, error) {
+	logger.Section("CRAFT AGENT - Organization Generation")
+	logger.Info("Organizations: %v", names)
+	logger.Info("Language: %s", a.base.language)
+
+	relevantChapters := a.findChaptersWithOrganizations(names)
+	logger.Info("Found %d relevant chapters for these organizations", len(relevantChapters))
+
+	input := CraftGenOrganizationsInput{
+		StorySetup:       a.buildStorySetupSummary(),
+		Outline:          a.buildOutlineSummary(),
+		RelevantChapters: relevantChapters,
+		Organizations:    names,
+		CustomPrompt:     customPrompt,
+	}
+
+	var output CraftGenOrganizationsOutput
+	params := InvokeParams{
+		Skills:  []string{"craft-organizations"},
+		Command: "generate detailed organization profiles",
+	}
+
+	if err := a.base.Execute(ctx, params, input, &output.Organizations); err != nil {
+		return nil, err
+	}
+
+	output.Organizations = normalizeGeneratedOrganizations(names, output.Organizations)
+
+	logger.Info("鉁?Generated %d organizations", len(output.Organizations))
+	return output.Organizations, nil
+}
+
 // findChaptersWithCharacters finds chapters that mention the given characters.
 func (a *CraftAgent) findChaptersWithCharacters(characterNames []string) []CraftChapterSummary {
 	if a.outline == nil {
@@ -369,6 +416,31 @@ func (a *CraftAgent) findChaptersWithItems(itemNames []string) []CraftChapterSum
 		for _, vol := range part.Volumes {
 			for _, ch := range vol.Chapters {
 				if chapterHasItem(ch, nameSet) {
+					relevantChapters = append(relevantChapters, buildCraftChapterSummary(ch))
+				}
+			}
+		}
+	}
+
+	return relevantChapters
+}
+
+// findChaptersWithOrganizations finds chapters that mention the given organizations
+func (a *CraftAgent) findChaptersWithOrganizations(organizationNames []string) []CraftChapterSummary {
+	if a.outline == nil {
+		return nil
+	}
+
+	var relevantChapters []CraftChapterSummary
+	nameSet := make(map[string]bool)
+	for _, name := range organizationNames {
+		nameSet[name] = true
+	}
+
+	for _, part := range a.outline.Parts {
+		for _, vol := range part.Volumes {
+			for _, ch := range vol.Chapters {
+				if chapterHasOrganization(ch, nameSet) {
 					relevantChapters = append(relevantChapters, buildCraftChapterSummary(ch))
 				}
 			}
@@ -523,6 +595,31 @@ func chapterHasItem(ch models.Chapter, names map[string]bool) bool {
 	return false
 }
 
+func chapterHasOrganization(ch models.Chapter, names map[string]bool) bool {
+	for _, enemy := range ch.Enemies {
+		if names[enemy.Faction] {
+			return true
+		}
+	}
+	for _, advance := range ch.StorylineAdvances {
+		if names[advance.StorylineName] {
+			return true
+		}
+	}
+	for _, event := range ch.Events {
+		if names[event.Context] || names[event.GetTarget()] || names[event.GetActor()] {
+			return true
+		}
+	}
+	content := ch.Title + " " + ch.Summary + " " + ch.Conflict
+	for name := range names {
+		if strings.Contains(content, name) {
+			return true
+		}
+	}
+	return false
+}
+
 func normalizeGeneratedCharacters(requested []string, generated map[string]models.Character) map[string]models.Character {
 	out := make(map[string]models.Character, len(generated))
 	for _, name := range requested {
@@ -543,12 +640,42 @@ func normalizeGeneratedCharacters(requested []string, generated map[string]model
 		char.NormalizeForCraft(name)
 		out[name] = char
 	}
-	if len(out) > 0 {
+	if len(requested) > 0 {
 		return out
 	}
 	for name, char := range generated {
 		char.NormalizeForCraft(name)
 		out[name] = char
+	}
+	return out
+}
+
+func normalizeGeneratedOrganizations(requested []string, generated map[string]models.Organization) map[string]models.Organization {
+	out := make(map[string]models.Organization, len(generated))
+	for _, name := range requested {
+		org, ok := generated[name]
+		if !ok {
+			for key, candidate := range generated {
+				if candidate.Name == name {
+					org = candidate
+					delete(generated, key)
+					ok = true
+					break
+				}
+			}
+		}
+		if !ok {
+			continue
+		}
+		org.NormalizeForCraft(name)
+		out[name] = org
+	}
+	if len(requested) > 0 {
+		return out
+	}
+	for name, org := range generated {
+		org.NormalizeForCraft(name)
+		out[name] = org
 	}
 	return out
 }
@@ -573,7 +700,7 @@ func normalizeGeneratedLocations(requested []string, generated map[string]models
 		loc.NormalizeForCraft(name)
 		out[name] = loc
 	}
-	if len(out) > 0 {
+	if len(requested) > 0 {
 		return out
 	}
 	for name, loc := range generated {
@@ -603,7 +730,7 @@ func normalizeGeneratedItems(requested []string, generated map[string]models.Ite
 		item.NormalizeForCraft(name)
 		out[name] = item
 	}
-	if len(out) > 0 {
+	if len(requested) > 0 {
 		return out
 	}
 	for name, item := range generated {

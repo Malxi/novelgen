@@ -31,6 +31,7 @@ Project root:
 - `story/craft/characters.json`: `map[string]models.Character`
 - `story/craft/locations.json`: `map[string]models.Location`
 - `story/craft/items.json`: `map[string]models.Item`
+- `story/craft/organizations.json`: `map[string]models.Organization`
 - `chapters/<chapter_id>.md`: final chapter text
 - `drafts/<chapter_id>.md`: legacy draft text
 - `story/recaps/<chapter_id>.json`: `models.ChapterRecap`
@@ -263,12 +264,14 @@ Outputs:
 - `story/craft/characters.json`
 - `story/craft/locations.json`
 - `story/craft/items.json`
+- `story/craft/organizations.json`
 
 Go types:
 
 - `map[string]models.Character`
 - `map[string]models.Location`
 - `map[string]models.Item`
+- `map[string]models.Organization`
 
 Required invariants:
 
@@ -280,6 +283,9 @@ Required invariants:
 - Alias fields are additive and must not replace canonical names.
 - Location and item references should use names stable enough for write and RPG
   conversion.
+- Ability systems and progression stages are owned by `setup.v1`
+  (`StorySetup.Premises[]`) and must not be duplicated as craft project state.
+  Craft may use them to ground characters, locations, and items.
 - Craft elements may include optional RPG/DSL metadata. Producers are
   `craft gen` and `craft improve`; consumers are RPG adapters, DSL conversion,
   and simulation. Missing fields are valid for old projects and fall back to
@@ -292,17 +298,32 @@ Required invariants:
   `encounter_tags`, `resource_tags`, `dsl_tags`, and `state_effects`.
 - Item RPG metadata includes `rpg_item_type`, `rarity`, `power_level`,
   `quantity_tracking`, `dsl_tags`, and `state_effects`.
+- Organization profiles describe durable factions, guilds, sects, companies,
+  empires, clans, armies, agencies, alliances, or other power groups. They are
+  produced by `craft gen` from explicit outline factions and faction-like setup
+  storylines, then refined by `craft improve`. Missing
+  `organizations.json` remains valid for older projects.
 - Craft extraction scans chapter characters, scenes, enemies, `state_anchor`,
   typed event actors/targets via `Event` accessors, and `resource_ledger` so
   RPG-relevant elements are not missed.
+- Outline events that reference premise/ability targets should resolve to
+  `StorySetup.Premises[]` names or progression stage names. Missing references
+  are reported by `craft gen` as setup gaps; craft does not create a separate
+  `ability_systems.json` fallback.
 
 Consumers:
 
 - `write` uses craft data for chapter context and prose grounding.
 - `logic.StateMatrixManager` loads craft data into continuity state.
-- RPG/DSL conversion uses craft data to enrich entities and locations.
+- RPG/DSL conversion uses craft data to enrich entities, locations, items, and
+  organization world rules.
 - RPG/DSL conversion prefers explicit craft RPG metadata when present, then
   falls back to the older name/type/skill heuristics.
+- Organization data grounds faction names used by character affiliations,
+  outline enemies, and storyline pressure. `write` includes a compact relevant
+  organization summary in chapter context; RPG/DSL conversion emits organization
+  profile and state-effect rules. Downstream consumers may ignore it for old
+  projects when the file is absent.
 
 Change checklist:
 
@@ -349,7 +370,8 @@ Required invariants:
 
 - Chapter filename is based on `models.Chapter.ID`.
 - Generation should use the current chapter, previous recap, nearby context,
-  state matrix, and configured word target.
+  state matrix, relevant craft context such as organizations, and configured
+  word target.
 - Review/improve should preserve chapter identity and should not silently write
   results for a different chapter ID.
 - If RPG DSL emission is enabled, generated or repaired DSL must parse and
@@ -475,8 +497,10 @@ Required invariants:
 - Craft phase conversion consumes optional RPG metadata from
   `story/craft/*.json`: character stats/roles become player or enemy defaults,
   location map/danger/tags become location properties, and item type/rarity/tags
-  become DSL item fields/effects. Old craft files without these fields remain
-  valid and use deterministic fallback inference.
+  become DSL item fields/effects. Organization profiles become world rules with
+  `organization.profile` and `organization.state_effect` triggers. Old craft
+  files without these fields remain valid and use deterministic fallback
+  inference.
 
 Consumers:
 

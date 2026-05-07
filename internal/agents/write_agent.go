@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"novelgen/internal/logic"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
+	"novelgen/internal/logic"
 	"novelgen/internal/models"
 )
 
@@ -94,6 +94,7 @@ type ChapterContext struct {
 	Current  *models.Chapter
 	Next     []*ContextChapter
 	Recap    string
+	Craft    string
 }
 
 // ContextChapter represents a chapter with its content
@@ -463,7 +464,16 @@ func (a *WriteAgent) logWriteContext(chapterID, variant string, input interface{
 
 // formatChapterContext formats the chapter context for the prompt
 func formatChapterContext(context *ChapterContext) string {
+	if context == nil {
+		return ""
+	}
 	var sb strings.Builder
+
+	if strings.TrimSpace(context.Craft) != "" {
+		sb.WriteString("CRAFT CONTEXT:\n")
+		sb.WriteString(strings.TrimSpace(context.Craft))
+		sb.WriteString("\n")
+	}
 
 	if len(context.Previous) > 0 {
 		sb.WriteString("PREVIOUS CHAPTERS:\n")

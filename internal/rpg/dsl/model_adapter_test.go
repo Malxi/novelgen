@@ -206,7 +206,7 @@ func TestMergerCombinesFullAndVolumeOutlineFragments(t *testing.T) {
 }
 
 func TestModelAdapterCraftUsesExplicitRPGMetadata(t *testing.T) {
-	adapter := NewModelAdapter(nil, nil,
+	adapter := NewModelAdapterWithOrganizations(nil, nil,
 		map[string]*models.Character{
 			"chen_dong": {
 				Name:        "Chen Dong",
@@ -247,6 +247,20 @@ func TestModelAdapterCraftUsesExplicitRPGMetadata(t *testing.T) {
 				}},
 			},
 		},
+		map[string]*models.Organization{
+			"ember_guild": {
+				Name:      "Ember Guild",
+				Type:      "guild",
+				Goals:     []string{"Control the mine"},
+				Resources: []string{"forges"},
+				StateEffects: []models.CraftStateEffect{{
+					Target: "ember_guild",
+					Kind:   "faction",
+					Field:  "influence",
+					To:     "rising",
+				}},
+			},
+		},
 	)
 
 	dslData, err := adapter.BuildDSL(PhaseCraft)
@@ -264,6 +278,9 @@ func TestModelAdapterCraftUsesExplicitRPGMetadata(t *testing.T) {
 	}
 	if len(dslData.World.Items) != 1 || dslData.World.Items[0].Type != "key" || dslData.World.Items[0].Rarity != "rare" || dslData.World.Items[0].Effects["quantity_tracking"] != true {
 		t.Fatalf("item did not use explicit metadata: %+v", dslData.World.Items)
+	}
+	if !hasRuleWithTrigger(dslData, "organization.profile") || !hasRuleWithTrigger(dslData, "organization.state_effect") {
+		t.Fatalf("organization rules were not emitted: %+v", dslData.World.Rules)
 	}
 }
 
@@ -290,6 +307,15 @@ func hasNPC(dsl *DSL, name string) bool {
 func hasLocation(dsl *DSL, name string) bool {
 	for _, loc := range dsl.World.Locations {
 		if loc.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func hasRuleWithTrigger(dsl *DSL, trigger string) bool {
+	for _, rule := range dsl.World.Rules {
+		if rule.Trigger == trigger {
 			return true
 		}
 	}

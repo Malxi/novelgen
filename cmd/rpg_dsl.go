@@ -523,7 +523,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("加载 story setup 失败: %w", err)
 	}
-	charModels, locModels, _, err := loadAllElements()
+	charModels, locModels, _, _, err := loadAllElements()
 	if err != nil {
 		return fmt.Errorf("加载 craft 元素失败: %w", err)
 	}

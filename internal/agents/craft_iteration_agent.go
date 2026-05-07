@@ -49,6 +49,19 @@ type CraftReviewItemsOutput struct {
 	Result models.ReviewResult `json:"result" md:"result" desc:"Review result with scores and suggestions"`
 }
 
+// CraftReviewOrganizationsInput is the input for organization review
+type CraftReviewOrganizationsInput struct {
+	StorySetup    models.StorySetup              `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Outline       string                         `json:"outline" md:"outline" desc:"Story outline as string"`
+	Organizations map[string]models.Organization `json:"organizations" md:"organizations" desc:"Organizations to review"`
+	Iteration     int                            `json:"iteration" md:"iteration" desc:"Current iteration number"`
+}
+
+// CraftReviewOrganizationsOutput is the output for organization review
+type CraftReviewOrganizationsOutput struct {
+	Result models.ReviewResult `json:"result" md:"result" desc:"Review result with scores and suggestions"`
+}
+
 // CraftImproveCharactersInput is the input for character improvement
 type CraftImproveCharactersInput struct {
 	StorySetup   models.StorySetup           `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
@@ -89,6 +102,20 @@ type CraftImproveItemsInput struct {
 // CraftImproveItemsOutput is the output for item improvement
 type CraftImproveItemsOutput struct {
 	Items map[string]models.Item `json:"items" md:"items" desc:"Improved item descriptions"`
+}
+
+// CraftImproveOrganizationsInput is the input for organization improvement
+type CraftImproveOrganizationsInput struct {
+	StorySetup    models.StorySetup              `json:"story_setup" md:"story_setup" desc:"Story setup including premise, genres, themes, rules"`
+	Outline       string                         `json:"outline" md:"outline" desc:"Story outline as string"`
+	Organizations map[string]models.Organization `json:"organizations" md:"organizations" desc:"Organizations to improve"`
+	ReviewResult  models.ReviewResult            `json:"review_result" md:"review_result" desc:"Review result for improvement guidance"`
+	CustomPrompt  string                         `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional custom prompt"`
+}
+
+// CraftImproveOrganizationsOutput is the output for organization improvement
+type CraftImproveOrganizationsOutput struct {
+	Organizations map[string]models.Organization `json:"organizations" md:"organizations" desc:"Improved organization profiles"`
 }
 
 // CraftIterationAgent handles AI-driven element review and improvement
@@ -211,6 +238,36 @@ func (a *CraftIterationAgent) ReviewItems(ctx context.Context, items map[string]
 	return output.Result, nil
 }
 
+// ReviewOrganizations reviews organizations and returns improvement suggestions
+func (a *CraftIterationAgent) ReviewOrganizations(ctx context.Context, organizations map[string]models.Organization, iteration int) (models.ReviewResult, error) {
+	logger.Section("CRAFT ITERATION AGENT - Organization Review")
+	logger.Info("Iteration: %d, Organizations: %d", iteration, len(organizations))
+	logger.Info("Language: %s", a.base.language)
+
+	input := CraftReviewOrganizationsInput{
+		StorySetup:    *a.setup,
+		Outline:       a.getOutlineSummary(),
+		Organizations: organizations,
+		Iteration:     iteration,
+	}
+
+	var output CraftReviewOrganizationsOutput
+	params := InvokeParams{
+		Skills:  []string{"craft-review-organizations"},
+		Command: "review organizations and provide improvement suggestions",
+	}
+
+	if err := a.base.Execute(ctx, params, input, &output.Result); err != nil {
+		return models.ReviewResult{}, err
+	}
+
+	logger.Section("Organization Review Result")
+	logger.Info("Overall Score: %.1f/100", output.Result.OverallScore)
+	logger.Info("Suggestions: %d", len(output.Result.Suggestions))
+
+	return output.Result, nil
+}
+
 // ImproveCharacters applies improvements to characters based on review
 func (a *CraftIterationAgent) ImproveCharacters(ctx context.Context, characters map[string]models.Character, review models.ReviewResult, customPrompt string) (map[string]models.Character, error) {
 	logger.Section("CRAFT ITERATION AGENT - Character Improvement")
@@ -305,6 +362,38 @@ func (a *CraftIterationAgent) ImproveItems(ctx context.Context, items map[string
 
 	logger.Info("✓ Improved %d items", len(output.Items))
 	return output.Items, nil
+}
+
+// ImproveOrganizations applies improvements to organizations based on review
+func (a *CraftIterationAgent) ImproveOrganizations(ctx context.Context, organizations map[string]models.Organization, review models.ReviewResult, customPrompt string) (map[string]models.Organization, error) {
+	logger.Section("CRAFT ITERATION AGENT - Organization Improvement")
+	logger.Info("Organizations: %d, Suggestions: %d", len(organizations), len(review.Suggestions))
+	logger.Info("Language: %s", a.base.language)
+
+	input := CraftImproveOrganizationsInput{
+		StorySetup:    *a.setup,
+		Outline:       a.getOutlineSummary(),
+		Organizations: organizations,
+		ReviewResult:  review,
+		CustomPrompt:  customPrompt,
+	}
+
+	var output CraftImproveOrganizationsOutput
+	params := InvokeParams{
+		Skills:  []string{"craft-improve-organizations"},
+		Command: "improve organizations based on review suggestions",
+	}
+
+	if err := a.base.Execute(ctx, params, input, &output.Organizations); err != nil {
+		return nil, err
+	}
+	for name, org := range output.Organizations {
+		org.NormalizeForCraft(name)
+		output.Organizations[name] = org
+	}
+
+	logger.Info("鉁?Improved %d organizations", len(output.Organizations))
+	return output.Organizations, nil
 }
 
 // IterateCharacters runs the review-improvement loop for characters
@@ -470,6 +559,55 @@ func (a *CraftIterationAgent) IterateItems(ctx context.Context, items map[string
 	}
 
 	return currentItems, finalReview, nil
+}
+
+// IterateOrganizations runs the review-improvement loop for organizations
+func (a *CraftIterationAgent) IterateOrganizations(ctx context.Context, organizations map[string]models.Organization, maxIterations int, qualityThreshold float64, customPrompt string) (map[string]models.Organization, *models.ReviewResult, error) {
+	logger.Section("CRAFT ITERATION AGENT - Organization Iteration Loop")
+	logger.Info("Max iterations: %d", maxIterations)
+	logger.Info("Quality threshold: %.1f", qualityThreshold)
+
+	currentOrganizations := organizations
+	var finalReview *models.ReviewResult
+
+	for i := 1; i <= maxIterations; i++ {
+		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
+
+		review, err := a.ReviewOrganizations(ctx, currentOrganizations, i)
+		if err != nil {
+			return nil, nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
+		}
+		finalReview = &review
+
+		if review.OverallScore >= qualityThreshold {
+			logger.Info("鉁?Quality threshold met (%.1f >= %.1f)", review.OverallScore, qualityThreshold)
+			break
+		}
+		if i == maxIterations {
+			logger.Warn("Max iterations reached, stopping iteration loop")
+			break
+		}
+
+		hasHighPriority := false
+		for _, s := range review.Suggestions {
+			if s.Priority == "high" {
+				hasHighPriority = true
+				break
+			}
+		}
+		if !hasHighPriority {
+			logger.Info("No high priority issues, stopping iteration")
+			break
+		}
+
+		improved, err := a.ImproveOrganizations(ctx, currentOrganizations, review, customPrompt)
+		if err != nil {
+			return nil, nil, fmt.Errorf("improvement failed at iteration %d: %w", i, err)
+		}
+		currentOrganizations = improved
+	}
+
+	return currentOrganizations, finalReview, nil
 }
 
 // getOutlineSummary returns a summary of the outline for context

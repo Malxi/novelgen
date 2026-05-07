@@ -1051,6 +1051,15 @@ func (na *NovelgenAdapter) toCraftDSL(dsl *DSL) (*DSL, error) {
 		dsl.World.Items = append(dsl.World.Items, rpgItem)
 	}
 
+	if len(na.project.Organizations) > 0 {
+		organizations := make(map[string]*models.Organization, len(na.project.Organizations))
+		for id, org := range na.project.Organizations {
+			orgCopy := org
+			organizations[id] = &orgCopy
+		}
+		(&ModelAdapter{organizations: organizations}).buildOrganizations(dsl)
+	}
+
 	return dsl, nil
 }
 
