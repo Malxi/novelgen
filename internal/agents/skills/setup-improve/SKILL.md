@@ -59,6 +59,7 @@ For each suggestion:
 - Strengthen cause-effect relationships
 - Preserve one clear root premise, but expand long-form genre setups into 3-6 derived `premises` systems when they are thin. Do not create unrelated cores; split the same world logic into simulatable tracks such as protagonist growth, enemy tiers, faction technology, resource economy, social/faction hierarchy, and final external threat.
 - Every added or revised `premises[]` system should have a progression ladder with named stages, requirements/costs, ceilings, and a clear story use. Avoid one vague omnipotent upgrade system.
+- For power-fantasy/web-novel setups, prefer "surface limits the protagonist can exploit" over grim mandatory costs. A good rule should create clever wins, enemy misreads, and visible rewards.
 
 ### Characters
 - Enhance motivation clarity
@@ -75,6 +76,8 @@ For each suggestion:
 - For important storylines (`importance >= 8`), prefer a concrete arc contract: `scope`, `setup_role`, `payoff_style`, 2-4 `pressure_points`, and the most relevant desire/opposition/stakes/open_question/payoff fields
 - Keep `scope` high-level (`opening`, `volume`, `book`, `series`) and avoid chapter-specific planning in setup
 - Use `payoff_style` to distinguish immediate payoff from staged reveals or slow-burn promises
+- Add or refine optional `appeal_engine` on important storylines when the arc lacks a repeatable爽点: define `appeal`, `surface_limit`, `exploit`, `signature_win`, `upgrade_path`, `opponent_misread`, and `reward_type`.
+- Add optional `appeal_engine` on core `premises[]` when a setting system is logically clear but not yet fun to write. The key question is: how can the protagonist use this unique setting to win in a way readers can picture?
 
 ### DSL Simulation Feedback
 - Treat review suggestions from `category: logic`, `plot`, `conflict`, `structure`, or `consistency` as possible DSL simulation feedback.
@@ -107,6 +110,7 @@ For each suggestion:
 6. **Keep valid content** - Don't remove elements that work well
 7. **Ensure completeness** - All required fields must be populated
 8. **Keep storyline texture flexible** - Do not fill every optional storyline field mechanically; choose the few hints that make the arc more alive
+9. **Make wins designable** - Important rules and arcs should imply a satisfying win pattern, not just background logic
 
 ## Output Requirements
 

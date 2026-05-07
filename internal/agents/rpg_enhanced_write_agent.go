@@ -347,7 +347,7 @@ func (a *RPGEnhancedWriteAgent) ReviewChapterWithRPG(
 	// 先进行普通评审
 	input := WriteReviewInput{
 		StorySetup:     ToCompact(a.setup),
-		StateMatrix:    formatStateMatrixForWrite(state, chapter),
+		Continuity:     formatStateMatrixForWrite(state, chapter),
 		Chapter:        *chapter,
 		ChapterContent: content,
 		TargetWords:    targetWords,

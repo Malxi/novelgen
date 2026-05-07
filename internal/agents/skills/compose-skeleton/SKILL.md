@@ -15,6 +15,7 @@ This creates the high-level structure that will be filled in with chapters later
   - `volumes`: Array of Volume objects, each containing:
     - `title`: Volume title
     - `summary`: Volume summary
+    - `payoff_contract` (optional but strongly recommended): reader promise and satisfying volume payoff
 
 ## Structure Requirements
 
@@ -28,6 +29,14 @@ This creates the high-level structure that will be filled in with chapters later
 - Volume summaries should describe the specific storyline
 - Volumes within a part should build toward the part's conclusion
 - Volume-to-volume continuity must be maintained
+- Each volume should have a `payoff_contract` that makes the爽点 promise explicit:
+  - `volume_question`: the question that keeps readers turning pages
+  - `power_promise`: the cool rule/ability/fantasy this volume will demonstrate
+  - `main_opponent_misread`: what the main obstacle misunderstands about the protagonist or rules
+  - `big_win`: the satisfying win image the volume builds toward
+  - `visible_reward`: concrete reward after the win
+  - `reputation_shift`: how others see the protagonist differently afterward
+  - `next_bigger_game`: the larger game revealed after the win
 
 ## Output Format Example
 
@@ -40,7 +49,16 @@ This creates the high-level structure that will be filled in with chapters later
       "volumes": [
         {
           "title": "Volume 1: Discovery",
-          "summary": "Protagonist discovers their unique ability and faces first challenge"
+          "summary": "Protagonist discovers their unique ability and faces first challenge",
+          "payoff_contract": {
+            "volume_question": "Can the protagonist survive long enough to understand the ability?",
+            "power_promise": "The protagonist turns a visible weakness into a winning trick.",
+            "main_opponent_misread": "Enemies think the ability is only defensive.",
+            "big_win": "The protagonist uses the limitation to bait and defeat a stronger enemy.",
+            "visible_reward": "A new resource and public proof of competence.",
+            "reputation_shift": "From disposable novice to dangerous variable.",
+            "next_bigger_game": "The enemy behind the first attack notices him."
+          }
         },
         {
           "title": "Volume 2: Awakening",

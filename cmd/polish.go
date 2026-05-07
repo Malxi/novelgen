@@ -112,8 +112,8 @@ func runPolish(cmd *cobra.Command, args []string) error {
 	recapAgent.SetLanguage(config.Language)
 	recapStore := recap.NewStore(root)
 
-	// Initialize state manager
-	stateManager := logic.NewStateMatrixManager(root)
+	// Initialize continuity builder
+	continuityBuilder := logic.NewChapterContinuityBuilder(root)
 
 	// Determine target words per chapter
 	targetWords := config.ChapterConfig.TargetWordsPerChapter
@@ -191,7 +191,7 @@ func runPolish(cmd *cobra.Command, args []string) error {
 
 			// Step 2: Improve chapters based on volume review and RPG DSL issues
 			log.Info("Improving chapters based on volume review and RPG DSL issues...")
-			improvedCount, err := improveChaptersWithVolumeReviewAndRPGIssues(ctx, writeAgent, recapAgent, recapStore, stateManager, volume, chapters, volumeReviewResult, rpgDSLIssues, outline, targetWords)
+			improvedCount, err := improveChaptersWithVolumeReviewAndRPGIssues(ctx, writeAgent, recapAgent, recapStore, continuityBuilder, volume, chapters, volumeReviewResult, rpgDSLIssues, outline, targetWords)
 			if err != nil {
 				log.Error("Failed to polish some chapters in volume %s: %v", volume.ID, err)
 				errc.Add(err)
@@ -306,7 +306,7 @@ func performVolumeReview(ctx context.Context, writeAgent *agents.WriteAgent, vol
 }
 
 // improveChaptersWithVolumeReviewAndRPGIssues improves chapters based on volume-level review and RPG DSL issues
-func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent *agents.WriteAgent, recapAgent *agents.RecapAgent, recapStore *recap.Store, stateManager *logic.StateMatrixManager, volume *models.Volume, chapters []*models.Chapter, volumeReview agents.VolumeReviewResult, rpgDSLIssues []dsl.SimulationIssue, outline *models.Outline, targetWords int) (int, error) {
+func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent *agents.WriteAgent, recapAgent *agents.RecapAgent, recapStore *recap.Store, continuityBuilder *logic.ChapterContinuityBuilder, volume *models.Volume, chapters []*models.Chapter, volumeReview agents.VolumeReviewResult, rpgDSLIssues []dsl.SimulationIssue, outline *models.Outline, targetWords int) (int, error) {
 	log := logger.GetLogger()
 	var errc writeErrorCollector
 
@@ -420,11 +420,11 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent
 				// Load context
 				chapterContext := loadChapterContext(outline, chapter, 2)
 
-				// Calculate state matrix
-				stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
+				// Calculate continuity
+				continuity := continuityBuilder.BuildBefore(outline, chapter)
 
 				// Generate improved content
-				content, err := writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, stateMatrix, targetWords, currentContent, suggestions.String())
+				content, err := writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, continuity, targetWords, currentContent, suggestions.String())
 				if err != nil {
 					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
 					errc.Addf("%s: polish improve failed: %w", chapter.ID, err)

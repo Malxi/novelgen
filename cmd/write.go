@@ -304,15 +304,15 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	agent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	agent.SetLanguage(config.Language)
 
-	// Get project root for state matrix manager
+	// Get project root for continuity builder
 	root, err := findProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
 	setupWriteRunLogging(root, "write gen")
 
-	// Create state matrix manager
-	stateManager := logic.NewStateMatrixManager(root)
+	// Create continuity builder
+	continuityBuilder := logic.NewChapterContinuityBuilder(root)
 	// Create recap agent + store (auto-persist recaps for continuity)
 	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
 	recapAgent.SetLanguage(config.Language)
@@ -351,11 +351,11 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 				// Load context drafts (previous and next chapters)
 				context := loadChapterContext(outline, chapter, writeContextFlag)
 
-				// Calculate story state matrix
-				stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
+				// Calculate chapter continuity
+				continuity := continuityBuilder.BuildBefore(outline, chapter)
 
 				// Generate final content
-				content, err := agent.GenerateChapter(ctx, chapter, context, stateMatrix, targetWords)
+				content, err := agent.GenerateChapter(ctx, chapter, context, continuity, targetWords)
 				if err != nil {
 					log.Error("Failed to generate content for chapter %s: %v", chapter.ID, err)
 					errc.Addf("%s: generate failed: %w", chapter.ID, err)
@@ -866,15 +866,15 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	writeAgent.SetLanguage(config.Language)
 
-	// Get project root for state matrix manager
+	// Get project root for continuity builder
 	root, err := findProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
 	setupWriteRunLogging(root, "write improve")
 
-	// Create state matrix manager
-	stateManager := logic.NewStateMatrixManager(root)
+	// Create continuity builder
+	continuityBuilder := logic.NewChapterContinuityBuilder(root)
 
 	// Get volumes to improve
 	volumes := getVolumesForDraft(outline, writeVolumeFlag, writeChapterFlag)
@@ -904,7 +904,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 			_, err := loadVolumeReview(volume.ID)
 			if err != nil {
 				log.Info("Auto-reviewing volume: %s", volume.ID)
-				if err := reviewVolumeWithWriteAgent(ctx, writeAgent, stateManager, volume, outline, targetWords, writeConcurrencyFlag); err != nil {
+				if err := reviewVolumeWithWriteAgent(ctx, writeAgent, continuityBuilder, volume, outline, targetWords, writeConcurrencyFlag); err != nil {
 					log.Error("Failed to auto-review volume %s: %v", volume.ID, err)
 					return err
 				}
@@ -948,7 +948,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 			}
 
 			// Improve chapters concurrently
-			improved, err := improveChaptersWithWriteAgent(ctx, writeAgent, chaptersToImprove, review.Reviews, outline, stateManager, writeConcurrencyFlag, targetWords)
+			improved, err := improveChaptersWithWriteAgent(ctx, writeAgent, chaptersToImprove, review.Reviews, outline, continuityBuilder, writeConcurrencyFlag, targetWords)
 			if err != nil {
 				log.Error("Failed to improve some chapters in volume %s: %v", volume.ID, err)
 				return err
@@ -977,7 +977,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 }
 
 // improveChaptersWithWriteAgent improves chapters using the write agent
-func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, stateManager *logic.StateMatrixManager, concurrency int, targetWords int) (int, error) {
+func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, continuityBuilder *logic.ChapterContinuityBuilder, concurrency int, targetWords int) (int, error) {
 	log := logger.GetLogger()
 	var errc writeErrorCollector
 
@@ -1049,11 +1049,11 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 				// Load context drafts
 				context := loadChapterContext(outline, chapter, writeContextFlag)
 
-				// Calculate story state matrix
-				stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
+				// Calculate chapter continuity
+				continuity := continuityBuilder.BuildBefore(outline, chapter)
 
 				// Generate improved content with suggestions
-				content, err := agent.GenerateChapterWithSuggestions(ctx, chapter, context, stateMatrix, targetWords, currentContent, suggestions)
+				content, err := agent.GenerateChapterWithSuggestions(ctx, chapter, context, continuity, targetWords, currentContent, suggestions)
 				if err != nil {
 					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
 					errc.Addf("%s: improve failed: %w", chapter.ID, err)
@@ -1072,13 +1072,13 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 					writeTeleportFixFlag,
 					writeBridgeRetriesFlag,
 					func(s string) (string, error) {
-						return agent.GenerateChapterWithSuggestions(ctx, chapter, context, stateMatrix, targetWords, content, s)
+						return agent.GenerateChapterWithSuggestions(ctx, chapter, context, continuity, targetWords, content, s)
 					},
 					writeCharacterFixFlag,
 					writeCharacterPatchRetriesFlag,
 					knownChars,
 					func(s string) (string, error) {
-						return agent.GenerateChapterWithSuggestions(ctx, chapter, context, stateMatrix, targetWords, content, s)
+						return agent.GenerateChapterWithSuggestions(ctx, chapter, context, continuity, targetWords, content, s)
 					},
 				)
 				content = fixed
@@ -1189,15 +1189,15 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	writeAgent.SetLanguage(config.Language)
 
-	// Get project root for state matrix manager
+	// Get project root for continuity builder
 	root, err := findProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
 	setupWriteRunLogging(root, "write review")
 
-	// Create state matrix manager
-	stateManager := logic.NewStateMatrixManager(root)
+	// Create continuity builder
+	continuityBuilder := logic.NewChapterContinuityBuilder(root)
 
 	// Get chapters to review based on flags
 	chaptersToReview := getChaptersToReview(outline, writeChapterFlag, writeVolumeFlag, writePartFlag, writeAllFlag)
@@ -1243,11 +1243,11 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 				// Load context with recap for continuity checking
 				chapterContext := loadChapterContext(outline, chapter, writeContextFlag)
 
-				// Calculate state matrix for continuity checking
-				stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
+				// Calculate continuity snapshot for continuity checking
+				continuity := continuityBuilder.BuildBefore(outline, chapter)
 
 				// Review chapter
-				reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, chapterContext, stateMatrix, content, targetWords, 1)
+				reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, chapterContext, continuity, content, targetWords, 1)
 				if err != nil {
 					log.Error("[Worker %d] Failed to review chapter %s: %v", workerID, chapter.ID, err)
 					errc.Addf("%s: review failed: %w", chapter.ID, err)
@@ -1398,7 +1398,7 @@ func resolveVolumeID(outline *models.Outline, volumeFlag, partFlag string) strin
 }
 
 // reviewVolumeWithWriteAgent reviews all chapters in a volume using the write agent
-func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAgent, stateManager *logic.StateMatrixManager, volume *models.Volume, outline *models.Outline, targetWords int, concurrency int) error {
+func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAgent, continuityBuilder *logic.ChapterContinuityBuilder, volume *models.Volume, outline *models.Outline, targetWords int, concurrency int) error {
 	log := logger.GetLogger()
 
 	// Get all chapters in this volume
@@ -1452,11 +1452,11 @@ func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAge
 				// Load context with recap for continuity checking
 				chapterContext := loadChapterContext(outline, chapter, writeContextFlag)
 
-				// Calculate state matrix for continuity checking
-				stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
+				// Calculate continuity snapshot for continuity checking
+				continuity := continuityBuilder.BuildBefore(outline, chapter)
 
 				// Review chapter
-				reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, chapterContext, stateMatrix, content, targetWords, 1)
+				reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, chapterContext, continuity, content, targetWords, 1)
 				if err != nil {
 					log.Error("[Worker %d] Failed to review chapter %s: %v", workerID, chapter.ID, err)
 					errc.Addf("%s: review failed: %w", chapter.ID, err)
@@ -1562,15 +1562,15 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	writeAgent.SetLanguage(config.Language)
 
-	// Get project root for state matrix manager
+	// Get project root for continuity builder
 	root, err := findProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
 	setupWriteRunLogging(root, "write pipeline")
 
-	// Create state matrix manager
-	stateManager := logic.NewStateMatrixManager(root)
+	// Create continuity builder
+	continuityBuilder := logic.NewChapterContinuityBuilder(root)
 
 	// Get chapters to process
 	chaptersToProcess := getChaptersToReview(outline, writeChapterFlag, writeVolumeFlag, writePartFlag, writeAllFlag)
@@ -1607,8 +1607,8 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		if content == "" {
 			log.Info("Generating chapter: %s - %s", chapter.ID, chapter.Title)
 			chapterContext := loadChapterContext(outline, chapter, writeContextFlag)
-			stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
-			generatedContent, err := writeAgent.GenerateChapter(ctx, chapter, chapterContext, stateMatrix, targetWords)
+			continuity := continuityBuilder.BuildBefore(outline, chapter)
+			generatedContent, err := writeAgent.GenerateChapter(ctx, chapter, chapterContext, continuity, targetWords)
 			if err != nil {
 				log.Error("Failed to generate chapter %s: %v", chapter.ID, err)
 				errc.Addf("%s: generate failed: %w", chapter.ID, err)
@@ -1628,8 +1628,8 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		// Step 2: Review chapter
 		log.Info("\n[Step 2/4] Reviewing chapter...")
 		chapterContext := loadChapterContext(outline, chapter, writeContextFlag)
-		stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
-		reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, chapterContext, stateMatrix, content, targetWords, 1)
+		continuity := continuityBuilder.BuildBefore(outline, chapter)
+		reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, chapterContext, continuity, content, targetWords, 1)
 		if err != nil {
 			log.Error("Failed to review chapter %s: %v", chapter.ID, err)
 			errc.Addf("%s: review failed: %w", chapter.ID, err)
@@ -1732,8 +1732,8 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				suggestions += "\n\n" + chapterRPGIssues
 			}
 			chapterContext := loadChapterContext(outline, chapter, writeContextFlag)
-			stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
-			improvedContent, err := writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, stateMatrix, targetWords, currentContent, suggestions, round)
+			continuity := continuityBuilder.BuildBefore(outline, chapter)
+			improvedContent, err := writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, continuity, targetWords, currentContent, suggestions, round)
 			if err != nil {
 				log.Error("Failed to improve chapter %s: %v", chapter.ID, err)
 				errc.Addf("%s: improve round %d failed: %w", chapter.ID, round, err)
@@ -1750,13 +1750,13 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				writeTeleportFixFlag,
 				writeBridgeRetriesFlag,
 				func(s string) (string, error) {
-					return writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, stateMatrix, targetWords, improvedContent, s, round)
+					return writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, continuity, targetWords, improvedContent, s, round)
 				},
 				writeCharacterFixFlag,
 				writeCharacterPatchRetriesFlag,
 				knownChars,
 				func(s string) (string, error) {
-					return writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, stateMatrix, targetWords, improvedContent, s, round)
+					return writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, continuity, targetWords, improvedContent, s, round)
 				},
 			)
 			improvedContent = fixedContent
@@ -1773,7 +1773,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 			// Re-review after improvement (if not last round)
 			if round < writeMaxRoundsFlag {
 				log.Info("Re-reviewing chapter %s after improvement...", chapter.ID)
-				reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, chapterContext, stateMatrix, currentContent, targetWords, 1)
+				reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, chapterContext, continuity, currentContent, targetWords, 1)
 				if err != nil {
 					log.Error("Failed to re-review chapter %s: %v", chapter.ID, err)
 					errc.Addf("%s: re-review after improvement failed: %w", chapter.ID, err)

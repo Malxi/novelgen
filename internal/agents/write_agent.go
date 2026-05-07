@@ -52,7 +52,7 @@ func ToCompact(setup *models.StorySetup) CompactStorySetup {
 type WriteGenInput struct {
 	StorySetup   CompactStorySetup `json:"story_setup" md:"story_setup" desc:"Core story setup including premise, genres, themes, rules"`
 	Chapter      models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
-	StateMatrix  string            `json:"state_matrix" md:"state_matrix" desc:"Current story state including character statuses, relationships, goals"`
+	Continuity   string            `json:"continuity" md:"continuity" desc:"Current story continuity including character statuses, relationships, goals, resources, and recent state changes"`
 	TargetWords  int               `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
 	Context      string            `json:"context,omitempty" md:"context,omitempty" desc:"Continuity context from previous chapters"`
 	Recap        string            `json:"recap,omitempty" md:"recap,omitempty" desc:"Canonical recap from previous chapter"`
@@ -68,7 +68,7 @@ type WriteGenOutput struct {
 type WriteImproveInput struct {
 	StorySetup   CompactStorySetup `json:"story_setup" md:"story_setup" desc:"Core story setup including premise, genres, themes, rules"`
 	Chapter      models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
-	StateMatrix  string            `json:"state_matrix" md:"state_matrix" desc:"Current story state including character statuses, relationships, goals"`
+	Continuity   string            `json:"continuity" md:"continuity" desc:"Current story continuity including character statuses, relationships, goals, resources, and recent state changes"`
 	TargetWords  int               `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
 	Iteration    int               `json:"iteration" md:"iteration" desc:"Current improvement iteration number"`
 	CurrentDraft string            `json:"current_draft" md:"current_draft" desc:"The current draft content to be improved"`
@@ -86,7 +86,7 @@ type WriteImproveOutput struct {
 // WriteReviewInput is the input for chapter review
 type WriteReviewInput struct {
 	StorySetup     CompactStorySetup `json:"story_setup" md:"story_setup" desc:"Core story setup including premise, genres, themes, rules"`
-	StateMatrix    string            `json:"state_matrix" md:"state_matrix" desc:"Current story state including character statuses, relationships, goals"`
+	Continuity     string            `json:"continuity" md:"continuity" desc:"Current story continuity including character statuses, relationships, goals, resources, and recent state changes"`
 	Chapter        models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
 	ChapterContent string            `json:"chapter_content" md:"chapter_content" desc:"The chapter content to be reviewed"`
 	TargetWords    int               `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
@@ -199,7 +199,7 @@ func (a *WriteAgent) SetLanguage(language string) {
 }
 
 // GenerateChapter generates final chapter content with continuity
-func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, targetWords int) (string, error) {
+func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapter, context *ChapterContext, continuity *models.ChapterContinuity, targetWords int) (string, error) {
 	logger.Section("WRITE AGENT - Final Chapter Generation")
 	logger.Info("Chapter: %s", chapter.ID)
 	logger.Info("Target words: %d", targetWords)
@@ -214,7 +214,7 @@ func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapte
 	input := WriteGenInput{
 		StorySetup:   ToCompact(a.setup),
 		Chapter:      *chapter,
-		StateMatrix:  formatStateMatrixForWrite(state, chapter),
+		Continuity:   formatContinuityForWrite(continuity, chapter),
 		TargetWords:  targetWords,
 		Context:      formatChapterContext(context),
 		Recap:        recap,
@@ -248,7 +248,7 @@ func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapte
 }
 
 // GenerateChapterWithSuggestions generates improved chapter content with review suggestions
-func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, targetWords int, currentDraft string, suggestions string, iteration ...int) (string, error) {
+func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter *models.Chapter, context *ChapterContext, continuity *models.ChapterContinuity, targetWords int, currentDraft string, suggestions string, iteration ...int) (string, error) {
 	logger.Section("WRITE AGENT - Chapter Improvement")
 	logger.Info("Chapter: %s", chapter.ID)
 	logger.Info("Target words: %d", targetWords)
@@ -262,7 +262,7 @@ func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter
 	input := WriteImproveInput{
 		StorySetup:   ToCompact(a.setup),
 		Chapter:      *chapter,
-		StateMatrix:  formatStateMatrixForWrite(state, chapter),
+		Continuity:   formatContinuityForWrite(continuity, chapter),
 		TargetWords:  targetWords,
 		Iteration:    iter,
 		CurrentDraft: currentDraft,
@@ -299,7 +299,7 @@ func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter
 }
 
 // ReviewChapter reviews a chapter and provides improvement suggestions
-func (a *WriteAgent) ReviewChapter(ctx context.Context, chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, content string, targetWords int, iteration int) (models.ReviewResult, error) {
+func (a *WriteAgent) ReviewChapter(ctx context.Context, chapter *models.Chapter, context *ChapterContext, continuity *models.ChapterContinuity, content string, targetWords int, iteration int) (models.ReviewResult, error) {
 	logger.Section("WRITE AGENT - Chapter Review")
 	logger.Info("Chapter: %s", chapter.ID)
 	logger.Info("Iteration: %d", iteration)
@@ -316,7 +316,7 @@ func (a *WriteAgent) ReviewChapter(ctx context.Context, chapter *models.Chapter,
 
 	input := WriteReviewInput{
 		StorySetup:     ToCompact(a.setup),
-		StateMatrix:    formatStateMatrixForWrite(state, chapter),
+		Continuity:     formatContinuityForWrite(continuity, chapter),
 		Chapter:        *chapter,
 		ChapterContent: content,
 		TargetWords:    targetWords,
@@ -404,7 +404,7 @@ func (a *WriteAgent) ReviewVolume(ctx context.Context, volume *models.Volume, ch
 }
 
 // IterateChapter runs the review-improvement loop for a chapter
-func (a *WriteAgent) IterateChapter(ctx context.Context, chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, targetWords int, initialContent string, maxIterations int, qualityThreshold float64) (string, *models.ReviewResult, error) {
+func (a *WriteAgent) IterateChapter(ctx context.Context, chapter *models.Chapter, context *ChapterContext, continuity *models.ChapterContinuity, targetWords int, initialContent string, maxIterations int, qualityThreshold float64) (string, *models.ReviewResult, error) {
 	logger.Section("WRITE AGENT - Chapter Iteration Loop")
 	logger.Info("Chapter: %s", chapter.ID)
 	logger.Info("Max iterations: %d", maxIterations)
@@ -417,7 +417,7 @@ func (a *WriteAgent) IterateChapter(ctx context.Context, chapter *models.Chapter
 		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
 
 		// Review
-		review, err := a.ReviewChapter(ctx, chapter, context, state, currentContent, targetWords, i)
+		review, err := a.ReviewChapter(ctx, chapter, context, continuity, currentContent, targetWords, i)
 		if err != nil {
 			return "", nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
 		}
@@ -450,7 +450,7 @@ func (a *WriteAgent) IterateChapter(ctx context.Context, chapter *models.Chapter
 
 		// Improve
 		suggestions := formatWriteSuggestions(review.Suggestions)
-		improved, err := a.GenerateChapterWithSuggestions(ctx, chapter, context, state, targetWords, currentContent, suggestions, i)
+		improved, err := a.GenerateChapterWithSuggestions(ctx, chapter, context, continuity, targetWords, currentContent, suggestions, i)
 		if err != nil {
 			return "", nil, fmt.Errorf("improvement failed at iteration %d: %w", i, err)
 		}
@@ -613,8 +613,13 @@ func isCJK(r rune) bool {
 	return unicode.In(r, unicode.Han, unicode.Hiragana, unicode.Katakana, unicode.Hangul)
 }
 
-// formatStateMatrixForWrite formats the state matrix for the prompt
-// Delegates to logic.FormatStateMatrix for consistency
+// formatContinuityForWrite formats the continuity snapshot for the prompt.
+func formatContinuityForWrite(continuity *models.ChapterContinuity, chapter *models.Chapter) string {
+	return logic.FormatChapterContinuity(continuity, chapter)
+}
+
+// formatStateMatrixForWrite is retained for legacy RPG-enhanced write paths
+// until they migrate to ChapterContinuity.
 func formatStateMatrixForWrite(state *models.StateMatrix, chapter *models.Chapter) string {
 	return logic.FormatStateMatrix(state, chapter)
 }

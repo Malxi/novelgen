@@ -44,11 +44,11 @@ Project root:
 | --- | --- | --- | --- |
 | `init.v1` | `novelgen init` | `novel.json`, directory layout | all project commands |
 | `setup.v1` | `novelgen setup` | `story/setup/story_setup.json` | compose, craft, write, RPG |
-| `compose.v1` | `novelgen compose` | `story/compose/outline.json` | craft, write, state matrix, RPG DSL |
-| `craft.v1` | `novelgen craft` | `story/craft/*.json` | write, state matrix, RPG DSL |
+| `compose.v1` | `novelgen compose` | `story/compose/outline.json` | craft, write continuity, RPG DSL |
+| `craft.v1` | `novelgen craft` | `story/craft/*.json` | write continuity, RPG DSL |
 | `write.v1` | `novelgen write` | `chapters/chapter-<chapter_id>.md` | recap, review, RPG DSL |
 | `recap.v1` | `novelgen recap`, `write pipeline` | `story/recaps/<chapter_id>.json` | continuity, write |
-| `rpg-dsl.v1` | `novelgen rpg-dsl`, `write pipeline` | `story/rpg/*.rpg` | parser, validator, simulator, state matrix |
+| `rpg-dsl.v1` | `novelgen rpg-dsl`, `write pipeline` | `story/rpg/*.rpg` | parser, validator, simulator, write continuity |
 | `draft.v1` | `novelgen draft` | `drafts/<chapter_id>.md` | legacy review/improve only |
 
 ## `init.v1`
@@ -132,6 +132,12 @@ Required invariants:
   arc contract data for downstream planning: `scope`, `setup_role`,
   `payoff_style`, and pressure hints are preferred, but older projects may omit
   them and receive quality-gate suggestions rather than parse failures.
+- Important `Storylines[]` and core `Premises[]` may include optional
+  `appeal_engine` data. The setup stage produces it when it helps define the
+  book's power-fantasy promise: `appeal`, `surface_limit`, `exploit`,
+  `signature_win`, `upgrade_path`, `opponent_misread`, and `reward_type`.
+  Missing `appeal_engine` is valid for older projects; compose and write fall
+  back to premise/rule/storyline text and review stages may suggest adding it.
 - Long-form genre setups should keep one root `Premise` string while splitting
   derived world logic into multiple `Premises[]` systems when useful. These
   systems give RPG/DSL conversion simulatable growth, enemy, faction, resource,
@@ -150,6 +156,8 @@ Required invariants:
 Consumers:
 
 - `compose` uses setup as the source of story intent and structure.
+- `compose` consumes optional `appeal_engine` hints to create volume
+  `payoff_contract` and chapter `chapter_payoff` entries.
 - `craft` uses setup to generate world elements.
 - `write` uses setup for style, rules, tone, and continuity.
 - `write` consumes optional `WritingStyle` for prose voice, rhythm, description
@@ -222,6 +230,20 @@ Required invariants:
 - IDs are stable and unique. Preferred chapter format is `P<n>-V<n>-C<n>`.
 - Each chapter has `ID`, `Title`, `Summary`, `Characters`, `Location`,
   `Conflict`, `Pacing`, and meaningful `Events`.
+- Volumes may include optional `PayoffContract` (`payoff_contract`) describing
+  the reader promise for that volume: `volume_question`, `power_promise`,
+  `main_opponent_misread`, `big_win`, `visible_reward`, `reputation_shift`, and
+  `next_bigger_game`. It is produced by compose skeleton/full generation and
+  consumed by compose review/improve, volume review, and write context through
+  the current volume/chapter data. Missing values are valid for old outlines and
+  should degrade to ordinary summary-based planning.
+- Chapters may include optional `ChapterPayoff` (`chapter_payoff`) describing
+  the chapter-level satisfying win pattern: `desire`, `pressure`,
+  `clever_move`, `payoff_moment`, `reward`, `social_proof`, and `hook`. It is
+  produced by compose chapter/full generation and consumed by write generation,
+  write review/improve, volume review, and markdown exports. Missing values are
+  valid for old outlines; write falls back to scenes, beats, conflict, events,
+  and storyline advances.
 - `Events` are consumable through `Event.GetActor`, `GetAction`, `GetTarget`,
   and `GetTargetType`.
 - Code that consumes events should use accessor methods rather than direct field
@@ -240,7 +262,7 @@ Consumers:
 - `craft` extracts character, location, and item targets from the outline.
 - `write` uses chapters, scenes, events, state anchors, enemies, resources, and
   storyline advances.
-- `logic.StateMatrixManager` folds outline events into continuity state.
+- `logic.ChapterContinuityBuilder` folds outline events into write continuity.
 - RPG and RPG-DSL converters derive story structure and state deltas.
 
 Change checklist:
@@ -248,7 +270,7 @@ Change checklist:
 - Update compose skills and output validation together.
 - Update `internal/models/outline_normalizer.go` or add normalization when
   introducing fields that can drift.
-- Update state matrix, write context builders, and RPG converters for any field
+- Update write continuity builders, write context builders, and RPG converters for any field
   that affects continuity or simulation.
 - Add tests for structure validation, event compatibility, or normalization.
 
@@ -323,7 +345,7 @@ Required invariants:
 Consumers:
 
 - `write` uses craft data for chapter context and prose grounding.
-- `logic.StateMatrixManager` loads craft data into continuity state.
+- `logic.ChapterContinuityBuilder` loads craft data into write continuity.
 - RPG/DSL conversion uses craft data to enrich entities, locations, items, and
   organization world rules.
 - RPG/DSL conversion prefers explicit craft RPG metadata when present, then
@@ -376,7 +398,8 @@ Outputs:
 Go types:
 
 - `agents.ChapterContext`
-- `models.StateMatrix`
+- `models.ChapterContinuity`
+- `models.RPGState`
 - `models.ReviewResult`
 - `models.ChapterRecap` through recap extraction
 
@@ -384,8 +407,8 @@ Required invariants:
 
 - Chapter filename is based on `models.Chapter.ID`.
 - Generation should use the current chapter, previous recap, nearby context,
-  relevant craft context such as organizations, pre-chapter state matrix, and
-  configured word target. The state matrix sent to write generation/review/improve
+  relevant craft context such as organizations, pre-chapter continuity, and
+  configured word target. The continuity sent to write generation/review/improve
   represents facts before the target chapter begins; the target chapter's own
   events remain planned beats/deltas rather than already-true state.
 - Optional setup `WritingStyle` is passed to write generation, review, improve,
@@ -550,7 +573,8 @@ Required invariants:
 Consumers:
 
 - RPG simulator and benchmark tools.
-- `StateMatrixManager` can fold generated RPG state deltas into state.
+- `ChapterContinuityBuilder` can fold generated RPG state deltas into write
+  continuity through `models.RPGState`.
 - RPG-enhanced write agents use constraints and simulation feedback.
 
 Change checklist:

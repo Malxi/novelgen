@@ -91,7 +91,7 @@ func main() {
         context.Background(),
         chapter,
         chapterContext,
-        stateMatrix,
+        continuity,
         3000,  // targetWords
     )
     if err != nil {
@@ -111,7 +111,7 @@ content, review, err := writeAgent.IterateChapterWithRPG(
     ctx,
     chapter,
     chapterContext,
-    stateMatrix,
+    continuity,
     3000,   // targetWords
     initialContent,
     3,      // maxIterations

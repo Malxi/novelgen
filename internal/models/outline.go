@@ -22,10 +22,35 @@ type Part struct {
 
 // Volume represents a subdivision of a part
 type Volume struct {
-	ID       string    `json:"id" md:"-"` // ID not shown in markdown
-	Title    string    `json:"title" md:"title"`
-	Summary  string    `json:"summary" md:"heading"`
-	Chapters []Chapter `json:"chapters" md:"chapters"`
+	ID             string                `json:"id" md:"-"` // ID not shown in markdown
+	Title          string                `json:"title" md:"title"`
+	Summary        string                `json:"summary" md:"heading"`
+	PayoffContract *VolumePayoffContract `json:"payoff_contract,omitempty" md:"payoff_contract" desc:"可选，卷级爽点兑现契约"`
+	Chapters       []Chapter             `json:"chapters" md:"chapters"`
+}
+
+// VolumePayoffContract defines the reader promise and satisfying payoff for a volume.
+type VolumePayoffContract struct {
+	VolumeQuestion      string `json:"volume_question,omitempty" md:"volume_question" desc:"本卷驱动读者追看的核心问题"`
+	PowerPromise        string `json:"power_promise,omitempty" md:"power_promise" desc:"本卷承诺展示的能力爽点或独特设定用法"`
+	MainOpponentMisread string `json:"main_opponent_misread,omitempty" md:"main_opponent_misread" desc:"本卷主要对手对主角、规则或局势的误判"`
+	BigWin              string `json:"big_win,omitempty" md:"big_win" desc:"本卷最终要落地的爽点大赢画面"`
+	VisibleReward       string `json:"visible_reward,omitempty" md:"visible_reward" desc:"读者能看见的实际收益：资源、地位、地盘、秘密、盟友等"`
+	ReputationShift     string `json:"reputation_shift,omitempty" md:"reputation_shift" desc:"赢后外界对主角的看法如何改变"`
+	NextBiggerGame      string `json:"next_bigger_game,omitempty" md:"next_bigger_game" desc:"赢后露出的下一层更大局"`
+}
+
+func (p *VolumePayoffContract) IsZero() bool {
+	if p == nil {
+		return true
+	}
+	return strings.TrimSpace(p.VolumeQuestion) == "" &&
+		strings.TrimSpace(p.PowerPromise) == "" &&
+		strings.TrimSpace(p.MainOpponentMisread) == "" &&
+		strings.TrimSpace(p.BigWin) == "" &&
+		strings.TrimSpace(p.VisibleReward) == "" &&
+		strings.TrimSpace(p.ReputationShift) == "" &&
+		strings.TrimSpace(p.NextBiggerGame) == ""
 }
 
 // ChapterTimeline represents timeline information for a chapter
@@ -119,6 +144,30 @@ type StorylineAdvance struct {
 	Pressure      string `json:"pressure,omitempty" md:"pressure" desc:"可选：本章给这条线增加的压力或风险"`
 }
 
+// ChapterPayoff defines the concrete satisfying beat a chapter should deliver or set up.
+type ChapterPayoff struct {
+	Desire       string `json:"desire,omitempty" md:"desire" desc:"本章主角想要得到、证明、避开或推进什么"`
+	Pressure     string `json:"pressure,omitempty" md:"pressure" desc:"谁或什么卡住主角，形成即时阻力"`
+	CleverMove   string `json:"clever_move,omitempty" md:"clever_move" desc:"主角利用本书独特设定、信息差或对手误判做出的破局动作"`
+	PayoffMoment string `json:"payoff_moment,omitempty" md:"payoff_moment" desc:"本章要写出来的具体爽点画面"`
+	Reward       string `json:"reward,omitempty" md:"reward" desc:"赢后的实际收益、状态变化或推进"`
+	SocialProof  string `json:"social_proof,omitempty" md:"social_proof" desc:"旁人震惊、敌人错愕、地位变化或关系确认"`
+	Hook         string `json:"hook,omitempty" md:"hook" desc:"本章结尾露出的下一层更大局或新问题"`
+}
+
+func (p *ChapterPayoff) IsZero() bool {
+	if p == nil {
+		return true
+	}
+	return strings.TrimSpace(p.Desire) == "" &&
+		strings.TrimSpace(p.Pressure) == "" &&
+		strings.TrimSpace(p.CleverMove) == "" &&
+		strings.TrimSpace(p.PayoffMoment) == "" &&
+		strings.TrimSpace(p.Reward) == "" &&
+		strings.TrimSpace(p.SocialProof) == "" &&
+		strings.TrimSpace(p.Hook) == ""
+}
+
 // Chapter represents a single chapter in the story
 type Chapter struct {
 	ID                string                `json:"id" md:"-"` // ID not shown in markdown
@@ -140,6 +189,7 @@ type Chapter struct {
 	Scenes            []OutlineScene        `json:"scenes,omitempty" md:"scenes" desc:"章节内场景拆分"`
 	Mysteries         ChapterMysteries      `json:"mysteries,omitempty" md:"mysteries" desc:"本章埋设和回收的谜题/伏笔"`
 	StorylineAdvances []StorylineAdvance    `json:"storyline_advances,omitempty" md:"storyline_advances" desc:"可选：本章推进了哪些故事线，以及产生了什么后果"`
+	ChapterPayoff     *ChapterPayoff        `json:"chapter_payoff,omitempty" md:"chapter_payoff" desc:"可选，本章爽点兑现设计"`
 }
 
 // Event represents a story event that changes state
@@ -328,6 +378,18 @@ func (v *Volume) ToMarkdown() string {
 	sb.WriteString(fmt.Sprintf("### %s\n\n", v.Title))
 	sb.WriteString(fmt.Sprintf("**Summary:** %s\n\n", v.Summary))
 
+	if !v.PayoffContract.IsZero() {
+		sb.WriteString("**Payoff Contract:**\n")
+		writeMarkdownLine(&sb, "Volume Question", v.PayoffContract.VolumeQuestion)
+		writeMarkdownLine(&sb, "Power Promise", v.PayoffContract.PowerPromise)
+		writeMarkdownLine(&sb, "Main Opponent Misread", v.PayoffContract.MainOpponentMisread)
+		writeMarkdownLine(&sb, "Big Win", v.PayoffContract.BigWin)
+		writeMarkdownLine(&sb, "Visible Reward", v.PayoffContract.VisibleReward)
+		writeMarkdownLine(&sb, "Reputation Shift", v.PayoffContract.ReputationShift)
+		writeMarkdownLine(&sb, "Next Bigger Game", v.PayoffContract.NextBiggerGame)
+		sb.WriteString("\n")
+	}
+
 	for _, chapter := range v.Chapters {
 		sb.WriteString(chapter.ToMarkdown())
 	}
@@ -383,6 +445,18 @@ func (c *Chapter) ToMarkdown() string {
 		sb.WriteString(fmt.Sprintf("**State Change:** %s\n\n", c.StateChange))
 	}
 
+	if !c.ChapterPayoff.IsZero() {
+		sb.WriteString("**Chapter Payoff:**\n")
+		writeMarkdownLine(&sb, "Desire", c.ChapterPayoff.Desire)
+		writeMarkdownLine(&sb, "Pressure", c.ChapterPayoff.Pressure)
+		writeMarkdownLine(&sb, "Clever Move", c.ChapterPayoff.CleverMove)
+		writeMarkdownLine(&sb, "Payoff Moment", c.ChapterPayoff.PayoffMoment)
+		writeMarkdownLine(&sb, "Reward", c.ChapterPayoff.Reward)
+		writeMarkdownLine(&sb, "Social Proof", c.ChapterPayoff.SocialProof)
+		writeMarkdownLine(&sb, "Hook", c.ChapterPayoff.Hook)
+		sb.WriteString("\n")
+	}
+
 	if len(c.StorylineAdvances) > 0 {
 		sb.WriteString("**Storyline Advances:**\n")
 		for _, advance := range c.StorylineAdvances {
@@ -417,6 +491,14 @@ func (c *Chapter) ToMarkdown() string {
 	sb.WriteString("---\n\n")
 
 	return sb.String()
+}
+
+func writeMarkdownLine(sb *strings.Builder, label, value string) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return
+	}
+	sb.WriteString(fmt.Sprintf("- **%s:** %s\n", label, value))
 }
 
 // ToMarkdown converts event to markdown

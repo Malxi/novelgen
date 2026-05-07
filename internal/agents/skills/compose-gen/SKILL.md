@@ -22,6 +22,15 @@ The outline should be simulatable:
 - Avoid chapters that only move characters or start fights without changing the situation.
 - If setup promises a payoff, make sure the outline plants, escalates, and eventually marks a payoff or resolution. Keep this sparse and natural, not mechanical.
 
+## 爽点 / Payoff Execution Guidance
+
+The outline should be satisfying to read, not only coherent to simulate.
+- Use setup `appeal_engine` fields when present. Translate `surface_limit`, `exploit`, `signature_win`, `opponent_misread`, and `reward_type` into volume and chapter payoffs.
+- Each volume should include `payoff_contract`: `volume_question`, `power_promise`, `main_opponent_misread`, `big_win`, `visible_reward`, `reputation_shift`, and `next_bigger_game`.
+- Each chapter should include `chapter_payoff`: `desire`, `pressure`, `clever_move`, `payoff_moment`, `reward`, `social_proof`, and `hook`.
+- The default web-novel beat is: protagonist wants something → someone/something blocks him → opponent misreads the rule or protagonist → protagonist uses this book's unique setting to break the situation → win is visible → reward changes the board → a bigger game appears.
+- Avoid empty suffering. Limits are useful when they create clever wins and escalation; do not turn every rule into a bleak cost unless the requested genre demands it.
+
 ---
 
 ## 二、输出结构要求

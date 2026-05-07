@@ -40,6 +40,11 @@ Improve the chapters in a specific volume based on review feedback, while mainta
 - Maintain the volume's thematic focus
 - Keep the same chapter count and chapter order unless the review explicitly asks for a structural change
 
+### 4. Strengthen Payoff Design
+- Preserve or add `payoff_contract` for the target volume. It should define the volume question, power promise, opponent misread, big win, visible reward, reputation shift, and next bigger game.
+- Preserve or add `chapter_payoff` for chapters that lack a satisfying win pattern. Make it concrete enough for write agents to dramatize.
+- Do not solve weak chapters by adding only harsher pressure. Add how the protagonist uses the book's unique setting to win beautifully.
+
 ## Chapter Requirements
 
 ### Required Fields (All must be present)
@@ -57,6 +62,7 @@ Improve the chapters in a specific volume based on review feedback, while mainta
 - `state_anchor`: protagonist state at chapter start when relevant (cultivation/ability, allies, injuries, location, key_items)
 - `resource_ledger`: only when a scarce resource is gained, spent, lost, or consumed
 - `storyline_advances`: only when the chapter meaningfully advances a setup storyline through pressure, reveal, reversal, payoff, choice, or consequence
+- `chapter_payoff`: the chapter's爽点 contract with `desire`, `pressure`, `clever_move`, `payoff_moment`, `reward`, `social_proof`, and `hook`
 
 ### Scene Requirements
 
@@ -142,3 +148,4 @@ Each scene should include:
 5. **Context Awareness**: Use the compact setup brief and outline context as boundaries for changes
 6. **User Suggestions**: If `user_prompt` is provided, prioritize the user's specific requests alongside review feedback
 7. **Output Discipline**: Return pure JSON only. Do not wrap the response in markdown fences and do not add explanations.
+8. **Payoff Discipline**: Keep every chapter's win pattern visible and grounded in setup rules, not generic coincidence.

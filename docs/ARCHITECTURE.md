@@ -136,7 +136,8 @@ novelgen/
 │   │   │   ├── character/        # 角色出场
 │   │   │   ├── transition/       # 转场桥段
 │   │   │   └── recap/            # 回顾处理
-│   │   ├── state_matrix.go       # 状态矩阵
+│   │   ├── chapter_continuity.go # 写作连续性快照
+│   │   ├── state_matrix.go       # 旧版状态折叠适配层
 │   │   ├── id_manager.go         # ID 管理
 │   │   └── dependency_executor.go # 依赖执行器
 │   │

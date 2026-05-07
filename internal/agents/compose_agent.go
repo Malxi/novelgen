@@ -516,6 +516,9 @@ func (a *ComposeAgent) buildSetupBrief(setup *models.StorySetup) string {
 				b.WriteString(fmt.Sprintf("  Desire: %s | Opposition: %s | Payoff%s: %s\n",
 					clipForPrompt(sl.Desire, 160), clipForPrompt(sl.Opposition, 160), compactPayoffStyle(sl), clipForPrompt(sl.Payoff, 160)))
 			}
+			if sl.AppealEngine != nil {
+				b.WriteString(formatAppealEngineBrief("  Appeal", sl.AppealEngine))
+			}
 		}
 	}
 
@@ -523,6 +526,9 @@ func (a *ComposeAgent) buildSetupBrief(setup *models.StorySetup) string {
 		b.WriteString("\nProgression Systems:\n")
 		for _, premise := range setup.Premises {
 			b.WriteString(fmt.Sprintf("- %s (%s): %s\n", premise.Name, premise.Category, clipForPrompt(premise.Description, 280)))
+			if premise.AppealEngine != nil {
+				b.WriteString(formatAppealEngineBrief("  Appeal", premise.AppealEngine))
+			}
 			for _, stage := range premise.Progression {
 				b.WriteString(fmt.Sprintf("  L%d %s: %s Requirement: %s\n",
 					stage.Level, stage.Name, clipForPrompt(stage.Description, 130), clipForPrompt(stage.Requirements, 130)))
@@ -539,6 +545,35 @@ func (a *ComposeAgent) buildSetupBrief(setup *models.StorySetup) string {
 	}
 
 	return b.String()
+}
+
+func formatAppealEngineBrief(prefix string, engine *models.AppealEngine) string {
+	if engine == nil {
+		return ""
+	}
+	var parts []string
+	if strings.TrimSpace(engine.Appeal) != "" {
+		parts = append(parts, "appeal="+clipForPrompt(engine.Appeal, 120))
+	}
+	if strings.TrimSpace(engine.SurfaceLimit) != "" {
+		parts = append(parts, "surface_limit="+clipForPrompt(engine.SurfaceLimit, 120))
+	}
+	if strings.TrimSpace(engine.Exploit) != "" {
+		parts = append(parts, "exploit="+clipForPrompt(engine.Exploit, 120))
+	}
+	if strings.TrimSpace(engine.SignatureWin) != "" {
+		parts = append(parts, "signature_win="+clipForPrompt(engine.SignatureWin, 120))
+	}
+	if strings.TrimSpace(engine.OpponentMisread) != "" {
+		parts = append(parts, "opponent_misread="+clipForPrompt(engine.OpponentMisread, 120))
+	}
+	if strings.TrimSpace(engine.RewardType) != "" {
+		parts = append(parts, "reward_type="+clipForPrompt(engine.RewardType, 80))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s: %s\n", prefix, strings.Join(parts, " | "))
 }
 
 func compactStorylineScope(sl models.Storyline) string {
@@ -617,6 +652,13 @@ func (a *ComposeAgent) buildVolumeImproveContext(outline *models.Outline, partID
 func formatVolumeBrief(volume models.Volume) string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("- %s (%s): %s\n", volume.Title, volume.ID, clipForPrompt(volume.Summary, 500)))
+	if volume.PayoffContract != nil {
+		b.WriteString(fmt.Sprintf("  Payoff: question=%s | big_win=%s | reward=%s | next=%s\n",
+			clipForPrompt(volume.PayoffContract.VolumeQuestion, 120),
+			clipForPrompt(volume.PayoffContract.BigWin, 140),
+			clipForPrompt(volume.PayoffContract.VisibleReward, 100),
+			clipForPrompt(volume.PayoffContract.NextBiggerGame, 120)))
+	}
 	if len(volume.Chapters) > 0 {
 		first := volume.Chapters[0]
 		last := volume.Chapters[len(volume.Chapters)-1]
@@ -649,8 +691,15 @@ func formatChapterBrief(ch models.Chapter) string {
 		stateLine = "no explicit state anchor"
 	}
 
-	return fmt.Sprintf("- %s %s: %s | %s | first beat: %s | last beat: %s\n",
-		ch.ID, ch.Title, clipForPrompt(ch.Summary, 240), stateLine, clipForPrompt(firstBeat, 120), clipForPrompt(lastBeat, 120))
+	payoffLine := ""
+	if ch.ChapterPayoff != nil {
+		payoffLine = fmt.Sprintf(" | payoff: %s -> %s",
+			clipForPrompt(ch.ChapterPayoff.CleverMove, 100),
+			clipForPrompt(ch.ChapterPayoff.PayoffMoment, 120))
+	}
+
+	return fmt.Sprintf("- %s %s: %s | %s%s | first beat: %s | last beat: %s\n",
+		ch.ID, ch.Title, clipForPrompt(ch.Summary, 240), stateLine, payoffLine, clipForPrompt(firstBeat, 120), clipForPrompt(lastBeat, 120))
 }
 
 func compactReviewForPrompt(review models.ReviewResult) models.ReviewResult {

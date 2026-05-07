@@ -75,28 +75,42 @@ func nonEmptyStrings(items []string) []string {
 
 // Storyline represents a story arc or plot line
 type Storyline struct {
-	Name           string   `json:"name" prompt:"Name" desc:"故事线名称"`
-	Description    string   `json:"description" prompt:"Description" desc:"故事线描述，2-4句话"`
-	Type           string   `json:"type" prompt:"Type" desc:"故事线类型"`                   // main, subplot, character_arc, etc.
-	Importance     int      `json:"importance" prompt:"Importance" desc:"故事线重要性，1-10"` // 1-10, 10 being most important
-	Scope          string   `json:"scope,omitempty" prompt:"Scope" desc:"可选，高层作用域：opening、volume、book、series；不要写具体章节"`
-	PayoffStyle    string   `json:"payoff_style,omitempty" prompt:"Payoff Style" desc:"可选，兑现方式：immediate、staged_reveal、slow_burn、final_turn 等高层方式"`
-	SetupRole      string   `json:"setup_role,omitempty" prompt:"Setup Role" desc:"可选，这条线在故事机器中的高层作用：生存钩子、长期悬念、势力压力、成长驱动等"`
-	Desire         string   `json:"desire,omitempty" prompt:"Desire" desc:"这条故事线中角色或势力最想得到什么"`
-	Opposition     string   `json:"opposition,omitempty" prompt:"Opposition" desc:"阻止这条故事线推进的人、规则、困境或代价"`
-	Stakes         string   `json:"stakes,omitempty" prompt:"Stakes" desc:"如果失败会失去什么，或成功会改变什么"`
-	Turn           string   `json:"turn,omitempty" prompt:"Turn" desc:"这条线最有戏剧张力的反转、误判或关系变化"`
-	Payoff         string   `json:"payoff,omitempty" prompt:"Payoff" desc:"这条线承诺给读者的情绪或信息回收"`
-	OpenQuestion   string   `json:"open_question,omitempty" prompt:"Open Question" desc:"驱动读者继续看的未解问题"`
-	PressurePoints []string `json:"pressure_points,omitempty" prompt:"Pressure Points" desc:"可选的2-4个推进压力点，不必写成固定阶段"`
+	Name           string        `json:"name" prompt:"Name" desc:"故事线名称"`
+	Description    string        `json:"description" prompt:"Description" desc:"故事线描述，2-4句话"`
+	Type           string        `json:"type" prompt:"Type" desc:"故事线类型"`                   // main, subplot, character_arc, etc.
+	Importance     int           `json:"importance" prompt:"Importance" desc:"故事线重要性，1-10"` // 1-10, 10 being most important
+	Scope          string        `json:"scope,omitempty" prompt:"Scope" desc:"可选，高层作用域：opening、volume、book、series；不要写具体章节"`
+	PayoffStyle    string        `json:"payoff_style,omitempty" prompt:"Payoff Style" desc:"可选，兑现方式：immediate、staged_reveal、slow_burn、final_turn 等高层方式"`
+	SetupRole      string        `json:"setup_role,omitempty" prompt:"Setup Role" desc:"可选，这条线在故事机器中的高层作用：生存钩子、长期悬念、势力压力、成长驱动等"`
+	Desire         string        `json:"desire,omitempty" prompt:"Desire" desc:"这条故事线中角色或势力最想得到什么"`
+	Opposition     string        `json:"opposition,omitempty" prompt:"Opposition" desc:"阻止这条故事线推进的人、规则、困境或代价"`
+	Stakes         string        `json:"stakes,omitempty" prompt:"Stakes" desc:"如果失败会失去什么，或成功会改变什么"`
+	Turn           string        `json:"turn,omitempty" prompt:"Turn" desc:"这条线最有戏剧张力的反转、误判或关系变化"`
+	Payoff         string        `json:"payoff,omitempty" prompt:"Payoff" desc:"这条线承诺给读者的情绪或信息回收"`
+	OpenQuestion   string        `json:"open_question,omitempty" prompt:"Open Question" desc:"驱动读者继续看的未解问题"`
+	PressurePoints []string      `json:"pressure_points,omitempty" prompt:"Pressure Points" desc:"可选的2-4个推进压力点，不必写成固定阶段"`
+	AppealEngine   *AppealEngine `json:"appeal_engine,omitempty" prompt:"Appeal Engine" desc:"可选，爽点引擎：能力爽点、表面限制、破解方式、赢法展示、升级钩子、敌人误判、收益类型"`
+}
+
+// AppealEngine describes how a setting or arc creates satisfying power-fantasy payoffs.
+// It frames limits as exploitable surfaces rather than grim mandatory costs.
+type AppealEngine struct {
+	Appeal          string `json:"appeal,omitempty" prompt:"Appeal" desc:"核心能力爽点或读者期待"`
+	SurfaceLimit    string `json:"surface_limit,omitempty" prompt:"Surface Limit" desc:"表面限制、冷却、盲区、条件或规则边界，避免能力无限膨胀"`
+	Exploit         string `json:"exploit,omitempty" prompt:"Exploit" desc:"主角如何利用规则、时机、信息差或敌人假设漂亮破局"`
+	SignatureWin    string `json:"signature_win,omitempty" prompt:"Signature Win" desc:"这个设定能制造的具体赢法画面"`
+	UpgradePath     string `json:"upgrade_path,omitempty" prompt:"Upgrade Path" desc:"后续如何升级爽点且不破坏规则"`
+	OpponentMisread string `json:"opponent_misread,omitempty" prompt:"Opponent Misread" desc:"敌人通常会误判这个设定的地方"`
+	RewardType      string `json:"reward_type,omitempty" prompt:"Reward Type" desc:"赢后收益类型：资源、地位、秘密、盟友、地盘、名声、自由等"`
 }
 
 // Premise represents a story premise/setting element with progression system
 type Premise struct {
-	Name        string             `json:"name" prompt:"Name" desc:"设定体系名称"`
-	Description string             `json:"description" prompt:"Description" desc:"设定体系描述，2-4句话"`
-	Category    string             `json:"category" prompt:"Category" desc:"设定体系类型"`         // 机甲, 基因, 飞船, 魔法, etc.
-	Progression []ProgressionStage `json:"progression" prompt:"Progression" desc:"设定体系升级体系"` // 升级体系
+	Name         string             `json:"name" prompt:"Name" desc:"设定体系名称"`
+	Description  string             `json:"description" prompt:"Description" desc:"设定体系描述，2-4句话"`
+	Category     string             `json:"category" prompt:"Category" desc:"设定体系类型"`         // 机甲, 基因, 飞船, 魔法, etc.
+	Progression  []ProgressionStage `json:"progression" prompt:"Progression" desc:"设定体系升级体系"` // 升级体系
+	AppealEngine *AppealEngine      `json:"appeal_engine,omitempty" prompt:"Appeal Engine" desc:"可选，该设定体系的爽点引擎"`
 }
 
 // ProgressionStage represents a single stage in the progression system

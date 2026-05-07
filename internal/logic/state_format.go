@@ -9,11 +9,32 @@ import (
 )
 
 // FormatStateMatrix formats the state matrix into a human-readable string for prompts.
-// This is a shared utility used by both DraftAgent and WriteAgent.
+// This is a shared utility used by legacy DraftAgent paths.
 func FormatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) string {
-	var sb strings.Builder
+	if state == nil {
+		return FormatChapterContinuity(nil, chapter)
+	}
+	return FormatChapterContinuity(&models.ChapterContinuity{
+		RPG:        state.RPG,
+		Characters: state.Characters,
+		Locations:  state.Locations,
+		Items:      state.Items,
+		Premises:   state.Premises,
+		Gates:      state.Gates,
+		Status:     state.Status,
+		Memories:   state.Memories,
+	}, chapter)
+}
 
-	sb.WriteString("CURRENT STORY STATE:\n")
+// FormatChapterContinuity formats the writer-facing continuity snapshot before
+// a chapter begins.
+func FormatChapterContinuity(state *models.ChapterContinuity, chapter *models.Chapter) string {
+	var sb strings.Builder
+	if state == nil {
+		state = &models.ChapterContinuity{}
+	}
+
+	sb.WriteString("CURRENT CONTINUITY:\n")
 	if state.RPG != nil {
 		sb.WriteString("\n")
 		sb.WriteString(FormatRPGState(state.RPG, chapter))
@@ -289,7 +310,7 @@ func FormatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) strin
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString("=== END STATE ===\n")
+	sb.WriteString("=== END CONTINUITY ===\n")
 
 	return sb.String()
 }
@@ -524,7 +545,7 @@ func writeIntMap(sb *strings.Builder, label string, values map[string]int, inden
 }
 
 // formatItems formats the items section of the state matrix
-func formatItems(sb *strings.Builder, state *models.StateMatrix, chapter *models.Chapter) {
+func formatItems(sb *strings.Builder, state *models.ChapterContinuity, chapter *models.Chapter) {
 	// Items relevant to this chapter
 	relevantItems := make(map[string]string) // itemName -> description
 

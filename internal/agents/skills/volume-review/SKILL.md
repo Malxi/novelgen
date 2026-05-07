@@ -6,12 +6,14 @@
 ## 强制参考输入项
 - `story_setup`：故事核心设定，包含可选的`writing_style`写作风格要求；参考片段只用于评估文风一致性，不作为剧情事实
 - `volume`：卷信息（ID、标题、摘要）
+- `volume.payoff_contract`（如存在）：卷级爽点兑现契约，评审时检查是否真正落地到本卷正文
 - `chapters`：卷内所有章节数组，每章包含：
   - `chapter_id`：章节ID
   - `chapter_title`：章节标题
   - `chapter_summary`：章节摘要
   - `chapter_content`：章节完整内容
   - `beats`：情节节点
+  - `chapter_payoff`（如存在）：本章爽点契约
 - `target_words_per_chapter`：每章目标字数
 
 ### 关键原则：问题分配到具体章节
@@ -77,5 +79,11 @@
 - 剧情Bug（无Bug满分，有Bug扣分）：15%
 - 逻辑Bug（无Bug满分，有Bug扣分）：10%
 - 文笔质量：10%
+
+## 爽点兑现专项
+- 检查`volume.payoff_contract`中的大问题、能力承诺、敌人误判、大赢画面、可见收益、地位变化、下一层更大局是否在本卷形成闭环。
+- 检查每章`chapter_payoff`是否被正文兑现：主角目标、阻力、聪明破局、爽点画面、赢后收益、旁人反馈、结尾钩子。
+- 如果某章只有压力升级但没有漂亮赢法，给该章独立 issue 和本章可执行建议。
+- 如果胜利没有利用本书独特设定，只是泛泛打赢/升级/震惊，应作为读者粘性问题扣分。
 
 > **重要**：每发现一个critical级别的Bug，总分扣减10分；major级别扣5分；minor级别扣2分。

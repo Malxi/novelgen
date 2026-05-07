@@ -55,3 +55,50 @@ func TestCalculateStateMatrixBeforeExcludesTargetChapterEvents(t *testing.T) {
 		t.Fatalf("after second chapter target premise = %q, want advanced", got)
 	}
 }
+
+func TestChapterContinuityBuilderBuildBeforeExcludesTargetChapterEvents(t *testing.T) {
+	outline := &models.Outline{
+		Parts: []models.Part{{
+			ID: "P1",
+			Volumes: []models.Volume{{
+				ID: "P1-V1",
+				Chapters: []models.Chapter{
+					{
+						ID:         "P1-V1-C1",
+						Characters: []string{"Lin"},
+						Events: []models.Event{{
+							Type:       models.EventTypePremise,
+							Characters: []string{"Lin"},
+							Subject:    "power",
+							Change:     "seeded",
+						}},
+					},
+					{
+						ID:         "P1-V1-C2",
+						Characters: []string{"Lin"},
+						Events: []models.Event{{
+							Type:       models.EventTypePremise,
+							Characters: []string{"Lin"},
+							Subject:    "rank",
+							Change:     "advanced",
+						}},
+					},
+				},
+			}},
+		}},
+	}
+
+	builder := NewChapterContinuityBuilder("")
+	beforeSecond := builder.BuildBefore(outline, &outline.Parts[0].Volumes[0].Chapters[1])
+	if got := beforeSecond.Premises["Lin_power"]; got != "seeded" {
+		t.Fatalf("before second chapter previous premise = %q, want seeded", got)
+	}
+	if got := beforeSecond.Premises["Lin_rank"]; got != "" {
+		t.Fatalf("before second chapter included target event premise = %q", got)
+	}
+
+	text := FormatChapterContinuity(beforeSecond, &outline.Parts[0].Volumes[0].Chapters[1])
+	if text == "" || text == "No state matrix available" {
+		t.Fatalf("continuity formatter returned legacy or empty text: %q", text)
+	}
+}

@@ -46,6 +46,9 @@ Improve a story outline based on review feedback or user guidance.
 - Add hooks and reveals
 - Enhance emotional beats
 - Improve chapter endings
+- Repair weak `payoff_contract` fields on volumes when review feedback says the volume lacks reader promise, big win, visible reward, or escalation.
+- Repair weak `chapter_payoff` fields when a chapter has events but no satisfying win pattern. Make the chain concrete: desire → pressure → clever move → payoff moment → reward → social proof → hook.
+- If a chapter already has pressure but no爽点, do not simply increase danger. Add a more interesting exploit, opponent misread, or visible reward.
 
 ## Guidelines
 
@@ -56,6 +59,7 @@ Improve a story outline based on review feedback or user guidance.
 5. Maintain continuity with previous and following chapters
 6. If `user_prompt` is provided, prioritize the user's specific requests alongside review feedback
 7. Keep storyline tracking flexible: do not add `storyline_advances` to every chapter, and do not convert the outline into a rigid formula
+8. Keep爽点 design concrete: wins should use this book's unique setup, not generic luck, generic strength, or unexplained author convenience
 
 ## Output Requirements
 

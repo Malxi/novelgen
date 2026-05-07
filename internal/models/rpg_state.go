@@ -1,6 +1,6 @@
 package models
 
-// RPGState is the structured, simulation-friendly version of StateMatrix.
+// RPGState is the structured, simulation-friendly continuity state.
 // It keeps writer-facing continuity data while making numeric/typed state explicit.
 type RPGState struct {
 	CurrentChapter  string                        `json:"current_chapter,omitempty"`

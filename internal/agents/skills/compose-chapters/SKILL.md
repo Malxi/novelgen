@@ -35,6 +35,7 @@ Generate detailed chapters for a specific volume, maintaining continuity with pr
 11. **state_anchor**: Protagonist state at chapter START (object) - ⚠️ REQUIRED for cross-chapter state tracking
 12. **enemies**: Enemy list for this chapter (array) - ⚠️ REQUIRED if chapter has combat
 13. **resource_ledger**: Resource changes this chapter (array) - ⚠️ REQUIRED if resources change
+14. **chapter_payoff**: Chapter-level爽点 contract (object) - ⚠️ STRONGLY RECOMMENDED for every chapter
 
 ### ⚠️ CRITICAL: Events Count Requirement
 ### Optional: Storyline Advances
@@ -49,6 +50,21 @@ Fields:
 - `pressure`: Optional new risk, clock, threat, or unanswered question
 
 Do not add `storyline_advances` to every chapter. Prefer sparse, high-signal entries that help later agents carry emotional pressure forward without locking the AI into a rigid formula.
+
+### Chapter Payoff Contract
+
+Use `chapter_payoff` to make each chapter writable as satisfying web fiction, not just a sequence of reasonable events.
+
+Fields:
+- `desire`: 主角本章想要什么
+- `pressure`: 谁或什么卡住主角
+- `clever_move`: 主角如何利用本书独特设定、信息差、时机或敌人误判破局
+- `payoff_moment`: 具体爽点画面，必须能被写成场景
+- `reward`: 赢后获得什么实际收益或状态推进
+- `social_proof`: 谁震惊、谁服气、谁误判破产、主角地位如何改变
+- `hook`: 赢后露出的下一层更大局
+
+Power-fantasy rule: every chapter should either deliver a small satisfying win or clearly load the spring for a larger win. Do not only design pressure; design the protagonist's beautiful win inside that pressure. "Limits" should usually be surface limits or exploitable rules, not automatic misery.
 
 ### DSL Simulation Execution
 
@@ -341,6 +357,15 @@ Example:
         "location": "黑风矿坍塌矿道",
         "key_items": ["碎矿镐"],
         "notes": "刚穿越，身体虚弱，记忆模糊"
+      },
+      "chapter_payoff": {
+        "desire": "活着逃出坍塌矿道",
+        "pressure": "矿道继续塌陷，监工以为他只是累赘",
+        "clever_move": "利用复活后的短暂感知差发现安全缝隙",
+        "payoff_moment": "监工以为他必死时，他从落石背后拖出矿图和活人",
+        "reward": "获得矿图和第一次能力认知",
+        "social_proof": "老矿工意识到他不是普通矿奴",
+        "hook": "矿图上标着一个不存在的密室"
       }
     },
     {
@@ -399,6 +424,7 @@ Example:
 7. **Last Chapter Cliffhanger**: Final chapter should set up the next volume
 8. **Event Progression**: Events should follow a logical flow: enter/meet → discover/learn → combat/achieve
 7. **⚠️ EVENT COUNT**: Each chapter MUST have 3-5 events. This is a HARD requirement.
+8. **爽点 Design**: Each chapter's `chapter_payoff` should make the win pattern visible: desire → pressure → clever move → payoff moment → reward → hook.
 
 ### ⚠️ CRITICAL: Mysteries / Suspense Tracking (NEW)
 **Track planted and resolved mysteries across chapters.** Validator checks: unresolved at end, resolved-without-planted, same-chapter plant+resolve.

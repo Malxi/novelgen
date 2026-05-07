@@ -24,6 +24,15 @@ func TestStorylineTextureJSONRoundTrip(t *testing.T) {
 			Payoff:         "The first mystery reframes the war.",
 			OpenQuestion:   "Who benefits from waking the swarm?",
 			PressurePoints: []string{"lost telemetry", "fleet quarantine"},
+			AppealEngine: &AppealEngine{
+				Appeal:          "A weak pilot wins by reading signal timing better than the fleet.",
+				SurfaceLimit:    "The signal only updates every seven breaths.",
+				Exploit:         "He moves during the blind interval.",
+				SignatureWin:    "The enemy fires at his old position while he takes the command room.",
+				UpgradePath:     "Later he predicts longer signal chains.",
+				OpponentMisread: "Enemies assume the signal is real-time surveillance.",
+				RewardType:      "reputation",
+			},
 		}},
 	}
 
@@ -47,6 +56,9 @@ func TestStorylineTextureJSONRoundTrip(t *testing.T) {
 	if len(storyline.PressurePoints) != 2 || storyline.PressurePoints[1] != "fleet quarantine" {
 		t.Fatalf("pressure_points = %#v", storyline.PressurePoints)
 	}
+	if storyline.AppealEngine == nil || storyline.AppealEngine.Exploit != "He moves during the blind interval." {
+		t.Fatalf("appeal_engine not preserved: %#v", storyline.AppealEngine)
+	}
 }
 
 func TestStorylineTextureOmitEmptyAndMarkdown(t *testing.T) {
@@ -54,7 +66,7 @@ func TestStorylineTextureOmitEmptyAndMarkdown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal empty storyline: %v", err)
 	}
-	if strings.Contains(string(emptyData), "desire") || strings.Contains(string(emptyData), "pressure_points") {
+	if strings.Contains(string(emptyData), "desire") || strings.Contains(string(emptyData), "pressure_points") || strings.Contains(string(emptyData), "appeal_engine") {
 		t.Fatalf("empty optional fields should be omitted: %s", emptyData)
 	}
 
@@ -64,9 +76,27 @@ func TestStorylineTextureOmitEmptyAndMarkdown(t *testing.T) {
 		Volumes: []Volume{{
 			Title:   "Volume One",
 			Summary: "The first chase.",
+			PayoffContract: &VolumePayoffContract{
+				VolumeQuestion:      "Can the pilot expose the false command chain?",
+				PowerPromise:        "He turns a surveillance weakness into a weapon.",
+				MainOpponentMisread: "The admiral thinks he only knows the signal exists.",
+				BigWin:              "He hijacks the enemy broadcast in public.",
+				VisibleReward:       "A ship and a crew.",
+				ReputationShift:     "From suspect to impossible problem.",
+				NextBiggerGame:      "The signal source answers back.",
+			},
 			Chapters: []Chapter{{
 				Title:   "Wake",
 				Summary: "A pilot finds the signal.",
+				ChapterPayoff: &ChapterPayoff{
+					Desire:       "Escape the locked bay.",
+					Pressure:     "Security drones close every exit.",
+					CleverMove:   "He times movement to the signal refresh gap.",
+					PayoffMoment: "The drones salute an empty corner while he opens the bay.",
+					Reward:       "He gets the access card.",
+					SocialProof:  "The guard captain realizes the cameras lied.",
+					Hook:         "The card opens a door that should not exist.",
+				},
 				StorylineAdvances: []StorylineAdvance{{
 					StorylineName: "Signal War",
 					Stage:         "reveal",
@@ -83,5 +113,11 @@ func TestStorylineTextureOmitEmptyAndMarkdown(t *testing.T) {
 	}
 	if !strings.Contains(md, "Signal War") || !strings.Contains(md, "pressure: The enemy can trace the receiver.") {
 		t.Fatalf("markdown missing advance details:\n%s", md)
+	}
+	if !strings.Contains(md, "Payoff Contract") || !strings.Contains(md, "The signal source answers back.") {
+		t.Fatalf("markdown missing payoff contract:\n%s", md)
+	}
+	if !strings.Contains(md, "Chapter Payoff") || !strings.Contains(md, "The drones salute an empty corner") {
+		t.Fatalf("markdown missing chapter payoff:\n%s", md)
 	}
 }

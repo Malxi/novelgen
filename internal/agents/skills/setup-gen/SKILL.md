@@ -21,6 +21,21 @@ Keep `scope`, `payoff_style`, and `setup_role` high-level:
 
 These fields should clarify how later outlines should treat a promise. A series-scale staged reveal does not need immediate resolution; it only needs occasional pressure, clues, or partial reveals.
 
+## 爽点引擎 Guidance
+
+This project favors power-fantasy/web-novel payoff. Do not frame every rule as a grim "cost". For important `storylines` and core `premises`, add an optional `appeal_engine` when it makes the setup more writable.
+
+`appeal_engine` should answer:
+- `appeal`: 这条设定最爽的读者期待是什么？
+- `surface_limit`: 表面限制/冷却/盲区/条件是什么，让能力不显得无限？
+- `exploit`: 主角如何利用规则、时机、信息差或敌人误判漂亮破局？
+- `signature_win`: 这个设定能制造什么具体赢法画面？
+- `upgrade_path`: 后续如何升级爽点而不破坏规则？
+- `opponent_misread`: 敌人通常误判什么？
+- `reward_type`: 赢后获得什么类型的收益？
+
+Core rule: do not only design what can "reasonably happen"; design how the protagonist can use this book's unique rules to win beautifully. Limits exist to create clever wins, misreads, and escalation, not to make every victory miserable.
+
 ## Writing Style Guidance
 
 `writing_style` is optional. Populate it only when the user explicitly asks for a prose style, gives style preferences, or provides a reference passage.

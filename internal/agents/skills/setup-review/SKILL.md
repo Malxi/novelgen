@@ -15,6 +15,21 @@ Treat these as creative suggestions, not hard requirements. Recommend adding the
 
 Do not ask setup to become a chapter plan. If an arc is long-running, prefer recommending `scope: book/series` and `payoff_style: staged_reveal/slow_burn` instead of demanding an immediate payoff.
 
+## Appeal Engine Review
+
+For power-fantasy/web-novel setups, review whether important `storylines` and core `premises[]` have a usable `appeal_engine` or at least imply one.
+
+A strong appeal engine has:
+- a clear `appeal` readers want to see again
+- a `surface_limit` that prevents unlimited power without making every victory miserable
+- an `exploit` that lets the protagonist win through rule use, timing, information gap, or opponent misread
+- a concrete `signature_win` image
+- an `upgrade_path` for escalation
+- an `opponent_misread` that can create face-slapping / reversal moments
+- a `reward_type` so wins visibly change the situation
+
+Flag setups that are logical but not fun: rules that explain the world yet do not suggest how the protagonist can win beautifully. Prefer suggestions like "add a surface limit and exploit pattern" over "add harsher cost" unless the genre specifically demands suffering.
+
 ## Progression System Depth Review
 
 Keep one clear root premise, but review whether long-form genre fiction has enough derived systems for later outline and RPG simulation. A setup for sci-fi, mecha, cultivation, apocalypse, fantasy, or other progression-heavy genres is thin if it has only one broad `premises` entry.
