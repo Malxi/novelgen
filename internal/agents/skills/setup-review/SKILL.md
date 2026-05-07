@@ -21,6 +21,12 @@ Keep one clear root premise, but review whether long-form genre fiction has enou
 
 Recommend 3-6 derived `premises` systems when appropriate. Good systems include protagonist growth, enemy tier ecology, faction technology, resource economy, social/faction hierarchy, and final external threat. Each system should have a progression ladder with named stages, requirements or costs, ceilings, and a clear narrative use.
 
+## Writing Style Review
+
+Review `writing_style` only when it is present or when the user explicitly requested a style/reference passage. A useful writing style contract should describe prose-level execution: narrative voice, sentence rhythm, description density, dialogue texture, and concrete do/don't principles.
+
+If `reference_excerpt` is present, verify that it is treated as style-only. Flag any setup text that imports the reference passage's plot, characters, places, terminology, or sentences as canon.
+
 ## 一、审查维度
 
 ### 1. 根设定审查

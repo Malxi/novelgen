@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,11 +15,50 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
 	"novelgen/internal/logic/continuity/recap"
+	"novelgen/internal/logic/style"
 	"novelgen/internal/models"
 	"novelgen/internal/rpg/dsl"
 
 	"github.com/spf13/cobra"
 )
+
+type writeErrorCollector struct {
+	mu   sync.Mutex
+	errs []error
+}
+
+func (c *writeErrorCollector) Add(err error) {
+	if err == nil {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.errs = append(c.errs, err)
+}
+
+func (c *writeErrorCollector) Addf(format string, args ...interface{}) {
+	c.Add(fmt.Errorf(format, args...))
+}
+
+func (c *writeErrorCollector) Err() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.errs) == 0 {
+		return nil
+	}
+	return errors.Join(c.errs...)
+}
+
+func validateWriteMinScoreFlag() error {
+	if writeMinScoreFlag < 0 || writeMinScoreFlag > 100 {
+		return fmt.Errorf("--min-score must be between 0 and 100, got %d", writeMinScoreFlag)
+	}
+	return nil
+}
+
+func writeMinScorePercent() float64 {
+	return float64(writeMinScoreFlag)
+}
 
 var (
 	writeChapterFlag               string
@@ -37,6 +77,8 @@ var (
 	writePromptFlag                string
 	writeEmitRPGDSLFlag            bool
 	writeRPGBatchSizeFlag          int
+	writeHumanizeFlag              bool
+	writeHumanizeThresholdFlag     int
 )
 
 var writeCmd = &cobra.Command{
@@ -106,8 +148,8 @@ Examples:
   # Improve with max 3 rounds
   novelgen write improve --volume 1 --max-rounds 3
 
-  # Only improve chapters with score below 7
-  novelgen write improve --volume 1 --min-score 7`,
+  # Only improve chapters with score below 70
+  novelgen write improve --volume 1 --min-score 70`,
 	RunE: runWriteImprove,
 }
 
@@ -174,19 +216,23 @@ func init() {
 	writeImproveCmd.Flags().StringVar(&writeVolumeFlag, "volume", "", "Volume to improve (e.g., '1', 'P1-V1')")
 	writeImproveCmd.Flags().StringVar(&writePartFlag, "part", "", "Part to improve (e.g., '1', 'P1')")
 	writeImproveCmd.Flags().IntVar(&writeMaxRoundsFlag, "max-rounds", 1, "Maximum improvement rounds")
-	writeImproveCmd.Flags().IntVar(&writeMinScoreFlag, "min-score", 7, "Minimum acceptable score (1-10)")
+	writeImproveCmd.Flags().IntVar(&writeMinScoreFlag, "min-score", 70, "Minimum acceptable score (0-100)")
 	writeImproveCmd.Flags().IntVar(&writeConcurrencyFlag, "concurrency", 1, "Number of concurrent improvements")
 	writeImproveCmd.Flags().IntVar(&writeBridgeRetriesFlag, "bridge-retries", 1, "Max retries for teleport transition bridge patch")
 	writeImproveCmd.Flags().BoolVar(&writeTeleportFixFlag, "enable-teleport-auto-fix", true, "Enable automatic teleport transition fixes")
 	writeImproveCmd.Flags().IntVar(&writeCharacterPatchRetriesFlag, "character-patch-retries", 1, "Max retries for character presence patch")
 	writeImproveCmd.Flags().BoolVar(&writeCharacterFixFlag, "enable-character-presence-auto-fix", true, "Enable automatic character presence fixes")
 	writeImproveCmd.Flags().StringVar(&writePromptFlag, "prompt", "", "Additional user instructions for improvement")
+	writeImproveCmd.Flags().BoolVar(&writeHumanizeFlag, "humanize", true, "Enable deterministic AI-flavor checks and humanization suggestions")
+	writeImproveCmd.Flags().IntVar(&writeHumanizeThresholdFlag, "humanize-threshold", 75, "Minimum humanization score before improvement is suggested (0-100)")
 
 	writeReviewCmd.Flags().StringVar(&writeChapterFlag, "chapter", "", "Chapter to review (e.g., '1' or 'P1-V1-C1')")
 	writeReviewCmd.Flags().StringVar(&writeVolumeFlag, "volume", "", "Volume to review (e.g., '1', 'P1-V1')")
 	writeReviewCmd.Flags().StringVar(&writePartFlag, "part", "", "Part to review (e.g., '1', 'P1')")
 	writeReviewCmd.Flags().BoolVar(&writeAllFlag, "all", false, "Review all chapters")
 	writeReviewCmd.Flags().IntVar(&writeConcurrencyFlag, "concurrency", 1, "Number of concurrent reviews")
+	writeReviewCmd.Flags().BoolVar(&writeHumanizeFlag, "humanize", true, "Enable deterministic AI-flavor checks in write review")
+	writeReviewCmd.Flags().IntVar(&writeHumanizeThresholdFlag, "humanize-threshold", 75, "Minimum humanization score before review marks style issues (0-100)")
 
 	writePipelineCmd.Flags().StringVar(&writeChapterFlag, "chapter", "", "Chapter to process (e.g., '1' or 'P1-V1-C1')")
 	writePipelineCmd.Flags().StringVar(&writeVolumeFlag, "volume", "", "Volume to process (e.g., '1', 'P1-V1')")
@@ -194,15 +240,18 @@ func init() {
 	writePipelineCmd.Flags().BoolVar(&writeAllFlag, "all", false, "Process all chapters")
 	writePipelineCmd.Flags().IntVar(&writeWordsFlag, "words", 2000, "Target word count for the chapter")
 	writePipelineCmd.Flags().IntVar(&writeMaxRoundsFlag, "max-rounds", 2, "Maximum improvement rounds")
-	writePipelineCmd.Flags().IntVar(&writeMinScoreFlag, "min-score", 7, "Minimum acceptable score (1-10)")
+	writePipelineCmd.Flags().IntVar(&writeMinScoreFlag, "min-score", 70, "Minimum acceptable score (0-100)")
 	writePipelineCmd.Flags().IntVar(&writeContextFlag, "context", 1, "Number of surrounding chapters to include as context")
 	writePipelineCmd.Flags().IntVar(&writeConcurrencyFlag, "concurrency", 1, "Number of concurrent operations")
+	_ = writePipelineCmd.Flags().MarkHidden("concurrency")
 	writePipelineCmd.Flags().BoolVar(&writeTeleportFixFlag, "enable-teleport-auto-fix", true, "Enable automatic teleport transition fixes")
 	writePipelineCmd.Flags().IntVar(&writeBridgeRetriesFlag, "bridge-retries", 1, "Max retries for teleport transition bridge patch")
 	writePipelineCmd.Flags().BoolVar(&writeCharacterFixFlag, "enable-character-presence-auto-fix", true, "Enable automatic character presence fixes")
 	writePipelineCmd.Flags().IntVar(&writeCharacterPatchRetriesFlag, "character-patch-retries", 1, "Max retries for character presence patch")
 	writePipelineCmd.Flags().BoolVar(&writeEmitRPGDSLFlag, "emit-rpg-dsl", true, "Update story/rpg/04_chapters.rpg from chapter markdown plus optional recaps")
 	writePipelineCmd.Flags().IntVar(&writeRPGBatchSizeFlag, "rpg-batch-size", 10, "Chapter markdown batch size for AI -> RPG DSL conversion")
+	writePipelineCmd.Flags().BoolVar(&writeHumanizeFlag, "humanize", true, "Enable deterministic AI-flavor checks and humanization suggestions")
+	writePipelineCmd.Flags().IntVar(&writeHumanizeThresholdFlag, "humanize-threshold", 75, "Minimum humanization score before improvement is suggested (0-100)")
 
 	// Register write command using the new plugin mechanism
 	RegisterCommand(func() *cobra.Command {
@@ -267,6 +316,7 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
 	recapAgent.SetLanguage(config.Language)
 	recapStore := recap.NewStore(root)
+	var errc writeErrorCollector
 
 	// Get list of chapters to generate
 	chapters, err := getChaptersToGenerate(outline, writeChapterFlag, writeVolumeFlag, writePartFlag, writeAllFlag)
@@ -301,51 +351,27 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 				context := loadChapterContext(outline, chapter, writeContextFlag)
 
 				// Calculate story state matrix
-				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
+				stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
 
 				// Generate final content
 				content, err := agent.GenerateChapter(ctx, chapter, context, stateMatrix, targetWords)
 				if err != nil {
 					log.Error("Failed to generate content for chapter %s: %v", chapter.ID, err)
+					errc.Addf("%s: generate failed: %w", chapter.ID, err)
 					continue
 				}
 
 				// Save final content
 				if err := saveFinalChapter(chapter, content); err != nil {
 					log.Error("Failed to save content for chapter %s: %v", chapter.ID, err)
+					errc.Addf("%s: save final chapter failed: %w", chapter.ID, err)
 					continue
 				}
 
 				// Auto-extract + persist recap for this final chapter (best-effort)
-				if recapData, err := recapAgent.Extract(ctx, chapter.ID, chapter.Title, content); err == nil {
-					if ok, reasons := recap.ValidateMinimal(recapData); !ok {
-						log.Warn("[Worker %d] Recap minimal validation failed for %s: %v", workerID, chapter.ID, reasons)
-
-						// One retry with explicit feedback to force required fields.
-						fb := recapGateFeedback(reasons, recapData)
-						if recap2, err2 := recapAgent.ExtractWithFeedback(ctx, chapter.ID, chapter.Title, content, fb); err2 == nil {
-							if okR, reasonsR := recap.ValidateMinimal(recap2); okR {
-								recapData = recap2
-							} else {
-								log.Warn("[Worker %d] Recap retry still failed minimal validation for %s: %v", workerID, chapter.ID, reasonsR)
-								goto recap_done
-							}
-						} else {
-							log.Warn("[Worker %d] Recap retry extract failed for %s: %v", workerID, chapter.ID, err2)
-							goto recap_done
-						}
-					}
-
-					if ok2, reasons2 := recap.ValidateConsistency(recapData); !ok2 {
-						log.Warn("[Worker %d] Recap consistency validation warning for %s: %v", workerID, chapter.ID, reasons2)
-					}
-					if err := recapStore.Save(recapData); err != nil {
-						log.Warn("[Worker %d] Failed to save recap for %s: %v", workerID, chapter.ID, err)
-					}
-				} else {
-					log.Warn("[Worker %d] Failed to extract recap for %s: %v", workerID, chapter.ID, err)
+				if err := extractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, content, workerID); err != nil {
+					log.Warn("[Worker %d] Recap gate failed for %s: %v", workerID, chapter.ID, err)
 				}
-			recap_done:
 
 				log.Info("[Worker %d] Content saved for chapter %s: %d words", workerID, chapter.ID, len(strings.Fields(content)))
 			}
@@ -360,6 +386,10 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 
 	// Wait for all workers to complete
 	wg.Wait()
+
+	if err := errc.Err(); err != nil {
+		return err
+	}
 
 	log.Info("Chapter writing complete")
 	return nil
@@ -515,10 +545,155 @@ func saveFinalChapter(chapter *models.Chapter, content string) error {
 	return os.WriteFile(filename, []byte(sb.String()), 0644)
 }
 
+func saveWriteReviewResult(chapter *models.Chapter, review models.ReviewResult) error {
+	root, err := findProjectRoot()
+	if err != nil {
+		return err
+	}
+	if chapter == nil {
+		return fmt.Errorf("chapter is nil")
+	}
+
+	reviewDir := filepath.Join(root, "story", "reviews")
+	if err := os.MkdirAll(reviewDir, 0755); err != nil {
+		return fmt.Errorf("failed to create reviews directory: %w", err)
+	}
+
+	reviewPath := filepath.Join(reviewDir, chapter.ID+"_write_review.json")
+	data, err := json.MarshalIndent(review, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal write review: %w", err)
+	}
+	return os.WriteFile(reviewPath, data, 0644)
+}
+
+func extractAndSaveRecapWithGate(ctx context.Context, recapAgent *agents.RecapAgent, recapStore *recap.Store, chapter *models.Chapter, content string, workerID int) error {
+	if recapAgent == nil || recapStore == nil {
+		return fmt.Errorf("recap dependencies are not initialized")
+	}
+	if chapter == nil {
+		return fmt.Errorf("chapter is nil")
+	}
+
+	recapData, err := recapAgent.Extract(ctx, chapter.ID, chapter.Title, content)
+	if err != nil {
+		return fmt.Errorf("extract recap: %w", err)
+	}
+
+	log := logger.GetLogger()
+	if ok, reasons := recap.ValidateMinimal(recapData); !ok {
+		log.Warn("[Worker %d] Recap minimal validation failed for %s: %v", workerID, chapter.ID, reasons)
+
+		fb := recapGateFeedback(reasons, recapData)
+		recap2, err := recapAgent.ExtractWithFeedback(ctx, chapter.ID, chapter.Title, content, fb)
+		if err != nil {
+			return fmt.Errorf("retry recap extraction: %w", err)
+		}
+		if okR, reasonsR := recap.ValidateMinimal(recap2); !okR {
+			return fmt.Errorf("recap retry still failed minimal validation: %s", strings.Join(reasonsR, "; "))
+		}
+		recapData = recap2
+	}
+
+	if ok, reasons := recap.ValidateConsistency(recapData); !ok {
+		log.Warn("[Worker %d] Recap consistency validation warning for %s: %v", workerID, chapter.ID, reasons)
+	}
+
+	if err := recapStore.Save(recapData); err != nil {
+		return fmt.Errorf("save recap: %w", err)
+	}
+	return nil
+}
+
+func loadFinalChapterContentsForVolume(volume *models.Volume) map[string]string {
+	contents := make(map[string]string)
+	if volume == nil {
+		return contents
+	}
+	for i := range volume.Chapters {
+		ch := &volume.Chapters[i]
+		if content := loadFinalChapterContent(ch); strings.TrimSpace(content) != "" {
+			contents[ch.ID] = content
+		}
+	}
+	return contents
+}
+
+func findDraftReview(review *agents.VolumeReview, chapterID string) *agents.DraftReview {
+	if review == nil {
+		return nil
+	}
+	for i := range review.Reviews {
+		if review.Reviews[i].ChapterID == chapterID {
+			return &review.Reviews[i]
+		}
+	}
+	return nil
+}
+
+func applyHumanizeCheckToReview(chapter *models.Chapter, content string, review *agents.DraftReview) {
+	if !writeHumanizeFlag || review == nil || strings.TrimSpace(content) == "" {
+		return
+	}
+	result := style.CheckAIFlavor(content, writeHumanizeThresholdFlag)
+	if len(result.Issues) == 0 && len(result.Suggestions) == 0 {
+		return
+	}
+
+	if review.PacingReview.Score == 0 {
+		review.PacingReview.Score = 8
+	}
+	for _, issue := range result.Issues {
+		msg := fmt.Sprintf("去AI味检查（score=%d）：%s", result.Score, issue)
+		if !containsStr(review.PacingReview.Issues, msg) {
+			review.PacingReview.Issues = append(review.PacingReview.Issues, msg)
+		}
+	}
+	for _, suggestion := range result.Suggestions {
+		msg := "【去AI味】" + suggestion
+		if !containsStr(review.PacingReview.Suggestions, msg) {
+			review.PacingReview.Suggestions = append(review.PacingReview.Suggestions, msg)
+		}
+	}
+	if result.HasIssue {
+		review.NeedsRevision = true
+		if review.OverallScore == 0 || review.OverallScore > 7 {
+			review.OverallScore = 7
+		}
+		if chapter != nil {
+			summary := fmt.Sprintf("[medium] style: 本章%s去AI味得分 %d，建议按“去AI味”条目改写公式化表达。", chapter.ID, result.Score)
+			if !containsStr(review.Suggestions, summary) {
+				review.Suggestions = append(review.Suggestions, summary)
+			}
+		}
+	}
+}
+
+func applyHumanizeChecksToVolume(volume *models.Volume, contents map[string]string, review *agents.VolumeReview) {
+	if !writeHumanizeFlag || volume == nil || review == nil {
+		return
+	}
+	contentByID := contents
+	if contentByID == nil {
+		contentByID = loadFinalChapterContentsForVolume(volume)
+	}
+	chapterByID := make(map[string]*models.Chapter)
+	for i := range volume.Chapters {
+		chapterByID[volume.Chapters[i].ID] = &volume.Chapters[i]
+	}
+	for i := range review.Reviews {
+		r := &review.Reviews[i]
+		applyHumanizeCheckToReview(chapterByID[r.ChapterID], contentByID[r.ChapterID], r)
+	}
+}
+
 // runWriteImprove improves final chapters based on review
 func runWriteImprove(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
+	if err := validateWriteMinScoreFlag(); err != nil {
+		return err
+	}
 
 	// Load project config
 	config, err := loadProjectConfig()
@@ -600,6 +775,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 				log.Info("Auto-reviewing volume: %s", volume.ID)
 				if err := reviewVolumeWithWriteAgent(ctx, writeAgent, stateManager, volume, outline, targetWords, writeConcurrencyFlag); err != nil {
 					log.Error("Failed to auto-review volume %s: %v", volume.ID, err)
+					return err
 				}
 			}
 		}
@@ -632,7 +808,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 					log.Info("Volume %s: Force improving %d chapters (chapter specified)", volume.ID, len(chaptersToImprove))
 				}
 			} else {
-				chaptersToImprove = getChaptersNeedingImprovement(review, outline, writeMinScoreFlag)
+				chaptersToImprove = getWriteChaptersNeedingImprovement(review, outline, writeMinScoreFlag)
 				if len(chaptersToImprove) == 0 {
 					log.Info("Volume %s: All chapters meet quality threshold", volume.ID)
 					continue
@@ -641,7 +817,11 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 			}
 
 			// Improve chapters concurrently
-			improved := improveChaptersWithWriteAgent(ctx, writeAgent, chaptersToImprove, review.Reviews, outline, stateManager, writeConcurrencyFlag, targetWords)
+			improved, err := improveChaptersWithWriteAgent(ctx, writeAgent, chaptersToImprove, review.Reviews, outline, stateManager, writeConcurrencyFlag, targetWords)
+			if err != nil {
+				log.Error("Failed to improve some chapters in volume %s: %v", volume.ID, err)
+				return err
+			}
 			improvedCount += improved
 		}
 
@@ -666,8 +846,9 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 }
 
 // improveChaptersWithWriteAgent improves chapters using the write agent
-func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, stateManager *logic.StateMatrixManager, concurrency int, targetWords int) int {
+func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, stateManager *logic.StateMatrixManager, concurrency int, targetWords int) (int, error) {
 	log := logger.GetLogger()
+	var errc writeErrorCollector
 
 	// Pre-build DSL simulation for enrichment (shared across goroutines)
 	var dslIssues []dsl.SimulationIssue
@@ -710,8 +891,10 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 				currentContent := loadFinalChapterContent(chapter)
 				if currentContent == "" {
 					log.Error("[Worker %d] No existing content for chapter %s, skipping improvement", workerID, chapter.ID)
+					errc.Addf("%s: no existing content for improvement", chapter.ID)
 					continue
 				}
+				applyHumanizeCheckToReview(chapter, currentContent, review)
 
 				// Build improvement suggestions
 				suggestions := buildImprovementSuggestions(review)
@@ -736,12 +919,13 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 				context := loadChapterContext(outline, chapter, writeContextFlag)
 
 				// Calculate story state matrix
-				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
+				stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
 
 				// Generate improved content with suggestions
 				content, err := agent.GenerateChapterWithSuggestions(ctx, chapter, context, stateMatrix, targetWords, currentContent, suggestions)
 				if err != nil {
 					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
+					errc.Addf("%s: improve failed: %w", chapter.ID, err)
 					continue
 				}
 
@@ -772,6 +956,7 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 				// Save improved content
 				if err := saveFinalChapter(chapter, content); err != nil {
 					log.Error("[Worker %d] Failed to save improved chapter %s: %v", workerID, chapter.ID, err)
+					errc.Addf("%s: save improved chapter failed: %w", chapter.ID, err)
 					continue
 				}
 
@@ -793,7 +978,39 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 	// Wait for all workers to complete
 	wg.Wait()
 
-	return improvedCount
+	return improvedCount, errc.Err()
+}
+
+func getWriteChaptersNeedingImprovement(review *agents.VolumeReview, outline *models.Outline, minScorePercent int) []*models.Chapter {
+	if review == nil || outline == nil {
+		return nil
+	}
+	chapters := make([]*models.Chapter, 0)
+	for _, r := range review.Reviews {
+		if r.NeedsRevision || draftReviewScorePercent(r) < minScorePercent {
+			if chapter := outline.GetChapterByID(r.ChapterID); chapter != nil {
+				chapters = append(chapters, chapter)
+			}
+		}
+	}
+	return chapters
+}
+
+func draftReviewScorePercent(review agents.DraftReview) int {
+	if review.OverallScore <= 10 {
+		return review.OverallScore * 10
+	}
+	return review.OverallScore
+}
+
+func reviewScorePercentInt(score float64) int {
+	if score < 0 {
+		return 0
+	}
+	if score > 100 {
+		return 100
+	}
+	return int(score + 0.5)
 }
 
 // runWriteReview reviews final chapters and saves review results
@@ -861,6 +1078,8 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 
 	// Group chapters by volume for saving reviews
 	volumeReviews := make(map[string]*agents.VolumeReview)
+	volumeContents := make(map[string]map[string]string)
+	var errc writeErrorCollector
 
 	// Review chapters concurrently
 	chapterChan := make(chan *models.Chapter, len(chaptersToReview))
@@ -886,6 +1105,7 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 				content := loadFinalChapterContent(chapter)
 				if content == "" {
 					log.Warn("[Worker %d] No final content found for chapter %s, skipping", workerID, chapter.ID)
+					errc.Addf("%s: no final chapter content found for review", chapter.ID)
 					continue
 				}
 
@@ -893,13 +1113,17 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 				chapterContext := loadChapterContext(outline, chapter, writeContextFlag)
 
 				// Calculate state matrix for continuity checking
-				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
+				stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
 
 				// Review chapter
 				reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, chapterContext, stateMatrix, content, targetWords, 1)
 				if err != nil {
 					log.Error("[Worker %d] Failed to review chapter %s: %v", workerID, chapter.ID, err)
+					errc.Addf("%s: review failed: %w", chapter.ID, err)
 					continue
+				}
+				if err := saveWriteReviewResult(chapter, reviewResult); err != nil {
+					log.Warn("[Worker %d] Failed to save full write review for %s: %v", workerID, chapter.ID, err)
 				}
 
 				// Convert suggestions to strings
@@ -912,7 +1136,7 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 				draftReview := agents.DraftReview{
 					ChapterID:     chapter.ID,
 					ChapterTitle:  chapter.Title,
-					OverallScore:  int(reviewResult.OverallScore / 10), // Convert 0-100 to 0-10
+					OverallScore:  reviewScorePercentInt(reviewResult.OverallScore),
 					NeedsRevision: reviewResult.OverallScore < 70,
 					Suggestions:   suggestionStrings,
 				}
@@ -922,6 +1146,10 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 				volume := outline.GetVolumeByID(volumeID)
 
 				mu.Lock()
+				if _, exists := volumeContents[volumeID]; !exists {
+					volumeContents[volumeID] = make(map[string]string)
+				}
+				volumeContents[volumeID][chapter.ID] = content
 				// Create volume review if not exists
 				if _, exists := volumeReviews[volumeID]; !exists {
 					volumeTitle := ""
@@ -953,11 +1181,20 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 
 	// Save all volume reviews
 	for volumeID, review := range volumeReviews {
+		if volume := outline.GetVolumeByID(volumeID); volume != nil {
+			applyHeuristicTransitionChecks(volume, volumeContents[volumeID], review)
+			applyHumanizeChecksToVolume(volume, volumeContents[volumeID], review)
+		}
 		if err := saveVolumeReview(review); err != nil {
 			log.Error("Failed to save review for volume %s: %v", volumeID, err)
+			errc.Addf("%s: save volume review failed: %w", volumeID, err)
 			continue
 		}
 		log.Info("Review saved for volume %s: %d chapters reviewed", volumeID, len(review.Reviews))
+	}
+
+	if err := errc.Err(); err != nil {
+		return err
 	}
 
 	log.Info("Review process complete")
@@ -1051,6 +1288,8 @@ func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAge
 		VolumeTitle: volume.Title,
 		Reviews:     make([]agents.DraftReview, 0),
 	}
+	volumeContents := make(map[string]string)
+	var errc writeErrorCollector
 
 	// Review chapters concurrently
 	chapterChan := make(chan *models.Chapter, len(chapters))
@@ -1075,6 +1314,7 @@ func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAge
 				content := loadFinalChapterContent(chapter)
 				if content == "" {
 					log.Warn("[Worker %d] No final content found for chapter %s, skipping", workerID, chapter.ID)
+					errc.Addf("%s: no final chapter content found for review", chapter.ID)
 					continue
 				}
 
@@ -1082,13 +1322,17 @@ func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAge
 				chapterContext := loadChapterContext(outline, chapter, writeContextFlag)
 
 				// Calculate state matrix for continuity checking
-				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
+				stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
 
 				// Review chapter
 				reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, chapterContext, stateMatrix, content, targetWords, 1)
 				if err != nil {
 					log.Error("[Worker %d] Failed to review chapter %s: %v", workerID, chapter.ID, err)
+					errc.Addf("%s: review failed: %w", chapter.ID, err)
 					continue
+				}
+				if err := saveWriteReviewResult(chapter, reviewResult); err != nil {
+					log.Warn("[Worker %d] Failed to save full write review for %s: %v", workerID, chapter.ID, err)
 				}
 
 				// Convert suggestions to strings
@@ -1101,12 +1345,13 @@ func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAge
 				draftReview := agents.DraftReview{
 					ChapterID:     chapter.ID,
 					ChapterTitle:  chapter.Title,
-					OverallScore:  int(reviewResult.OverallScore / 10), // Convert 0-100 to 0-10
+					OverallScore:  reviewScorePercentInt(reviewResult.OverallScore),
 					NeedsRevision: reviewResult.OverallScore < 70,
 					Suggestions:   suggestionStrings,
 				}
 
 				mu.Lock()
+				volumeContents[chapter.ID] = content
 				volumeReview.Reviews = append(volumeReview.Reviews, draftReview)
 				mu.Unlock()
 
@@ -1125,8 +1370,13 @@ func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAge
 	wg.Wait()
 
 	// Save volume review
+	applyHeuristicTransitionChecks(volume, volumeContents, volumeReview)
+	applyHumanizeChecksToVolume(volume, volumeContents, volumeReview)
 	if err := saveVolumeReview(volumeReview); err != nil {
 		return fmt.Errorf("failed to save review for volume %s: %w", volume.ID, err)
+	}
+	if err := errc.Err(); err != nil {
+		return err
 	}
 
 	log.Info("Review saved for volume %s: %d chapters reviewed", volume.ID, len(volumeReview.Reviews))
@@ -1137,6 +1387,9 @@ func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAge
 func runWritePipeline(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
+	if err := validateWriteMinScoreFlag(); err != nil {
+		return err
+	}
 
 	// Load project config
 	config, err := loadProjectConfig()
@@ -1197,25 +1450,19 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	log.Info("=== WRITE PIPELINE ===")
 	log.Info("Processing %d chapter(s)", len(chaptersToProcess))
 	log.Info("RPG DSL export: enabled=%t batch_size=%d output=%s", writeEmitRPGDSLFlag, writeRPGBatchSizeFlag, filepath.Join(root, "story", "rpg", "04_chapters.rpg"))
+	minScorePercent := writeMinScorePercent()
+	log.Info("Minimum acceptable score: %.0f/100", minScorePercent)
 
 	// Create recap agent for all chapters
 	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
 	recapAgent.SetLanguage(config.Language)
 	recapStore := recap.NewStore(root)
 
-	// Pre-generate RPG DSL and detect issues if enabled
+	// RPG DSL issues are refreshed after chapter content changes. Running this
+	// before generation would analyze stale or missing chapter files.
 	var rpgDSLIssues []dsl.SimulationIssue
-	if writeEmitRPGDSLFlag {
-		log.Info("\n[Pre-step] Generating RPG DSL and detecting issues...")
-		result, err := emitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, writeRPGBatchSizeFlag)
-		if err != nil {
-			log.Error("Failed to generate RPG DSL: %v", err)
-		} else {
-			rpgDSLIssues = result.Issues
-			log.Info("RPG DSL generated: %s", result.DSLPath)
-			log.Info("Issues detected: %d total, %d important", len(result.Issues), len(FilterImportantIssues(result.Issues)))
-		}
-	}
+	knownChars := collectKnownCharactersFromOutline(outline)
+	var errc writeErrorCollector
 
 	// Process each chapter completely before moving to the next
 	for chapterIdx, chapter := range chaptersToProcess {
@@ -1229,14 +1476,16 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		if content == "" {
 			log.Info("Generating chapter: %s - %s", chapter.ID, chapter.Title)
 			chapterContext := loadChapterContext(outline, chapter, writeContextFlag)
-			stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
+			stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
 			generatedContent, err := writeAgent.GenerateChapter(ctx, chapter, chapterContext, stateMatrix, targetWords)
 			if err != nil {
 				log.Error("Failed to generate chapter %s: %v", chapter.ID, err)
+				errc.Addf("%s: generate failed: %w", chapter.ID, err)
 				continue
 			}
 			if err := saveFinalChapter(chapter, generatedContent); err != nil {
 				log.Error("Failed to save chapter %s: %v", chapter.ID, err)
+				errc.Addf("%s: save generated chapter failed: %w", chapter.ID, err)
 				continue
 			}
 			content = generatedContent
@@ -1248,11 +1497,15 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		// Step 2: Review chapter
 		log.Info("\n[Step 2/4] Reviewing chapter...")
 		chapterContext := loadChapterContext(outline, chapter, writeContextFlag)
-		stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
+		stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
 		reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, chapterContext, stateMatrix, content, targetWords, 1)
 		if err != nil {
 			log.Error("Failed to review chapter %s: %v", chapter.ID, err)
+			errc.Addf("%s: review failed: %w", chapter.ID, err)
 			continue
+		}
+		if err := saveWriteReviewResult(chapter, reviewResult); err != nil {
+			log.Warn("Failed to save full write review for %s: %v", chapter.ID, err)
 		}
 
 		// Save review
@@ -1263,8 +1516,8 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		draftReview := agents.DraftReview{
 			ChapterID:     chapter.ID,
 			ChapterTitle:  chapter.Title,
-			OverallScore:  int(reviewResult.OverallScore / 10),
-			NeedsRevision: reviewResult.OverallScore < 70,
+			OverallScore:  reviewScorePercentInt(reviewResult.OverallScore),
+			NeedsRevision: reviewResult.OverallScore < minScorePercent,
 			Suggestions:   suggestionStrings,
 		}
 		volumeID := getVolumeIDFromChapter(chapter.ID)
@@ -1299,16 +1552,37 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		if !found {
 			volumeReview.Reviews = append(volumeReview.Reviews, draftReview)
 		}
+		if volume != nil {
+			volumeContents := loadFinalChapterContentsForVolume(volume)
+			applyHeuristicTransitionChecks(volume, volumeContents, volumeReview)
+			applyHumanizeChecksToVolume(volume, volumeContents, volumeReview)
+			if updated := findDraftReview(volumeReview, chapter.ID); updated != nil {
+				draftReview = *updated
+			}
+		}
 		if err := saveVolumeReview(volumeReview); err != nil {
 			log.Error("Failed to save review for chapter %s: %v", chapter.ID, err)
+			errc.Addf("%s: save volume review failed: %w", chapter.ID, err)
 		}
 		log.Info("Review output: %s", reviewPath)
 		log.Info("Reviewed chapter %s: score %.1f", chapter.ID, reviewResult.OverallScore)
 
+		if writeEmitRPGDSLFlag && writeMaxRoundsFlag > 0 {
+			result, err := refreshWriteRPGDSL(ctx, root, config, cfg, setup, client, writeRPGBatchSizeFlag, "before improvement")
+			if err != nil {
+				log.Error("Failed to refresh RPG DSL before improving chapter %s: %v", chapter.ID, err)
+			} else {
+				rpgDSLIssues = result.Issues
+			}
+		}
+
 		// Step 3: Improve chapter (iterative)
 		log.Info("\n[Step 3/4] Improving chapter...")
 		currentContent := content
-		chapterReview := &draftReview
+		chapterReview := findDraftReview(volumeReview, chapter.ID)
+		if chapterReview == nil {
+			chapterReview = &draftReview
+		}
 		for round := 1; round <= writeMaxRoundsFlag; round++ {
 			// Check for RPG DSL issues for this chapter
 			chapterRPGIssues := GetChapterSpecificSuggestions(rpgDSLIssues, chapter.ID)
@@ -1327,14 +1601,39 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				suggestions += "\n\n" + chapterRPGIssues
 			}
 			chapterContext := loadChapterContext(outline, chapter, writeContextFlag)
-			stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
-			improvedContent, err := writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, stateMatrix, targetWords, currentContent, suggestions)
+			stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
+			improvedContent, err := writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, stateMatrix, targetWords, currentContent, suggestions, round)
 			if err != nil {
 				log.Error("Failed to improve chapter %s: %v", chapter.ID, err)
+				errc.Addf("%s: improve round %d failed: %w", chapter.ID, round, err)
 				break
 			}
+
+			fixedContent, sum := applyImproveFixesWrite(
+				log,
+				0,
+				chapter,
+				outline,
+				improvedContent,
+				suggestions,
+				writeTeleportFixFlag,
+				writeBridgeRetriesFlag,
+				func(s string) (string, error) {
+					return writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, stateMatrix, targetWords, improvedContent, s, round)
+				},
+				writeCharacterFixFlag,
+				writeCharacterPatchRetriesFlag,
+				knownChars,
+				func(s string) (string, error) {
+					return writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, stateMatrix, targetWords, improvedContent, s, round)
+				},
+			)
+			improvedContent = fixedContent
+			log.Info("Fix summary for %s: %s", chapter.ID, sum.String())
+
 			if err := saveFinalChapter(chapter, improvedContent); err != nil {
 				log.Error("Failed to save improved chapter %s: %v", chapter.ID, err)
+				errc.Addf("%s: save improved chapter failed: %w", chapter.ID, err)
 				break
 			}
 			currentContent = improvedContent
@@ -1346,22 +1645,35 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				reviewResult, err := writeAgent.ReviewChapter(ctx, chapter, chapterContext, stateMatrix, currentContent, targetWords, 1)
 				if err != nil {
 					log.Error("Failed to re-review chapter %s: %v", chapter.ID, err)
+					errc.Addf("%s: re-review after improvement failed: %w", chapter.ID, err)
 					break
+				}
+				if err := saveWriteReviewResult(chapter, reviewResult); err != nil {
+					log.Warn("Failed to save full write review for %s: %v", chapter.ID, err)
 				}
 				var suggestionStrings []string
 				for _, s := range reviewResult.Suggestions {
 					suggestionStrings = append(suggestionStrings, fmt.Sprintf("[%s] %s: %s", s.Priority, s.Category, s.Suggestion))
 				}
-				chapterReview.OverallScore = int(reviewResult.OverallScore / 10)
-				chapterReview.NeedsRevision = reviewResult.OverallScore < 70
+				chapterReview.OverallScore = reviewScorePercentInt(reviewResult.OverallScore)
+				chapterReview.NeedsRevision = reviewResult.OverallScore < minScorePercent
 				chapterReview.Suggestions = suggestionStrings
+				if volume != nil {
+					volumeContents := loadFinalChapterContentsForVolume(volume)
+					applyHeuristicTransitionChecks(volume, volumeContents, volumeReview)
+					applyHumanizeChecksToVolume(volume, volumeContents, volumeReview)
+					if updated := findDraftReview(volumeReview, chapter.ID); updated != nil {
+						chapterReview = updated
+					}
+				}
 				// Save updated review
 				if err := saveVolumeReview(volumeReview); err != nil {
 					log.Error("Failed to save updated review for chapter %s: %v", chapter.ID, err)
+					errc.Addf("%s: save updated review failed: %w", chapter.ID, err)
 				}
 				// Check if quality threshold met
-				if reviewResult.OverallScore >= 85 {
-					log.Info("Quality threshold met (%.1f >= 85), stopping improvement", reviewResult.OverallScore)
+				if reviewResult.OverallScore >= minScorePercent {
+					log.Info("Quality threshold met (%.1f >= %.0f), stopping improvement", reviewResult.OverallScore, minScorePercent)
 					break
 				}
 			}
@@ -1369,21 +1681,53 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 
 		// Step 4: Generate recap
 		log.Info("\n[Step 4/4] Generating recap...")
-		chapterRecap, err := recapAgent.Extract(ctx, chapter.ID, chapter.Title, currentContent)
-		if err != nil {
-			log.Error("Failed to generate recap for chapter %s: %v", chapter.ID, err)
+		if err := extractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, currentContent, 0); err != nil {
+			log.Error("Failed to generate/save recap for chapter %s: %v", chapter.ID, err)
+			errc.Addf("%s: final recap failed: %w", chapter.ID, err)
 		} else {
-			if err := recapStore.Save(chapterRecap); err != nil {
-				log.Error("Failed to save recap for chapter %s: %v", chapter.ID, err)
+			log.Info("Recap output: %s", filepath.Join(root, "story", "recaps", chapter.ID+".json"))
+		}
+
+		if writeEmitRPGDSLFlag {
+			result, err := refreshWriteRPGDSL(ctx, root, config, cfg, setup, client, writeRPGBatchSizeFlag, "after final recap")
+			if err != nil {
+				log.Error("Failed to refresh final RPG DSL after chapter %s recap: %v", chapter.ID, err)
 			} else {
-				log.Info("Recap output: %s", filepath.Join(root, "story", "recaps", chapter.ID+".json"))
+				rpgDSLIssues = result.Issues
 			}
 		}
 
 		log.Info("\nCompleted chapter: %s", chapter.ID)
 	}
 
+	if err := errc.Err(); err != nil {
+		log.Info("\n=== PIPELINE COMPLETE WITH ERRORS ===")
+		return err
+	}
+
 	log.Info("\n=== PIPELINE COMPLETE ===")
 	log.Info("All phases completed successfully!")
 	return nil
+}
+
+func refreshWriteRPGDSL(
+	ctx context.Context,
+	root string,
+	config *models.ProjectConfig,
+	cfg *llm.Config,
+	setup *models.StorySetup,
+	client llm.Client,
+	batchSize int,
+	reason string,
+) (writeRPGDSLResult, error) {
+	log := logger.GetLogger()
+	log.Info("\n[RPG DSL] Refreshing chapter DSL (%s)...", reason)
+	result, err := emitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, batchSize)
+	if err != nil {
+		return result, err
+	}
+	log.Info("[RPG DSL] Output: %s", result.DSLPath)
+	log.Info("[RPG DSL] Batches: %d reused, %d generated", result.ReusedBatches, result.GeneratedBatches)
+	log.Info("[RPG DSL] Issues detected: %d total, %d important", len(result.Issues), len(FilterImportantIssues(result.Issues)))
+	return result, nil
 }

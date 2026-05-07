@@ -2,40 +2,49 @@ package agents
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
-	"novelgen/internal/logic"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
+	"novelgen/internal/logic"
 	"novelgen/internal/models"
 )
+
+const compactStyleReferenceRuneLimit = 2000
 
 // CompactStorySetup is a minimal version of StorySetup for chapter generation
 // Only includes essential fields needed for writing
 type CompactStorySetup struct {
-	Genres   []string `json:"genres" md:"genres" desc:"Story genres (2-4 specific genres)"`
-	Premise  string   `json:"premise" md:"premise" desc:"Core story premise (2-4 sentences)"`
-	Theme    string   `json:"theme" md:"theme" desc:"Story theme (clear statement)"`
-	Rules    []string `json:"rules" md:"rules" desc:"World rules (3-7 enforceable rules)"`
-	Tone     string   `json:"tone" md:"tone" desc:"Writing tone (2-4 adjectives, comma-separated)"`
-	Tense    string   `json:"tense" md:"tense" desc:"Narrative tense (past or present)"`
-	POVStyle string   `json:"pov_style" md:"pov_style" desc:"POV style (first person, third person limited, or third person omniscient)"`
+	Genres       []string            `json:"genres" md:"genres" desc:"Story genres (2-4 specific genres)"`
+	Premise      string              `json:"premise" md:"premise" desc:"Core story premise (2-4 sentences)"`
+	Theme        string              `json:"theme" md:"theme" desc:"Story theme (clear statement)"`
+	Rules        []string            `json:"rules" md:"rules" desc:"World rules (3-7 enforceable rules)"`
+	Tone         string              `json:"tone" md:"tone" desc:"Writing tone (2-4 adjectives, comma-separated)"`
+	Tense        string              `json:"tense" md:"tense" desc:"Narrative tense (past or present)"`
+	POVStyle     string              `json:"pov_style" md:"pov_style" desc:"POV style (first person, third person limited, or third person omniscient)"`
+	WritingStyle models.WritingStyle `json:"writing_style,omitempty" md:"writing_style,omitempty" desc:"Optional prose style instructions and reference excerpt; use as style signal only, not story facts"`
 }
 
 // ToCompact converts a full StorySetup to CompactStorySetup
 func ToCompact(setup *models.StorySetup) CompactStorySetup {
+	if setup == nil {
+		return CompactStorySetup{}
+	}
 	return CompactStorySetup{
-		Genres:   setup.Genres,
-		Premise:  setup.Premise,
-		Theme:    setup.Theme,
-		Rules:    setup.Rules,
-		Tone:     setup.Tone,
-		Tense:    setup.Tense,
-		POVStyle: setup.POVStyle,
+		Genres:       setup.Genres,
+		Premise:      setup.Premise,
+		Theme:        setup.Theme,
+		Rules:        setup.Rules,
+		Tone:         setup.Tone,
+		Tense:        setup.Tense,
+		POVStyle:     setup.POVStyle,
+		WritingStyle: setup.WritingStyle.CompactReference(compactStyleReferenceRuneLimit),
 	}
 }
 
@@ -61,10 +70,12 @@ type WriteImproveInput struct {
 	Chapter      models.Chapter    `json:"chapter" md:"chapter" desc:"Chapter information including title, summary, beats, characters"`
 	StateMatrix  string            `json:"state_matrix" md:"state_matrix" desc:"Current story state including character statuses, relationships, goals"`
 	TargetWords  int               `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
+	Iteration    int               `json:"iteration" md:"iteration" desc:"Current improvement iteration number"`
 	CurrentDraft string            `json:"current_draft" md:"current_draft" desc:"The current draft content to be improved"`
 	Suggestions  string            `json:"suggestions" md:"suggestions" desc:"Review suggestions for improvement"`
 	Context      string            `json:"context,omitempty" md:"context,omitempty" desc:"Continuity context from previous chapters"`
 	Recap        string            `json:"recap,omitempty" md:"recap,omitempty" desc:"Canonical recap from previous chapter"`
+	NextChapters []NextChapterInfo `json:"next_chapters,omitempty" md:"next_chapters,omitempty" desc:"Information about upcoming chapters for foreshadowing"`
 }
 
 // WriteImproveOutput is the output for chapter improvement
@@ -80,7 +91,9 @@ type WriteReviewInput struct {
 	ChapterContent string            `json:"chapter_content" md:"chapter_content" desc:"The chapter content to be reviewed"`
 	TargetWords    int               `json:"target_words" md:"target_words" desc:"Target word count for the chapter"`
 	Iteration      int               `json:"iteration" md:"iteration" desc:"Current iteration number"`
+	Context        string            `json:"context,omitempty" md:"context,omitempty" desc:"Continuity context from previous chapters"`
 	Recap          string            `json:"recap,omitempty" md:"recap,omitempty" desc:"Canonical recap from previous chapter for continuity checking"`
+	NextChapters   []NextChapterInfo `json:"next_chapters,omitempty" md:"next_chapters,omitempty" desc:"Information about upcoming chapters for foreshadowing and hook checks"`
 }
 
 // WriteReviewOutput is the output for chapter review
@@ -191,14 +204,10 @@ func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapte
 	logger.Info("Target words: %d", targetWords)
 	logger.Info("Language: %s", a.base.language)
 
-	// Convert next chapters to info
-	var nextInfos []NextChapterInfo
-	for _, nc := range context.Next {
-		nextInfos = append(nextInfos, NextChapterInfo{
-			ID:      nc.Chapter.ID,
-			Title:   nc.Chapter.Title,
-			Summary: nc.Chapter.Summary,
-		})
+	nextInfos := buildNextChapterInfos(context)
+	recap := ""
+	if context != nil {
+		recap = context.Recap
 	}
 
 	input := WriteGenInput{
@@ -207,7 +216,7 @@ func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapte
 		StateMatrix:  formatStateMatrixForWrite(state, chapter),
 		TargetWords:  targetWords,
 		Context:      formatChapterContext(context),
-		Recap:        context.Recap,
+		Recap:        recap,
 		NextChapters: nextInfos,
 	}
 
@@ -221,9 +230,11 @@ func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapte
 		return "", err
 	}
 
-	// Validate output content is not empty
-	if strings.TrimSpace(output.Content) == "" {
-		return "", fmt.Errorf("AI returned empty content for chapter %s", chapter.ID)
+	if err := validateWriteContent(chapter, output.Content, targetWords); err != nil {
+		return "", err
+	}
+	if warn := validateWriteTargetLength(output.Content, targetWords); warn != "" {
+		logger.Warn("Chapter %s length warning: %s", chapter.ID, warn)
 	}
 
 	// Log context for debugging
@@ -236,21 +247,28 @@ func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapte
 }
 
 // GenerateChapterWithSuggestions generates improved chapter content with review suggestions
-func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, targetWords int, currentDraft string, suggestions string) (string, error) {
+func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter *models.Chapter, context *ChapterContext, state *models.StateMatrix, targetWords int, currentDraft string, suggestions string, iteration ...int) (string, error) {
 	logger.Section("WRITE AGENT - Chapter Improvement")
 	logger.Info("Chapter: %s", chapter.ID)
 	logger.Info("Target words: %d", targetWords)
 	logger.Info("Language: %s", a.base.language)
+
+	iter := 1
+	if len(iteration) > 0 && iteration[0] > 0 {
+		iter = iteration[0]
+	}
 
 	input := WriteImproveInput{
 		StorySetup:   ToCompact(a.setup),
 		Chapter:      *chapter,
 		StateMatrix:  formatStateMatrixForWrite(state, chapter),
 		TargetWords:  targetWords,
+		Iteration:    iter,
 		CurrentDraft: currentDraft,
 		Suggestions:  suggestions,
 		Context:      formatChapterContext(context),
-		Recap:        context.Recap,
+		Recap:        recapForContext(context),
+		NextChapters: buildNextChapterInfos(context),
 	}
 
 	var output WriteImproveOutput
@@ -263,9 +281,11 @@ func (a *WriteAgent) GenerateChapterWithSuggestions(ctx context.Context, chapter
 		return "", err
 	}
 
-	// Validate output content is not empty
-	if strings.TrimSpace(output.Content) == "" {
-		return "", fmt.Errorf("AI returned empty content for chapter %s improvement", chapter.ID)
+	if err := validateWriteContent(chapter, output.Content, targetWords); err != nil {
+		return "", err
+	}
+	if warn := validateWriteTargetLength(output.Content, targetWords); warn != "" {
+		logger.Warn("Chapter %s improvement length warning: %s", chapter.ID, warn)
 	}
 
 	// Log context for debugging
@@ -285,8 +305,12 @@ func (a *WriteAgent) ReviewChapter(ctx context.Context, chapter *models.Chapter,
 	logger.Info("Language: %s", a.base.language)
 
 	recap := ""
+	contextText := ""
+	nextInfos := []NextChapterInfo(nil)
 	if context != nil {
 		recap = context.Recap
+		contextText = formatChapterContext(context)
+		nextInfos = buildNextChapterInfos(context)
 	}
 
 	input := WriteReviewInput{
@@ -296,7 +320,9 @@ func (a *WriteAgent) ReviewChapter(ctx context.Context, chapter *models.Chapter,
 		ChapterContent: content,
 		TargetWords:    targetWords,
 		Iteration:      iteration,
+		Context:        contextText,
 		Recap:          recap,
+		NextChapters:   nextInfos,
 	}
 
 	var output WriteReviewOutput
@@ -423,7 +449,7 @@ func (a *WriteAgent) IterateChapter(ctx context.Context, chapter *models.Chapter
 
 		// Improve
 		suggestions := formatWriteSuggestions(review.Suggestions)
-		improved, err := a.GenerateChapterWithSuggestions(ctx, chapter, context, state, targetWords, currentContent, suggestions)
+		improved, err := a.GenerateChapterWithSuggestions(ctx, chapter, context, state, targetWords, currentContent, suggestions, i)
 		if err != nil {
 			return "", nil, fmt.Errorf("improvement failed at iteration %d: %w", i, err)
 		}
@@ -449,8 +475,11 @@ func (a *WriteAgent) logWriteContext(chapterID, variant string, input interface{
 
 	sb.WriteString("## Input\n\n")
 	sb.WriteString("```json\n")
-	// Simple representation
-	sb.WriteString(fmt.Sprintf("%+v", input))
+	if b, err := json.MarshalIndent(input, "", "  "); err == nil {
+		sb.Write(b)
+	} else {
+		sb.WriteString(fmt.Sprintf("%+v", input))
+	}
 	sb.WriteString("\n```\n\n")
 
 	sb.WriteString("## Output\n\n")
@@ -464,6 +493,9 @@ func (a *WriteAgent) logWriteContext(chapterID, variant string, input interface{
 // formatChapterContext formats the chapter context for the prompt
 func formatChapterContext(context *ChapterContext) string {
 	var sb strings.Builder
+	if context == nil {
+		return ""
+	}
 
 	if len(context.Previous) > 0 {
 		sb.WriteString("PREVIOUS CHAPTERS:\n")
@@ -483,6 +515,92 @@ func formatChapterContext(context *ChapterContext) string {
 	}
 
 	return sb.String()
+}
+
+func buildNextChapterInfos(context *ChapterContext) []NextChapterInfo {
+	if context == nil || len(context.Next) == 0 {
+		return nil
+	}
+	nextInfos := make([]NextChapterInfo, 0, len(context.Next))
+	for _, nc := range context.Next {
+		if nc == nil || nc.Chapter == nil {
+			continue
+		}
+		nextInfos = append(nextInfos, NextChapterInfo{
+			ID:      nc.Chapter.ID,
+			Title:   nc.Chapter.Title,
+			Summary: nc.Chapter.Summary,
+		})
+	}
+	return nextInfos
+}
+
+func recapForContext(context *ChapterContext) string {
+	if context == nil {
+		return ""
+	}
+	return context.Recap
+}
+
+func validateWriteContent(chapter *models.Chapter, content string, targetWords int) error {
+	chapterID := ""
+	if chapter != nil {
+		chapterID = chapter.ID
+	}
+	clean := strings.TrimSpace(content)
+	if clean == "" {
+		return fmt.Errorf("AI returned empty content for chapter %s", chapterID)
+	}
+	if strings.HasPrefix(clean, "{") && strings.Contains(clean, `"content"`) {
+		return fmt.Errorf("AI returned JSON text as chapter prose for chapter %s", chapterID)
+	}
+	if strings.Contains(clean, "```") {
+		return fmt.Errorf("AI returned markdown code fence in chapter prose for chapter %s", chapterID)
+	}
+	if targetWords > 0 && narrativeUnitCount(clean) < minAcceptableNarrativeUnits(targetWords) {
+		return fmt.Errorf("AI returned too little content for chapter %s: got %d narrative units, target %d", chapterID, narrativeUnitCount(clean), targetWords)
+	}
+	return nil
+}
+
+func validateWriteTargetLength(content string, targetWords int) string {
+	if targetWords <= 0 {
+		return ""
+	}
+	count := narrativeUnitCount(content)
+	low := int(float64(targetWords) * 0.95)
+	high := int(float64(targetWords) * 1.05)
+	if count < low || count > high {
+		return fmt.Sprintf("got %d narrative units, target %d, preferred range %d-%d", count, targetWords, low, high)
+	}
+	return ""
+}
+
+func minAcceptableNarrativeUnits(targetWords int) int {
+	min := targetWords / 2
+	if min < 120 {
+		min = 120
+	}
+	return min
+}
+
+func narrativeUnitCount(content string) int {
+	hasCJK := false
+	cjkCount := 0
+	for _, r := range content {
+		if isCJK(r) {
+			hasCJK = true
+			cjkCount++
+		}
+	}
+	if hasCJK {
+		return cjkCount
+	}
+	return len(strings.Fields(content))
+}
+
+func isCJK(r rune) bool {
+	return unicode.In(r, unicode.Han, unicode.Hiragana, unicode.Katakana, unicode.Hangul)
 }
 
 // formatStateMatrixForWrite formats the state matrix for the prompt

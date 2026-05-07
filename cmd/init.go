@@ -166,6 +166,9 @@ past
 
 ### POV Style
 third_person_limited
+
+### Writing Style
+None
 `,
 		config.Name,
 		"- 未分类",

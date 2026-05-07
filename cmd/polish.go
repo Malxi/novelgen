@@ -128,6 +128,7 @@ func runPolish(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Polishing %d volume(s)", len(volumes))
+	var errc writeErrorCollector
 
 	// Process each volume
 	for _, volume := range volumes {
@@ -137,6 +138,7 @@ func runPolish(cmd *cobra.Command, args []string) error {
 		chapters := getChaptersForVolume(outline, volume.ID)
 		if len(chapters) == 0 {
 			log.Warn("No chapters found in volume %s", volume.ID)
+			errc.Addf("%s: no chapters found to polish", volume.ID)
 			continue
 		}
 
@@ -162,6 +164,7 @@ func runPolish(cmd *cobra.Command, args []string) error {
 			volumeReviewResult, err := performVolumeReview(ctx, writeAgent, volume, chapters, targetWords)
 			if err != nil {
 				log.Error("Failed to perform volume review: %v", err)
+				errc.Addf("%s: volume review failed: %w", volume.ID, err)
 				continue
 			}
 
@@ -188,7 +191,11 @@ func runPolish(cmd *cobra.Command, args []string) error {
 
 			// Step 2: Improve chapters based on volume review and RPG DSL issues
 			log.Info("Improving chapters based on volume review and RPG DSL issues...")
-			improvedCount := improveChaptersWithVolumeReviewAndRPGIssues(ctx, writeAgent, recapAgent, recapStore, stateManager, volume, chapters, volumeReviewResult, rpgDSLIssues, outline, targetWords)
+			improvedCount, err := improveChaptersWithVolumeReviewAndRPGIssues(ctx, writeAgent, recapAgent, recapStore, stateManager, volume, chapters, volumeReviewResult, rpgDSLIssues, outline, targetWords)
+			if err != nil {
+				log.Error("Failed to polish some chapters in volume %s: %v", volume.ID, err)
+				errc.Add(err)
+			}
 			log.Info("Round %d complete: %d chapters improved", round, improvedCount)
 
 			// If no chapters were improved, stop
@@ -199,6 +206,10 @@ func runPolish(cmd *cobra.Command, args []string) error {
 		}
 
 		log.Info("Volume %s polishing complete", volume.ID)
+	}
+
+	if err := errc.Err(); err != nil {
+		return err
 	}
 
 	log.Info("Polish complete!")
@@ -295,8 +306,9 @@ func performVolumeReview(ctx context.Context, writeAgent *agents.WriteAgent, vol
 }
 
 // improveChaptersWithVolumeReviewAndRPGIssues improves chapters based on volume-level review and RPG DSL issues
-func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent *agents.WriteAgent, recapAgent *agents.RecapAgent, recapStore *recap.Store, stateManager *logic.StateMatrixManager, volume *models.Volume, chapters []*models.Chapter, volumeReview agents.VolumeReviewResult, rpgDSLIssues []dsl.SimulationIssue, outline *models.Outline, targetWords int) int {
+func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent *agents.WriteAgent, recapAgent *agents.RecapAgent, recapStore *recap.Store, stateManager *logic.StateMatrixManager, volume *models.Volume, chapters []*models.Chapter, volumeReview agents.VolumeReviewResult, rpgDSLIssues []dsl.SimulationIssue, outline *models.Outline, targetWords int) (int, error) {
 	log := logger.GetLogger()
+	var errc writeErrorCollector
 
 	// Create review map
 	reviewMap := make(map[string]*agents.VolumeChapterReview)
@@ -353,6 +365,7 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent
 				currentContent := loadFinalChapterContent(chapter)
 				if currentContent == "" {
 					log.Error("[Worker %d] No content for chapter %s, skipping", workerID, chapter.ID)
+					errc.Addf("%s: no final chapter content for polish", chapter.ID)
 					continue
 				}
 
@@ -408,31 +421,29 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent
 				chapterContext := loadChapterContext(outline, chapter, 2)
 
 				// Calculate state matrix
-				stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
+				stateMatrix := stateManager.CalculateStateMatrixBefore(outline, chapter)
 
 				// Generate improved content
 				content, err := writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, stateMatrix, targetWords, currentContent, suggestions.String())
 				if err != nil {
 					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
+					errc.Addf("%s: polish improve failed: %w", chapter.ID, err)
 					continue
 				}
 
 				// Save improved content
 				if err := saveFinalChapter(chapter, content); err != nil {
 					log.Error("[Worker %d] Failed to save chapter %s: %v", workerID, chapter.ID, err)
+					errc.Addf("%s: save polished chapter failed: %w", chapter.ID, err)
 					continue
 				}
 
 				// Update recap
-				chapterRecap, err := recapAgent.Extract(ctx, chapter.ID, chapter.Title, content)
-				if err != nil {
-					log.Error("[Worker %d] Failed to generate recap for chapter %s: %v", workerID, chapter.ID, err)
+				if err := extractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, content, workerID); err != nil {
+					log.Error("[Worker %d] Failed to generate/save recap for chapter %s: %v", workerID, chapter.ID, err)
+					errc.Addf("%s: polish recap failed: %w", chapter.ID, err)
 				} else {
-					if err := recapStore.Save(chapterRecap); err != nil {
-						log.Error("[Worker %d] Failed to save recap for chapter %s: %v", workerID, chapter.ID, err)
-					} else {
-						log.Info("[Worker %d] Updated recap for chapter %s", workerID, chapter.ID)
-					}
+					log.Info("[Worker %d] Updated recap for chapter %s", workerID, chapter.ID)
 				}
 
 				mu.Lock()
@@ -452,5 +463,5 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent
 
 	wg.Wait()
 
-	return improvedCount
+	return improvedCount, errc.Err()
 }

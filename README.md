@@ -254,7 +254,7 @@ novelgen write pipeline --all --rpg-batch-size 10
 | `--volume` | string | "" | 指定卷 |
 | `--part` | string | "" | 指定部 |
 | `--max-rounds` | int | 1 | 最大改进轮数 |
-| `--min-score` | int | 7 | 最低可接受分数 |
+| `--min-score` | int | 70 | 最低可接受分数 (0-100) |
 | `--concurrency` | int | 1 | 并发数 |
 | `--enable-teleport-auto-fix` | bool | true | 启用瞬移自动修复 |
 | `--enable-character-presence-auto-fix` | bool | true | 启用角色出场自动修复 |
@@ -270,7 +270,7 @@ novelgen write pipeline --all --rpg-batch-size 10
 ```bash
 novelgen write pipeline --chapter 1       # 推荐：生成/评审/改进/recap/RPG DSL
 novelgen write pipeline --all             # 推荐：处理所有章节
-novelgen write improve --volume 1         # 手动改进第1卷
+novelgen write improve --volume 1 --min-score 75  # 手动改进第1卷，低于75分则改进
 ```
 
 ---

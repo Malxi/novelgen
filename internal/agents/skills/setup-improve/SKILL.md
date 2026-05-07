@@ -88,6 +88,8 @@ For each suggestion:
 - Ensure tone consistency
 - Strengthen emotional resonance
 - Enhance genre alignment
+- Preserve or refine `writing_style` when user guidance or review feedback asks for a specific prose voice
+- If adding a reference excerpt, keep it short and mark it as style-only: it must not become story canon, plot, characters, places, or terminology
 
 ### Setting & Atmosphere
 - Add sensory details
