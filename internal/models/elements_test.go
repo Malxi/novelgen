@@ -41,3 +41,24 @@ func TestCraftRPGMetadataRoundTripAndNormalize(t *testing.T) {
 		t.Fatalf("metadata did not round trip: %+v", decoded)
 	}
 }
+
+func TestOrganizationNormalizeForCraft(t *testing.T) {
+	org := Organization{
+		Goals:     []string{"control the gate", "control the gate", ""},
+		Resources: []string{"spies", ""},
+		DSLTags:   []string{"faction", "faction"},
+		StateEffects: []CraftStateEffect{
+			{Target: "protagonist", Kind: "relationship", Field: "standing", To: "hostile"},
+			{},
+		},
+	}
+
+	org.NormalizeForCraft("Iron Sect")
+
+	if org.Name != "Iron Sect" {
+		t.Fatalf("expected fallback name, got %q", org.Name)
+	}
+	if len(org.Goals) != 1 || len(org.Resources) != 1 || len(org.DSLTags) != 1 || len(org.StateEffects) != 1 {
+		t.Fatalf("organization metadata was not compacted: %+v", org)
+	}
+}

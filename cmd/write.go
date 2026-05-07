@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -397,6 +398,9 @@ func loadChapterContext(outline *models.Outline, targetChapter *models.Chapter, 
 		Next:     make([]*agents.ContextChapter, 0),
 		Recap:    "",
 	}
+	if _, _, _, organizations, err := loadAllElements(); err == nil {
+		context.Craft = buildOrganizationWriteContext(targetChapter, organizations)
+	}
 
 	allChapters := getAllChapters(outline)
 
@@ -466,6 +470,93 @@ func loadChapterContext(outline *models.Outline, targetChapter *models.Chapter, 
 	}
 
 	return context
+}
+
+func buildOrganizationWriteContext(chapter *models.Chapter, organizations map[string]*models.Organization) string {
+	if chapter == nil || len(organizations) == 0 {
+		return ""
+	}
+
+	haystack := strings.ToLower(strings.Join([]string{
+		chapter.ID,
+		chapter.Title,
+		chapter.Summary,
+		chapter.Location,
+		chapter.StateAnchor.Location,
+		strings.Join(chapter.Characters, " "),
+		strings.Join(chapter.GetBeats(), " "),
+	}, " "))
+
+	type organizationMatch struct {
+		id    string
+		org   *models.Organization
+		score int
+	}
+	matches := make([]organizationMatch, 0, len(organizations))
+	for id, org := range organizations {
+		if org == nil {
+			continue
+		}
+		score := 0
+		candidates := []string{id, org.Name, org.Type, org.Headquarters, org.Leadership}
+		candidates = append(candidates, org.Members...)
+		candidates = append(candidates, org.Allies...)
+		candidates = append(candidates, org.Enemies...)
+		for _, candidate := range candidates {
+			candidate = strings.TrimSpace(candidate)
+			if candidate != "" && strings.Contains(haystack, strings.ToLower(candidate)) {
+				score++
+			}
+		}
+		matches = append(matches, organizationMatch{id: id, org: org, score: score})
+	}
+	sort.SliceStable(matches, func(i, j int) bool {
+		if matches[i].score != matches[j].score {
+			return matches[i].score > matches[j].score
+		}
+		return matches[i].id < matches[j].id
+	})
+
+	if len(matches) > 8 {
+		matches = matches[:8]
+	}
+	var sb strings.Builder
+	sb.WriteString("ORGANIZATIONS:\n")
+	for _, match := range matches {
+		org := match.org
+		name := strings.TrimSpace(org.Name)
+		if name == "" {
+			name = match.id
+		}
+		sb.WriteString(fmt.Sprintf("- %s", name))
+		if strings.TrimSpace(org.Type) != "" {
+			sb.WriteString(fmt.Sprintf(" (%s)", strings.TrimSpace(org.Type)))
+		}
+		sb.WriteString(": ")
+		parts := []string{}
+		appendPart := func(label, value string) {
+			value = strings.TrimSpace(value)
+			if value == "" {
+				return
+			}
+			if label == "" {
+				parts = append(parts, value)
+			} else {
+				parts = append(parts, label+"="+value)
+			}
+		}
+		appendPart("", org.Description)
+		appendPart("leadership", org.Leadership)
+		appendPart("headquarters", org.Headquarters)
+		appendPart("goals", strings.Join(org.Goals, " | "))
+		appendPart("resources", strings.Join(org.Resources, " | "))
+		appendPart("allies", strings.Join(org.Allies, " | "))
+		appendPart("enemies", strings.Join(org.Enemies, " | "))
+		appendPart("", org.Significance)
+		sb.WriteString(strings.Join(parts, "; "))
+		sb.WriteString("\n")
+	}
+	return strings.TrimSpace(sb.String())
 }
 
 // buildChapterContentFromOutline builds chapter content from outline data
@@ -672,9 +763,9 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 	// Pre-build DSL simulation for enrichment (shared across goroutines)
 	var dslIssues []dsl.SimulationIssue
 	dslBridge := dsl.NewSimulationBridge()
-	if charModels, locModels, itemModels, elErr := loadAllElements(); elErr == nil {
+	if charModels, locModels, itemModels, orgModels, elErr := loadAllElements(); elErr == nil {
 		setup, _ := loadStorySetup()
-		dslAdapter := dsl.NewModelAdapter(setup, outline, charModels, locModels, itemModels)
+		dslAdapter := dsl.NewModelAdapterWithOrganizations(setup, outline, charModels, locModels, itemModels, orgModels)
 		dslIssues, _ = dslAdapter.Simulate(dsl.PhaseCraft)
 		if len(dslIssues) > 0 {
 			log.Info("DSL simulation loaded %d issues for improvement enrichment", len(dslIssues))

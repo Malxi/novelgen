@@ -195,23 +195,39 @@ func compactStateEffects(effects []CraftStateEffect) []CraftStateEffect {
 
 // Organization represents a faction, guild, or organization in the story
 type Organization struct {
-	Name         string   `json:"name"`
-	Type         string   `json:"type"`
-	Description  string   `json:"description"`
-	Founding     string   `json:"founding,omitempty"`
-	Headquarters string   `json:"headquarters,omitempty"`
-	Leadership   string   `json:"leadership,omitempty"`
-	Members      []string `json:"members,omitempty"`
-	Goals        []string `json:"goals"`
-	Ideology     string   `json:"ideology,omitempty"`
-	Resources    []string `json:"resources,omitempty"`
-	Allies       []string `json:"allies,omitempty"`
-	Enemies      []string `json:"enemies,omitempty"`
-	Reputation   string   `json:"reputation,omitempty"`
-	Structure    string   `json:"structure,omitempty"`
-	Significance string   `json:"significance"`
-	Secrets      string   `json:"secrets,omitempty"`
-	Notes        string   `json:"notes,omitempty"`
+	Name         string             `json:"name"`
+	Type         string             `json:"type"`
+	Description  string             `json:"description"`
+	Founding     string             `json:"founding,omitempty"`
+	Headquarters string             `json:"headquarters,omitempty"`
+	Leadership   string             `json:"leadership,omitempty"`
+	Members      []string           `json:"members,omitempty"`
+	Goals        []string           `json:"goals"`
+	Ideology     string             `json:"ideology,omitempty"`
+	Resources    []string           `json:"resources,omitempty"`
+	Allies       []string           `json:"allies,omitempty"`
+	Enemies      []string           `json:"enemies,omitempty"`
+	Reputation   string             `json:"reputation,omitempty"`
+	Structure    string             `json:"structure,omitempty"`
+	Significance string             `json:"significance"`
+	Secrets      string             `json:"secrets,omitempty"`
+	Notes        string             `json:"notes,omitempty"`
+	DSLTags      []string           `json:"dsl_tags,omitempty" desc:"Stable tags used by RPG DSL conversion"`
+	StateEffects []CraftStateEffect `json:"state_effects,omitempty" desc:"Static state effects this organization implies when introduced"`
+}
+
+// NormalizeForCraft clamps optional metadata while preserving old JSON.
+func (o *Organization) NormalizeForCraft(name string) {
+	if o.Name == "" {
+		o.Name = name
+	}
+	o.Members = compactStringList(o.Members)
+	o.Goals = compactStringList(o.Goals)
+	o.Resources = compactStringList(o.Resources)
+	o.Allies = compactStringList(o.Allies)
+	o.Enemies = compactStringList(o.Enemies)
+	o.DSLTags = compactStringList(o.DSLTags)
+	o.StateEffects = compactStateEffects(o.StateEffects)
 }
 
 // Race represents a species or race in the story world

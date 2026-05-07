@@ -15,10 +15,11 @@ type NovelgenProject struct {
 	BookName    string
 
 	// 数据文件
-	Characters map[string]NovelgenCharacter `json:"-"`
-	Items      map[string]NovelgenItem      `json:"-"`
-	Locations  map[string]NovelgenLocation  `json:"-"`
-	Outline    StoryOutline                 `json:"-"`
+	Characters    map[string]NovelgenCharacter   `json:"-"`
+	Items         map[string]NovelgenItem        `json:"-"`
+	Locations     map[string]NovelgenLocation    `json:"-"`
+	Organizations map[string]models.Organization `json:"-"`
+	Outline       StoryOutline                   `json:"-"`
 }
 
 // NovelgenCharacter novelgen角色结构
@@ -96,11 +97,12 @@ type NovelgenLocation struct {
 // bookName: 书籍名称（books文件夹下的子目录名）
 func LoadNovelgenProject(projectPath, bookName string) (*NovelgenProject, error) {
 	project := &NovelgenProject{
-		ProjectPath: projectPath,
-		BookName:    bookName,
-		Characters:  make(map[string]NovelgenCharacter),
-		Items:       make(map[string]NovelgenItem),
-		Locations:   make(map[string]NovelgenLocation),
+		ProjectPath:   projectPath,
+		BookName:      bookName,
+		Characters:    make(map[string]NovelgenCharacter),
+		Items:         make(map[string]NovelgenItem),
+		Locations:     make(map[string]NovelgenLocation),
+		Organizations: make(map[string]models.Organization),
 	}
 
 	storyPath := filepath.Join(projectPath, "books", bookName, "story")
@@ -124,6 +126,13 @@ func LoadNovelgenProject(projectPath, bookName string) (*NovelgenProject, error)
 	}
 
 	// 加载大纲
+	orgPath := filepath.Join(storyPath, "craft", "organizations.json")
+	if data, err := ioutil.ReadFile(orgPath); err == nil {
+		if err := json.Unmarshal(data, &project.Organizations); err != nil {
+			return nil, fmt.Errorf("failed to parse organizations: %v", err)
+		}
+	}
+
 	outlinePath := filepath.Join(storyPath, "compose", "outline.json")
 	outlineData, err := ioutil.ReadFile(outlinePath)
 	if err != nil {
@@ -456,11 +465,12 @@ func (np *NovelgenProject) inferMapTypeFromLocation(loc NovelgenLocation) MapTyp
 // GetProjectSummary 获取项目摘要
 func (np *NovelgenProject) GetProjectSummary() map[string]interface{} {
 	return map[string]interface{}{
-		"book_name":  np.BookName,
-		"characters": len(np.Characters),
-		"items":      len(np.Items),
-		"locations":  len(np.Locations),
-		"parts":      len(np.Outline.Parts),
+		"book_name":     np.BookName,
+		"characters":    len(np.Characters),
+		"items":         len(np.Items),
+		"locations":     len(np.Locations),
+		"organizations": len(np.Organizations),
+		"parts":         len(np.Outline.Parts),
 	}
 }
 

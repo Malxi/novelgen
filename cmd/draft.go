@@ -736,9 +736,9 @@ func improveChaptersWithAgent(ctx context.Context, agent *agents.DraftAgent, cha
 	// Pre-build DSL simulation for enrichment (shared across goroutines)
 	var dslIssues []dsl.SimulationIssue
 	dslBridge := dsl.NewSimulationBridge()
-	if charModels, locModels, itemModels, elErr := loadAllElements(); elErr == nil {
+	if charModels, locModels, itemModels, orgModels, elErr := loadAllElements(); elErr == nil {
 		setup, _ := loadStorySetup()
-		dslAdapter := dsl.NewModelAdapter(setup, outline, charModels, locModels, itemModels)
+		dslAdapter := dsl.NewModelAdapterWithOrganizations(setup, outline, charModels, locModels, itemModels, orgModels)
 		dslIssues, _ = dslAdapter.Simulate(dsl.PhaseCraft)
 		if len(dslIssues) > 0 {
 			log.Info("DSL simulation loaded %d issues for improvement enrichment", len(dslIssues))

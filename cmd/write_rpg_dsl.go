@@ -86,7 +86,7 @@ func emitChapterRPGDSLForProject(
 	}
 	sortRPGDSLChapterInputs(chapterInputs)
 
-	characters, locations, _, err := loadAllElements()
+	characters, locations, _, _, err := loadAllElements()
 	if err != nil {
 		return result, err
 	}

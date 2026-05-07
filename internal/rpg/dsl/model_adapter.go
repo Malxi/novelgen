@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"novelgen/internal/models"
@@ -11,11 +12,12 @@ import (
 // All constructor parameters are optional — nil values produce a minimal DSL skeleton
 // that the simulator can still run against (producing info-level issues about what's missing).
 type ModelAdapter struct {
-	setup      *models.StorySetup
-	outline    *models.Outline
-	characters map[string]*models.Character
-	locations  map[string]*models.Location
-	items      map[string]*models.Item
+	setup         *models.StorySetup
+	outline       *models.Outline
+	characters    map[string]*models.Character
+	locations     map[string]*models.Location
+	items         map[string]*models.Item
+	organizations map[string]*models.Organization
 }
 
 // NewModelAdapter creates a new ModelAdapter. All parameters are optional.
@@ -33,6 +35,21 @@ func NewModelAdapter(
 		locations:  locations,
 		items:      items,
 	}
+}
+
+// NewModelAdapterWithOrganizations creates a ModelAdapter that also carries
+// craft organization data. Existing callers can keep using NewModelAdapter.
+func NewModelAdapterWithOrganizations(
+	setup *models.StorySetup,
+	outline *models.Outline,
+	characters map[string]*models.Character,
+	locations map[string]*models.Location,
+	items map[string]*models.Item,
+	organizations map[string]*models.Organization,
+) *ModelAdapter {
+	adapter := NewModelAdapter(setup, outline, characters, locations, items)
+	adapter.organizations = organizations
+	return adapter
 }
 
 // BuildDSL constructs a DSL AST populated according to phase.
@@ -69,6 +86,7 @@ func (a *ModelAdapter) BuildDSL(phase MergePhase) (*DSL, error) {
 		a.buildCharacters(dsl)
 		a.buildLocations(dsl)
 		a.buildItems(dsl)
+		a.buildOrganizations(dsl)
 		return dsl, nil
 	default:
 		return dsl, nil
@@ -975,6 +993,38 @@ func (a *ModelAdapter) buildItems(dsl *DSL) {
 	}
 }
 
+func (a *ModelAdapter) buildOrganizations(dsl *DSL) {
+	if a.organizations == nil || dsl.World == nil {
+		return
+	}
+
+	ids := make([]string, 0, len(a.organizations))
+	for id := range a.organizations {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+
+	for i, id := range ids {
+		org := a.organizations[id]
+		if org == nil {
+			continue
+		}
+		ruleID := coalesceID(sanitizeID(id), fmt.Sprintf("organization_%02d", i+1))
+		dsl.World.Rules = append(dsl.World.Rules, Rule{
+			Name:    "organization_" + ruleID,
+			Trigger: "organization.profile",
+			Effect:  craftOrganizationRuleEffect(ruleID, org),
+		})
+		for j, effect := range org.StateEffects {
+			dsl.World.Rules = append(dsl.World.Rules, Rule{
+				Name:    fmt.Sprintf("organization_%s_state_%02d", ruleID, j+1),
+				Trigger: "organization.state_effect",
+				Effect:  craftStateEffectRuleEffect(effect),
+			})
+		}
+	}
+}
+
 func isCraftProtagonist(ch *models.Character) bool {
 	if ch == nil {
 		return false
@@ -1078,6 +1128,59 @@ func craftItemEffects(item *models.Item) map[string]interface{} {
 		return nil
 	}
 	return effects
+}
+
+func craftOrganizationRuleEffect(id string, org *models.Organization) string {
+	if org == nil {
+		return "id=" + id
+	}
+	parts := []string{
+		"id=" + sanitizeRuleValue(id),
+		"name=" + sanitizeRuleValue(org.Name),
+		"type=" + sanitizeRuleValue(org.Type),
+		"description=" + sanitizeRuleValue(org.Description),
+		"headquarters=" + sanitizeRuleValue(org.Headquarters),
+		"leadership=" + sanitizeRuleValue(org.Leadership),
+		"goals=" + sanitizeRuleValue(strings.Join(org.Goals, " | ")),
+		"ideology=" + sanitizeRuleValue(org.Ideology),
+		"resources=" + sanitizeRuleValue(strings.Join(org.Resources, " | ")),
+		"allies=" + sanitizeRuleValue(strings.Join(org.Allies, " | ")),
+		"enemies=" + sanitizeRuleValue(strings.Join(org.Enemies, " | ")),
+		"reputation=" + sanitizeRuleValue(org.Reputation),
+		"structure=" + sanitizeRuleValue(org.Structure),
+		"significance=" + sanitizeRuleValue(org.Significance),
+		"dsl_tags=" + sanitizeRuleValue(strings.Join(org.DSLTags, " | ")),
+	}
+	return compactRuleParts(parts)
+}
+
+func craftStateEffectRuleEffect(effect models.CraftStateEffect) string {
+	parts := []string{
+		"target=" + sanitizeRuleValue(effect.Target),
+		"kind=" + sanitizeRuleValue(effect.Kind),
+		"field=" + sanitizeRuleValue(effect.Field),
+		"from=" + sanitizeRuleValue(effect.From),
+		"to=" + sanitizeRuleValue(effect.To),
+		"unit=" + sanitizeRuleValue(effect.Unit),
+		"cost=" + sanitizeRuleValue(effect.Cost),
+		"note=" + sanitizeRuleValue(effect.Note),
+	}
+	if effect.Delta != 0 {
+		parts = append(parts, fmt.Sprintf("delta=%d", effect.Delta))
+	}
+	return compactRuleParts(parts)
+}
+
+func compactRuleParts(parts []string) string {
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		key, value, ok := strings.Cut(part, "=")
+		if !ok || strings.TrimSpace(value) == "" {
+			continue
+		}
+		out = append(out, key+"="+value)
+	}
+	return strings.Join(out, "; ")
 }
 
 func craftStateEffects(effects []models.CraftStateEffect) []StateDelta {
