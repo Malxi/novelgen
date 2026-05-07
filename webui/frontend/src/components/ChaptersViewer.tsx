@@ -181,7 +181,7 @@ export function ChaptersViewer({ projectPath }: { projectPath: string }) {
         <div className="text-center py-16">
           <FileText className="w-16 h-16 mx-auto text-[var(--text-muted)] mb-4" />
           <h2 className="text-xl font-bold mb-2">暂无章节</h2>
-          <p className="text-[var(--text-muted)] mb-6">基于草稿生成最终章节</p>
+          <p className="text-[var(--text-muted)] mb-6">基于大纲和世界元素生成最终章节</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

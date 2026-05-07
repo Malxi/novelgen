@@ -1,4 +1,4 @@
-import type { APIResponse, Project, Task, Outline, StorySetup, Character, Location, Item } from './types';
+import type { APIResponse, Project, Task, Outline, StorySetup, Character, Location, Item, AICallSummary, AICallDetail, TemplateLibrary } from './types';
 
 const API_BASE = '/api';
 
@@ -49,6 +49,13 @@ export const createTask = (task: {
 });
 export const deleteTask = (id: string) => fetchAPI<void>(`/tasks/${id}`, { method: 'DELETE' });
 
+// AI calls
+export const listAICalls = (project?: string) =>
+  fetchAPI<AICallSummary[]>(`/ai-calls${project ? `?project=${encodeURIComponent(project)}` : ''}`);
+
+export const getAICall = (id: string, project?: string) =>
+  fetchAPI<AICallDetail>(`/ai-calls/${encodeURIComponent(id)}${project ? `?project=${encodeURIComponent(project)}` : ''}`);
+
 // Content
 export const getOutline = (project?: string) =>
   fetchAPI<Outline>(`/content/outline${project ? `?project=${encodeURIComponent(project)}` : ''}`);
@@ -82,17 +89,14 @@ export const getChapters = (project?: string) =>
 export const getChapter = (id: string, project?: string) =>
   fetchAPI<{ id: string; content: string }>(`/content/chapters/${id}${project ? `?project=${encodeURIComponent(project)}` : ''}`);
 
-export const getDrafts = (project?: string) =>
-  fetchAPI<{ id: string; name: string }[]>(`/content/drafts${project ? `?project=${encodeURIComponent(project)}` : ''}`);
-
-export const getDraft = (id: string, project?: string) =>
-  fetchAPI<{ id: string; content: string }>(`/content/drafts/${id}${project ? `?project=${encodeURIComponent(project)}` : ''}`);
-
 export const getRecaps = (project?: string) =>
   fetchAPI<{ id: string; name: string }[]>(`/content/recaps${project ? `?project=${encodeURIComponent(project)}` : ''}`);
 
 export const getReviews = (project?: string) =>
   fetchAPI<{ id: string; name: string }[]>(`/content/reviews${project ? `?project=${encodeURIComponent(project)}` : ''}`);
+
+export const getTemplates = (project?: string) =>
+  fetchAPI<TemplateLibrary>(`/files/story/templates/templates.json${project ? `?project=${encodeURIComponent(project)}` : ''}`);
 
 // RPG Data
 export const getRPGData = (project?: string) =>
@@ -134,6 +138,9 @@ export const saveFile = (path: string, content: string, project?: string) =>
     method: 'POST',
     body: JSON.stringify({ content }),
   });
+
+export const saveJSONFile = (path: string, value: unknown, project?: string) =>
+  saveFile(path, JSON.stringify(value, null, 2), project);
 
 // WebSocket
 export function createWebSocketConnection(onMessage: (data: unknown) => void): WebSocket {

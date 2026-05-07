@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   BookOpen,
-  FileText,
   Users,
   MapPin,
   Package,
@@ -10,7 +9,7 @@ import {
   CheckCircle,
   Clock,
 } from 'lucide-react';
-import { getOutline, getCharacters, getLocations, getItems, getChapters, getDrafts } from '../api';
+import { getOutline, getCharacters, getLocations, getItems } from '../api';
 import type { Project } from '../types';
 
 interface StatCardProps {
@@ -84,7 +83,6 @@ interface DashboardProps {
 export function Dashboard({ project, onTabChange }: DashboardProps) {
   const [stats, setStats] = useState({
     chapters: 0,
-    drafts: 0,
     characters: 0,
     locations: 0,
     items: 0,
@@ -98,13 +96,11 @@ export function Dashboard({ project, onTabChange }: DashboardProps) {
   async function loadData() {
     try {
       // Load stats for the selected project
-      const [outline, charactersData, locationsData, itemsData, _chapters, drafts] = await Promise.all([
+      const [outline, charactersData, locationsData, itemsData] = await Promise.all([
         getOutline(project.path).catch(() => null),
         getCharacters(project.path).catch(() => ({ characters: [] })),
         getLocations(project.path).catch(() => ({ locations: [] })),
         getItems(project.path).catch(() => ({ items: [] })),
-        getChapters(project.path).catch(() => []),
-        getDrafts(project.path).catch(() => []),
       ]);
 
       let chapterCount = 0;
@@ -118,7 +114,6 @@ export function Dashboard({ project, onTabChange }: DashboardProps) {
 
       setStats({
         chapters: chapterCount,
-        drafts: drafts.length,
         characters: charactersData.characters?.length || 0,
         locations: locationsData.locations?.length || 0,
         items: itemsData.items?.length || 0,
@@ -151,18 +146,12 @@ export function Dashboard({ project, onTabChange }: DashboardProps) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="章节大纲"
           value={stats.chapters}
           icon={BookOpen}
           color="bg-blue-500/20 text-blue-500"
-        />
-        <StatCard
-          title="草稿"
-          value={stats.drafts}
-          icon={FileText}
-          color="bg-yellow-500/20 text-yellow-500"
         />
         <StatCard
           title="角色"
@@ -203,7 +192,7 @@ export function Dashboard({ project, onTabChange }: DashboardProps) {
             title="故事设定"
             description="定义类型、前提、主题等"
             status={stats.chapters > 0 ? 'completed' : 'active'}
-            onClick={() => onTabChange('settings')}
+            onClick={() => onTabChange('setup')}
           />
           <WorkflowStep
             number={3}
@@ -221,16 +210,9 @@ export function Dashboard({ project, onTabChange }: DashboardProps) {
           />
           <WorkflowStep
             number={5}
-            title="草稿生成"
-            description="生成并改进草稿章节"
-            status={stats.drafts > 0 ? 'completed' : stats.characters > 0 ? 'active' : 'pending'}
-            onClick={() => onTabChange('drafts')}
-          />
-          <WorkflowStep
-            number={6}
             title="最终章节"
-            description="生成润色的最终章节"
-            status={stats.drafts > 0 ? 'active' : 'pending'}
+            description="基于大纲和世界元素生成最终章节"
+            status={stats.characters > 0 ? 'active' : 'pending'}
             onClick={() => onTabChange('chapters')}
           />
         </div>

@@ -9,8 +9,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -26,32 +29,45 @@ var (
 			return true
 		},
 	}
-	clients = make(map[string]*websocket.Conn)
+	clients   = make(map[string]*websocket.Conn)
+	clientsMu sync.RWMutex
+	writesMu  sync.Mutex
 )
 
-// getNovelGenPath returns the path to novelgen executable
-// Priority: 1. webui directory, 2. PATH
+// getNovelGenPath returns the path to novelgen executable.
 func getNovelGenPath() string {
-	// Check if novelgen.exe exists in webui directory
 	exePath := "novelgen.exe"
 	if runtime.GOOS != "windows" {
 		exePath = "novelgen"
 	}
 
-	// Get the directory of the current executable (webui)
+	candidates := []string{}
 	if execPath, err := os.Executable(); err == nil {
 		webuiDir := filepath.Dir(execPath)
-		localPath := filepath.Join(webuiDir, exePath)
-		if _, err := os.Stat(localPath); err == nil {
-			return localPath
-		}
+		candidates = append(candidates,
+			filepath.Join(webuiDir, exePath),
+			filepath.Join(webuiDir, "..", "bin", exePath),
+			filepath.Join(webuiDir, "..", exePath),
+		)
 	}
-
-	// Check current working directory (for go run)
 	if cwd, err := os.Getwd(); err == nil {
-		localPath := filepath.Join(cwd, exePath)
-		if _, err := os.Stat(localPath); err == nil {
-			return localPath
+		candidates = append(candidates,
+			filepath.Join(cwd, exePath),
+			filepath.Join(cwd, "bin", exePath),
+			filepath.Join(cwd, "webui", exePath),
+			filepath.Join(cwd, "..", "bin", exePath),
+			filepath.Join(cwd, "..", exePath),
+		)
+	}
+	for _, candidate := range candidates {
+		if candidate == "" {
+			continue
+		}
+		if _, err := os.Stat(candidate); err == nil {
+			if abs, err := filepath.Abs(candidate); err == nil {
+				return abs
+			}
+			return candidate
 		}
 	}
 
@@ -87,7 +103,54 @@ type APIResponse struct {
 	Error   string      `json:"error,omitempty"`
 }
 
-var tasks = make(map[string]*Task)
+type AICallSummary struct {
+	ID               string    `json:"id"`
+	Agent            string    `json:"agent"`
+	Command          string    `json:"command,omitempty"`
+	Model            string    `json:"model,omitempty"`
+	StartedAt        time.Time `json:"started_at"`
+	HasInput         bool      `json:"has_input"`
+	HasOutput        bool      `json:"has_output"`
+	InputChars       int       `json:"input_chars"`
+	OutputChars      int       `json:"output_chars"`
+	PromptTokens     int       `json:"prompt_tokens,omitempty"`
+	CompletionTokens int       `json:"completion_tokens,omitempty"`
+	TotalTokens      int       `json:"total_tokens,omitempty"`
+	Legacy           bool      `json:"legacy"`
+}
+
+type AICallDetail struct {
+	AICallSummary
+	Skills       []string `json:"skills,omitempty"`
+	SystemPrompt string   `json:"system_prompt"`
+	UserPrompt   string   `json:"user_prompt"`
+	Response     string   `json:"response"`
+	PromptPath   string   `json:"prompt_path,omitempty"`
+	ResponsePath string   `json:"response_path,omitempty"`
+}
+
+type aiCallLogFile struct {
+	ID           string    `json:"id"`
+	Agent        string    `json:"agent"`
+	Command      string    `json:"command"`
+	Skills       []string  `json:"skills"`
+	Model        string    `json:"model"`
+	StartedAt    time.Time `json:"started_at"`
+	CompletedAt  time.Time `json:"completed_at"`
+	SystemPrompt string    `json:"system_prompt"`
+	UserPrompt   string    `json:"user_prompt"`
+	Response     string    `json:"response"`
+	Usage        struct {
+		PromptTokens     int `json:"prompt_tokens"`
+		CompletionTokens int `json:"completion_tokens"`
+		TotalTokens      int `json:"total_tokens"`
+	} `json:"usage"`
+}
+
+var (
+	tasks   = make(map[string]*Task)
+	tasksMu sync.RWMutex
+)
 
 func main() {
 	port := flag.String("port", "8080", "Server port")
@@ -132,6 +195,8 @@ func main() {
 		api.GET("/content/drafts/:id", getDraft)
 		api.GET("/content/recaps", getRecaps)
 		api.GET("/content/reviews", getReviews)
+		api.GET("/ai-calls", listAICalls)
+		api.GET("/ai-calls/:id", getAICall)
 
 		// RPG data management
 		api.GET("/rpg/data", getRPGData)
@@ -178,8 +243,14 @@ func handleWebSocket(c *gin.Context) {
 	defer conn.Close()
 
 	clientID := uuid.New().String()
+	clientsMu.Lock()
 	clients[clientID] = conn
-	defer delete(clients, clientID)
+	clientsMu.Unlock()
+	defer func() {
+		clientsMu.Lock()
+		delete(clients, clientID)
+		clientsMu.Unlock()
+	}()
 
 	// Send initial connection success
 	conn.WriteJSON(map[string]string{
@@ -197,12 +268,39 @@ func handleWebSocket(c *gin.Context) {
 }
 
 func broadcastTaskUpdate(task *Task) {
+	snapshot := cloneTask(task)
+	clientsMu.RLock()
+	connections := make([]*websocket.Conn, 0, len(clients))
 	for _, conn := range clients {
-		conn.WriteJSON(map[string]interface{}{
+		connections = append(connections, conn)
+	}
+	clientsMu.RUnlock()
+
+	writesMu.Lock()
+	defer writesMu.Unlock()
+	for _, conn := range connections {
+		_ = conn.WriteJSON(map[string]interface{}{
 			"type": "task_update",
-			"data": task,
+			"data": snapshot,
 		})
 	}
+}
+
+func cloneTask(task *Task) *Task {
+	if task == nil {
+		return nil
+	}
+	copied := *task
+	return &copied
+}
+
+func updateTask(task *Task, update func(*Task)) *Task {
+	tasksMu.Lock()
+	update(task)
+	task.UpdatedAt = time.Now()
+	snapshot := cloneTask(task)
+	tasksMu.Unlock()
+	return snapshot
 }
 
 func listProjects(c *gin.Context) {
@@ -385,24 +483,28 @@ func createTask(c *gin.Context) {
 		Type:      req.Type,
 		Status:    "pending",
 		Progress:  0,
-		Message:   "Task created",
+		Message:   describeTask(req.Command, req.Args) + " queued",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
 
+	tasksMu.Lock()
 	tasks[task.ID] = task
+	taskSnapshot := cloneTask(task)
+	tasksMu.Unlock()
 
 	// Execute task asynchronously
 	go executeTask(task, req.Command, req.Args)
 
-	c.JSON(http.StatusOK, APIResponse{Success: true, Data: task})
+	c.JSON(http.StatusOK, APIResponse{Success: true, Data: taskSnapshot})
 }
 
 func executeTask(task *Task, command string, args map[string]interface{}) {
-	task.Status = "running"
-	task.Message = "Executing command..."
-	task.UpdatedAt = time.Now()
-	broadcastTaskUpdate(task)
+	broadcastTaskUpdate(updateTask(task, func(t *Task) {
+		t.Status = "running"
+		t.Progress = 5
+		t.Message = "Running " + describeTask(command, args)
+	}))
 
 	// Find project directory first (needed for backup)
 	projectPath := ""
@@ -430,15 +532,18 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 		if subcommand, ok := args["subcommand"].(string); ok {
 			if subcommand == "gen" || subcommand == "regen" {
 				if projectPath != "" {
-					task.Message = "Backing up existing outline..."
-					broadcastTaskUpdate(task)
-					
+					broadcastTaskUpdate(updateTask(task, func(t *Task) {
+						t.Message = "Backing up existing outline..."
+					}))
+
 					if backupName, err := backupOutline(projectPath); err != nil {
-						task.Message = "Warning: Failed to backup outline: " + err.Error()
-						broadcastTaskUpdate(task)
+						broadcastTaskUpdate(updateTask(task, func(t *Task) {
+							t.Message = "Warning: Failed to backup outline: " + err.Error()
+						}))
 					} else if backupName != "" {
-						task.Message = "Outline backed up: " + backupName
-						broadcastTaskUpdate(task)
+						broadcastTaskUpdate(updateTask(task, func(t *Task) {
+							t.Message = "Outline backed up: " + backupName
+						}))
 					}
 				}
 			}
@@ -554,43 +659,70 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 	// Capture output
 	output, err := cmd.CombinedOutput()
 
-	task.Output = debugInfo.String() + string(output)
-	task.UpdatedAt = time.Now()
-
 	if err != nil {
-		task.Status = "failed"
-		task.Error = err.Error()
-		task.Message = "Task failed"
+		broadcastTaskUpdate(updateTask(task, func(t *Task) {
+			t.Output = debugInfo.String() + string(output)
+			t.Status = "failed"
+			t.Error = err.Error()
+			t.Message = "Task failed"
+		}))
 	} else {
-		task.Status = "completed"
-		task.Progress = 100
-		task.Message = "Task completed successfully"
+		broadcastTaskUpdate(updateTask(task, func(t *Task) {
+			t.Output = debugInfo.String() + string(output)
+			t.Status = "completed"
+			t.Progress = 100
+			t.Message = "Task completed successfully"
+		}))
 	}
+}
 
-	broadcastTaskUpdate(task)
+func describeTask(command string, args map[string]interface{}) string {
+	parts := []string{command}
+	if subcommand, ok := args["subcommand"].(string); ok && subcommand != "" {
+		parts = append(parts, subcommand)
+	}
+	if positional, ok := args["_positional"].(string); ok && positional != "" {
+		parts = append(parts, positional)
+	}
+	if prompt, ok := args["prompt"].(string); ok && strings.TrimSpace(prompt) != "" {
+		trimmed := strings.TrimSpace(prompt)
+		if len([]rune(trimmed)) > 28 {
+			runes := []rune(trimmed)
+			trimmed = string(runes[:28]) + "..."
+		}
+		parts = append(parts, fmt.Sprintf("(%s)", trimmed))
+	}
+	return strings.Join(parts, " ")
 }
 
 func listTasks(c *gin.Context) {
+	tasksMu.RLock()
 	taskList := make([]*Task, 0, len(tasks))
 	for _, task := range tasks {
-		taskList = append(taskList, task)
+		taskList = append(taskList, cloneTask(task))
 	}
+	tasksMu.RUnlock()
 	c.JSON(http.StatusOK, APIResponse{Success: true, Data: taskList})
 }
 
 func getTask(c *gin.Context) {
 	id := c.Param("id")
+	tasksMu.RLock()
 	task, exists := tasks[id]
+	taskSnapshot := cloneTask(task)
+	tasksMu.RUnlock()
 	if !exists {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "Task not found"})
 		return
 	}
-	c.JSON(http.StatusOK, APIResponse{Success: true, Data: task})
+	c.JSON(http.StatusOK, APIResponse{Success: true, Data: taskSnapshot})
 }
 
 func deleteTask(c *gin.Context) {
 	id := c.Param("id")
+	tasksMu.Lock()
 	delete(tasks, id)
+	tasksMu.Unlock()
 	c.JSON(http.StatusOK, APIResponse{Success: true})
 }
 
@@ -619,7 +751,7 @@ func getOutline(c *gin.Context) {
 // backupOutline creates a backup of the current outline with timestamp
 func backupOutline(projectPath string) (string, error) {
 	outlinePath := filepath.Join(projectPath, "story", "compose", "outline.json")
-	
+
 	// Check if outline exists
 	if _, err := os.Stat(outlinePath); os.IsNotExist(err) {
 		return "", nil // No outline to backup
@@ -650,6 +782,32 @@ func backupOutline(projectPath string) (string, error) {
 	return backupFilename, nil
 }
 
+func backupStorySetup(projectPath string) (string, error) {
+	setupPath := filepath.Join(projectPath, "story", "setup", "story_setup.json")
+	if _, err := os.Stat(setupPath); os.IsNotExist(err) {
+		return "", nil
+	}
+
+	backupsDir := filepath.Join(projectPath, "story", "setup", "backups")
+	if err := os.MkdirAll(backupsDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create backups directory: %w", err)
+	}
+
+	timestamp := time.Now().Format("20060102_150405")
+	backupFilename := fmt.Sprintf("story_setup_%s.json", timestamp)
+	backupPath := filepath.Join(backupsDir, backupFilename)
+
+	data, err := os.ReadFile(setupPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read story setup: %w", err)
+	}
+	if err := os.WriteFile(backupPath, data, 0644); err != nil {
+		return "", fmt.Errorf("failed to write backup: %w", err)
+	}
+
+	return backupFilename, nil
+}
+
 func listOutlineVersions(c *gin.Context) {
 	projectPath := c.Query("project")
 	if projectPath == "" {
@@ -657,7 +815,7 @@ func listOutlineVersions(c *gin.Context) {
 	}
 
 	backupsDir := filepath.Join(projectPath, "story", "compose", "backups")
-	
+
 	// Check if backups directory exists
 	if _, err := os.Stat(backupsDir); os.IsNotExist(err) {
 		c.JSON(http.StatusOK, APIResponse{Success: true, Data: []map[string]interface{}{}})
@@ -1009,6 +1167,384 @@ func getReviews(c *gin.Context) {
 	c.JSON(http.StatusOK, APIResponse{Success: true, Data: reviews})
 }
 
+var aiLogFilenamePattern = regexp.MustCompile(`^(.+)_(\d{8}_\d{6})(?:_\d+)?\.(md|json)$`)
+
+type legacyAILog struct {
+	Name  string
+	Path  string
+	Agent string
+	Time  time.Time
+	Size  int64
+}
+
+func listAICalls(c *gin.Context) {
+	projectPath := c.Query("project")
+	if projectPath == "" {
+		projectPath = "."
+	}
+
+	calls := make([]AICallSummary, 0)
+	structured, err := listStructuredAICalls(projectPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: err.Error()})
+		return
+	}
+	calls = append(calls, structured...)
+	calls = append(calls, listLegacyAICalls(projectPath)...)
+
+	sort.Slice(calls, func(i, j int) bool {
+		return calls[i].StartedAt.After(calls[j].StartedAt)
+	})
+
+	c.JSON(http.StatusOK, APIResponse{Success: true, Data: calls})
+}
+
+func getAICall(c *gin.Context) {
+	projectPath := c.Query("project")
+	if projectPath == "" {
+		projectPath = "."
+	}
+
+	id := c.Param("id")
+	if strings.HasPrefix(id, "structured:") {
+		detail, err := readStructuredAICall(projectPath, strings.TrimPrefix(id, "structured:"))
+		if err != nil {
+			c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, APIResponse{Success: true, Data: detail})
+		return
+	}
+
+	if strings.HasPrefix(id, "legacy-response:") {
+		detail, err := readLegacyResponseOnlyAICall(projectPath, strings.TrimPrefix(id, "legacy-response:"))
+		if err != nil {
+			c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, APIResponse{Success: true, Data: detail})
+		return
+	}
+
+	if strings.HasPrefix(id, "legacy:") {
+		detail, err := readLegacyAICall(projectPath, strings.TrimPrefix(id, "legacy:"))
+		if err != nil {
+			c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, APIResponse{Success: true, Data: detail})
+		return
+	}
+
+	c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Invalid AI call id"})
+}
+
+func listStructuredAICalls(projectPath string) ([]AICallSummary, error) {
+	dir := filepath.Join(projectPath, "logs", "ai_calls")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	calls := make([]AICallSummary, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+		detail, err := readStructuredAICall(projectPath, strings.TrimSuffix(entry.Name(), ".json"))
+		if err != nil {
+			continue
+		}
+		calls = append(calls, detail.AICallSummary)
+	}
+	return calls, nil
+}
+
+func readStructuredAICall(projectPath, id string) (*AICallDetail, error) {
+	if !safeLogName(id) {
+		return nil, fmt.Errorf("invalid AI call id")
+	}
+	path := filepath.Join(projectPath, "logs", "ai_calls", id+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var entry aiCallLogFile
+	if err := json.Unmarshal(data, &entry); err != nil {
+		return nil, err
+	}
+	if entry.ID == "" {
+		entry.ID = id
+	}
+
+	inputChars := len(entry.SystemPrompt) + len(entry.UserPrompt)
+	detail := &AICallDetail{
+		AICallSummary: AICallSummary{
+			ID:               "structured:" + id,
+			Agent:            entry.Agent,
+			Command:          entry.Command,
+			Model:            entry.Model,
+			StartedAt:        entry.StartedAt,
+			HasInput:         strings.TrimSpace(entry.SystemPrompt) != "" || strings.TrimSpace(entry.UserPrompt) != "",
+			HasOutput:        strings.TrimSpace(entry.Response) != "",
+			InputChars:       inputChars,
+			OutputChars:      len(entry.Response),
+			PromptTokens:     entry.Usage.PromptTokens,
+			CompletionTokens: entry.Usage.CompletionTokens,
+			TotalTokens:      entry.Usage.TotalTokens,
+			Legacy:           false,
+		},
+		Skills:       entry.Skills,
+		SystemPrompt: entry.SystemPrompt,
+		UserPrompt:   entry.UserPrompt,
+		Response:     entry.Response,
+	}
+	if detail.StartedAt.IsZero() {
+		if info, err := os.Stat(path); err == nil {
+			detail.StartedAt = info.ModTime()
+		}
+	}
+	return detail, nil
+}
+
+func listLegacyAICalls(projectPath string) []AICallSummary {
+	prompts := readLegacyAILogs(filepath.Join(projectPath, "logs", "prompts"), ".md")
+	responses := readLegacyAILogs(filepath.Join(projectPath, "logs", "responses"), ".md")
+	pairs := pairLegacyAILogs(prompts, responses)
+
+	calls := make([]AICallSummary, 0, len(prompts)+len(responses))
+	for _, prompt := range prompts {
+		response := pairs[prompt.Name]
+		summary := AICallSummary{
+			ID:          "legacy:" + prompt.Name,
+			Agent:       prompt.Agent,
+			StartedAt:   prompt.Time,
+			HasInput:    true,
+			HasOutput:   response != nil,
+			InputChars:  int(prompt.Size),
+			OutputChars: 0,
+			Legacy:      true,
+		}
+		if response != nil {
+			summary.OutputChars = int(response.Size)
+		}
+		calls = append(calls, summary)
+	}
+
+	matchedResponses := map[string]bool{}
+	for _, response := range pairs {
+		if response != nil {
+			matchedResponses[response.Name] = true
+		}
+	}
+	for _, response := range responses {
+		if matchedResponses[response.Name] {
+			continue
+		}
+		calls = append(calls, AICallSummary{
+			ID:          "legacy-response:" + response.Name,
+			Agent:       response.Agent,
+			StartedAt:   response.Time,
+			HasInput:    false,
+			HasOutput:   true,
+			OutputChars: int(response.Size),
+			Legacy:      true,
+		})
+	}
+
+	return calls
+}
+
+func readLegacyAICall(projectPath, promptName string) (*AICallDetail, error) {
+	if !safeLogName(promptName) || !strings.HasSuffix(promptName, ".md") {
+		return nil, fmt.Errorf("invalid prompt log name")
+	}
+	promptPath := filepath.Join(projectPath, "logs", "prompts", promptName)
+	promptData, err := os.ReadFile(promptPath)
+	if err != nil {
+		return nil, err
+	}
+
+	promptLog, err := legacyAILogFromPath(promptPath)
+	if err != nil {
+		return nil, err
+	}
+	responses := readLegacyAILogs(filepath.Join(projectPath, "logs", "responses"), ".md")
+	pairs := pairLegacyAILogs([]legacyAILog{promptLog}, responses)
+	response := pairs[promptLog.Name]
+
+	systemPrompt, userPrompt := splitPromptLog(string(promptData))
+	detail := &AICallDetail{
+		AICallSummary: AICallSummary{
+			ID:          "legacy:" + promptLog.Name,
+			Agent:       promptLog.Agent,
+			StartedAt:   promptLog.Time,
+			HasInput:    true,
+			HasOutput:   response != nil,
+			InputChars:  len(systemPrompt) + len(userPrompt),
+			OutputChars: 0,
+			Legacy:      true,
+		},
+		SystemPrompt: systemPrompt,
+		UserPrompt:   userPrompt,
+		PromptPath:   promptPath,
+	}
+	if response != nil {
+		responseData, _ := os.ReadFile(response.Path)
+		detail.Response = extractAIResponse(string(responseData))
+		detail.ResponsePath = response.Path
+		detail.OutputChars = len(detail.Response)
+	}
+	return detail, nil
+}
+
+func readLegacyResponseOnlyAICall(projectPath, responseName string) (*AICallDetail, error) {
+	if !safeLogName(responseName) || !strings.HasSuffix(responseName, ".md") {
+		return nil, fmt.Errorf("invalid response log name")
+	}
+	responsePath := filepath.Join(projectPath, "logs", "responses", responseName)
+	responseData, err := os.ReadFile(responsePath)
+	if err != nil {
+		return nil, err
+	}
+	responseLog, err := legacyAILogFromPath(responsePath)
+	if err != nil {
+		return nil, err
+	}
+	response := extractAIResponse(string(responseData))
+	return &AICallDetail{
+		AICallSummary: AICallSummary{
+			ID:          "legacy-response:" + responseLog.Name,
+			Agent:       responseLog.Agent,
+			StartedAt:   responseLog.Time,
+			HasInput:    false,
+			HasOutput:   true,
+			OutputChars: len(response),
+			Legacy:      true,
+		},
+		Response:     response,
+		ResponsePath: responsePath,
+	}, nil
+}
+
+func readLegacyAILogs(dir, suffix string) []legacyAILog {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	logs := make([]legacyAILog, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), suffix) {
+			continue
+		}
+		log, err := legacyAILogFromPath(filepath.Join(dir, entry.Name()))
+		if err != nil {
+			continue
+		}
+		logs = append(logs, log)
+	}
+	sort.Slice(logs, func(i, j int) bool {
+		return logs[i].Time.Before(logs[j].Time)
+	})
+	return logs
+}
+
+func legacyAILogFromPath(path string) (legacyAILog, error) {
+	name := filepath.Base(path)
+	info, err := os.Stat(path)
+	if err != nil {
+		return legacyAILog{}, err
+	}
+	agent, loggedAt := parseAILogFilename(name, info.ModTime())
+	return legacyAILog{
+		Name:  name,
+		Path:  path,
+		Agent: agent,
+		Time:  loggedAt,
+		Size:  info.Size(),
+	}, nil
+}
+
+func pairLegacyAILogs(prompts, responses []legacyAILog) map[string]*legacyAILog {
+	pairs := map[string]*legacyAILog{}
+	used := map[string]bool{}
+	for _, prompt := range prompts {
+		var best *legacyAILog
+		for i := range responses {
+			response := responses[i]
+			if used[response.Name] || response.Agent != prompt.Agent || response.Time.Before(prompt.Time) {
+				continue
+			}
+			if response.Time.Sub(prompt.Time) > 2*time.Hour {
+				continue
+			}
+			if best == nil || response.Time.Before(best.Time) {
+				candidate := response
+				best = &candidate
+			}
+		}
+		if best != nil {
+			used[best.Name] = true
+		}
+		pairs[prompt.Name] = best
+	}
+	return pairs
+}
+
+func parseAILogFilename(name string, fallback time.Time) (string, time.Time) {
+	matches := aiLogFilenamePattern.FindStringSubmatch(name)
+	if len(matches) != 4 {
+		return strings.TrimSuffix(name, filepath.Ext(name)), fallback
+	}
+	loggedAt, err := time.ParseInLocation("20060102_150405", matches[2], time.Local)
+	if err != nil {
+		loggedAt = fallback
+	}
+	return matches[1], loggedAt
+}
+
+func splitPromptLog(content string) (string, string) {
+	systemMarker := "# SYSTEM PROMPT"
+	userMarker := "# USER PROMPT"
+	systemIndex := strings.Index(content, systemMarker)
+	userIndex := strings.Index(content, userMarker)
+	if systemIndex == -1 || userIndex == -1 || userIndex <= systemIndex {
+		return content, ""
+	}
+	systemPrompt := strings.TrimSpace(content[systemIndex+len(systemMarker) : userIndex])
+	systemPrompt = strings.Trim(systemPrompt, "- \n\r\t")
+	userPrompt := strings.TrimSpace(content[userIndex+len(userMarker):])
+	return strings.TrimSpace(systemPrompt), userPrompt
+}
+
+func extractAIResponse(content string) string {
+	marker := "# AI RESPONSE"
+	if idx := strings.Index(content, marker); idx != -1 {
+		content = content[idx+len(marker):]
+	}
+	content = strings.TrimSpace(content)
+	if strings.HasPrefix(content, "```") {
+		if newline := strings.Index(content, "\n"); newline != -1 {
+			content = content[newline+1:]
+		}
+		if end := strings.LastIndex(content, "```"); end != -1 {
+			content = content[:end]
+		}
+	}
+	return strings.TrimSpace(content)
+}
+
+func safeLogName(name string) bool {
+	if name == "" || strings.Contains(name, "..") || strings.ContainsAny(name, `/\`) {
+		return false
+	}
+	return filepath.Base(name) == name
+}
+
 func getFile(c *gin.Context) {
 	path := c.Param("path")
 	projectPath := c.Query("project")
@@ -1055,7 +1591,31 @@ func saveFile(c *gin.Context) {
 		return
 	}
 
-	fullPath := filepath.Join(projectPath, path)
+	cleanPath := filepath.Clean(strings.TrimPrefix(path, "/"))
+	if cleanPath == "." || strings.HasPrefix(cleanPath, "..") || filepath.IsAbs(cleanPath) {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Invalid path"})
+		return
+	}
+
+	if strings.HasSuffix(cleanPath, ".json") && !json.Valid([]byte(req.Content)) {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Invalid JSON"})
+		return
+	}
+
+	var backupName string
+	var err error
+	switch filepath.ToSlash(cleanPath) {
+	case "story/compose/outline.json":
+		backupName, err = backupOutline(projectPath)
+	case "story/setup/story_setup.json":
+		backupName, err = backupStorySetup(projectPath)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: "Failed to backup existing file: " + err.Error()})
+		return
+	}
+
+	fullPath := filepath.Join(projectPath, cleanPath)
 
 	// Ensure directory exists
 	dir := filepath.Dir(fullPath)
@@ -1069,7 +1629,7 @@ func saveFile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, APIResponse{Success: true})
+	c.JSON(http.StatusOK, APIResponse{Success: true, Data: map[string]string{"backup": backupName}})
 }
 
 func openBrowser(url string) {

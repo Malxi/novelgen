@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
-import { OutlineViewer } from './components/OutlineViewer';
+import { OutlineWorkbench } from './components/OutlineWorkbench';
+import { StorySetupWorkbench } from './components/StorySetupWorkbench';
 import { CharactersViewer } from './components/CharactersViewer';
 import { LocationsViewer } from './components/LocationsViewer';
 import { ItemsViewer } from './components/ItemsViewer';
-import { DraftsViewer } from './components/DraftsViewer';
 import { ChaptersViewer } from './components/ChaptersViewer';
 import { TaskManager } from './components/TaskManager';
 import { RPGManager } from './components/RPGManager';
+import { AICallsViewer } from './components/AICallsViewer';
 import { listProjects } from './api';
 import type { Project } from './types';
 
@@ -62,8 +63,10 @@ function App() {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard project={selectedProject} onTabChange={setActiveTab} />;
+      case 'setup':
+        return <StorySetupWorkbench projectPath={selectedProject.path} />;
       case 'outline':
-        return <OutlineViewer projectPath={selectedProject.path} />;
+        return <OutlineWorkbench projectPath={selectedProject.path} />;
       case 'characters':
         return <CharactersViewer projectPath={selectedProject.path} />;
       case 'locations':
@@ -72,8 +75,8 @@ function App() {
         return <ItemsViewer projectPath={selectedProject.path} />;
       case 'rpg':
         return <RPGManager projectPath={selectedProject.path} />;
-      case 'drafts':
-        return <DraftsViewer projectPath={selectedProject.path} />;
+      case 'ai-calls':
+        return <AICallsViewer projectPath={selectedProject.path} />;
       case 'chapters':
         return <ChaptersViewer projectPath={selectedProject.path} />;
       case 'tasks':

@@ -13,6 +13,7 @@ import type { Task } from '../types';
 export function TaskManager() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     loadTasks();
@@ -21,14 +22,14 @@ export function TaskManager() {
     const ws = createWebSocketConnection((data: unknown) => {
       const msg = data as { type: string; data: Task };
       if (msg.type === 'task_update') {
-        const updatedTask = msg.data;
-        setTasks((prev) =>
-          prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
-        );
+        setTasks((prev) => upsertTask(prev, msg.data));
       }
     });
 
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
+
     return () => {
+      window.clearInterval(interval);
       ws.close();
     };
   }, []);
@@ -37,7 +38,7 @@ export function TaskManager() {
     try {
       setLoading(true);
       const data = await listTasks();
-      setTasks(data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      setTasks(sortTasks(data));
     } catch (err) {
       console.error('Failed to load tasks:', err);
     } finally {
@@ -124,6 +125,11 @@ export function TaskManager() {
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{task.type}</span>
                     {getStatusBadge(task.status)}
+                    {(task.status === 'running' || task.status === 'pending') && (
+                      <span className="text-xs text-[var(--text-muted)]">
+                        {formatElapsed(task.created_at, now)}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-[var(--text-muted)] truncate">
                     {task.message}
@@ -162,4 +168,32 @@ export function TaskManager() {
       )}
     </div>
   );
+}
+
+function sortTasks(tasks: Task[]) {
+  return [...tasks].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+function upsertTask(tasks: Task[], updatedTask: Task) {
+  const exists = tasks.some((task) => task.id === updatedTask.id);
+  const next = exists
+    ? tasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+    : [updatedTask, ...tasks];
+  return sortTasks(next);
+}
+
+function formatElapsed(startedAt: string, now: number) {
+  const elapsed = Math.max(0, now - new Date(startedAt).getTime());
+  const seconds = Math.floor(elapsed / 1000);
+
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }

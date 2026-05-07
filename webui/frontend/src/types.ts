@@ -31,6 +31,31 @@ export interface Task {
   updated_at: string;
 }
 
+export interface AICallSummary {
+  id: string;
+  agent: string;
+  command?: string;
+  model?: string;
+  started_at: string;
+  has_input: boolean;
+  has_output: boolean;
+  input_chars: number;
+  output_chars: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+  legacy: boolean;
+}
+
+export interface AICallDetail extends AICallSummary {
+  skills?: string[];
+  system_prompt: string;
+  user_prompt: string;
+  response: string;
+  prompt_path?: string;
+  response_path?: string;
+}
+
 export interface Outline {
   parts: Part[];
 }
@@ -71,15 +96,179 @@ export interface Chapter {
   pacing: string;
 }
 
+export interface StorylineVolumeIntent {
+  volume?: number;
+  intent: string;
+  pressure?: string;
+  must_include?: string[];
+  must_avoid?: string[];
+}
+
+export interface StorylineArcPhase {
+  phase: string;
+  purpose: string;
+  volume?: number;
+}
+
+export interface StorylineBeatPrerequisite {
+  beat: string;
+  requires: string[];
+}
+
+export interface StorylineAgencyContract {
+  character: string;
+  must_choose: string;
+  private_goal?: string;
+  can_conflict_with_protagonist?: boolean;
+}
+
+export interface StorylineClueContract {
+  truth: string;
+  source: string;
+  reliability?: string;
+  cost?: string;
+  must_not?: string;
+}
+
+export interface Storyline {
+  name: string;
+  description: string;
+  type: string;
+  importance: number;
+  scope?: string;
+  payoff_style?: string;
+  setup_role?: string;
+  desire?: string;
+  opposition?: string;
+  stakes?: string;
+  turn?: string;
+  payoff?: string;
+  open_question?: string;
+  pressure_points?: string[];
+  key_characters?: string[];
+  must_include?: string[];
+  must_avoid?: string[];
+  volume_intents?: StorylineVolumeIntent[];
+  arc_phases?: StorylineArcPhase[];
+  beat_prerequisites?: StorylineBeatPrerequisite[];
+  required_costs?: string[];
+  agency_contracts?: StorylineAgencyContract[];
+  antagonist_moves?: string[];
+  clue_contracts?: StorylineClueContract[];
+}
+
+export interface PremiseProgression {
+  level: number;
+  name: string;
+  description: string;
+  requirements?: string;
+}
+
+export interface Premise {
+  name: string;
+  description: string;
+  category: string;
+  progression: PremiseProgression[];
+}
+
+export interface WorldTimelineEntry {
+  year: string;
+  event: string;
+  impact?: string;
+  related_mystery?: string;
+}
+
+export interface WorldResource {
+  name: string;
+  category: string;
+  scarcity: string;
+  description: string;
+}
+
+export interface TemplateLibrary {
+  version: string;
+  templates: SystemTemplate[];
+  applied_templates?: AppliedTemplateRef[];
+}
+
+export interface SystemTemplate {
+  id: string;
+  name: string;
+  kind: 'progression' | 'item_rarity' | 'resource_tier' | string;
+  description: string;
+  tags?: string[];
+  progression?: ProgressionTemplate;
+  item_rarity?: ItemRarityTemplate;
+  resource_tier?: ResourceTierTemplate;
+  notes?: string[];
+}
+
+export interface ProgressionTemplate {
+  category: string;
+  stages: PremiseProgression[];
+  rules?: string[];
+  resource_hints?: WorldResource[];
+}
+
+export interface ItemRarityTemplate {
+  power_scale?: string;
+  rarities: ItemRarityStage[];
+  rules?: string[];
+}
+
+export interface ItemRarityStage {
+  id: string;
+  name: string;
+  rank: number;
+  description: string;
+  power_min?: number;
+  power_max?: number;
+  scarcity?: string;
+  typical_items?: string[];
+  rules?: string[];
+}
+
+export interface ResourceTierTemplate {
+  categories: ResourceTierCategory[];
+  rules?: string[];
+}
+
+export interface ResourceTierCategory {
+  id: string;
+  name: string;
+  description?: string;
+  tiers: ResourceTierStage[];
+}
+
+export interface ResourceTierStage {
+  id: string;
+  name: string;
+  rank: number;
+  scarcity?: string;
+  description: string;
+}
+
+export interface AppliedTemplateRef {
+  id: string;
+  name: string;
+  kind: string;
+  applied_at: string;
+}
+
 export interface StorySetup {
-  genre: string[];
+  project_name: string;
+  genres: string[];
   premise: string;
   theme: string;
-  story_rules: string[];
+  rules: string[];
   target_audience: string;
-  tone_style: string;
-  narrative_tense: string;
+  tone: string;
+  tense: string;
   pov_style: string;
+  storylines?: Storyline[];
+  premises?: Premise[];
+  world_timeline?: WorldTimelineEntry[];
+  world_resources?: WorldResource[];
 }
 
 export interface Character {

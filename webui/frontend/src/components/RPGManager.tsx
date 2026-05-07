@@ -18,11 +18,14 @@ import {
   Bolt,
   Snowflake,
   Skull,
+  Layers,
+  CheckCircle2,
 } from 'lucide-react';
-import { getRPGCharacters, getRPGSkills, getRPGItems, getRPGClasses, getRPGEvents, getRPGQuests } from '../api';
+import { createTask, getRPGCharacters, getRPGSkills, getRPGItems, getRPGClasses, getRPGEvents, getRPGQuests, getTemplates } from '../api';
+import type { SystemTemplate, TemplateLibrary } from '../types';
 import type { RPGCharacter, RPGSkill, RPGItem, RPGClass, RPGEvent, RPGQuest, ElementType, Rarity } from '../types/rpg';
 
-type RPGTab = 'characters' | 'skills' | 'items' | 'classes' | 'events' | 'quests';
+type RPGTab = 'characters' | 'skills' | 'items' | 'classes' | 'events' | 'quests' | 'templates';
 
 interface RPGManagerProps {
   projectPath: string;
@@ -281,6 +284,66 @@ function QuestCard({ quest, onClick }: { quest: RPGQuest; onClick: () => void })
   );
 }
 
+function TemplateCard({
+  template,
+  active,
+  busy,
+  onApply,
+}: {
+  template: SystemTemplate;
+  active: boolean;
+  busy: boolean;
+  onApply: () => void;
+}) {
+  const stageCount = template.progression?.stages?.length || 0;
+  const rarityCount = template.item_rarity?.rarities?.length || 0;
+  const resourceCategoryCount = template.resource_tier?.categories?.length || 0;
+  const resourceTierCount = (template.resource_tier?.categories || []).reduce((total, category) => total + (category.tiers?.length || 0), 0);
+  const meta = template.kind === 'progression'
+    ? `${template.progression?.category || 'progression'} · ${stageCount} stages`
+    : template.kind === 'resource_tier'
+      ? `${resourceCategoryCount} categories · ${resourceTierCount} tiers`
+      : `${template.item_rarity?.power_scale || 'item scale'} · ${rarityCount} tiers`;
+
+  return (
+    <div className="glass rounded-xl p-4">
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-xl bg-[var(--primary)]/15 flex items-center justify-center">
+          <Layers className="w-6 h-6 text-[var(--primary)]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-semibold">{template.name}</h3>
+            <span className="text-xs px-2 py-0.5 rounded bg-[var(--surface-light)] text-[var(--text-muted)]">{template.kind}</span>
+            {active && (
+              <span className="text-xs px-2 py-0.5 rounded bg-green-500/15 text-green-400 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" />
+                active
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-[var(--text-muted)] mt-1">{meta}</p>
+          <p className="text-sm text-[var(--text)] mt-2 line-clamp-2">{template.description}</p>
+          {template.tags && template.tags.length > 0 && (
+            <div className="flex gap-2 mt-3 flex-wrap">
+              {template.tags.slice(0, 5).map((tag) => (
+                <span key={tag} className="text-xs px-2 py-1 bg-[var(--surface-light)] rounded">{tag}</span>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={onApply}
+          disabled={busy}
+          className="btn btn-secondary text-sm"
+        >
+          {active ? '重应用' : '应用'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function RPGManager({ projectPath }: RPGManagerProps) {
   const [activeTab, setActiveTab] = useState<RPGTab>('characters');
   const [characters, setCharacters] = useState<RPGCharacter[]>([]);
@@ -289,7 +352,9 @@ export function RPGManager({ projectPath }: RPGManagerProps) {
   const [classes, setClasses] = useState<RPGClass[]>([]);
   const [events, setEvents] = useState<RPGEvent[]>([]);
   const [quests, setQuests] = useState<RPGQuest[]>([]);
+  const [templates, setTemplates] = useState<TemplateLibrary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [templateBusy, setTemplateBusy] = useState(false);
 
   const tabs = [
     { id: 'characters' as RPGTab, label: '角色', icon: Users },
@@ -298,6 +363,7 @@ export function RPGManager({ projectPath }: RPGManagerProps) {
     { id: 'classes' as RPGTab, label: '职业', icon: Trophy },
     { id: 'events' as RPGTab, label: '事件', icon: Map },
     { id: 'quests' as RPGTab, label: '任务', icon: Scroll },
+    { id: 'templates' as RPGTab, label: '模板', icon: Layers },
   ];
 
   useEffect(() => {
@@ -307,13 +373,14 @@ export function RPGManager({ projectPath }: RPGManagerProps) {
   async function loadRPGData() {
     try {
       setLoading(true);
-      const [charsData, skillsData, itemsData, classesData, eventsData, questsData] = await Promise.all([
+      const [charsData, skillsData, itemsData, classesData, eventsData, questsData, templatesData] = await Promise.all([
         getRPGCharacters(projectPath).catch(() => ({ characters: [] })),
         getRPGSkills(projectPath).catch(() => ({ skills: [] })),
         getRPGItems(projectPath).catch(() => ({ items: [] })),
         getRPGClasses(projectPath).catch(() => ({ classes: [] })),
         getRPGEvents(projectPath).catch(() => ({ events: [] })),
         getRPGQuests(projectPath).catch(() => ({ quests: [] })),
+        getTemplates(projectPath).catch(() => null),
       ]);
 
       setCharacters((charsData.characters || []) as RPGCharacter[]);
@@ -322,10 +389,31 @@ export function RPGManager({ projectPath }: RPGManagerProps) {
       setClasses((classesData.classes || []) as RPGClass[]);
       setEvents((eventsData.events || []) as RPGEvent[]);
       setQuests((questsData.quests || []) as RPGQuest[]);
+      setTemplates(templatesData);
     } catch (err) {
       console.error('Failed to load RPG data:', err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function runTemplateCommand(subcommand: 'init' | 'apply', templateId?: string) {
+    try {
+      setTemplateBusy(true);
+      await createTask({
+        type: `template-${subcommand}`,
+        command: 'template',
+        args: {
+          project_dir: projectPath,
+          subcommand,
+          ...(templateId ? { _positional: templateId } : {}),
+        },
+      });
+      setTimeout(loadRPGData, 1200);
+    } catch (err) {
+      console.error('Failed to run template command:', err);
+    } finally {
+      setTemplateBusy(false);
     }
   }
 
@@ -338,6 +426,40 @@ export function RPGManager({ projectPath }: RPGManagerProps) {
       );
     }
 
+    if (activeTab === 'templates') {
+      const applied = new Set((templates?.applied_templates || []).map((t) => t.id));
+      if (!templates) {
+        return (
+          <div className="glass rounded-xl p-6 flex items-center justify-between gap-4">
+            <div>
+              <h3 className="font-semibold mb-1">模板库尚未初始化</h3>
+              <p className="text-sm text-[var(--text-muted)]">创建默认的升级体系和物品等级模板。</p>
+            </div>
+            <button
+              onClick={() => runTemplateCommand('init')}
+              disabled={templateBusy}
+              className="btn btn-primary"
+            >
+              初始化模板
+            </button>
+          </div>
+        );
+      }
+      return (
+        <div className="space-y-4">
+          {templates.templates.map((template) => (
+            <TemplateCard
+              key={template.id}
+              template={template}
+              active={applied.has(template.id)}
+              busy={templateBusy}
+              onApply={() => runTemplateCommand('apply', template.id)}
+            />
+          ))}
+        </div>
+      );
+    }
+
     const currentData = {
       characters,
       skills,
@@ -345,6 +467,7 @@ export function RPGManager({ projectPath }: RPGManagerProps) {
       classes,
       events,
       quests,
+      templates: templates?.templates || [],
     }[activeTab];
 
     if (currentData.length === 0) {
@@ -415,9 +538,9 @@ export function RPGManager({ projectPath }: RPGManagerProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold mb-1">RPG 数据管理</h1>
+          <h1 className="text-2xl font-bold mb-1">数值化系统</h1>
           <p className="text-[var(--text-muted)] text-sm">
-            {characters.length} 角色 · {skills.length} 技能 · {items.length} 物品 · {classes.length} 职业 · {events.length} 事件 · {quests.length} 任务
+            {characters.length} 角色 · {skills.length} 技能 · {items.length} 物品 · {classes.length} 职业 · {events.length} 事件 · {quests.length} 任务 · {templates?.templates?.length || 0} 模板
           </p>
         </div>
         <button
