@@ -36,6 +36,7 @@ This command generates story/setup/story_setup.json containing:
   - Story rules and mechanics
   - Themes and motifs
   - Tone and atmosphere
+  - Optional writing style and reference excerpt
   - POV style and narrative voice
 
 Subcommands:
@@ -759,14 +760,18 @@ func fillSetupField(setup *models.StorySetup, section, content string) {
 	case strings.Contains(sectionLower, "target audience") || strings.Contains(sectionLower, "audience"):
 		setup.TargetAudience = content
 
-	case strings.Contains(sectionLower, "tone") || strings.Contains(sectionLower, "style"):
-		setup.Tone = content
+	case strings.Contains(sectionLower, "writing style") || strings.Contains(sectionLower, "writing_style") ||
+		strings.Contains(sectionLower, "写作风格") || strings.Contains(sectionLower, "文风"):
+		setup.WritingStyle = parseWritingStyleMarkdown(content)
 
 	case strings.Contains(sectionLower, "tense"):
 		setup.Tense = content
 
 	case strings.Contains(sectionLower, "pov"):
 		setup.POVStyle = content
+
+	case strings.Contains(sectionLower, "tone") || strings.Contains(sectionLower, "style"):
+		setup.Tone = content
 	}
 }
 
@@ -858,6 +863,9 @@ func createStorySetupMarkdown(setup *models.StorySetup, path string) error {
 ### POV Style
 %s
 
+### Writing Style
+%s
+
 ## Storylines
 %s
 
@@ -873,6 +881,7 @@ func createStorySetupMarkdown(setup *models.StorySetup, path string) error {
 		setup.Tone,
 		setup.Tense,
 		setup.POVStyle,
+		formatWritingStyle(setup.WritingStyle),
 		formatStorylines(setup.Storylines),
 		formatPremises(setup.Premises),
 	)
@@ -954,6 +963,143 @@ func splitInlineList(value string) []string {
 		}
 	}
 	return result
+}
+
+func parseWritingStyleMarkdown(content string) models.WritingStyle {
+	var style models.WritingStyle
+	var freeform []string
+	var referenceLines []string
+	currentList := ""
+	inReference := false
+
+	for _, rawLine := range strings.Split(content, "\n") {
+		line := strings.TrimSpace(rawLine)
+		if line == "" || line == "None" || line == "(待填写)" {
+			continue
+		}
+
+		if key, value, ok := parseMarkdownLabel(line); ok {
+			normalizedKey := normalizeMarkdownLabel(key)
+			wasInReference := inReference
+			currentList = ""
+			inReference = false
+
+			switch normalizedKey {
+			case "name", "style name", "writing style name", "名称", "风格名称":
+				style.Name = value
+			case "description", "style description", "writing style description", "描述", "风格描述":
+				style.Description = value
+			case "principles", "style principles", "writing principles", "原则", "写作原则":
+				style.Principles = append(style.Principles, splitInlineList(value)...)
+				currentList = "principles"
+			case "avoid", "avoidance", "dont", "don't", "避免", "禁忌", "避免事项":
+				style.Avoid = append(style.Avoid, splitInlineList(value)...)
+				currentList = "avoid"
+			case "reference excerpt", "reference", "sample", "参考文章", "参考片段", "参考文":
+				if value != "" {
+					referenceLines = append(referenceLines, value)
+				}
+				inReference = true
+			default:
+				if wasInReference {
+					referenceLines = append(referenceLines, line)
+					inReference = true
+				} else {
+					freeform = append(freeform, line)
+				}
+			}
+			continue
+		}
+
+		line = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(line, "- "), "* "))
+		switch {
+		case inReference:
+			referenceLines = append(referenceLines, line)
+		case currentList == "principles":
+			style.Principles = append(style.Principles, line)
+		case currentList == "avoid":
+			style.Avoid = append(style.Avoid, line)
+		default:
+			freeform = append(freeform, line)
+		}
+	}
+
+	if style.Description == "" && len(freeform) > 0 {
+		style.Description = strings.Join(freeform, "\n")
+	}
+	style.ReferenceExcerpt = strings.TrimSpace(strings.Join(referenceLines, "\n"))
+	return style.CompactReference(len([]rune(style.ReferenceExcerpt)))
+}
+
+func parseMarkdownLabel(line string) (key, value string, ok bool) {
+	line = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(line), "- "), "* "))
+	if line == "" {
+		return "", "", false
+	}
+
+	if strings.HasPrefix(line, "**") {
+		rest := line[2:]
+		if end := strings.Index(rest, "**"); end >= 0 {
+			key = strings.TrimSpace(rest[:end])
+			value = strings.TrimSpace(rest[end+2:])
+			value = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(value, ":"), "："))
+			return key, value, key != ""
+		}
+	}
+
+	colon := strings.Index(line, ":")
+	sepLen := len(":")
+	fullColon := strings.Index(line, "：")
+	if colon < 0 || (fullColon >= 0 && fullColon < colon) {
+		colon = fullColon
+		sepLen = len("：")
+	}
+	if colon <= 0 {
+		return "", "", false
+	}
+	return strings.TrimSpace(line[:colon]), strings.TrimSpace(line[colon+sepLen:]), true
+}
+
+func normalizeMarkdownLabel(key string) string {
+	key = strings.ToLower(strings.TrimSpace(key))
+	key = strings.Trim(key, "*` ")
+	key = strings.ReplaceAll(key, "_", " ")
+	key = strings.ReplaceAll(key, "-", " ")
+	key = strings.Join(strings.Fields(key), " ")
+	return key
+}
+
+func formatWritingStyle(style models.WritingStyle) string {
+	if style.IsZero() {
+		return "None"
+	}
+	var result strings.Builder
+	if style.Name != "" {
+		result.WriteString(fmt.Sprintf("- **Name**: %s\n", style.Name))
+	}
+	if style.Description != "" {
+		result.WriteString(fmt.Sprintf("- **Description**: %s\n", style.Description))
+	}
+	if len(style.Principles) > 0 {
+		result.WriteString("- **Principles**:\n")
+		for _, item := range style.Principles {
+			result.WriteString(fmt.Sprintf("  - %s\n", item))
+		}
+	}
+	if len(style.Avoid) > 0 {
+		result.WriteString("- **Avoid**:\n")
+		for _, item := range style.Avoid {
+			result.WriteString(fmt.Sprintf("  - %s\n", item))
+		}
+	}
+	if style.ReferenceExcerpt != "" {
+		result.WriteString("- **Reference Excerpt**:\n")
+		result.WriteString(style.ReferenceExcerpt)
+		if !strings.HasSuffix(style.ReferenceExcerpt, "\n") {
+			result.WriteString("\n")
+		}
+	}
+	return strings.TrimRight(result.String(), "\n")
 }
 
 func formatPremises(premises []models.Premise) string {

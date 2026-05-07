@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"os"
+	"strings"
 )
 
 // StorySetup represents the story configuration
@@ -16,10 +17,60 @@ type StorySetup struct {
 	Tone           string               `json:"tone" prompt:"基调" desc:"小说基调，一句话，2-4个形容词，逗号分隔"`
 	Tense          string               `json:"tense" prompt:"时态" desc:"过去时或现在时"`
 	POVStyle       string               `json:"pov_style" prompt:"视角" desc:"第一人称、第三人称有限视角或第三人称全知视角"`
+	WritingStyle   WritingStyle         `json:"writing_style,omitempty" prompt:"写作风格" desc:"可选，写作风格要求与参考片段；write 阶段只作为风格参照，不作为剧情事实"`
 	Storylines     []Storyline          `json:"storylines,omitempty" prompt:"故事线" desc:"故事线"`
 	Premises       []Premise            `json:"premises,omitempty" prompt:"设定体系" desc:"设定升级体系（含阵营定义和主角能力体系）"`
 	WorldTimeline  []WorldTimelineEntry `json:"world_timeline,omitempty" prompt:"世界时间线" desc:"关键历史事件时间线"`
 	WorldResources []WorldResource      `json:"world_resources,omitempty" prompt:"核心资源" desc:"世界中的核心资源定义"`
+}
+
+// WritingStyle captures optional prose-level style instructions for write agents.
+type WritingStyle struct {
+	Name             string   `json:"name,omitempty" prompt:"写作风格名称" desc:"可选，风格名称或参照对象，例如：冷峻克制、轻喜剧网文、参考文的节奏"`
+	Description      string   `json:"description,omitempty" prompt:"写作风格描述" desc:"可选，2-6句话，说明叙述声音、句式节奏、描写密度、对白风格"`
+	Principles       []string `json:"principles,omitempty" prompt:"写作原则" desc:"可选，3-8条可执行写作原则"`
+	Avoid            []string `json:"avoid,omitempty" prompt:"避免事项" desc:"可选，风格禁忌或不要模仿的内容"`
+	ReferenceExcerpt string   `json:"reference_excerpt,omitempty" prompt:"参考文章片段" desc:"可选，作为文风参照的短文片段；只模仿风格，不继承情节、设定或人物"`
+}
+
+// IsZero reports whether the style carries any user-visible instruction.
+func (s WritingStyle) IsZero() bool {
+	if strings.TrimSpace(s.Name) != "" ||
+		strings.TrimSpace(s.Description) != "" ||
+		strings.TrimSpace(s.ReferenceExcerpt) != "" {
+		return false
+	}
+	return len(nonEmptyStrings(s.Principles)) == 0 && len(nonEmptyStrings(s.Avoid)) == 0
+}
+
+// CompactReference returns a copy with ReferenceExcerpt trimmed to maxRunes.
+func (s WritingStyle) CompactReference(maxRunes int) WritingStyle {
+	s.Name = strings.TrimSpace(s.Name)
+	s.Description = strings.TrimSpace(s.Description)
+	s.Principles = nonEmptyStrings(s.Principles)
+	s.Avoid = nonEmptyStrings(s.Avoid)
+	if maxRunes <= 0 {
+		s.ReferenceExcerpt = ""
+		return s
+	}
+	runes := []rune(strings.TrimSpace(s.ReferenceExcerpt))
+	if len(runes) > maxRunes {
+		s.ReferenceExcerpt = string(runes[:maxRunes]) + "..."
+	} else {
+		s.ReferenceExcerpt = string(runes)
+	}
+	return s
+}
+
+func nonEmptyStrings(items []string) []string {
+	var result []string
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		if item != "" {
+			result = append(result, item)
+		}
+	}
+	return result
 }
 
 // Storyline represents a story arc or plot line

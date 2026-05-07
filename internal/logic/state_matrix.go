@@ -59,22 +59,10 @@ func (m *StateMatrixManager) loadSetup() *models.StorySetup {
 
 // CalculateStateMatrix calculates the story state up to the target chapter
 func (m *StateMatrixManager) CalculateStateMatrix(outline *models.Outline, targetChapter *models.Chapter) *models.StateMatrix {
-	state := &models.StateMatrix{
-		Characters:    make(map[string]*models.Character),
-		Locations:     make(map[string]*models.Location),
-		Items:         make(map[string]*models.Item),
-		Relationships: make(map[string]string),
-		Goals:         make(map[string][]string),
-		Storylines:    make(map[string]*models.StorylineState),
-		Premises:      make(map[string]string),
-		Gates:         make(map[string]*models.GateState),
-		Status:        make(map[string]*models.StatusState),
-		Memories:      make(map[string][]*models.MemoryState),
-		RPG:           newRPGState(),
+	state := m.newStateMatrix()
+	if outline == nil || targetChapter == nil {
+		return state
 	}
-
-	// Load all generated elements
-	m.loadElementsIntoState(state)
 
 	// Apply events from all chapters up to and including target
 	for _, part := range outline.Parts {
@@ -93,6 +81,54 @@ func (m *StateMatrixManager) CalculateStateMatrix(outline *models.Outline, targe
 			}
 		}
 	}
+
+	return state
+}
+
+// CalculateStateMatrixBefore calculates story state before the target chapter begins.
+// This is the state write generation should use; the target chapter's own events
+// remain chapter plan, not already-true state.
+func (m *StateMatrixManager) CalculateStateMatrixBefore(outline *models.Outline, targetChapter *models.Chapter) *models.StateMatrix {
+	state := m.newStateMatrix()
+
+	if outline == nil || targetChapter == nil {
+		return state
+	}
+
+	for _, part := range outline.Parts {
+		for _, vol := range part.Volumes {
+			for _, ch := range vol.Chapters {
+				if ch.ID == targetChapter.ID {
+					return state
+				}
+				for _, event := range ch.Events {
+					m.applyEvent(state, event, ch.ID)
+				}
+				m.applyRPGDSLDeltasForChapter(state, ch.ID)
+			}
+		}
+	}
+
+	return state
+}
+
+func (m *StateMatrixManager) newStateMatrix() *models.StateMatrix {
+	state := &models.StateMatrix{
+		Characters:    make(map[string]*models.Character),
+		Locations:     make(map[string]*models.Location),
+		Items:         make(map[string]*models.Item),
+		Relationships: make(map[string]string),
+		Goals:         make(map[string][]string),
+		Storylines:    make(map[string]*models.StorylineState),
+		Premises:      make(map[string]string),
+		Gates:         make(map[string]*models.GateState),
+		Status:        make(map[string]*models.StatusState),
+		Memories:      make(map[string][]*models.MemoryState),
+		RPG:           newRPGState(),
+	}
+
+	// Load all generated elements
+	m.loadElementsIntoState(state)
 
 	return state
 }

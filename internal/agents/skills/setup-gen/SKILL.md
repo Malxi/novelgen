@@ -21,6 +21,12 @@ Keep `scope`, `payoff_style`, and `setup_role` high-level:
 
 These fields should clarify how later outlines should treat a promise. A series-scale staged reveal does not need immediate resolution; it only needs occasional pressure, clues, or partial reveals.
 
+## Writing Style Guidance
+
+`writing_style` is optional. Populate it only when the user explicitly asks for a prose style, gives style preferences, or provides a reference passage.
+
+Use `writing_style` for prose-level guidance: narrative voice, sentence rhythm, description density, dialogue texture, humor/seriousness balance, and concrete do/don't principles. If the user provides a reference passage, store a short excerpt in `reference_excerpt` and treat it strictly as a style sample: do not copy sentences, do not import its plot, characters, places, terminology, or world facts into the novel setup.
+
 ## DSL Simulation Contract Guidance
 
 Generate setup data that can be pressure-tested by DSL simulation:

@@ -2,6 +2,7 @@ package agents
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -85,16 +86,16 @@ func (a *RPGEnhancedWriteAgent) SetLanguage(language string) {
 
 // RPGWriteGenInput RPG增强的写作输入
 type RPGWriteGenInput struct {
-	StorySetup        CompactStorySetup        `json:"story_setup" md:"story_setup"`
-	Chapter           models.Chapter           `json:"chapter" md:"chapter"`
-	StateMatrix       string                   `json:"state_matrix" md:"state_matrix"`
-	TargetWords       int                      `json:"target_words" md:"target_words"`
-	Context           string                   `json:"context,omitempty" md:"context,omitempty"`
-	Recap             string                   `json:"recap,omitempty" md:"recap,omitempty"`
-	NextChapters      []NextChapterInfo        `json:"next_chapters,omitempty" md:"next_chapters,omitempty"`
-	RPGConstraints    string                   `json:"rpg_constraints" md:"rpg_constraints"`
-	CharacterProfiles []RPGCharacterProfile    `json:"character_profiles,omitempty" md:"character_profiles,omitempty"`
-	WorldState        *RPGWorldState           `json:"world_state,omitempty" md:"world_state,omitempty"`
+	StorySetup        CompactStorySetup     `json:"story_setup" md:"story_setup"`
+	Chapter           models.Chapter        `json:"chapter" md:"chapter"`
+	StateMatrix       string                `json:"state_matrix" md:"state_matrix"`
+	TargetWords       int                   `json:"target_words" md:"target_words"`
+	Context           string                `json:"context,omitempty" md:"context,omitempty"`
+	Recap             string                `json:"recap,omitempty" md:"recap,omitempty"`
+	NextChapters      []NextChapterInfo     `json:"next_chapters,omitempty" md:"next_chapters,omitempty"`
+	RPGConstraints    string                `json:"rpg_constraints" md:"rpg_constraints"`
+	CharacterProfiles []RPGCharacterProfile `json:"character_profiles,omitempty" md:"character_profiles,omitempty"`
+	WorldState        *RPGWorldState        `json:"world_state,omitempty" md:"world_state,omitempty"`
 }
 
 // RPGCharacterProfile RPG角色档案
@@ -112,19 +113,19 @@ type RPGCharacterProfile struct {
 
 // RPGWorldState RPG世界状态
 type RPGWorldState struct {
-	CurrentLocation string            `json:"current_location"`
-	TimeOfDay       string            `json:"time_of_day"`
-	Weather         string            `json:"weather"`
-	ActiveQuests    []string          `json:"active_quests"`
-	WorldEvents     []string          `json:"world_events"`
+	CurrentLocation string                     `json:"current_location"`
+	TimeOfDay       string                     `json:"time_of_day"`
+	Weather         string                     `json:"weather"`
+	ActiveQuests    []string                   `json:"active_quests"`
+	WorldEvents     []string                   `json:"world_events"`
 	PowerSystem     *rpg.PowerSystemConstraint `json:"power_system,omitempty"`
 }
 
 // RPGWriteGenOutput RPG增强的写作输出
 type RPGWriteGenOutput struct {
-	Content            string                     `json:"content" md:"content"`
+	Content              string                    `json:"content" md:"content"`
 	ConstraintViolations []rpg.ConstraintViolation `json:"violations,omitempty"`
-	RPGStateChanges    map[string]interface{}     `json:"rpg_state_changes,omitempty"`
+	RPGStateChanges      map[string]interface{}    `json:"rpg_state_changes,omitempty"`
 }
 
 // GenerateChapter 生成章节内容（带RPG约束）
@@ -139,15 +140,7 @@ func (a *RPGEnhancedWriteAgent) GenerateChapter(
 	logger.Info("Chapter: %s", chapter.ID)
 	logger.Info("Target words: %d", targetWords)
 
-	// 转换下一章信息
-	var nextInfos []NextChapterInfo
-	for _, nc := range context.Next {
-		nextInfos = append(nextInfos, NextChapterInfo{
-			ID:      nc.Chapter.ID,
-			Title:   nc.Chapter.Title,
-			Summary: nc.Chapter.Summary,
-		})
-	}
+	nextInfos := buildNextChapterInfos(context)
 
 	// 构建RPG约束提示词
 	rpgConstraints := ""
@@ -167,7 +160,7 @@ func (a *RPGEnhancedWriteAgent) GenerateChapter(
 		StateMatrix:       formatStateMatrixForWrite(state, chapter),
 		TargetWords:       targetWords,
 		Context:           formatChapterContext(context),
-		Recap:             context.Recap,
+		Recap:             recapForContext(context),
 		NextChapters:      nextInfos,
 		RPGConstraints:    rpgConstraints,
 		CharacterProfiles: characterProfiles,
@@ -192,7 +185,7 @@ func (a *RPGEnhancedWriteAgent) GenerateChapter(
 			for _, v := range violations {
 				logger.Warn("  - %s: %s", v.Target, v.Issue)
 			}
-			
+
 			// 尝试修正
 			corrected, err := a.correctViolations(ctx, chapter, context, state, targetWords, output.Content, violations)
 			if err != nil {
@@ -203,9 +196,8 @@ func (a *RPGEnhancedWriteAgent) GenerateChapter(
 		}
 	}
 
-	// 验证输出内容
-	if strings.TrimSpace(output.Content) == "" {
-		return "", fmt.Errorf("AI returned empty content for chapter %s", chapter.ID)
+	if err := validateWriteContent(chapter, output.Content, targetWords); err != nil {
+		return "", err
 	}
 
 	// 记录上下文
@@ -232,14 +224,14 @@ func (a *RPGEnhancedWriteAgent) buildCharacterProfiles(chapter *models.Chapter) 
 		}
 
 		profile := RPGCharacterProfile{
-			Name:    char.Name,
-			Level:   char.Level,
-			HP:      char.CurrentStats.HP,
-			MP:      char.CurrentStats.MP,
-			Attack:  char.CurrentStats.Attack,
-			Defense: char.CurrentStats.Defense,
-			Skills:  char.Skills,
-			Status:  string(char.State),
+			Name:        char.Name,
+			Level:       char.Level,
+			HP:          char.CurrentStats.HP,
+			MP:          char.CurrentStats.MP,
+			Attack:      char.CurrentStats.Attack,
+			Defense:     char.CurrentStats.Defense,
+			Skills:      char.Skills,
+			Status:      string(char.State),
 			Constraints: make(map[string]string),
 		}
 
@@ -301,7 +293,8 @@ func (a *RPGEnhancedWriteAgent) correctViolations(
 		CurrentContent: currentContent,
 		Corrections:    correctionPrompt,
 		Context:        formatChapterContext(context),
-		Recap:          context.Recap,
+		Recap:          recapForContext(context),
+		NextChapters:   buildNextChapterInfos(context),
 	}
 
 	var output RPGWriteCorrectOutput
@@ -311,6 +304,9 @@ func (a *RPGEnhancedWriteAgent) correctViolations(
 	}
 
 	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return "", err
+	}
+	if err := validateWriteContent(chapter, output.Content, targetWords); err != nil {
 		return "", err
 	}
 
@@ -328,6 +324,7 @@ type RPGWriteCorrectInput struct {
 	Corrections    string            `json:"corrections"`
 	Context        string            `json:"context,omitempty"`
 	Recap          string            `json:"recap,omitempty"`
+	NextChapters   []NextChapterInfo `json:"next_chapters,omitempty"`
 }
 
 // RPGWriteCorrectOutput 修正输出
@@ -348,11 +345,6 @@ func (a *RPGEnhancedWriteAgent) ReviewChapterWithRPG(
 	logger.Section("RPG ENHANCED REVIEW")
 
 	// 先进行普通评审
-	recap := ""
-	if context != nil {
-		recap = context.Recap
-	}
-
 	input := WriteReviewInput{
 		StorySetup:     ToCompact(a.setup),
 		StateMatrix:    formatStateMatrixForWrite(state, chapter),
@@ -360,7 +352,9 @@ func (a *RPGEnhancedWriteAgent) ReviewChapterWithRPG(
 		ChapterContent: content,
 		TargetWords:    targetWords,
 		Iteration:      iteration,
-		Recap:          recap,
+		Context:        formatChapterContext(context),
+		Recap:          recapForContext(context),
+		NextChapters:   buildNextChapterInfos(context),
 	}
 
 	var output WriteReviewOutput
@@ -462,7 +456,7 @@ func (a *RPGEnhancedWriteAgent) IterateChapterWithRPG(
 			}
 
 			if !hasCriticalRPGViolation {
-				logger.Info("✓ Quality threshold met (%.1f >= %.1f) and no critical RPG violations", 
+				logger.Info("✓ Quality threshold met (%.1f >= %.1f) and no critical RPG violations",
 					review.OverallScore, qualityThreshold)
 				break
 			}
@@ -520,7 +514,8 @@ func (a *RPGEnhancedWriteAgent) GenerateChapterWithRPGSuggestions(
 		CurrentDraft: currentDraft,
 		Suggestions:  suggestions,
 		Context:      formatChapterContext(context),
-		Recap:        context.Recap,
+		Recap:        recapForContext(context),
+		NextChapters: buildNextChapterInfos(context),
 	}
 
 	// 添加RPG约束
@@ -538,8 +533,8 @@ func (a *RPGEnhancedWriteAgent) GenerateChapterWithRPGSuggestions(
 		return "", err
 	}
 
-	if strings.TrimSpace(output.Content) == "" {
-		return "", fmt.Errorf("AI returned empty content for chapter %s improvement", chapter.ID)
+	if err := validateWriteContent(chapter, output.Content, targetWords); err != nil {
+		return "", err
 	}
 
 	logger.Info("✓ Generated RPG-enhanced improved chapter: %d characters", len(output.Content))
@@ -556,6 +551,7 @@ type RPGWriteImproveInput struct {
 	Suggestions    string            `json:"suggestions"`
 	Context        string            `json:"context,omitempty"`
 	Recap          string            `json:"recap,omitempty"`
+	NextChapters   []NextChapterInfo `json:"next_chapters,omitempty"`
 	RPGConstraints string            `json:"rpg_constraints,omitempty"`
 }
 
@@ -580,7 +576,11 @@ func (a *RPGEnhancedWriteAgent) logWriteContext(chapterID, variant string, input
 
 	sb.WriteString("## Input\n\n")
 	sb.WriteString("```json\n")
-	sb.WriteString(fmt.Sprintf("%+v", input))
+	if b, err := json.MarshalIndent(input, "", "  "); err == nil {
+		sb.Write(b)
+	} else {
+		sb.WriteString(fmt.Sprintf("%+v", input))
+	}
 	sb.WriteString("\n```\n\n")
 
 	sb.WriteString("## Output\n\n")
@@ -604,7 +604,7 @@ func (a *RPGEnhancedWriteAgent) ValidateOutlineWithRPG() (*rpg.RPGCheckResult, e
 
 	// 这里可以调用RPG检查器来验证大纲
 	checker := rpg.NewOutlineRPGChecker()
-	
+
 	// 需要从outline转换为StoryOutline
 	// 这是一个简化实现
 	storyOutline := rpg.StoryOutline{

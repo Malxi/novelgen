@@ -1,6 +1,6 @@
 # Novelgen Stage Contracts
 
-Last updated: 2026-05-02
+Last updated: 2026-05-07
 
 This document defines the persistent data contracts between Novelgen workflow
 stages. Treat these contracts as part of the public behavior of the repository:
@@ -32,7 +32,7 @@ Project root:
 - `story/craft/locations.json`: `map[string]models.Location`
 - `story/craft/items.json`: `map[string]models.Item`
 - `story/craft/organizations.json`: `map[string]models.Organization`
-- `chapters/<chapter_id>.md`: final chapter text
+- `chapters/chapter-<chapter_id>.md`: final chapter text
 - `drafts/<chapter_id>.md`: legacy draft text
 - `story/recaps/<chapter_id>.json`: `models.ChapterRecap`
 - `story/reviews/*.json`: review outputs
@@ -46,7 +46,7 @@ Project root:
 | `setup.v1` | `novelgen setup` | `story/setup/story_setup.json` | compose, craft, write, RPG |
 | `compose.v1` | `novelgen compose` | `story/compose/outline.json` | craft, write, state matrix, RPG DSL |
 | `craft.v1` | `novelgen craft` | `story/craft/*.json` | write, state matrix, RPG DSL |
-| `write.v1` | `novelgen write` | `chapters/<chapter_id>.md` | recap, review, RPG DSL |
+| `write.v1` | `novelgen write` | `chapters/chapter-<chapter_id>.md` | recap, review, RPG DSL |
 | `recap.v1` | `novelgen recap`, `write pipeline` | `story/recaps/<chapter_id>.json` | continuity, write |
 | `rpg-dsl.v1` | `novelgen rpg-dsl`, `write pipeline` | `story/rpg/*.rpg` | parser, validator, simulator, state matrix |
 | `draft.v1` | `novelgen draft` | `drafts/<chapter_id>.md` | legacy review/improve only |
@@ -139,12 +139,21 @@ Required invariants:
 - `Premises[].Progression` is ordered by level when levels are present.
 - `WorldResources[].Name` is stable enough for outline resource ledgers to
   reference.
+- `WritingStyle` is optional. It is produced by `setup gen`, `setup improve`,
+  or `setup import` only when a user requests a prose style or provides a
+  reference passage. Older projects may omit it and consumers must fall back to
+  `Tone`, `Tense`, and `POVStyle`.
+- `WritingStyle.ReferenceExcerpt` is a style signal only. It is not story canon:
+  downstream stages must not import its plot, characters, places, terminology,
+  or world facts into generated project state.
 
 Consumers:
 
 - `compose` uses setup as the source of story intent and structure.
 - `craft` uses setup to generate world elements.
 - `write` uses setup for style, rules, tone, and continuity.
+- `write` consumes optional `WritingStyle` for prose voice, rhythm, description
+  density, dialogue texture, and style avoid-list guidance.
 - RPG/DSL generators use setup for systems, resources, and world rules.
 
 Change checklist:
@@ -354,8 +363,13 @@ Inputs:
 
 Outputs:
 
-- `chapters/<chapter_id>.md`
+- `chapters/chapter-<chapter_id>.md`
 - Review files under `story/reviews/`
+  - `story/reviews/<volume_id>_review.json`: compatibility volume review
+    summary used by existing improve flows.
+  - `story/reviews/<chapter_id>_write_review.json`: full
+    `models.ReviewResult` for the chapter, preserving dimensions and
+    structured suggestions.
 - Recaps through the recap stage when running `write pipeline`
 - Optional `story/rpg/04_chapters.rpg`
 
@@ -370,14 +384,45 @@ Required invariants:
 
 - Chapter filename is based on `models.Chapter.ID`.
 - Generation should use the current chapter, previous recap, nearby context,
-  state matrix, relevant craft context such as organizations, and configured
-  word target.
+  relevant craft context such as organizations, pre-chapter state matrix, and
+  configured word target. The state matrix sent to write generation/review/improve
+  represents facts before the target chapter begins; the target chapter's own
+  events remain planned beats/deltas rather than already-true state.
+- Optional setup `WritingStyle` is passed to write generation, review, improve,
+  and volume review as part of the compact setup. Long `ReferenceExcerpt` values
+  are truncated before prompt use. The excerpt may guide prose-level style only;
+  it must not become continuity, plot, character, location, item, or world-rule
+  state.
 - Review/improve should preserve chapter identity and should not silently write
   results for a different chapter ID.
+- `write pipeline --min-score` is the single CLI threshold for pipeline
+  `NeedsRevision` decisions and post-improvement early stopping. It is expressed
+  as 0-100 on the CLI, matching `models.ReviewResult.OverallScore`. Compatibility
+  volume review files may still store old 1-10 scores; write improve normalizes
+  them to percent before comparing. New write review compatibility files store
+  percent scores.
+- Batch write commands must surface chapter-level generation, review, improve,
+  save, and final recap failures as command errors instead of reporting overall
+  success after skipped failed chapters.
+- When write humanization is enabled, deterministic AI-flavor checks may add
+  style issues and suggestions before improve decisions. These checks only
+  produce review feedback; all prose changes still go through the typed
+  write-improve JSON contract.
+- Write generation and improvement agent outputs are JSON objects with a
+  `content` field; `content` is validated as prose before writing. Empty prose,
+  JSON-as-prose, fenced code blocks, and severe length shortfalls are rejected.
 - If RPG DSL emission is enabled, generated or repaired DSL must parse and
-  validate before it is treated as usable state.
+  validate before it is treated as usable state. `write pipeline` refreshes
+  chapter RPG DSL before improvement to gather simulation feedback, then once
+  more after final recap extraction so simulation feedback is based on actual
+  final chapter files without refreshing after every improvement pass.
 - Continuity repairs must be applied as deterministic patches or validated AI
   outputs, not as unchecked text rewrites.
+- Deterministic transition and character-presence checks are merged into write
+  review compatibility files before improve decisions are made.
+- Recaps generated by write commands must pass the same minimal recap gate used
+  by `recap.v1`: retry once with explicit feedback when required fields are
+  missing, warn on consistency issues, and save only a minimally valid recap.
 
 Consumers:
 
@@ -404,7 +449,7 @@ Producer:
 
 Inputs:
 
-- `chapters/<chapter_id>.md`
+- `chapters/chapter-<chapter_id>.md`
 - Chapter ID and title from outline
 - Optional feedback when retrying extraction
 

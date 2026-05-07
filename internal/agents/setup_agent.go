@@ -215,6 +215,7 @@ func (a *SetupAgent) normalizeSetup(setup *models.StorySetup) {
 	setup.Tone = strings.TrimSpace(setup.Tone)
 	setup.Tense = strings.TrimSpace(setup.Tense)
 	setup.POVStyle = strings.TrimSpace(setup.POVStyle)
+	setup.WritingStyle = setup.WritingStyle.CompactReference(len([]rune(setup.WritingStyle.ReferenceExcerpt)))
 	for i := range setup.Storylines {
 		setup.Storylines[i].Name = strings.TrimSpace(setup.Storylines[i].Name)
 		setup.Storylines[i].Description = strings.TrimSpace(setup.Storylines[i].Description)
