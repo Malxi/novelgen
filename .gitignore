@@ -1,6 +1,7 @@
 logs/
 run/
 *.exe
+*.exe~
 *.zip
 .claude/
 bin/
