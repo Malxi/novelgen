@@ -171,7 +171,11 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate story setup with AI: %w", err)
 	}
 
-	logQualityGateResult("setup", runSetupQualityGate(setup))
+	setup, gate, err := repairSetupWithQualityGate(cmd.Context(), setup, projectConfig, "generation")
+	if err != nil {
+		return err
+	}
+	logQualityGateResult("setup", gate)
 
 	// Save story setup
 	if err := saveStorySetup(setup); err != nil {
@@ -237,7 +241,11 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to regenerate story setup: %w", err)
 	}
 
-	logQualityGateResult("setup", runSetupQualityGate(setup))
+	setup, gate, err := repairSetupWithQualityGate(cmd.Context(), setup, projectConfig, "regeneration")
+	if err != nil {
+		return err
+	}
+	logQualityGateResult("setup", gate)
 
 	// Save story setup
 	if err := saveStorySetup(setup); err != nil {
@@ -330,7 +338,11 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 		}
 		setup = &improveResult.Setup
 
-		logQualityGateResult("setup", runSetupQualityGate(setup))
+		setup, gate, err := repairSetupWithQualityGate(cmd.Context(), setup, projectConfig, "manual improvement")
+		if err != nil {
+			return err
+		}
+		logQualityGateResult("setup", gate)
 
 		// Save improved setup
 		if err := saveStorySetup(setup); err != nil {
@@ -391,10 +403,25 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 			if len(crossIssues)+len(crossWarnings) > 0 {
 				logger.Info("Cross-module check added %d issues and %d warnings to review",
 					len(crossIssues), len(crossWarnings))
+				extraInput := agents.SetupImproveInput{
+					ExistingSetup: *setup,
+					ReviewResult:  *review,
+				}
+				if extraResult, extraErr := agent.Improve(cmd.Context(), extraInput); extraErr == nil {
+					setup = &extraResult.Setup
+					improvedSetup = setup
+					logger.Info("Extra improve pass completed with setup/outline cross feedback")
+				} else {
+					logger.Warn("Extra improve pass with setup/outline cross feedback failed: %v", extraErr)
+				}
 			}
 		}
 
-		logQualityGateResult("setup", runSetupQualityGate(setup))
+		setup, gate, err := repairSetupWithQualityGate(cmd.Context(), setup, projectConfig, "auto improvement")
+		if err != nil {
+			return err
+		}
+		logQualityGateResult("setup", gate)
 
 		// Save improved setup
 		if err := saveStorySetup(setup); err != nil {
@@ -816,6 +843,41 @@ func generateStorySetupWithAI(ctx context.Context, prompt, language string, proj
 		return nil, err
 	}
 	return &result.Setup, nil
+}
+
+func repairSetupWithQualityGate(ctx context.Context, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string) (*models.StorySetup, qualityGateResult, error) {
+	gate := runSetupQualityGate(setup)
+	if !gate.Blocking {
+		return setup, gate, nil
+	}
+	if setup == nil {
+		return nil, gate, fmt.Errorf("setup quality gate failed: setup is nil")
+	}
+
+	logger.Info("Setup quality gate found blocking issues after %s; running one repair pass", stage)
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return setup, gate, fmt.Errorf("failed to load LLM config for setup repair: %w", err)
+	}
+	client := cfg.CreateClient(&projectConfig.LLM)
+	if client == nil {
+		return setup, gate, fmt.Errorf("failed to create LLM client for setup repair")
+	}
+
+	agent := agents.NewSetupAgent(client, cfg, &projectConfig.LLM)
+	agent.SetLanguage(projectConfig.Language)
+	review := qualityGateReviewResult("Repair setup quality gate findings before saving project state.", gate)
+	output, err := agent.Improve(ctx, agents.SetupImproveInput{
+		ExistingSetup: *setup,
+		ReviewResult:  *review,
+	})
+	if err != nil {
+		return setup, gate, fmt.Errorf("setup quality gate repair failed: %w", err)
+	}
+
+	repaired := &output.Setup
+	finalGate := runSetupQualityGate(repaired)
+	return repaired, finalGate, nil
 }
 
 func saveStorySetup(setup *models.StorySetup) error {

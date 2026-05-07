@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"novelgen/internal/llm"
@@ -1417,6 +1418,8 @@ func (a *ComposeAgent) GenerateOutlineHierarchical(ctx context.Context, setup mo
 	outline := &models.Outline{
 		Parts: skeletonOutput.Parts,
 	}
+	logic.NewIDManager(outline).AssignIDsToOutline()
+	models.NormalizeOutline(outline)
 
 	return a.GenerateChaptersHierarchical(ctx, setup, structure, outline, nil)
 }
@@ -1534,6 +1537,7 @@ func (a *ComposeAgent) buildHierarchicalContext(outline *models.Outline, partIdx
 			}
 		}
 	}
+	context.WriteString(a.buildContinuitySnapshot(outline, partIdx, volIdx))
 
 	// Add current part context
 	currentPart := outline.Parts[partIdx]
@@ -1552,6 +1556,188 @@ func (a *ComposeAgent) buildHierarchicalContext(outline *models.Outline, partIdx
 	context.WriteString("3. Set up for the next volume (if any)\n")
 
 	return context.String()
+}
+
+func (a *ComposeAgent) buildContinuitySnapshot(outline *models.Outline, partIdx, volIdx int) string {
+	if outline == nil {
+		return ""
+	}
+
+	var chapters []models.Chapter
+	for p := 0; p <= partIdx && p < len(outline.Parts); p++ {
+		for v := 0; v < len(outline.Parts[p].Volumes); v++ {
+			if p == partIdx && v >= volIdx {
+				break
+			}
+			chapters = append(chapters, outline.Parts[p].Volumes[v].Chapters...)
+		}
+	}
+	if len(chapters) == 0 {
+		return ""
+	}
+
+	lastChapter := chapters[len(chapters)-1]
+	resources := map[string]int{}
+	openMysteries := map[string]string{}
+	activeBosses := map[string]string{}
+	recentStorylines := map[string]string{}
+
+	for _, chapter := range chapters {
+		for _, entry := range chapter.ResourceLedger {
+			item := strings.TrimSpace(entry.Item)
+			if item != "" {
+				resources[item] = entry.End
+			}
+		}
+		for _, planted := range chapter.Mysteries.Planted {
+			id := strings.TrimSpace(planted.ID)
+			if id != "" {
+				openMysteries[id] = clipForPrompt(planted.Clue, 120)
+			}
+		}
+		for _, resolved := range chapter.Mysteries.Resolved {
+			delete(openMysteries, strings.TrimSpace(resolved.ID))
+		}
+		for _, enemy := range chapter.Enemies {
+			if !enemy.IsBoss && strings.TrimSpace(enemy.BossID) == "" {
+				continue
+			}
+			id := strings.TrimSpace(enemy.BossID)
+			if id == "" {
+				id = strings.TrimSpace(enemy.Name)
+			}
+			if id == "" {
+				continue
+			}
+			status := strings.TrimSpace(enemy.Status)
+			if status == "" {
+				status = "engaged"
+			}
+			if status == "defeated" {
+				delete(activeBosses, id)
+			} else {
+				activeBosses[id] = fmt.Sprintf("%s in %s", status, chapter.ID)
+			}
+		}
+		for _, advance := range chapter.StorylineAdvances {
+			name := strings.TrimSpace(advance.StorylineName)
+			if name == "" {
+				continue
+			}
+			recentStorylines[name] = fmt.Sprintf("%s: %s%s%s",
+				nonEmpty(advance.Stage, "progress"),
+				clipForPrompt(advance.Change, 120),
+				compactLabel("pressure", advance.Pressure),
+				compactLabel("consequence", advance.Consequence))
+		}
+	}
+
+	var b strings.Builder
+	b.WriteString("\n=== CONTINUITY SNAPSHOT ===\n")
+	b.WriteString(fmt.Sprintf("Last generated chapter: %s %s - %s\n",
+		lastChapter.ID, lastChapter.Title, clipForPrompt(lastChapter.Summary, 220)))
+	if beats := lastChapter.GetBeats(); len(beats) > 0 {
+		b.WriteString(fmt.Sprintf("Last closing beat: %s\n", clipForPrompt(beats[len(beats)-1], 180)))
+	}
+	if lastChapter.StateAnchor.Cultivation != "" || lastChapter.StateAnchor.Location != "" || len(lastChapter.StateAnchor.Allies) > 0 || len(lastChapter.StateAnchor.Injuries) > 0 || len(lastChapter.StateAnchor.KeyItems) > 0 {
+		b.WriteString(fmt.Sprintf("Carry-forward state: cultivation=%s; location=%s; allies=%s; injuries=%s; key_items=%s; notes=%s\n",
+			clipForPrompt(lastChapter.StateAnchor.Cultivation, 120),
+			clipForPrompt(lastChapter.StateAnchor.Location, 120),
+			joinLimited(lastChapter.StateAnchor.Allies, 6),
+			joinLimited(lastChapter.StateAnchor.Injuries, 6),
+			joinLimited(lastChapter.StateAnchor.KeyItems, 8),
+			clipForPrompt(lastChapter.StateAnchor.Notes, 180)))
+	}
+	if len(resources) > 0 {
+		b.WriteString("Resource ledger endings: ")
+		b.WriteString(formatIntMap(resources, 8))
+		b.WriteString("\n")
+	}
+	if len(openMysteries) > 0 {
+		b.WriteString("Open mysteries to preserve: ")
+		b.WriteString(formatStringMap(openMysteries, 6))
+		b.WriteString("\n")
+	}
+	if len(activeBosses) > 0 {
+		b.WriteString("Active boss continuity: ")
+		b.WriteString(formatStringMap(activeBosses, 6))
+		b.WriteString("\n")
+	}
+	if len(recentStorylines) > 0 {
+		b.WriteString("Recent storyline pressure/payoff traces: ")
+		b.WriteString(formatStringMap(recentStorylines, 8))
+		b.WriteString("\n")
+	}
+	b.WriteString("Use this snapshot as the starting state for the next generated volume; do not reset resources, injuries, mysteries, bosses, or storyline pressure without an explicit event.\n\n")
+	return b.String()
+}
+
+func compactLabel(label, value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	return fmt.Sprintf("; %s=%s", label, clipForPrompt(value, 100))
+}
+
+func joinLimited(values []string, limit int) string {
+	values = compactStringList(values)
+	if len(values) == 0 {
+		return "none"
+	}
+	if limit > 0 && len(values) > limit {
+		values = append(values[:limit], fmt.Sprintf("...%d more", len(values)-limit))
+	}
+	return strings.Join(values, ", ")
+}
+
+func compactStringList(values []string) []string {
+	seen := map[string]bool{}
+	var result []string
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		result = append(result, value)
+	}
+	return result
+}
+
+func formatIntMap(values map[string]int, limit int) string {
+	keys := sortedKeys(values)
+	var parts []string
+	for i, key := range keys {
+		if limit > 0 && i >= limit {
+			parts = append(parts, fmt.Sprintf("...%d more", len(keys)-limit))
+			break
+		}
+		parts = append(parts, fmt.Sprintf("%s=%d", key, values[key]))
+	}
+	return strings.Join(parts, "; ")
+}
+
+func formatStringMap(values map[string]string, limit int) string {
+	keys := sortedKeys(values)
+	var parts []string
+	for i, key := range keys {
+		if limit > 0 && i >= limit {
+			parts = append(parts, fmt.Sprintf("...%d more", len(keys)-limit))
+			break
+		}
+		parts = append(parts, fmt.Sprintf("%s=%s", key, values[key]))
+	}
+	return strings.Join(parts, "; ")
+}
+
+func sortedKeys[V any](values map[string]V) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // getOpeningBeat returns beats[0] or empty string.

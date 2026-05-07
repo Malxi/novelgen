@@ -297,7 +297,11 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate outline with AI: %w", err)
 	}
 
-	logQualityGateResult("outline", runOutlineQualityGate(setup, outline))
+	outline, gate, err := repairOutlineWithQualityGate(cmd.Context(), outline, setup, projectConfig, "generation")
+	if err != nil {
+		return err
+	}
+	logQualityGateResult("outline", gate)
 
 	// Save outline
 	if err := outline.Save(outlinePath); err != nil {
@@ -461,7 +465,11 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		mergeGeneratedVolumes(outline, improveOutline)
 	}
 
-	logQualityGateResult("outline", runOutlineQualityGate(setup, outline))
+	outline, gate, err := repairOutlineWithQualityGate(cmd.Context(), outline, setup, projectConfig, "improvement")
+	if err != nil {
+		return err
+	}
+	logQualityGateResult("outline", gate)
 
 	// Save improved outline
 	if err := outline.Save(outlinePath); err != nil {
@@ -1087,6 +1095,38 @@ func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.Proje
 	return &output.Outline, nil
 }
 
+func repairOutlineWithQualityGate(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string) (*models.Outline, qualityGateResult, error) {
+	applyOutlineNormalization(outline, "pre_gate_"+stage)
+	gate := runOutlineQualityGate(setup, outline)
+	if !gate.Blocking {
+		return outline, gate, nil
+	}
+	if outline == nil {
+		return nil, gate, fmt.Errorf("outline quality gate failed: outline is nil")
+	}
+
+	logger.Info("Outline quality gate found blocking issues after %s; running one bounded repair pass", stage)
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return outline, gate, fmt.Errorf("failed to load LLM config for outline repair: %w", err)
+	}
+	client := cfg.CreateClient(&projectConfig.LLM)
+	if client == nil {
+		return outline, gate, fmt.Errorf("failed to create LLM client for outline repair")
+	}
+
+	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
+	agent.SetLanguage(projectConfig.Language)
+	review := qualityGateReviewResult("Repair outline quality gate findings before saving project state.", gate)
+	repaired, err := agent.RepairByReview(ctx, outline, review, setup)
+	if err != nil {
+		return outline, gate, fmt.Errorf("outline quality gate repair failed: %w", err)
+	}
+	applyOutlineNormalization(repaired, "post_gate_"+stage)
+	finalGate := runOutlineQualityGate(setup, repaired)
+	return repaired, finalGate, nil
+}
+
 // generateOutlineHierarchical generates outline using hierarchical approach
 // Supports incremental save and resume
 func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models.ProjectConfig) (*models.Outline, error) {
@@ -1183,6 +1223,8 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 		outline = &models.Outline{
 			Parts: skeletonOutput.Parts,
 		}
+		logic.NewIDManager(outline).AssignIDsToOutline()
+		applyOutlineNormalization(outline, "fresh_skeleton")
 
 		// Save skeleton as initial outline with empty chapter arrays.
 		if err := savePartialOutline(outline, outlinePath); err != nil {

@@ -271,7 +271,9 @@ func (dm *DSLMerger) mergeOutline(result *MergeResult, fragment *DSLFragment) er
 	if dsl.Characters != nil {
 		// Player placeholder
 		if dsl.Characters.Player != nil {
-			result.DSL.Characters.Player = dm.createPlaceholderCharacter(dsl.Characters.Player, fragment.Phase)
+			if result.DSL.Characters.Player == nil || result.DSL.Characters.Player.IsPlaceholder {
+				result.DSL.Characters.Player = dm.createPlaceholderCharacter(dsl.Characters.Player, fragment.Phase)
+			}
 		}
 
 		// Enemy placeholders
@@ -302,7 +304,7 @@ func (dm *DSLMerger) mergeOutline(result *MergeResult, fragment *DSLFragment) er
 
 	// Storyline (outline has the most complete structure)
 	if dsl.Storyline != nil {
-		result.DSL.Storyline = dsl.Storyline
+		result.DSL.Storyline = dm.mergeStoryline(result.DSL.Storyline, dsl.Storyline)
 	}
 
 	return nil
@@ -644,6 +646,46 @@ func (dm *DSLMerger) mergeRuleList(rules []Rule, newRule Rule) []Rule {
 		}
 	}
 	return append(rules, newRule)
+}
+
+func (dm *DSLMerger) mergeStoryline(current, incoming *Storyline) *Storyline {
+	if incoming == nil {
+		return current
+	}
+	if current == nil {
+		return incoming
+	}
+	if len(current.Arcs) == 0 && len(current.Chapters) == 0 {
+		return incoming
+	}
+
+	for _, arc := range incoming.Arcs {
+		current.Arcs = mergeArcByID(current.Arcs, arc)
+	}
+	for _, chapter := range incoming.Chapters {
+		current.Chapters = mergeChapterByID(current.Chapters, chapter)
+	}
+	return current
+}
+
+func mergeArcByID(arcs []Arc, incoming Arc) []Arc {
+	for i, arc := range arcs {
+		if arc.ID != "" && arc.ID == incoming.ID {
+			arcs[i] = incoming
+			return arcs
+		}
+	}
+	return append(arcs, incoming)
+}
+
+func mergeChapterByID(chapters []Chapter, incoming Chapter) []Chapter {
+	for i, chapter := range chapters {
+		if chapter.ID != "" && chapter.ID == incoming.ID {
+			chapters[i] = incoming
+			return chapters
+		}
+	}
+	return append(chapters, incoming)
 }
 
 func (dm *DSLMerger) materializeGenericEnemiesFromCombatRefs(result *MergeResult) {
