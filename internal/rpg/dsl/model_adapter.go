@@ -129,7 +129,11 @@ func (a *ModelAdapter) buildDefaultPlayer(dsl *DSL) {
 
 	// If craft characters are available, find the protagonist among them
 	if a.characters != nil {
-		for id, ch := range a.characters {
+		for _, id := range sortedCharacterKeys(a.characters) {
+			ch := a.characters[id]
+			if ch == nil {
+				continue
+			}
 			if ch.RoleInStory == "protagonist" || ch.RoleInStory == "主角" {
 				playerName = ch.Name
 				playerID = id
@@ -869,7 +873,11 @@ func (a *ModelAdapter) buildCharacters(dsl *DSL) {
 		return
 	}
 
-	for id, ch := range a.characters {
+	for _, id := range sortedCharacterKeys(a.characters) {
+		ch := a.characters[id]
+		if ch == nil {
+			continue
+		}
 		if isCraftProtagonist(ch) {
 			dsl.Characters.Player = &Player{
 				ID:           id,
@@ -943,7 +951,11 @@ func (a *ModelAdapter) buildLocations(dsl *DSL) {
 	// Clear placeholders first
 	dsl.World.Locations = nil
 
-	for id, loc := range a.locations {
+	for _, id := range sortedLocationKeys(a.locations) {
+		loc := a.locations[id]
+		if loc == nil {
+			continue
+		}
 		dslLoc := Location{
 			ID:          id,
 			Name:        loc.Name,
@@ -981,7 +993,11 @@ func (a *ModelAdapter) buildItems(dsl *DSL) {
 		return
 	}
 
-	for id, item := range a.items {
+	for _, id := range sortedItemKeys(a.items) {
+		item := a.items[id]
+		if item == nil {
+			continue
+		}
 		dsl.World.Items = append(dsl.World.Items, Item{
 			ID:          id,
 			Name:        item.Name,
@@ -1206,6 +1222,33 @@ func maxPairInt(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func sortedCharacterKeys(values map[string]*models.Character) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func sortedLocationKeys(values map[string]*models.Location) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func sortedItemKeys(values map[string]*models.Item) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func (a *ModelAdapter) inferPowerSystem() string {

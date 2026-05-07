@@ -507,7 +507,7 @@ func buildOrganizationWriteContext(chapter *models.Chapter, organizations map[st
 		return ""
 	}
 
-	haystack := strings.ToLower(strings.Join([]string{
+	haystackParts := []string{
 		chapter.ID,
 		chapter.Title,
 		chapter.Summary,
@@ -515,7 +515,40 @@ func buildOrganizationWriteContext(chapter *models.Chapter, organizations map[st
 		chapter.StateAnchor.Location,
 		strings.Join(chapter.Characters, " "),
 		strings.Join(chapter.GetBeats(), " "),
-	}, " "))
+		chapter.Conflict,
+		chapter.StateChange,
+	}
+	for _, scene := range chapter.Scenes {
+		haystackParts = append(haystackParts, scene.POV, scene.Goal, scene.Location, strings.Join(scene.Characters, " "), strings.Join(scene.Beats, " "))
+	}
+	for _, enemy := range chapter.Enemies {
+		haystackParts = append(haystackParts, enemy.Name, enemy.Faction, enemy.Tier, enemy.BossID, enemy.Status, enemy.Context)
+	}
+	for _, entry := range chapter.ResourceLedger {
+		haystackParts = append(haystackParts, entry.Item, entry.Reason)
+	}
+	for _, advance := range chapter.StorylineAdvances {
+		haystackParts = append(haystackParts, advance.StorylineName, advance.Stage, advance.Change, advance.Consequence, advance.Pressure)
+	}
+	for _, planted := range chapter.Mysteries.Planted {
+		haystackParts = append(haystackParts, planted.ID, planted.Clue)
+	}
+	for _, resolved := range chapter.Mysteries.Resolved {
+		haystackParts = append(haystackParts, resolved.ID, resolved.Resolution)
+	}
+	for _, event := range chapter.Events {
+		haystackParts = append(haystackParts,
+			event.GetActor(),
+			event.GetAction(),
+			event.GetTarget(),
+			event.GetTargetType(),
+			strings.Join(event.Characters, " "),
+			event.Context,
+			event.Details,
+			event.Result,
+		)
+	}
+	haystack := strings.ToLower(strings.Join(haystackParts, " "))
 
 	type organizationMatch struct {
 		id    string
@@ -528,17 +561,24 @@ func buildOrganizationWriteContext(chapter *models.Chapter, organizations map[st
 			continue
 		}
 		score := 0
-		candidates := []string{id, org.Name, org.Type, org.Headquarters, org.Leadership}
+		candidates := []string{id, org.Name, org.Headquarters, org.Leadership}
 		candidates = append(candidates, org.Members...)
 		candidates = append(candidates, org.Allies...)
 		candidates = append(candidates, org.Enemies...)
+		candidates = append(candidates, org.DSLTags...)
 		for _, candidate := range candidates {
 			candidate = strings.TrimSpace(candidate)
 			if candidate != "" && strings.Contains(haystack, strings.ToLower(candidate)) {
 				score++
 			}
 		}
+		if score == 0 {
+			continue
+		}
 		matches = append(matches, organizationMatch{id: id, org: org, score: score})
+	}
+	if len(matches) == 0 {
+		return ""
 	}
 	sort.SliceStable(matches, func(i, j int) bool {
 		if matches[i].score != matches[j].score {

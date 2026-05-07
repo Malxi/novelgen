@@ -284,6 +284,44 @@ func TestModelAdapterCraftUsesExplicitRPGMetadata(t *testing.T) {
 	}
 }
 
+func TestModelAdapterCraftOrdersMapBackedElements(t *testing.T) {
+	adapter := NewModelAdapterWithOrganizations(nil, nil,
+		map[string]*models.Character{
+			"zeta":  {Name: "Zeta", RoleInStory: "supporting"},
+			"alpha": {Name: "Alpha", RoleInStory: "supporting"},
+		},
+		map[string]*models.Location{
+			"zeta_base":  {Name: "Zeta Base"},
+			"alpha_mine": {Name: "Alpha Mine"},
+		},
+		map[string]*models.Item{
+			"zeta_key":  {Name: "Zeta Key"},
+			"alpha_key": {Name: "Alpha Key"},
+		},
+		map[string]*models.Organization{
+			"zeta_order":  {Name: "Zeta Order"},
+			"alpha_order": {Name: "Alpha Order"},
+		},
+	)
+
+	dslData, err := adapter.BuildDSL(PhaseCraft)
+	if err != nil {
+		t.Fatalf("build DSL: %v", err)
+	}
+	if len(dslData.Characters.NPCs) != 2 || dslData.Characters.NPCs[0].ID != "alpha" || dslData.Characters.NPCs[1].ID != "zeta" {
+		t.Fatalf("characters were not deterministic: %+v", dslData.Characters.NPCs)
+	}
+	if len(dslData.World.Locations) != 2 || dslData.World.Locations[0].ID != "alpha_mine" || dslData.World.Locations[1].ID != "zeta_base" {
+		t.Fatalf("locations were not deterministic: %+v", dslData.World.Locations)
+	}
+	if len(dslData.World.Items) != 2 || dslData.World.Items[0].ID != "alpha_key" || dslData.World.Items[1].ID != "zeta_key" {
+		t.Fatalf("items were not deterministic: %+v", dslData.World.Items)
+	}
+	if !strings.Contains(dslData.World.Rules[0].Name, "alpha_order") || !strings.Contains(dslData.World.Rules[1].Name, "zeta_order") {
+		t.Fatalf("organizations were not deterministic: %+v", dslData.World.Rules)
+	}
+}
+
 func writeJSON(t *testing.T, path string, value interface{}) {
 	t.Helper()
 	data, err := json.MarshalIndent(value, "", "  ")

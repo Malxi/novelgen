@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"strings"
 	"testing"
 
 	"novelgen/internal/models"
@@ -170,6 +171,83 @@ func TestCraftFiltersResolveNumericIDs(t *testing.T) {
 	}
 	if !containsString(byPart.Locations, "L") || containsString(byPart.Locations, "Elsewhere") {
 		t.Fatalf("unexpected part filter result: %+v", byPart.Locations)
+	}
+}
+
+func TestOrganizationWriteContextOnlyIncludesRelevantOrganizations(t *testing.T) {
+	chapter := &models.Chapter{
+		ID:      "P1-V1-C1",
+		Title:   "Mine Ambush",
+		Summary: "Chen Dong faces an Iron Hive patrol.",
+		Enemies: []models.OutlineEnemy{{
+			Name:    "Drone Guard",
+			Faction: "Iron Hive",
+		}},
+	}
+	organizations := map[string]*models.Organization{
+		"iron_hive": {
+			Name:        "Iron Hive",
+			Type:        "faction",
+			Description: "A machine cult controlling the lower mine shafts.",
+			Goals:       []string{"Hold the mine"},
+		},
+		"moon_court": {
+			Name:        "Moon Court",
+			Type:        "faction",
+			Description: "A distant aristocratic house.",
+			Goals:       []string{"Win court influence"},
+		},
+	}
+
+	got := buildOrganizationWriteContext(chapter, organizations)
+	if !strings.Contains(got, "Iron Hive") {
+		t.Fatalf("expected relevant organization in context, got %q", got)
+	}
+	if strings.Contains(got, "Moon Court") {
+		t.Fatalf("unmatched organization should not be injected into write context: %q", got)
+	}
+}
+
+func TestOrganizationWriteContextReturnsEmptyWithoutMatches(t *testing.T) {
+	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Quiet Camp"}
+	organizations := map[string]*models.Organization{
+		"moon_court": {Name: "Moon Court", Type: "faction"},
+	}
+
+	if got := buildOrganizationWriteContext(chapter, organizations); got != "" {
+		t.Fatalf("expected no organization context for unrelated chapter, got %q", got)
+	}
+}
+
+func TestNormalizeLoadedElementsCompactsAndDropsNilEntries(t *testing.T) {
+	characters := map[string]*models.Character{
+		"hero": {
+			DSLTags:    []string{"pilot", "pilot", ""},
+			PowerLevel: -1,
+		},
+		"nil": nil,
+	}
+	organizations := map[string]*models.Organization{
+		"guild": {
+			Goals:   []string{"survive", "survive", ""},
+			DSLTags: []string{"mine", "mine"},
+		},
+		"nil": nil,
+	}
+
+	normalizeLoadedElements(characters, nil, nil, organizations)
+
+	if _, ok := characters["nil"]; ok {
+		t.Fatalf("nil character entry should be dropped")
+	}
+	if characters["hero"].Name != "hero" || characters["hero"].PowerLevel != 0 || len(characters["hero"].DSLTags) != 1 {
+		t.Fatalf("character was not normalized: %+v", characters["hero"])
+	}
+	if _, ok := organizations["nil"]; ok {
+		t.Fatalf("nil organization entry should be dropped")
+	}
+	if organizations["guild"].Name != "guild" || len(organizations["guild"].Goals) != 1 || len(organizations["guild"].DSLTags) != 1 {
+		t.Fatalf("organization was not normalized: %+v", organizations["guild"])
 	}
 }
 

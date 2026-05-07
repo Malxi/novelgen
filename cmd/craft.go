@@ -1525,5 +1525,37 @@ func loadAllElements() (map[string]*models.Character, map[string]*models.Locatio
 		}
 	}
 
+	normalizeLoadedElements(characters, locations, items, organizations)
 	return characters, locations, items, organizations, nil
+}
+
+func normalizeLoadedElements(characters map[string]*models.Character, locations map[string]*models.Location, items map[string]*models.Item, organizations map[string]*models.Organization) {
+	for name, character := range characters {
+		if character == nil {
+			delete(characters, name)
+			continue
+		}
+		character.NormalizeForCraft(name)
+	}
+	for name, location := range locations {
+		if location == nil {
+			delete(locations, name)
+			continue
+		}
+		location.NormalizeForCraft(name)
+	}
+	for name, item := range items {
+		if item == nil {
+			delete(items, name)
+			continue
+		}
+		item.NormalizeForCraft(name)
+	}
+	for name, organization := range organizations {
+		if organization == nil {
+			delete(organizations, name)
+			continue
+		}
+		organization.NormalizeForCraft(name)
+	}
 }
