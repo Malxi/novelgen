@@ -1737,18 +1737,6 @@ func backupOutlineFiles() error {
 	return nil
 }
 
-func splitLinesAndTrim(s string) []string {
-	parts := strings.Split(s, "\n")
-	var result []string
-	for _, p := range parts {
-		trimmed := strings.TrimSpace(p)
-		if trimmed != "" {
-			result = append(result, trimmed)
-		}
-	}
-	return result
-}
-
 // runOutlineValidatorOnModel converts models.Outline to rpg.StoryOutline,
 // runs the outline validator, and returns issues as ReviewSuggestions.
 func runOutlineValidatorOnModel(outline *models.Outline) []models.ReviewSuggestion {

@@ -88,7 +88,6 @@ novelgen/
 │   │   ├── write_agent.go        # 写作 Agent
 │   │   ├── recap_agent.go        # 回顾 Agent
 │   │   ├── translate_agent.go    # 翻译 Agent
-│   │   ├── rpg_enhanced_write_agent.go  # RPG 增强写作
 │   │   ├── ai_rpg_pipeline.go    # AI→RPG 管道
 │   │   ├── chapter_analysis_agent.go    # 章节分析
 │   │   ├── chapter_to_dsl_agent.go      # 章节→DSL
@@ -148,7 +147,6 @@ novelgen/
 │   ├── DSL_RPG_INTEGRATION_SPEC.md    # DSL-RPG 集成规范
 │   ├── RPG_DSL_SPEC.md                # DSL 规格文档
 │   ├── DSL_INCREMENTAL_WORKFLOW.md    # 渐进式工作流
-│   ├── RPG_CONSTRAINT_INTEGRATION.md  # 约束系统集成
 │   ├── RPG_WRITE_USAGE.md             # RPG 写作指南
 │   ├── NOVELGEN_RPG_INTEGRATION.md    # RPG 集成指南
 │   └── rpg-compose-integration.md     # RPG-Compose 集成
@@ -265,7 +263,6 @@ type BaseAgent struct {
 - `CraftAgent` - 世界元素生成
 - `DraftAgent` - 草稿生成/评审/改进
 - `WriteAgent` - 最终章节生成
-- `RPGEnhancedWriteAgent` - RPG 约束增强写作
 - `RecapAgent` - 章节回顾提取
 - `TranslateAgent` - 翻译
 
@@ -370,9 +367,7 @@ novelgen_adapter.go (转换为 RPG World)
     ↓
 constraint_system.go (生成约束规则)
     ↓
-rpg_enhanced_write_agent.go (约束指导写作)
-    ↓
-simulation.go (剧情推演)
+write pipeline / simulate-dsl (剧情推演与反馈)
     ↓
 rpg_data.json (输出)
 ```
@@ -513,7 +508,6 @@ novelgen check-novel -b mine
 - [README.md](../README.md) - 主文档和命令参考
 - [docs/DSL_RPG_INTEGRATION_SPEC.md](docs/DSL_RPG_INTEGRATION_SPEC.md) - DSL-RPG 集成规范
 - [docs/RPG_DSL_SPEC.md](docs/RPG_DSL_SPEC.md) - DSL 规格文档
-- [docs/RPG_CONSTRAINT_INTEGRATION.md](docs/RPG_CONSTRAINT_INTEGRATION.md) - 约束系统集成
 - [docs/RPG_WRITE_USAGE.md](docs/RPG_WRITE_USAGE.md) - RPG 写作指南
 - [docs/DSL_INCREMENTAL_WORKFLOW.md](docs/DSL_INCREMENTAL_WORKFLOW.md) - 渐进式工作流
 - [docs/NOVELGEN_RPG_INTEGRATION.md](docs/NOVELGEN_RPG_INTEGRATION.md) - RPG 集成指南

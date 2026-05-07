@@ -46,85 +46,25 @@ Total Suggestions: 12
 [plot] 全局: 快节奏比例控制在30%-60%
 ```
 
-### 2. 在代码中使用 RPG 增强写作
+### 2. 在写作流水线中使用 RPG/DSL 反馈
 
-#### 基础用法
+当前写作路径使用 `WriteAgent`，并通过章节 DSL 生成、模拟和评审反馈把 RPG 约束纳入 `write pipeline`。
 
-```go
-package main
-
-import (
-    "context"
-    "novelgen/internal/agents"
-    "novelgen/internal/llm"
-    "novelgen/internal/models"
-)
-
-func main() {
-    // 1. 初始化 LLM 客户端
-    config := &llm.Config{/* ... */}
-    client := config.CreateClient(projectLLM)
-    
-    // 2. 加载故事数据
-    setup, outline := loadStoryData()
-    
-    // 3. 创建 RPG 增强写作 Agent
-    writeAgent, err := agents.NewRPGEnhancedWriteAgent(
-        client,
-        config,
-        projectLLM,
-        setup,
-        outline,
-        ".",        // projectPath
-        "mine",     // bookName
-    )
-    if err != nil {
-        panic(err)
-    }
-    
-    // 4. 获取约束报告（可选，用于查看约束）
-    constraintReport := writeAgent.GetConstraintReport()
-    
-    // 5. 生成章节（自动应用 RPG 约束）
-    chapter := findChapter(outline, "P1-V1-C1")
-    content, err := writeAgent.GenerateChapter(
-        context.Background(),
-        chapter,
-        chapterContext,
-        continuity,
-        3000,  // targetWords
-    )
-    if err != nil {
-        panic(err)
-    }
-    
-    // 6. 保存内容
-    saveContent(chapter.ID, content)
-}
+```bash
+novelgen write pipeline --emit-rpg-dsl --simulate-rpg
 ```
 
-#### 带约束验证的迭代写作
+常见工作流：
 
-```go
-// 使用 RPG 增强的迭代写作
-content, review, err := writeAgent.IterateChapterWithRPG(
-    ctx,
-    chapter,
-    chapterContext,
-    continuity,
-    3000,   // targetWords
-    initialContent,
-    3,      // maxIterations
-    80.0,   // qualityThreshold
-)
+1. `write pipeline` 生成或修复 `story/rpg/04_chapters.rpg`
+2. DSL 解析与验证先通过，才会被当作可用状态
+3. 模拟反馈会合并进章节评审/改稿建议
+4. 最终章节保存后，再刷新一次章节 DSL，使反馈基于实际正文
 
-// 检查是否有 RPG 约束违反
-for _, sug := range review.Suggestions {
-    if sug.Category == "rpg_constraint" {
-        fmt.Printf("RPG约束违反: %s\n", sug.Issue)
-        fmt.Printf("建议: %s\n", sug.Suggestion)
-    }
-}
+如需手动检查：
+
+```bash
+novelgen simulate-dsl
 ```
 
 ### 3. 自定义约束规则

@@ -616,19 +616,6 @@ func FilterImportantIssues(issues []rpgdsl.SimulationIssue) []rpgdsl.SimulationI
 	return important
 }
 
-// GroupIssuesByChapter 将 issues 按章节分组
-func GroupIssuesByChapter(issues []rpgdsl.SimulationIssue) map[string][]rpgdsl.SimulationIssue {
-	grouped := make(map[string][]rpgdsl.SimulationIssue)
-	for _, issue := range issues {
-		chapterID := issue.Chapter
-		if chapterID == "" {
-			chapterID = "_global_" // 全局问题
-		}
-		grouped[chapterID] = append(grouped[chapterID], issue)
-	}
-	return grouped
-}
-
 // FormatIssuesAsSuggestions 将 issues 格式化为 improvement suggestions
 func FormatIssuesAsSuggestions(issues []rpgdsl.SimulationIssue) string {
 	if len(issues) == 0 {

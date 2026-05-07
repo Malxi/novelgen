@@ -369,9 +369,7 @@ Producer:
 
 - `cmd/write.go`
 - `internal/agents/write_agent.go`
-- `internal/agents/rpg_enhanced_write_agent.go`
-- Skills: `write-generate`, `write-review`, `write-improve`, `volume-review`,
-  plus RPG-enhanced skills when present
+- Skills: `write-generate`, `write-review`, `write-improve`, `volume-review`
 
 Inputs:
 
@@ -575,7 +573,8 @@ Consumers:
 - RPG simulator and benchmark tools.
 - `ChapterContinuityBuilder` can fold generated RPG state deltas into write
   continuity through `models.RPGState`.
-- RPG-enhanced write agents use constraints and simulation feedback.
+- `write pipeline` can use generated DSL and simulation feedback to guide
+  review/improve decisions.
 
 Change checklist:
 

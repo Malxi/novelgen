@@ -24,7 +24,6 @@
 | [DSL_RPG_INTEGRATION_SPEC.md](DSL_RPG_INTEGRATION_SPEC.md) | DSL-RPG 集成规范，完整的架构设计和数据流 | 架构师/开发者 |
 | [RPG_DSL_SPEC.md](RPG_DSL_SPEC.md) | DSL 规格文档，详细的语法定义和函数库 | DSL 开发者 |
 | [DSL_INCREMENTAL_WORKFLOW.md](DSL_INCREMENTAL_WORKFLOW.md) | 渐进式生成工作流，分阶段 DSL 生成策略 | 高级用户 |
-| [RPG_CONSTRAINT_INTEGRATION.md](RPG_CONSTRAINT_INTEGRATION.md) | 约束系统集成方案，RPG 约束指导写作 | 开发者/内容创作者 |
 | [rpg-compose-integration.md](rpg-compose-integration.md) | RPG 与 Compose 大纲系统集成 | 开发者 |
 
 ### 历史记录
@@ -83,7 +82,6 @@
 面向实现和维护系统的开发者：
 
 - [RPG_DSL_SPEC.md](RPG_DSL_SPEC.md) - DSL 规格
-- [RPG_CONSTRAINT_INTEGRATION.md](RPG_CONSTRAINT_INTEGRATION.md) - 约束系统
 - [rpg-compose-integration.md](rpg-compose-integration.md) - Compose 集成
 
 ### 开发指南
@@ -115,7 +113,6 @@
 
 ### 约束系统
 
-- [RPG_CONSTRAINT_INTEGRATION.md](RPG_CONSTRAINT_INTEGRATION.md) - 约束方案
 - [RPG_WRITE_USAGE.md](RPG_WRITE_USAGE.md) - 约束使用指南
 - `internal/rpg/constraint_system.go` - 源码
 

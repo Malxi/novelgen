@@ -403,63 +403,6 @@ func (a *WriteAgent) ReviewVolume(ctx context.Context, volume *models.Volume, ch
 	return output.Result, nil
 }
 
-// IterateChapter runs the review-improvement loop for a chapter
-func (a *WriteAgent) IterateChapter(ctx context.Context, chapter *models.Chapter, context *ChapterContext, continuity *models.ChapterContinuity, targetWords int, initialContent string, maxIterations int, qualityThreshold float64) (string, *models.ReviewResult, error) {
-	logger.Section("WRITE AGENT - Chapter Iteration Loop")
-	logger.Info("Chapter: %s", chapter.ID)
-	logger.Info("Max iterations: %d", maxIterations)
-	logger.Info("Quality threshold: %.1f", qualityThreshold)
-
-	currentContent := initialContent
-	var finalReview *models.ReviewResult
-
-	for i := 1; i <= maxIterations; i++ {
-		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
-
-		// Review
-		review, err := a.ReviewChapter(ctx, chapter, context, continuity, currentContent, targetWords, i)
-		if err != nil {
-			return "", nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
-		}
-		finalReview = &review
-
-		// Check if quality meets threshold
-		if review.OverallScore >= qualityThreshold {
-			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", review.OverallScore, qualityThreshold)
-			break
-		}
-
-		// Check if this is the last iteration
-		if i == maxIterations {
-			logger.Warn("Max iterations reached, stopping iteration loop")
-			break
-		}
-
-		// Check if there are high priority suggestions
-		hasHighPriority := false
-		for _, s := range review.Suggestions {
-			if s.Priority == "high" {
-				hasHighPriority = true
-				break
-			}
-		}
-		if !hasHighPriority {
-			logger.Info("No high priority issues, stopping iteration")
-			break
-		}
-
-		// Improve
-		suggestions := formatWriteSuggestions(review.Suggestions)
-		improved, err := a.GenerateChapterWithSuggestions(ctx, chapter, context, continuity, targetWords, currentContent, suggestions, i)
-		if err != nil {
-			return "", nil, fmt.Errorf("improvement failed at iteration %d: %w", i, err)
-		}
-		currentContent = improved
-	}
-
-	return currentContent, finalReview, nil
-}
-
 // logWriteContext logs the write context to a markdown file for debugging
 func (a *WriteAgent) logWriteContext(chapterID, variant string, input interface{}, output string) error {
 	debugDir := filepath.Join("logs", "write_contexts")
@@ -616,20 +559,4 @@ func isCJK(r rune) bool {
 // formatContinuityForWrite formats the continuity snapshot for the prompt.
 func formatContinuityForWrite(continuity *models.ChapterContinuity, chapter *models.Chapter) string {
 	return logic.FormatChapterContinuity(continuity, chapter)
-}
-
-// formatStateMatrixForWrite is retained for legacy RPG-enhanced write paths
-// until they migrate to ChapterContinuity.
-func formatStateMatrixForWrite(state *models.StateMatrix, chapter *models.Chapter) string {
-	return logic.FormatStateMatrix(state, chapter)
-}
-
-// formatWriteSuggestions formats review suggestions for the improvement prompt
-func formatWriteSuggestions(suggestions []models.ReviewSuggestion) string {
-	var sb strings.Builder
-	for i, s := range suggestions {
-		sb.WriteString(fmt.Sprintf("%d. [%s] %s\n", i+1, s.Priority, s.Issue))
-		sb.WriteString(fmt.Sprintf("   Suggestion: %s\n\n", s.Suggestion))
-	}
-	return sb.String()
 }

@@ -32,7 +32,6 @@ RPG-DSL（Role-Playing Game Domain-Specific Language）是 Novelgen 的核心创
 
 | 文档 | 说明 | 适合人群 |
 |------|------|----------|
-| [RPG_CONSTRAINT_INTEGRATION.md](RPG_CONSTRAINT_INTEGRATION.md) | 约束系统集成方案，RPG 约束指导写作 | 开发者/内容创作者 |
 | [rpg-compose-integration.md](rpg-compose-integration.md) | RPG 与 Compose 大纲系统集成 | 开发者 |
 
 ---
@@ -173,14 +172,10 @@ novelgen simulate-dsl books/mine/story/rpg/final.rpg
 cat simulation_report.json
 ```
 
-### 场景 2: 约束写作
+### 场景 2: 写作时使用 DSL 反馈
 
-```go
-// 创建 RPG 增强写作 Agent
-agent := agents.NewRPGEnhancedWriteAgent(...)
-
-// 生成章节（自动应用约束）
-content := agent.GenerateChapter(ctx, chapter, ...)
+```bash
+novelgen write pipeline --emit-rpg-dsl --simulate-rpg
 ```
 
 ### 场景 3: 基准测试
@@ -247,7 +242,6 @@ A: 战力崩坏、角色死亡滥用、时间线混乱、节奏失衡、逻辑�
 - [README.md](../README.md) - 主文档和命令参考
 - `internal/rpg/dsl/` - DSL 引擎源码
 - `internal/rpg/benchmark/` - 基准测试源码
-- `internal/agents/rpg_enhanced_write_agent.go` - RPG 增强写作 Agent
 
 ---
 
