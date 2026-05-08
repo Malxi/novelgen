@@ -246,6 +246,58 @@ func TestNormalizeOutlineCanonicalizesLegacyIDs(t *testing.T) {
 	}
 }
 
+func TestNormalizeOutlinePayoffContracts(t *testing.T) {
+	outline := &Outline{
+		Parts: []Part{{
+			ID: "P1",
+			Volumes: []Volume{{
+				ID: "P1-V1",
+				PayoffContract: &VolumePayoffContract{
+					VolumeQuestion: "  Can the hero turn the arena rules?  ",
+					BigWin:         "  ",
+				},
+				Chapters: []Chapter{
+					{
+						ID:            "P1-V1-C1",
+						ChapterPayoff: &ChapterPayoff{},
+					},
+					{
+						ID: "P1-V1-C2",
+						ChapterPayoff: &ChapterPayoff{
+							PayoffMoment: "  The judge realizes the trap was legal.  ",
+						},
+					},
+				},
+			}, {
+				ID:             "P1-V2",
+				PayoffContract: &VolumePayoffContract{},
+			}},
+		}},
+	}
+
+	report := NormalizeOutline(outline)
+	volume := outline.Parts[0].Volumes[0]
+
+	if volume.PayoffContract == nil || volume.PayoffContract.VolumeQuestion != "Can the hero turn the arena rules?" {
+		t.Fatalf("volume payoff was not trimmed: %#v", volume.PayoffContract)
+	}
+	if volume.Chapters[0].ChapterPayoff != nil {
+		t.Fatalf("empty chapter payoff should be removed: %#v", volume.Chapters[0].ChapterPayoff)
+	}
+	if volume.Chapters[1].ChapterPayoff == nil || volume.Chapters[1].ChapterPayoff.PayoffMoment != "The judge realizes the trap was legal." {
+		t.Fatalf("chapter payoff was not trimmed: %#v", volume.Chapters[1].ChapterPayoff)
+	}
+	if outline.Parts[0].Volumes[1].PayoffContract != nil {
+		t.Fatalf("empty volume payoff should be removed: %#v", outline.Parts[0].Volumes[1].PayoffContract)
+	}
+	if !hasNormalizationChange(report, "drop_empty_chapter_payoff", "") {
+		t.Fatalf("missing empty chapter payoff cleanup: %#v", report.Changes)
+	}
+	if !hasNormalizationChange(report, "drop_empty_volume_payoff", "") {
+		t.Fatalf("missing empty volume payoff cleanup: %#v", report.Changes)
+	}
+}
+
 func hasNormalizationChange(report OutlineNormalizationReport, action, value string) bool {
 	for _, change := range report.Changes {
 		if change.Action == action && change.Value == value {

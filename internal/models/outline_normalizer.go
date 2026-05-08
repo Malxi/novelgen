@@ -40,6 +40,7 @@ func NormalizeOutline(outline *Outline) OutlineNormalizationReport {
 				normalizeChapterIdentity(&outline.Parts[pi].Volumes[vi], ci, &report)
 				normalizeChapterScenes(chapter, &report)
 				normalizeChapterTimeline(chapter, ci, &report)
+				normalizeChapterPayoff(chapter, &report)
 				normalizeChapterEvents(chapter, &report)
 				seen := make(map[string]bool, len(chapter.Characters))
 
@@ -68,6 +69,7 @@ func NormalizeOutline(outline *Outline) OutlineNormalizationReport {
 
 				normalizeStateAnchor(chapter, &report)
 			}
+			normalizeVolumePayoff(&outline.Parts[pi].Volumes[vi], &report)
 		}
 	}
 
@@ -270,6 +272,74 @@ func normalizeChapterTimeline(chapter *Chapter, chapterIndex int, report *Outlin
 			Path:   chapter.ID + ".timeline.anchor",
 			Action: "fill_timeline_anchor",
 			Value:  chapter.Timeline.Anchor,
+		})
+	}
+}
+
+func normalizeVolumePayoff(volume *Volume, report *OutlineNormalizationReport) {
+	if volume == nil || volume.PayoffContract == nil {
+		return
+	}
+
+	contract := volume.PayoffContract
+	before := *contract
+	contract.VolumeQuestion = strings.TrimSpace(contract.VolumeQuestion)
+	contract.PowerPromise = strings.TrimSpace(contract.PowerPromise)
+	contract.MainOpponentMisread = strings.TrimSpace(contract.MainOpponentMisread)
+	contract.BigWin = strings.TrimSpace(contract.BigWin)
+	contract.VisibleReward = strings.TrimSpace(contract.VisibleReward)
+	contract.ReputationShift = strings.TrimSpace(contract.ReputationShift)
+	contract.NextBiggerGame = strings.TrimSpace(contract.NextBiggerGame)
+
+	if contract.IsZero() {
+		volume.PayoffContract = nil
+		report.Changes = append(report.Changes, OutlineNormalizationChange{
+			Path:   volume.ID + ".payoff_contract",
+			Action: "drop_empty_volume_payoff",
+			Value:  "",
+		})
+		return
+	}
+
+	if *contract != before {
+		report.Changes = append(report.Changes, OutlineNormalizationChange{
+			Path:   volume.ID + ".payoff_contract",
+			Action: "trim_volume_payoff",
+			Value:  contract.VolumeQuestion,
+		})
+	}
+}
+
+func normalizeChapterPayoff(chapter *Chapter, report *OutlineNormalizationReport) {
+	if chapter == nil || chapter.ChapterPayoff == nil {
+		return
+	}
+
+	payoff := chapter.ChapterPayoff
+	before := *payoff
+	payoff.Desire = strings.TrimSpace(payoff.Desire)
+	payoff.Pressure = strings.TrimSpace(payoff.Pressure)
+	payoff.CleverMove = strings.TrimSpace(payoff.CleverMove)
+	payoff.PayoffMoment = strings.TrimSpace(payoff.PayoffMoment)
+	payoff.Reward = strings.TrimSpace(payoff.Reward)
+	payoff.SocialProof = strings.TrimSpace(payoff.SocialProof)
+	payoff.Hook = strings.TrimSpace(payoff.Hook)
+
+	if payoff.IsZero() {
+		chapter.ChapterPayoff = nil
+		report.Changes = append(report.Changes, OutlineNormalizationChange{
+			Path:   chapter.ID + ".chapter_payoff",
+			Action: "drop_empty_chapter_payoff",
+			Value:  "",
+		})
+		return
+	}
+
+	if *payoff != before {
+		report.Changes = append(report.Changes, OutlineNormalizationChange{
+			Path:   chapter.ID + ".chapter_payoff",
+			Action: "trim_chapter_payoff",
+			Value:  payoff.PayoffMoment,
 		})
 	}
 }

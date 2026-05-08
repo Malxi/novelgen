@@ -138,6 +138,9 @@ Required invariants:
   `signature_win`, `upgrade_path`, `opponent_misread`, and `reward_type`.
   Missing `appeal_engine` is valid for older projects; compose and write fall
   back to premise/rule/storyline text and review stages may suggest adding it.
+- `models.NormalizeStorySetup` and `StorySetup.Save` trim whitespace, remove
+  blank list items, drop empty appeal-engine blocks, and order progression
+  stages by level when possible before persistence.
 - Long-form genre setups should keep one root `Premise` string while splitting
   derived world logic into multiple `Premises[]` systems when useful. These
   systems give RPG/DSL conversion simulatable growth, enemy, faction, resource,
@@ -244,6 +247,8 @@ Required invariants:
   write review/improve, volume review, and markdown exports. Missing values are
   valid for old outlines; write falls back to scenes, beats, conflict, events,
   and storyline advances.
+- `models.NormalizeOutline` and `Outline.Save` trim payoff fields and drop
+  empty payoff containers before persistence.
 - `Events` are consumable through `Event.GetActor`, `GetAction`, `GetTarget`,
   and `GetTargetType`.
 - Code that consumes events should use accessor methods rather than direct field

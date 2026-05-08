@@ -291,6 +291,7 @@ const (
 
 // Save writes the outline to a file
 func (o *Outline) Save(path string) error {
+	NormalizeOutline(o)
 	data, err := json.MarshalIndent(o, "", "  ")
 	if err != nil {
 		return err

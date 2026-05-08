@@ -139,6 +139,7 @@ type WorldResource struct {
 
 // Save writes the story setup to a file
 func (s *StorySetup) Save(path string) error {
+	NormalizeStorySetup(s)
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err

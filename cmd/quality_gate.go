@@ -15,6 +15,7 @@ type qualityGateResult struct {
 
 func runSetupQualityGate(setup *models.StorySetup) qualityGateResult {
 	var result qualityGateResult
+	models.NormalizeStorySetup(setup)
 	result.add(validateStorySetupDirect(setup)...)
 
 	adapter := dsl.NewModelAdapter(setup, nil, nil, nil, nil)
@@ -29,6 +30,8 @@ func runSetupQualityGate(setup *models.StorySetup) qualityGateResult {
 
 func runOutlineQualityGate(setup *models.StorySetup, outline *models.Outline) qualityGateResult {
 	var result qualityGateResult
+	models.NormalizeStorySetup(setup)
+	models.NormalizeOutline(outline)
 	result.add(validateOutlineDirect(setup, outline)...)
 	result.add(runOutlineValidatorOnModel(outline)...)
 
@@ -199,6 +202,15 @@ func validateStorySetupDirect(setup *models.StorySetup) []models.ReviewSuggestio
 		if storyline.Importance >= 8 && !hasStorylineArcContract(storyline) {
 			suggestions = append(suggestions, qualitySuggestion("plot", target, storyline.Name, "important storyline lacks an arc contract", "Add high-level scope, setup_role, payoff_style, and 2-4 pressure_points so outline generation knows how long the promise runs and what kind of pressure to apply.", models.PriorityMedium))
 		}
+		if storyline.Importance >= 8 {
+			if missing := missingAppealEngineFields(storyline.AppealEngine); len(missing) > 0 {
+				issue := "important storyline lacks a complete appeal_engine"
+				if storyline.AppealEngine != nil && appealEngineCompleteness(storyline.AppealEngine) > 0 {
+					issue = "important storyline has a thin appeal_engine"
+				}
+				suggestions = append(suggestions, qualitySuggestion("appeal", target, storyline.Name, issue, fmt.Sprintf("Fill setup.storylines[].appeal_engine fields for a repeatable power-fantasy promise: %s.", strings.Join(missing, ", ")), models.PriorityMedium))
+			}
+		}
 	}
 
 	for i, premise := range setup.Premises {
@@ -209,6 +221,15 @@ func validateStorySetupDirect(setup *models.StorySetup) []models.ReviewSuggestio
 		if len(premise.Progression) == 0 {
 			suggestions = append(suggestions, qualitySuggestion("logic", target, premise.Name, "premise has no progression ladder", "Add progression stages with levels, boundaries, and requirements.", models.PriorityMedium))
 			continue
+		}
+		if storySetupWantsExpandedSystems(setup) {
+			if missing := missingAppealEngineFields(premise.AppealEngine); len(missing) > 0 {
+				issue := "core premise lacks appeal_engine"
+				if premise.AppealEngine != nil && appealEngineCompleteness(premise.AppealEngine) > 0 {
+					issue = "core premise has a thin appeal_engine"
+				}
+				suggestions = append(suggestions, qualitySuggestion("appeal", target, premise.Name, issue, fmt.Sprintf("Clarify how this setting system creates fun wins by filling: %s.", strings.Join(missing, ", ")), models.PriorityMedium))
+			}
 		}
 		previousLevel := -1
 		for j, stage := range premise.Progression {
@@ -300,6 +321,15 @@ func validateOutlineDirect(setup *models.StorySetup, outline *models.Outline) []
 			if len(volume.Chapters) == 0 {
 				suggestions = append(suggestions, qualitySuggestion("structure", volumeTarget, volume.Title, "volume has no chapters", "Generate chapters for this volume.", models.PriorityHigh))
 			}
+			if len(volume.Chapters) > 0 {
+				if missing := missingVolumePayoffFields(volume.PayoffContract); len(missing) > 0 {
+					issue := "volume lacks payoff_contract"
+					if volume.PayoffContract != nil && volumePayoffCompleteness(volume.PayoffContract) > 0 {
+						issue = "volume has a thin payoff_contract"
+					}
+					suggestions = append(suggestions, qualitySuggestion("appeal", volumeTarget, volume.Title, issue, fmt.Sprintf("Fill payoff_contract so this volume has a clear reader promise and big win: %s.", strings.Join(missing, ", ")), models.PriorityMedium))
+				}
+			}
 			for chapIdx := range volume.Chapters {
 				chapter := &volume.Chapters[chapIdx]
 				totalStorylineAdvances += len(chapter.StorylineAdvances)
@@ -345,6 +375,15 @@ func validateChapterDirect(chapter *models.Chapter, setupResources map[string]bo
 		suggestions = append(suggestions, qualitySuggestion("plot", target, chapter.Title, "chapter has no events", "Add 3-5 concrete state-changing events.", models.PriorityHigh))
 	} else if len(chapter.Events) < 3 || len(chapter.Events) > 5 {
 		suggestions = append(suggestions, qualitySuggestion("plot", target, chapter.Title, "chapter event count should be 3-5", "Split or consolidate events so each one records a meaningful state change.", models.PriorityMedium))
+	}
+	if len(chapter.Events) > 0 {
+		if missing := missingChapterPayoffFields(chapter.ChapterPayoff); len(missing) > 0 {
+			issue := "chapter lacks chapter_payoff"
+			if chapter.ChapterPayoff != nil && chapterPayoffCompleteness(chapter.ChapterPayoff) > 0 {
+				issue = "chapter has a thin chapter_payoff"
+			}
+			suggestions = append(suggestions, qualitySuggestion("appeal", target, chapter.Title, issue, fmt.Sprintf("Fill chapter_payoff so write generation can dramatize the win pattern: %s.", strings.Join(missing, ", ")), models.PriorityMedium))
+		}
 	}
 
 	hasCombat := false
@@ -456,4 +495,144 @@ func coalesceString(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func appealEngineCompleteness(engine *models.AppealEngine) int {
+	if engine == nil {
+		return 0
+	}
+	count := 0
+	for _, value := range []string{
+		engine.Appeal,
+		engine.SurfaceLimit,
+		engine.Exploit,
+		engine.SignatureWin,
+		engine.UpgradePath,
+		engine.OpponentMisread,
+		engine.RewardType,
+	} {
+		if strings.TrimSpace(value) != "" {
+			count++
+		}
+	}
+	return count
+}
+
+func missingAppealEngineFields(engine *models.AppealEngine) []string {
+	fields := []struct {
+		name  string
+		value string
+	}{
+		{"appeal", engineValue(engine, func(e *models.AppealEngine) string { return e.Appeal })},
+		{"surface_limit", engineValue(engine, func(e *models.AppealEngine) string { return e.SurfaceLimit })},
+		{"exploit", engineValue(engine, func(e *models.AppealEngine) string { return e.Exploit })},
+		{"signature_win", engineValue(engine, func(e *models.AppealEngine) string { return e.SignatureWin })},
+		{"upgrade_path", engineValue(engine, func(e *models.AppealEngine) string { return e.UpgradePath })},
+		{"opponent_misread", engineValue(engine, func(e *models.AppealEngine) string { return e.OpponentMisread })},
+		{"reward_type", engineValue(engine, func(e *models.AppealEngine) string { return e.RewardType })},
+	}
+	var missing []string
+	for _, field := range fields {
+		if strings.TrimSpace(field.value) == "" {
+			missing = append(missing, field.name)
+		}
+	}
+	return missing
+}
+
+func engineValue(engine *models.AppealEngine, pick func(*models.AppealEngine) string) string {
+	if engine == nil {
+		return ""
+	}
+	return pick(engine)
+}
+
+func volumePayoffCompleteness(contract *models.VolumePayoffContract) int {
+	if contract == nil {
+		return 0
+	}
+	count := 0
+	for _, value := range []string{
+		contract.VolumeQuestion,
+		contract.PowerPromise,
+		contract.MainOpponentMisread,
+		contract.BigWin,
+		contract.VisibleReward,
+		contract.ReputationShift,
+		contract.NextBiggerGame,
+	} {
+		if strings.TrimSpace(value) != "" {
+			count++
+		}
+	}
+	return count
+}
+
+func missingVolumePayoffFields(contract *models.VolumePayoffContract) []string {
+	if contract == nil {
+		return []string{"volume_question", "power_promise", "main_opponent_misread", "big_win", "visible_reward", "reputation_shift", "next_bigger_game"}
+	}
+	var missing []string
+	for _, field := range []struct {
+		name  string
+		value string
+	}{
+		{"volume_question", contract.VolumeQuestion},
+		{"power_promise", contract.PowerPromise},
+		{"main_opponent_misread", contract.MainOpponentMisread},
+		{"big_win", contract.BigWin},
+		{"visible_reward", contract.VisibleReward},
+		{"reputation_shift", contract.ReputationShift},
+		{"next_bigger_game", contract.NextBiggerGame},
+	} {
+		if strings.TrimSpace(field.value) == "" {
+			missing = append(missing, field.name)
+		}
+	}
+	return missing
+}
+
+func chapterPayoffCompleteness(payoff *models.ChapterPayoff) int {
+	if payoff == nil {
+		return 0
+	}
+	count := 0
+	for _, value := range []string{
+		payoff.Desire,
+		payoff.Pressure,
+		payoff.CleverMove,
+		payoff.PayoffMoment,
+		payoff.Reward,
+		payoff.SocialProof,
+		payoff.Hook,
+	} {
+		if strings.TrimSpace(value) != "" {
+			count++
+		}
+	}
+	return count
+}
+
+func missingChapterPayoffFields(payoff *models.ChapterPayoff) []string {
+	if payoff == nil {
+		return []string{"desire", "pressure", "clever_move", "payoff_moment", "reward", "social_proof", "hook"}
+	}
+	var missing []string
+	for _, field := range []struct {
+		name  string
+		value string
+	}{
+		{"desire", payoff.Desire},
+		{"pressure", payoff.Pressure},
+		{"clever_move", payoff.CleverMove},
+		{"payoff_moment", payoff.PayoffMoment},
+		{"reward", payoff.Reward},
+		{"social_proof", payoff.SocialProof},
+		{"hook", payoff.Hook},
+	} {
+		if strings.TrimSpace(field.value) == "" {
+			missing = append(missing, field.name)
+		}
+	}
+	return missing
 }

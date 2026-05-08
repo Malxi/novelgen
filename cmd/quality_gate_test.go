@@ -32,6 +32,7 @@ func TestValidateStorySetupDirectFindsMissingContractFields(t *testing.T) {
 	assertHasIssue(t, suggestions, "required setup field is empty")
 	assertHasIssue(t, suggestions, "important storyline is under-specified")
 	assertHasIssue(t, suggestions, "important storyline lacks an arc contract")
+	assertHasIssue(t, suggestions, "important storyline lacks a complete appeal_engine")
 	assertHasIssue(t, suggestions, "progression levels are not increasing")
 	assertHasIssue(t, suggestions, "duplicate world resource name")
 }
@@ -115,6 +116,8 @@ func TestValidateOutlineDirectFindsChapterContractIssues(t *testing.T) {
 	assertHasIssue(t, suggestions, "chapter event count should be 3-5")
 	assertHasIssue(t, suggestions, "combat chapter has no enemies")
 	assertHasIssue(t, suggestions, "chapter has no scenes")
+	assertHasIssue(t, suggestions, "chapter lacks chapter_payoff")
+	assertHasIssue(t, suggestions, "volume lacks payoff_contract")
 	assertHasIssue(t, suggestions, "time jump lacks transition")
 	assertHasIssue(t, suggestions, "resource ledger arithmetic is invalid")
 	assertHasIssue(t, suggestions, "is not declared in setup.world_resources")
