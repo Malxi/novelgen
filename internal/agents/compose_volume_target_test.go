@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"strings"
 	"testing"
 
 	"novelgen/internal/models"
@@ -85,5 +86,47 @@ func TestPreserveImprovedVolumeIdentityKeepsStableIDs(t *testing.T) {
 	}
 	if improved.Chapters[2].ID != "p1-v10-c3" {
 		t.Fatalf("extra chapter id should be untouched, got %q", improved.Chapters[2].ID)
+	}
+}
+
+func TestAppealAndPayoffBriefsSkipEmptyAndKeepUpgradePath(t *testing.T) {
+	appeal := formatAppealEngineBrief("Appeal", &models.AppealEngine{
+		Appeal:      "wins through timing",
+		UpgradePath: "predicts longer chains",
+	})
+	if !strings.Contains(appeal, "upgrade_path=predicts longer chains") {
+		t.Fatalf("appeal brief missing upgrade path: %q", appeal)
+	}
+
+	emptyVolume := formatVolumeBrief(models.Volume{
+		ID:             "P1-V1",
+		Title:          "Empty",
+		Summary:        "No payoff yet",
+		PayoffContract: &models.VolumePayoffContract{},
+	})
+	if strings.Contains(emptyVolume, "Payoff:") {
+		t.Fatalf("empty payoff contract should not be formatted:\n%s", emptyVolume)
+	}
+
+	emptyChapter := formatChapterBrief(models.Chapter{
+		ID:            "P1-V1-C1",
+		Title:         "Empty",
+		Summary:       "No chapter payoff yet",
+		ChapterPayoff: &models.ChapterPayoff{},
+	})
+	if strings.Contains(emptyChapter, "payoff:") {
+		t.Fatalf("empty chapter payoff should not be formatted:\n%s", emptyChapter)
+	}
+
+	partialChapter := formatChapterBrief(models.Chapter{
+		ID:      "P1-V1-C2",
+		Title:   "Partial",
+		Summary: "Only a payoff moment is known",
+		ChapterPayoff: &models.ChapterPayoff{
+			PayoffMoment: "The guard salutes an empty corner.",
+		},
+	})
+	if strings.Contains(partialChapter, "->") || !strings.Contains(partialChapter, "moment=The guard salutes an empty corner.") {
+		t.Fatalf("partial chapter payoff should format only populated fields:\n%s", partialChapter)
 	}
 }

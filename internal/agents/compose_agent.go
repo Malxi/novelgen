@@ -564,6 +564,9 @@ func formatAppealEngineBrief(prefix string, engine *models.AppealEngine) string 
 	if strings.TrimSpace(engine.SignatureWin) != "" {
 		parts = append(parts, "signature_win="+clipForPrompt(engine.SignatureWin, 120))
 	}
+	if strings.TrimSpace(engine.UpgradePath) != "" {
+		parts = append(parts, "upgrade_path="+clipForPrompt(engine.UpgradePath, 120))
+	}
 	if strings.TrimSpace(engine.OpponentMisread) != "" {
 		parts = append(parts, "opponent_misread="+clipForPrompt(engine.OpponentMisread, 120))
 	}
@@ -652,12 +655,8 @@ func (a *ComposeAgent) buildVolumeImproveContext(outline *models.Outline, partID
 func formatVolumeBrief(volume models.Volume) string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("- %s (%s): %s\n", volume.Title, volume.ID, clipForPrompt(volume.Summary, 500)))
-	if volume.PayoffContract != nil {
-		b.WriteString(fmt.Sprintf("  Payoff: question=%s | big_win=%s | reward=%s | next=%s\n",
-			clipForPrompt(volume.PayoffContract.VolumeQuestion, 120),
-			clipForPrompt(volume.PayoffContract.BigWin, 140),
-			clipForPrompt(volume.PayoffContract.VisibleReward, 100),
-			clipForPrompt(volume.PayoffContract.NextBiggerGame, 120)))
+	if payoff := formatVolumePayoffBrief(volume.PayoffContract); payoff != "" {
+		b.WriteString("  Payoff: " + payoff + "\n")
 	}
 	if len(volume.Chapters) > 0 {
 		first := volume.Chapters[0]
@@ -666,6 +665,35 @@ func formatVolumeBrief(volume models.Volume) string {
 		b.WriteString(fmt.Sprintf("  Ends with: %s - %s\n", last.Title, clipForPrompt(last.Summary, 180)))
 	}
 	return b.String()
+}
+
+func formatVolumePayoffBrief(payoff *models.VolumePayoffContract) string {
+	if payoff.IsZero() {
+		return ""
+	}
+	var parts []string
+	if strings.TrimSpace(payoff.VolumeQuestion) != "" {
+		parts = append(parts, "question="+clipForPrompt(payoff.VolumeQuestion, 120))
+	}
+	if strings.TrimSpace(payoff.PowerPromise) != "" {
+		parts = append(parts, "promise="+clipForPrompt(payoff.PowerPromise, 120))
+	}
+	if strings.TrimSpace(payoff.MainOpponentMisread) != "" {
+		parts = append(parts, "misread="+clipForPrompt(payoff.MainOpponentMisread, 120))
+	}
+	if strings.TrimSpace(payoff.BigWin) != "" {
+		parts = append(parts, "big_win="+clipForPrompt(payoff.BigWin, 140))
+	}
+	if strings.TrimSpace(payoff.VisibleReward) != "" {
+		parts = append(parts, "reward="+clipForPrompt(payoff.VisibleReward, 100))
+	}
+	if strings.TrimSpace(payoff.ReputationShift) != "" {
+		parts = append(parts, "reputation="+clipForPrompt(payoff.ReputationShift, 100))
+	}
+	if strings.TrimSpace(payoff.NextBiggerGame) != "" {
+		parts = append(parts, "next="+clipForPrompt(payoff.NextBiggerGame, 120))
+	}
+	return strings.Join(parts, " | ")
 }
 
 func formatChapterBrief(ch models.Chapter) string {
@@ -692,14 +720,41 @@ func formatChapterBrief(ch models.Chapter) string {
 	}
 
 	payoffLine := ""
-	if ch.ChapterPayoff != nil {
-		payoffLine = fmt.Sprintf(" | payoff: %s -> %s",
-			clipForPrompt(ch.ChapterPayoff.CleverMove, 100),
-			clipForPrompt(ch.ChapterPayoff.PayoffMoment, 120))
+	if payoff := formatChapterPayoffBrief(ch.ChapterPayoff); payoff != "" {
+		payoffLine = " | payoff: " + payoff
 	}
 
 	return fmt.Sprintf("- %s %s: %s | %s%s | first beat: %s | last beat: %s\n",
 		ch.ID, ch.Title, clipForPrompt(ch.Summary, 240), stateLine, payoffLine, clipForPrompt(firstBeat, 120), clipForPrompt(lastBeat, 120))
+}
+
+func formatChapterPayoffBrief(payoff *models.ChapterPayoff) string {
+	if payoff.IsZero() {
+		return ""
+	}
+	var parts []string
+	if strings.TrimSpace(payoff.Desire) != "" {
+		parts = append(parts, "desire="+clipForPrompt(payoff.Desire, 90))
+	}
+	if strings.TrimSpace(payoff.Pressure) != "" {
+		parts = append(parts, "pressure="+clipForPrompt(payoff.Pressure, 90))
+	}
+	if strings.TrimSpace(payoff.CleverMove) != "" {
+		parts = append(parts, "move="+clipForPrompt(payoff.CleverMove, 100))
+	}
+	if strings.TrimSpace(payoff.PayoffMoment) != "" {
+		parts = append(parts, "moment="+clipForPrompt(payoff.PayoffMoment, 120))
+	}
+	if strings.TrimSpace(payoff.Reward) != "" {
+		parts = append(parts, "reward="+clipForPrompt(payoff.Reward, 90))
+	}
+	if strings.TrimSpace(payoff.SocialProof) != "" {
+		parts = append(parts, "proof="+clipForPrompt(payoff.SocialProof, 90))
+	}
+	if strings.TrimSpace(payoff.Hook) != "" {
+		parts = append(parts, "hook="+clipForPrompt(payoff.Hook, 100))
+	}
+	return strings.Join(parts, " | ")
 }
 
 func compactReviewForPrompt(review models.ReviewResult) models.ReviewResult {
