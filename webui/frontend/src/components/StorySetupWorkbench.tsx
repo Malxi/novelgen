@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { createTask, getStorySetup, getTask, getTemplates, saveJSONFile } from '../api';
 import { VersionHistory } from './VersionHistory';
-import type { Premise, PremiseProgression, StorySetup, Storyline, Task, TemplateLibrary, WorldResource } from '../types';
+import type { CoreCastSeed, LongFormPlan, Premise, PremiseProgression, StorySetup, Storyline, Task, TemplateLibrary, WorldResource } from '../types';
 
 interface StorySetupWorkbenchProps {
   projectPath: string;
@@ -32,6 +32,8 @@ const emptySetup: StorySetup = {
   tone: '',
   tense: '',
   pov_style: '',
+  long_form_plan: undefined,
+  core_cast: [],
   storylines: [],
   premises: [],
   world_timeline: [],
@@ -63,6 +65,30 @@ const createPremise = (): Premise => ({
   description: '',
   category: '修炼体系',
   progression: [],
+});
+
+const createLongFormPlan = (): LongFormPlan => ({
+  target_chapters: 1000,
+  target_volumes: 10,
+  main_loop: 'pressure -> opponent misread -> clever exploit -> visible win -> reward -> bigger game',
+  escalation_ladder: [],
+  reader_promises: [],
+  payoff_cadence: '',
+  volume_pattern: ['hook', 'pressure', 'misread', 'exploit', 'big win', 'visible reward', 'next gate'],
+  midpoint_mutation: '',
+  endgame_promise: '',
+});
+
+const createCoreCastSeed = (): CoreCastSeed => ({
+  name: 'New Cast Seed',
+  role: 'ally',
+  importance: 8,
+  story_function: '',
+  relationship_to_lead: '',
+  relationship_arc: '',
+  entry_phase: 'early',
+  payoff: '',
+  storyline_refs: [],
 });
 
 const createProgressionStage = (level: number): PremiseProgression => ({
@@ -221,6 +247,8 @@ export function StorySetupWorkbench({ projectPath }: StorySetupWorkbenchProps) {
 
   const storylines = setup.storylines || [];
   const premises = setup.premises || [];
+  const coreCast = setup.core_cast || [];
+  const longFormPlan = setup.long_form_plan;
   const worldResources = setup.world_resources || [];
   const progressionTemplates = (templates?.templates || []).filter((item) => item.kind === 'progression');
   const resourceTierTemplates = (templates?.templates || []).filter((item) => item.kind === 'resource_tier');
@@ -230,8 +258,21 @@ export function StorySetupWorkbench({ projectPath }: StorySetupWorkbenchProps) {
     const contracted = storylines.filter(
       (item) => (item.must_include?.length || 0) > 0 && (item.must_avoid?.length || 0) > 0 && (item.pressure_points?.length || 0) > 0
     ).length;
-    return { important, contracted };
-  }, [storylines]);
+    const longFormReady = Boolean(
+      longFormPlan?.main_loop &&
+        (longFormPlan.escalation_ladder?.length || 0) >= 4 &&
+        (longFormPlan.reader_promises?.length || 0) >= 3 &&
+        longFormPlan.payoff_cadence &&
+        (longFormPlan.volume_pattern?.length || 0) >= 4
+    );
+    const setupBloat =
+      (coreCast.length > 12 ? 1 : 0) +
+      (storylines.length > 12 ? 1 : 0) +
+      (premises.length > 8 ? 1 : 0) +
+      ((setup.rules?.length || 0) > 15 ? 1 : 0) +
+      (worldResources.length > 12 ? 1 : 0);
+    return { important, contracted, longFormReady, setupBloat };
+  }, [coreCast.length, longFormPlan, premises.length, setup.rules?.length, storylines, worldResources.length]);
 
   const loadSetup = useCallback(async () => {
     setError(null);
@@ -240,6 +281,8 @@ export function StorySetupWorkbench({ projectPath }: StorySetupWorkbenchProps) {
       const next = {
         ...emptySetup,
         ...data,
+        long_form_plan: data.long_form_plan,
+        core_cast: data.core_cast || [],
         storylines: data.storylines || [],
         premises: data.premises || [],
         world_resources: data.world_resources || [],
@@ -317,6 +360,64 @@ export function StorySetupWorkbench({ projectPath }: StorySetupWorkbenchProps) {
   function updateSetupField<K extends keyof StorySetup>(field: K, value: StorySetup[K]) {
     setDirty(true);
     setSetup((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateLongFormPlan(patch: Partial<LongFormPlan>) {
+    setDirty(true);
+    setSetup((current) => ({ ...current, long_form_plan: { ...(current.long_form_plan || createLongFormPlan()), ...patch } }));
+  }
+
+  function ensureLongFormPlan() {
+    setDirty(true);
+    setSetup((current) => ({ ...current, long_form_plan: current.long_form_plan || createLongFormPlan() }));
+  }
+
+  function clearLongFormPlan() {
+    setDirty(true);
+    setSetup((current) => ({ ...current, long_form_plan: undefined }));
+  }
+
+  function addLongFormPlanWithAI() {
+    runSetupTask('improve', {
+      prompt: `Add or refine only long_form_plan as a compact serial capacity contract. User request: ${prompt.trim() || 'make this setup stable for a 1000-chapter web novel with repeatable loop, escalation ladder, reader promises, payoff cadence, volume pattern, midpoint mutation, and endgame promise'}. Do not rewrite storylines, premises, or full character cards.`,
+      force: true,
+      'max-rounds': 1,
+    });
+  }
+
+  function updateCoreCast(index: number, patch: Partial<CoreCastSeed>) {
+    setDirty(true);
+    setSetup((current) => {
+      const next = [...(current.core_cast || [])];
+      next[index] = { ...next[index], ...patch };
+      return { ...current, core_cast: next };
+    });
+  }
+
+  function addCoreCastSeed() {
+    setDirty(true);
+    setSetup((current) => ({ ...current, core_cast: [...(current.core_cast || []), createCoreCastSeed()] }));
+  }
+
+  function addCoreCastWithAI() {
+    runSetupTask('improve', {
+      prompt: `Add or refine only core_cast seeds. User request: ${prompt.trim() || 'seed protagonist, leads, rivals, mentors, allies, and antagonist pressure for long-form fiction'}. Keep each seed compact: role, importance, story_function, relationship_arc, entry_phase, payoff, storyline_refs. Do not create full character cards or biographies.`,
+      force: true,
+      'max-rounds': 1,
+    });
+  }
+
+  function removeCoreCastSeed(index: number) {
+    setDirty(true);
+    setSetup((current) => ({ ...current, core_cast: (current.core_cast || []).filter((_, itemIndex) => itemIndex !== index) }));
+  }
+
+  function compactSetupWithAI() {
+    runSetupTask('improve', {
+      prompt: `Compress story setup for stable prompting. Keep setup as contracts and seeds, not encyclopedia. Target: core_cast <= 12, storylines <= 12, premises <= 8, rules <= 15, resources <= 12. Preserve important promises, payoff engines, long_form_plan, and IDs/names. Move implied full biographies/lore/catalog detail out of setup conceptually instead of adding more text.`,
+      force: true,
+      'max-rounds': 1,
+    });
   }
 
   function updateStoryline(index: number, patch: Partial<Storyline>) {
@@ -464,6 +565,8 @@ export function StorySetupWorkbench({ projectPath }: StorySetupWorkbenchProps) {
       await saveSetup({
         ...emptySetup,
         ...parsed,
+        long_form_plan: parsed.long_form_plan,
+        core_cast: parsed.core_cast || [],
         storylines: parsed.storylines || [],
         premises: parsed.premises || [],
         world_resources: parsed.world_resources || [],
@@ -541,6 +644,9 @@ export function StorySetupWorkbench({ projectPath }: StorySetupWorkbenchProps) {
               <button className="btn btn-secondary" onClick={() => runSetupTask('storyline-review', { prompt, apply: true })}>
                 AI/DSL Review 后应用
               </button>
+              <button className="btn btn-secondary" onClick={compactSetupWithAI}>
+                Compact setup for stable AI context
+              </button>
               <button className="btn btn-secondary" onClick={() => runSetupTask('check', {})}>
                 只运行确定性检查
               </button>
@@ -563,6 +669,25 @@ export function StorySetupWorkbench({ projectPath }: StorySetupWorkbenchProps) {
             <div className="metric-card">
               <p className="text-2xl font-bold">{worldResources.length}</p>
               <p className="text-xs text-[var(--text-muted)]">核心资源</p>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-2 gap-3">
+            <div className="metric-card">
+              <p className="text-2xl font-bold">{coreCast.length}</p>
+              <p className="text-xs text-[var(--text-muted)]">Core cast seeds</p>
+            </div>
+            <div className="metric-card">
+              <p className="text-2xl font-bold">{texture.longFormReady ? 'OK' : '-'}</p>
+              <p className="text-xs text-[var(--text-muted)]">Long-form plan</p>
+            </div>
+            <div className="metric-card">
+              <p className="text-2xl font-bold">{texture.setupBloat}</p>
+              <p className="text-xs text-[var(--text-muted)]">Prompt budget warnings</p>
+            </div>
+            <div className="metric-card">
+              <p className="text-2xl font-bold">{setup.rules?.length || 0}</p>
+              <p className="text-xs text-[var(--text-muted)]">Core rules</p>
             </div>
           </section>
 
@@ -620,6 +745,146 @@ export function StorySetupWorkbench({ projectPath }: StorySetupWorkbenchProps) {
                     <input className="input" value={setup.pov_style || ''} onChange={(event) => updateSetupField('pov_style', event.target.value)} />
                   </Field>
                 </div>
+              </div>
+
+              <div id="setup-longform" className="scroll-mt-20 panel panel-pad space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="font-semibold">Long-form plan</h2>
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">Compact serial contract for 300-1000 chapter projects. Keep this as loops, cadence, promises, and escalation, not a chapter outline.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="btn btn-secondary" onClick={addLongFormPlanWithAI}>
+                      <Sparkles className="h-4 w-4" />
+                      AI refine
+                    </button>
+                    {longFormPlan ? (
+                      <ConfirmButton className="btn btn-secondary" confirmText="Clear plan" onConfirm={clearLongFormPlan}>
+                        <Trash2 className="h-4 w-4" />
+                        Clear
+                      </ConfirmButton>
+                    ) : (
+                      <button className="btn btn-primary" onClick={ensureLongFormPlan}>
+                        <Plus className="h-4 w-4" />
+                        Add plan
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {longFormPlan ? (
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="Target chapters">
+                        <input className="input" type="number" min={0} value={longFormPlan.target_chapters || 0} onChange={(event) => updateLongFormPlan({ target_chapters: Number(event.target.value) })} />
+                      </Field>
+                      <Field label="Target volumes">
+                        <input className="input" type="number" min={0} value={longFormPlan.target_volumes || 0} onChange={(event) => updateLongFormPlan({ target_volumes: Number(event.target.value) })} />
+                      </Field>
+                    </div>
+                    <Field label="Main loop">
+                      <textarea className="input min-h-24" value={longFormPlan.main_loop || ''} onChange={(event) => updateLongFormPlan({ main_loop: event.target.value })} />
+                    </Field>
+                    <ListField label="Escalation ladder" value={longFormPlan.escalation_ladder} onChange={(value) => updateLongFormPlan({ escalation_ladder: value })} />
+                    <ListField label="Reader promises" value={longFormPlan.reader_promises} onChange={(value) => updateLongFormPlan({ reader_promises: value })} />
+                    <Field label="Payoff cadence">
+                      <textarea className="input min-h-24" value={longFormPlan.payoff_cadence || ''} onChange={(event) => updateLongFormPlan({ payoff_cadence: event.target.value })} />
+                    </Field>
+                    <ListField label="Volume pattern" value={longFormPlan.volume_pattern} onChange={(value) => updateLongFormPlan({ volume_pattern: value })} />
+                    <Field label="Midpoint mutation">
+                      <textarea className="input min-h-24" value={longFormPlan.midpoint_mutation || ''} onChange={(event) => updateLongFormPlan({ midpoint_mutation: event.target.value })} />
+                    </Field>
+                    <Field label="Endgame promise">
+                      <textarea className="input min-h-24" value={longFormPlan.endgame_promise || ''} onChange={(event) => updateLongFormPlan({ endgame_promise: event.target.value })} />
+                    </Field>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-muted)]">
+                    No long-form plan yet. Add one when the story targets a serial, web novel, group-cast saga, or hundreds of chapters.
+                  </div>
+                )}
+              </div>
+
+              <div id="setup-corecast" className="scroll-mt-20 panel panel-pad space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="font-semibold">Core cast seeds</h2>
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">Setup owns role, function, relationship arc, entry phase, and payoff. Craft expands these seeds into full character cards.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="btn btn-secondary" onClick={addCoreCastSeed}>
+                      <Plus className="h-4 w-4" />
+                      Add seed
+                    </button>
+                    <button className="btn btn-secondary" onClick={addCoreCastWithAI}>
+                      <Sparkles className="h-4 w-4" />
+                      AI seed
+                    </button>
+                  </div>
+                </div>
+
+                {coreCast.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-muted)]">
+                    No core cast seeds. For long-form fiction, seed protagonist, leads, rivals, mentors, allies, and delayed antagonistic pressure.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {coreCast.map((seed, seedIndex) => (
+                      <details key={`${seed.name}-${seedIndex}`} className="group rounded-lg border border-[var(--border)]/70 bg-[var(--surface)]/60">
+                        <summary className="flex cursor-pointer list-none items-start justify-between gap-3 p-4 transition-colors hover:bg-[var(--surface-light)]/60">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium">{seed.name || `Seed ${seedIndex + 1}`}</span>
+                              <span className="rounded bg-[var(--surface-light)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{seed.role || 'role'}</span>
+                              <span className="rounded bg-[var(--primary)]/10 px-2 py-0.5 text-xs text-[var(--primary)]">{seed.importance || 0}/10</span>
+                              {seed.entry_phase && <span className="rounded bg-[var(--surface-light)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{seed.entry_phase}</span>}
+                            </div>
+                            <p className="mt-1 line-clamp-2 text-sm text-[var(--text-muted)]">{seed.story_function || 'No story function yet'}</p>
+                          </div>
+                          <span className="mt-1 text-xs text-[var(--text-muted)] group-open:hidden">Edit</span>
+                          <span className="mt-1 hidden text-xs text-[var(--text-muted)] group-open:inline">Close</span>
+                        </summary>
+                        <div className="space-y-4 border-t border-[var(--border)]/70 p-4">
+                          <div className="flex justify-end">
+                            <ConfirmButton className="btn btn-secondary" confirmText="Remove seed" onConfirm={() => removeCoreCastSeed(seedIndex)}>
+                              <Trash2 className="h-4 w-4" />
+                              Remove
+                            </ConfirmButton>
+                          </div>
+                          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                            <Field label="Name">
+                              <input className="input" value={seed.name || ''} onChange={(event) => updateCoreCast(seedIndex, { name: event.target.value })} />
+                            </Field>
+                            <div className="grid grid-cols-2 gap-3">
+                              <Field label="Role">
+                                <input className="input" value={seed.role || ''} onChange={(event) => updateCoreCast(seedIndex, { role: event.target.value })} />
+                              </Field>
+                              <Field label="Importance">
+                                <input className="input" type="number" min={1} max={10} value={seed.importance || 1} onChange={(event) => updateCoreCast(seedIndex, { importance: Number(event.target.value) })} />
+                              </Field>
+                            </div>
+                            <Field label="Entry phase">
+                              <input className="input" value={seed.entry_phase || ''} onChange={(event) => updateCoreCast(seedIndex, { entry_phase: event.target.value })} />
+                            </Field>
+                            <Field label="Relationship to lead">
+                              <input className="input" value={seed.relationship_to_lead || ''} onChange={(event) => updateCoreCast(seedIndex, { relationship_to_lead: event.target.value })} />
+                            </Field>
+                            <Field label="Story function">
+                              <textarea className="input min-h-24" value={seed.story_function || ''} onChange={(event) => updateCoreCast(seedIndex, { story_function: event.target.value })} />
+                            </Field>
+                            <Field label="Relationship arc">
+                              <textarea className="input min-h-24" value={seed.relationship_arc || ''} onChange={(event) => updateCoreCast(seedIndex, { relationship_arc: event.target.value })} />
+                            </Field>
+                            <Field label="Payoff">
+                              <textarea className="input min-h-24" value={seed.payoff || ''} onChange={(event) => updateCoreCast(seedIndex, { payoff: event.target.value })} />
+                            </Field>
+                            <ListField label="Storyline refs" value={seed.storyline_refs} onChange={(value) => updateCoreCast(seedIndex, { storyline_refs: value })} />
+                          </div>
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div id="setup-storylines" className="scroll-mt-20 panel panel-pad space-y-4">
@@ -717,6 +982,18 @@ export function StorySetupWorkbench({ projectPath }: StorySetupWorkbenchProps) {
                             </Field>
                             <ListField label="关键角色" value={storyline.key_characters} onChange={(value) => updateStoryline(storylineIndex, { key_characters: value })} />
                             <ListField label="Pressure Points" value={storyline.pressure_points} onChange={(value) => updateStoryline(storylineIndex, { pressure_points: value })} />
+                            <Field label="Repeatable pressure">
+                              <textarea className="input min-h-24" value={storyline.repeatable_pressure || ''} onChange={(event) => updateStoryline(storylineIndex, { repeatable_pressure: event.target.value })} />
+                            </Field>
+                            <Field label="Payoff cadence">
+                              <textarea className="input min-h-24" value={storyline.payoff_cadence || ''} onChange={(event) => updateStoryline(storylineIndex, { payoff_cadence: event.target.value })} />
+                            </Field>
+                            <Field label="Mutation">
+                              <textarea className="input min-h-24" value={storyline.mutation || ''} onChange={(event) => updateStoryline(storylineIndex, { mutation: event.target.value })} />
+                            </Field>
+                            <Field label="Failure mode">
+                              <textarea className="input min-h-24" value={storyline.failure_mode || ''} onChange={(event) => updateStoryline(storylineIndex, { failure_mode: event.target.value })} />
+                            </Field>
                             <ListField label="Must Include" value={storyline.must_include} onChange={(value) => updateStoryline(storylineIndex, { must_include: value })} minHeight="min-h-28" />
                             <ListField label="Must Avoid" value={storyline.must_avoid} onChange={(value) => updateStoryline(storylineIndex, { must_avoid: value })} minHeight="min-h-28" />
                             <ListField label="Required Costs" value={storyline.required_costs} onChange={(value) => updateStoryline(storylineIndex, { required_costs: value })} />

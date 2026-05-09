@@ -356,6 +356,9 @@ func (e *ElementExtractor) Extract() *ExtractedElements {
 	}
 
 	if e.setup != nil {
+		for _, seed := range e.setup.CoreCast {
+			addExtractedName(seed.Name, charMap, &result.Characters)
+		}
 		// Extract from storylines (potential organizations or lore)
 		for _, storyline := range e.setup.Storylines {
 			if storyline.Name != "" && storylineLooksLikeOrganization(storyline) {

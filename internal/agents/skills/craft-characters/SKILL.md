@@ -5,6 +5,7 @@ Generate detailed character profiles based on story setup and outline context.
 
 ## Input
 - `story_setup`: The story setup containing premise, genres, themes, etc.
+  - `core_cast` entries are setup-level character seeds. Treat them as character promises: role, importance, story function, relationship arc, entry phase, payoff, and storyline references.
 - `outline`: Complete story outline structure (parts, volumes, chapters)
 - `relevant_chapters`: Array of chapter summaries where these characters appear
 - `characters`: List of character names to generate
@@ -44,12 +45,13 @@ Each character must include:
 2. Each character MUST have a unique and memorable personality
 3. Characters should fit the story's genre and style
 4. **Use relevant_chapters to understand character context** - these chapters show where and how the character appears in the story
-5. **Align character motivation with their role in relevant chapters** - the character's actions should make sense given their motivation
-6. Include specific details that can be referenced in writing
-7. Focus on STATIC attributes only - do NOT include dynamic story elements
-8. Use outline events, state anchors, enemies, and resource ledgers to set RPG/DSL metadata conservatively
-9. Keep `rpg_stats` balanced; use small integers for early characters and only high values when the outline clearly supports them
-10. Keep all content in the specified language
+5. **Use core_cast seeds as source of intent** - if a requested character appears in `story_setup.core_cast`, preserve its role, story function, relationship arc, entry phase, payoff, and storyline references while expanding details
+6. **Align character motivation with their role in relevant chapters** - the character's actions should make sense given their motivation
+7. Include specific details that can be referenced in writing
+8. Focus on STATIC attributes only - do NOT include dynamic story elements
+9. Use outline events, state anchors, enemies, and resource ledgers to set RPG/DSL metadata conservatively
+10. Keep `rpg_stats` balanced; use small integers for early characters and only high values when the outline clearly supports them
+11. Keep all content in the specified language
 
 ## IMPORTANT - DO NOT INCLUDE
 

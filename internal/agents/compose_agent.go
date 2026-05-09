@@ -60,6 +60,7 @@ type ComposeImproveInput struct {
 	ReviewResult    models.ReviewResult `json:"review_result,omitempty" md:"review_result,omitempty" desc:"Review result for improvement guidance"`
 	UserPrompt      string              `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for improvement"`
 	Setup           models.StorySetup   `json:"setup,omitempty" md:"setup" desc:"Story setup including premise, genres, themes, rules"`
+	RevisionContext string              `json:"revision_context,omitempty" md:"revision_context,omitempty" desc:"Compact session trail from earlier outline review and improve rounds"`
 }
 
 // ComposeImproveOutput is the output for outline improvement
@@ -93,6 +94,43 @@ type ComposeChaptersInput struct {
 // ComposeChaptersOutput is the output for chapter generation
 type ComposeChaptersOutput struct {
 	Chapters []models.Chapter `json:"chapters" md:"chapters" desc:"Generated chapters for the volume"`
+}
+
+// Compact compose prompt payloads keep large story setup files from crowding
+// out the outline task. Public inputs stay rich for CLI/internal contracts.
+type composeGenPromptInput struct {
+	SetupBrief string                `json:"setup_brief" md:"setup_brief" desc:"Compact story contract: premise, rules, progression limits, resources, core cast seeds, storylines"`
+	Structure  models.StoryStructure `json:"structure" md:"structure" desc:"Story structure including target chapters and volumes"`
+}
+
+type composeReviewPromptInput struct {
+	ExistingOutline models.Outline `json:"existing_outline" md:"existing_outline" desc:"Existing outline to review"`
+	SetupBrief      string         `json:"setup_brief,omitempty" md:"setup_brief" desc:"Compact story contract for checking outline alignment"`
+	UserPrompt      string         `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for review focus"`
+}
+
+type composeImprovePromptInput struct {
+	ExistingOutline models.Outline      `json:"existing_outline" md:"existing_outline" desc:"Existing outline to improve"`
+	ReviewResult    models.ReviewResult `json:"review_result,omitempty" md:"review_result,omitempty" desc:"Review result for improvement guidance"`
+	UserPrompt      string              `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for improvement"`
+	SetupBrief      string              `json:"setup_brief,omitempty" md:"setup_brief" desc:"Compact story contract for preserving setup promises"`
+	RevisionContext string              `json:"revision_context,omitempty" md:"revision_context,omitempty" desc:"Compact session trail from earlier outline review and improve rounds"`
+}
+
+type composeSkeletonPromptInput struct {
+	SetupBrief string                `json:"setup_brief" md:"setup_brief" desc:"Compact story contract: premise, long-form plan, core cast seeds, storylines, progression systems"`
+	Structure  models.StoryStructure `json:"structure" md:"structure" desc:"Story structure including target parts and volumes"`
+}
+
+type composeChaptersPromptInput struct {
+	SetupBrief     string         `json:"setup_brief" md:"setup_brief" desc:"Compact story contract: rules, resources, core cast seeds, long-form plan, storylines"`
+	Part           models.Part    `json:"part" md:"part" desc:"Current part information"`
+	Volume         models.Volume  `json:"volume" md:"volume" desc:"Current volume information"`
+	VolumeIndex    int            `json:"volume_index" md:"volume_index" desc:"Index of current volume"`
+	TotalVolumes   int            `json:"total_volumes" md:"total_volumes" desc:"Total number of volumes"`
+	ChaptersPerVol int            `json:"chapters_per_volume" md:"chapters_per_volume" desc:"Number of chapters to generate in this call"`
+	PreviousVolume *models.Volume `json:"previous_volume,omitempty" md:"previous_volume,omitempty" desc:"Previous volume for continuity"`
+	OutlineContext string         `json:"outline_context" md:"outline_context" desc:"Context from previously generated outline"`
 }
 
 // ComposeReviewVolumeInput is the input for reviewing a specific volume
@@ -185,7 +223,11 @@ func (a *ComposeAgent) Generate(ctx context.Context, input ComposeGenInput) (Com
 		Command: "generate a story outline with the specified structure",
 	}
 
-	if err := a.base.Execute(ctx, params, input, &output.Outline); err != nil {
+	promptInput := composeGenPromptInput{
+		SetupBrief: a.buildSetupBrief(&input.Setup),
+		Structure:  input.Structure,
+	}
+	if err := a.base.Execute(ctx, params, promptInput, &output.Outline); err != nil {
 		return ComposeGenOutput{}, err
 	}
 
@@ -272,7 +314,12 @@ func (a *ComposeAgent) Review(ctx context.Context, input ComposeReviewInput) (Co
 		Command: "review the story outline and provide improvement suggestions",
 	}
 
-	if err := a.base.Execute(ctx, params, input, &output.Result); err != nil {
+	promptInput := composeReviewPromptInput{
+		ExistingOutline: input.ExistingOutline,
+		SetupBrief:      a.buildSetupBrief(&input.Setup),
+		UserPrompt:      input.UserPrompt,
+	}
+	if err := a.base.Execute(ctx, params, promptInput, &output.Result); err != nil {
 		return ComposeReviewOutput{}, err
 	}
 
@@ -300,7 +347,14 @@ func (a *ComposeAgent) Improve(ctx context.Context, input ComposeImproveInput) (
 		Command: "improve the story outline",
 	}
 
-	if err := a.base.Execute(ctx, params, input, &output.Outline); err != nil {
+	promptInput := composeImprovePromptInput{
+		ExistingOutline: input.ExistingOutline,
+		ReviewResult:    compactReviewForPrompt(input.ReviewResult),
+		UserPrompt:      input.UserPrompt,
+		SetupBrief:      a.buildSetupBrief(&input.Setup),
+		RevisionContext: input.RevisionContext,
+	}
+	if err := a.base.Execute(ctx, params, promptInput, &output.Outline); err != nil {
 		return ComposeImproveOutput{}, err
 	}
 
@@ -323,6 +377,10 @@ func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, max
 
 	currentOutline := *outline
 	var finalReview *models.ReviewResult
+	session := NewRevisionSession("compose", "Improve the outline through review feedback while preserving existing structure and continuity.")
+	if strings.TrimSpace(userPrompt) != "" {
+		session.AddUserGuidance(0, userPrompt)
+	}
 
 	for i := 1; i <= maxIterations; i++ {
 		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
@@ -337,6 +395,8 @@ func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, max
 			return nil, nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
 		}
 
+		reviewOutput.Result.Iteration = i
+		session.AddReview(i, reviewOutput.Result)
 		finalReview = &reviewOutput.Result
 
 		// Check if quality meets threshold
@@ -359,8 +419,9 @@ func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, max
 		// Improve the outline with review feedback
 		improveInput := ComposeImproveInput{
 			ExistingOutline: currentOutline,
-			ReviewResult:    reviewOutput.Result,
+			ReviewResult:    compactReviewForPrompt(reviewOutput.Result),
 			UserPrompt:      userPrompt,
+			RevisionContext: session.Prompt(),
 		}
 		if setup != nil {
 			improveInput.Setup = *setup
@@ -371,6 +432,7 @@ func (a *ComposeAgent) Iterate(ctx context.Context, outline *models.Outline, max
 		}
 
 		currentOutline = improveOutput.Outline
+		session.AddImprove(i, "Applied the previous outline review feedback; next review should verify the repaired chapters and avoid undoing preserved structure.")
 		logger.Info("✓ Outline improved based on review suggestions")
 
 		// Check if this is the last iteration
@@ -492,6 +554,32 @@ func (a *ComposeAgent) buildSetupBrief(setup *models.StorySetup) string {
 		b.WriteString(fmt.Sprintf("Tone: %s\n", clipForPrompt(setup.Tone, 160)))
 	}
 
+	if setup.LongFormPlan != nil && !setup.LongFormPlan.IsZero() {
+		plan := setup.LongFormPlan
+		b.WriteString("\nLong Form Plan:\n")
+		if plan.TargetChapters > 0 || plan.TargetVolumes > 0 {
+			b.WriteString(fmt.Sprintf("- Target scale: %d chapter(s), %d volume(s)\n", plan.TargetChapters, plan.TargetVolumes))
+		}
+		if plan.MainLoop != "" {
+			b.WriteString(fmt.Sprintf("- Main loop: %s\n", clipForPrompt(plan.MainLoop, 260)))
+		}
+		if len(plan.EscalationLadder) > 0 {
+			b.WriteString(fmt.Sprintf("- Escalation ladder: %s\n", joinLimited(plan.EscalationLadder, 8)))
+		}
+		if len(plan.ReaderPromises) > 0 {
+			b.WriteString(fmt.Sprintf("- Reader promises: %s\n", joinLimited(plan.ReaderPromises, 8)))
+		}
+		if plan.PayoffCadence != "" {
+			b.WriteString(fmt.Sprintf("- Payoff cadence: %s\n", clipForPrompt(plan.PayoffCadence, 220)))
+		}
+		if len(plan.VolumePattern) > 0 {
+			b.WriteString(fmt.Sprintf("- Volume pattern: %s\n", joinLimited(plan.VolumePattern, 8)))
+		}
+		if plan.MidpointMutation != "" || plan.EndgamePromise != "" {
+			b.WriteString(fmt.Sprintf("- Mutation/endgame: %s | %s\n", clipForPrompt(plan.MidpointMutation, 180), clipForPrompt(plan.EndgamePromise, 180)))
+		}
+	}
+
 	if len(setup.Rules) > 0 {
 		b.WriteString("\nCore Rules:\n")
 		for i, rule := range setup.Rules {
@@ -503,14 +591,44 @@ func (a *ComposeAgent) buildSetupBrief(setup *models.StorySetup) string {
 		}
 	}
 
+	if len(setup.CoreCast) > 0 {
+		b.WriteString("\nCore Cast Seeds:\n")
+		for i, seed := range setup.CoreCast {
+			if i >= 12 {
+				b.WriteString(fmt.Sprintf("- ... %d more cast seed(s)\n", len(setup.CoreCast)-i))
+				break
+			}
+			b.WriteString(fmt.Sprintf("- %s (%s, importance %d, entry %s): %s\n",
+				seed.Name, seed.Role, seed.Importance, seed.EntryPhase, clipForPrompt(seed.StoryFunction, 220)))
+			if seed.RelationshipArc != "" || seed.Payoff != "" {
+				b.WriteString(fmt.Sprintf("  Arc: %s | Payoff: %s\n",
+					clipForPrompt(seed.RelationshipArc, 160), clipForPrompt(seed.Payoff, 180)))
+			}
+			if len(seed.StorylineRefs) > 0 {
+				b.WriteString(fmt.Sprintf("  Storylines: %s\n", strings.Join(seed.StorylineRefs, ", ")))
+			}
+		}
+	}
+
 	if len(setup.Storylines) > 0 {
 		b.WriteString("\nStorylines:\n")
-		for _, sl := range setup.Storylines {
+		for i, sl := range setup.Storylines {
+			if i >= 12 {
+				b.WriteString(fmt.Sprintf("- ... %d more storyline(s)\n", len(setup.Storylines)-i))
+				break
+			}
 			scopeNote := compactStorylineScope(sl)
 			b.WriteString(fmt.Sprintf("- %s (%s%s, importance %d): %s\n",
 				sl.Name, sl.Type, scopeNote, sl.Importance, clipForPrompt(sl.Description, 260)))
 			if sl.SetupRole != "" {
 				b.WriteString(fmt.Sprintf("  Role: %s\n", clipForPrompt(sl.SetupRole, 160)))
+			}
+			if sl.RepeatablePressure != "" || sl.PayoffCadence != "" || sl.Mutation != "" {
+				b.WriteString(fmt.Sprintf("  Serial engine: pressure=%s | cadence=%s | mutation=%s\n",
+					clipForPrompt(sl.RepeatablePressure, 150), clipForPrompt(sl.PayoffCadence, 130), clipForPrompt(sl.Mutation, 150)))
+			}
+			if sl.FailureMode != "" {
+				b.WriteString(fmt.Sprintf("  Avoid failure mode: %s\n", clipForPrompt(sl.FailureMode, 140)))
 			}
 			if sl.Desire != "" || sl.Opposition != "" || sl.Payoff != "" {
 				b.WriteString(fmt.Sprintf("  Desire: %s | Opposition: %s | Payoff%s: %s\n",
@@ -524,12 +642,20 @@ func (a *ComposeAgent) buildSetupBrief(setup *models.StorySetup) string {
 
 	if len(setup.Premises) > 0 {
 		b.WriteString("\nProgression Systems:\n")
-		for _, premise := range setup.Premises {
+		for i, premise := range setup.Premises {
+			if i >= 8 {
+				b.WriteString(fmt.Sprintf("- ... %d more progression system(s)\n", len(setup.Premises)-i))
+				break
+			}
 			b.WriteString(fmt.Sprintf("- %s (%s): %s\n", premise.Name, premise.Category, clipForPrompt(premise.Description, 280)))
 			if premise.AppealEngine != nil {
 				b.WriteString(formatAppealEngineBrief("  Appeal", premise.AppealEngine))
 			}
-			for _, stage := range premise.Progression {
+			for j, stage := range premise.Progression {
+				if j >= 8 {
+					b.WriteString(fmt.Sprintf("  ... %d more progression stage(s)\n", len(premise.Progression)-j))
+					break
+				}
 				b.WriteString(fmt.Sprintf("  L%d %s: %s Requirement: %s\n",
 					stage.Level, stage.Name, clipForPrompt(stage.Description, 130), clipForPrompt(stage.Requirements, 130)))
 			}
@@ -538,7 +664,11 @@ func (a *ComposeAgent) buildSetupBrief(setup *models.StorySetup) string {
 
 	if len(setup.WorldResources) > 0 {
 		b.WriteString("\nResources:\n")
-		for _, res := range setup.WorldResources {
+		for i, res := range setup.WorldResources {
+			if i >= 12 {
+				b.WriteString(fmt.Sprintf("- ... %d more resource(s)\n", len(setup.WorldResources)-i))
+				break
+			}
 			b.WriteString(fmt.Sprintf("- %s (%s, scarcity: %s): %s\n",
 				res.Name, res.Category, res.Scarcity, clipForPrompt(res.Description, 180)))
 		}
@@ -1365,7 +1495,11 @@ func (a *ComposeAgent) GenerateSkeleton(ctx context.Context, input ComposeSkelet
 		Command: "generate the story outline skeleton with parts and volumes only",
 	}
 
-	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+	promptInput := composeSkeletonPromptInput{
+		SetupBrief: a.buildSetupBrief(&input.Setup),
+		Structure:  input.Structure,
+	}
+	if err := a.base.Execute(ctx, params, promptInput, &output); err != nil {
 		return ComposeSkeletonOutput{}, err
 	}
 
@@ -1401,7 +1535,8 @@ func (a *ComposeAgent) GenerateChaptersForVolume(ctx context.Context, input Comp
 		Command: fmt.Sprintf("generate %d chapters for this volume with proper continuity", input.ChaptersPerVol),
 	}
 
-	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+	promptInput := a.buildChaptersPromptInput(input)
+	if err := a.base.Execute(ctx, params, promptInput, &output); err != nil {
 		return ComposeChaptersOutput{}, err
 	}
 
@@ -1428,7 +1563,8 @@ func (a *ComposeAgent) GenerateChaptersForVolume(ctx context.Context, input Comp
 		}
 
 		var continued ComposeChaptersOutput
-		if err := a.base.Execute(ctx, continueParams, continueInput, &continued); err != nil {
+		continuePromptInput := a.buildChaptersPromptInput(continueInput)
+		if err := a.base.Execute(ctx, continueParams, continuePromptInput, &continued); err != nil {
 			return ComposeChaptersOutput{}, err
 		}
 		before := len(chapters)
@@ -1459,6 +1595,19 @@ func (a *ComposeAgent) GenerateChaptersForVolume(ctx context.Context, input Comp
 	logger.Info("Generated %d chapters for volume", len(output.Chapters))
 
 	return output, nil
+}
+
+func (a *ComposeAgent) buildChaptersPromptInput(input ComposeChaptersInput) composeChaptersPromptInput {
+	return composeChaptersPromptInput{
+		SetupBrief:     a.buildSetupBrief(&input.Setup),
+		Part:           input.Part,
+		Volume:         input.Volume,
+		VolumeIndex:    input.VolumeIndex,
+		TotalVolumes:   input.TotalVolumes,
+		ChaptersPerVol: input.ChaptersPerVol,
+		PreviousVolume: input.PreviousVolume,
+		OutlineContext: input.OutlineContext,
+	}
 }
 
 func buildChapterContinuationContext(baseContext string, existing []models.Chapter, totalRequested int) string {

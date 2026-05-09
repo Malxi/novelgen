@@ -7,7 +7,7 @@
 ## 输入参数
 
 - `existing_outline`：待评审的故事大纲，包含篇章、卷次、章节等完整内容
-- `setup`（可选）：故事的设定信息，如前提、类型、主题、世界观规则、主线脉络、核心 premise 等
+- `setup_brief`（可选）：压缩后的故事设定契约，包含前提、规则、长篇计划、核心角色种子、故事线、进阶系统和资源。按它检查大纲是否兑现设定，但不要要求百科式细节。
 - `user_prompt`（可选）：用户指定的评审关注点。**若提供此参数，请优先围绕用户的具体问题生成建议**
 
 ## 输出格式
@@ -99,4 +99,12 @@
 
 When setup storylines are available, check whether major chapters clearly move at least some arcs forward. Useful optional signals include chapter `storyline_advances` entries with a concrete `change`, plus `pressure` or `consequence` when that makes the arc more dramatic.
 
+When setup storylines include `repeatable_pressure`, `payoff_cadence`, `mutation`, or `failure_mode`, check whether the outline honors those hints. A serial arc should not repeat the same pressure forever, delay every payoff, or walk directly into its stated failure mode.
+
 Treat this as a low-pressure craft suggestion. Do not require every chapter to include `storyline_advances`; recommend it only where the arc movement would otherwise feel thin, vague, or easy for later agents to forget.
+
+## Long Form Plan Review
+
+If setup includes `long_form_plan`, check whether the outline honors it: target scale roughly matches, volume arcs use the escalation ladder, most volumes have payoff_contracts, chapter payoffs maintain the promised cadence, and the midpoint/endgame promises remain visible.
+
+Flag outlines that claim serial scale but repeat the same arena, skip visible rewards for too long, or ignore the plan's volume_pattern.

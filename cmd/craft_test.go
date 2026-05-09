@@ -76,6 +76,24 @@ func TestElementExtractorDoesNotTurnSetupPremisesIntoCraftItems(t *testing.T) {
 	}
 }
 
+func TestElementExtractorIncludesSetupCoreCast(t *testing.T) {
+	outline := &models.Outline{Parts: []models.Part{{}}}
+	setup := &models.StorySetup{
+		CoreCast: []models.CoreCastSeed{
+			{Name: "Hero", Role: "protagonist", Importance: 10},
+			{Name: "Late Rival", Role: "rival", Importance: 8, EntryPhase: "mid"},
+		},
+	}
+
+	elements := NewElementExtractor(outline, setup).Extract()
+
+	for _, name := range []string{"Hero", "Late Rival"} {
+		if !containsString(elements.Characters, name) {
+			t.Fatalf("missing core cast character %q in %+v", name, elements.Characters)
+		}
+	}
+}
+
 func TestFindUnknownAbilitySystemRefsUsesSetupPremisesAsAuthority(t *testing.T) {
 	outline := &models.Outline{Parts: []models.Part{{
 		Volumes: []models.Volume{{

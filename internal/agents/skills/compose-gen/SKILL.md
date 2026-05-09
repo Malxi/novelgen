@@ -1,5 +1,10 @@
 # 小说大纲生成技能
 
+## Input Context
+
+- `setup_brief`: Compact story setup contract. It contains the usable premise, rules, long-form plan, core cast seeds, storylines, progression systems, and resources. Treat it as authoritative setup context, but do not expand it into encyclopedic detail.
+- `structure`: Target parts, volumes, and chapters.
+
 ## 文档信息
 - 版本：V1.0
 - 适用场景：基于小说设定生成结构化大纲
@@ -16,8 +21,22 @@
 
 ## DSL Simulation Execution Guidance
 
+## Long Form Plan Execution Guidance
+
+If setup includes `long_form_plan`, treat it as the serial blueprint:
+- Align the requested structure with `target_chapters` and `target_volumes` when possible.
+- Use `main_loop` to shape the recurring pressure -> exploit -> win -> reward rhythm.
+- Map `escalation_ladder` onto parts/volumes so each volume raises the arena instead of repeating the same conflict.
+- Translate `reader_promises` into volume `payoff_contract` and chapter `chapter_payoff`.
+- Use `payoff_cadence` to avoid long stretches with no visible reward or status change.
+- Use `volume_pattern` as the default volume arc, while still making each volume specific.
+- Plant `midpoint_mutation` before the story loop becomes stale, and let `endgame_promise` stay visible as distant pressure.
+
+Do not copy `long_form_plan` verbatim into chapter summaries. Convert it into concrete volume questions, obstacles, clever wins, rewards, and next gates.
+
 The outline should be simulatable:
 - Use setup `storylines` as long-running contracts. Add `storyline_advances` only on chapters that create real pressure, reveal, reversal, consequence, or payoff.
+- If a setup storyline has `repeatable_pressure`, `payoff_cadence`, `mutation`, or `failure_mode`, use those hints to place recurring pressure, partial payoffs, mid-story changes, and avoid repetitive filler.
 - When a chapter changes resources, growth, injuries, relationships, goals, or knowledge, make that change visible in `events`, `resource_ledger`, `state_anchor`, or `storyline_advances`.
 - Avoid chapters that only move characters or start fights without changing the situation.
 - If setup promises a payoff, make sure the outline plants, escalates, and eventually marks a payoff or resolution. Keep this sparse and natural, not mechanical.

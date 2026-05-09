@@ -5,7 +5,7 @@ Generate the story outline skeleton - parts and volumes only, without chapters.
 This creates the high-level structure that will be filled in with chapters later.
 
 ## Input
-- `setup`: StorySetup with premise, characters, storylines, etc.
+- `setup_brief`: Compact StorySetup contract with premise, long-form plan, core cast seeds, storylines, progression systems, and resources.
 - `structure`: StoryStructure with target parts and volumes
 
 ## Output
@@ -29,6 +29,7 @@ This creates the high-level structure that will be filled in with chapters later
 - Volume summaries should describe the specific storyline
 - Volumes within a part should build toward the part's conclusion
 - Volume-to-volume continuity must be maintained
+- If setup has `long_form_plan`, map its `escalation_ladder`, `reader_promises`, `payoff_cadence`, and `volume_pattern` onto the volume sequence. Each volume should feel like a specific instance of the serial loop, not a repeated placeholder.
 - Each volume should have a `payoff_contract` that makes the爽点 promise explicit:
   - `volume_question`: the question that keeps readers turning pages
   - `power_promise`: the cool rule/ability/fantasy this volume will demonstrate

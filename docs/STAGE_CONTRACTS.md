@@ -128,10 +128,34 @@ Required invariants:
 - `Storylines[].Name` is stable enough for outline `storyline_advances` to
   reference.
 - `Storylines[].Importance` is in the documented range.
+- `CoreCast[]` is optional setup-level character seed data. It should stay
+  lightweight: role, importance, story function, relationship arc, entry phase,
+  payoff, and storyline references. Setup owns the promise; craft owns the full
+  character card.
+- Setup is a compact contract, not an encyclopedia. Long biographies, minor
+  cast lists, exhaustive rulebooks, and chapter-scale lore should move to craft,
+  notes, or later stage-specific context. Quality gates may flag oversized
+  setup sections or fields that are too long for stable prompting.
+- `LongFormPlan` is optional setup-level serial capacity data. It owns target
+  scale, repeatable main loop, escalation ladder, reader promises, payoff
+  cadence, reusable volume pattern, midpoint mutation, and endgame promise.
+  It must not become a chapter-by-chapter outline.
+- Long-form setups that imply a large serial, web novel, power fantasy, group
+  cast, or multi-system genre story should use `CoreCast[]` as capacity seeds:
+  at least one protagonist anchor, several important (`Importance >= 8`) roles,
+  distinct story functions, relationship arcs, staggered `entry_phase` values,
+  payoff promises, and `storyline_refs` that match `Storylines[].Name`.
+- Long-form setups should include `LongFormPlan` when target scale is explicit
+  or implied. Quality gates may suggest it when a setup says 300+, 500+, 1000
+  chapters, serial/web novel, large series, or similar signals.
 - Important `Storylines[]` (`Importance >= 8`) should carry enough high-level
   arc contract data for downstream planning: `scope`, `setup_role`,
   `payoff_style`, and pressure hints are preferred, but older projects may omit
   them and receive quality-gate suggestions rather than parse failures.
+- Long-form important `Storylines[]` may also carry serial-engine hints:
+  `repeatable_pressure`, `payoff_cadence`, `mutation`, and `failure_mode`.
+  These stay at setup level and help compose avoid one-use arcs, endless
+  delayed payoffs, and repetitive filler.
 - Important `Storylines[]` and core `Premises[]` may include optional
   `appeal_engine` data. The setup stage produces it when it helps define the
   book's power-fantasy promise: `appeal`, `surface_limit`, `exploit`,
@@ -155,17 +179,34 @@ Required invariants:
 - `WritingStyle.ReferenceExcerpt` is a style signal only. It is not story canon:
   downstream stages must not import its plot, characters, places, terminology,
   or world facts into generated project state.
+- `setup improve` may pass a prompt-only `revision_context` between review and
+  improve rounds. It is not persisted in `story_setup.json`; it only helps the
+  agent remember what the current session already tried.
 
 Consumers:
 
 - `compose` uses setup as the source of story intent and structure.
+- `compose` sends a prompt-only `setup_brief` rather than the full
+  `StorySetup` where possible. The persisted setup remains complete, but
+  outline generation/review/improve/chapter generation consume the compact
+  contract so large setup files do not crowd out the active outline task.
 - `compose` consumes optional `appeal_engine` hints to create volume
   `payoff_contract` and chapter `chapter_payoff` entries.
+- `compose` consumes optional `LongFormPlan` to align volume count, chapter
+  scale, volume payoff contracts, escalation, and serial cadence.
+- `compose` consumes optional storyline serial-engine hints to place recurring
+  pressure, partial payoffs, mid-story mutations, and avoid known failure modes.
 - `craft` uses setup to generate world elements.
+- `craft` consumes optional `CoreCast[]` seeds to anchor character expansion
+  and uses `story_setup.core_cast` names as a character extraction source even
+  when the outline does not mention them yet.
 - `write` uses setup for style, rules, tone, and continuity.
 - `write` consumes optional `WritingStyle` for prose voice, rhythm, description
   density, dialogue texture, and style avoid-list guidance.
 - RPG/DSL generators use setup for systems, resources, and world rules.
+- `compose improve` may pass a prompt-only `revision_context` across review and
+  improve rounds. It is not persisted in `outline.json`; it just keeps the
+  current session from forgetting which fixes were already tried.
 
 Change checklist:
 
@@ -550,6 +591,9 @@ Required invariants:
 - New constructs require AST, parser, validator, converter, docs, and tests.
 - Runtime constructs require simulator/evaluator/hook tests.
 - Phased DSL fragments must merge without losing stable IDs.
+- Validator must catch structural cross-reference problems before conversion,
+  including missing location/item/arc/chapter references, invalid event setup,
+  and inconsistent `state_delta` arithmetic.
 - Outline-only conversion must not require craft files. A single-volume outline
   conversion must reject empty future volumes instead of emitting placeholder
   chapters.

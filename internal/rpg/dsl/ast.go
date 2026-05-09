@@ -575,6 +575,9 @@ type Condition struct {
 
 // Validate performs basic validation on the DSL
 func (d *DSL) Validate() error {
+	if d == nil {
+		return fmt.Errorf("dsl is required")
+	}
 	if d.Metadata == nil {
 		return fmt.Errorf("metadata is required")
 	}
@@ -584,7 +587,7 @@ func (d *DSL) Validate() error {
 	if d.Characters == nil || d.Characters.Player == nil {
 		return fmt.Errorf("at least one player character is required")
 	}
-	if len(d.Storyline.Chapters) == 0 {
+	if d.Storyline == nil || len(d.Storyline.Chapters) == 0 {
 		return fmt.Errorf("at least one chapter is required")
 	}
 	return nil

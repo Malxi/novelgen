@@ -22,8 +22,9 @@ type SetupGenOutput struct {
 
 // SetupImproveInput is the input for setup improvement
 type SetupImproveInput struct {
-	ReviewResult  models.ReviewResult `json:"review_result,omitempty" md:"review_result,omitempty" desc:"Review result for improvement guidance"`
-	ExistingSetup models.StorySetup   `json:"existing_setup" md:"existing_setup" desc:"Current story setup to improve"`
+	ReviewResult    models.ReviewResult `json:"review_result,omitempty" md:"review_result,omitempty" desc:"Review result for improvement guidance"`
+	ExistingSetup   models.StorySetup   `json:"existing_setup" md:"existing_setup" desc:"Current story setup to improve"`
+	RevisionContext string              `json:"revision_context,omitempty" md:"revision_context,omitempty" desc:"Compact session trail from earlier generation, review, and improve rounds"`
 }
 
 // SetupImproveOutput is the output for setup improvement
@@ -155,6 +156,7 @@ func (a *SetupAgent) Iterate(ctx context.Context, setup *models.StorySetup, maxI
 
 	currentSetup := *setup
 	var finalReview *models.ReviewResult
+	session := NewRevisionSession("setup", "Improve story setup until review feedback is resolved without losing the core concept.")
 
 	for i := 1; i <= maxIterations; i++ {
 		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
@@ -166,6 +168,8 @@ func (a *SetupAgent) Iterate(ctx context.Context, setup *models.StorySetup, maxI
 			return nil, nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
 		}
 
+		reviewOutput.Result.Iteration = i
+		session.AddReview(i, reviewOutput.Result)
 		finalReview = &reviewOutput.Result
 
 		// Check if quality meets threshold
@@ -186,8 +190,9 @@ func (a *SetupAgent) Iterate(ctx context.Context, setup *models.StorySetup, maxI
 
 		// Improve the setup with review feedback
 		improveInput := SetupImproveInput{
-			ExistingSetup: currentSetup,
-			ReviewResult:  reviewOutput.Result,
+			ExistingSetup:   currentSetup,
+			ReviewResult:    compactReviewForPrompt(reviewOutput.Result),
+			RevisionContext: session.Prompt(),
 		}
 		improveOutput, err := a.Improve(ctx, improveInput)
 		if err != nil {
@@ -195,6 +200,7 @@ func (a *SetupAgent) Iterate(ctx context.Context, setup *models.StorySetup, maxI
 		}
 
 		currentSetup = improveOutput.Setup
+		session.AddImprove(i, "Applied the previous review feedback to the setup; next review should verify resolved issues and preserve existing strengths.")
 		logger.Info("Setup improved based on review suggestions")
 		if i == maxIterations {
 			logger.Warn("Max iterations reached, stopping iteration loop")
@@ -216,6 +222,7 @@ func (a *SetupAgent) normalizeSetup(setup *models.StorySetup) {
 	setup.Tense = strings.TrimSpace(setup.Tense)
 	setup.POVStyle = strings.TrimSpace(setup.POVStyle)
 	setup.WritingStyle = setup.WritingStyle.CompactReference(len([]rune(setup.WritingStyle.ReferenceExcerpt)))
+	models.NormalizeStorySetup(setup)
 	for i := range setup.Storylines {
 		setup.Storylines[i].Name = strings.TrimSpace(setup.Storylines[i].Name)
 		setup.Storylines[i].Description = strings.TrimSpace(setup.Storylines[i].Description)

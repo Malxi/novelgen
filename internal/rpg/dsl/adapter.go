@@ -1589,13 +1589,33 @@ func (na *NovelgenAdapter) convertNovelgenLocationToLocation(name string, loc rp
 	location.Properties = novelgenLocationProperties(loc)
 
 	// Add connections
+	locationRefIDs := na.projectLocationReferenceIDs()
 	for _, connected := range loc.ConnectedLocs {
 		location.Connections = append(location.Connections, Connection{
-			To: sanitizeID(connected),
+			To: resolveLocationReferenceID(connected, locationRefIDs),
 		})
 	}
 
 	return location
+}
+
+func (na *NovelgenAdapter) projectLocationReferenceIDs() map[string]string {
+	refs := make(map[string]string)
+	if na == nil || na.project == nil {
+		return refs
+	}
+	for key, loc := range na.project.Locations {
+		id := sanitizeID(key)
+		if id == "" {
+			continue
+		}
+		refs[normalizeValidationKey(key)] = id
+		refs[normalizeValidationKey(id)] = id
+		if strings.TrimSpace(loc.Name) != "" {
+			refs[normalizeValidationKey(loc.Name)] = id
+		}
+	}
+	return refs
 }
 
 // convertNovelgenItemToItem converts novelgen item to DSL item

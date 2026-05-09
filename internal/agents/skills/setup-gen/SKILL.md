@@ -10,7 +10,52 @@
 
 ## Storyline Texture Guidance
 
+## Setup Compactness Guidance
+
+Story setup is a compact contract, not an encyclopedia. Keep the generated
+setup small enough for later agents to use reliably:
+- Prefer 6-12 `core_cast` seeds, not full character cards.
+- Prefer 3-8 major `premises` systems and 3-12 storylines.
+- Keep `rules` to the most generative rules, exploitable surfaces, and hard
+  boundaries. Do not dump a full lore bible here.
+- Keep long text fields brief: one focused paragraph or a short list of
+  reusable hooks. Move biographies, minor cast, geography detail, item catalogs,
+  and historical essays to craft or notes.
+
+When in doubt, write the promise/payoff/function that guides creation later,
+not every fact the world could contain.
+
+## Long Form Plan Guidance
+
+Use `long_form_plan` when the idea implies a serial, web novel, power fantasy, group-cast saga, 300+ chapters, 1000 chapters, or a multi-volume series. Keep it lightweight: it is a capacity contract, not an outline.
+
+A useful long_form_plan should define:
+- `target_chapters` and `target_volumes` when the scale is known or implied
+- `main_loop`: the repeatable reader loop, such as pressure -> opponent misread -> clever exploit -> visible win -> reward -> bigger game
+- `escalation_ladder`: 4-8 high-level scope stages, not chapter numbers
+- `reader_promises`: 3-6 repeatable attractions readers should expect
+- `payoff_cadence`: how often small, medium, and major payoffs land
+- `volume_pattern`: reusable volume blueprint beats, such as hook, pressure, misread, exploit, big win, visible reward, next gate
+- `midpoint_mutation`: how the serial changes before the initial loop becomes stale
+- `endgame_promise`: the far-horizon payoff
+
+Do not turn setup into a chapter plan. Let compose create volumes and chapters from this plan.
+
+## Core Cast Guidance
+
+Use `core_cast` for setup-level character seeds when the story needs durable character promises. These are not full character cards; craft will expand them later.
+
+Each useful core cast seed should define `name`, `role`, `importance`, `story_function`, `relationship_to_lead`, `relationship_arc`, `entry_phase`, `payoff`, and `storyline_refs`.
+
+For long-form or 1000-chapter ambitions, seed a small but durable cast: protagonist, 1-3 leads, 2-4 rivals/allies, 1-3 mentors or gatekeepers, and important antagonistic pressure. Do not dump biographies, appearance, stats, or complete relationship maps into setup.
+
 Storylines may include optional high-level contract hints: `scope`, `payoff_style`, `setup_role`, `desire`, `opposition`, `stakes`, `turn`, `payoff`, `open_question`, and `pressure_points`.
+
+For important long-form storylines, add serial-engine hints when useful:
+- `repeatable_pressure`: how this line keeps creating pressure across many volumes
+- `payoff_cadence`: how often partial or major payoffs should land
+- `mutation`: how the line changes after the first pattern would become stale
+- `failure_mode`: the main way this line could become boring or inconsistent
 
 Use these fields only when they sharpen the story. Prefer the 2-4 hints that create real dramatic pressure, reader curiosity, or later payoff. Do not fill every field mechanically, do not force every storyline into the same structure, and leave room for later agents to invent better turns when the outline develops.
 

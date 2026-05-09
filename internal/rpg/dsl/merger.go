@@ -364,6 +364,12 @@ func (dm *DSLMerger) mergeCraft(result *MergeResult, fragment *DSLFragment) erro
 				result,
 			)
 		}
+
+		// Craft organizations and element-level state effects can be emitted as
+		// world rules, so preserve them when merging the craft fragment.
+		for _, rule := range dsl.World.Rules {
+			result.DSL.World.Rules = dm.mergeRuleList(result.DSL.World.Rules, rule)
+		}
 	}
 
 	return nil

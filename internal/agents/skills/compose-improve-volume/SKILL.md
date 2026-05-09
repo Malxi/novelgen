@@ -44,6 +44,7 @@ Improve the chapters in a specific volume based on review feedback, while mainta
 - Preserve or add `payoff_contract` for the target volume. It should define the volume question, power promise, opponent misread, big win, visible reward, reputation shift, and next bigger game.
 - Preserve or add `chapter_payoff` for chapters that lack a satisfying win pattern. Make it concrete enough for write agents to dramatize.
 - Do not solve weak chapters by adding only harsher pressure. Add how the protagonist uses the book's unique setting to win beautifully.
+- If `setup_brief` includes Long Form Plan, align this volume with its main loop, payoff cadence, reader promises, and volume pattern. Keep the volume specific, but do not drift away from the serial engine.
 
 ## Chapter Requirements
 

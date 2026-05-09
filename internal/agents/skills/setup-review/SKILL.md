@@ -9,7 +9,17 @@
 
 ## Storyline Texture Review
 
+## Setup Compactness Review
+
+Review whether setup is usable as a compact contract for later agents. Flag
+oversized sections when they look like full biographies, lore essays, item
+catalogs, minor cast dumps, or chapter-by-chapter plans. Prefer suggestions
+that compress detail into role, function, rule boundary, pressure engine, payoff
+promise, progression tier, or resource name.
+
 When reviewing `storylines`, look for whether important arcs have enough high-level dramatic pressure to guide later outline generation. Optional texture fields include `scope`, `payoff_style`, `setup_role`, `desire`, `opposition`, `stakes`, `turn`, `payoff`, `open_question`, and `pressure_points`.
+
+For long-form work, also review whether important storylines behave like repeatable engines. Useful fields are `repeatable_pressure`, `payoff_cadence`, `mutation`, and `failure_mode`. Flag a 1000-chapter setup whose main arcs can only fire once, have no cadence, or have no plan for changing shape.
 
 Treat these as creative suggestions, not hard requirements. Recommend adding them only when a storyline feels thin, static, or hard to continue. Do not penalize a clean storyline for leaving some optional fields blank.
 
@@ -35,6 +45,20 @@ Flag setups that are logical but not fun: rules that explain the world yet do no
 Keep one clear root premise, but review whether long-form genre fiction has enough derived systems for later outline and RPG simulation. A setup for sci-fi, mecha, cultivation, apocalypse, fantasy, or other progression-heavy genres is thin if it has only one broad `premises` entry.
 
 Recommend 3-6 derived `premises` systems when appropriate. Good systems include protagonist growth, enemy tier ecology, faction technology, resource economy, social/faction hierarchy, and final external threat. Each system should have a progression ladder with named stages, requirements or costs, ceilings, and a clear narrative use.
+
+## Long Form Plan Review
+
+Review `long_form_plan` when the setup implies serial/web-novel scale, 300+ chapters, 1000 chapters, large group cast, or multi-volume progression. It should explain how the story stays fun over many volumes without becoming a chapter outline.
+
+A strong plan has target scale, repeatable main_loop, escalation_ladder, reader_promises, payoff_cadence, volume_pattern, midpoint_mutation, and endgame_promise. Flag plans that promise 1000 chapters but have no escalation ladder, no cadence, no late-story mutation, or no repeatable payoff loop.
+
+## Core Cast Review
+
+Review whether `core_cast` gives craft enough signal to expand characters consistently. A useful seed has a stable name, role, importance, story_function, entry_phase, payoff, and a sensible relationship arc. Flag setups that have many implied major characters but no core cast seeds, or important seeds that only contain names.
+
+For long-form stories, a thin core cast is a structural problem: it makes craft guess at lead roles, delayed entrances, and relationship payoffs.
+
+For serial/web-novel scale, also check capacity: there should be a protagonist anchor, several importance 8-10 roles, at least a few distinct role types, some mid/late/series entrances, and storyline_refs that point to real setup storylines. Prefer asking for seeds and payoff promises, not full biographies.
 
 ## Writing Style Review
 

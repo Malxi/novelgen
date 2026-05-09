@@ -130,3 +130,65 @@ func TestAppealAndPayoffBriefsSkipEmptyAndKeepUpgradePath(t *testing.T) {
 		t.Fatalf("partial chapter payoff should format only populated fields:\n%s", partialChapter)
 	}
 }
+
+func TestBuildSetupBriefCapsLargeSetupSections(t *testing.T) {
+	setup := &models.StorySetup{
+		ProjectName: "Large",
+		Premise:     strings.Repeat("p", 800),
+		Theme:       "growth",
+	}
+	for i := 0; i < 14; i++ {
+		setup.CoreCast = append(setup.CoreCast, models.CoreCastSeed{
+			Name:          "Cast",
+			Role:          "ally",
+			Importance:    5,
+			StoryFunction: strings.Repeat("function", 40),
+			EntryPhase:    "series",
+		})
+		setup.Storylines = append(setup.Storylines, models.Storyline{
+			Name:        "Arc",
+			Type:        "subplot",
+			Importance:  5,
+			Description: strings.Repeat("description", 40),
+		})
+		setup.WorldResources = append(setup.WorldResources, models.WorldResource{
+			Name:        "Resource",
+			Category:    "currency",
+			Scarcity:    "rare",
+			Description: strings.Repeat("resource", 40),
+		})
+	}
+	for i := 0; i < 10; i++ {
+		premise := models.Premise{
+			Name:        "System",
+			Category:    "progression",
+			Description: strings.Repeat("system", 80),
+		}
+		for level := 1; level <= 10; level++ {
+			premise.Progression = append(premise.Progression, models.ProgressionStage{
+				Level:       level,
+				Name:        "Tier",
+				Description: strings.Repeat("stage", 50),
+			})
+		}
+		setup.Premises = append(setup.Premises, premise)
+	}
+
+	brief := (&ComposeAgent{}).buildSetupBrief(setup)
+
+	for _, want := range []string{
+		"... 2 more cast seed(s)",
+		"... 2 more storyline(s)",
+		"... 2 more progression system(s)",
+		"... 2 more progression stage(s)",
+		"... 2 more resource(s)",
+		"...",
+	} {
+		if !strings.Contains(brief, want) {
+			t.Fatalf("setup brief missing %q:\n%s", want, brief)
+		}
+	}
+	if strings.Contains(brief, strings.Repeat("function", 40)) {
+		t.Fatalf("setup brief should clip oversized cast functions:\n%s", brief)
+	}
+}

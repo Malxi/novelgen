@@ -322,6 +322,71 @@ func TestModelAdapterCraftOrdersMapBackedElements(t *testing.T) {
 	}
 }
 
+func TestModelAdapterCraftResolvesLocationConnectionsByNameOrKey(t *testing.T) {
+	adapter := NewModelAdapter(nil, nil, nil,
+		map[string]*models.Location{
+			"loc_start": {
+				Name:               "Crystal Market",
+				ConnectedLocations: []string{"Other Gate"},
+			},
+			"other_gate": {
+				Name: "Other Gate",
+			},
+		},
+		nil,
+	)
+
+	dslData, err := adapter.BuildDSL(PhaseCraft)
+	if err != nil {
+		t.Fatalf("build DSL: %v", err)
+	}
+	if len(dslData.World.Locations) != 2 {
+		t.Fatalf("expected two locations, got %+v", dslData.World.Locations)
+	}
+	if len(dslData.World.Locations[0].Connections) != 1 || dslData.World.Locations[0].Connections[0].To != "other_gate" {
+		t.Fatalf("expected location connection to resolve to craft key, got %+v", dslData.World.Locations[0].Connections)
+	}
+}
+
+func TestDSLMergerPreservesCraftWorldRules(t *testing.T) {
+	merger := NewDSLMerger(NewConsoleLogger(WithMinLevel(LogLevelError)))
+	merger.AddFragment(&DSL{
+		Metadata:   &Metadata{Title: "outline"},
+		World:      &World{},
+		Characters: &Characters{},
+		Storyline:  &Storyline{},
+		Systems:    &Systems{},
+	}, PhaseOutline, "01_outline.rpg")
+	merger.AddFragment(&DSL{
+		Metadata: &Metadata{Title: "craft"},
+		World: &World{
+			Rules: []Rule{{
+				Name:    "organization_ember_guild",
+				Trigger: "organization.profile",
+				Effect:  "id=ember_guild; name=Ember Guild",
+			}},
+		},
+		Characters: &Characters{},
+		Storyline:  &Storyline{},
+		Systems:    &Systems{},
+	}, PhaseCraft, "02_craft.rpg")
+
+	result, err := merger.Merge()
+	if err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+	found := false
+	for _, rule := range result.DSL.World.Rules {
+		if rule.Name == "organization_ember_guild" && rule.Trigger == "organization.profile" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected craft world rule to survive merge, got %+v", result.DSL.World.Rules)
+	}
+}
+
 func writeJSON(t *testing.T, path string, value interface{}) {
 	t.Helper()
 	data, err := json.MarshalIndent(value, "", "  ")

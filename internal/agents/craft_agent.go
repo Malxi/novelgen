@@ -17,6 +17,7 @@ type CraftStorySetupSummary struct {
 	Premise        string   `json:"premise" md:"premise" desc:"Story premise and core concept"`
 	Theme          string   `json:"theme" md:"theme" desc:"Central theme of the story"`
 	Rules          []string `json:"rules" md:"rules" desc:"Story world rules and constraints"`
+	CoreCast       []string `json:"core_cast,omitempty" md:"core_cast,omitempty" desc:"Setup-level core cast seeds"`
 	Premises       []string `json:"premises,omitempty" md:"premises,omitempty" desc:"Ability/world systems with progression hints"`
 	WorldResources []string `json:"world_resources,omitempty" md:"world_resources,omitempty" desc:"Core resources and scarcity constraints"`
 	Storylines     []string `json:"storylines,omitempty" md:"storylines,omitempty" desc:"High-level story contracts and pressures"`
@@ -175,6 +176,17 @@ func (a *CraftAgent) buildStorySetupSummary() CraftStorySetupSummary {
 			resource.Category,
 			resource.Scarcity,
 			resource.Description,
+		}, " | "))
+	}
+	for _, seed := range a.setup.CoreCast {
+		summary.CoreCast = append(summary.CoreCast, joinNonEmpty([]string{
+			seed.Name,
+			seed.Role,
+			fmt.Sprintf("importance=%d", seed.Importance),
+			seed.StoryFunction,
+			seed.RelationshipArc,
+			seed.EntryPhase,
+			seed.Payoff,
 		}, " | "))
 	}
 	for _, storyline := range a.setup.Storylines {

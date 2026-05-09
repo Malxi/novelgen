@@ -13,6 +13,17 @@ func TestNormalizeStorySetupTrimsAndOrdersContracts(t *testing.T) {
 		Tone:           "  sharp  ",
 		Tense:          " present ",
 		POVStyle:       "  third person  ",
+		LongFormPlan: &LongFormPlan{
+			TargetChapters:   1000,
+			TargetVolumes:    10,
+			MainLoop:         "  pressure -> exploit -> win  ",
+			EscalationLadder: []string{" local ", "", "local", " empire "},
+			ReaderPromises:   []string{" public wins ", " public wins ", " faction rise "},
+			PayoffCadence:    "  small wins every chapter, big wins every volume  ",
+			VolumePattern:    []string{" hook ", " exploit ", " win "},
+			MidpointMutation: "  local game becomes regional war  ",
+			EndgamePromise:   "  final public reversal  ",
+		},
 		Storylines: []Storyline{{
 			Name:       "  Main Arc  ",
 			Importance: 9,
@@ -25,6 +36,20 @@ func TestNormalizeStorySetupTrimsAndOrdersContracts(t *testing.T) {
 				OpponentMisread: "  ",
 				RewardType:      "  reputation  ",
 			},
+			RepeatablePressure: "  rival factions keep raising public tests  ",
+			PayoffCadence:      "  partial reveal each volume  ",
+			Mutation:           "  local rivalry becomes imperial audit  ",
+			FailureMode:        "  repetitive tournament brackets  ",
+		}},
+		CoreCast: []CoreCastSeed{{
+			Name:            "  Hero  ",
+			Role:            " protagonist ",
+			Importance:      10,
+			StoryFunction:   "  drives the main power fantasy  ",
+			RelationshipArc: "  isolated -> trusted  ",
+			EntryPhase:      " opening ",
+			Payoff:          "  public victory  ",
+			StorylineRefs:   []string{" Main Arc ", "", "Main Arc"},
 		}},
 		Premises: []Premise{{
 			Name:        "  Growth System  ",
@@ -61,8 +86,17 @@ func TestNormalizeStorySetupTrimsAndOrdersContracts(t *testing.T) {
 	if len(setup.Rules) != 2 {
 		t.Fatalf("rules were not compacted: %#v", setup.Rules)
 	}
+	if setup.LongFormPlan == nil || setup.LongFormPlan.MainLoop != "pressure -> exploit -> win" || len(setup.LongFormPlan.EscalationLadder) != 2 {
+		t.Fatalf("long form plan was not normalized: %#v", setup.LongFormPlan)
+	}
 	if len(setup.Storylines) != 1 || setup.Storylines[0].Name != "Main Arc" {
 		t.Fatalf("storyline was not trimmed: %#v", setup.Storylines)
+	}
+	if setup.Storylines[0].RepeatablePressure != "rival factions keep raising public tests" || setup.Storylines[0].FailureMode != "repetitive tournament brackets" {
+		t.Fatalf("storyline serial engine was not trimmed: %#v", setup.Storylines[0])
+	}
+	if len(setup.CoreCast) != 1 || setup.CoreCast[0].Name != "Hero" || len(setup.CoreCast[0].StorylineRefs) != 1 {
+		t.Fatalf("core cast was not normalized: %#v", setup.CoreCast)
 	}
 	if setup.Storylines[0].AppealEngine == nil || setup.Storylines[0].AppealEngine.SurfaceLimit != "" {
 		t.Fatalf("storyline appeal engine was not normalized: %#v", setup.Storylines[0].AppealEngine)

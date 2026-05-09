@@ -9,9 +9,19 @@ Improve a story setup based on review feedback or user guidance.
   - `summary`: Overall evaluation summary
   - `suggestions`: List of specific improvement suggestions with category, issue, suggestion, and priority
   - `strengths`: List of what works well (should be preserved)
+- `revision_context` (optional): Compact session memory from earlier generation, review, and improve rounds. Use it to keep continuity across rounds, preserve already-accepted strengths, and avoid reworking fixed issues.
 
 ## Output
 - `setup`: The improved story setup
+
+## Setup Compactness
+
+Keep setup as a compact creation contract. If review feedback asks for more
+depth, add the smallest seed, rule, progression boundary, or payoff promise
+that solves the issue. Do not expand setup into full biographies, exhaustive
+lore, minor cast catalogs, chapter plans, or item encyclopedias. Oversized
+sections should be compressed into reusable functions and moved conceptually to
+craft or notes.
 
 ## Improvement Strategy
 
@@ -50,6 +60,12 @@ For each suggestion:
 - Don't over-correct and lose what works well
 - Maintain the core vision and unique aspects
 
+### 5. Use Revision Context
+- If `revision_context` is present, treat it as the running memory of the current session
+- Follow the order of history: generation -> review -> improve -> review
+- Do not re-open issues that were already addressed unless the current review shows they still fail
+- Keep the revision focused on the current round's highest-value fixes
+
 ## Specific Improvement Areas
 
 ### World Building & Rules
@@ -61,11 +77,17 @@ For each suggestion:
 - Every added or revised `premises[]` system should have a progression ladder with named stages, requirements/costs, ceilings, and a clear story use. Avoid one vague omnipotent upgrade system.
 - For power-fantasy/web-novel setups, prefer "surface limits the protagonist can exploit" over grim mandatory costs. A good rule should create clever wins, enemy misreads, and visible rewards.
 
+### Long-Form Capacity
+- Add or refine `long_form_plan` when the setup targets or implies serial/web-novel scale, 300+ chapters, 1000 chapters, group cast, or multi-volume progression.
+- Keep it as a high-level capacity contract: target_chapters, target_volumes, main_loop, escalation_ladder, reader_promises, payoff_cadence, volume_pattern, midpoint_mutation, and endgame_promise.
+- Use it to make the story easier for compose to outline: define repeatable wins, escalation stages, and when bigger payoffs should land.
+- Do not add concrete chapter lists here. Compose owns the actual parts, volumes, and chapters.
+
 ### Characters
-- Enhance motivation clarity
-- Deepen character backgrounds
-- Strengthen character arcs
-- Improve character relationships
+- Use `core_cast` for setup-level character seeds, not complete character cards
+- Add or refine core cast seeds when the setup needs stronger long-form character engines
+- Each important seed should define role, importance, story_function, relationship_arc, entry_phase, payoff, and storyline_refs when useful
+- Do not overfill biography, appearance, exact skills, stats, or detailed backstory here; craft owns full character cards
 
 ### Plot & Storylines
 - Strengthen main storyline progression
@@ -74,6 +96,7 @@ For each suggestion:
 - Improve pacing and tension
 - Optionally enrich storylines with high-level contract hints such as `scope`, `payoff_style`, `setup_role`, `desire`, `opposition`, `stakes`, `turn`, `payoff`, `open_question`, or `pressure_points` when those hints create real pressure or payoff
 - For important storylines (`importance >= 8`), prefer a concrete arc contract: `scope`, `setup_role`, `payoff_style`, 2-4 `pressure_points`, and the most relevant desire/opposition/stakes/open_question/payoff fields
+- For important long-form storylines, add or refine serial-engine hints when they are thin: `repeatable_pressure`, `payoff_cadence`, `mutation`, and `failure_mode`
 - Keep `scope` high-level (`opening`, `volume`, `book`, `series`) and avoid chapter-specific planning in setup
 - Use `payoff_style` to distinguish immediate payoff from staged reveals or slow-burn promises
 - Add or refine optional `appeal_engine` on important storylines when the arc lacks a repeatable爽点: define `appeal`, `surface_limit`, `exploit`, `signature_win`, `upgrade_path`, `opponent_misread`, and `reward_type`.

@@ -4,7 +4,7 @@
 Generate detailed chapters for a specific volume, maintaining continuity with previous volumes and building toward the volume's goals.
 
 ## Input
-- `setup`: StorySetup with premise, characters, storylines, etc.
+- `setup_brief`: Compact StorySetup contract with premise, rules, long-form plan, core cast seeds, storylines, progression systems, and resources.
 - `part`: Current Part information (title, summary)
 - `volume`: Current Volume to generate chapters for (title, summary)
 - `volume_index`: Index of this volume (1-based)
@@ -287,6 +287,7 @@ Example:
 - Chapter 1 must follow from previous volume's ending (if any)
 - Each chapter must lead logically to the next
 - Last chapter must fulfill the volume's summary
+- If setup has `long_form_plan`, use its `main_loop`, `reader_promises`, and `payoff_cadence` to keep this volume's chapters delivering visible wins, rewards, and next gates. Do not stall the serial loop with setup-only chapters.
 
 ### Beat Continuity
 - Chapter N's closing beat must connect to Chapter N+1's opening
@@ -448,7 +449,7 @@ Example:
 - Unresolved mysteries at the volume's end produce an info-level suggestion
 
 ### Using Setup Data (NEW)
-The input includes story setup with faction definitions, world timeline, and resources. Use these to inform your output:
+The input includes `setup_brief`, a compact story setup contract with faction hints, world timeline cues, and resources. Use these to inform your output:
 
 - **Faction tiers from premises**: If setup.premises defines factions (e.g. `category: "zerg"` with progression levels), use those tier names in enemy `faction` and `tier` fields. Do NOT invent new faction names.
 - **World timeline**: Align chapter `timeline.anchor` with setup.world_timeline events. If the setup says "2247年: 休眠", the first chapter's timeline anchor should match.

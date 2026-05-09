@@ -161,6 +161,46 @@ export interface Storyline {
   agency_contracts?: StorylineAgencyContract[];
   antagonist_moves?: string[];
   clue_contracts?: StorylineClueContract[];
+  repeatable_pressure?: string;
+  payoff_cadence?: string;
+  mutation?: string;
+  failure_mode?: string;
+  appeal_engine?: AppealEngine;
+}
+
+export interface AppealEngine {
+  appeal?: string;
+  surface_limit?: string;
+  exploit?: string;
+  signature_win?: string;
+  upgrade_path?: string;
+  opponent_misread?: string;
+  reward_type?: string;
+}
+
+export interface LongFormPlan {
+  target_chapters?: number;
+  target_volumes?: number;
+  main_loop?: string;
+  escalation_ladder?: string[];
+  reader_promises?: string[];
+  payoff_cadence?: string;
+  volume_pattern?: string[];
+  midpoint_mutation?: string;
+  endgame_promise?: string;
+}
+
+export interface CoreCastSeed {
+  id?: string;
+  name: string;
+  role: string;
+  importance: number;
+  story_function: string;
+  relationship_to_lead?: string;
+  relationship_arc?: string;
+  entry_phase: string;
+  payoff?: string;
+  storyline_refs?: string[];
 }
 
 export interface PremiseProgression {
@@ -175,6 +215,7 @@ export interface Premise {
   description: string;
   category: string;
   progression: PremiseProgression[];
+  appeal_engine?: AppealEngine;
 }
 
 export interface WorldTimelineEntry {
@@ -271,6 +312,8 @@ export interface StorySetup {
   tone: string;
   tense: string;
   pov_style: string;
+  long_form_plan?: LongFormPlan;
+  core_cast?: CoreCastSeed[];
   storylines?: Storyline[];
   premises?: Premise[];
   world_timeline?: WorldTimelineEntry[];

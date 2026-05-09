@@ -48,6 +48,8 @@ func NormalizeStorySetup(setup *StorySetup) StorySetupNormalizationReport {
 		setup.WritingStyle = setup.WritingStyle.CompactReference(len([]rune(strings.TrimSpace(setup.WritingStyle.ReferenceExcerpt))))
 	}
 
+	setup.LongFormPlan = normalizeLongFormPlan(setup.LongFormPlan, &report)
+	setup.CoreCast = normalizeCoreCast(setup.CoreCast, &report)
 	setup.Storylines = normalizeStorylines(setup.Storylines, &report)
 	setup.Premises = normalizePremises(setup.Premises, &report)
 
@@ -130,6 +132,92 @@ func normalizeSetupResources(entries []WorldResource, report *StorySetupNormaliz
 	return cleaned
 }
 
+func normalizeLongFormPlan(plan *LongFormPlan, report *StorySetupNormalizationReport) *LongFormPlan {
+	if plan == nil {
+		return nil
+	}
+	before := *plan
+	beforeEscalation := append([]string(nil), plan.EscalationLadder...)
+	beforePromises := append([]string(nil), plan.ReaderPromises...)
+	beforePattern := append([]string(nil), plan.VolumePattern...)
+
+	plan.MainLoop = strings.TrimSpace(plan.MainLoop)
+	plan.EscalationLadder = normalizeSetupStrings(plan.EscalationLadder, "long_form_plan.escalation_ladder", report)
+	plan.ReaderPromises = normalizeSetupStrings(plan.ReaderPromises, "long_form_plan.reader_promises", report)
+	plan.PayoffCadence = strings.TrimSpace(plan.PayoffCadence)
+	plan.VolumePattern = normalizeSetupStrings(plan.VolumePattern, "long_form_plan.volume_pattern", report)
+	plan.MidpointMutation = strings.TrimSpace(plan.MidpointMutation)
+	plan.EndgamePromise = strings.TrimSpace(plan.EndgamePromise)
+
+	if plan.IsZero() {
+		report.Changes = append(report.Changes, StorySetupNormalizationChange{
+			Path:   "long_form_plan",
+			Action: "drop_empty_long_form_plan",
+			Value:  "",
+		})
+		return nil
+	}
+
+	if plan.TargetChapters != before.TargetChapters ||
+		plan.TargetVolumes != before.TargetVolumes ||
+		plan.MainLoop != before.MainLoop ||
+		plan.PayoffCadence != before.PayoffCadence ||
+		plan.MidpointMutation != before.MidpointMutation ||
+		plan.EndgamePromise != before.EndgamePromise ||
+		!stringSlicesEqual(beforeEscalation, plan.EscalationLadder) ||
+		!stringSlicesEqual(beforePromises, plan.ReaderPromises) ||
+		!stringSlicesEqual(beforePattern, plan.VolumePattern) {
+		report.Changes = append(report.Changes, StorySetupNormalizationChange{
+			Path:   "long_form_plan",
+			Action: "trim_long_form_plan",
+			Value:  compactSummary(plan.MainLoop, plan.PayoffCadence),
+		})
+	}
+	return plan
+}
+
+func normalizeCoreCast(entries []CoreCastSeed, report *StorySetupNormalizationReport) []CoreCastSeed {
+	cleaned := make([]CoreCastSeed, 0, len(entries))
+	for i := range entries {
+		seed := entries[i]
+		beforeRefs := append([]string(nil), seed.StorylineRefs...)
+		seed.ID = strings.TrimSpace(seed.ID)
+		seed.Name = strings.TrimSpace(seed.Name)
+		seed.Role = strings.TrimSpace(seed.Role)
+		seed.StoryFunction = strings.TrimSpace(seed.StoryFunction)
+		seed.RelationshipToLead = strings.TrimSpace(seed.RelationshipToLead)
+		seed.RelationshipArc = strings.TrimSpace(seed.RelationshipArc)
+		seed.EntryPhase = strings.TrimSpace(seed.EntryPhase)
+		seed.Payoff = strings.TrimSpace(seed.Payoff)
+		seed.StorylineRefs = normalizeSetupStrings(seed.StorylineRefs, fmt.Sprintf("core_cast[%d].storyline_refs", i), report)
+
+		changed := seed.ID != entries[i].ID ||
+			seed.Name != entries[i].Name ||
+			seed.Role != entries[i].Role ||
+			seed.StoryFunction != entries[i].StoryFunction ||
+			seed.RelationshipToLead != entries[i].RelationshipToLead ||
+			seed.RelationshipArc != entries[i].RelationshipArc ||
+			seed.EntryPhase != entries[i].EntryPhase ||
+			seed.Payoff != entries[i].Payoff ||
+			!stringSlicesEqual(beforeRefs, seed.StorylineRefs)
+
+		if seed.ID == "" && seed.Name == "" && seed.Role == "" && seed.Importance == 0 &&
+			seed.StoryFunction == "" && seed.RelationshipToLead == "" && seed.RelationshipArc == "" &&
+			seed.EntryPhase == "" && seed.Payoff == "" && len(seed.StorylineRefs) == 0 {
+			continue
+		}
+		if changed {
+			report.Changes = append(report.Changes, StorySetupNormalizationChange{
+				Path:   fmt.Sprintf("core_cast[%d]", i),
+				Action: "trim_core_cast_seed",
+				Value:  seed.Name,
+			})
+		}
+		cleaned = append(cleaned, seed)
+	}
+	return cleaned
+}
+
 func normalizeStorylines(entries []Storyline, report *StorySetupNormalizationReport) []Storyline {
 	cleaned := make([]Storyline, 0, len(entries))
 	for i := range entries {
@@ -143,6 +231,10 @@ func normalizeStorylines(entries []Storyline, report *StorySetupNormalizationRep
 		item.Scope = strings.TrimSpace(item.Scope)
 		item.PayoffStyle = strings.TrimSpace(item.PayoffStyle)
 		item.SetupRole = strings.TrimSpace(item.SetupRole)
+		item.RepeatablePressure = strings.TrimSpace(item.RepeatablePressure)
+		item.PayoffCadence = strings.TrimSpace(item.PayoffCadence)
+		item.Mutation = strings.TrimSpace(item.Mutation)
+		item.FailureMode = strings.TrimSpace(item.FailureMode)
 		item.Desire = strings.TrimSpace(item.Desire)
 		item.Opposition = strings.TrimSpace(item.Opposition)
 		item.Stakes = strings.TrimSpace(item.Stakes)
@@ -153,6 +245,8 @@ func normalizeStorylines(entries []Storyline, report *StorySetupNormalizationRep
 		item.AppealEngine = normalizeAppealEngine(item.AppealEngine, fmt.Sprintf("storylines[%d].appeal_engine", i), report)
 		if item.Name != entries[i].Name || item.Description != entries[i].Description || item.Type != entries[i].Type ||
 			item.Scope != entries[i].Scope || item.PayoffStyle != entries[i].PayoffStyle || item.SetupRole != entries[i].SetupRole ||
+			item.RepeatablePressure != entries[i].RepeatablePressure || item.PayoffCadence != entries[i].PayoffCadence ||
+			item.Mutation != entries[i].Mutation || item.FailureMode != entries[i].FailureMode ||
 			item.Desire != entries[i].Desire || item.Opposition != entries[i].Opposition || item.Stakes != entries[i].Stakes ||
 			item.Turn != entries[i].Turn || item.Payoff != entries[i].Payoff || item.OpenQuestion != entries[i].OpenQuestion {
 			changed = true
@@ -165,6 +259,7 @@ func normalizeStorylines(entries []Storyline, report *StorySetupNormalizationRep
 		}
 		if item.Name == "" && item.Description == "" && item.Type == "" && item.Importance == 0 &&
 			item.Scope == "" && item.PayoffStyle == "" && item.SetupRole == "" &&
+			item.RepeatablePressure == "" && item.PayoffCadence == "" && item.Mutation == "" && item.FailureMode == "" &&
 			item.Desire == "" && item.Opposition == "" && item.Stakes == "" && item.Turn == "" &&
 			item.Payoff == "" && item.OpenQuestion == "" && len(item.PressurePoints) == 0 && item.AppealEngine == nil {
 			continue

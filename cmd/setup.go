@@ -316,19 +316,24 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 		logger.Info("Prompt: %s", setupImprovePrompt)
 
 		// Create input with user prompt
-		input := agents.SetupImproveInput{
-			ExistingSetup: *setup,
-			ReviewResult: models.ReviewResult{
-				Summary: setupImprovePrompt,
-				Suggestions: []models.ReviewSuggestion{
-					{
-						Category:   "user_guidance",
-						Issue:      "User requested improvement",
-						Suggestion: setupImprovePrompt,
-						Priority:   "high",
-					},
+		review := models.ReviewResult{
+			Summary: setupImprovePrompt,
+			Suggestions: []models.ReviewSuggestion{
+				{
+					Category:   "user_guidance",
+					Issue:      "User requested improvement",
+					Suggestion: setupImprovePrompt,
+					Priority:   "high",
 				},
 			},
+		}
+		session := agents.NewRevisionSession("setup", "Manual setup improvement from user guidance.")
+		session.AddUserGuidance(1, setupImprovePrompt)
+		session.AddReview(1, review)
+		input := agents.SetupImproveInput{
+			ExistingSetup:   *setup,
+			ReviewResult:    review,
+			RevisionContext: session.Prompt(),
 		}
 
 		improveResult, err := agent.Improve(cmd.Context(), input)
@@ -371,9 +376,12 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 			logger.Info("DSL simulation enriched review with %d additional issues", len(dslIssues))
 
 			if review != nil {
+				session := agents.NewRevisionSession("setup", "Repair setup after DSL simulation feedback.")
+				session.AddReview(review.Iteration+1, *review)
 				extraInput := agents.SetupImproveInput{
-					ExistingSetup: *improvedSetup,
-					ReviewResult:  *review,
+					ExistingSetup:   *improvedSetup,
+					ReviewResult:    *review,
+					RevisionContext: session.Prompt(),
 				}
 				if extraResult, extraErr := agent.Improve(cmd.Context(), extraInput); extraErr == nil {
 					setup = &extraResult.Setup
@@ -403,9 +411,12 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 			if len(crossIssues)+len(crossWarnings) > 0 {
 				logger.Info("Cross-module check added %d issues and %d warnings to review",
 					len(crossIssues), len(crossWarnings))
+				session := agents.NewRevisionSession("setup", "Repair setup after setup/outline cross-module feedback.")
+				session.AddReview(review.Iteration+1, *review)
 				extraInput := agents.SetupImproveInput{
-					ExistingSetup: *setup,
-					ReviewResult:  *review,
+					ExistingSetup:   *setup,
+					ReviewResult:    *review,
+					RevisionContext: session.Prompt(),
 				}
 				if extraResult, extraErr := agent.Improve(cmd.Context(), extraInput); extraErr == nil {
 					setup = &extraResult.Setup
@@ -518,8 +529,10 @@ func parseStorySetupFromMarkdown(content string) (*models.StorySetup, error) {
 	lines := strings.Split(content, "\n")
 	var currentSection string
 	var sectionContent []string
+	var inCoreCast bool
 	var inStorylines bool
 	var inPremises bool
+	var currentCoreCast *models.CoreCastSeed
 	var currentStoryline *models.Storyline
 	var currentPremise *models.Premise
 	var currentProgression *models.ProgressionStage
@@ -547,9 +560,13 @@ func parseStorySetupFromMarkdown(content string) (*models.StorySetup, error) {
 			flushSection()
 			sectionName := strings.TrimSpace(strings.TrimPrefix(trimmed, "## "))
 			sectionLower := strings.ToLower(sectionName)
+			inCoreCast = strings.Contains(sectionLower, "core cast") || strings.Contains(sectionLower, "character seed")
 			inStorylines = strings.Contains(sectionLower, "storyline")
 			inPremises = strings.Contains(sectionLower, "premise")
 			currentSection = ""
+			if strings.Contains(sectionLower, "long form") || strings.Contains(sectionLower, "long_form") || strings.Contains(sectionLower, "serial plan") {
+				currentSection = sectionName
+			}
 			sectionContent = []string{}
 			continue
 		}
@@ -559,7 +576,18 @@ func parseStorySetupFromMarkdown(content string) (*models.StorySetup, error) {
 			flushSection()
 			subSection := strings.TrimSpace(strings.TrimPrefix(trimmed, "### "))
 
-			if inStorylines {
+			if inCoreCast {
+				if currentCoreCast != nil && currentCoreCast.Name != "" {
+					setup.CoreCast = append(setup.CoreCast, *currentCoreCast)
+				}
+				name := subSection
+				if idx := strings.Index(subSection, ":"); idx > 0 {
+					name = strings.TrimSpace(subSection[idx+1:])
+				}
+				currentCoreCast = &models.CoreCastSeed{Name: name}
+				currentSection = "core_cast_item"
+				sectionContent = []string{}
+			} else if inStorylines {
 				// Save previous storyline
 				if currentStoryline != nil && currentStoryline.Name != "" {
 					setup.Storylines = append(setup.Storylines, *currentStoryline)
@@ -598,6 +626,47 @@ func parseStorySetupFromMarkdown(content string) (*models.StorySetup, error) {
 				sectionContent = []string{}
 			}
 			continue
+		}
+
+		if currentCoreCast != nil && currentSection == "core_cast_item" {
+			if strings.HasPrefix(trimmed, "- **ID**:") || strings.HasPrefix(trimmed, "- ID:") {
+				currentCoreCast.ID = trimMarkdownField(trimmed, "ID")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Role**:") || strings.HasPrefix(trimmed, "- Role:") {
+				currentCoreCast.Role = trimMarkdownField(trimmed, "Role")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Importance**:") || strings.HasPrefix(trimmed, "- Importance:") {
+				imp := trimMarkdownField(trimmed, "Importance")
+				imp = strings.TrimSuffix(imp, "/10")
+				fmt.Sscanf(imp, "%d", &currentCoreCast.Importance)
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Story Function**:") || strings.HasPrefix(trimmed, "- Story Function:") {
+				currentCoreCast.StoryFunction = trimMarkdownField(trimmed, "Story Function")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Relationship To Lead**:") || strings.HasPrefix(trimmed, "- Relationship To Lead:") {
+				currentCoreCast.RelationshipToLead = trimMarkdownField(trimmed, "Relationship To Lead")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Relationship Arc**:") || strings.HasPrefix(trimmed, "- Relationship Arc:") {
+				currentCoreCast.RelationshipArc = trimMarkdownField(trimmed, "Relationship Arc")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Entry Phase**:") || strings.HasPrefix(trimmed, "- Entry Phase:") {
+				currentCoreCast.EntryPhase = trimMarkdownField(trimmed, "Entry Phase")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Payoff**:") || strings.HasPrefix(trimmed, "- Payoff:") {
+				currentCoreCast.Payoff = trimMarkdownField(trimmed, "Payoff")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Storyline Refs**:") || strings.HasPrefix(trimmed, "- Storyline Refs:") {
+				currentCoreCast.StorylineRefs = splitInlineList(trimMarkdownField(trimmed, "Storyline Refs"))
+				continue
+			}
 		}
 
 		// Progression stage headers (Level X:)
@@ -667,6 +736,22 @@ func parseStorySetupFromMarkdown(content string) (*models.StorySetup, error) {
 				currentStoryline.SetupRole = trimMarkdownField(trimmed, "Setup Role")
 				continue
 			}
+			if strings.HasPrefix(trimmed, "- **Repeatable Pressure**:") || strings.HasPrefix(trimmed, "- Repeatable Pressure:") {
+				currentStoryline.RepeatablePressure = trimMarkdownField(trimmed, "Repeatable Pressure")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Payoff Cadence**:") || strings.HasPrefix(trimmed, "- Payoff Cadence:") {
+				currentStoryline.PayoffCadence = trimMarkdownField(trimmed, "Payoff Cadence")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Mutation**:") || strings.HasPrefix(trimmed, "- Mutation:") {
+				currentStoryline.Mutation = trimMarkdownField(trimmed, "Mutation")
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- **Failure Mode**:") || strings.HasPrefix(trimmed, "- Failure Mode:") {
+				currentStoryline.FailureMode = trimMarkdownField(trimmed, "Failure Mode")
+				continue
+			}
 			if strings.HasPrefix(trimmed, "- **Importance**:") || strings.HasPrefix(trimmed, "- Importance:") {
 				imp := trimmed
 				imp = strings.TrimPrefix(imp, "- **Importance**:")
@@ -723,7 +808,7 @@ func parseStorySetupFromMarkdown(content string) (*models.StorySetup, error) {
 		}
 
 		// Regular content for simple fields
-		if currentSection != "" && currentSection != "storyline_item" && currentSection != "premise_item" {
+		if currentSection != "" && currentSection != "core_cast_item" && currentSection != "storyline_item" && currentSection != "premise_item" {
 			cleanLine := trimmed
 			cleanLine = strings.TrimPrefix(cleanLine, "- ")
 			cleanLine = strings.TrimPrefix(cleanLine, "* ")
@@ -735,6 +820,9 @@ func parseStorySetupFromMarkdown(content string) (*models.StorySetup, error) {
 
 	// Save final items
 	flushSection()
+	if currentCoreCast != nil && currentCoreCast.Name != "" {
+		setup.CoreCast = append(setup.CoreCast, *currentCoreCast)
+	}
 	if currentStoryline != nil && currentStoryline.Name != "" {
 		setup.Storylines = append(setup.Storylines, *currentStoryline)
 	}
@@ -790,6 +878,9 @@ func fillSetupField(setup *models.StorySetup, section, content string) {
 	case strings.Contains(sectionLower, "writing style") || strings.Contains(sectionLower, "writing_style") ||
 		strings.Contains(sectionLower, "写作风格") || strings.Contains(sectionLower, "文风"):
 		setup.WritingStyle = parseWritingStyleMarkdown(content)
+
+	case strings.Contains(sectionLower, "long form") || strings.Contains(sectionLower, "long_form") || strings.Contains(sectionLower, "serial plan"):
+		setup.LongFormPlan = parseLongFormPlanMarkdown(content)
 
 	case strings.Contains(sectionLower, "tense"):
 		setup.Tense = content
@@ -867,9 +958,12 @@ func repairSetupWithQualityGate(ctx context.Context, setup *models.StorySetup, p
 	agent := agents.NewSetupAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
 	review := qualityGateReviewResult("Repair setup quality gate findings before saving project state.", gate)
+	session := agents.NewRevisionSession("setup", fmt.Sprintf("Repair %s quality-gate issues before saving project state.", stage))
+	session.AddReview(1, *review)
 	output, err := agent.Improve(ctx, agents.SetupImproveInput{
-		ExistingSetup: *setup,
-		ReviewResult:  *review,
+		ExistingSetup:   *setup,
+		ReviewResult:    *review,
+		RevisionContext: session.Prompt(),
 	})
 	if err != nil {
 		return setup, gate, fmt.Errorf("setup quality gate repair failed: %w", err)
@@ -928,6 +1022,12 @@ func createStorySetupMarkdown(setup *models.StorySetup, path string) error {
 ### Writing Style
 %s
 
+## Long Form Plan
+%s
+
+## Core Cast
+%s
+
 ## Storylines
 %s
 
@@ -944,11 +1044,80 @@ func createStorySetupMarkdown(setup *models.StorySetup, path string) error {
 		setup.Tense,
 		setup.POVStyle,
 		formatWritingStyle(setup.WritingStyle),
+		formatLongFormPlan(setup.LongFormPlan),
+		formatCoreCast(setup.CoreCast),
 		formatStorylines(setup.Storylines),
 		formatPremises(setup.Premises),
 	)
 
 	return os.WriteFile(path, []byte(content), 0644)
+}
+
+func formatLongFormPlan(plan *models.LongFormPlan) string {
+	if plan == nil || plan.IsZero() {
+		return "No long-form plan defined."
+	}
+	var result strings.Builder
+	if plan.TargetChapters > 0 {
+		result.WriteString(fmt.Sprintf("- **Target Chapters**: %d\n", plan.TargetChapters))
+	}
+	if plan.TargetVolumes > 0 {
+		result.WriteString(fmt.Sprintf("- **Target Volumes**: %d\n", plan.TargetVolumes))
+	}
+	if plan.MainLoop != "" {
+		result.WriteString(fmt.Sprintf("- **Main Loop**: %s\n", plan.MainLoop))
+	}
+	if len(plan.EscalationLadder) > 0 {
+		result.WriteString(fmt.Sprintf("- **Escalation Ladder**: %s\n", strings.Join(plan.EscalationLadder, "; ")))
+	}
+	if len(plan.ReaderPromises) > 0 {
+		result.WriteString(fmt.Sprintf("- **Reader Promises**: %s\n", strings.Join(plan.ReaderPromises, "; ")))
+	}
+	if plan.PayoffCadence != "" {
+		result.WriteString(fmt.Sprintf("- **Payoff Cadence**: %s\n", plan.PayoffCadence))
+	}
+	if len(plan.VolumePattern) > 0 {
+		result.WriteString(fmt.Sprintf("- **Volume Pattern**: %s\n", strings.Join(plan.VolumePattern, "; ")))
+	}
+	if plan.MidpointMutation != "" {
+		result.WriteString(fmt.Sprintf("- **Midpoint Mutation**: %s\n", plan.MidpointMutation))
+	}
+	if plan.EndgamePromise != "" {
+		result.WriteString(fmt.Sprintf("- **Endgame Promise**: %s\n", plan.EndgamePromise))
+	}
+	return result.String()
+}
+
+func formatCoreCast(seeds []models.CoreCastSeed) string {
+	if len(seeds) == 0 {
+		return "No core cast seeds defined."
+	}
+	var result strings.Builder
+	for _, seed := range seeds {
+		result.WriteString(fmt.Sprintf("\n### %s\n", seed.Name))
+		if seed.ID != "" {
+			result.WriteString(fmt.Sprintf("- **ID**: %s\n", seed.ID))
+		}
+		result.WriteString(fmt.Sprintf("- **Role**: %s\n", seed.Role))
+		result.WriteString(fmt.Sprintf("- **Importance**: %d/10\n", seed.Importance))
+		result.WriteString(fmt.Sprintf("- **Story Function**: %s\n", seed.StoryFunction))
+		if seed.RelationshipToLead != "" {
+			result.WriteString(fmt.Sprintf("- **Relationship To Lead**: %s\n", seed.RelationshipToLead))
+		}
+		if seed.RelationshipArc != "" {
+			result.WriteString(fmt.Sprintf("- **Relationship Arc**: %s\n", seed.RelationshipArc))
+		}
+		if seed.EntryPhase != "" {
+			result.WriteString(fmt.Sprintf("- **Entry Phase**: %s\n", seed.EntryPhase))
+		}
+		if seed.Payoff != "" {
+			result.WriteString(fmt.Sprintf("- **Payoff**: %s\n", seed.Payoff))
+		}
+		if len(seed.StorylineRefs) > 0 {
+			result.WriteString(fmt.Sprintf("- **Storyline Refs**: %s\n", strings.Join(seed.StorylineRefs, "; ")))
+		}
+	}
+	return result.String()
 }
 
 func formatStorylines(storylines []models.Storyline) string {
@@ -968,6 +1137,18 @@ func formatStorylines(storylines []models.Storyline) string {
 		}
 		if s.SetupRole != "" {
 			result.WriteString(fmt.Sprintf("- **Setup Role**: %s\n", s.SetupRole))
+		}
+		if s.RepeatablePressure != "" {
+			result.WriteString(fmt.Sprintf("- **Repeatable Pressure**: %s\n", s.RepeatablePressure))
+		}
+		if s.PayoffCadence != "" {
+			result.WriteString(fmt.Sprintf("- **Payoff Cadence**: %s\n", s.PayoffCadence))
+		}
+		if s.Mutation != "" {
+			result.WriteString(fmt.Sprintf("- **Mutation**: %s\n", s.Mutation))
+		}
+		if s.FailureMode != "" {
+			result.WriteString(fmt.Sprintf("- **Failure Mode**: %s\n", s.FailureMode))
 		}
 		result.WriteString(fmt.Sprintf("- **Description**: %s\n", s.Description))
 		if s.Desire != "" {
@@ -1091,6 +1272,40 @@ func parseWritingStyleMarkdown(content string) models.WritingStyle {
 	}
 	style.ReferenceExcerpt = strings.TrimSpace(strings.Join(referenceLines, "\n"))
 	return style.CompactReference(len([]rune(style.ReferenceExcerpt)))
+}
+
+func parseLongFormPlanMarkdown(content string) *models.LongFormPlan {
+	var plan models.LongFormPlan
+	for _, line := range strings.Split(content, "\n") {
+		key, value, ok := parseMarkdownLabel(line)
+		if !ok {
+			continue
+		}
+		switch normalizeMarkdownLabel(key) {
+		case "target chapters":
+			fmt.Sscanf(value, "%d", &plan.TargetChapters)
+		case "target volumes":
+			fmt.Sscanf(value, "%d", &plan.TargetVolumes)
+		case "main loop":
+			plan.MainLoop = value
+		case "escalation ladder":
+			plan.EscalationLadder = splitInlineList(value)
+		case "reader promises":
+			plan.ReaderPromises = splitInlineList(value)
+		case "payoff cadence":
+			plan.PayoffCadence = value
+		case "volume pattern":
+			plan.VolumePattern = splitInlineList(value)
+		case "midpoint mutation":
+			plan.MidpointMutation = value
+		case "endgame promise":
+			plan.EndgamePromise = value
+		}
+	}
+	if plan.IsZero() {
+		return nil
+	}
+	return &plan
 }
 
 func parseMarkdownLabel(line string) (key, value string, ok bool) {
@@ -1234,8 +1449,8 @@ func runSetupCheck(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 	fmt.Printf("===== SETUP VALIDATION =====\n")
 	fmt.Printf("Project: %s | Genres: %v\n", setup.ProjectName, setup.Genres)
-	fmt.Printf("Premises: %d | Storylines: %d | Timeline events: %d | Resources: %d\n\n",
-		len(setup.Premises), len(setup.Storylines), len(setup.WorldTimeline), len(setup.WorldResources))
+	fmt.Printf("Premises: %d | Storylines: %d | Core cast: %d | Timeline events: %d | Resources: %d\n\n",
+		len(setup.Premises), len(setup.Storylines), len(setup.CoreCast), len(setup.WorldTimeline), len(setup.WorldResources))
 
 	for _, p := range setup.Premises {
 		if len(p.Progression) == 0 {
@@ -1275,6 +1490,13 @@ func runSetupCheck(cmd *cobra.Command, args []string) error {
 		}
 		if texture < 3 {
 			fmt.Printf("  💡 [storyline] '%s' 可补充欲望、阻力、代价、反转或回收提示，让故事线更有压力\n", storyline.Name)
+			suggestions++
+		}
+	}
+
+	for _, seed := range setup.CoreCast {
+		if seed.Importance >= 8 && (strings.TrimSpace(seed.StoryFunction) == "" || strings.TrimSpace(seed.Payoff) == "") {
+			fmt.Printf("  馃挕 [core_cast] '%s' 鍙ˉ鍏呮晠浜嬪姛鑳戒笌 payoff锛岃 craft 鎵╁啓鏃朵笉浼氭紓绉籠n", seed.Name)
 			suggestions++
 		}
 	}

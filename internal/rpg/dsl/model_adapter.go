@@ -950,6 +950,7 @@ func (a *ModelAdapter) buildLocations(dsl *DSL) {
 
 	// Clear placeholders first
 	dsl.World.Locations = nil
+	locationRefIDs := a.locationReferenceIDs()
 
 	for _, id := range sortedLocationKeys(a.locations) {
 		loc := a.locations[id]
@@ -972,7 +973,7 @@ func (a *ModelAdapter) buildLocations(dsl *DSL) {
 
 		for _, connName := range loc.ConnectedLocations {
 			dslLoc.Connections = append(dslLoc.Connections, Connection{
-				To: sanitizeID(connName),
+				To: resolveLocationReferenceID(connName, locationRefIDs),
 			})
 		}
 
@@ -986,6 +987,25 @@ func (a *ModelAdapter) buildLocations(dsl *DSL) {
 
 		dsl.World.Locations = append(dsl.World.Locations, dslLoc)
 	}
+}
+
+func (a *ModelAdapter) locationReferenceIDs() map[string]string {
+	refs := make(map[string]string)
+	if a.locations == nil {
+		return refs
+	}
+	for _, id := range sortedLocationKeys(a.locations) {
+		loc := a.locations[id]
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		refs[normalizeValidationKey(id)] = id
+		if loc != nil && strings.TrimSpace(loc.Name) != "" {
+			refs[normalizeValidationKey(loc.Name)] = id
+		}
+	}
+	return refs
 }
 
 func (a *ModelAdapter) buildItems(dsl *DSL) {
@@ -1215,6 +1235,17 @@ func craftStateEffects(effects []models.CraftStateEffect) []StateDelta {
 		})
 	}
 	return deltas
+}
+
+func resolveLocationReferenceID(raw string, refs map[string]string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if id, ok := refs[normalizeValidationKey(raw)]; ok {
+		return id
+	}
+	return sanitizeID(raw)
 }
 
 func maxPairInt(a, b int) int {
