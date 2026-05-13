@@ -5,6 +5,7 @@ run/
 *.zip
 .claude/
 bin/
+books/
 
 # LLM Config files (may contain API keys)
 llm_config.json
