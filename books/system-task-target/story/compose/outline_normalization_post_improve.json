@@ -1,64 +1,14 @@
 {
   "changes": [
     {
-      "path": "P1-V1-C1.timeline.anchor",
-      "action": "fill_timeline_anchor",
-      "value": "第1章"
+      "path": "P1-V1-C4.characters",
+      "action": "sync_scene_character",
+      "value": "顾衡"
     },
     {
-      "path": "P1-V1-C2.timeline.anchor",
-      "action": "fill_timeline_anchor",
-      "value": "第2章"
-    },
-    {
-      "path": "P1-V1-C3.timeline.anchor",
-      "action": "fill_timeline_anchor",
-      "value": "第3章"
-    },
-    {
-      "path": "P1-V1-C4.timeline.anchor",
-      "action": "fill_timeline_anchor",
-      "value": "第4章"
-    },
-    {
-      "path": "P1-V1-C5.timeline.anchor",
-      "action": "fill_timeline_anchor",
-      "value": "第5章"
-    },
-    {
-      "path": "P1-V1-C5.events",
-      "action": "add_conflict_event",
-      "value": "顾衡准备复查丹房废炉，但比预期来得更早；白烬必须在丹房执事的额外监管和顾衡提前到来之间找到空档，..."
-    },
-    {
-      "path": "P1-V1-C6.timeline.anchor",
-      "action": "fill_timeline_anchor",
-      "value": "第6章"
-    },
-    {
-      "path": "P1-V1-C7.timeline.anchor",
-      "action": "fill_timeline_anchor",
-      "value": "第7章"
-    },
-    {
-      "path": "P1-V1-C8.timeline.anchor",
-      "action": "fill_timeline_anchor",
-      "value": "第8章"
-    },
-    {
-      "path": "P1-V1-C8.events",
-      "action": "add_state_change_event",
-      "value": "白烬把旧演武台断剑共鸣、陆青禾入崖令、藏剑崖旧阶剑痕连成一条线，并把'听回响'转化成右肩线线索。"
-    },
-    {
-      "path": "P1-V1-C9.timeline.anchor",
-      "action": "fill_timeline_anchor",
-      "value": "第9章"
-    },
-    {
-      "path": "P1-V1-C10.timeline.anchor",
-      "action": "fill_timeline_anchor",
-      "value": "第10章"
+      "path": "P1-V1-C6.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "陆青禾（初步信任） -\u003e 陆青禾"
     }
   ]
 }
