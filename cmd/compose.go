@@ -1787,14 +1787,9 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 			return err
 		}
 		if output.Chapter != nil {
-			chapter.Title = output.Chapter.Title
-			chapter.Summary = output.Chapter.Summary
-			chapter.Characters = output.Chapter.Characters
-			chapter.Location = output.Chapter.Location
-			chapter.Events = output.Chapter.Events
-
-			chapter.Conflict = output.Chapter.Conflict
-			chapter.Pacing = output.Chapter.Pacing
+			existingID := chapter.ID
+			*chapter = *output.Chapter
+			chapter.ID = existingID
 		}
 		return nil
 

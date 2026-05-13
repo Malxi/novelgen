@@ -369,7 +369,7 @@ export function OutlineWorkbench({ projectPath, view = 'skeleton' }: OutlineWork
     loadOutline();
   }, [loadOutline]);
 
-  async function saveOutline(next = outline) {
+  async function saveOutline(next = outline): Promise<boolean> {
     setSaving(true);
     setError(null);
     try {
@@ -377,8 +377,10 @@ export function OutlineWorkbench({ projectPath, view = 'skeleton' }: OutlineWork
       setOutline(next);
       setJsonDraft(JSON.stringify(next, null, 2));
       setDirty(false);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      return false;
     } finally {
       setSaving(false);
     }
@@ -443,8 +445,19 @@ export function OutlineWorkbench({ projectPath, view = 'skeleton' }: OutlineWork
     return `${target.partIndex + 1}_${target.volumeIndex + 1}_${target.chapterIndex + 1}`;
   }
 
-  function runRegen(target: OutlineTarget) {
-    runComposeTask('regen', { _positional: regenID(target), prompt });
+  function defaultRegenPrompt(target: OutlineTarget) {
+    if (target.type === 'part') return 'Rewrite this part while preserving the existing continuity and stronger reader hooks.';
+    if (target.type === 'volume') return 'Rewrite this volume while preserving continuity, chapter count, and the current story setup.';
+    return 'Rewrite this chapter using the current outline context. Preserve continuity, but improve motivation, conflict, beats, payoff, and hook.';
+  }
+
+  async function runRegen(target: OutlineTarget) {
+    const suggestions = prompt.trim() || defaultRegenPrompt(target);
+    if (dirty) {
+      const saved = await saveOutline();
+      if (!saved) return;
+    }
+    await runComposeTask('regen', { _positional: regenID(target), prompt: suggestions });
   }
 
   function switchMode(nextMode: OutlineMode) {
@@ -587,6 +600,15 @@ export function OutlineWorkbench({ projectPath, view = 'skeleton' }: OutlineWork
             </div>
           </div>
 
+          <Field label="AI Prompt">
+            <textarea
+              className="input min-h-20"
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              placeholder="例如：重写这一卷，强化主角反制外挂的爽点；减少巧合，让冲突更自然。"
+            />
+          </Field>
+
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Field label="卷标题">
               <input className="input" value={volume.title || ''} onChange={(event) => updateVolume(partIndex, volumeIndex, { title: event.target.value })} />
@@ -626,7 +648,15 @@ export function OutlineWorkbench({ projectPath, view = 'skeleton' }: OutlineWork
                     <ChevronRight className="mt-1 h-4 w-4 flex-none text-[var(--text-muted)] transition-transform group-open/chapter:rotate-90" />
                   </summary>
                   <div className="space-y-4 border-t border-[var(--border)]/70 p-4">
-                    <div className="flex justify-end">
+                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                      <Field label="AI Prompt">
+                        <textarea
+                          className="input min-h-20"
+                          value={prompt}
+                          onChange={(event) => setPrompt(event.target.value)}
+                          placeholder="例如：重写此章，强化角色动机；主角只能看到单条日志，不要全知。"
+                        />
+                      </Field>
                       <ConfirmButton
                         className="btn btn-secondary"
                         confirmText="确认重写此章"
@@ -730,6 +760,15 @@ export function OutlineWorkbench({ projectPath, view = 'skeleton' }: OutlineWork
             AI 重写此章
           </ConfirmButton>
         </div>
+
+        <Field label="AI Prompt">
+          <textarea
+            className="input min-h-20"
+            value={prompt}
+            onChange={(event) => setPrompt(event.target.value)}
+            placeholder="例如：重写此章，主角只能看见单条日志；冲突动机要自然，不要机械解释系统。"
+          />
+        </Field>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Field label="标题">

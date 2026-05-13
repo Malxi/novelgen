@@ -570,6 +570,16 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 		cmdArgs = append(cmdArgs, positional)
 	}
 
+	// Web tasks are non-interactive. compose regen prompts in the terminal when
+	// --prompt is omitted, so provide a default to avoid hanging background jobs.
+	if command == "compose" {
+		if subcommand, ok := args["subcommand"].(string); ok && subcommand == "regen" {
+			if prompt, ok := args["prompt"].(string); !ok || strings.TrimSpace(prompt) == "" {
+				args["prompt"] = "Regenerate this outline element while preserving continuity and improving motivation, conflict, beats, payoff, and hook."
+			}
+		}
+	}
+
 	// Auto-add --force for compose gen to allow regeneration with backup
 	if command == "compose" {
 		if subcommand, ok := args["subcommand"].(string); ok && subcommand == "gen" {
