@@ -1,0 +1,124 @@
+{
+  "changes": [
+    {
+      "path": "P1-V1-C2.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "穿越带来的轻微头痛（缓解中） -\u003e 穿越带来的轻微头痛"
+    },
+    {
+      "path": "P1-V1-C3.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "轻微头痛（基本消退） -\u003e 轻微头痛"
+    },
+    {
+      "path": "P1-V1-C6.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "轻微擦伤（手臂） -\u003e 轻微擦伤"
+    },
+    {
+      "path": "P1-V1-C10.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "经历过一次死亡（回档重置） -\u003e 经历过一次死亡"
+    },
+    {
+      "path": "P1-V3-C1.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第1章"
+    },
+    {
+      "path": "P1-V3-C1.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青岚宗主擂台广场"
+    },
+    {
+      "path": "P1-V3-C2.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第2章"
+    },
+    {
+      "path": "P1-V3-C2.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青岚宗外门小比赛区"
+    },
+    {
+      "path": "P1-V3-C3.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第3章"
+    },
+    {
+      "path": "P1-V3-C3.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青岚宗外门西侧假山"
+    },
+    {
+      "path": "P1-V3-C4.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第4章"
+    },
+    {
+      "path": "P1-V3-C4.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青岚宗丹房后院"
+    },
+    {
+      "path": "P1-V3-C5.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第5章"
+    },
+    {
+      "path": "P1-V3-C5.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青岚宗藏经阁东角"
+    },
+    {
+      "path": "P1-V3-C6.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第6章"
+    },
+    {
+      "path": "P1-V3-C6.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青岚宗小比擂台"
+    },
+    {
+      "path": "P1-V3-C7.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第7章"
+    },
+    {
+      "path": "P1-V3-C7.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青岚宗小比决赛擂台区"
+    },
+    {
+      "path": "P1-V3-C8.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第8章"
+    },
+    {
+      "path": "P1-V3-C8.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青岚宗决赛擂台下方暗道"
+    },
+    {
+      "path": "P1-V3-C9.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第9章"
+    },
+    {
+      "path": "P1-V3-C9.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青岚宗决赛擂台"
+    },
+    {
+      "path": "P1-V3-C10.timeline.anchor",
+      "action": "fill_timeline_anchor",
+      "value": "第10章"
+    },
+    {
+      "path": "P1-V3-C10.state_anchor.location",
+      "action": "fill_state_anchor_location",
+      "value": "青岚宗议事堂侧厅（开始）→杂役房（结束）"
+    }
+  ]
+}

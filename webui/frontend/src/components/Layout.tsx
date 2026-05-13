@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   BookOpen,
@@ -10,6 +10,9 @@ import {
   MapPin,
   Menu,
   Package,
+  RefreshCw,
+  RotateCcw,
+  Star,
   ScrollText,
   Settings,
   Sparkles,
@@ -18,7 +21,8 @@ import {
   X,
 } from 'lucide-react';
 import { ProjectSelector } from './ProjectSelector';
-import { createWebSocketConnection, listTasks } from '../api';
+import { createWebSocketConnection, listProjects, listTasks } from '../api';
+import { DEFAULT_PROJECT_STORAGE_KEY } from './ProjectSelector';
 import type { Project, Task } from '../types';
 import type { ReactNode } from 'react';
 
@@ -41,17 +45,32 @@ const navItems = [
   { id: 'chapters', label: '章节', icon: FileText },
 ];
 
+const outlineSubItems = [
+  { id: 'outline-skeleton', label: '骨架', icon: ScrollText },
+  { id: 'outline-volumes', label: '卷', icon: BookOpen },
+];
+
 const craftSubItems = [
   { id: 'characters', label: '角色', icon: Users },
   { id: 'locations', label: '地点', icon: MapPin },
   { id: 'items', label: '物品', icon: Package },
 ];
 
-export function Layout({ children, activeTab, onTabChange, selectedProject, onSelectProject }: LayoutProps) {
+export function Layout({
+  children,
+  activeTab,
+  onTabChange,
+  selectedProject,
+  onSelectProject,
+}: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [outlineExpanded, setOutlineExpanded] = useState(false);
   const [craftExpanded, setCraftExpanded] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [projectRefreshToken, setProjectRefreshToken] = useState(0);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [now, setNow] = useState(() => Date.now());
+  const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -80,12 +99,59 @@ export function Layout({ children, activeTab, onTabChange, selectedProject, onSe
     };
   }, []);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setSettingsOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const activeTasks = useMemo(
     () => tasks.filter((task) => task.status === 'running' || task.status === 'pending'),
     [tasks]
   );
   const visibleTask = activeTasks.find((task) => task.status === 'running') || activeTasks[0];
   const activeTaskCount = activeTasks.length;
+
+  useEffect(() => {
+    if (activeTab === 'outline' || activeTab === 'outline-skeleton' || activeTab === 'outline-volumes') setOutlineExpanded(true);
+    if (activeTab === 'characters' || activeTab === 'locations' || activeTab === 'items') setCraftExpanded(true);
+  }, [activeTab]);
+
+  async function openDefaultProject() {
+    const defaultPath = window.localStorage.getItem(DEFAULT_PROJECT_STORAGE_KEY);
+    if (!defaultPath) {
+      setProjectRefreshToken((token) => token + 1);
+      setSettingsOpen(false);
+      return;
+    }
+
+    try {
+      const projects = await listProjects();
+      const defaultProject = projects.find((project) => project.path === defaultPath);
+      if (defaultProject) {
+        onSelectProject(defaultProject);
+      } else {
+        window.localStorage.removeItem(DEFAULT_PROJECT_STORAGE_KEY);
+        setProjectRefreshToken((token) => token + 1);
+      }
+    } catch (err) {
+      console.error('Failed to open default project:', err);
+    } finally {
+      setSettingsOpen(false);
+    }
+  }
+
+  function setCurrentProjectAsDefault() {
+    if (selectedProject) {
+      window.localStorage.setItem(DEFAULT_PROJECT_STORAGE_KEY, selectedProject.path);
+    }
+    setSettingsOpen(false);
+  }
 
   return (
     <div className="flex h-screen bg-[var(--background)]">
@@ -101,41 +167,88 @@ export function Layout({ children, activeTab, onTabChange, selectedProject, onSe
             </div>
             <span className="text-xl font-bold gradient-text">NovelGen</span>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-[var(--surface-light)]">
-            <X className="w-5 h-5" />
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="rounded-lg p-2 hover:bg-[var(--surface-light)] lg:hidden"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         <div className="border-b border-[var(--border)]/60 p-4">
-          <ProjectSelector selectedProject={selectedProject} onSelectProject={onSelectProject} />
+          <ProjectSelector
+            selectedProject={selectedProject}
+            onSelectProject={onSelectProject}
+            refreshToken={projectRefreshToken}
+          />
         </div>
 
         <nav className="space-y-1 p-3">
           {navItems.map((item) => {
+            if (item.id === 'outline') {
+              const active = activeTab === 'outline' || activeTab === 'outline-skeleton' || activeTab === 'outline-volumes';
+              return (
+                <div key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onTabChange('outline-skeleton');
+                      setOutlineExpanded(!outlineExpanded);
+                    }}
+                    className={`nav-item justify-between ${active ? 'nav-item-active' : ''}`}
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <item.icon className="h-5 w-5 flex-none" />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    <ChevronRight className={`h-4 w-4 flex-none transition-transform ${outlineExpanded ? 'rotate-90' : ''}`} />
+                  </button>
+                  {outlineExpanded && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      {outlineSubItems.map((subItem) => (
+                        <button
+                          key={subItem.id}
+                          type="button"
+                          onClick={() => onTabChange(subItem.id)}
+                          className={`nav-item py-2 text-sm ${activeTab === subItem.id || (activeTab === 'outline' && subItem.id === 'outline-skeleton') ? 'nav-item-active' : ''}`}
+                        >
+                          <subItem.icon className="h-4 w-4 flex-none" />
+                          <span className="truncate text-sm">{subItem.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             if (item.id === 'craft') {
               const active = activeTab === 'characters' || activeTab === 'locations' || activeTab === 'items';
               return (
                 <div key={item.id}>
                   <button
+                    type="button"
                     onClick={() => setCraftExpanded(!craftExpanded)}
                     className={`nav-item justify-between ${active ? 'nav-item-active' : ''}`}
                   >
-                    <div className="flex items-center gap-3">
-                      <item.icon className="w-5 h-5" />
-                      <span>{item.label}</span>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <item.icon className="h-5 w-5 flex-none" />
+                      <span className="truncate">{item.label}</span>
                     </div>
-                    <ChevronRight className={`w-4 h-4 transition-transform ${craftExpanded ? 'rotate-90' : ''}`} />
+                    <ChevronRight className={`h-4 w-4 flex-none transition-transform ${craftExpanded ? 'rotate-90' : ''}`} />
                   </button>
                   {craftExpanded && (
                     <div className="ml-4 mt-1 space-y-1">
                       {craftSubItems.map((subItem) => (
                         <button
                           key={subItem.id}
+                          type="button"
                           onClick={() => onTabChange(subItem.id)}
                           className={`nav-item py-2 text-sm ${activeTab === subItem.id ? 'nav-item-active' : ''}`}
                         >
-                          <subItem.icon className="w-4 h-4" />
-                          <span className="text-sm">{subItem.label}</span>
+                          <subItem.icon className="h-4 w-4 flex-none" />
+                          <span className="truncate text-sm">{subItem.label}</span>
                         </button>
                       ))}
                     </div>
@@ -147,13 +260,14 @@ export function Layout({ children, activeTab, onTabChange, selectedProject, onSe
             return (
               <button
                 key={item.id}
+                type="button"
                 onClick={() => onTabChange(item.id)}
                 className={`nav-item ${activeTab === item.id ? 'nav-item-active' : ''}`}
               >
-                <item.icon className="w-5 h-5" />
-                <span className="flex-1 text-left">{item.label}</span>
+                <item.icon className="h-5 w-5 flex-none" />
+                <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
                 {item.id === 'tasks' && activeTaskCount > 0 && (
-                  <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--primary)] px-1.5 text-xs font-bold text-[#041312]">
+                  <span className="flex h-5 min-w-[1.25rem] flex-none items-center justify-center rounded-full bg-[var(--primary)] px-1.5 text-xs font-bold text-[#041312]">
                     {activeTaskCount}
                   </span>
                 )}
@@ -163,19 +277,70 @@ export function Layout({ children, activeTab, onTabChange, selectedProject, onSe
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 border-t border-[var(--border)]/60 p-3">
-          <button className="nav-item">
-            <Settings className="w-5 h-5" />
-            <span>设置</span>
-          </button>
+          <div className="relative" ref={settingsRef}>
+            {settingsOpen && (
+              <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-xl">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[var(--text-muted)] transition hover:bg-[var(--surface-light)] hover:text-[var(--text)]"
+                  disabled={!selectedProject}
+                  onClick={setCurrentProjectAsDefault}
+                >
+                  <Star className="h-4 w-4" />
+                  <span>设当前为默认项目</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[var(--text-muted)] transition hover:bg-[var(--surface-light)] hover:text-[var(--text)]"
+                  onClick={openDefaultProject}
+                >
+                  <BookOpen className="h-4 w-4" />
+                  <span>打开默认项目</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[var(--text-muted)] transition hover:bg-[var(--surface-light)] hover:text-[var(--text)]"
+                  onClick={() => {
+                    setProjectRefreshToken((token) => token + 1);
+                    setSettingsOpen(false);
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span>刷新项目列表</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[var(--text-muted)] transition hover:bg-[var(--surface-light)] hover:text-[var(--text)]"
+                  onClick={() => window.location.reload()}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  <span>重新载入界面</span>
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              className={`nav-item ${settingsOpen ? 'nav-item-active' : ''}`}
+              aria-expanded={settingsOpen}
+              onClick={() => setSettingsOpen((open) => !open)}
+            >
+              <Settings className="h-5 w-5 flex-none" />
+              <span>设置</span>
+            </button>
+          </div>
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="app-topbar flex h-16 items-center justify-between px-5">
-          <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-[var(--surface-light)]">
-            <Menu className="w-5 h-5" />
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="rounded-lg p-2 hover:bg-[var(--surface-light)] lg:hidden"
+          >
+            <Menu className="h-5 w-5" />
           </button>
-          <div className="flex items-center gap-4">
+          <div className="flex min-w-0 items-center gap-4">
             {visibleTask && (
               <button
                 type="button"
@@ -213,8 +378,11 @@ export function Layout({ children, activeTab, onTabChange, selectedProject, onSe
               </button>
             )}
             {selectedProject && (
-              <div className="rounded-lg border border-[var(--border)]/70 bg-[var(--surface)]/70 px-3 py-1.5 text-sm text-[var(--text-muted)]">
-                当前项目 <span className="text-[var(--text)] font-semibold">{selectedProject.name}</span>
+              <div className="min-w-0 max-w-[24rem] rounded-lg border border-[var(--border)]/70 bg-[var(--surface)]/70 px-3 py-1.5 text-sm text-[var(--text-muted)]">
+                当前项目{' '}
+                <span className="inline-block max-w-[16rem] truncate align-bottom font-semibold text-[var(--text)]">
+                  {selectedProject.name}
+                </span>
               </div>
             )}
           </div>
@@ -225,7 +393,7 @@ export function Layout({ children, activeTab, onTabChange, selectedProject, onSe
         </main>
       </div>
 
-      {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
     </div>
   );
 }

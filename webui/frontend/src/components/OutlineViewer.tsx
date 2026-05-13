@@ -67,7 +67,15 @@ interface ChapterDetailProps {
   onClose: () => void;
 }
 
+function chapterBeats(chapter: Chapter): string[] {
+  const sceneBeats = (chapter.scenes || []).flatMap((scene) => scene.beats || []).map((beat) => beat.trim()).filter(Boolean);
+  if (sceneBeats.length > 0) return sceneBeats;
+  return (chapter.beats || []).map((beat) => beat.trim()).filter(Boolean);
+}
+
 function ChapterDetail({ chapter, onClose }: ChapterDetailProps) {
+  const beats = chapterBeats(chapter);
+
   return (
     <div className="glass rounded-xl p-6 animate-fade-in">
       <div className="flex items-center justify-between mb-4">
@@ -134,11 +142,11 @@ function ChapterDetail({ chapter, onClose }: ChapterDetailProps) {
             </div>
           </div>
         )}
-        {chapter.beats && chapter.beats.length > 0 && (
+        {beats.length > 0 && (
           <div>
             <label className="block text-sm text-[var(--text-muted)] mb-1">情节节拍</label>
             <div className="space-y-2">
-              {chapter.beats.map((beat, idx) => (
+              {beats.map((beat, idx) => (
                 <div key={idx} className="flex items-start gap-2 text-sm">
                   <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--primary)]/20 text-[var(--primary)] flex items-center justify-center text-xs">
                     {idx + 1}

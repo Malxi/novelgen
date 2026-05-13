@@ -810,6 +810,17 @@ func (ep *EnhancedParser) parseChapterEnhanced() (*Chapter, error) {
 				return nil, ep.enhanceError(err, keyPos, "parsing chapter id")
 			}
 			chapter.ID = ep.toString(val)
+		case "position":
+			if err := ep.expectCharEnhanced('='); err != nil {
+				return nil, ep.enhanceError(err, keyPos, "after 'position'")
+			}
+			val, err := ep.parseValueEnhanced()
+			if err != nil {
+				return nil, ep.enhanceError(err, keyPos, "parsing chapter position")
+			}
+			if pos, ok := ep.toInt(val); ok {
+				chapter.Position = pos
+			}
 		case "objective":
 			obj, err := ep.parseObjectiveEnhanced()
 			if err != nil {
@@ -964,6 +975,51 @@ func (ep *EnhancedParser) parseEventEnhanced() (*Event, error) {
 			return nil, ep.enhanceError(err, keyPos, "parsing event property")
 		}
 
+		switch key {
+		case "combat":
+			combat, err := ep.parseCombatEvent()
+			if err != nil {
+				return nil, ep.enhanceError(err, keyPos, "parsing combat")
+			}
+			event.Combat = combat
+			continue
+		case "move":
+			move, err := ep.parseMoveEvent()
+			if err != nil {
+				return nil, ep.enhanceError(err, keyPos, "parsing move")
+			}
+			event.Move = move
+			continue
+		case "spawn":
+			spawn, err := ep.parseSpawnEvent()
+			if err != nil {
+				return nil, ep.enhanceError(err, keyPos, "parsing spawn")
+			}
+			event.Spawn = spawn
+			continue
+		case "acquire":
+			acquire, err := ep.parseAcquireEvent()
+			if err != nil {
+				return nil, ep.enhanceError(err, keyPos, "parsing acquire")
+			}
+			event.Acquire = acquire
+			continue
+		case "on_complete":
+			result, err := ep.parseEventResultEnhanced()
+			if err != nil {
+				return nil, ep.enhanceError(err, keyPos, "parsing on_complete")
+			}
+			event.OnComplete = result
+			continue
+		case "state_delta":
+			delta, err := ep.parseStateDelta()
+			if err != nil {
+				return nil, ep.enhanceError(err, keyPos, "parsing state_delta")
+			}
+			event.StateDeltas = append(event.StateDeltas, *delta)
+			continue
+		}
+
 		if err := ep.expectCharEnhanced('='); err != nil {
 			return nil, ep.enhanceError(err, keyPos, fmt.Sprintf("after '%s'", key))
 		}
@@ -997,12 +1053,23 @@ func (ep *EnhancedParser) parseEventEnhanced() (*Event, error) {
 				event.Combat = &CombatEvent{}
 			}
 			event.Combat.Setup.Enemies = ep.parseEnemySpawnList(value)
-		case "on_complete":
-			result, err := ep.parseEventResultEnhanced()
-			if err != nil {
-				return nil, ep.enhanceError(err, valuePos, "parsing on_complete")
+		case "item":
+			if event.Acquire == nil {
+				event.Acquire = &AcquireEvent{}
 			}
-			event.OnComplete = result
+			event.Acquire.Item = ep.toString(value)
+		case "quantity":
+			if event.Acquire == nil {
+				event.Acquire = &AcquireEvent{}
+			}
+			if quantity, ok := ep.toInt(value); ok {
+				event.Acquire.Quantity = quantity
+			}
+		case "source":
+			if event.Acquire == nil {
+				event.Acquire = &AcquireEvent{}
+			}
+			event.Acquire.Source = ep.toString(value)
 		}
 	}
 

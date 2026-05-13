@@ -396,8 +396,9 @@ func (a *ModelAdapter) buildEventFromModel(evt models.Event, enemies []models.Ou
 	case models.ActionAcquire:
 		dslEvent.Type = "acquire"
 		dslEvent.Acquire = &AcquireEvent{
-			Actor: evt.Actor,
-			Item:  evt.Target,
+			Actor:    evt.Actor,
+			Item:     evt.Target,
+			Quantity: 1,
 		}
 	case models.ActionMeet:
 		dslEvent.Type = "dialogue"
@@ -597,6 +598,7 @@ func buildEventStateDeltas(evt models.Event) []StateDelta {
 	if kind == "" {
 		kind = eventTypeFromAction(evt.Action)
 	}
+	kind = normalizeStateDeltaKind(kind)
 	if target != "" || evt.Change != "" || evt.Result != "" {
 		deltas = append(deltas, StateDelta{
 			Target: target,

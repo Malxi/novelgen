@@ -449,6 +449,9 @@ func (dw *DSLWriter) writeChapter(chapter Chapter) error {
 		if chapter.Arc != "" {
 			dw.writeField("arc", fmt.Sprintf("%q", chapter.Arc))
 		}
+		if chapter.Position > 0 {
+			dw.writeField("position", fmt.Sprintf("%d", chapter.Position))
+		}
 
 		for _, objective := range chapter.Objectives {
 			if err := dw.writeObjective(objective); err != nil {
@@ -513,6 +516,23 @@ func (dw *DSLWriter) writeStep(step Step) error {
 							parts = append(parts, "{"+fields+"}")
 						}
 						dw.writeLine(fmt.Sprintf("enemies = [%s]", strings.Join(parts, ", ")))
+						return nil
+					})
+				}
+				if step.Event.Acquire != nil {
+					dw.writeBlock("acquire", "", func() error {
+						if step.Event.Acquire.Actor != "" {
+							dw.writeField("actor", fmt.Sprintf("%q", step.Event.Acquire.Actor))
+						}
+						if step.Event.Acquire.Item != "" {
+							dw.writeField("item", fmt.Sprintf("%q", step.Event.Acquire.Item))
+						}
+						if step.Event.Acquire.Quantity > 0 {
+							dw.writeField("quantity", fmt.Sprintf("%d", step.Event.Acquire.Quantity))
+						}
+						if step.Event.Acquire.Source != "" {
+							dw.writeField("source", fmt.Sprintf("%q", step.Event.Acquire.Source))
+						}
 						return nil
 					})
 				}

@@ -101,6 +101,32 @@ func (r *ReviewResult) IsPassing(threshold float64) bool {
 	return r.OverallScore >= threshold
 }
 
+// NormalizeScoreScale makes AI review scores comparable as 0-100 percentages.
+// Some models return overall_score on a 0-10 scale while also returning
+// dimensions such as 9/10. When dimension maxima are available, trust their
+// ratio because it preserves non-uniform dimension scores.
+func (r *ReviewResult) NormalizeScoreScale() {
+	if r == nil {
+		return
+	}
+	if len(r.Dimensions) > 0 {
+		var totalScore, totalMax float64
+		for _, d := range r.Dimensions {
+			if d.Max > 0 {
+				totalScore += d.Score
+				totalMax += d.Max
+			}
+		}
+		if totalMax > 0 && r.OverallScore >= 0 && r.OverallScore <= 10 {
+			r.OverallScore = (totalScore / totalMax) * 100
+			return
+		}
+	}
+	if r.OverallScore > 0 && r.OverallScore <= 10 {
+		r.OverallScore *= 10
+	}
+}
+
 // CalculateOverallScore recalculates the overall score based on dimensions
 // This is useful when dimensions are modified
 func (r *ReviewResult) CalculateOverallScore() float64 {
@@ -158,5 +184,16 @@ const (
 )
 
 func normalizeReviewSeverity(value string) string {
-	return strings.ToLower(strings.TrimSpace(value))
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "致命", "严重", "阻塞", "阻断", "最高":
+		return PriorityCritical
+	case "高", "高优先级":
+		return PriorityHigh
+	case "中", "中等", "中优先级":
+		return PriorityMedium
+	case "低", "低优先级":
+		return PriorityLow
+	default:
+		return strings.ToLower(strings.TrimSpace(value))
+	}
 }

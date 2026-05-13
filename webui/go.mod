@@ -8,7 +8,10 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
+	novelgen v0.0.0
 )
+
+replace novelgen => ..
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect

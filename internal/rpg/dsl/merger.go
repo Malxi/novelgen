@@ -445,13 +445,10 @@ func (dm *DSLMerger) mergeSystems(result *MergeResult, fragment *DSLFragment) er
 // Helper methods for merging
 
 func (dm *DSLMerger) createPlaceholderCharacter(char *Player, phase MergePhase) *Player {
-	placeholder := &Player{
-		Name:              char.Name,
-		ID:                char.ID,
-		IsPlaceholder:     true,
-		PlaceholderSource: string(phase),
-	}
-	return placeholder
+	placeholder := *char
+	placeholder.IsPlaceholder = true
+	placeholder.PlaceholderSource = string(phase)
+	return &placeholder
 }
 
 func (dm *DSLMerger) createPlaceholderEnemy(enemy Enemy, phase MergePhase) Enemy {

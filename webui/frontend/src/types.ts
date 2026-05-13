@@ -66,6 +66,11 @@ export interface Outline {
   parts: Part[];
 }
 
+export type OutlineSelection =
+  | { type: 'skeleton' }
+  | { type: 'volume'; partIndex: number; volumeIndex: number }
+  | { type: 'chapter'; partIndex: number; volumeIndex: number; chapterIndex: number };
+
 export interface Part {
   id: string;
   title: string;
@@ -98,8 +103,20 @@ export interface Chapter {
   beats: string[];
   opening_beat: string;
   closing_beat: string;
+  scenes?: OutlineScene[];
   conflict: string;
   pacing: string;
+}
+
+export interface OutlineScene {
+  order?: number;
+  pov?: string;
+  goal?: string;
+  location?: string;
+  characters?: string[];
+  beats?: string[];
+  words?: number;
+  tone?: string;
 }
 
 export interface StorylineVolumeIntent {

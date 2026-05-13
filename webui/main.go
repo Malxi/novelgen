@@ -21,6 +21,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"novelgen/internal/models"
 )
 
 var (
@@ -1674,7 +1675,34 @@ func saveFile(c *gin.Context) {
 		return
 	}
 
+	if err := syncDerivedFileAfterSave(cleanPath, fullPath); err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: "Saved file, but failed to sync derived file: " + err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusOK, APIResponse{Success: true, Data: map[string]string{"backup": backupName}})
+}
+
+func syncDerivedFileAfterSave(cleanPath, fullPath string) error {
+	if filepath.ToSlash(cleanPath) != "story/compose/outline.json" {
+		return nil
+	}
+
+	outline, err := models.LoadOutline(fullPath)
+	if err != nil {
+		return fmt.Errorf("failed to load outline: %w", err)
+	}
+
+	if err := outline.Save(fullPath); err != nil {
+		return fmt.Errorf("failed to normalize outline json: %w", err)
+	}
+
+	markdownPath := filepath.Join(filepath.Dir(fullPath), "outline.md")
+	if err := os.WriteFile(markdownPath, []byte(outline.ToMarkdown()), 0644); err != nil {
+		return fmt.Errorf("failed to write outline markdown: %w", err)
+	}
+
+	return nil
 }
 
 func openBrowser(url string) {

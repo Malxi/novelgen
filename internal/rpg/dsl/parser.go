@@ -573,6 +573,14 @@ func (p *Parser) parseChapter() (*Chapter, error) {
 			}
 			val, _ := p.parseValue()
 			chapter.ID = p.toString(val)
+		case "position":
+			if err := p.expectChar('='); err != nil {
+				return nil, err
+			}
+			val, _ := p.parseValue()
+			if pos, ok := p.toInt(val); ok {
+				chapter.Position = pos
+			}
 		case "objective":
 			obj, err := p.parseObjective()
 			if err != nil {
@@ -764,6 +772,14 @@ func (p *Parser) parseEvent() (*Event, error) {
 			event.Spawn = spawn
 			continue
 		}
+		if key == "acquire" {
+			acquire, err := p.parseAcquireEvent()
+			if err != nil {
+				return nil, err
+			}
+			event.Acquire = acquire
+			continue
+		}
 		if key == "on_complete" {
 			result, err := p.parseEventResult()
 			if err != nil {
@@ -813,6 +829,23 @@ func (p *Parser) parseEvent() (*Event, error) {
 				event.Combat = &CombatEvent{}
 			}
 			event.Combat.Setup.Enemies = p.parseEnemySpawnList(value)
+		case "item":
+			if event.Acquire == nil {
+				event.Acquire = &AcquireEvent{}
+			}
+			event.Acquire.Item = p.toString(value)
+		case "quantity":
+			if event.Acquire == nil {
+				event.Acquire = &AcquireEvent{}
+			}
+			if quantity, ok := p.toInt(value); ok {
+				event.Acquire.Quantity = quantity
+			}
+		case "source":
+			if event.Acquire == nil {
+				event.Acquire = &AcquireEvent{}
+			}
+			event.Acquire.Source = p.toString(value)
 		}
 	}
 
@@ -998,6 +1031,53 @@ func (p *Parser) parseSpawnEvent() (*SpawnEvent, error) {
 	}
 
 	return spawn, nil
+}
+
+// parseAcquireEvent parses the acquire block.
+func (p *Parser) parseAcquireEvent() (*AcquireEvent, error) {
+	acquire := &AcquireEvent{}
+
+	if err := p.expectChar('{'); err != nil {
+		return nil, err
+	}
+
+	for !p.peekChar('}') {
+		p.skipWhitespace()
+		if p.peekChar('}') {
+			break
+		}
+
+		key, err := p.parseIdentifier()
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectChar('='); err != nil {
+			return nil, err
+		}
+		value, err := p.parseValue()
+		if err != nil {
+			return nil, err
+		}
+
+		switch key {
+		case "actor":
+			acquire.Actor = p.toString(value)
+		case "item":
+			acquire.Item = p.toString(value)
+		case "quantity":
+			if quantity, ok := p.toInt(value); ok {
+				acquire.Quantity = quantity
+			}
+		case "source":
+			acquire.Source = p.toString(value)
+		}
+	}
+
+	if err := p.expectChar('}'); err != nil {
+		return nil, err
+	}
+
+	return acquire, nil
 }
 
 // parseEventResult parses an event result block

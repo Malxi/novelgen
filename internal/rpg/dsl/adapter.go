@@ -161,6 +161,7 @@ func (na *NovelgenAdapter) toOutlineDSL(dsl *DSL) (*DSL, error) {
 		seenLocations[location.ID] = true
 	}
 	na.addOutlineLocationPlaceholders(dsl, seenLocations)
+	na.addOutlineItemPlaceholders(dsl)
 
 	// Convert outline to storyline
 	if err := na.convertOutlineToStoryline(dsl); err != nil {
@@ -250,6 +251,48 @@ func (na *NovelgenAdapter) addOutlineLocationPlaceholder(dsl *DSL, seen map[stri
 		IsPlaceholder:     true,
 		PlaceholderSource: "outline",
 	})
+}
+
+func (na *NovelgenAdapter) addOutlineItemPlaceholders(dsl *DSL) {
+	if dsl == nil || dsl.World == nil {
+		return
+	}
+	seen := make(map[string]bool)
+	for _, item := range dsl.World.Items {
+		seen[strings.TrimSpace(item.ID)] = true
+		seen[strings.TrimSpace(item.Name)] = true
+	}
+	add := func(raw string) {
+		name := strings.TrimSpace(raw)
+		if name == "" || seen[name] {
+			return
+		}
+		seen[name] = true
+		dsl.World.Items = append(dsl.World.Items, Item{
+			ID:          name,
+			Name:        name,
+			Type:        "outline",
+			Rarity:      "common",
+			Description: fmt.Sprintf("Placeholder for %s from outline events", name),
+		})
+	}
+	for _, part := range na.project.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				for _, item := range chapter.StateAnchor.KeyItems {
+					add(item)
+				}
+				for _, entry := range chapter.ResourceLedger {
+					add(entry.Item)
+				}
+				for _, event := range chapter.Events {
+					if normalizeOutlineEventType(event.Type, event.GetAction(), event.GetTargetType()) == "acquire" {
+						add(event.Target)
+					}
+				}
+			}
+		}
+	}
 }
 
 func (na *NovelgenAdapter) loadStorySetup() *models.StorySetup {
@@ -454,14 +497,18 @@ func inferRarityFromScarcity(scarcity string) string {
 	switch {
 	case text == "":
 		return ""
-	case strings.Contains(text, "unique"), strings.Contains(text, "唯一"), strings.Contains(text, "独一"):
+	case strings.Contains(text, "unique"), strings.Contains(text, "legendary"), strings.Contains(text, "唯一"), strings.Contains(text, "独一"):
 		return "legendary"
+	case strings.Contains(text, "epic"):
+		return "epic"
+	case strings.Contains(text, "uncommon"):
+		return "uncommon"
 	case strings.Contains(text, "极"), strings.Contains(text, "稀"), strings.Contains(text, "rare"):
 		return "rare"
 	case strings.Contains(text, "common"), strings.Contains(text, "常见"):
 		return "common"
 	default:
-		return text
+		return "rare"
 	}
 }
 
@@ -1218,9 +1265,10 @@ func (na *NovelgenAdapter) convertEventToStep(event rpg.StoryEvent, enemies []rp
 		step.Event = Event{
 			Type: "acquire",
 			Acquire: &AcquireEvent{
-				Actor:  event.Actor,
-				Item:   event.Target,
-				Source: event.Context,
+				Actor:    event.Actor,
+				Item:     event.Target,
+				Quantity: 1,
+				Source:   event.Context,
 			},
 		}
 
@@ -1360,6 +1408,7 @@ func buildStoryEventStateDeltas(event rpg.StoryEvent) []StateDelta {
 	if kind == "" {
 		kind = eventTypeFromAction(event.Action)
 	}
+	kind = normalizeStateDeltaKind(kind)
 	if target != "" || event.Change != "" || event.Result != "" {
 		deltas = append(deltas, StateDelta{
 			Target: target,
@@ -1379,6 +1428,21 @@ func buildStoryEventStateDeltas(event rpg.StoryEvent) []StateDelta {
 		})
 	}
 	return deltas
+}
+
+func normalizeStateDeltaKind(kind string) string {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "":
+		return ""
+	case "skill":
+		return "knowledge"
+	case "character":
+		return "status"
+	case "event":
+		return "story"
+	default:
+		return strings.TrimSpace(kind)
+	}
 }
 
 func storyStorylineAdvanceDescription(advance rpg.StorylineAdvance) string {

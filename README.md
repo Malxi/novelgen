@@ -120,6 +120,8 @@ novelgen setup import story/setup/story_setup.md
 - `regen [id]` - 重新生成特定部分
   - `--prompt` (string) - 重新生成时的建议
 - `improve [--max-rounds]` - 改进现有大纲
+- `skeleton-review` - 在生成章节前评审部/卷骨架
+- `skeleton-improve` - 只改进部/卷骨架，并保留已有章节数组
 - `pipeline` - 按全局卷序号逐卷执行 skeleton/生成/improve/cross patch
 
 **示例：**
@@ -130,6 +132,8 @@ novelgen compose pipeline --from-volume 2 --to-volume 7 --max-rounds 1
 novelgen compose regen 1_1_1              # 重新生成第1部第1卷第1章
 novelgen compose regen 1_1_1 --prompt "加强冲突"
 novelgen compose improve --max-rounds 3   # 改进大纲3轮
+novelgen compose skeleton-review          # 只评审大纲骨架
+novelgen compose skeleton-improve --max-rounds 1
 ```
 
 ---

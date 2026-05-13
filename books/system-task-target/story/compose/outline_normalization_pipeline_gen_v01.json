@@ -1,0 +1,74 @@
+{
+  "changes": [
+    {
+      "path": "P1-V1-C2.characters",
+      "action": "sync_scene_character",
+      "value": "其他杂役"
+    },
+    {
+      "path": "P1-V1-C2.characters",
+      "action": "sync_scene_character",
+      "value": "饭堂管事"
+    },
+    {
+      "path": "P1-V1-C5.characters",
+      "action": "sync_scene_character",
+      "value": "苏瑶（远处）"
+    },
+    {
+      "path": "P1-V1-C5.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "陆青禾（初步信任） -\u003e 陆青禾"
+    },
+    {
+      "path": "P1-V1-C6.characters",
+      "action": "sync_scene_character",
+      "value": "其他杂役（睡着）"
+    },
+    {
+      "path": "P1-V1-C6.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "陆青禾（初步信任） -\u003e 陆青禾"
+    },
+    {
+      "path": "P1-V1-C7.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "陆青禾（初步信任） -\u003e 陆青禾"
+    },
+    {
+      "path": "P1-V1-C8.scenes[1].beats",
+      "action": "fill_scene_beats",
+      "value": "1 beat(s)"
+    },
+    {
+      "path": "P1-V1-C8.events[1].target",
+      "action": "fill_event_target",
+      "value": "苏瑶的任务失败"
+    },
+    {
+      "path": "P1-V1-C8.events[1].target_type",
+      "action": "fill_event_target_type",
+      "value": "storyline"
+    },
+    {
+      "path": "P1-V1-C8.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "陆青禾（信任加深） -\u003e 陆青禾"
+    },
+    {
+      "path": "P1-V1-C9.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "陆青禾（信任加深） -\u003e 陆青禾"
+    },
+    {
+      "path": "P1-V1-C10.scenes[1].beats",
+      "action": "fill_scene_beats",
+      "value": "1 beat(s)"
+    },
+    {
+      "path": "P1-V1-C10.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "陆青禾（信任） -\u003e 陆青禾"
+    }
+  ]
+}

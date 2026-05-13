@@ -1,0 +1,2902 @@
+
+metadata {
+  title = "外挂公敌"
+  genre = ["修仙", "系统流", "反套路", "智斗爽文"]
+  power_system = "系统任务日志 + 宿主名单之外 + 任务热度 + 五条宿主线 + 修仙境界与真实战力 + 势力分层"
+  tone = "节奏快，吐槽锋利，前期轻松缺德，中期爽感和压力并重，后期保持智斗爽文底色，但让“别人刷任务会伤到真人”的代价越来越清楚。"
+  dsl_version = "0.2.0"
+  phase = "outline"
+}
+
+characters {
+  player "青年白烬" {
+    id = "青年白烬"
+    class = "adventurer"
+    description = "现代青年白烬穿越到修仙界青岚宗，成了最底层的杂役。别人开局绑定系统，拿功法、丹药、回档、签到和气运；他什么都没有。"
+    background = "现代青年白烬穿越到修仙界青岚宗，成了最底层的杂役。别人开局绑定系统，拿功法、丹药、回档、签到和气运；他什么都没有。"
+    personality = ["沉稳务实", "重情重义", "求生意志强"]
+    motivation = "白烬想从任务耗材身份里活下来，并弄清如何不再被随意调用。"
+    role_in_story = "protagonist"
+    str = 12
+    agi = 11
+    int = 14
+    vit = 12
+    hp = 120
+    mp = 60
+    skills = ["快速学习"]
+  }
+  enemy "纪迟（潜在冲突）" {
+    id = "system_host_low_纪迟（潜在冲突）"
+    type = "system_host"
+    level = 2
+    description = "签到任务指向剑骨"
+  }
+  enemy "苏瑶（潜在冲突）" {
+    id = "system_host_elite_苏瑶（潜在冲突）"
+    type = "system_host"
+    level = 4
+    description = "命格掠夺任务指向陆青禾"
+  }
+  enemy "顾衡" {
+    id = "system_host_master_顾衡"
+    type = "system_host"
+    level = 5
+    description = "假山设伏，被纪迟撞破"
+  }
+  enemy "纪迟（误以为敌人）" {
+    id = "system_host_low_纪迟（误以为敌人）"
+    type = "system_host"
+    level = 2
+    description = "发现了白烬留下的字条"
+  }
+  enemy "苏瑶" {
+    id = "system_host_elite_苏瑶"
+    type = "system_host"
+    level = 4
+    description = "命格掠夺第一次尝试失败"
+  }
+  enemy "赵恒" {
+    id = "neutral_low_赵恒"
+    type = "neutral"
+    level = 2
+    description = "比赛中违规被裁判处罚"
+  }
+  enemy "纪迟" {
+    id = "system_host_low_纪迟"
+    type = "system_host"
+    level = 2
+    description = "签到第三次被干扰"
+  }
+  npc "白烬" {
+    id = "白烬"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "陆青禾" {
+    id = "陆青禾"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "苏瑶" {
+    id = "苏瑶"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "顾衡" {
+    id = "顾衡"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "纪迟" {
+    id = "纪迟"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "莫问君" {
+    id = "莫问君"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "杂役管事" {
+    id = "杂役管事"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "丹房执事" {
+    id = "丹房执事"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "裁判" {
+    id = "裁判"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "苏瑶的盟友弟子" {
+    id = "苏瑶的盟友弟子"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "赵恒" {
+    id = "赵恒"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "多名外门弟子" {
+    id = "多名外门弟子"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  npc "观众弟子们" {
+    id = "观众弟子们"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+}
+
+world {
+  location "青岚宗主擂台广场" {
+    id = "青岚宗主擂台广场"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "青岚宗主擂台观礼席" {
+    id = "青岚宗主擂台观礼席"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "青岚宗外门小比赛区" {
+    id = "青岚宗外门小比赛区"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "小比赛区外围丹房后院" {
+    id = "小比赛区外围丹房后院"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "青岚宗外门西侧假山" {
+    id = "青岚宗外门西侧假山"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "杂役房" {
+    id = "杂役房"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "青岚宗丹房后院" {
+    id = "青岚宗丹房后院"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "丹房后院外侧走廊" {
+    id = "丹房后院外侧走廊"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "青岚宗藏经阁东角" {
+    id = "青岚宗藏经阁东角"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "藏经阁东角" {
+    id = "藏经阁东角"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "青岚宗小比擂台" {
+    id = "青岚宗小比擂台"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "小比擂台观众席" {
+    id = "小比擂台观众席"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "青岚宗小比决赛擂台区" {
+    id = "青岚宗小比决赛擂台区"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "擂台区观众席" {
+    id = "擂台区观众席"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "青岚宗决赛擂台下方暗道" {
+    id = "青岚宗决赛擂台下方暗道"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "决赛擂台底部" {
+    id = "决赛擂台底部"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "青岚宗决赛擂台" {
+    id = "青岚宗决赛擂台"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "决赛擂台观众席" {
+    id = "决赛擂台观众席"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "青岚宗议事堂侧厅" {
+    id = "青岚宗议事堂侧厅"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  location "青岚宗议事堂侧厅（开始）→杂役房（结束）" {
+    id = "青岚宗议事堂侧厅（开始）→杂役房（结束）"
+    __placeholder__ = true
+    __source_phase__ = "outline"
+  }
+  item "任务热度" {
+    id = "resource_01"
+    type = "隐性规则资源"
+    rarity = "rare"
+    description = "决定人物被系统写入任务的概率和任务级别。"
+  }
+  item "系统日志" {
+    id = "resource_02"
+    type = "情报资源"
+    rarity = "rare"
+    description = "宿主任务、失败、结算或警告留下的文字痕迹。"
+  }
+  item "任务奖励" {
+    id = "resource_03"
+    type = "系统资源"
+    rarity = "rare"
+    description = "功法、丹药、道具、气运、声望、军功等，常常伴随不合理代价。"
+  }
+  item "本土信任" {
+    id = "resource_04"
+    type = "社会资源"
+    rarity = "rare"
+    description = "白烬在没有硬实力时最重要的生存资源，来自陆青禾、莫问君、摇光圣女等本土角色。"
+  }
+  item "势力庇护" {
+    id = "resource_05"
+    type = "社会资源"
+    rarity = "rare"
+    description = "来自宗门长老、圣地、边军、万妖城等势力的临时保护。它不是后台，随时可能因为利益变化反噬白烬。"
+  }
+  item "灵石" {
+    id = "resource_06"
+    type = "general"
+    rarity = "rare"
+    description = "Auto-added by compose pipeline cross check; refine manually."
+  }
+  item "破旧衣衫" {
+    id = "破旧衣衫"
+    type = "outline"
+    rarity = "common"
+    description = "Placeholder for 破旧衣衫 from outline events"
+  }
+  item "杂役令牌" {
+    id = "杂役令牌"
+    type = "outline"
+    rarity = "common"
+    description = "Placeholder for 杂役令牌 from outline events"
+  }
+  item "妖狼牙" {
+    id = "妖狼牙"
+    type = "outline"
+    rarity = "common"
+    description = "Placeholder for 妖狼牙 from outline events"
+  }
+  item "草药志（记忆）" {
+    id = "草药志（记忆）"
+    type = "outline"
+    rarity = "common"
+    description = "Placeholder for 草药志（记忆） from outline events"
+  }
+  item "观礼令牌" {
+    id = "观礼令牌"
+    type = "outline"
+    rarity = "common"
+    description = "Placeholder for 观礼令牌 from outline events"
+  }
+  item "小香炉" {
+    id = "小香炉"
+    type = "outline"
+    rarity = "common"
+    description = "Placeholder for 小香炉 from outline events"
+  }
+  item "炭笔（写假情报用）" {
+    id = "炭笔（写假情报用）"
+    type = "outline"
+    rarity = "common"
+    description = "Placeholder for 炭笔（写假情报用） from outline events"
+  }
+  item "小香炉（余灰已用）" {
+    id = "小香炉（余灰已用）"
+    type = "outline"
+    rarity = "common"
+    description = "Placeholder for 小香炉（余灰已用） from outline events"
+  }
+  item "灵灰标记" {
+    id = "灵灰标记"
+    type = "outline"
+    rarity = "common"
+    description = "Placeholder for 灵灰标记 from outline events"
+  }
+  item "小香炉（已空）" {
+    id = "小香炉（已空）"
+    type = "outline"
+    rarity = "common"
+    description = "Placeholder for 小香炉（已空） from outline events"
+  }
+  item "观礼令牌（已过期）" {
+    id = "观礼令牌（已过期）"
+    type = "outline"
+    rarity = "common"
+    description = "Placeholder for 观礼令牌（已过期） from outline events"
+  }
+  item "莫问君给的药材手册（内含纸条）" {
+    id = "莫问君给的药材手册（内含纸条）"
+    type = "outline"
+    rarity = "common"
+    description = "Placeholder for 莫问君给的药材手册（内含纸条） from outline events"
+  }
+  item "莫问君的信" {
+    id = "莫问君的信"
+    type = "outline"
+    rarity = "common"
+    description = "Placeholder for 莫问君的信 from outline events"
+  }
+  rule "setup_rule_01" {
+    trigger = "always"
+    effect = "系统宿主拥有不同外挂，但外挂必须靠任务触发、结算或升级；为了制造爽点，任务会主动寻找羞辱对象、见证人、炮灰、背锅人、截胡目标等消耗位。"
+  }
+  rule "setup_rule_02" {
+    trigger = "always"
+    effect = "白烬不是系统宿主，不在任何宿主名单里，也没有系统奖励；他不能读档，死亡即真死。"
+  }
+  rule "setup_rule_03" {
+    trigger = "always"
+    effect = "白烬不能主动读心，也看不到完整系统面板；他只能看见与自己、当前局势或强烈系统干预有关的任务日志、失败记录和结算残留。"
+  }
+  rule "setup_rule_04" {
+    trigger = "always"
+    effect = "白烬不是天选漏洞，也不是隐藏命格。他只是没被任何系统护着，又太像软柿子：身份低、没后台、没外挂反制。系统越喜欢拿他刷奖励，他越容易提前看见任务破绽。"
+  }
+  rule "setup_rule_05" {
+    trigger = "always"
+    effect = "任务热度不是奖励，而是危险：它会带来更多任务、更多误会和更高阶宿主。白烬能做的，是把危险改造成诱饵。"
+  }
+  rule "setup_rule_06" {
+    trigger = "always"
+    effect = "系统宿主不全是坏人，但他们的任务常常把本土修士、凡人和弱者当成耗材。白烬后期真正要划的线，是“开挂可以，别拿别人垫账”。"
+  }
+  rule "setup_rule_07" {
+    trigger = "always"
+    effect = "主角的胜利优先来自信息差、任务条件互卡、对手误判和低成本反制，而不是突然获得压倒性战力。"
+  }
+  rule "setup_rule_08" {
+    trigger = "always"
+    effect = "每卷必须有一个具体舞台和清晰玩法：宗门、外门大比、秘境、拍卖黑市、圣地、战场、万妖城、众矢之的终局。"
+  }
+  rule "resource_scarcity_resource_01" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_01; scarcity=不可直接交易，但会随任务干预累积; category=隐性规则资源"
+  }
+  rule "resource_scarcity_resource_02" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_02; scarcity=只有白烬能稳定看见，且多为残缺片段; category=情报资源"
+  }
+  rule "resource_scarcity_resource_03" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_03; scarcity=宿主专属，依赖任务结算; category=系统资源"
+  }
+  rule "resource_scarcity_resource_04" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_04; scarcity=难得易失; category=社会资源"
+  }
+  rule "resource_scarcity_resource_05" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_05; scarcity=不稳定; category=社会资源"
+  }
+  rule "resource_scarcity_resource_06" {
+    trigger = "resource.scarcity"
+    effect = "resource=resource_06; scarcity=rare; category=general"
+  }
+  rule "progression_requirement_系统任务日志_L1" {
+    trigger = "progression.requirement"
+    effect = "system=系统任务日志; level=1; requires=青岚宗开局，第一次被任务调用。"
+  }
+  rule "progression_max_系统任务日志" {
+    trigger = "progression.max_level"
+    effect = "system=系统任务日志; max_level=1"
+  }
+  rule "progression_max_宿主名单之外" {
+    trigger = "progression.max_level"
+    effect = "system=宿主名单之外; max_level=5"
+  }
+  rule "progression_max_任务热度" {
+    trigger = "progression.max_level"
+    effect = "system=任务热度; max_level=5"
+  }
+  rule "progression_max_五条宿主线" {
+    trigger = "progression.max_level"
+    effect = "system=五条宿主线; max_level=5"
+  }
+  rule "progression_max_修仙境界与真实战力" {
+    trigger = "progression.max_level"
+    effect = "system=修仙境界与真实战力; max_level=5"
+  }
+  rule "progression_requirement_势力分层_L1" {
+    trigger = "progression.requirement"
+    effect = "system=势力分层; level=1; requires=第一至三卷"
+  }
+  rule "progression_requirement_势力分层_L2" {
+    trigger = "progression.requirement"
+    effect = "system=势力分层; level=2; requires=第四至六卷"
+  }
+  rule "progression_requirement_势力分层_L3" {
+    trigger = "progression.requirement"
+    effect = "system=势力分层; level=3; requires=第九至十卷"
+  }
+  rule "progression_requirement_势力分层_L4" {
+    trigger = "progression.requirement"
+    effect = "system=势力分层; level=4; requires=第十一至十三卷"
+  }
+  rule "progression_requirement_势力分层_L5" {
+    trigger = "progression.requirement"
+    effect = "system=势力分层; level=5; requires=第十四至十六卷"
+  }
+  rule "progression_requirement_势力分层_L6" {
+    trigger = "progression.requirement"
+    effect = "system=势力分层; level=6; requires=第十七至十九卷"
+  }
+  rule "progression_max_势力分层" {
+    trigger = "progression.max_level"
+    effect = "system=势力分层; max_level=6"
+  }
+  rule "storyline_contract_没有金手指的耗材" {
+    trigger = "storyline.contract"
+    effect = "id=没有金手指的耗材; name=没有金手指的耗材; type=main; importance=10; scope=series; payoff_style=staged_reveal; setup_role=解释主角为什么不断卷入宿主冲突：不是因为天生命格特殊，而是因为没被任何系统罩着、身份低、又最好欺负。; desire=白烬想从任务耗材身份里活下来，并弄清如何不再被随意调用。; opposition=各类系统需要他扮演爽点耗材，宿主也需要踩他拿奖励。; stakes=失败意味着白烬会被当成一次性任务怪杀死，或者被迫成为所有系统定义的反派。; open_question=一个没有金手指的人，能不能靠读懂别人的任务栏，活成所有外挂都不敢乱刷的对象？; pressure_points=第一次发现自己在别人的新手任务里 | 大比阶段被多个宿主同时指定为垫脚石 | 黑市阶段悬赏榜上出现白烬 | 终局阶段被公开悬赏为众矢之的"
+  }
+  rule "storyline_contract_从新手任务怪到众矢之的" {
+    trigger = "storyline.contract"
+    effect = "id=从新手任务怪到众矢之的; name=从新手任务怪到众矢之的; type=main; importance=10; scope=series; payoff_style=slow_burn; setup_role=提供全书名场面和爽点升级。; desire=白烬想保住普通人的行动自由。; opposition=系统和宿主都需要给他贴标签，好把他写进任务。; stakes=标签一旦坐实，所有宿主都会把击败他当升级捷径。; open_question=被系统刷出来的反派，能不能反过来改写规则？; pressure_points=顾衡回档后把白烬列入高危名单 | 大比宿主把白烬当名场面垫脚石 | 圣地系统把白烬包装成道心反派 | 终局白烬承认众矢之的身份"
+  }
+  rule "storyline_contract_青岚宗四宿主局" {
+    trigger = "storyline.contract"
+    effect = "id=青岚宗四宿主局; name=青岚宗四宿主局; type=opening_arc; importance=9; scope=opening; payoff_style=immediate; setup_role=用具体好玩的局面让读者理解设定，而不是先讲宏大规则。; desire=白烬想在大师兄、二师姐、小师弟的任务缝隙中活过新手期。; opposition=回档、气运掠夺、签到三个系统都把青岚宗当起步资源池。; stakes=白烬随时可能被杀、背锅或被拿去刷任务。; payoff=白烬反杀/反制第一个系统宿主，确认日志能力能让他活下去。; pressure_points=饭堂羞辱任务 | 丹房灭口回档 | 陆青禾机缘被截胡 | 宗门大比前夜三系统互撞"
+  }
+  rule "storyline_contract_普通人不是耗材" {
+    trigger = "storyline.contract"
+    effect = "id=普通人不是耗材; name=普通人不是耗材; type=moral_arc; importance=9; scope=book; payoff_style=staged_reveal; setup_role=让主角行动不只停留在缺德自保，而有后期立场。; desire=白烬想让自己和身边人不再被当成奖励触发器。; opposition=系统的任务逻辑天然需要耗材，宿主为了变强会合理化消耗。; stakes=如果没人阻止，系统宿主越强，世界越像一张刷分地图。; open_question=白烬能不能在不成为救世圣人的情况下，建立最低限度的边界？; pressure_points=陆青禾机缘被签到和气运任务反复挤压 | 秘境本土弟子被攻略线当成牺牲节点 | 边境城被军功宿主当成刷分诱饵 | 终局普通人被系统重新归类为可调用耗材"
+  }
+  rule "storyline_contract_系统宿主也是人" {
+    trigger = "storyline.contract"
+    effect = "id=系统宿主也是人; name=系统宿主也是人; type=character_arc; importance=8; scope=book; payoff_style=staged_reveal; setup_role=避免系统宿主脸谱化，并给后续临时同盟和背刺空间。; desire=白烬想利用宿主，但也不想变成把别人当工具的人。; opposition=系统惩罚、奖励诱惑和宿主自己的欲望。; stakes=错误判断会让白烬被背刺，或亲手毁掉本可救的人。; open_question=一个靠拆别人任务活下来的人，能否不把别人也当任务耗材？; pressure_points=纪迟被签到系统逼着截胡不属于自己的机缘 | 苏瑶在收益和短暂合作之间反复摇摆 | 战场宿主为了活命不得不刷军功 | 终局部分宿主选择帮白烬拆自己的任务"
+  }
+  rule "storyline_contract_众矢之的终局" {
+    trigger = "storyline.contract"
+    effect = "id=众矢之的终局; name=众矢之的终局; type=final_arc; importance=9; scope=series; payoff_style=final_turn; setup_role=给长线反派压力和终局方向，不急着露出宏大幕后。; desire=白烬想让系统不敢再随意调用自己和普通人。; opposition=高阶系统宿主和把白烬当升级钥匙的群体任务。; stakes=白烬一旦输，所有被他保护过的人都会被系统重新归类为耗材。; payoff=白烬利用众矢之的身份完成反围剿，建立宿主越界必被反噬的新规则。; open_question=当所有系统都要他当反派，他能不能用这个位置赢出一条普通人能活的路？; pressure_points=高阶宿主远程观察白烬的任务热度 | 圣地阶段白烬被定义成反派模板 | 万妖城后多个系统联合生成围猎任务 | 终局围剿中所有任务奖励都指向击败白烬"
+  }
+}
+
+storyline {
+  chapter "宗门小比开幕" {
+    id = "P1-V3-C1"
+    arc = "P1-V3"
+    position = 1
+    objective "宗门小比开幕" {
+      id = "obj_P1-V3-C1"
+      type = "sequence"
+      step 1 {
+        description = "青岚宗四宿主局 | hook | 宗门小比开启，三名宿主的目标清晰化 | 白烬需要同时应对三条任务线，但也有了让它们互撞的空间 | 剑骨的出现让纪迟和苏瑶都进入了更积极的模式，顾衡也在暗中提升"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "青岚宗四宿主局"
+            kind = "storyline"
+            field = "stage"
+            to = "hook"
+            unit = "剑骨的出现让纪迟和苏瑶都进入了更积极的模式，顾衡也在暗中提升"
+            cost = "白烬需要同时应对三条任务线，但也有了让它们互撞的空间"
+            note = "change=宗门小比开启，三名宿主的目标清晰化; consequence=白烬需要同时应对三条任务线，但也有了让它们互撞的空间; pressure=剑骨的出现让纪迟和苏瑶都进入了更积极的模式，顾衡也在暗中提升"
+          }
+          state_delta {
+            target = "青岚宗四宿主局"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V3-C1"
+          }
+        }
+      }
+      step 2 {
+        description = "mystery myst_swordbone_origin planted: 剑骨是临时添加的奖励，并非原定计划，可能是上宗或莫问君故意放出的诱饵"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_swordbone_origin"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "剑骨是临时添加的奖励，并非原定计划，可能是上宗或莫问君故意放出的诱饵"
+          }
+        }
+      }
+      step 3 {
+        description = "chapter start cultivation: 炼气入门"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "炼气入门"
+            note = "chapter start cultivation: 炼气入门"
+          }
+        }
+      }
+      step 4 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "1"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start allies: 陆青禾"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "陆青禾"
+            note = "chapter start allies: 陆青禾"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌"
+            note = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌"
+          }
+        }
+      }
+      step 7 {
+        description = "白烬作为杂役获得观礼资格，但无参赛资格"
+        event {
+          type = "status"
+          state_delta {
+            target = "观礼令牌"
+            kind = "item"
+            field = "acquire"
+            to = "get"
+            note = "白烬作为杂役获得观礼资格，但无参赛资格"
+          }
+        }
+      }
+      step 8 {
+        description = "小比奖励榜公告：最终胜者获一枚剑骨，传说可淬炼剑意。白烬看到纪迟面前闪过签到任务日志：『签到任务·高级：于小比决赛擂台中央静坐三十息，奖励：剑骨碎片×1』"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "纪迟的签到目标"
+            kind = "knowledge"
+            field = "discover"
+            to = "revealed"
+            note = "小比奖励榜公告：最终胜者获一枚剑骨，传说可淬炼剑意。白烬看到纪迟面前闪过签到任务日志：『签到任务·高级：于小比决赛擂台中央静坐三十息，奖励：剑骨碎片×1』"
+          }
+          state_delta {
+            target = "纪迟的签到目标"
+            kind = "storyline"
+            field = "event"
+            to = "revealed"
+            note = "小比奖励榜公告：最终胜者获一枚剑骨，传说可淬炼剑意。白烬看到纪迟面前闪过签到任务日志：『签到任务·高级：于小比决赛擂台中央静坐三十息，奖励：剑骨碎片×1』"
+          }
+        }
+      }
+      step 9 {
+        description = "白烬瞥见苏瑶的任务日志更新：『命格掠夺·陆青禾：使陆青禾在小比全程中被师门公开批评三次以上，即可抽离其命格』"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "苏瑶的命格掠夺任务"
+            kind = "knowledge"
+            field = "discover"
+            to = "started"
+            note = "白烬瞥见苏瑶的任务日志更新：『命格掠夺·陆青禾：使陆青禾在小比全程中被师门公开批评三次以上，即可抽离其命格』"
+          }
+          state_delta {
+            target = "苏瑶的命格掠夺任务"
+            kind = "storyline"
+            field = "event"
+            to = "started"
+            note = "白烬瞥见苏瑶的任务日志更新：『命格掠夺·陆青禾：使陆青禾在小比全程中被师门公开批评三次以上，即可抽离其命格』"
+          }
+        }
+      }
+      step 10 {
+        description = "顾衡全程未看向白烬，但白烬注意到他袖口有藏经阁高阶功法的灵力残留——他已偷到《玄元诀》并开始修炼"
+        event {
+          type = "status"
+          state_delta {
+            target = "顾衡的新功法"
+            kind = "knowledge"
+            field = "observe"
+            to = "observed"
+            note = "顾衡全程未看向白烬，但白烬注意到他袖口有藏经阁高阶功法的灵力残留——他已偷到《玄元诀》并开始修炼"
+          }
+        }
+      }
+      step 11 {
+        description = "灵石 resource change: 1 +1 = 2. 小比开幕式上执事发放的杂役补贴"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "1"
+            to = "2"
+            delta = 1
+            note = "小比开幕式上执事发放的杂役补贴"
+          }
+        }
+      }
+      step 12 {
+        description = "预选赛结束后，白烬回杂役房睡了一夜，体力恢复"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "次日 预选赛结束后，白烬回杂役房睡了一夜，体力恢复"
+          }
+        }
+      }
+    }
+  }
+  chapter "纪迟的签到路线" {
+    id = "P1-V3-C2"
+    arc = "P1-V3"
+    position = 2
+    objective "纪迟的签到路线" {
+      id = "obj_P1-V3-C2"
+      type = "sequence"
+      step 1 {
+        description = "青岚宗四宿主局 | progress | 白烬主动挖掘宿主行动规律，发现苏瑶和纪迟的任务在时间地点上存在天然交叉 | 白烬可以利用交叉点制造冲突，但风险是同时激怒两人 | 苏瑶和纪迟都在加速布局，留给白烬策划的时间窗口有限"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "青岚宗四宿主局"
+            kind = "storyline"
+            field = "stage"
+            to = "progress"
+            unit = "苏瑶和纪迟都在加速布局，留给白烬策划的时间窗口有限"
+            cost = "白烬可以利用交叉点制造冲突，但风险是同时激怒两人"
+            note = "change=白烬主动挖掘宿主行动规律，发现苏瑶和纪迟的任务在时间地点上存在天然交叉; consequence=白烬可以利用交叉点制造冲突，但风险是同时激怒两人; pressure=苏瑶和纪迟都在加速布局，留给白烬策划的时间窗口有限"
+          }
+          state_delta {
+            target = "青岚宗四宿主局"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V3-C2"
+          }
+        }
+      }
+      step 2 {
+        description = "mystery myst_su_jichi_overlap planted: 苏瑶选择丹房后院作为批评陆青禾的场合，也许不是巧合，她可能也在监视纪迟的签到动态"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_su_jichi_overlap"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "苏瑶选择丹房后院作为批评陆青禾的场合，也许不是巧合，她可能也在监视纪迟的签到动态"
+          }
+        }
+      }
+      step 3 {
+        description = "chapter start cultivation: 炼气入门"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "炼气入门"
+            note = "chapter start cultivation: 炼气入门"
+          }
+        }
+      }
+      step 4 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "2"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start allies: 陆青禾"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "陆青禾"
+            note = "chapter start allies: 陆青禾"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉"
+            note = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉"
+          }
+        }
+      }
+      step 7 {
+        description = "白烬跟踪纪迟发现他偷偷检查了四个地点：西侧假山（初赛第一轮）、丹房后院（第二轮）、藏经阁东角（第三轮）、决赛擂台中央（最终）。每处需静坐一炷香时间。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "纪迟的签到路线"
+            kind = "knowledge"
+            field = "discover"
+            to = "discovered"
+            note = "白烬跟踪纪迟发现他偷偷检查了四个地点：西侧假山（初赛第一轮）、丹房后院（第二轮）、藏经阁东角（第三轮）、决赛擂台中央（最终）。每处需静坐一炷香时间。"
+          }
+          state_delta {
+            target = "纪迟的签到路线"
+            kind = "storyline"
+            field = "event"
+            to = "discovered"
+            note = "白烬跟踪纪迟发现他偷偷检查了四个地点：西侧假山（初赛第一轮）、丹房后院（第二轮）、藏经阁东角（第三轮）、决赛擂台中央（最终）。每处需静坐一炷香时间。"
+          }
+        }
+      }
+      step 8 {
+        description = "白烬通过陆青禾得知苏瑶约她在初赛第三轮前的休息时间去丹房后院‘叙旧’，白烬意识到丹房后院正是纪迟第二轮签到点——苏瑶可能想在那里制造‘当众批评’的场合。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "苏瑶与纪迟的时空交叉"
+            kind = "knowledge"
+            field = "infer"
+            to = "confirmed"
+            note = "白烬通过陆青禾得知苏瑶约她在初赛第三轮前的休息时间去丹房后院‘叙旧’，白烬意识到丹房后院正是纪迟第二轮签到点——苏瑶可能想在那里制造‘当众批评’的场合。"
+          }
+          state_delta {
+            target = "苏瑶与纪迟的时空交叉"
+            kind = "storyline"
+            field = "event"
+            to = "confirmed"
+            note = "白烬通过陆青禾得知苏瑶约她在初赛第三轮前的休息时间去丹房后院‘叙旧’，白烬意识到丹房后院正是纪迟第二轮签到点——苏瑶可能想在那里制造‘当众批评’的场合。"
+          }
+        }
+      }
+      step 9 {
+        description = "白烬决定引导纪迟提前或延迟签到时间，让纪迟的静坐正好卡在苏瑶批评陆青禾的那一刻——两人任务同时进行，互相干扰。"
+        event {
+          type = "goal"
+          state_delta {
+            target = "路线重叠"
+            kind = "knowledge"
+            field = "use"
+            to = "formulated"
+            note = "白烬决定引导纪迟提前或延迟签到时间，让纪迟的静坐正好卡在苏瑶批评陆青禾的那一刻——两人任务同时进行，互相干扰。"
+          }
+        }
+      }
+      step 10 {
+        description = "白烬从杂役房捡到一个废弃小香炉，里面有余灰，可用作制造‘意外’的道具"
+        event {
+          type = "acquire"
+          acquire {
+            actor = "白烬"
+            item = "小香炉"
+            quantity = 1
+            source = "杂役房角落"
+          }
+          state_delta {
+            target = "小香炉"
+            kind = "item"
+            field = "acquire"
+            to = "acquired"
+            note = "白烬从杂役房捡到一个废弃小香炉，里面有余灰，可用作制造‘意外’的道具"
+          }
+        }
+      }
+      step 11 {
+        description = "灵石 resource change: 2 +0 = 2. 未消耗"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "2"
+            to = "2"
+            note = "未消耗"
+          }
+        }
+      }
+      step 12 {
+        description = "小比开幕式结束后，白烬吃过午饭开始跟踪纪迟"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "次日 小比开幕式结束后，白烬吃过午饭开始跟踪纪迟"
+          }
+        }
+      }
+    }
+  }
+  chapter "顾衡的假山埋伏" {
+    id = "P1-V3-C3"
+    arc = "P1-V3"
+    position = 3
+    objective "顾衡的假山埋伏" {
+      id = "obj_P1-V3-C3"
+      type = "sequence"
+      step 1 {
+        description = "没有金手指的耗材 | progress | 白烬从被动避开顾衡转为主动转移顾衡的敌意 | 顾衡与纪迟的矛盾加深，白烬的生存空间扩大 | 但顾衡会越来越确认有人在暗中操控局面，最终仍会回到白烬身上"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "没有金手指的耗材"
+            kind = "storyline"
+            field = "stage"
+            to = "progress"
+            unit = "但顾衡会越来越确认有人在暗中操控局面，最终仍会回到白烬身上"
+            cost = "顾衡与纪迟的矛盾加深，白烬的生存空间扩大"
+            note = "change=白烬从被动避开顾衡转为主动转移顾衡的敌意; consequence=顾衡与纪迟的矛盾加深，白烬的生存空间扩大; pressure=但顾衡会越来越确认有人在暗中操控局面，最终仍会回到白烬身上"
+          }
+          state_delta {
+            target = "没有金手指的耗材"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V3-C3"
+          }
+        }
+      }
+      step 2 {
+        description = "青岚宗四宿主局 | pressure | 顾衡和纪迟的敌意公开化，两人可能在小比中互相针对 | 白烬可以利用两人的冲突掩护自己的行动 | 苏瑶的命格任务尚未开始，她可能在观察这个新变化"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "青岚宗四宿主局"
+            kind = "storyline"
+            field = "stage"
+            to = "pressure"
+            unit = "苏瑶的命格任务尚未开始，她可能在观察这个新变化"
+            cost = "白烬可以利用两人的冲突掩护自己的行动"
+            note = "change=顾衡和纪迟的敌意公开化，两人可能在小比中互相针对; consequence=白烬可以利用两人的冲突掩护自己的行动; pressure=苏瑶的命格任务尚未开始，她可能在观察这个新变化"
+          }
+          state_delta {
+            target = "青岚宗四宿主局"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V3-C3"
+          }
+        }
+      }
+      step 3 {
+        description = "mystery myst_guhun_newcycle planted: 顾衡本卷的回档额度仅剩1次（预选赛已用9次，系统以卷为单位重设，但只给了1次保底），他尚未使用"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_guhun_newcycle"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "顾衡本卷的回档额度仅剩1次（预选赛已用9次，系统以卷为单位重设，但只给了1次保底），他尚未使用"
+          }
+        }
+      }
+      step 4 {
+        description = "chapter start cultivation: 炼气入门"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "炼气入门"
+            note = "chapter start cultivation: 炼气入门"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "2"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start allies: 陆青禾"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "陆青禾"
+            note = "chapter start allies: 陆青禾"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉"
+            note = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉"
+          }
+        }
+      }
+      step 8 {
+        description = "白烬清晨醒来，看到顾衡的任务日志上多了一条计划残响：『已定位纪迟签到点：西侧假山。计划提前设伏，同时抓捕可能出现的杂役白烬。』（顾衡本卷仅剩1次回档额度，他打算先不用回档，仅靠正常实力解决）"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "顾衡的伏击计划"
+            kind = "knowledge"
+            field = "discover"
+            to = "observed"
+            note = "白烬清晨醒来，看到顾衡的任务日志上多了一条计划残响：『已定位纪迟签到点：西侧假山。计划提前设伏，同时抓捕可能出现的杂役白烬。』（顾衡本卷仅剩1次回档额度，他打算先不用回档，仅靠正常实力解决）"
+          }
+          state_delta {
+            target = "顾衡的伏击计划"
+            kind = "storyline"
+            field = "event"
+            to = "observed"
+            note = "白烬清晨醒来，看到顾衡的任务日志上多了一条计划残响：『已定位纪迟签到点：西侧假山。计划提前设伏，同时抓捕可能出现的杂役白烬。』（顾衡本卷仅剩1次回档额度，他打算先不用回档，仅靠正常实力解决）"
+          }
+        }
+      }
+      step 9 {
+        description = "白烬故意不出现在假山，但提前在假山石缝里塞了一张字条，上面写着‘纪师兄，剑骨签到点西侧假山已被大师兄发现’。"
+        event {
+          type = "goal"
+          state_delta {
+            target = "顾衡的埋伏意图"
+            kind = "knowledge"
+            field = "use"
+            to = "formulated"
+            note = "白烬故意不出现在假山，但提前在假山石缝里塞了一张字条，上面写着‘纪师兄，剑骨签到点西侧假山已被大师兄发现’。"
+          }
+        }
+      }
+      step 10 {
+        description = "纪迟按路线来到西侧假山进行第一轮签到，发现塞在石缝里的字条，抬头时正好看到顾衡在不远处鬼鬼祟祟地探查。纪迟立刻认定顾衡在破坏他的签到点。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "顾衡的埋伏"
+            kind = "knowledge"
+            field = "discover"
+            to = "encountered"
+            note = "纪迟按路线来到西侧假山进行第一轮签到，发现塞在石缝里的字条，抬头时正好看到顾衡在不远处鬼鬼祟祟地探查。纪迟立刻认定顾衡在破坏他的签到点。"
+          }
+          state_delta {
+            target = "顾衡的埋伏"
+            kind = "storyline"
+            field = "event"
+            to = "encountered"
+            note = "纪迟按路线来到西侧假山进行第一轮签到，发现塞在石缝里的字条，抬头时正好看到顾衡在不远处鬼鬼祟祟地探查。纪迟立刻认定顾衡在破坏他的签到点。"
+          }
+        }
+      }
+      step 11 {
+        description = "顾衡看到纪迟出现在假山且一脸警惕，意识到自己的埋伏位置被泄露，以为是纪迟自己察觉了，没有怀疑到白烬。"
+        event {
+          type = "status"
+          state_delta {
+            target = "假山区域"
+            kind = "location"
+            field = "retreat"
+            to = "observed"
+            note = "顾衡看到纪迟出现在假山且一脸警惕，意识到自己的埋伏位置被泄露，以为是纪迟自己察觉了，没有怀疑到白烬。"
+          }
+        }
+      }
+      step 12 {
+        description = "灵石 resource change: 2 +0 = 2. 未变动"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "2"
+            to = "2"
+            note = "未变动"
+          }
+        }
+      }
+      step 13 {
+        description = "前一天下午的事件后，白烬好好休息了一晚，体力充足"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "次日早晨 前一天下午的事件后，白烬好好休息了一晚，体力充足"
+          }
+        }
+      }
+    }
+  }
+  chapter "苏瑶的叙旧围猎" {
+    id = "P1-V3-C4"
+    arc = "P1-V3"
+    position = 4
+    objective "苏瑶的叙旧围猎" {
+      id = "obj_P1-V3-C4"
+      type = "sequence"
+      step 1 {
+        description = "普通人不是耗材 | progress | 陆青禾第一次主动配合白烬的反制计划，成功脱身 | 陆青禾对白烬的信任更加稳固，她开始主动思考如何应对宿主 | 苏瑶会怀疑有人在她的计划中做了手脚，可能更严密地监视陆青禾"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "普通人不是耗材"
+            kind = "storyline"
+            field = "stage"
+            to = "progress"
+            unit = "苏瑶会怀疑有人在她的计划中做了手脚，可能更严密地监视陆青禾"
+            cost = "陆青禾对白烬的信任更加稳固，她开始主动思考如何应对宿主"
+            note = "change=陆青禾第一次主动配合白烬的反制计划，成功脱身; consequence=陆青禾对白烬的信任更加稳固，她开始主动思考如何应对宿主; pressure=苏瑶会怀疑有人在她的计划中做了手脚，可能更严密地监视陆青禾"
+          }
+          state_delta {
+            target = "普通人不是耗材"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V3-C4"
+          }
+        }
+      }
+      step 2 {
+        description = "青岚宗四宿主局 | reversal | 苏瑶和纪迟因白烬的操控互相误伤，两人之间开始产生敌意 | 三名宿主之间的猜忌链更加复杂，白烬拥有更大的操作空间 | 苏瑶可能开始调查是谁把纪迟引到丹房后院"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "青岚宗四宿主局"
+            kind = "storyline"
+            field = "stage"
+            to = "reversal"
+            unit = "苏瑶可能开始调查是谁把纪迟引到丹房后院"
+            cost = "三名宿主之间的猜忌链更加复杂，白烬拥有更大的操作空间"
+            note = "change=苏瑶和纪迟因白烬的操控互相误伤，两人之间开始产生敌意; consequence=三名宿主之间的猜忌链更加复杂，白烬拥有更大的操作空间; pressure=苏瑶可能开始调查是谁把纪迟引到丹房后院"
+          }
+          state_delta {
+            target = "青岚宗四宿主局"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V3-C4"
+          }
+        }
+      }
+      step 3 {
+        description = "mystery myst_su_jichi_overlap resolved: 确认苏瑶和纪迟确实在同一地点同一时间执行任务，证明白烬可以利用天然交叉点让两人互相干扰"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_su_jichi_overlap"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "确认苏瑶和纪迟确实在同一地点同一时间执行任务，证明白烬可以利用天然交叉点让两人互相干扰"
+          }
+        }
+      }
+      step 4 {
+        description = "chapter start cultivation: 炼气入门"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "炼气入门"
+            note = "chapter start cultivation: 炼气入门"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "2"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start allies: 陆青禾"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "陆青禾"
+            note = "chapter start allies: 陆青禾"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉"
+            note = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉"
+          }
+        }
+      }
+      step 8 {
+        description = "苏瑶请陆青禾到丹房后院‘谈心’，然后假装不小心打翻药篓，准备嫁祸给陆青禾，引来执事当众批评"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "陆青禾"
+            kind = "status"
+            field = "meet"
+            to = "triggered"
+            note = "苏瑶请陆青禾到丹房后院‘谈心’，然后假装不小心打翻药篓，准备嫁祸给陆青禾，引来执事当众批评"
+          }
+          state_delta {
+            target = "陆青禾"
+            kind = "storyline"
+            field = "event"
+            to = "triggered"
+            note = "苏瑶请陆青禾到丹房后院‘谈心’，然后假装不小心打翻药篓，准备嫁祸给陆青禾，引来执事当众批评"
+          }
+        }
+      }
+      step 9 {
+        description = "白烬在丹房后院外侧的走廊上故意拍了一下纪迟的肩膀，说‘大师兄好像在丹房后院翻找东西，不知道是不是找到了什么好东西’。纪迟担心签到点被抢，立刻赶往丹房后院。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "纪迟的签到路线"
+            kind = "knowledge"
+            field = "use"
+            to = "executed"
+            note = "白烬在丹房后院外侧的走廊上故意拍了一下纪迟的肩膀，说‘大师兄好像在丹房后院翻找东西，不知道是不是找到了什么好东西’。纪迟担心签到点被抢，立刻赶往丹房后院。"
+          }
+          state_delta {
+            target = "纪迟的签到路线"
+            kind = "storyline"
+            field = "event"
+            to = "executed"
+            note = "白烬在丹房后院外侧的走廊上故意拍了一下纪迟的肩膀，说‘大师兄好像在丹房后院翻找东西，不知道是不是找到了什么好东西’。纪迟担心签到点被抢，立刻赶往丹房后院。"
+          }
+        }
+      }
+      step 10 {
+        description = "纪迟到达丹房后院时正好看到苏瑶和陆青禾，他不管不顾地走到提前选好的签到位置——枯井旁边——开始静坐。苏瑶正准备大声喊执事，纪迟的静坐被执事看到，执事以为他在偷懒，先呵斥了纪迟，打断了苏瑶的‘当众批评’时机。"
+        event {
+          type = "status"
+          state_delta {
+            target = "苏瑶在场"
+            kind = "knowledge"
+            field = "discover"
+            to = "happened"
+            note = "纪迟到达丹房后院时正好看到苏瑶和陆青禾，他不管不顾地走到提前选好的签到位置——枯井旁边——开始静坐。苏瑶正准备大声喊执事，纪迟的静坐被执事看到，执事以为他在偷懒，先呵斥了纪迟，打断了苏瑶的‘当众批评’时机。"
+          }
+        }
+      }
+      step 11 {
+        description = "系统判定：『命格掠夺·陆青禾：批评场合因第三方干扰未完成，不计入次数。』苏瑶脸色铁青。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "命格掠夺任务"
+            kind = "storyline"
+            field = "fail"
+            to = "failed"
+            note = "系统判定：『命格掠夺·陆青禾：批评场合因第三方干扰未完成，不计入次数。』苏瑶脸色铁青。"
+          }
+          state_delta {
+            target = "命格掠夺任务"
+            kind = "storyline"
+            field = "event"
+            to = "failed"
+            note = "系统判定：『命格掠夺·陆青禾：批评场合因第三方干扰未完成，不计入次数。』苏瑶脸色铁青。"
+          }
+        }
+      }
+      step 12 {
+        description = "灵石 resource change: 2 +0 = 2. 未消耗"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "2"
+            to = "2"
+            note = "未消耗"
+          }
+        }
+      }
+      step 13 {
+        description = "上午的假山事件后，白烬休息了一会儿"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "当天上午 上午的假山事件后，白烬休息了一会儿"
+          }
+        }
+      }
+    }
+  }
+  chapter "顾衡的剑骨观察" {
+    id = "P1-V3-C5"
+    arc = "P1-V3"
+    position = 5
+    objective "顾衡的剑骨观察" {
+      id = "obj_P1-V3-C5"
+      type = "sequence"
+      step 1 {
+        description = "没有金手指的耗材 | progress | 白烬开始主动引导宿主之间的对抗，不再只是被动防御 | 风险增大：一旦被任何宿主抓到证据，他将同时面对三人的报复 | 顾衡连续三次失败后，一定会开始思考是否存在更高明的对手在操控"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "没有金手指的耗材"
+            kind = "storyline"
+            field = "stage"
+            to = "progress"
+            unit = "顾衡连续三次失败后，一定会开始思考是否存在更高明的对手在操控"
+            cost = "风险增大：一旦被任何宿主抓到证据，他将同时面对三人的报复"
+            note = "change=白烬开始主动引导宿主之间的对抗，不再只是被动防御; consequence=风险增大：一旦被任何宿主抓到证据，他将同时面对三人的报复; pressure=顾衡连续三次失败后，一定会开始思考是否存在更高明的对手在操控"
+          }
+          state_delta {
+            target = "没有金手指的耗材"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V3-C5"
+          }
+        }
+      }
+      step 2 {
+        description = "mystery myst_guhun_jichi_backup planted: 纪迟有三个备用签到点，说明他的系统允许在常规点被破坏时切换——但备用点奖励更低，可能影响最终剑骨结算"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_guhun_jichi_backup"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "纪迟有三个备用签到点，说明他的系统允许在常规点被破坏时切换——但备用点奖励更低，可能影响最终剑骨结算"
+          }
+        }
+      }
+      step 3 {
+        description = "chapter start cultivation: 炼气入门"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "炼气入门"
+            note = "chapter start cultivation: 炼气入门"
+          }
+        }
+      }
+      step 4 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "2"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start allies: 陆青禾"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "陆青禾"
+            note = "chapter start allies: 陆青禾"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉, 炭笔（写假情报用）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉, 炭笔（写假情报用）"
+            note = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉, 炭笔（写假情报用）"
+          }
+        }
+      }
+      step 7 {
+        description = "白烬看到顾衡的任务日志更新了一条猜测：『剑骨可能触发签到系统的奖励结算。干扰签到可阻止剑骨被夺。』白烬意识到顾衡打算对纪迟的签到点动手脚。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "顾衡的剑骨策略"
+            kind = "knowledge"
+            field = "discover"
+            to = "observed"
+            note = "白烬看到顾衡的任务日志更新了一条猜测：『剑骨可能触发签到系统的奖励结算。干扰签到可阻止剑骨被夺。』白烬意识到顾衡打算对纪迟的签到点动手脚。"
+          }
+          state_delta {
+            target = "顾衡的剑骨策略"
+            kind = "storyline"
+            field = "event"
+            to = "observed"
+            note = "白烬看到顾衡的任务日志更新了一条猜测：『剑骨可能触发签到系统的奖励结算。干扰签到可阻止剑骨被夺。』白烬意识到顾衡打算对纪迟的签到点动手脚。"
+          }
+        }
+      }
+      step 8 {
+        description = "白烬在纪迟的第三条签到点（藏经阁东角）的石台下面用炭笔写下一行小字：‘大师兄已知此点，换位’。他故意模仿纪迟的笔迹。"
+        event {
+          type = "goal"
+          state_delta {
+            target = "假情报"
+            kind = "knowledge"
+            field = "use"
+            to = "executed"
+            note = "白烬在纪迟的第三条签到点（藏经阁东角）的石台下面用炭笔写下一行小字：‘大师兄已知此点，换位’。他故意模仿纪迟的笔迹。"
+          }
+        }
+      }
+      step 9 {
+        description = "纪迟来到藏经阁东角准备签到，看到石台下的字条，以为是上次字条的同一个人（或顾衡）在警告他，于是放弃了这个签到点，转向了预留的备用点位。顾衡布置的陷阱落空。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "放弃签到点"
+            kind = "location"
+            field = "decide"
+            to = "discovered"
+            note = "纪迟来到藏经阁东角准备签到，看到石台下的字条，以为是上次字条的同一个人（或顾衡）在警告他，于是放弃了这个签到点，转向了预留的备用点位。顾衡布置的陷阱落空。"
+          }
+          state_delta {
+            target = "放弃签到点"
+            kind = "storyline"
+            field = "event"
+            to = "discovered"
+            note = "纪迟来到藏经阁东角准备签到，看到石台下的字条，以为是上次字条的同一个人（或顾衡）在警告他，于是放弃了这个签到点，转向了预留的备用点位。顾衡布置的陷阱落空。"
+          }
+        }
+      }
+      step 10 {
+        description = "顾衡在预定位置设下的干扰灵力，等了一下午也没等到纪迟出现，任务栏显示『干扰目标：未抵达』。顾衡愤怒地离开。"
+        event {
+          type = "status"
+          state_delta {
+            target = "剑骨干扰计划"
+            kind = "storyline"
+            field = "fail"
+            to = "failed"
+            note = "顾衡在预定位置设下的干扰灵力，等了一下午也没等到纪迟出现，任务栏显示『干扰目标：未抵达』。顾衡愤怒地离开。"
+          }
+          state_delta {
+            target = "剑骨干扰计划"
+            kind = "storyline"
+            field = "event"
+            to = "failed"
+            note = "顾衡在预定位置设下的干扰灵力，等了一下午也没等到纪迟出现，任务栏显示『干扰目标：未抵达』。顾衡愤怒地离开。"
+          }
+        }
+      }
+      step 11 {
+        description = "灵石 resource change: 2 +0 = 2. 未消耗"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "2"
+            to = "2"
+            note = "未消耗"
+          }
+        }
+      }
+      step 12 {
+        description = "丹房后院事件后的第二天"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "次日 丹房后院事件后的第二天"
+          }
+        }
+      }
+    }
+  }
+  chapter "苏瑶的第二次计划与陆青禾的反向操作" {
+    id = "P1-V3-C6"
+    arc = "P1-V3"
+    position = 6
+    objective "苏瑶的第二次计划与陆青禾的反向操作" {
+      id = "obj_P1-V3-C6"
+      type = "sequence"
+      step 1 {
+        description = "普通人不是耗材 | reversal | 陆青禾不再只是被动躲避，而是能在擂台上主动制造反转局面 | 苏瑶对陆青禾的难度评估上升，可能升级任务手段 | 苏瑶连续两次失败后，可能会亲自下场而非借助他人"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "普通人不是耗材"
+            kind = "storyline"
+            field = "stage"
+            to = "reversal"
+            unit = "苏瑶连续两次失败后，可能会亲自下场而非借助他人"
+            cost = "苏瑶对陆青禾的难度评估上升，可能升级任务手段"
+            note = "change=陆青禾不再只是被动躲避，而是能在擂台上主动制造反转局面; consequence=苏瑶对陆青禾的难度评估上升，可能升级任务手段; pressure=苏瑶连续两次失败后，可能会亲自下场而非借助他人"
+          }
+          state_delta {
+            target = "普通人不是耗材"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V3-C6"
+          }
+        }
+      }
+      step 2 {
+        description = "chapter start cultivation: 炼气入门"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "炼气入门"
+            note = "chapter start cultivation: 炼气入门"
+          }
+        }
+      }
+      step 3 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "2"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 4 {
+        description = "chapter start allies: 陆青禾"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "陆青禾"
+            note = "chapter start allies: 陆青禾"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌"
+            note = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌"
+          }
+        }
+      }
+      step 6 {
+        description = "白烬看到苏瑶的任务日志更新：『命格掠夺·第二次：在陆青禾的小比第三轮比赛中，通过裁判的‘战术批评’使其被当众呵斥』"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "苏瑶的裁判策略"
+            kind = "knowledge"
+            field = "discover"
+            to = "observed"
+            note = "白烬看到苏瑶的任务日志更新：『命格掠夺·第二次：在陆青禾的小比第三轮比赛中，通过裁判的‘战术批评’使其被当众呵斥』"
+          }
+          state_delta {
+            target = "苏瑶的裁判策略"
+            kind = "storyline"
+            field = "event"
+            to = "observed"
+            note = "白烬看到苏瑶的任务日志更新：『命格掠夺·第二次：在陆青禾的小比第三轮比赛中，通过裁判的‘战术批评’使其被当众呵斥』"
+          }
+        }
+      }
+      step 7 {
+        description = "白烬让陆青禾在第三轮比赛中，当对手使用违规小动作时，大声指出并主动要求裁判制裁。这样反而让苏瑶安排的‘批评’失去了目标——陆青禾的行为变成了合理申诉。"
+        event {
+          type = "goal"
+          state_delta {
+            target = "苏瑶的裁判计划"
+            kind = "knowledge"
+            field = "use"
+            to = "executed"
+            note = "白烬让陆青禾在第三轮比赛中，当对手使用违规小动作时，大声指出并主动要求裁判制裁。这样反而让苏瑶安排的‘批评’失去了目标——陆青禾的行为变成了合理申诉。"
+          }
+        }
+      }
+      step 8 {
+        description = "比赛开始后，苏瑶收买的赵恒果然按照计划在第三回合使用隐蔽的灵绳绊陆青禾。陆青禾早有准备，当场抓住灵绳大声质问裁判，裁判不得不呵斥赵恒违规，陆青禾获得公平重赛机会且无批评。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "赵恒"
+            kind = "status"
+            field = "combat"
+            to = "executed"
+            note = "比赛开始后，苏瑶收买的赵恒果然按照计划在第三回合使用隐蔽的灵绳绊陆青禾。陆青禾早有准备，当场抓住灵绳大声质问裁判，裁判不得不呵斥赵恒违规，陆青禾获得公平重赛机会且无批评。"
+          }
+          state_delta {
+            target = "赵恒"
+            kind = "storyline"
+            field = "event"
+            to = "executed"
+            note = "比赛开始后，苏瑶收买的赵恒果然按照计划在第三回合使用隐蔽的灵绳绊陆青禾。陆青禾早有准备，当场抓住灵绳大声质问裁判，裁判不得不呵斥赵恒违规，陆青禾获得公平重赛机会且无批评。"
+          }
+        }
+      }
+      step 9 {
+        description = "系统判定：『命格掠夺·第二次：目标未受到当众批评，且对手因违规被罚，任务条件不满足。』苏瑶的计划再次失败。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "命格掠夺第二次"
+            kind = "storyline"
+            field = "fail"
+            to = "failed"
+            note = "系统判定：『命格掠夺·第二次：目标未受到当众批评，且对手因违规被罚，任务条件不满足。』苏瑶的计划再次失败。"
+          }
+          state_delta {
+            target = "命格掠夺第二次"
+            kind = "storyline"
+            field = "event"
+            to = "failed"
+            note = "系统判定：『命格掠夺·第二次：目标未受到当众批评，且对手因违规被罚，任务条件不满足。』苏瑶的计划再次失败。"
+          }
+        }
+      }
+      step 10 {
+        description = "灵石 resource change: 2 +0 = 2. 未消耗"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "2"
+            to = "2"
+            note = "未消耗"
+          }
+        }
+      }
+      step 11 {
+        description = "前一天的事件后，白烬和陆青禾在夜中交换了信息"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "次日 前一天的事件后，白烬和陆青禾在夜中交换了信息"
+          }
+        }
+      }
+    }
+  }
+  chapter "三线交汇的预演" {
+    id = "P1-V3-C7"
+    arc = "P1-V3"
+    position = 7
+    objective "三线交汇的预演" {
+      id = "obj_P1-V3-C7"
+      type = "sequence"
+      step 1 {
+        description = "没有金手指的耗材 | reversal | 白烬成功让三位宿主的核心任务在同一个瞬间全部失败，这是他从被动避害转向主动操控的里程碑 | 三位宿主都意识到存在第三方干扰，但无法锁定白烬 | 任务热度急剧升高，更高阶的任务可能开始注意到这个杂役"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "没有金手指的耗材"
+            kind = "storyline"
+            field = "stage"
+            to = "reversal"
+            unit = "任务热度急剧升高，更高阶的任务可能开始注意到这个杂役"
+            cost = "三位宿主都意识到存在第三方干扰，但无法锁定白烬"
+            note = "change=白烬成功让三位宿主的核心任务在同一个瞬间全部失败，这是他从被动避害转向主动操控的里程碑; consequence=三位宿主都意识到存在第三方干扰，但无法锁定白烬; pressure=任务热度急剧升高，更高阶的任务可能开始注意到这个杂役"
+          }
+          state_delta {
+            target = "没有金手指的耗材"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V3-C7"
+          }
+        }
+      }
+      step 2 {
+        description = "青岚宗四宿主局 | climax | 三系统互撞的预演成功实现 | 卷末高潮即将到来，白烬已经掌握了让三人任务同时失败的方法 | 三人中的任何一人如果联合另两人排查，白烬就可能暴露"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "青岚宗四宿主局"
+            kind = "storyline"
+            field = "stage"
+            to = "climax"
+            unit = "三人中的任何一人如果联合另两人排查，白烬就可能暴露"
+            cost = "卷末高潮即将到来，白烬已经掌握了让三人任务同时失败的方法"
+            note = "change=三系统互撞的预演成功实现; consequence=卷末高潮即将到来，白烬已经掌握了让三人任务同时失败的方法; pressure=三人中的任何一人如果联合另两人排查，白烬就可能暴露"
+          }
+        }
+      }
+      step 3 {
+        description = "mystery myst_guhun_lost_times planted: 顾衡失去了所有回档次数（唯一一次已被打断），从此没有重来能力"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_guhun_lost_times"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "this_volume"
+            cost = "open"
+            note = "顾衡失去了所有回档次数（唯一一次已被打断），从此没有重来能力"
+          }
+        }
+      }
+      step 4 {
+        description = "chapter start cultivation: 炼气入门"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "炼气入门"
+            note = "chapter start cultivation: 炼气入门"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "2"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start allies: 陆青禾"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "陆青禾"
+            note = "chapter start allies: 陆青禾"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉"
+            note = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉"
+          }
+        }
+      }
+      step 8 {
+        description = "白烬看到顾衡的任务日志显示『回档剩余次数：1』，且他站在擂台东南角，目光同时扫过苏瑶、纪迟和白烬，显然打算用这次机会一次性清除所有对手。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "顾衡的回档计划"
+            kind = "knowledge"
+            field = "discover"
+            to = "planned"
+            note = "白烬看到顾衡的任务日志显示『回档剩余次数：1』，且他站在擂台东南角，目光同时扫过苏瑶、纪迟和白烬，显然打算用这次机会一次性清除所有对手。"
+          }
+          state_delta {
+            target = "顾衡的回档计划"
+            kind = "storyline"
+            field = "event"
+            to = "planned"
+            note = "白烬看到顾衡的任务日志显示『回档剩余次数：1』，且他站在擂台东南角，目光同时扫过苏瑶、纪迟和白烬，显然打算用这次机会一次性清除所有对手。"
+          }
+        }
+      }
+      step 9 {
+        description = "白烬在顾衡即将启动回档的前一刻，安排一位杂役突然大喊‘有人偷剑骨’，分散了顾衡的注意力。回档需要集中意念，被打断后失效。"
+        event {
+          type = "goal"
+          state_delta {
+            target = "顾衡的注意力"
+            kind = "knowledge"
+            field = "use"
+            to = "executed"
+            note = "白烬在顾衡即将启动回档的前一刻，安排一位杂役突然大喊‘有人偷剑骨’，分散了顾衡的注意力。回档需要集中意念，被打断后失效。"
+          }
+        }
+      }
+      step 10 {
+        description = "苏瑶试图在混乱中亲自对陆青禾出手，将她推向擂台边缘以制造摔伤和批评。陆青禾顺势抓住苏瑶的袖子，一起摔倒，两人同时被裁判警告，苏瑶的掠夺任务因‘同时受罚’而无法计数。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "苏瑶"
+            kind = "status"
+            field = "combat"
+            to = "executed"
+            note = "苏瑶试图在混乱中亲自对陆青禾出手，将她推向擂台边缘以制造摔伤和批评。陆青禾顺势抓住苏瑶的袖子，一起摔倒，两人同时被裁判警告，苏瑶的掠夺任务因‘同时受罚’而无法计数。"
+          }
+          state_delta {
+            target = "苏瑶"
+            kind = "storyline"
+            field = "event"
+            to = "executed"
+            note = "苏瑶试图在混乱中亲自对陆青禾出手，将她推向擂台边缘以制造摔伤和批评。陆青禾顺势抓住苏瑶的袖子，一起摔倒，两人同时被裁判警告，苏瑶的掠夺任务因‘同时受罚’而无法计数。"
+          }
+        }
+      }
+      step 11 {
+        description = "顾衡回档被打断时泄漏的灵力残响影响了纪迟正在进行的签到，系统判定『环境灵力异常，签到失败』。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "纪迟签到失败"
+            kind = "knowledge"
+            field = "observe"
+            to = "interrupted"
+            note = "顾衡回档被打断时泄漏的灵力残响影响了纪迟正在进行的签到，系统判定『环境灵力异常，签到失败』。"
+          }
+          state_delta {
+            target = "纪迟签到失败"
+            kind = "storyline"
+            field = "event"
+            to = "interrupted"
+            note = "顾衡回档被打断时泄漏的灵力残响影响了纪迟正在进行的签到，系统判定『环境灵力异常，签到失败』。"
+          }
+        }
+      }
+      step 12 {
+        description = "灵石 resource change: 2 +0 = 2. 未消耗"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "2"
+            to = "2"
+            note = "未消耗"
+          }
+        }
+      }
+      step 13 {
+        description = "前一天的事件结束后，白烬和陆青禾为决赛做了准备"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "次日 前一天的事件结束后，白烬和陆青禾为决赛做了准备"
+          }
+        }
+      }
+    }
+  }
+  chapter "剑骨前的最后一步" {
+    id = "P1-V3-C8"
+    arc = "P1-V3"
+    position = 8
+    objective "剑骨前的最后一步" {
+      id = "obj_P1-V3-C8"
+      type = "sequence"
+      step 1 {
+        description = "青岚宗四宿主局 | preparation | 白烬完成了物理布置，决赛将是他验证三系统互撞理论的实验场 | 如果成功，他将拥有可复用的反制体系 | 一旦失败，他将同时面对三名宿主的直接追杀"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "青岚宗四宿主局"
+            kind = "storyline"
+            field = "stage"
+            to = "preparation"
+            unit = "一旦失败，他将同时面对三名宿主的直接追杀"
+            cost = "如果成功，他将拥有可复用的反制体系"
+            note = "change=白烬完成了物理布置，决赛将是他验证三系统互撞理论的实验场; consequence=如果成功，他将拥有可复用的反制体系; pressure=一旦失败，他将同时面对三名宿主的直接追杀"
+          }
+        }
+      }
+      step 2 {
+        description = "chapter start cultivation: 炼气入门"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "炼气入门"
+            note = "chapter start cultivation: 炼气入门"
+          }
+        }
+      }
+      step 3 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "2"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 4 {
+        description = "chapter start allies: 陆青禾"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "陆青禾"
+            note = "chapter start allies: 陆青禾"
+          }
+        }
+      }
+      step 5 {
+        description = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉（余灰已用）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉（余灰已用）"
+            note = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉（余灰已用）"
+          }
+        }
+      }
+      step 6 {
+        description = "白烬跟踪纪迟发现他勘探了一个从擂台底部爬上去的隐秘路线，这条路线可以在决赛时让他从台下直接钻到擂台中央签到。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "纪迟的决赛签到路线"
+            kind = "knowledge"
+            field = "discover"
+            to = "discovered"
+            note = "白烬跟踪纪迟发现他勘探了一个从擂台底部爬上去的隐秘路线，这条路线可以在决赛时让他从台下直接钻到擂台中央签到。"
+          }
+          state_delta {
+            target = "纪迟的决赛签到路线"
+            kind = "storyline"
+            field = "event"
+            to = "discovered"
+            note = "白烬跟踪纪迟发现他勘探了一个从擂台底部爬上去的隐秘路线，这条路线可以在决赛时让他从台下直接钻到擂台中央签到。"
+          }
+        }
+      }
+      step 7 {
+        description = "白烬用香炉灰在擂台底部的地板上画了一个微小的引导标记，未来旁人或宿主经过时会产生微弱的灵力扰动，让顾衡或苏瑶误以为有人藏在那里。"
+        event {
+          type = "goal"
+          state_delta {
+            target = "灵灰标记"
+            kind = "knowledge"
+            field = "use"
+            to = "started"
+            note = "白烬用香炉灰在擂台底部的地板上画了一个微小的引导标记，未来旁人或宿主经过时会产生微弱的灵力扰动，让顾衡或苏瑶误以为有人藏在那里。"
+          }
+        }
+      }
+      step 8 {
+        description = "白烬让陆青禾在决赛中采取拖延战术，尽量与对手打成持久战，让时间拖到纪迟按计划从擂台底部钻出来那一刻。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "拖延战术"
+            kind = "goal"
+            field = "agree"
+            to = "agreed"
+            note = "白烬让陆青禾在决赛中采取拖延战术，尽量与对手打成持久战，让时间拖到纪迟按计划从擂台底部钻出来那一刻。"
+          }
+          state_delta {
+            target = "拖延战术"
+            kind = "storyline"
+            field = "event"
+            to = "agreed"
+            note = "白烬让陆青禾在决赛中采取拖延战术，尽量与对手打成持久战，让时间拖到纪迟按计划从擂台底部钻出来那一刻。"
+          }
+        }
+      }
+      step 9 {
+        description = "小香炉的余灰混合了一滴炼气初期的灵血，具有微弱灵力残留，能被修炼者感知"
+        event {
+          type = "acquire"
+          acquire {
+            actor = "白烬"
+            item = "灵灰标记"
+            quantity = 1
+            source = "擂台底部"
+          }
+          state_delta {
+            target = "灵灰标记"
+            kind = "item"
+            field = "create"
+            to = "created"
+            note = "小香炉的余灰混合了一滴炼气初期的灵血，具有微弱灵力残留，能被修炼者感知"
+          }
+        }
+      }
+      step 10 {
+        description = "灵石 resource change: 2 +0 = 2. 未消耗"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "2"
+            to = "2"
+            note = "未消耗"
+          }
+        }
+      }
+      step 11 {
+        description = "白天的事件后，白烬趁夜布置"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "当天傍晚 白天的事件后，白烬趁夜布置"
+          }
+        }
+      }
+    }
+  }
+  chapter "决赛日，三撞" {
+    id = "P1-V3-C9"
+    arc = "P1-V3"
+    position = 9
+    objective "决赛日，三撞" {
+      id = "obj_P1-V3-C9"
+      type = "sequence"
+      step 1 {
+        description = "青岚宗四宿主局 | payoff | 三系统互撞成功实现，三名宿主的任务全部失败，白烬成为最大赢家 | 顾衡被禁足，苏瑶任务链中断，纪迟失去了剑骨签到机会 | 莫问君开始关注白烬，这可能成为新的变数"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "青岚宗四宿主局"
+            kind = "storyline"
+            field = "stage"
+            to = "payoff"
+            unit = "莫问君开始关注白烬，这可能成为新的变数"
+            cost = "顾衡被禁足，苏瑶任务链中断，纪迟失去了剑骨签到机会"
+            note = "change=三系统互撞成功实现，三名宿主的任务全部失败，白烬成为最大赢家; consequence=顾衡被禁足，苏瑶任务链中断，纪迟失去了剑骨签到机会; pressure=莫问君开始关注白烬，这可能成为新的变数"
+          }
+          state_delta {
+            target = "青岚宗四宿主局"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "resolved"
+            note = "payoff in P1-V3-C9"
+          }
+        }
+      }
+      step 2 {
+        description = "从新手任务怪到众矢之的 | reversal | 白烬从‘难刷的人’升级为‘疑似隐藏宿主’，三名宿主都开始认为白烬要么有更强的系统，要么是宗门高层安排的棋子 | 宿主们对白烬的评估发生质变，未来的任务将会以更高规格调用 | 高阶系统可能开始记录白烬的名字"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "从新手任务怪到众矢之的"
+            kind = "storyline"
+            field = "stage"
+            to = "reversal"
+            unit = "高阶系统可能开始记录白烬的名字"
+            cost = "宿主们对白烬的评估发生质变，未来的任务将会以更高规格调用"
+            note = "change=白烬从‘难刷的人’升级为‘疑似隐藏宿主’，三名宿主都开始认为白烬要么有更强的系统，要么是宗门高层安排的棋子; consequence=宿主们对白烬的评估发生质变，未来的任务将会以更高规格调用; pressure=高阶系统可能开始记录白烬的名字"
+          }
+          state_delta {
+            target = "从新手任务怪到众矢之的"
+            kind = "plot_thread"
+            field = "storyline"
+            to = "raised"
+            note = "active pressure in P1-V3-C9"
+          }
+        }
+      }
+      step 3 {
+        description = "mystery myst_mo_attention planted: 莫问君长老在决赛后特意看了白烬一眼，说明他注意到了异常，可能已经知道白烬不是普通杂役"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_mo_attention"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "next_volume"
+            cost = "open"
+            note = "莫问君长老在决赛后特意看了白烬一眼，说明他注意到了异常，可能已经知道白烬不是普通杂役"
+          }
+        }
+      }
+      step 4 {
+        description = "mystery myst_swordbone_origin resolved: 剑骨被莫问君收回，说明它确实是诱饵，但莫问君可能并不清楚宿主系统，只是察觉到有人故意用剑骨制造混乱"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_swordbone_origin"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "剑骨被莫问君收回，说明它确实是诱饵，但莫问君可能并不清楚宿主系统，只是察觉到有人故意用剑骨制造混乱"
+          }
+        }
+      }
+      step 5 {
+        description = "mystery myst_guhun_lost_times resolved: 顾衡在决赛后失去了所有回档次数（唯一一次也被打断），从此没有重来能力"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_guhun_lost_times"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "顾衡在决赛后失去了所有回档次数（唯一一次也被打断），从此没有重来能力"
+          }
+        }
+      }
+      step 6 {
+        description = "chapter start cultivation: 炼气入门"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "炼气入门"
+            note = "chapter start cultivation: 炼气入门"
+          }
+        }
+      }
+      step 7 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "2"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start allies: 陆青禾"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "陆青禾"
+            note = "chapter start allies: 陆青禾"
+          }
+        }
+      }
+      step 9 {
+        description = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉（已空）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉（已空）"
+            note = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌, 小香炉（已空）"
+          }
+        }
+      }
+      step 10 {
+        description = "陆青禾在决赛中对阵赵恒，采取游走防守，消耗时间，打到近三刻钟"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "赵恒"
+            kind = "status"
+            field = "combat"
+            to = "executed"
+            note = "陆青禾在决赛中对阵赵恒，采取游走防守，消耗时间，打到近三刻钟"
+          }
+          state_delta {
+            target = "赵恒"
+            kind = "storyline"
+            field = "event"
+            to = "executed"
+            note = "陆青禾在决赛中对阵赵恒，采取游走防守，消耗时间，打到近三刻钟"
+          }
+        }
+      }
+      step 11 {
+        description = "纪迟在比赛进行到一炷香时从擂台底部钻出，正要完成签到，被顾衡发现的灵力波动打断。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "擂台中央"
+            kind = "location"
+            field = "discover"
+            to = "attempted"
+            note = "纪迟在比赛进行到一炷香时从擂台底部钻出，正要完成签到，被顾衡发现的灵力波动打断。"
+          }
+          state_delta {
+            target = "擂台中央"
+            kind = "storyline"
+            field = "event"
+            to = "attempted"
+            note = "纪迟在比赛进行到一炷香时从擂台底部钻出，正要完成签到，被顾衡发现的灵力波动打断。"
+          }
+        }
+      }
+      step 12 {
+        description = "顾衡感知到灵灰标记释放的灵力波动，以为有人夺取剑骨，冲上擂台一掌打向纪迟，同时波及苏瑶。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "纪迟"
+            kind = "status"
+            field = "combat"
+            to = "executed"
+            note = "顾衡感知到灵灰标记释放的灵力波动，以为有人夺取剑骨，冲上擂台一掌打向纪迟，同时波及苏瑶。"
+          }
+          state_delta {
+            target = "纪迟"
+            kind = "storyline"
+            field = "event"
+            to = "executed"
+            note = "顾衡感知到灵灰标记释放的灵力波动，以为有人夺取剑骨，冲上擂台一掌打向纪迟，同时波及苏瑶。"
+          }
+        }
+      }
+      step 13 {
+        description = "苏瑶趁机大声指责陆青禾与纪迟合谋作弊，但观众看到是纪迟从地底钻出、顾衡打人，无人关心她的指控，裁判也被混乱吸引。"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "命格掠夺任务"
+            kind = "storyline"
+            field = "fail"
+            to = "failed"
+            note = "苏瑶趁机大声指责陆青禾与纪迟合谋作弊，但观众看到是纪迟从地底钻出、顾衡打人，无人关心她的指控，裁判也被混乱吸引。"
+          }
+          state_delta {
+            target = "命格掠夺任务"
+            kind = "storyline"
+            field = "event"
+            to = "failed"
+            note = "苏瑶趁机大声指责陆青禾与纪迟合谋作弊，但观众看到是纪迟从地底钻出、顾衡打人，无人关心她的指控，裁判也被混乱吸引。"
+          }
+        }
+      }
+      step 14 {
+        description = "莫问君长老出现在擂台上，宣布决赛因多方干扰取消结果，剑骨收回宗门宝库，待查明真相"
+        event {
+          type = "status"
+          state_delta {
+            target = "决赛"
+            kind = "story"
+            field = "stop"
+            to = "intervened"
+            note = "莫问君长老出现在擂台上，宣布决赛因多方干扰取消结果，剑骨收回宗门宝库，待查明真相"
+          }
+        }
+      }
+      step 15 {
+        description = "灵石 resource change: 2 +1 = 3. 莫问君长老在混乱后给杂役们的安抚补贴，白烬作为在场杂役领到1块"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "2"
+            to = "3"
+            delta = 1
+            note = "莫问君长老在混乱后给杂役们的安抚补贴，白烬作为在场杂役领到1块"
+          }
+        }
+      }
+      step 16 {
+        description = "布置完成后的第二天"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "次日 布置完成后的第二天"
+          }
+        }
+      }
+    }
+  }
+  chapter "小比之后，暗流涌动" {
+    id = "P1-V3-C10"
+    arc = "P1-V3"
+    position = 10
+    objective "小比之后，暗流涌动" {
+      id = "obj_P1-V3-C10"
+      type = "sequence"
+      step 1 {
+        description = "没有金手指的耗材 | escalation | 白烬从‘难刷的人’升级为高级任务池目标，意味着更强大的宿主即将登场 | 下卷的三十六宗大比将是全新舞台，敌人不再局限于一个小宗门的三名宿主 | 半年时间窗口内，白烬必须大幅提升自己的修为和情报网络"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "没有金手指的耗材"
+            kind = "storyline"
+            field = "stage"
+            to = "escalation"
+            unit = "半年时间窗口内，白烬必须大幅提升自己的修为和情报网络"
+            cost = "下卷的三十六宗大比将是全新舞台，敌人不再局限于一个小宗门的三名宿主"
+            note = "change=白烬从‘难刷的人’升级为高级任务池目标，意味着更强大的宿主即将登场; consequence=下卷的三十六宗大比将是全新舞台，敌人不再局限于一个小宗门的三名宿主; pressure=半年时间窗口内，白烬必须大幅提升自己的修为和情报网络"
+          }
+        }
+      }
+      step 2 {
+        description = "从新手任务怪到众矢之的 | setup | 外门大比邀请到达，白烬的舞台将正式扩展到宗门之外 | 白烬需要在更大范围内保持低调，并应对更多系统的调用 | 莫问君的态度既是机遇也是监视，白烬不能完全信任他"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "从新手任务怪到众矢之的"
+            kind = "storyline"
+            field = "stage"
+            to = "setup"
+            unit = "莫问君的态度既是机遇也是监视，白烬不能完全信任他"
+            cost = "白烬需要在更大范围内保持低调，并应对更多系统的调用"
+            note = "change=外门大比邀请到达，白烬的舞台将正式扩展到宗门之外; consequence=白烬需要在更大范围内保持低调，并应对更多系统的调用; pressure=莫问君的态度既是机遇也是监视，白烬不能完全信任他"
+          }
+        }
+      }
+      step 3 {
+        description = "青岚宗四宿主局 | closure | 青岚宗的小比舞台以三系统互撞告终，三名宿主暂时退场 | 青岚宗线的短期冲突告一段落，但任务热度升高意味着新的敌人 | 莫问君成为新的关键人物，下一卷他将以长老身份出现在大比中"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "青岚宗四宿主局"
+            kind = "storyline"
+            field = "stage"
+            to = "closure"
+            unit = "莫问君成为新的关键人物，下一卷他将以长老身份出现在大比中"
+            cost = "青岚宗线的短期冲突告一段落，但任务热度升高意味着新的敌人"
+            note = "change=青岚宗的小比舞台以三系统互撞告终，三名宿主暂时退场; consequence=青岚宗线的短期冲突告一段落，但任务热度升高意味着新的敌人; pressure=莫问君成为新的关键人物，下一卷他将以长老身份出现在大比中"
+          }
+        }
+      }
+      step 4 {
+        description = "mystery myst_mo_knowledge planted: 莫问君知道白烬不是普通杂役，但他到底知道多少？他是否在利用白烬？"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_mo_knowledge"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "next_volume"
+            cost = "open"
+            note = "莫问君知道白烬不是普通杂役，但他到底知道多少？他是否在利用白烬？"
+          }
+        }
+      }
+      step 5 {
+        description = "mystery myst_high_level_taskpool planted: 任务热度升级到高级任务池，意味着白烬的名字已经被跨宗门的系统记录，下卷的敌人可能不是青岚宗的宿主"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_high_level_taskpool"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "raised"
+            unit = "next_volume"
+            cost = "open"
+            note = "任务热度升级到高级任务池，意味着白烬的名字已经被跨宗门的系统记录，下卷的敌人可能不是青岚宗的宿主"
+          }
+        }
+      }
+      step 6 {
+        description = "mystery myst_guhun_type resolved: 顾衡的回档系统以卷为单位重置次数，且他唯一一次机会已用"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_guhun_type"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "顾衡的回档系统以卷为单位重置次数，且他唯一一次机会已用"
+          }
+        }
+      }
+      step 7 {
+        description = "mystery myst_mo_attention resolved: 莫问君确实注意到了白烬，并主动发出邀请信，说明他至少知道部分真相，愿意拉拢白烬而非敌对"
+        event {
+          type = "mystery"
+          state_delta {
+            target = "myst_mo_attention"
+            kind = "plot_thread"
+            field = "mystery"
+            to = "resolved"
+            note = "莫问君确实注意到了白烬，并主动发出邀请信，说明他至少知道部分真相，愿意拉拢白烬而非敌对"
+          }
+        }
+      }
+      step 8 {
+        description = "chapter start cultivation: 炼气入门"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "cultivation"
+            field = "realm"
+            to = "炼气入门"
+            note = "chapter start cultivation: 炼气入门"
+          }
+        }
+      }
+      step 9 {
+        description = "chapter start spirit stones"
+        event {
+          type = "status"
+          state_delta {
+            target = "spirit_stones"
+            kind = "resource"
+            field = "quantity"
+            to = "3"
+            note = "chapter start spirit stones"
+          }
+        }
+      }
+      step 10 {
+        description = "chapter start allies: 陆青禾"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "ally"
+            field = "active"
+            to = "陆青禾"
+            note = "chapter start allies: 陆青禾"
+          }
+        }
+      }
+      step 11 {
+        description = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌（已过期）, 小香炉（已空）, 莫问君给的药材手册（内含纸条）"
+        event {
+          type = "status"
+          state_delta {
+            target = "protagonist"
+            kind = "item"
+            field = "key_items"
+            to = "破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌（已过期）, 小香炉（已空）, 莫问君给的药材手册（内含纸条）"
+            note = "chapter start key items: 破旧衣衫, 杂役令牌, 妖狼牙, 草药志（记忆）, 观礼令牌（已过期）, 小香炉（已空）, 莫问君给的药材手册（内含纸条）"
+          }
+        }
+      }
+      step 12 {
+        description = "莫问君在侧厅单独询问白烬，用看似随意的几句话试探：'你最近和陆青禾走得很近？' '你看到剑骨被干扰时在想什么？' '杂役房里有什么有趣的东西吗？'"
+        event {
+          type = "relationship"
+          state_delta {
+            target = "白烬"
+            kind = "status"
+            field = "meet"
+            to = "started"
+            note = "莫问君在侧厅单独询问白烬，用看似随意的几句话试探：'你最近和陆青禾走得很近？' '你看到剑骨被干扰时在想什么？' '杂役房里有什么有趣的东西吗？'"
+          }
+        }
+      }
+      step 13 {
+        description = "白烬对所有问题都回答得滴水不漏：'陆师姐是照顾杂役的好人' '我当时吓坏了，只想着躲' '杂役房只有老鼠和破被子'。莫问君笑着让他离开了。"
+        event {
+          type = "status"
+          state_delta {
+            target = "模糊回答"
+            kind = "knowledge"
+            field = "use"
+            to = "successful"
+            note = "白烬对所有问题都回答得滴水不漏：'陆师姐是照顾杂役的好人' '我当时吓坏了，只想着躲' '杂役房只有老鼠和破被子'。莫问君笑着让他离开了。"
+          }
+        }
+      }
+      step 14 {
+        description = "白烬从陆青禾处得知：顾衡被禁足三天；苏瑶接到宗门任务临时离开青岚宗前往临城；纪迟的签到系统因剑骨被莫问君收入宗门宝库，系统判定『高级物品位置失效，所有相关路线标记为不可达』，任务自动关闭。但白烬在三人离开前都看到了他们任务日志上的相同提示：『任务热度升级：目标“杂役白烬”已被录入高级任务池』"
+        event {
+          type = "storyline"
+          state_delta {
+            target = "任务热度升级"
+            kind = "knowledge"
+            field = "discover"
+            to = "resolved"
+            note = "白烬从陆青禾处得知：顾衡被禁足三天；苏瑶接到宗门任务临时离开青岚宗前往临城；纪迟的签到系统因剑骨被莫问君收入宗门宝库，系统判定『高级物品位置失效，所有相关路线标记为不可达』，任务自动关闭。但白烬在三人离开前都看到了他们任务日志上的相同提示：『任务热度升级：目标“杂役白烬”已被录入高级任务池』"
+          }
+          state_delta {
+            target = "任务热度升级"
+            kind = "storyline"
+            field = "event"
+            to = "resolved"
+            note = "白烬从陆青禾处得知：顾衡被禁足三天；苏瑶接到宗门任务临时离开青岚宗前往临城；纪迟的签到系统因剑骨被莫问君收入宗门宝库，系统判定『高级物品位置失效，所有相关路线标记为不可达』，任务自动关闭。但白烬在三人离开前都看到了他们任务日志上的相同提示：『任务热度升级：目标“杂役白烬”已被录入高级任务池』"
+          }
+        }
+      }
+      step 15 {
+        description = "问话结束后，莫问君让弟子转给白烬一本《青岚山低级药材炮制手册》，说是'照顾杂役的奖赏'，但白烬发现书里夹了一页手写的纸条：'三十六宗外门大比将在半年后举行，青岚宗需选十名弟子参加。名额有限。'"
+        event {
+          type = "acquire"
+          acquire {
+            actor = "白烬"
+            item = "莫问君的信"
+            quantity = 1
+            source = "回到杂役房后阅读"
+          }
+          state_delta {
+            target = "莫问君的信"
+            kind = "item"
+            field = "acquire"
+            to = "acquired"
+            note = "问话结束后，莫问君让弟子转给白烬一本《青岚山低级药材炮制手册》，说是'照顾杂役的奖赏'，但白烬发现书里夹了一页手写的纸条：'三十六宗外门大比将在半年后举行，青岚宗需选十名弟子参加。名额有限。'"
+          }
+        }
+      }
+      step 16 {
+        description = "灵石 resource change: 3 +1 = 4. 莫问君的弟子在小比后额外给了杂役补贴，白烬分到1块"
+        event {
+          type = "resource"
+          state_delta {
+            target = "灵石"
+            kind = "resource"
+            field = "quantity"
+            from = "3"
+            to = "4"
+            delta = 1
+            note = "莫问君的弟子在小比后额外给了杂役补贴，白烬分到1块"
+          }
+        }
+      }
+      step 17 {
+        description = "决赛后的第二天"
+        event {
+          type = "transition"
+          state_delta {
+            kind = "transition"
+            field = "time_jump"
+            to = "true"
+            note = "次日 决赛后的第二天"
+          }
+        }
+      }
+    }
+  }
+}
+
+systems {
+  attribute_system "Core Attributes" {
+    id = "attr_core"
+    description = "Numeric baseline attributes for simulation and continuity checks."
+    attribute "Strength" {
+      id = "str"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "Agility" {
+      id = "agi"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "Intelligence" {
+      id = "int"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "Vitality" {
+      id = "vit"
+      type = "stat"
+      base_value = 10
+      max_value = 999
+      is_resource = false
+    }
+    attribute "HP" {
+      id = "hp"
+      type = "resource"
+      base_value = 100
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "MP" {
+      id = "mp"
+      type = "resource"
+      base_value = 50
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "Qi" {
+      id = "qi"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "任务热度" {
+      id = "resource_01"
+      description = "决定人物被系统写入任务的概率和任务级别。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "系统日志" {
+      id = "resource_02"
+      description = "宿主任务、失败、结算或警告留下的文字痕迹。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "任务奖励" {
+      id = "resource_03"
+      description = "功法、丹药、道具、气运、声望、军功等，常常伴随不合理代价。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "本土信任" {
+      id = "resource_04"
+      description = "白烬在没有硬实力时最重要的生存资源，来自陆青禾、莫问君、摇光圣女等本土角色。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "势力庇护" {
+      id = "resource_05"
+      description = "来自宗门长老、圣地、边军、万妖城等势力的临时保护。它不是后台，随时可能因为利益变化反噬白烬。"
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+    attribute "灵石" {
+      id = "resource_06"
+      description = "Auto-added by compose pipeline cross check; refine manually."
+      type = "resource"
+      base_value = 0
+      max_value = 999999
+      is_resource = true
+    }
+  }
+  power_formula "Core Power Formula" {
+    id = "power_core"
+    description = "Deterministic combat power formula for benchmark simulation."
+    base_power = 10
+    formula = "base + sum(attr_i * weight_i)"
+    factor "Strength" {
+      attribute = "str"
+      weight = 2
+    }
+    factor "Agility" {
+      attribute = "agi"
+      weight = 1.2
+    }
+    factor "Intelligence" {
+      attribute = "int"
+      weight = 1.8
+    }
+    factor "Vitality" {
+      attribute = "vit"
+      weight = 1.5
+    }
+    factor "HP" {
+      attribute = "hp"
+      weight = 0.1
+    }
+    factor "MP" {
+      attribute = "mp"
+      weight = 0.2
+    }
+    factor "Qi" {
+      attribute = "qi"
+      weight = 1
+    }
+  }
+  counter "chapter_progress" {
+    track = "story.chapter"
+    description = "Story progression counter"
+    milestone 5 {
+      title = "Arc Warmup"
+    }
+    milestone 10 {
+      title = "Arc Core"
+    }
+  }
+  counter "系统任务日志_progress" {
+    track = "player.progression"
+    description = "Primary progression pace tracker"
+    milestone 1 {
+      title = "System Activated"
+    }
+    milestone 3 {
+      title = "First Breakthrough"
+    }
+    milestone 5 {
+      title = "Mid-Arc Growth"
+    }
+  }
+  progression "系统任务日志" {
+    id = "系统任务日志"
+    level 1 {
+      name = "残留提示"
+      requirements = "青岚宗开局，第一次被任务调用。"
+      bonuses = ["只能看见与自己直接相关的任务片段。"]
+    }
+  }
+  progression "宿主名单之外" {
+    id = "宿主名单之外"
+    level 1 {
+      name = "软柿子"
+      requirements = "reach level 1"
+      bonuses = ["系统把他当成随手可用的羞辱对象、背锅人、新手怪。"]
+    }
+    level 2 {
+      name = "常用耗材"
+      requirements = "reach level 2"
+      bonuses = ["白烬反复出现在任务里，成了宿主们熟悉的刷奖励对象。"]
+    }
+    level 3 {
+      name = "难刷的人"
+      requirements = "reach level 3"
+      bonuses = ["他开始卡任务条件，系统和宿主都发现这个人不好刷。"]
+    }
+    level 4 {
+      name = "反派靶子"
+      requirements = "reach level 4"
+      bonuses = ["高阶宿主把他包装成道心试炼、攻略阻碍、宗门隐患。"]
+    }
+    level 5 {
+      name = "外挂公敌"
+      requirements = "reach level 5"
+      bonuses = ["击败白烬本身变成高收益任务，但谁来刷他，谁就可能被他反刷。"]
+    }
+  }
+  progression "任务热度" {
+    id = "任务热度"
+    level 1 {
+      name = "被随手调用"
+      requirements = "reach level 1"
+      bonuses = ["系统把白烬当普通路人。"]
+    }
+    level 2 {
+      name = "被重复调用"
+      requirements = "reach level 2"
+      bonuses = ["系统发现他适合制造冲突。"]
+    }
+    level 3 {
+      name = "被主动标记"
+      requirements = "reach level 3"
+      bonuses = ["任务开始出现白烬的名字。"]
+    }
+    level 4 {
+      name = "被悬赏调用"
+      requirements = "reach level 4"
+      bonuses = ["多个宿主围绕白烬获得任务奖励。"]
+    }
+    level 5 {
+      name = "被规则承认"
+      requirements = "reach level 5"
+      bonuses = ["白烬能用自身任务热度反向吸引和转移任务。"]
+    }
+  }
+  progression "五条宿主线" {
+    id = "五条宿主线"
+    level 1 {
+      name = "顾衡 / 回档系统"
+      requirements = "reach level 1"
+      bonuses = ["随手重开 -> 路线排除 -> 残响泄露 -> 重来成瘾 -> 重来不等于清零。白烬的解法是收集每次回档留下的失败痕迹。"]
+    }
+    level 2 {
+      name = "苏瑶 / 气运掠夺系统"
+      requirements = "reach level 2"
+      bonuses = ["借运 -> 夺运 -> 嫁祸 -> 收割关系 -> 气运反噬。白烬的解法是拆她的关系链，让收益条件互相打架。"]
+    }
+    level 3 {
+      name = "纪迟 / 签到系统"
+      requirements = "reach level 3"
+      bonuses = ["蹲点签到 -> 错位捡漏 -> 地点污染 -> 被迫截胡 -> 反向签到。白烬的解法是把签到点变成诱饵。"]
+    }
+    level 4 {
+      name = "摇光圣女 / 攻略系统线"
+      requirements = "reach level 4"
+      bonuses = ["被当目标 -> 情敌模板 -> 道心试炼 -> 共同拆局 -> 拒绝被攻略。摇光不是宿主，她是攻略线的核心目标和反制者。"]
+    }
+    level 5 {
+      name = "谢无咎 / 定义系统"
+      requirements = "reach level 5"
+      bonuses = ["远程标记 -> 反派命名 -> 公开悬赏 -> 同日围猎 -> 外挂公敌。白烬的解法是不否认标签，而是让标签背后的任务条件互相冲突。"]
+    }
+  }
+  progression "修仙境界与真实战力" {
+    id = "修仙境界与真实战力"
+    level 1 {
+      name = "炼气"
+      requirements = "reach level 1"
+      bonuses = ["外门、杂役和低阶宿主主要阶段。"]
+    }
+    level 2 {
+      name = "筑基"
+      requirements = "reach level 2"
+      bonuses = ["内门弟子、基层执事和大比强者。"]
+    }
+    level 3 {
+      name = "金丹"
+      requirements = "reach level 3"
+      bonuses = ["长老、秘境核心对手和战场骨干。"]
+    }
+    level 4 {
+      name = "元婴"
+      requirements = "reach level 4"
+      bonuses = ["宗门高层、圣地强者和万妖城王族。"]
+    }
+    level 5 {
+      name = "化神"
+      requirements = "reach level 5"
+      bonuses = ["终局级强者和高阶系统宿主后台。"]
+    }
+  }
+  progression "势力分层" {
+    id = "势力分层"
+    level 1 {
+      name = "青岚宗"
+      requirements = "第一至三卷"
+      bonuses = ["杂役 -> 外门 -> 内门 -> 核心 -> 长老 -> 宗主。开局舞台，白烬从最底层杂役往上接触宗门规则；宿主把这里当新手村，本土弟子最容易被当耗材。"]
+    }
+    level 2 {
+      name = "三十六宗与上宗"
+      requirements = "第四至六卷"
+      bonuses = ["小宗弟子 -> 大比选手 -> 宗门种子 -> 上宗观察名单 -> 临时弟子 -> 上宗真传。公开大比舞台，名声、排名、观众和门派脸面会成为系统任务条件。"]
+    }
+    level 3 {
+      name = "仙城黑市"
+      requirements = "第九至十卷"
+      bonuses = ["散客 -> 掮客 -> 摊主 -> 拍卖行 -> 商会供奉 -> 幕后庄家。交易任务情报、宿主遗物和系统奖励；白烬要用买卖规矩反过来钓买家。"]
+    }
+    level 4 {
+      name = "圣地"
+      requirements = "第十一至十三卷"
+      bonuses = ["外围弟子 -> 试炼者 -> 真传候选 -> 圣女一系 -> 长老会 -> 圣地主脉。圣地看重道心、名望和身份标签，攻略、收徒、打脸类系统在这里最容易泛滥。"]
+    }
+    level 5 {
+      name = "边军"
+      requirements = "第十四至十六卷"
+      bonuses = ["新卒 -> 斥候 -> 小队首 -> 百夫长 -> 校尉 -> 镇边将。战场不认爽文名场面，只认军令、粮草和城池伤亡；军功系统在这里必须付出现实代价。"]
+    }
+    level 6 {
+      name = "万妖城"
+      requirements = "第十七至十九卷"
+      bonuses = ["外城客 -> 契约客卿 -> 妖卫 -> 妖将 -> 王族议席 -> 城主盟约。妖族礼法和契约不按人族系统模板运行，是白烬验证“系统不是万能”的关键舞台。"]
+    }
+  }
+}

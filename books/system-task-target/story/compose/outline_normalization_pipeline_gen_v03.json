@@ -1,0 +1,59 @@
+{
+  "changes": [
+    {
+      "path": "P1-V3-C3.characters",
+      "action": "sync_scene_character",
+      "value": "杂役管事（远处）"
+    },
+    {
+      "path": "P1-V3-C5.characters",
+      "action": "sync_scene_character",
+      "value": "顾衡（远处）"
+    },
+    {
+      "path": "P1-V3-C6.characters",
+      "action": "sync_event_character",
+      "value": "苏瑶的盟友"
+    },
+    {
+      "path": "P1-V3-C6.characters",
+      "action": "sync_scene_character",
+      "value": "裁判"
+    },
+    {
+      "path": "P1-V3-C6.characters",
+      "action": "sync_scene_character",
+      "value": "苏瑶（远处）"
+    },
+    {
+      "path": "P1-V3-C9.characters",
+      "action": "sync_event_character",
+      "value": "对手弟子"
+    },
+    {
+      "path": "P1-V3-C9.characters",
+      "action": "sync_event_character",
+      "value": "莫问君"
+    },
+    {
+      "path": "P1-V3-C9.characters",
+      "action": "sync_scene_character",
+      "value": "莫问君（远处）"
+    },
+    {
+      "path": "P1-V3-C10.characters",
+      "action": "sync_event_character",
+      "value": "顾衡"
+    },
+    {
+      "path": "P1-V3-C10.characters",
+      "action": "sync_event_character",
+      "value": "苏瑶"
+    },
+    {
+      "path": "P1-V3-C10.characters",
+      "action": "sync_event_character",
+      "value": "纪迟"
+    }
+  ]
+}

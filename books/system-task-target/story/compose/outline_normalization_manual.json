@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "path": "P1-V1-C6.state_anchor.allies",
+      "action": "canonicalize_ally_name",
+      "value": "陆青禾（初步信任） -\u003e 陆青禾"
+    }
+  ]
+}

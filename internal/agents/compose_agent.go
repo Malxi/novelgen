@@ -79,6 +79,37 @@ type ComposeSkeletonOutput struct {
 	Parts []models.Part `json:"parts" md:"parts" desc:"Generated story parts with volumes"`
 }
 
+// ComposeSkeletonReviewInput is the input for reviewing an outline skeleton
+// before chapter-level generation. It intentionally focuses on parts, volumes,
+// summaries, payoff contracts, and long-form escalation rather than chapter
+// completeness.
+type ComposeSkeletonReviewInput struct {
+	ExistingOutline models.Outline        `json:"existing_outline" md:"existing_outline" desc:"Existing outline skeleton to review"`
+	Setup           models.StorySetup     `json:"setup,omitempty" md:"setup" desc:"Story setup including premise, genres, themes, rules"`
+	Structure       models.StoryStructure `json:"structure,omitempty" md:"structure" desc:"Expected project structure"`
+	UserPrompt      string                `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for review focus"`
+}
+
+// ComposeSkeletonReviewOutput is the output for outline skeleton review.
+type ComposeSkeletonReviewOutput struct {
+	Result models.ReviewResult `json:"result" md:"result" desc:"Review result with scores and suggestions"`
+}
+
+// ComposeSkeletonImproveInput is the input for improving an outline skeleton.
+type ComposeSkeletonImproveInput struct {
+	ExistingOutline models.Outline        `json:"existing_outline" md:"existing_outline" desc:"Existing outline skeleton to improve"`
+	ReviewResult    models.ReviewResult   `json:"review_result,omitempty" md:"review_result,omitempty" desc:"Review result for improvement guidance"`
+	UserPrompt      string                `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for improvement"`
+	Setup           models.StorySetup     `json:"setup,omitempty" md:"setup" desc:"Story setup including premise, genres, themes, rules"`
+	Structure       models.StoryStructure `json:"structure,omitempty" md:"structure" desc:"Expected project structure"`
+	RevisionContext string                `json:"revision_context,omitempty" md:"revision_context,omitempty" desc:"Compact session trail from earlier skeleton review and improve rounds"`
+}
+
+// ComposeSkeletonImproveOutput is the output for outline skeleton improvement.
+type ComposeSkeletonImproveOutput struct {
+	Outline models.Outline `json:"outline" md:"outline" desc:"Improved outline skeleton"`
+}
+
 // ComposeChaptersInput is the input for generating chapters for a volume
 type ComposeChaptersInput struct {
 	Setup          models.StorySetup `json:"setup" md:"setup" desc:"Story setup including premise, genres, themes, rules"`
@@ -120,6 +151,22 @@ type composeImprovePromptInput struct {
 type composeSkeletonPromptInput struct {
 	SetupBrief string                `json:"setup_brief" md:"setup_brief" desc:"Compact story contract: premise, long-form plan, core cast seeds, storylines, progression systems"`
 	Structure  models.StoryStructure `json:"structure" md:"structure" desc:"Story structure including target parts and volumes"`
+}
+
+type composeSkeletonReviewPromptInput struct {
+	ExistingOutline models.Outline        `json:"existing_outline" md:"existing_outline" desc:"Existing outline skeleton to review"`
+	SetupBrief      string                `json:"setup_brief,omitempty" md:"setup_brief" desc:"Compact story contract for checking skeleton alignment"`
+	Structure       models.StoryStructure `json:"structure,omitempty" md:"structure" desc:"Expected project structure"`
+	UserPrompt      string                `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for review focus"`
+}
+
+type composeSkeletonImprovePromptInput struct {
+	ExistingOutline models.Outline        `json:"existing_outline" md:"existing_outline" desc:"Existing outline skeleton to improve"`
+	ReviewResult    models.ReviewResult   `json:"review_result,omitempty" md:"review_result,omitempty" desc:"Review result for improvement guidance"`
+	UserPrompt      string                `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for improvement"`
+	SetupBrief      string                `json:"setup_brief,omitempty" md:"setup_brief" desc:"Compact story contract for preserving setup promises"`
+	Structure       models.StoryStructure `json:"structure,omitempty" md:"structure" desc:"Expected project structure"`
+	RevisionContext string                `json:"revision_context,omitempty" md:"revision_context,omitempty" desc:"Compact session trail from earlier skeleton review and improve rounds"`
 }
 
 type composeChaptersPromptInput struct {
@@ -179,9 +226,10 @@ type ImproveProgress struct {
 	TotalIterations  int                 `json:"total_iterations"`   // Total iterations planned
 	CurrentVolumeIdx int                 `json:"current_volume_idx"` // Index of next volume to improve (0-based)
 	TotalVolumes     int                 `json:"total_volumes"`      // Total volumes to improve
-	CompletedVolumes []string            `json:"completed_volumes"`  // List of completed volume IDs
-	Outline          models.Outline      `json:"outline"`            // Current state of outline
-	ReviewResult     models.ReviewResult `json:"review_result"`      // Review result for current iteration
+	TargetVolumes    []string            `json:"target_volumes,omitempty"`
+	CompletedVolumes []string            `json:"completed_volumes"` // List of completed volume IDs
+	Outline          models.Outline      `json:"outline"`           // Current state of outline
+	ReviewResult     models.ReviewResult `json:"review_result"`     // Review result for current iteration
 }
 
 // ComposeAgent handles AI generation for story outline
@@ -322,6 +370,7 @@ func (a *ComposeAgent) Review(ctx context.Context, input ComposeReviewInput) (Co
 	if err := a.base.Execute(ctx, params, promptInput, &output.Result); err != nil {
 		return ComposeReviewOutput{}, err
 	}
+	output.Result.NormalizeScoreScale()
 
 	// Log result
 	logger.Section("Outline Review Result")
@@ -364,6 +413,147 @@ func (a *ComposeAgent) Improve(ctx context.Context, input ComposeImproveInput) (
 	}
 
 	return output, nil
+}
+
+// ReviewSkeleton reviews an outline skeleton without requiring generated chapters.
+func (a *ComposeAgent) ReviewSkeleton(ctx context.Context, input ComposeSkeletonReviewInput) (ComposeSkeletonReviewOutput, error) {
+	logger.Section("COMPOSE AGENT - Outline Skeleton Review")
+	logger.Info("Language: %s", a.base.language)
+
+	var output ComposeSkeletonReviewOutput
+	params := InvokeParams{
+		Skills:  []string{"compose-skeleton-review"},
+		Command: "review the story outline skeleton and provide improvement suggestions",
+	}
+
+	promptInput := composeSkeletonReviewPromptInput{
+		ExistingOutline: input.ExistingOutline,
+		SetupBrief:      a.buildSetupBrief(&input.Setup),
+		Structure:       input.Structure,
+		UserPrompt:      input.UserPrompt,
+	}
+	if err := a.base.Execute(ctx, params, promptInput, &output.Result); err != nil {
+		return ComposeSkeletonReviewOutput{}, err
+	}
+	output.Result.NormalizeScoreScale()
+
+	logger.Section("Outline Skeleton Review Result")
+	logger.Info("Overall Score: %.1f/100", output.Result.OverallScore)
+	for _, dim := range output.Result.Dimensions {
+		logger.Info("%s: %.1f/%.0f", dim.Name, dim.Score, dim.Max)
+	}
+	logger.Info("Summary: %s", output.Result.Summary)
+	logger.Info("Strengths: %d items", len(output.Result.Strengths))
+	logger.Info("Suggestions: %d items", len(output.Result.Suggestions))
+
+	return output, nil
+}
+
+// ImproveSkeleton improves only the part/volume skeleton. Existing chapters are
+// preserved, so this is safe to run before or after some volumes have chapters.
+func (a *ComposeAgent) ImproveSkeleton(ctx context.Context, input ComposeSkeletonImproveInput) (ComposeSkeletonImproveOutput, error) {
+	logger.Section("COMPOSE AGENT - Outline Skeleton Improvement")
+	logger.Info("Language: %s", a.base.language)
+
+	var output ComposeSkeletonImproveOutput
+	params := InvokeParams{
+		Skills:  []string{"compose-skeleton-improve"},
+		Command: "improve the story outline skeleton",
+	}
+
+	promptInput := composeSkeletonImprovePromptInput{
+		ExistingOutline: input.ExistingOutline,
+		ReviewResult:    compactReviewForPrompt(input.ReviewResult),
+		UserPrompt:      input.UserPrompt,
+		SetupBrief:      a.buildSetupBrief(&input.Setup),
+		Structure:       input.Structure,
+		RevisionContext: input.RevisionContext,
+	}
+	if err := a.base.Execute(ctx, params, promptInput, &output.Outline); err != nil {
+		return ComposeSkeletonImproveOutput{}, err
+	}
+
+	if err := preserveSkeletonIdentityAndChapters(&input.ExistingOutline, &output.Outline); err != nil {
+		return ComposeSkeletonImproveOutput{}, err
+	}
+	models.EnsureVolumeTitleOrdinals(&output.Outline)
+	if err := validateOutlineSkeleton(&output.Outline, input.Structure); err != nil {
+		return ComposeSkeletonImproveOutput{}, err
+	}
+
+	return output, nil
+}
+
+// IterateSkeleton runs review/improve loops for a parts/volumes skeleton.
+func (a *ComposeAgent) IterateSkeleton(ctx context.Context, outline *models.Outline, setup *models.StorySetup, structure models.StoryStructure, maxIterations int, qualityThreshold float64, forceImprove bool, userPrompt string) (*models.Outline, *models.ReviewResult, error) {
+	logger.Section("COMPOSE AGENT - Skeleton Iteration Loop")
+	logger.Info("Max iterations: %d", maxIterations)
+	logger.Info("Quality threshold: %.1f", qualityThreshold)
+	if forceImprove {
+		logger.Info("Force improve enabled: will improve based on suggestions even if score meets threshold")
+	}
+
+	if err := validateOutlineSkeleton(outline, structure); err != nil {
+		return nil, nil, err
+	}
+
+	currentOutline := *outline
+	var finalReview *models.ReviewResult
+	session := NewRevisionSession("compose-skeleton", "Improve only outline parts/volumes/payoff contracts before chapter generation.")
+	if strings.TrimSpace(userPrompt) != "" {
+		session.AddUserGuidance(0, userPrompt)
+	}
+
+	for i := 1; i <= maxIterations; i++ {
+		logger.Info("=== Skeleton iteration %d/%d ===", i, maxIterations)
+		reviewOutput, err := a.ReviewSkeleton(ctx, ComposeSkeletonReviewInput{
+			ExistingOutline: currentOutline,
+			Setup:           *setup,
+			Structure:       structure,
+			UserPrompt:      userPrompt,
+		})
+		if err != nil {
+			return nil, nil, fmt.Errorf("skeleton review failed at iteration %d: %w", i, err)
+		}
+		reviewOutput.Result.Iteration = i
+		session.AddReview(i, reviewOutput.Result)
+		finalReview = &reviewOutput.Result
+
+		scoreMeetsThreshold := reviewOutput.Result.OverallScore >= qualityThreshold
+		hasBlockingSuggestions := reviewOutput.Result.HasBlockingSuggestions()
+		if scoreMeetsThreshold {
+			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", reviewOutput.Result.OverallScore, qualityThreshold)
+		}
+		if scoreMeetsThreshold && hasBlockingSuggestions {
+			logger.Info("Quality threshold met, but blocking suggestions exist; continuing skeleton improvement")
+		}
+		shouldImprove := !scoreMeetsThreshold || hasBlockingSuggestions || forceImprove
+		if !shouldImprove {
+			break
+		}
+
+		improveOutput, err := a.ImproveSkeleton(ctx, ComposeSkeletonImproveInput{
+			ExistingOutline: currentOutline,
+			ReviewResult:    reviewOutput.Result,
+			UserPrompt:      userPrompt,
+			Setup:           *setup,
+			Structure:       structure,
+			RevisionContext: session.Prompt(),
+		})
+		if err != nil {
+			return nil, nil, fmt.Errorf("skeleton improvement failed at iteration %d: %w", i, err)
+		}
+		currentOutline = improveOutput.Outline
+		session.AddImprove(i, "Applied skeleton review feedback while preserving part/volume IDs and existing chapters.")
+
+		if i == maxIterations {
+			logger.Warn("Max skeleton iterations reached, stopping iteration loop")
+			break
+		}
+	}
+
+	models.EnsureVolumeTitleOrdinals(&currentOutline)
+	return &currentOutline, finalReview, nil
 }
 
 // Iterate runs the review-improvement loop for outline
@@ -1044,8 +1234,14 @@ func (a *ComposeAgent) RepairByReview(ctx context.Context, outline *models.Outli
 
 	volumesToImprove := a.identifyVolumesToImprove(outline, reviewResult)
 	if len(volumesToImprove) == 0 {
-		logger.Info("No specific volume targets in review; repairing all volumes")
-		volumesToImprove = allVolumeIndices(outline)
+		logger.Info("No specific volume targets in review; repairing generated volumes only")
+		volumesToImprove = generatedVolumeIndices(outline)
+	} else {
+		volumesToImprove = filterGeneratedVolumeIndices(outline, volumesToImprove)
+	}
+	if len(volumesToImprove) == 0 {
+		logger.Info("No generated volumes to repair")
+		return outline, nil
 	}
 
 	logger.Info("Repairing %d volume(s) from enriched review feedback", len(volumesToImprove))
@@ -1056,12 +1252,13 @@ func (a *ComposeAgent) RepairByReview(ctx context.Context, outline *models.Outli
 func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int, setup *models.StorySetup) (*models.Outline, error) {
 	currentOutline := *outline
 	progressPath := "story/compose/outline_improve_progress.json"
+	targetVolumes := improveTargetVolumeIDs(outline, volumesToImprove)
 
 	// Try to load existing progress
 	var progress *ImproveProgress
 	if _, err := os.Stat(progressPath); err == nil {
 		loadedProgress, err := a.loadImproveProgress(progressPath)
-		if err == nil && loadedProgress.Iteration == currentIteration {
+		if err == nil && loadedProgress.Iteration == currentIteration && equalStringSlices(loadedProgress.TargetVolumes, targetVolumes) {
 			logger.Info("📂 Found existing progress for iteration %d, resuming...", currentIteration)
 			progress = loadedProgress
 			currentOutline = progress.Outline
@@ -1076,6 +1273,7 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 			TotalIterations:  totalIterations,
 			CurrentVolumeIdx: 0,
 			TotalVolumes:     len(volumesToImprove),
+			TargetVolumes:    targetVolumes,
 			CompletedVolumes: []string{},
 			Outline:          currentOutline,
 			ReviewResult:     *reviewResult,
@@ -1097,6 +1295,11 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 		}
 		part := &currentOutline.Parts[partIdx]
 		volume := &part.Volumes[volIdx]
+		if len(volume.Chapters) == 0 {
+			logger.Warn("Skipping empty future volume repair target %s", volume.ID)
+			progress.CurrentVolumeIdx = idx + 1
+			continue
+		}
 
 		logger.Info("Improving Volume %d.%d: %s (%d/%d)", partIdx+1, volIdx+1, volume.Title, idx+1, len(volumesToImprove))
 
@@ -1172,6 +1375,72 @@ func allVolumeIndices(outline *models.Outline) [][2]int {
 		}
 	}
 	return result
+}
+
+func generatedVolumeIndices(outline *models.Outline) [][2]int {
+	if outline == nil {
+		return nil
+	}
+	var result [][2]int
+	for partIdx := range outline.Parts {
+		for volIdx := range outline.Parts[partIdx].Volumes {
+			if len(outline.Parts[partIdx].Volumes[volIdx].Chapters) == 0 {
+				continue
+			}
+			result = append(result, [2]int{partIdx, volIdx})
+		}
+	}
+	return result
+}
+
+func filterGeneratedVolumeIndices(outline *models.Outline, indices [][2]int) [][2]int {
+	if outline == nil {
+		return nil
+	}
+	var result [][2]int
+	for _, index := range indices {
+		partIdx, volIdx := index[0], index[1]
+		if partIdx < 0 || partIdx >= len(outline.Parts) || volIdx < 0 || volIdx >= len(outline.Parts[partIdx].Volumes) {
+			continue
+		}
+		if len(outline.Parts[partIdx].Volumes[volIdx].Chapters) == 0 {
+			continue
+		}
+		result = append(result, index)
+	}
+	return result
+}
+
+func improveTargetVolumeIDs(outline *models.Outline, indices [][2]int) []string {
+	if outline == nil {
+		return nil
+	}
+	targets := make([]string, 0, len(indices))
+	for _, index := range indices {
+		partIdx, volIdx := index[0], index[1]
+		if partIdx < 0 || partIdx >= len(outline.Parts) || volIdx < 0 || volIdx >= len(outline.Parts[partIdx].Volumes) {
+			targets = append(targets, fmt.Sprintf("invalid:%d:%d", partIdx, volIdx))
+			continue
+		}
+		volumeID := strings.TrimSpace(outline.Parts[partIdx].Volumes[volIdx].ID)
+		if volumeID == "" {
+			volumeID = fmt.Sprintf("P%d-V%d", partIdx+1, volIdx+1)
+		}
+		targets = append(targets, volumeID)
+	}
+	return targets
+}
+
+func equalStringSlices(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // loadImproveProgress loads improvement progress from file
@@ -1477,6 +1746,62 @@ func (a *ComposeAgent) validateChapterOutput(chapter *models.Chapter) error {
 	}
 	if len(chapter.Events) == 0 {
 		return fmt.Errorf("events are required")
+	}
+	return nil
+}
+
+func validateOutlineSkeleton(outline *models.Outline, structure models.StoryStructure) error {
+	if outline == nil {
+		return fmt.Errorf("outline is nil")
+	}
+	if len(outline.Parts) == 0 {
+		return fmt.Errorf("outline skeleton has no parts")
+	}
+	if structure.TargetParts > 0 && len(outline.Parts) != structure.TargetParts {
+		return fmt.Errorf("outline skeleton has %d parts, expected %d", len(outline.Parts), structure.TargetParts)
+	}
+	for partIdx, part := range outline.Parts {
+		if strings.TrimSpace(part.Title) == "" {
+			return fmt.Errorf("part %d has empty title", partIdx+1)
+		}
+		if strings.TrimSpace(part.Summary) == "" {
+			return fmt.Errorf("part %d has empty summary", partIdx+1)
+		}
+		if len(part.Volumes) == 0 {
+			return fmt.Errorf("part %d has no volumes", partIdx+1)
+		}
+		if structure.TargetVolumes > 0 && len(part.Volumes) != structure.TargetVolumes {
+			return fmt.Errorf("part %d has %d volumes, expected %d", partIdx+1, len(part.Volumes), structure.TargetVolumes)
+		}
+		for volIdx, volume := range part.Volumes {
+			if strings.TrimSpace(volume.Title) == "" {
+				return fmt.Errorf("volume %d.%d has empty title", partIdx+1, volIdx+1)
+			}
+			if strings.TrimSpace(volume.Summary) == "" {
+				return fmt.Errorf("volume %d.%d has empty summary", partIdx+1, volIdx+1)
+			}
+		}
+	}
+	return nil
+}
+
+func preserveSkeletonIdentityAndChapters(original *models.Outline, improved *models.Outline) error {
+	if original == nil || improved == nil {
+		return fmt.Errorf("outline is nil")
+	}
+	if len(original.Parts) != len(improved.Parts) {
+		return fmt.Errorf("improved skeleton changed part count from %d to %d", len(original.Parts), len(improved.Parts))
+	}
+	for partIdx := range original.Parts {
+		if len(original.Parts[partIdx].Volumes) != len(improved.Parts[partIdx].Volumes) {
+			return fmt.Errorf("improved skeleton changed volume count in part %d from %d to %d",
+				partIdx+1, len(original.Parts[partIdx].Volumes), len(improved.Parts[partIdx].Volumes))
+		}
+		improved.Parts[partIdx].ID = original.Parts[partIdx].ID
+		for volIdx := range original.Parts[partIdx].Volumes {
+			improved.Parts[partIdx].Volumes[volIdx].ID = original.Parts[partIdx].Volumes[volIdx].ID
+			improved.Parts[partIdx].Volumes[volIdx].Chapters = original.Parts[partIdx].Volumes[volIdx].Chapters
+		}
 	}
 	return nil
 }

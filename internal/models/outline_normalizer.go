@@ -35,6 +35,7 @@ func NormalizeOutline(outline *Outline) OutlineNormalizationReport {
 	for pi := range outline.Parts {
 		for vi := range outline.Parts[pi].Volumes {
 			normalizeVolumeIdentity(&outline.Parts[pi], vi, &report)
+			normalizeVolumeTitleOrdinal(&outline.Parts[pi].Volumes[vi], vi, &report)
 			for ci := range outline.Parts[pi].Volumes[vi].Chapters {
 				chapter := &outline.Parts[pi].Volumes[vi].Chapters[ci]
 				normalizeChapterIdentity(&outline.Parts[pi].Volumes[vi], ci, &report)
@@ -76,6 +77,20 @@ func NormalizeOutline(outline *Outline) OutlineNormalizationReport {
 	return report
 }
 
+// EnsureVolumeTitleOrdinals restores the readable "第X卷：" prefix that
+// skeleton improvement prompts sometimes drop while rewriting titles.
+func EnsureVolumeTitleOrdinals(outline *Outline) {
+	if outline == nil {
+		return
+	}
+	report := OutlineNormalizationReport{}
+	for pi := range outline.Parts {
+		for vi := range outline.Parts[pi].Volumes {
+			normalizeVolumeTitleOrdinal(&outline.Parts[pi].Volumes[vi], vi, &report)
+		}
+	}
+}
+
 func normalizeVolumeIdentity(part *Part, volumeIndex int, report *OutlineNormalizationReport) {
 	if part == nil || volumeIndex < 0 || volumeIndex >= len(part.Volumes) {
 		return
@@ -98,6 +113,58 @@ func normalizeVolumeIdentity(part *Part, volumeIndex int, report *OutlineNormali
 			Value:  currentID + " -> " + expectedID,
 		})
 	}
+}
+
+func normalizeVolumeTitleOrdinal(volume *Volume, volumeIndex int, report *OutlineNormalizationReport) {
+	if volume == nil {
+		return
+	}
+	title := strings.TrimSpace(volume.Title)
+	if title == "" || hasVolumeOrdinalPrefix(title) {
+		return
+	}
+	updated := fmt.Sprintf("第%s卷：%s", chineseOrdinal(volumeIndex+1), title)
+	volume.Title = updated
+	if report != nil {
+		report.Changes = append(report.Changes, OutlineNormalizationChange{
+			Path:   fmt.Sprintf("%s.title", strings.TrimSpace(volume.ID)),
+			Action: "restore_volume_title_ordinal",
+			Value:  updated,
+		})
+	}
+}
+
+func hasVolumeOrdinalPrefix(title string) bool {
+	if !strings.HasPrefix(title, "第") {
+		return false
+	}
+	cut := len(title)
+	if colon := strings.IndexAny(title, "：:"); colon >= 0 {
+		cut = colon
+	}
+	return strings.Contains(title[:cut], "卷")
+}
+
+func chineseOrdinal(n int) string {
+	if n <= 0 {
+		return fmt.Sprintf("%d", n)
+	}
+	digits := []string{"零", "一", "二", "三", "四", "五", "六", "七", "八", "九"}
+	if n < 10 {
+		return digits[n]
+	}
+	if n == 10 {
+		return "十"
+	}
+	if n < 20 {
+		return "十" + digits[n%10]
+	}
+	tens := n / 10
+	ones := n % 10
+	if ones == 0 {
+		return digits[tens] + "十"
+	}
+	return digits[tens] + "十" + digits[ones]
 }
 
 func normalizeChapterIdentity(volume *Volume, chapterIndex int, report *OutlineNormalizationReport) {

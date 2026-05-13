@@ -64,6 +64,8 @@ Subcommands:
   gen     - Generate new outline
   regen   - Regenerate specific part/volume/chapter
   improve - Improve existing outline through AI review
+  skeleton-review - Review parts/volumes before chapter generation
+  skeleton-improve - Improve parts/volumes while preserving chapters
   pipeline - Run checkpointed per-volume compose workflow`,
 }
 
@@ -112,6 +114,26 @@ Examples:
   novelgen compose improve --max-rounds 3   # Run 3 improvement rounds
   novelgen compose improve --one-shot       # Try one-shot improvement, fallback to hierarchical on failure`,
 	RunE: runComposeImprove,
+}
+
+var composeSkeletonReviewCmd = &cobra.Command{
+	Use:   "skeleton-review",
+	Short: "Review the outline skeleton without requiring chapters",
+	Long: `Review the current outline skeleton before chapter generation.
+
+This command checks only parts, volumes, summaries, volume-to-volume causality,
+and payoff contracts. It does not require chapters and does not modify files.`,
+	RunE: runComposeSkeletonReview,
+}
+
+var composeSkeletonImproveCmd = &cobra.Command{
+	Use:   "skeleton-improve",
+	Short: "Improve the outline skeleton without generating chapters",
+	Long: `Improve the current outline skeleton through AI review and refinement.
+
+This command only changes part/volume titles, summaries, and payoff contracts.
+It preserves part IDs, volume IDs, and any existing chapter arrays.`,
+	RunE: runComposeSkeletonImprove,
 }
 
 var composeCheckCmd = &cobra.Command{
@@ -167,6 +189,8 @@ func init() {
 	composeCmd.AddCommand(composeGenCmd)
 	composeCmd.AddCommand(composeRegenCmd)
 	composeCmd.AddCommand(composeImproveCmd)
+	composeCmd.AddCommand(composeSkeletonReviewCmd)
+	composeCmd.AddCommand(composeSkeletonImproveCmd)
 	composeCmd.AddCommand(composeCheckCmd)
 	composeCmd.AddCommand(composeNormalizeCmd)
 	composeCmd.AddCommand(composePipelineCmd)
@@ -184,6 +208,10 @@ func init() {
 	composeImproveCmd.Flags().IntVar(&composeImproveVolume, "volume", 0, "Improve one 1-based global volume index")
 	composeImproveCmd.Flags().IntVar(&composeImproveFromVol, "from-volume", 0, "Improve from this 1-based global volume index")
 	composeImproveCmd.Flags().IntVar(&composeImproveToVol, "to-volume", 0, "Improve through this 1-based global volume index")
+	composeSkeletonReviewCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional review focus")
+	composeSkeletonImproveCmd.Flags().IntVar(&composeMaxRoundsFlag, "max-rounds", 1, "Maximum skeleton improvement rounds")
+	composeSkeletonImproveCmd.Flags().BoolVar(&composeForceImproveFlag, "force", false, "Force improvement based on suggestions even if score meets threshold")
+	composeSkeletonImproveCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional user suggestions for skeleton improvement")
 	composePipelineCmd.Flags().IntVar(&composePipelineFromVol, "from-volume", 1, "Start at this 1-based global volume index")
 	composePipelineCmd.Flags().IntVar(&composePipelineToVol, "to-volume", 0, "Stop at this 1-based global volume index (default: all volumes)")
 	composePipelineCmd.Flags().IntVar(&composePipelineMaxRounds, "max-rounds", 1, "Maximum improvement rounds per generated volume")
@@ -461,15 +489,21 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		logger.Error("Improvement failed: %v", err)
 		return fmt.Errorf("improvement failed: %w", err)
 	}
+	var gate qualityGateResult
 	if improveOutline != outline {
+		improveOutline, gate, err = repairOutlineWithQualityGate(cmd.Context(), improveOutline, setup, projectConfig, "improvement")
+		if err != nil {
+			return err
+		}
+		logQualityGateResult("outline", gate)
 		mergeGeneratedVolumes(outline, improveOutline)
+	} else {
+		outline, gate, err = repairOutlineWithQualityGate(cmd.Context(), outline, setup, projectConfig, "improvement")
+		if err != nil {
+			return err
+		}
+		logQualityGateResult("outline", gate)
 	}
-
-	outline, gate, err := repairOutlineWithQualityGate(cmd.Context(), outline, setup, projectConfig, "improvement")
-	if err != nil {
-		return err
-	}
-	logQualityGateResult("outline", gate)
 
 	// Save improved outline
 	if err := outline.Save(outlinePath); err != nil {
@@ -487,6 +521,91 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	fmt.Println("  - Edit story/compose/outline.json to refine your outline")
 	fmt.Println("  - Run 'novelgen craft' to create world elements")
 
+	return nil
+}
+
+func runComposeSkeletonReview(cmd *cobra.Command, args []string) error {
+	logger.SetDefault(logger.New(logger.DebugLevel))
+	logger.Section("NOVELGEN COMPOSE SKELETON REVIEW")
+
+	projectConfig, setup, outline, err := loadComposeProjectState()
+	if err != nil {
+		return err
+	}
+
+	agent, err := newComposeAgentForProject(projectConfig)
+	if err != nil {
+		return err
+	}
+	agent.SetLanguage(projectConfig.Language)
+
+	review, err := agent.ReviewSkeleton(cmd.Context(), agents.ComposeSkeletonReviewInput{
+		ExistingOutline: *outline,
+		Setup:           *setup,
+		Structure:       projectConfig.Structure,
+		UserPrompt:      composePromptFlag,
+	})
+	if err != nil {
+		return fmt.Errorf("skeleton review failed: %w", err)
+	}
+
+	reportPath := filepath.Join("story", "compose", "skeleton_review.json")
+	if err := saveReviewResult(reportPath, review.Result); err != nil {
+		return err
+	}
+	printReviewResult("Outline skeleton review", review.Result)
+	fmt.Printf("✓ Skeleton review saved to %s\n", reportPath)
+	return nil
+}
+
+func runComposeSkeletonImprove(cmd *cobra.Command, args []string) error {
+	logger.SetDefault(logger.New(logger.DebugLevel))
+	logger.Section("NOVELGEN COMPOSE SKELETON IMPROVE")
+
+	projectConfig, setup, outline, err := loadComposeProjectState()
+	if err != nil {
+		return err
+	}
+	if composeMaxRoundsFlag < 1 {
+		return fmt.Errorf("--max-rounds must be at least 1")
+	}
+
+	agent, err := newComposeAgentForProject(projectConfig)
+	if err != nil {
+		return err
+	}
+	agent.SetLanguage(projectConfig.Language)
+
+	improved, review, err := agent.IterateSkeleton(cmd.Context(), outline, setup, projectConfig.Structure, composeMaxRoundsFlag, 80.0, composeForceImproveFlag, composePromptFlag)
+	if err != nil {
+		return fmt.Errorf("skeleton improvement failed: %w", err)
+	}
+
+	applyOutlineNormalization(improved, "skeleton_improve")
+	if err := backupOutlineFiles(); err != nil {
+		return err
+	}
+
+	outlinePath := filepath.Join("story", "compose", "outline.json")
+	if err := improved.Save(outlinePath); err != nil {
+		return fmt.Errorf("failed to save improved skeleton outline: %w", err)
+	}
+	mdPath := filepath.Join("story", "compose", "outline.md")
+	if err := createOutlineMarkdown(improved, mdPath); err != nil {
+		return fmt.Errorf("failed to save outline markdown: %w", err)
+	}
+
+	if review != nil {
+		reportPath := filepath.Join("story", "compose", "skeleton_improve_review.json")
+		if err := saveReviewResult(reportPath, *review); err != nil {
+			return err
+		}
+		printReviewResult("Outline skeleton improve review", *review)
+		fmt.Printf("✓ Skeleton improve review saved to %s\n", reportPath)
+	}
+
+	fmt.Printf("✓ Skeleton outline improved and saved to %s\n", outlinePath)
+	fmt.Printf("✓ Markdown updated at %s\n", mdPath)
 	return nil
 }
 
@@ -1705,6 +1824,71 @@ func getRegenPrompt() (string, error) {
 func createOutlineMarkdown(outline *models.Outline, path string) error {
 	// Use the ToMarkdown method to ensure all fields are included
 	return os.WriteFile(path, []byte(outline.ToMarkdown()), 0644)
+}
+
+func loadComposeProjectState() (*models.ProjectConfig, *models.StorySetup, *models.Outline, error) {
+	if _, err := os.Stat("novel.json"); err != nil {
+		return nil, nil, nil, fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first")
+	}
+	projectConfig, err := models.LoadProjectConfig("novel.json")
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to load novel.json: %w", err)
+	}
+	logger.Info("Loaded project config: %s", projectConfig.Name)
+
+	setupPath := filepath.Join("story", "setup", "story_setup.json")
+	setup, err := models.LoadStorySetup(setupPath)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to load story setup at %s: %w", setupPath, err)
+	}
+
+	outlinePath := filepath.Join("story", "compose", "outline.json")
+	outline, err := models.LoadOutline(outlinePath)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to load outline at %s: %w", outlinePath, err)
+	}
+	return projectConfig, setup, outline, nil
+}
+
+func newComposeAgentForProject(projectConfig *models.ProjectConfig) (*agents.ComposeAgent, error) {
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load LLM config: %w", err)
+	}
+	client := cfg.CreateClient(&projectConfig.LLM)
+	if client == nil {
+		return nil, fmt.Errorf("failed to create LLM client")
+	}
+	return agents.NewComposeAgent(client, cfg, &projectConfig.LLM), nil
+}
+
+func saveReviewResult(path string, result models.ReviewResult) error {
+	data, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal review result: %w", err)
+	}
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write review result to %s: %w", path, err)
+	}
+	return nil
+}
+
+func printReviewResult(label string, result models.ReviewResult) {
+	fmt.Printf("\n%s: %.1f/100\n", label, result.OverallScore)
+	if strings.TrimSpace(result.Summary) != "" {
+		fmt.Printf("Summary: %s\n", result.Summary)
+	}
+	if len(result.Suggestions) > 0 {
+		fmt.Println("Top suggestions:")
+		limit := len(result.Suggestions)
+		if limit > 5 {
+			limit = 5
+		}
+		for i := 0; i < limit; i++ {
+			s := result.Suggestions[i]
+			fmt.Printf("- [%s] %s: %s\n", s.Priority, s.TargetName, s.Suggestion)
+		}
+	}
 }
 
 func backupOutlineFiles() error {

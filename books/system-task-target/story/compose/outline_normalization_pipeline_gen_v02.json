@@ -1,0 +1,59 @@
+{
+  "changes": [
+    {
+      "path": "P1-V2-C3.characters",
+      "action": "sync_scene_character",
+      "value": "顾衡（伪装的）"
+    },
+    {
+      "path": "P1-V2-C7.events[0].target",
+      "action": "fill_event_target",
+      "value": "章节事件"
+    },
+    {
+      "path": "P1-V2-C7.events[0].target_type",
+      "action": "fill_event_target_type",
+      "value": "knowledge"
+    },
+    {
+      "path": "P1-V2-C7.characters",
+      "action": "sync_scene_character",
+      "value": "苏瑶的内应弟子"
+    },
+    {
+      "path": "P1-V2-C7.state_anchor.injuries",
+      "action": "canonicalize_injury",
+      "value": "体力略差（修炼适应期） -\u003e 体力略差"
+    },
+    {
+      "path": "P1-V2-C9.events[0].target",
+      "action": "fill_event_target",
+      "value": "章节事件"
+    },
+    {
+      "path": "P1-V2-C9.events[0].target_type",
+      "action": "fill_event_target_type",
+      "value": "knowledge"
+    },
+    {
+      "path": "P1-V2-C10.events[3].target",
+      "action": "fill_event_target",
+      "value": "章节事件"
+    },
+    {
+      "path": "P1-V2-C10.events[3].target_type",
+      "action": "fill_event_target_type",
+      "value": "knowledge"
+    },
+    {
+      "path": "P1-V2-C10.characters",
+      "action": "sync_scene_character",
+      "value": "苏瑶（擂台上）"
+    },
+    {
+      "path": "P1-V2-C10.characters",
+      "action": "sync_scene_character",
+      "value": "顾衡（观众席对面）"
+    }
+  ]
+}

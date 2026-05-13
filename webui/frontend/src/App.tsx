@@ -66,7 +66,10 @@ function App() {
       case 'setup':
         return <StorySetupWorkbench projectPath={selectedProject.path} />;
       case 'outline':
-        return <OutlineWorkbench projectPath={selectedProject.path} />;
+      case 'outline-skeleton':
+        return <OutlineWorkbench projectPath={selectedProject.path} view="skeleton" />;
+      case 'outline-volumes':
+        return <OutlineWorkbench projectPath={selectedProject.path} view="volumes" />;
       case 'characters':
         return <CharactersViewer projectPath={selectedProject.path} />;
       case 'locations':

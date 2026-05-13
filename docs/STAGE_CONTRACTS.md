@@ -220,9 +220,9 @@ Producer:
 
 - `cmd/compose.go`
 - `internal/agents/compose_agent.go`
-- Skills: `compose-gen`, `compose-skeleton`, `compose-chapters`,
-  `compose-regen`, `compose-review`, `compose-improve`,
-  `compose-improve-volume`
+- Skills: `compose-gen`, `compose-skeleton`, `compose-skeleton-review`,
+  `compose-skeleton-improve`, `compose-chapters`, `compose-regen`,
+  `compose-review`, `compose-improve`, `compose-improve-volume`
 
 Inputs:
 
@@ -235,6 +235,12 @@ Outputs:
   - During hierarchical generation this file is the canonical incremental
     state: skeleton generation writes all parts/volumes with empty
     `Volume.Chapters`, and each completed volume updates the same file.
+  - `compose skeleton-review` reviews the current parts/volumes skeleton
+    without requiring chapters and writes `story/compose/skeleton_review.json`.
+  - `compose skeleton-improve` runs skeleton review/improve loops, preserves
+    part IDs, volume IDs, and existing chapter arrays, then writes the improved
+    skeleton back to `outline.json` and `outline.md`. Its final review is saved
+    as `story/compose/skeleton_improve_review.json`.
   - `compose pipeline` uses the same file as its only compose checkpoint:
     it creates or loads the skeleton, optionally generates one global volume
     range, improves each generated volume in isolation, then merges it back
@@ -263,6 +269,9 @@ Required invariants:
   `--volume`, `--from-volume`, or `--to-volume` is supplied, `compose improve`
   narrows that generated-volume view to the selected 1-based global volume
   index range before improving.
+- `compose skeleton-review` and `compose skeleton-improve` must not treat empty
+  `Volume.Chapters` as an error. Their contract is limited to part/volume
+  titles, summaries, payoff contracts, and long-form escalation.
 - `compose pipeline --from-volume A --to-volume B` addresses volumes by the
   same 1-based global volume index. It must not generate or improve volumes
   outside the selected range, and it preserves empty future volumes unless

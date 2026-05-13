@@ -46,6 +46,35 @@ func TestNormalizeOutlineSyncsEventAndSceneCharacters(t *testing.T) {
 	}
 }
 
+func TestNormalizeOutlineRestoresVolumeTitleOrdinals(t *testing.T) {
+	outline := &Outline{Parts: []Part{{
+		ID: "P1",
+		Volumes: []Volume{
+			{ID: "P1-V1", Title: "杂役白烬，所有人的新手任务"},
+			{ID: "P1-V2", Title: "第二卷：回档者的十三次失败"},
+			{ID: "P1-V3", Title: "第3卷：青岚宗小比"},
+			{ID: "P1-V4", Title: "三十六宗大比"},
+		},
+	}}}
+
+	report := NormalizeOutline(outline)
+
+	want := []string{
+		"第一卷：杂役白烬，所有人的新手任务",
+		"第二卷：回档者的十三次失败",
+		"第3卷：青岚宗小比",
+		"第四卷：三十六宗大比",
+	}
+	for i, volume := range outline.Parts[0].Volumes {
+		if volume.Title != want[i] {
+			t.Fatalf("volume %d title = %q, want %q", i+1, volume.Title, want[i])
+		}
+	}
+	if !hasNormalizationChange(report, "restore_volume_title_ordinal", "第一卷：杂役白烬，所有人的新手任务") {
+		t.Fatalf("missing title ordinal normalization change: %#v", report.Changes)
+	}
+}
+
 func TestNormalizeOutlineCanonicalizesStateAnchorAlliesAndInjuries(t *testing.T) {
 	outline := &Outline{
 		Parts: []Part{{

@@ -199,7 +199,7 @@ func (v *Validator) validateWorld(world *World) {
 		}
 
 		// Validate rarity
-		validRarities := []string{"common", "uncommon", "rare", "epic", "legendary", ""}
+		validRarities := []string{"common", "uncommon", "rare", "epic", "legendary", "unique", ""}
 		if !contains(validRarities, item.Rarity) {
 			v.addWarning(field+".rarity", fmt.Sprintf("unknown rarity: %s", item.Rarity))
 		}
