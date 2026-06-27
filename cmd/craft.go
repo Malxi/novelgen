@@ -170,10 +170,16 @@ func runCraftGen(cmd *cobra.Command, args []string) error {
 		len(elements.Items),
 		len(elements.Organizations))
 
-	// Filter elements based on flags
+	// Filter elements based on flags. Use the same filtered outline for prompt
+	// context so targeted craft generation does not drag in the whole book.
+	generationOutline := outline
 	if craftChapterFlag != "" {
 		log.Info("Filtering by chapter: %s", craftChapterFlag)
 		elements, err = filterElementsByChapter(elements, craftChapterFlag, outline)
+		if err != nil {
+			return err
+		}
+		generationOutline, err = outlineForCraftChapter(outline, craftChapterFlag)
 		if err != nil {
 			return err
 		}
@@ -185,9 +191,17 @@ func runCraftGen(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
+		generationOutline, err = outlineForCraftVolume(outline, craftVolumeFlag)
+		if err != nil {
+			return err
+		}
 	} else if craftPartFlag != "" {
 		log.Info("Filtering by part: %s", craftPartFlag)
 		elements, err = filterElementsByPart(elements, craftPartFlag, outline)
+		if err != nil {
+			return err
+		}
+		generationOutline, err = outlineForCraftPart(outline, craftPartFlag)
 		if err != nil {
 			return err
 		}
@@ -226,7 +240,7 @@ func runCraftGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create craft agent
-	agent := agents.NewCraftAgent(client, cfg, &config.LLM, setup, outline)
+	agent := agents.NewCraftAgent(client, cfg, &config.LLM, setup, generationOutline)
 	agent.SetLanguage(config.Language)
 
 	// Generate elements in batches
@@ -495,6 +509,68 @@ func filterElementsByChapter(elements *ExtractedElements, chapterID string, outl
 	filterElementSet(elements, result, charMap, locMap, itemMap, orgMap)
 
 	return result, nil
+}
+
+func outlineForCraftChapter(outline *models.Outline, chapterID string) (*models.Outline, error) {
+	resolvedChapterID, err := resolveCraftChapterID(outline, chapterID)
+	if err != nil {
+		return nil, err
+	}
+	if outline == nil {
+		return nil, fmt.Errorf("outline is nil")
+	}
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				if chapter.ID != resolvedChapterID {
+					continue
+				}
+				nextPart := part
+				nextVolume := volume
+				nextVolume.Chapters = []models.Chapter{chapter}
+				nextPart.Volumes = []models.Volume{nextVolume}
+				return &models.Outline{Parts: []models.Part{nextPart}}, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("chapter %s not found", resolvedChapterID)
+}
+
+func outlineForCraftVolume(outline *models.Outline, volumeID string) (*models.Outline, error) {
+	resolvedVolumeID, err := resolveCraftVolumeID(outline, volumeID)
+	if err != nil {
+		return nil, err
+	}
+	if outline == nil {
+		return nil, fmt.Errorf("outline is nil")
+	}
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			if volume.ID != resolvedVolumeID {
+				continue
+			}
+			nextPart := part
+			nextPart.Volumes = []models.Volume{volume}
+			return &models.Outline{Parts: []models.Part{nextPart}}, nil
+		}
+	}
+	return nil, fmt.Errorf("volume %s not found", resolvedVolumeID)
+}
+
+func outlineForCraftPart(outline *models.Outline, partID string) (*models.Outline, error) {
+	resolvedPartID, err := resolveCraftPartID(outline, partID)
+	if err != nil {
+		return nil, err
+	}
+	if outline == nil {
+		return nil, fmt.Errorf("outline is nil")
+	}
+	for _, part := range outline.Parts {
+		if part.ID == resolvedPartID {
+			return &models.Outline{Parts: []models.Part{part}}, nil
+		}
+	}
+	return nil, fmt.Errorf("part %s not found", resolvedPartID)
 }
 
 func filterElementsByVolume(elements *ExtractedElements, volumeID string, outline *models.Outline) (*ExtractedElements, error) {

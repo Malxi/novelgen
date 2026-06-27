@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -301,6 +303,11 @@ func (a *BaseAgent) parseResponse(content string, output interface{}) error {
 
 	// Try to parse as JSON directly
 	if err := json.Unmarshal([]byte(content), output); err != nil {
+		if repaired, repairErr := tryParseDeterministicallyRepairedJSON(content, output); repairErr == nil {
+			logger.Warn("[%s] JSON parse failed, recovered via deterministic JSON type repair: %s", a.name, repaired)
+			return nil
+		}
+
 		// Try to extract JSON from markdown code block
 		jsonContent := extractJSONFromMarkdown(content)
 		logger.Debug("[%s] Extracted JSON from markdown (length: %d)", a.name, len(jsonContent))
@@ -316,6 +323,10 @@ func (a *BaseAgent) parseResponse(content string, output interface{}) error {
 				logger.Warn("[%s] JSON parse failed, recovered DSL content via malformed-JSON fallback", a.name)
 				return nil
 			}
+			if repaired, repairErr := tryParseDeterministicallyRepairedJSON(jsonContent, output); repairErr == nil {
+				logger.Warn("[%s] JSON parse failed, recovered via deterministic JSON type repair: %s", a.name, repaired)
+				return nil
+			}
 
 			logger.Error("[%s] Failed to parse AI response as JSON: %v", a.name, err)
 			// Log more context about the error
@@ -328,6 +339,104 @@ func (a *BaseAgent) parseResponse(content string, output interface{}) error {
 		}
 	}
 	return nil
+}
+
+func tryParseDeterministicallyRepairedJSON(content string, output interface{}) (string, error) {
+	var data interface{}
+	if err := json.Unmarshal([]byte(content), &data); err != nil {
+		return "", err
+	}
+	changes := repairJSONNumericStrings(data)
+	if changes == 0 {
+		return "", fmt.Errorf("no deterministic JSON type repairs available")
+	}
+	repaired, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+	if err := json.Unmarshal(repaired, output); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%d numeric string field(s)", changes), nil
+}
+
+func repairJSONNumericStrings(value interface{}) int {
+	switch typed := value.(type) {
+	case map[string]interface{}:
+		changes := 0
+		for key, child := range typed {
+			if raw, ok := child.(string); ok && shouldRepairIntegerJSONField(key) {
+				if n, ok := parseStrictJSONInt(raw); ok {
+					typed[key] = float64(n)
+					changes++
+					continue
+				}
+			}
+			if raw, ok := child.(float64); ok && shouldRepairIntegerJSONField(key) && raw != math.Trunc(raw) {
+				typed[key] = float64(int64(math.Round(raw)))
+				changes++
+				continue
+			}
+			changes += repairJSONNumericStrings(child)
+		}
+		changes += repairResourceLedgerArithmetic(typed)
+		return changes
+	case []interface{}:
+		changes := 0
+		for _, child := range typed {
+			changes += repairJSONNumericStrings(child)
+		}
+		return changes
+	default:
+		return 0
+	}
+}
+
+func shouldRepairIntegerJSONField(key string) bool {
+	switch strings.ToLower(strings.TrimSpace(key)) {
+	case "count", "level", "start", "delta", "end":
+		return true
+	default:
+		return false
+	}
+}
+
+func repairResourceLedgerArithmetic(value map[string]interface{}) int {
+	if _, hasItem := value["item"]; !hasItem {
+		return 0
+	}
+	start, okStart := jsonNumberToInt(value["start"])
+	delta, okDelta := jsonNumberToInt(value["delta"])
+	end, okEnd := jsonNumberToInt(value["end"])
+	if !okStart || !okDelta || !okEnd {
+		return 0
+	}
+	expected := start + delta
+	if end == expected {
+		return 0
+	}
+	value["end"] = float64(expected)
+	return 1
+}
+
+func jsonNumberToInt(value interface{}) (int64, bool) {
+	n, ok := value.(float64)
+	if !ok || n != math.Trunc(n) {
+		return 0, false
+	}
+	return int64(n), true
+}
+
+func parseStrictJSONInt(raw string) (int64, bool) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return 0, false
+	}
+	n, err := strconv.ParseInt(trimmed, 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return n, true
 }
 
 func (a *BaseAgent) trySetDSLContentFromMalformed(content string, output interface{}) bool {

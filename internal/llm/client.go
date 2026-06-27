@@ -89,6 +89,7 @@ func NewOpenAIClient(config *OpenAIConfig) *OpenAIClient {
 		httpClient: &http.Client{
 			Timeout: time.Duration(config.Timeout) * time.Second,
 			Transport: &http.Transport{
+				Proxy:               http.ProxyFromEnvironment,
 				MaxIdleConns:        100,
 				MaxIdleConnsPerHost: 10,
 				IdleConnTimeout:     90 * time.Second,

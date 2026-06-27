@@ -1,0 +1,21 @@
+{
+  "name": "我能查看宿主系统日志",
+  "version": "1.0.0",
+  "created_at": "2026-05-18T23:38:26.3115036+08:00",
+  "updated_at": "2026-05-18T23:38:26.3229077+08:00",
+  "language": "zh",
+  "structure": {
+    "target_parts": 6,
+    "target_volumes": 5,
+    "target_chapters": 10
+  },
+  "chapter_config": {
+    "target_words_per_chapter": 3000,
+    "min_words_per_chapter": 2000,
+    "max_words_per_chapter": 5000
+  },
+  "llm": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-pro"
+  }
+}

@@ -6,6 +6,9 @@ run/
 .claude/
 bin/
 books/
+.gocache/
+.codex_go_cache/
+*.log
 
 # LLM Config files (may contain API keys)
 llm_config.json
