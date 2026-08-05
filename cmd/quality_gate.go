@@ -13,36 +13,89 @@ type qualityGateResult struct {
 	Blocking    bool
 }
 
+type outlineQualityGateOptions struct {
+	SkipLongFormScale bool
+}
+
 func runSetupQualityGate(setup *models.StorySetup) qualityGateResult {
 	var result qualityGateResult
 	models.NormalizeStorySetup(setup)
 	result.add(validateStorySetupDirect(setup)...)
-
-	adapter := dsl.NewModelAdapter(setup, nil, nil, nil, nil)
-	if issues, err := adapter.Simulate(dsl.PhaseSetup); err == nil {
-		result.add(dsl.NewSimulationBridge().ConvertIssuesToSuggestions(issues)...)
-	}
 
 	result.dedup()
 	result.Blocking = hasBlockingSuggestions(result.Suggestions)
 	return result
 }
 
+func runSetupSimulationGate(setup *models.StorySetup) qualityGateResult {
+	var result qualityGateResult
+	models.NormalizeStorySetup(setup)
+	adapter := dsl.NewModelAdapter(setup, nil, nil, nil, nil)
+	if issues, err := adapter.Simulate(dsl.PhaseSetup); err == nil {
+		result.add(dsl.NewSimulationBridge().ConvertIssuesToSuggestions(issues)...)
+	}
+	result.dedup()
+	result.Blocking = hasBlockingSuggestions(result.Suggestions)
+	return result
+}
+
 func runOutlineQualityGate(setup *models.StorySetup, outline *models.Outline) qualityGateResult {
+	return runOutlineQualityGateWithOptions(setup, outline, outlineQualityGateOptions{})
+}
+
+func runScopedOutlineQualityGate(setup *models.StorySetup, outline *models.Outline) qualityGateResult {
+	return runOutlineQualityGateWithOptions(setup, outline, outlineQualityGateOptions{SkipLongFormScale: true})
+}
+
+func runOutlineQualityGateWithOptions(setup *models.StorySetup, outline *models.Outline, options outlineQualityGateOptions) qualityGateResult {
 	var result qualityGateResult
 	models.NormalizeStorySetup(setup)
 	models.NormalizeOutline(outline)
-	result.add(validateOutlineDirect(setup, outline)...)
+	result.add(validateOutlineDirectWithOptions(setup, outline, options)...)
 	result.add(runOutlineValidatorOnModel(outline)...)
-
-	adapter := dsl.NewModelAdapter(setup, outline, nil, nil, nil)
-	if issues, err := adapter.Simulate(dsl.PhaseOutline); err == nil {
-		result.add(dsl.NewSimulationBridge().ConvertIssuesToSuggestions(issues)...)
-	}
 
 	result.dedup()
 	result.Blocking = hasBlockingSuggestions(result.Suggestions)
 	return result
+}
+
+func runOutlineSimulationGate(setup *models.StorySetup, outline *models.Outline) qualityGateResult {
+	var result qualityGateResult
+	models.NormalizeStorySetup(setup)
+	models.NormalizeOutline(outline)
+	characters, locations, items, organizations, _ := loadAllElements()
+	adapter := dsl.NewModelAdapterWithOrganizations(setup, outline, characters, locations, items, organizations)
+	if issues, err := adapter.Simulate(dsl.PhaseOutline); err == nil {
+		result.add(dsl.NewSimulationBridge().ConvertIssuesToSuggestions(issues)...)
+	}
+	result.dedup()
+	result.Blocking = hasBlockingSuggestions(result.Suggestions)
+	return result
+}
+
+func runOutlineCombinedGate(setup *models.StorySetup, outline *models.Outline) qualityGateResult {
+	quality := runOutlineQualityGate(setup, outline)
+	simulation := runOutlineSimulationGate(setup, outline)
+	quality.add(simulation.Suggestions...)
+	quality.dedup()
+	quality.Blocking = hasBlockingSuggestions(quality.Suggestions)
+	return quality
+}
+
+func runScopedOutlineCombinedGate(setup *models.StorySetup, outline *models.Outline) qualityGateResult {
+	quality := runScopedOutlineQualityGate(setup, outline)
+	simulation := runOutlineSimulationGate(setup, outline)
+	quality.add(simulation.Suggestions...)
+	quality.dedup()
+	quality.Blocking = hasBlockingSuggestions(quality.Suggestions)
+	return quality
+}
+
+func runOutlineCombinedGateForScope(setup *models.StorySetup, outline *models.Outline, scoped bool) qualityGateResult {
+	if scoped {
+		return runScopedOutlineCombinedGate(setup, outline)
+	}
+	return runOutlineCombinedGate(setup, outline)
 }
 
 func (r *qualityGateResult) add(suggestions ...models.ReviewSuggestion) {
@@ -78,12 +131,48 @@ func hasBlockingSuggestions(suggestions []models.ReviewSuggestion) bool {
 	return false
 }
 
+func hasMediumOrHigherSuggestions(suggestions []models.ReviewSuggestion) bool {
+	return len(filterMediumOrHigherSuggestions(suggestions)) > 0
+}
+
+func filterMediumOrHigherSuggestions(suggestions []models.ReviewSuggestion) []models.ReviewSuggestion {
+	var filtered []models.ReviewSuggestion
+	for _, s := range suggestions {
+		switch strings.ToLower(strings.TrimSpace(s.Priority)) {
+		case models.PriorityCritical, models.PriorityHigh, models.PriorityMedium:
+			filtered = append(filtered, s)
+		}
+	}
+	return filtered
+}
+
+func filterMediumOrHigherOutlineTargetSuggestions(suggestions []models.ReviewSuggestion) []models.ReviewSuggestion {
+	var filtered []models.ReviewSuggestion
+	for _, s := range filterMediumOrHigherSuggestions(suggestions) {
+		if isOutlineTargetID(s.TargetID) {
+			filtered = append(filtered, s)
+		}
+	}
+	return filtered
+}
+
+func isOutlineTargetID(targetID string) bool {
+	targetID = strings.TrimSpace(targetID)
+	return strings.HasPrefix(targetID, "P") && strings.Contains(targetID, "-V")
+}
+
 func qualityGateReviewResult(summary string, gate qualityGateResult) *models.ReviewResult {
 	return &models.ReviewResult{
 		OverallScore: scoreFromGate(gate),
 		Summary:      summary,
 		Suggestions:  gate.Suggestions,
 	}
+}
+
+func qualityGateMediumReviewResult(summary string, gate qualityGateResult) *models.ReviewResult {
+	filtered := qualityGateResult{Suggestions: filterMediumOrHigherOutlineTargetSuggestions(gate.Suggestions)}
+	filtered.Blocking = hasBlockingSuggestions(filtered.Suggestions)
+	return qualityGateReviewResult(summary, filtered)
 }
 
 func scoreFromGate(gate qualityGateResult) float64 {
@@ -702,6 +791,10 @@ func hasStorylineArcContract(storyline models.Storyline) bool {
 }
 
 func validateOutlineDirect(setup *models.StorySetup, outline *models.Outline) []models.ReviewSuggestion {
+	return validateOutlineDirectWithOptions(setup, outline, outlineQualityGateOptions{})
+}
+
+func validateOutlineDirectWithOptions(setup *models.StorySetup, outline *models.Outline, options outlineQualityGateOptions) []models.ReviewSuggestion {
 	if outline == nil {
 		return []models.ReviewSuggestion{qualitySuggestion("outline", "global", "outline", "outline is nil", "Generate an outline before continuing.", models.PriorityCritical)}
 	}
@@ -710,7 +803,7 @@ func validateOutlineDirect(setup *models.StorySetup, outline *models.Outline) []
 	}
 
 	var suggestions []models.ReviewSuggestion
-	suggestions = append(suggestions, validateOutlineLongFormAlignment(setup, outline)...)
+	suggestions = append(suggestions, validateOutlineLongFormAlignment(setup, outline, options)...)
 	setupResources := setupResourceNames(setup)
 	totalStorylineAdvances := 0
 
@@ -756,7 +849,7 @@ func validateOutlineDirect(setup *models.StorySetup, outline *models.Outline) []
 	return suggestions
 }
 
-func validateOutlineLongFormAlignment(setup *models.StorySetup, outline *models.Outline) []models.ReviewSuggestion {
+func validateOutlineLongFormAlignment(setup *models.StorySetup, outline *models.Outline, options outlineQualityGateOptions) []models.ReviewSuggestion {
 	if setup == nil || setup.LongFormPlan == nil || outline == nil {
 		return nil
 	}
@@ -764,13 +857,13 @@ func validateOutlineLongFormAlignment(setup *models.StorySetup, outline *models.
 	var suggestions []models.ReviewSuggestion
 	totalChapters := countOutlineChapters(outline)
 	totalVolumes := countOutlineVolumes(outline)
-	if plan.TargetChapters > 0 && totalChapters > 0 {
+	if !options.SkipLongFormScale && plan.TargetChapters > 0 && totalChapters > 0 {
 		minExpected := int(float64(plan.TargetChapters) * 0.8)
 		if totalChapters < minExpected {
 			suggestions = append(suggestions, qualitySuggestion("structure", "outline", "outline", "outline chapter count is far below long_form_plan target", fmt.Sprintf("Align novel.json structure or long_form_plan.target_chapters; outline has %d chapter(s), target is %d.", totalChapters, plan.TargetChapters), models.PriorityMedium))
 		}
 	}
-	if plan.TargetVolumes > 0 && totalVolumes > 0 {
+	if !options.SkipLongFormScale && plan.TargetVolumes > 0 && totalVolumes > 0 {
 		minExpected := int(float64(plan.TargetVolumes) * 0.8)
 		if totalVolumes < minExpected {
 			suggestions = append(suggestions, qualitySuggestion("structure", "outline", "outline", "outline volume count is far below long_form_plan target", fmt.Sprintf("Align novel.json structure or long_form_plan.target_volumes; outline has %d volume(s), target is %d.", totalVolumes, plan.TargetVolumes), models.PriorityMedium))

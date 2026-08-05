@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -227,6 +230,23 @@ func TestValidateOutlineDirectFlagsLongFormPlanMismatch(t *testing.T) {
 	assertHasIssue(t, suggestions, "long-form outline has too many volumes without payoff_contract")
 }
 
+func TestRunScopedOutlineQualityGateSkipsLongFormScaleMismatch(t *testing.T) {
+	setup := validLongFormSetup()
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1", Title: "Part", Summary: "Part summary",
+		Volumes: []models.Volume{{
+			ID: "P1-V1", Title: "Volume", Summary: "Volume summary",
+			Chapters: []models.Chapter{validChapterForQualityGate()},
+		}},
+	}}}
+
+	gate := runScopedOutlineQualityGate(setup, outline)
+
+	assertNoIssue(t, gate.Suggestions, "outline chapter count is far below long_form_plan target")
+	assertNoIssue(t, gate.Suggestions, "outline volume count is far below long_form_plan target")
+	assertHasIssue(t, gate.Suggestions, "long-form outline has too many volumes without payoff_contract")
+}
+
 func TestValidateOutlineDirectFindsChapterContractIssues(t *testing.T) {
 	setup := &models.StorySetup{
 		Storylines:     []models.Storyline{{Name: "Main Arc", Importance: 8}},
@@ -293,6 +313,105 @@ func TestQualityGateDeduplicatesSuggestionsAndMarksBlocking(t *testing.T) {
 	if !gate.Blocking {
 		t.Fatalf("expected high priority suggestion to be blocking")
 	}
+}
+
+func TestQualityGateMediumReviewFiltersLowNoise(t *testing.T) {
+	gate := qualityGateResult{
+		Suggestions: []models.ReviewSuggestion{
+			qualitySuggestion("logic", "P1-V1-C1", "C1", "low issue", "low fix", models.PriorityLow),
+			qualitySuggestion("logic", "P1-V1-C2", "C2", "medium issue", "medium fix", models.PriorityMedium),
+			qualitySuggestion("structure", "global", "global", "global medium issue", "global fix", models.PriorityMedium),
+		},
+	}
+	gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+	if gate.Blocking {
+		t.Fatalf("medium-only gate should not use global blocking semantics")
+	}
+	if !hasMediumOrHigherSuggestions(gate.Suggestions) {
+		t.Fatalf("medium issue should be actionable for Agent SDK repair")
+	}
+
+	review := qualityGateMediumReviewResult("medium repair", gate)
+	if len(review.Suggestions) != 1 {
+		t.Fatalf("review suggestions = %#v", review.Suggestions)
+	}
+	if review.Suggestions[0].Issue != "medium issue" {
+		t.Fatalf("low/global issues should be filtered out: %#v", review.Suggestions)
+	}
+}
+
+func TestLimitReviewSuggestionsForAgentSDKRepairBatchesHighestPriority(t *testing.T) {
+	review := &models.ReviewResult{
+		Summary: "repair",
+		Suggestions: []models.ReviewSuggestion{
+			qualitySuggestion("logic", "P1-V1-C5", "C5", "medium late", "fix", models.PriorityMedium),
+			qualitySuggestion("logic", "P1-V1-C2", "C2", "high early", "fix", models.PriorityHigh),
+			qualitySuggestion("logic", "P1-V1-C4", "C4", "medium middle", "fix", models.PriorityMedium),
+			qualitySuggestion("logic", "P1-V1-C1", "C1", "critical first", "fix", models.PriorityCritical),
+			qualitySuggestion("logic", "P1-V1-C3", "C3", "medium third", "fix", models.PriorityMedium),
+		},
+	}
+
+	got := limitReviewSuggestionsForAgentSDKRepair(review, 4)
+	if got == review {
+		t.Fatalf("expected a capped copy, got original pointer")
+	}
+	if len(got.Suggestions) != 4 {
+		t.Fatalf("suggestions = %d, want 4", len(got.Suggestions))
+	}
+	wantIssues := []string{"critical first", "high early", "medium third", "medium middle"}
+	for i, want := range wantIssues {
+		if got.Suggestions[i].Issue != want {
+			t.Fatalf("suggestion %d = %q, want %q; all=%#v", i, got.Suggestions[i].Issue, want, got.Suggestions)
+		}
+	}
+	if !strings.Contains(got.Summary, "first 4 of 5") {
+		t.Fatalf("summary should describe capped batch: %q", got.Summary)
+	}
+}
+
+func TestRunOutlineSimulationGateUsesCraftProtagonistDetails(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"project_name":"Fire"}`), 0o644); err != nil {
+		t.Fatalf("write novel.json: %v", err)
+	}
+	craftDir := filepath.Join(root, "story", "craft")
+	if err := os.MkdirAll(craftDir, 0o755); err != nil {
+		t.Fatalf("mkdir craft: %v", err)
+	}
+	characters := map[string]models.Character{
+		"Lin": {
+			Name:        "Lin",
+			RoleInStory: "protagonist",
+			Background:  "old-world engineer",
+			Motivation:  "restore humanity",
+			Personality: []string{"calm"},
+			CombatRole:  "mech pilot",
+		},
+	}
+	data, err := json.Marshal(characters)
+	if err != nil {
+		t.Fatalf("marshal characters: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(craftDir, "characters.json"), data, 0o644); err != nil {
+		t.Fatalf("write characters: %v", err)
+	}
+	oldWD, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("get wd: %v", err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(oldWD)
+	})
+
+	gate := runOutlineSimulationGate(&models.StorySetup{ProjectName: "Fire"}, &models.Outline{})
+
+	assertNoIssue(t, gate.Suggestions, "主角缺少背景故事")
+	assertNoIssue(t, gate.Suggestions, "主角缺少性格或动机描述")
+	assertNoIssue(t, gate.Suggestions, "主角缺少职业/修炼体系设定")
 }
 
 func assertHasIssue(t *testing.T, suggestions []models.ReviewSuggestion, needle string) {

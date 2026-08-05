@@ -8,6 +8,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/utils"
 )
 
 // CraftStorySetupSummary is a lightweight version of StorySetup for craft generation
@@ -80,6 +81,43 @@ type CraftGenCharactersInput struct {
 // CraftGenCharactersOutput is the output for character generation
 type CraftGenCharactersOutput struct {
 	Characters map[string]models.Character `json:"characters" md:"characters" desc:"Generated character profiles keyed by name"`
+}
+
+// CraftAgentSDKCharactersPromptInput is the compact task contract for
+// Agent SDK character generation. The SDK workflow must query project facts
+// through novel tools instead of receiving the whole setup/outline.
+type CraftAgentSDKCharactersPromptInput struct {
+	Characters      []string `json:"characters" md:"characters" desc:"Character names to generate or complete"`
+	CustomPrompt    string   `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional user guidance"`
+	ApplyPatches    bool     `json:"apply_patches" md:"apply_patches" desc:"Whether the workflow may use tool patch craft --apply after a successful dry-run"`
+	RequiredQueries []string `json:"required_queries" md:"required_queries" desc:"Queries that must be executed before returning"`
+	Instructions    []string `json:"instructions" md:"instructions" desc:"Workflow constraints"`
+}
+
+type CraftAgentSDKElementsPromptInput struct {
+	Target          string   `json:"target" md:"target" desc:"Craft target: item, location, or organization"`
+	OutputKey       string   `json:"output_key" md:"output_key" desc:"Required output object key: items, locations, or organizations"`
+	Names           []string `json:"names" md:"names" desc:"Element names to generate or complete"`
+	CustomPrompt    string   `json:"custom_prompt,omitempty" md:"custom_prompt,omitempty" desc:"Optional user guidance"`
+	ApplyPatches    bool     `json:"apply_patches" md:"apply_patches" desc:"Whether the workflow may use tool patch craft --apply after a successful dry-run"`
+	RequiredQueries []string `json:"required_queries" md:"required_queries" desc:"Queries that must be executed before returning"`
+	Instructions    []string `json:"instructions" md:"instructions" desc:"Workflow constraints"`
+}
+
+type craftAgentSDKCharactersOutput struct {
+	Characters map[string]models.Character `json:"characters" md:"characters" desc:"Generated or completed character profiles keyed by requested name"`
+}
+
+type craftAgentSDKLocationsOutput struct {
+	Locations map[string]models.Location `json:"locations" md:"locations" desc:"Generated or completed locations keyed by requested name"`
+}
+
+type craftAgentSDKItemsOutput struct {
+	Items map[string]models.Item `json:"items" md:"items" desc:"Generated or completed items keyed by requested name"`
+}
+
+type craftAgentSDKOrganizationsOutput struct {
+	Organizations map[string]models.Organization `json:"organizations" md:"organizations" desc:"Generated or completed organizations keyed by requested name"`
 }
 
 // CraftGenLocationsInput is the input for location generation
@@ -261,6 +299,293 @@ func (a *CraftAgent) GenerateCharacters(ctx context.Context, names []string, cus
 	return output.Characters, nil
 }
 
+// GenerateCharactersWithAgentSDK asks the Claude Agent SDK workflow to gather
+// context with novel tools, dry-run craft patches, and return typed character
+// cards. Go still validates, normalizes, and saves through the caller.
+func (a *CraftAgent) GenerateCharactersWithAgentSDK(ctx context.Context, names []string, customPrompt string, applyPatches bool) (map[string]models.Character, error) {
+	logger.Section("CRAFT AGENT SDK - Character Generation")
+	logger.Info("Characters: %v", names)
+
+	var output craftAgentSDKCharactersOutput
+	promptInput := buildCraftAgentSDKCharactersPromptInput(names, customPrompt, applyPatches)
+	params := craftAgentSDKParams("generate character craft using focused project query and patch tools", "craft-character-workflow", "character", 16, applyPatches, names, promptInput.RequiredQueries)
+	if err := a.base.Execute(ctx, params, promptInput, &output); err != nil {
+		return nil, err
+	}
+	if err := utils.ValidateNoSuspiciousPatchText(output.Characters); err != nil {
+		return nil, fmt.Errorf("agent SDK character craft rejected: %w", err)
+	}
+	output.Characters = normalizeGeneratedCharacters(names, output.Characters)
+	for name, character := range output.Characters {
+		if strings.TrimSpace(character.Name) == "" {
+			return nil, fmt.Errorf("agent SDK character %q is missing name", name)
+		}
+	}
+	logger.Info("[ok] Agent SDK generated %d characters", len(output.Characters))
+	return output.Characters, nil
+}
+
+// GenerateLocationsWithAgentSDK asks the Claude Agent SDK workflow to gather
+// context with novel tools, dry-run craft patches, and return typed locations.
+func (a *CraftAgent) GenerateLocationsWithAgentSDK(ctx context.Context, names []string, customPrompt string, applyPatches bool) (map[string]models.Location, error) {
+	logger.Section("CRAFT AGENT SDK - Location Generation")
+	logger.Info("Locations: %v", names)
+
+	var output craftAgentSDKLocationsOutput
+	promptInput := buildCraftAgentSDKElementsPromptInput("location", "locations", names, customPrompt, applyPatches)
+	params := craftAgentSDKParams("generate location craft using focused project query and patch tools", "craft-element-workflow", "location", 16, applyPatches, names, promptInput.RequiredQueries)
+	if err := a.base.Execute(ctx, params, promptInput, &output); err != nil {
+		return nil, err
+	}
+	if err := utils.ValidateNoSuspiciousPatchText(output.Locations); err != nil {
+		return nil, fmt.Errorf("agent SDK location craft rejected: %w", err)
+	}
+	output.Locations = normalizeGeneratedLocations(names, output.Locations)
+	for name, location := range output.Locations {
+		if strings.TrimSpace(location.Name) == "" {
+			return nil, fmt.Errorf("agent SDK location %q is missing name", name)
+		}
+	}
+	logger.Info("[ok] Agent SDK generated %d locations", len(output.Locations))
+	return output.Locations, nil
+}
+
+// GenerateItemsWithAgentSDK asks the Claude Agent SDK workflow to gather
+// context with novel tools, dry-run craft patches, and return typed items.
+func (a *CraftAgent) GenerateItemsWithAgentSDK(ctx context.Context, names []string, customPrompt string, applyPatches bool) (map[string]models.Item, error) {
+	logger.Section("CRAFT AGENT SDK - Item Generation")
+	logger.Info("Items: %v", names)
+
+	var output craftAgentSDKItemsOutput
+	promptInput := buildCraftAgentSDKElementsPromptInput("item", "items", names, customPrompt, applyPatches)
+	params := craftAgentSDKParams("generate item craft using focused project query and patch tools", "craft-element-workflow", "item", 16, applyPatches, names, promptInput.RequiredQueries)
+	if err := a.base.Execute(ctx, params, promptInput, &output); err != nil {
+		return nil, err
+	}
+	if err := utils.ValidateNoSuspiciousPatchText(output.Items); err != nil {
+		return nil, fmt.Errorf("agent SDK item craft rejected: %w", err)
+	}
+	output.Items = normalizeGeneratedItems(names, output.Items)
+	for name, item := range output.Items {
+		if strings.TrimSpace(item.Name) == "" {
+			return nil, fmt.Errorf("agent SDK item %q is missing name", name)
+		}
+	}
+	logger.Info("[ok] Agent SDK generated %d items", len(output.Items))
+	return output.Items, nil
+}
+
+// GenerateOrganizationsWithAgentSDK asks the Claude Agent SDK workflow to gather
+// context with novel tools, dry-run craft patches, and return typed organizations.
+func (a *CraftAgent) GenerateOrganizationsWithAgentSDK(ctx context.Context, names []string, customPrompt string, applyPatches bool) (map[string]models.Organization, error) {
+	logger.Section("CRAFT AGENT SDK - Organization Generation")
+	logger.Info("Organizations: %v", names)
+
+	var output craftAgentSDKOrganizationsOutput
+	promptInput := buildCraftAgentSDKElementsPromptInput("organization", "organizations", names, customPrompt, applyPatches)
+	params := craftAgentSDKParams("generate organization craft using focused project query and patch tools", "craft-element-workflow", "organization", 16, applyPatches, names, promptInput.RequiredQueries)
+	if err := a.base.Execute(ctx, params, promptInput, &output); err != nil {
+		return nil, err
+	}
+	if err := utils.ValidateNoSuspiciousPatchText(output.Organizations); err != nil {
+		return nil, fmt.Errorf("agent SDK organization craft rejected: %w", err)
+	}
+	output.Organizations = normalizeGeneratedOrganizations(names, output.Organizations)
+	for name, organization := range output.Organizations {
+		if strings.TrimSpace(organization.Name) == "" {
+			return nil, fmt.Errorf("agent SDK organization %q is missing name", name)
+		}
+	}
+	logger.Info("[ok] Agent SDK generated %d organizations", len(output.Organizations))
+	return output.Organizations, nil
+}
+
+func craftAgentSDKParams(command, workflowSkill, target string, maxTurns int, applyPatches bool, names []string, requiredQueries []string) InvokeParams {
+	if maxTurns <= 0 {
+		maxTurns = 12
+	}
+	target = normalizeCraftAgentSDKTarget(target)
+	allowlist := craftAgentSDKToolAllowlist(target, names, requiredQueries, applyPatches)
+	evidence := ToolEvidenceRequirement{}
+	if len(requiredQueries) > 0 {
+		evidence.MinContextQueryCalls = 1
+	}
+	if len(names) > 0 {
+		evidence.MinCheckCalls = 1
+	}
+	if applyPatches {
+		evidence.MinPatchApplyCalls = 1
+		evidence.RequirePatchApplyFollowupCheck = true
+	}
+	return InvokeParams{
+		SDKSkills:      []string{"novel-tools-core", workflowSkill},
+		Tools:          []string{"Bash"},
+		AllowedTools:   []string{"Bash"},
+		PermissionMode: "dontAsk",
+		RequireSDK:     true,
+		ToolAllowlist:  allowlist,
+		ToolEvidence:   evidence,
+		MaxTurns:       maxTurns,
+		Timeout:        300,
+		Command:        command,
+	}
+}
+
+func craftAgentSDKToolAllowlist(target string, names []string, requiredQueries []string, applyPatches bool) []string {
+	target = normalizeCraftAgentSDKTarget(target)
+	seen := map[string]bool{}
+	allowlist := []string{}
+	add := func(command string) {
+		command = strings.TrimSpace(command)
+		if command == "" || seen[command] {
+			return
+		}
+		seen[command] = true
+		allowlist = append(allowlist, command)
+	}
+	for _, query := range requiredQueries {
+		add(query)
+	}
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		add(fmt.Sprintf("novelgen tool check schema --target craft --scope %s --id %q", target, name))
+		patchTool := fmt.Sprintf("novelgen tool patch craft --target %s --id %q", target, name)
+		if applyPatches {
+			patchTool += " --apply"
+		}
+		add(patchTool)
+	}
+	return allowlist
+}
+
+func normalizeCraftAgentSDKTarget(target string) string {
+	switch strings.ToLower(strings.TrimSpace(target)) {
+	case "characters", "character", "":
+		return "character"
+	case "items", "item":
+		return "item"
+	case "locations", "location":
+		return "location"
+	case "organizations", "organization", "org":
+		return "organization"
+	default:
+		return strings.ToLower(strings.TrimSpace(target))
+	}
+}
+
+func buildCraftAgentSDKCharactersPromptInput(names []string, customPrompt string, applyPatches bool) CraftAgentSDKCharactersPromptInput {
+	required := []string{}
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		required = append(required, fmt.Sprintf("novelgen tool query context --type craft-character --name %q --view brief", name))
+	}
+	return CraftAgentSDKCharactersPromptInput{
+		Characters:      append([]string(nil), names...),
+		CustomPrompt:    customPrompt,
+		ApplyPatches:    applyPatches,
+		RequiredQueries: required,
+		Instructions: []string{
+			"Execute required_queries first. Use tool outputs as source of truth.",
+			"The context query returns setup, existing craft, outline refs, relevant chapters, events, stats, and navigation. Do not run extra project queries outside required_queries; if context is insufficient, keep uncertain fields conservative and note the limitation in notes.",
+			craftAgentSDKPatchInstruction(applyPatches),
+			craftAgentSDKCheckInstruction(applyPatches),
+			craftAgentSDKCharacterFieldInstruction(),
+			"When emitting rpg_stats, only use supported keys: str, agi, int, vit, hp, mp, level.",
+			"Return only the requested characters. Do not invent unrelated characters.",
+			craftAgentSDKWriteInstruction(applyPatches),
+		},
+	}
+}
+
+func buildCraftAgentSDKElementsPromptInput(target, outputKey string, names []string, customPrompt string, applyPatches bool) CraftAgentSDKElementsPromptInput {
+	target = normalizeCraftAgentSDKTarget(target)
+	required := []string{}
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		required = append(required, fmt.Sprintf("novelgen tool query context --type craft-%s --name %q --view brief", target, name))
+	}
+	return CraftAgentSDKElementsPromptInput{
+		Target:          target,
+		OutputKey:       outputKey,
+		Names:           append([]string(nil), names...),
+		CustomPrompt:    customPrompt,
+		ApplyPatches:    applyPatches,
+		RequiredQueries: required,
+		Instructions: []string{
+			"Execute required_queries first. Use tool outputs as source of truth.",
+			"The context query returns setup, existing craft, outline refs or events, relevant chapters, stats, and navigation. Do not run extra project queries outside required_queries; if context is insufficient, keep uncertain fields conservative and note the limitation in notes.",
+			craftAgentSDKTargetPatchInstruction(target, applyPatches),
+			craftAgentSDKTargetCheckInstruction(target, applyPatches),
+			craftAgentSDKTargetFieldInstruction(target),
+			fmt.Sprintf("Return only the requested %s entries under the JSON key %q. Do not invent unrelated elements.", target, outputKey),
+			craftAgentSDKTargetWriteInstruction(target, applyPatches),
+		},
+	}
+}
+
+func craftAgentSDKPatchInstruction(applyPatches bool) string {
+	return craftAgentSDKTargetPatchInstruction("character", applyPatches)
+}
+
+func craftAgentSDKTargetPatchInstruction(target string, applyPatches bool) string {
+	target = normalizeCraftAgentSDKTarget(target)
+	jsonInput := fmt.Sprintf(" For Chinese/non-ASCII patch JSON, do not use --patch-json and do not run Python/Node/PowerShell/help commands to encode it. Pipe compact literal JSON on stdin instead: `printf '%%s' '<compact-json>' | novelgen tool patch craft --target %s --id <name>`. Use --patch-json only for small ASCII-only patches.", target)
+	if applyPatches {
+		return fmt.Sprintf("Before final JSON, first dry-run each changed or created %s with `printf '%%s' '<compact-json>' | novelgen tool patch craft --target %s --id <name>`; only after a successful dry-run, repeat the same stdin-piped patch command with `--apply`.%s", target, target, jsonInput)
+	}
+	return fmt.Sprintf("Before final JSON, dry-run each changed or created %s with `printf '%%s' '<compact-json>' | novelgen tool patch craft --target %s --id <name>` and do not use --apply.%s", target, target, jsonInput)
+}
+
+func craftAgentSDKCheckInstruction(applyPatches bool) string {
+	return craftAgentSDKTargetCheckInstruction("character", applyPatches)
+}
+
+func craftAgentSDKTargetCheckInstruction(target string, applyPatches bool) string {
+	target = normalizeCraftAgentSDKTarget(target)
+	if applyPatches {
+		return fmt.Sprintf("After each successful --apply, run `novelgen tool check schema --target craft --scope %s --id <name>` and fix any blocking schema issue with another dry-run/apply cycle before returning.", target)
+	}
+	return "Use the schema result embedded in craft patch dry-run output as the validation signal."
+}
+
+func craftAgentSDKTargetFieldInstruction(target string) string {
+	switch normalizeCraftAgentSDKTarget(target) {
+	case "item":
+		return "Each item should include name, type, description, appearance, function, and significance. Use rarity/power_level conservatively and only when supported by project facts."
+	case "location":
+		return "Each location should include name, type, description, appearance, atmosphere, and significance. Use danger_level/resource_tags/encounter_tags conservatively."
+	case "organization":
+		return "Each organization should include name, type, description, goals, and significance. Keep members/resources/allies/enemies grounded in queried facts."
+	default:
+		return "When emitting rpg_stats, only use supported keys: str, agi, int, vit, hp, mp, level."
+	}
+}
+
+func craftAgentSDKCharacterFieldInstruction() string {
+	return "Distribute character craft into typed fields instead of dumping it into notes. For protagonist/lead/player characters, ensure personality has 3-6 decision-shaping traits, motivation is concrete, skills cover mundane/tactical competencies, abilities cover special powers with limits, voice gives drafting guidance, and notes stays concise for writer-only continuity constraints."
+}
+
+func craftAgentSDKWriteInstruction(applyPatches bool) string {
+	return craftAgentSDKTargetWriteInstruction("character", applyPatches)
+}
+
+func craftAgentSDKTargetWriteInstruction(target string, applyPatches bool) string {
+	target = normalizeCraftAgentSDKTarget(target)
+	if applyPatches {
+		return fmt.Sprintf("Do not inspect source code or write files directly; the only allowed write is `novelgen tool patch craft --target %s ... --apply` after dry-run validation.", target)
+	}
+	return "Go will normalize and save; you must not write files or inspect source code."
+}
+
 // GenerateLocations generates detailed location descriptions
 func (a *CraftAgent) GenerateLocations(ctx context.Context, names []string, customPrompt string) (map[string]models.Location, error) {
 	logger.Section("CRAFT AGENT - Location Generation")
@@ -358,7 +683,7 @@ func (a *CraftAgent) GenerateOrganizations(ctx context.Context, names []string, 
 
 	output.Organizations = normalizeGeneratedOrganizations(names, output.Organizations)
 
-	logger.Info("鉁?Generated %d organizations", len(output.Organizations))
+	logger.Info("[ok] Generated %d organizations", len(output.Organizations))
 	return output.Organizations, nil
 }
 

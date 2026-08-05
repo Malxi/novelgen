@@ -536,6 +536,16 @@ func (dw *DSLWriter) writeStep(step Step) error {
 						return nil
 					})
 				}
+				if step.Event.OnComplete != nil {
+					if err := dw.writeEventResult("on_complete", step.Event.OnComplete); err != nil {
+						return err
+					}
+				}
+				if step.Event.OnFail != nil {
+					if err := dw.writeEventResult("on_fail", step.Event.OnFail); err != nil {
+						return err
+					}
+				}
 				for _, delta := range step.Event.StateDeltas {
 					if err := dw.writeStateDelta(delta); err != nil {
 						return err
@@ -550,6 +560,39 @@ func (dw *DSLWriter) writeStep(step Step) error {
 	})
 
 	return nil
+}
+
+func (dw *DSLWriter) writeEventResult(blockName string, result *EventResult) error {
+	if result == nil {
+		return nil
+	}
+	return dw.writeBlock(blockName, "", func() error {
+		if result.Narration != "" {
+			dw.writeField("narration", fmt.Sprintf("%q", result.Narration))
+		}
+		if result.Exp != 0 {
+			dw.writeField("exp", fmt.Sprintf("%d", result.Exp))
+		}
+		if len(result.Items) > 0 {
+			dw.writeField("items", dw.formatStringSlice(result.Items))
+		}
+		if result.TriggerEvent != "" {
+			dw.writeField("trigger_event", fmt.Sprintf("%q", result.TriggerEvent))
+		}
+		if result.SetFlag != "" {
+			dw.writeField("set_flag", fmt.Sprintf("%q", result.SetFlag))
+		}
+		if result.UnlockStage != "" {
+			dw.writeField("unlock_stage", fmt.Sprintf("%q", result.UnlockStage))
+		}
+		if result.Heal != 0 {
+			dw.writeField("heal", fmt.Sprintf("%d", result.Heal))
+		}
+		if result.Result != "" {
+			dw.writeField("result", fmt.Sprintf("%q", result.Result))
+		}
+		return nil
+	})
 }
 
 func (dw *DSLWriter) writeStateDelta(delta StateDelta) error {

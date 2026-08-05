@@ -119,6 +119,9 @@ func (s *Simulator) collectStorylineMovements() []storylineMovement {
 	}
 	var movements []storylineMovement
 	for idx, chapter := range s.DSL.Storyline.Chapters {
+		chapterMovements := []storylineMovement{}
+		chapterDeltas := []StateDelta{}
+		chapterOrders := []int{}
 		for _, obj := range chapter.Objectives {
 			for _, step := range obj.Steps {
 				for _, delta := range step.Event.StateDeltas {
@@ -126,7 +129,7 @@ func (s *Simulator) collectStorylineMovements() []storylineMovement {
 						continue
 					}
 					stage := strings.ToLower(strings.TrimSpace(firstNonEmpty(delta.To, delta.Field)))
-					movements = append(movements, storylineMovement{
+					chapterMovements = append(chapterMovements, storylineMovement{
 						ChapterID: chapter.ID,
 						Index:     idx,
 						Target:    delta.Target,
@@ -134,18 +137,54 @@ func (s *Simulator) collectStorylineMovements() []storylineMovement {
 						Cost:      delta.Cost,
 						Note:      delta.Note,
 					})
-
-					if isStorylineProgressStage(stage) && strings.TrimSpace(delta.Cost) == "" && strings.TrimSpace(delta.Unit) == "" {
-						s.addIssueWithEvidence(IssueConflict, SeverityInfo, chapter.ID, step.Order,
-							fmt.Sprintf("storyline movement for '%s' has no visible cost, pressure, or consequence", delta.Target),
-							"Add a soft consequence or pressure note when the chapter changes an arc, so outline improve knows what got harder afterward.",
-							[]IssueEvidence{stateDeltaEvidence(chapter.ID, delta)})
-					}
+					chapterDeltas = append(chapterDeltas, delta)
+					chapterOrders = append(chapterOrders, step.Order)
 				}
+			}
+		}
+		pressureByTarget := map[string]bool{}
+		for _, delta := range chapterDeltas {
+			if storylineDeltaHasForwardPressure(delta) {
+				pressureByTarget[normalizeStorylineKey(delta.Target)] = true
+			}
+		}
+		for i, movement := range chapterMovements {
+			movements = append(movements, movement)
+			delta := chapterDeltas[i]
+			if isStorylineProgressStage(movement.Stage) && !pressureByTarget[normalizeStorylineKey(delta.Target)] {
+				s.addIssueWithEvidence(IssueConflict, SeverityInfo, chapter.ID, chapterOrders[i],
+					fmt.Sprintf("storyline movement for '%s' has no visible cost, pressure, or consequence", delta.Target),
+					"Add a soft consequence or pressure note when the chapter changes an arc, so outline improve knows what got harder afterward.",
+					[]IssueEvidence{stateDeltaEvidence(chapter.ID, delta)})
 			}
 		}
 	}
 	return movements
+}
+
+func storylineDeltaHasForwardPressure(delta StateDelta) bool {
+	if strings.TrimSpace(delta.Cost) != "" || strings.TrimSpace(delta.Unit) != "" {
+		return true
+	}
+	text := strings.ToLower(strings.TrimSpace(strings.Join([]string{delta.Note, delta.To, delta.Field}, " ")))
+	if text == "" {
+		return false
+	}
+	for _, marker := range []string{
+		"consequence", "pressure", "cost", "stakes", "risk", "harder", "choice",
+		"后果", "代价", "压力", "风险", "威胁", "困境", "更难", "选择", "暴露", "追杀",
+	} {
+		if strings.Contains(text, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func eventShouldCreateStorylineDelta(eventType string, targetType string) bool {
+	targetType = strings.ToLower(strings.TrimSpace(targetType))
+	eventType = strings.ToLower(strings.TrimSpace(eventType))
+	return targetType == "storyline" || (eventType == "storyline" && targetType == "")
 }
 
 func (s *Simulator) checkOutlineStorylineCoverage(contracts []storylineContract, movements []storylineMovement) {

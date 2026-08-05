@@ -1418,7 +1418,7 @@ func buildStoryEventStateDeltas(event rpg.StoryEvent) []StateDelta {
 			Note:   describeStoryEvent(event),
 		})
 	}
-	if event.Type == "storyline" || event.TargetType == "storyline" {
+	if eventShouldCreateStorylineDelta(event.Type, event.TargetType) {
 		deltas = append(deltas, StateDelta{
 			Target: target,
 			Kind:   "storyline",

@@ -78,6 +78,10 @@ func (a *ModelAdapter) BuildDSL(phase MergePhase) (*DSL, error) {
 		return dsl, nil
 	case PhaseOutline:
 		a.buildChaptersFromOutline(dsl)
+		a.buildCharacters(dsl)
+		a.buildLocations(dsl)
+		a.buildItems(dsl)
+		a.buildOrganizations(dsl)
 		a.buildPlaceholderNPCs(dsl)
 		a.buildPlaceholderLocations(dsl)
 		return dsl, nil
@@ -122,6 +126,7 @@ func (a *ModelAdapter) buildDefaultPlayer(dsl *DSL) {
 	playerName := "主角"
 	playerID := "protagonist"
 	playerStats := Stats{STR: 10, AGI: 10, INT: 10, VIT: 10, HP: 100, MP: 50}
+	var playerCraft *models.Character
 
 	if a.setup != nil && a.setup.ProjectName != "" {
 		playerID = sanitizeID(a.setup.ProjectName + "_protagonist")
@@ -134,22 +139,40 @@ func (a *ModelAdapter) buildDefaultPlayer(dsl *DSL) {
 			if ch == nil {
 				continue
 			}
-			if ch.RoleInStory == "protagonist" || ch.RoleInStory == "主角" {
+			if isCraftProtagonist(ch) {
 				playerName = ch.Name
 				playerID = id
 				playerStats = statsFromCraft(ch.RPGStats, playerStats)
+				playerCraft = ch
 				break
 			}
 		}
 	}
 
-	dsl.Characters.Player = &Player{
+	player := &Player{
 		ID:          playerID,
 		Name:        playerName,
 		Stats:       playerStats,
 		Description: "主角",
 		RoleInStory: "protagonist",
 	}
+	if playerCraft != nil {
+		player.Description = coalesceString(playerCraft.Background, coalesceString(playerCraft.Appearance, player.Description))
+		player.Age = parseAge(playerCraft.Age)
+		player.Gender = playerCraft.Gender
+		player.Race = playerCraft.Race
+		player.Background = playerCraft.Background
+		player.Personality = append([]string(nil), playerCraft.Personality...)
+		player.Motivation = playerCraft.Motivation
+		player.Abilities = append([]string(nil), playerCraft.Abilities...)
+		player.Affiliations = append([]string(nil), playerCraft.Affiliations...)
+		player.RoleInStory = coalesceString(playerCraft.RoleInStory, player.RoleInStory)
+		player.Voice = playerCraft.Voice
+		player.Class = coalesceString(playerCraft.CombatRole, coalesceString(playerCraft.RPGRole, "adventurer"))
+		player.Skills = append([]string(nil), playerCraft.Skills...)
+		player.Traits = traitsFromTags(playerCraft.DSLTags)
+	}
+	dsl.Characters.Player = player
 }
 
 func (a *ModelAdapter) buildDefaultSystems(dsl *DSL) {
@@ -377,6 +400,7 @@ func (a *ModelAdapter) buildEventFromModel(evt models.Event, enemies []models.Ou
 	dslEvent := Event{
 		Type:        normalizeOutlineEventType(evt.Type, evt.Action, evt.TargetType),
 		StateDeltas: buildEventStateDeltas(evt),
+		OnComplete:  buildEventResultFromModel(evt),
 	}
 	if dslEvent.Type == "" {
 		dslEvent.Type = eventTypeFromAction(evt.Action)
@@ -413,6 +437,21 @@ func (a *ModelAdapter) buildEventFromModel(evt models.Event, enemies []models.Ou
 	}
 
 	return dslEvent
+}
+
+func buildEventResultFromModel(evt models.Event) *EventResult {
+	result := strings.TrimSpace(evt.Result)
+	if result == "" {
+		return nil
+	}
+	out := &EventResult{
+		Narration: result,
+		Result:    result,
+	}
+	if evt.GetAction() == models.ActionAcquire && strings.TrimSpace(evt.GetTarget()) != "" {
+		out.Items = []string{strings.TrimSpace(evt.GetTarget())}
+	}
+	return out
 }
 
 func (a *ModelAdapter) addOutlineEnemies(dsl *DSL, enemies []models.OutlineEnemy) {
@@ -608,7 +647,7 @@ func buildEventStateDeltas(evt models.Event) []StateDelta {
 			Note:   describeModelEvent(evt),
 		})
 	}
-	if evt.Type == models.EventTypeStoryline || evt.TargetType == models.TargetTypeStoryline {
+	if eventShouldCreateStorylineDelta(string(evt.Type), string(evt.TargetType)) {
 		deltas = append(deltas, StateDelta{
 			Target: target,
 			Kind:   "storyline",
@@ -1076,7 +1115,13 @@ func isCraftEnemy(ch *models.Character) bool {
 		return false
 	}
 	role := strings.ToLower(strings.TrimSpace(ch.RoleInStory + " " + ch.RPGRole))
-	return strings.Contains(role, "enemy") || strings.Contains(role, "boss") || strings.Contains(role, "antagonist") || strings.Contains(role, "反派")
+	return strings.Contains(role, "enemy") ||
+		strings.Contains(role, "boss") ||
+		strings.Contains(role, "antagonist") ||
+		strings.Contains(role, "villain") ||
+		strings.Contains(role, "反派") ||
+		strings.Contains(role, "敌") ||
+		strings.Contains(role, "杂兵")
 }
 
 func statsFromCraft(stats *models.CraftRPGStats, fallback Stats) Stats {

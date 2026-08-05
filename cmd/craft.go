@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -16,6 +17,7 @@ import (
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -25,10 +27,13 @@ var (
 	craftVolumeFlag      string
 	craftPartFlag        string
 	craftPromptFlag      string
+	craftNameFlag        string
 	craftBatchFlag       int
 	craftConcurrencyFlag int
 	craftMaxRoundsFlag   int
 	craftElementTypeFlag string
+	craftAgentSDKFlag    bool
+	craftAgentApplyFlag  bool
 )
 
 var craftCmd = &cobra.Command{
@@ -80,7 +85,13 @@ Examples:
   novelgen craft gen --batch 5
 
   # Generate with concurrency
-  novelgen craft gen --concurrency 3`,
+  novelgen craft gen --concurrency 3
+
+  # Generate craft through Claude Agent SDK tools
+  novelgen craft gen --agent-sdk --chapter 1
+
+  # Let the Agent SDK workflow write craft through validated patch tools
+  novelgen craft gen --agent-sdk --agent-apply --chapter 1`,
 	RunE: runCraftGen,
 }
 
@@ -109,8 +120,17 @@ Examples:
   # Improve only organizations
   novelgen craft improve --type organizations
 
+  # Improve one exact craft object
+  novelgen craft improve --type characters --name "李侑"
+
   # Run 3 improvement rounds
-  novelgen craft improve --max-rounds 3`,
+  novelgen craft improve --max-rounds 3
+
+  # Improve craft through Claude Agent SDK tools
+  novelgen craft improve --agent-sdk --type characters --batch 1
+
+  # Let the Agent SDK workflow write craft through validated patch tools
+  novelgen craft improve --agent-sdk --agent-apply --type items --batch 1`,
 	RunE: runCraftImprove,
 }
 
@@ -124,10 +144,16 @@ func init() {
 	craftGenCmd.Flags().StringVar(&craftPromptFlag, "prompt", "", "Additional prompt to guide generation")
 	craftGenCmd.Flags().IntVar(&craftBatchFlag, "batch", 1, "Number of elements to generate in one batch")
 	craftGenCmd.Flags().IntVar(&craftConcurrencyFlag, "concurrency", 1, "Number of concurrent element generations")
+	craftGenCmd.Flags().BoolVar(&craftAgentSDKFlag, "agent-sdk", false, "Use Claude Agent SDK workflow for craft generation")
+	craftGenCmd.Flags().BoolVar(&craftAgentApplyFlag, "agent-apply", false, "With --agent-sdk, let the agent write craft through validated patch tools")
 
 	craftImproveCmd.Flags().StringVar(&craftElementTypeFlag, "type", "all", "Element type to improve (all/characters/locations/items/organizations)")
+	craftImproveCmd.Flags().StringVar(&craftNameFlag, "name", "", "Improve one exact craft object name within the selected type")
 	craftImproveCmd.Flags().IntVar(&craftMaxRoundsFlag, "max-rounds", 1, "Maximum number of improvement rounds")
 	craftImproveCmd.Flags().StringVar(&craftPromptFlag, "prompt", "", "Additional prompt to guide improvement")
+	craftImproveCmd.Flags().IntVar(&craftBatchFlag, "batch", 1, "Number of elements to improve in one Agent SDK batch")
+	craftImproveCmd.Flags().BoolVar(&craftAgentSDKFlag, "agent-sdk", false, "Use Claude Agent SDK workflow for craft improvement")
+	craftImproveCmd.Flags().BoolVar(&craftAgentApplyFlag, "agent-apply", false, "With --agent-sdk, let the agent write craft through validated patch tools")
 
 	// Register craft command using the new plugin mechanism
 	RegisterCommand(func() *cobra.Command {
@@ -137,6 +163,9 @@ func init() {
 
 func runCraftGen(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
+	if craftAgentApplyFlag && !craftAgentSDKFlag {
+		return fmt.Errorf("--agent-apply requires --agent-sdk")
+	}
 
 	// Load project config
 	config, err := loadProjectConfig()
@@ -252,6 +281,26 @@ func runCraftGen(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	// Generate characters
+	if craftAgentSDKFlag {
+		if craftConcurrencyFlag > 1 {
+			log.Warn("--agent-sdk craft generation runs sequentially; ignoring --concurrency")
+		}
+		if err := generateCharactersAgentSDK(ctx, agent, elementsToGenerate.Characters, generated, batchSize, craftAgentApplyFlag); err != nil {
+			return fmt.Errorf("failed to generate characters with Agent SDK: %w", err)
+		}
+		if err := generateLocationsAgentSDK(ctx, agent, elementsToGenerate.Locations, generated, batchSize, craftAgentApplyFlag); err != nil {
+			return fmt.Errorf("failed to generate locations with Agent SDK: %w", err)
+		}
+		if err := generateItemsAgentSDK(ctx, agent, elementsToGenerate.Items, generated, batchSize, craftAgentApplyFlag); err != nil {
+			return fmt.Errorf("failed to generate items with Agent SDK: %w", err)
+		}
+		if err := generateOrganizationsAgentSDK(ctx, agent, elementsToGenerate.Organizations, generated, batchSize, craftAgentApplyFlag); err != nil {
+			return fmt.Errorf("failed to generate organizations with Agent SDK: %w", err)
+		}
+		log.Info("Craft Agent SDK generation completed")
+		return nil
+	}
+
 	if err := generateCharacters(ctx, agent, elementsToGenerate.Characters, generated, batchSize); err != nil {
 		return fmt.Errorf("failed to generate characters: %w", err)
 	}
@@ -936,6 +985,294 @@ func generateCharacters(ctx context.Context, agent *agents.CraftAgent, character
 	return errors.Join(errs...)
 }
 
+func generateCharactersAgentSDK(ctx context.Context, agent *agents.CraftAgent, characters []string, generated *GeneratedElements, batchSize int, agentApply bool) error {
+	if len(characters) == 0 {
+		return nil
+	}
+	log := logger.GetLogger()
+	if batchSize <= 0 {
+		batchSize = 1
+	}
+	log.Info("Generating %d characters with Agent SDK, batch size %d", len(characters), batchSize)
+
+	results := make(map[string]models.Character)
+	var errs []error
+	for i := 0; i < len(characters); i += batchSize {
+		end := i + batchSize
+		if end > len(characters) {
+			end = len(characters)
+		}
+		batch := characters[i:end]
+		log.Info("[Agent SDK] Generating characters batch: %v", batch)
+		batchResults, err := agent.GenerateCharactersWithAgentSDK(ctx, batch, craftPromptFlag, agentApply)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("characters batch %v: %w", batch, err))
+			continue
+		}
+		for name, char := range batchResults {
+			results[name] = char
+		}
+		log.Info("[Agent SDK] Generated %d characters", len(batchResults))
+	}
+	if agentApply {
+		loaded, _, _, _, err := loadAllElements()
+		if err != nil {
+			errs = append(errs, fmt.Errorf("reload agent-applied characters: %w", err))
+		} else {
+			results = collectRequestedCharacters(characters, loaded)
+		}
+	}
+	for _, name := range missingGeneratedNames(characters, results) {
+		errs = append(errs, fmt.Errorf("character %q was not returned by Agent SDK", name))
+	}
+	if len(results) > 0 {
+		if agentApply {
+			for name := range results {
+				generated.Characters[name] = true
+			}
+			log.Info("Verified %d Agent SDK applied characters", len(results))
+			return errors.Join(errs...)
+		}
+		if err := saveCharacters(results); err != nil {
+			errs = append(errs, fmt.Errorf("save characters: %w", err))
+		} else {
+			for name := range results {
+				generated.Characters[name] = true
+			}
+			log.Info("Saved %d Agent SDK characters", len(results))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func collectRequestedCharacters(requested []string, loaded map[string]*models.Character) map[string]models.Character {
+	results := make(map[string]models.Character)
+	for _, name := range requested {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		if character, ok := loaded[name]; ok && character != nil {
+			results[name] = *character
+			continue
+		}
+		for key, character := range loaded {
+			if character == nil {
+				continue
+			}
+			if strings.EqualFold(strings.TrimSpace(key), name) || strings.EqualFold(strings.TrimSpace(character.Name), name) {
+				results[name] = *character
+				break
+			}
+		}
+	}
+	return results
+}
+
+func generateLocationsAgentSDK(ctx context.Context, agent *agents.CraftAgent, locations []string, generated *GeneratedElements, batchSize int, agentApply bool) error {
+	if len(locations) == 0 {
+		return nil
+	}
+	log := logger.GetLogger()
+	if batchSize <= 0 {
+		batchSize = 1
+	}
+	log.Info("Generating %d locations with Agent SDK, batch size %d", len(locations), batchSize)
+
+	results := make(map[string]models.Location)
+	var errs []error
+	for i := 0; i < len(locations); i += batchSize {
+		end := i + batchSize
+		if end > len(locations) {
+			end = len(locations)
+		}
+		batch := locations[i:end]
+		log.Info("[Agent SDK] Generating locations batch: %v", batch)
+		batchResults, err := agent.GenerateLocationsWithAgentSDK(ctx, batch, craftPromptFlag, agentApply)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("locations batch %v: %w", batch, err))
+			continue
+		}
+		for name, loc := range batchResults {
+			results[name] = loc
+		}
+		log.Info("[Agent SDK] Generated %d locations", len(batchResults))
+	}
+	if agentApply {
+		_, loaded, _, _, err := loadAllElements()
+		if err != nil {
+			errs = append(errs, fmt.Errorf("reload agent-applied locations: %w", err))
+		} else {
+			results = collectRequestedCraftValues(locations, loaded, func(v *models.Location) string { return v.Name })
+		}
+	}
+	for _, name := range missingGeneratedNames(locations, results) {
+		errs = append(errs, fmt.Errorf("location %q was not returned by Agent SDK", name))
+	}
+	if len(results) > 0 {
+		if agentApply {
+			for name := range results {
+				generated.Locations[name] = true
+			}
+			log.Info("Verified %d Agent SDK applied locations", len(results))
+			return errors.Join(errs...)
+		}
+		if err := saveLocations(results); err != nil {
+			errs = append(errs, fmt.Errorf("save locations: %w", err))
+		} else {
+			for name := range results {
+				generated.Locations[name] = true
+			}
+			log.Info("Saved %d Agent SDK locations", len(results))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func generateItemsAgentSDK(ctx context.Context, agent *agents.CraftAgent, items []string, generated *GeneratedElements, batchSize int, agentApply bool) error {
+	if len(items) == 0 {
+		return nil
+	}
+	log := logger.GetLogger()
+	if batchSize <= 0 {
+		batchSize = 1
+	}
+	log.Info("Generating %d items with Agent SDK, batch size %d", len(items), batchSize)
+
+	results := make(map[string]models.Item)
+	var errs []error
+	for i := 0; i < len(items); i += batchSize {
+		end := i + batchSize
+		if end > len(items) {
+			end = len(items)
+		}
+		batch := items[i:end]
+		log.Info("[Agent SDK] Generating items batch: %v", batch)
+		batchResults, err := agent.GenerateItemsWithAgentSDK(ctx, batch, craftPromptFlag, agentApply)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("items batch %v: %w", batch, err))
+			continue
+		}
+		for name, item := range batchResults {
+			results[name] = item
+		}
+		log.Info("[Agent SDK] Generated %d items", len(batchResults))
+	}
+	if agentApply {
+		_, _, loaded, _, err := loadAllElements()
+		if err != nil {
+			errs = append(errs, fmt.Errorf("reload agent-applied items: %w", err))
+		} else {
+			results = collectRequestedCraftValues(items, loaded, func(v *models.Item) string { return v.Name })
+		}
+	}
+	for _, name := range missingGeneratedNames(items, results) {
+		errs = append(errs, fmt.Errorf("item %q was not returned by Agent SDK", name))
+	}
+	if len(results) > 0 {
+		if agentApply {
+			for name := range results {
+				generated.Items[name] = true
+			}
+			log.Info("Verified %d Agent SDK applied items", len(results))
+			return errors.Join(errs...)
+		}
+		if err := saveItems(results); err != nil {
+			errs = append(errs, fmt.Errorf("save items: %w", err))
+		} else {
+			for name := range results {
+				generated.Items[name] = true
+			}
+			log.Info("Saved %d Agent SDK items", len(results))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func generateOrganizationsAgentSDK(ctx context.Context, agent *agents.CraftAgent, organizations []string, generated *GeneratedElements, batchSize int, agentApply bool) error {
+	if len(organizations) == 0 {
+		return nil
+	}
+	log := logger.GetLogger()
+	if batchSize <= 0 {
+		batchSize = 1
+	}
+	log.Info("Generating %d organizations with Agent SDK, batch size %d", len(organizations), batchSize)
+
+	results := make(map[string]models.Organization)
+	var errs []error
+	for i := 0; i < len(organizations); i += batchSize {
+		end := i + batchSize
+		if end > len(organizations) {
+			end = len(organizations)
+		}
+		batch := organizations[i:end]
+		log.Info("[Agent SDK] Generating organizations batch: %v", batch)
+		batchResults, err := agent.GenerateOrganizationsWithAgentSDK(ctx, batch, craftPromptFlag, agentApply)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("organizations batch %v: %w", batch, err))
+			continue
+		}
+		for name, org := range batchResults {
+			results[name] = org
+		}
+		log.Info("[Agent SDK] Generated %d organizations", len(batchResults))
+	}
+	if agentApply {
+		_, _, _, loaded, err := loadAllElements()
+		if err != nil {
+			errs = append(errs, fmt.Errorf("reload agent-applied organizations: %w", err))
+		} else {
+			results = collectRequestedCraftValues(organizations, loaded, func(v *models.Organization) string { return v.Name })
+		}
+	}
+	for _, name := range missingGeneratedNames(organizations, results) {
+		errs = append(errs, fmt.Errorf("organization %q was not returned by Agent SDK", name))
+	}
+	if len(results) > 0 {
+		if agentApply {
+			for name := range results {
+				generated.Organizations[name] = true
+			}
+			log.Info("Verified %d Agent SDK applied organizations", len(results))
+			return errors.Join(errs...)
+		}
+		if err := saveOrganizations(results); err != nil {
+			errs = append(errs, fmt.Errorf("save organizations: %w", err))
+		} else {
+			for name := range results {
+				generated.Organizations[name] = true
+			}
+			log.Info("Saved %d Agent SDK organizations", len(results))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func collectRequestedCraftValues[T any](requested []string, loaded map[string]*T, nameOf func(*T) string) map[string]T {
+	results := make(map[string]T)
+	for _, name := range requested {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		if value, ok := loaded[name]; ok && value != nil {
+			results[name] = *value
+			continue
+		}
+		for key, value := range loaded {
+			if value == nil {
+				continue
+			}
+			if strings.EqualFold(strings.TrimSpace(key), name) || strings.EqualFold(strings.TrimSpace(nameOf(value)), name) {
+				results[name] = *value
+				break
+			}
+		}
+	}
+	return results
+}
+
 func generateLocations(ctx context.Context, agent *agents.CraftAgent, locations []string, generated *GeneratedElements, batchSize int) error {
 	if len(locations) == 0 {
 		return nil
@@ -1262,6 +1599,7 @@ func saveJSON(path string, data interface{}) error {
 	// Read existing data if file exists
 	existing := make(map[string]interface{})
 	if fileData, err := os.ReadFile(path); err == nil {
+		fileData = utils.StripUTF8BOM(fileData)
 		if err := json.Unmarshal(fileData, &existing); err != nil {
 			return fmt.Errorf("failed to parse existing data: %w", err)
 		}
@@ -1293,6 +1631,9 @@ func saveJSON(path string, data interface{}) error {
 func runCraftImprove(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
+	if craftAgentApplyFlag && !craftAgentSDKFlag {
+		return fmt.Errorf("--agent-apply requires --agent-sdk")
+	}
 
 	// Load project config
 	config, err := loadProjectConfig()
@@ -1347,6 +1688,26 @@ func runCraftImprove(cmd *cobra.Command, args []string) error {
 	}
 	if elemType != "all" && elemType != "characters" && elemType != "locations" && elemType != "items" && elemType != "organizations" {
 		return fmt.Errorf("unknown craft element type %q (expected all/characters/locations/items/organizations)", elemType)
+	}
+	if strings.TrimSpace(craftNameFlag) != "" {
+		var filterErr error
+		charModels, locModels, itemModels, orgModels, filterErr = filterCraftModelsByName(elemType, craftNameFlag, charModels, locModels, itemModels, orgModels)
+		if filterErr != nil {
+			return filterErr
+		}
+	}
+
+	if craftAgentSDKFlag {
+		sdkAgent := agents.NewCraftAgent(client, cfg, &config.LLM, setup, outline)
+		sdkAgent.SetLanguage(config.Language)
+		batchSize := craftBatchFlag
+		if batchSize <= 0 {
+			batchSize = 1
+		}
+		if maxRounds > 1 {
+			log.Warn("--agent-sdk craft improvement performs one patch/check pass per element batch; ignoring --max-rounds=%d", maxRounds)
+		}
+		return improveCraftAgentSDK(ctx, sdkAgent, elemType, charModels, locModels, itemModels, orgModels, batchSize, craftAgentApplyFlag)
 	}
 
 	// DSL simulation bridge for enrichment
@@ -1468,13 +1829,306 @@ func runCraftImprove(cmd *cobra.Command, args []string) error {
 				if saveErr := saveOrganizations(improved); saveErr != nil {
 					log.Error("Failed to save organizations: %v", saveErr)
 				} else {
-					log.Info("鉁?Improved organizations saved")
+					log.Info("[ok] Improved organizations saved")
 				}
 			}
 		}
 	}
 
 	return nil
+}
+
+func improveCraftAgentSDK(ctx context.Context, agent *agents.CraftAgent, elemType string, characters map[string]*models.Character, locations map[string]*models.Location, items map[string]*models.Item, organizations map[string]*models.Organization, batchSize int, agentApply bool) error {
+	var errs []error
+	if elemType == "all" || elemType == "characters" {
+		if err := improveCharactersAgentSDK(ctx, agent, sortedCraftMapKeys(characters), batchSize, agentApply); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if elemType == "all" || elemType == "locations" {
+		if err := improveLocationsAgentSDK(ctx, agent, sortedCraftMapKeys(locations), batchSize, agentApply); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if elemType == "all" || elemType == "items" {
+		if err := improveItemsAgentSDK(ctx, agent, sortedCraftMapKeys(items), batchSize, agentApply); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if elemType == "all" || elemType == "organizations" {
+		if err := improveOrganizationsAgentSDK(ctx, agent, sortedCraftMapKeys(organizations), batchSize, agentApply); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func filterCraftModelsByName(elemType, name string, characters map[string]*models.Character, locations map[string]*models.Location, items map[string]*models.Item, organizations map[string]*models.Organization) (map[string]*models.Character, map[string]*models.Location, map[string]*models.Item, map[string]*models.Organization, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return characters, locations, items, organizations, nil
+	}
+	filteredChars := map[string]*models.Character{}
+	filteredLocs := map[string]*models.Location{}
+	filteredItems := map[string]*models.Item{}
+	filteredOrgs := map[string]*models.Organization{}
+	if elemType == "all" || elemType == "characters" {
+		filteredChars = filterCraftMapByName(characters, name, func(v *models.Character) string {
+			if v == nil {
+				return ""
+			}
+			return v.Name
+		})
+	}
+	if elemType == "all" || elemType == "locations" {
+		filteredLocs = filterCraftMapByName(locations, name, func(v *models.Location) string {
+			if v == nil {
+				return ""
+			}
+			return v.Name
+		})
+	}
+	if elemType == "all" || elemType == "items" {
+		filteredItems = filterCraftMapByName(items, name, func(v *models.Item) string {
+			if v == nil {
+				return ""
+			}
+			return v.Name
+		})
+	}
+	if elemType == "all" || elemType == "organizations" {
+		filteredOrgs = filterCraftMapByName(organizations, name, func(v *models.Organization) string {
+			if v == nil {
+				return ""
+			}
+			return v.Name
+		})
+	}
+	if len(filteredChars)+len(filteredLocs)+len(filteredItems)+len(filteredOrgs) == 0 {
+		if elemType == "all" {
+			return nil, nil, nil, nil, fmt.Errorf("craft object %q not found", name)
+		}
+		return nil, nil, nil, nil, fmt.Errorf("craft object %q not found in %s", name, elemType)
+	}
+	return filteredChars, filteredLocs, filteredItems, filteredOrgs, nil
+}
+
+func filterCraftMapByName[T any](values map[string]*T, name string, objectName func(*T) string) map[string]*T {
+	result := map[string]*T{}
+	for key, value := range values {
+		if strings.EqualFold(strings.TrimSpace(key), name) || strings.EqualFold(strings.TrimSpace(objectName(value)), name) {
+			result[key] = value
+		}
+	}
+	return result
+}
+
+func improveCharactersAgentSDK(ctx context.Context, agent *agents.CraftAgent, names []string, batchSize int, agentApply bool) error {
+	if len(names) == 0 {
+		logger.GetLogger().Info("No characters to improve")
+		return nil
+	}
+	log := logger.GetLogger()
+	log.Info("Improving %d characters with Agent SDK, batch size %d", len(names), batchSize)
+	results := make(map[string]models.Character)
+	var errs []error
+	for _, batch := range craftNameBatches(names, batchSize) {
+		log.Info("[Agent SDK] Improving characters batch: %v", batch)
+		batchResults, err := agent.GenerateCharactersWithAgentSDK(ctx, batch, craftAgentSDKImprovePrompt("character"), agentApply)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("characters batch %v: %w", batch, err))
+			continue
+		}
+		for name, character := range batchResults {
+			results[name] = character
+		}
+	}
+	if agentApply {
+		loaded, _, _, _, err := loadAllElements()
+		if err != nil {
+			errs = append(errs, fmt.Errorf("reload agent-applied characters: %w", err))
+		} else {
+			results = collectRequestedCharacters(names, loaded)
+		}
+	}
+	for _, name := range missingGeneratedNames(names, results) {
+		errs = append(errs, fmt.Errorf("character %q was not returned by Agent SDK", name))
+	}
+	if len(results) > 0 && !agentApply {
+		if err := saveCharacters(results); err != nil {
+			errs = append(errs, fmt.Errorf("save characters: %w", err))
+		} else {
+			log.Info("Saved %d Agent SDK improved characters", len(results))
+		}
+	} else if len(results) > 0 {
+		log.Info("Verified %d Agent SDK applied characters", len(results))
+	}
+	return errors.Join(errs...)
+}
+
+func improveLocationsAgentSDK(ctx context.Context, agent *agents.CraftAgent, names []string, batchSize int, agentApply bool) error {
+	if len(names) == 0 {
+		logger.GetLogger().Info("No locations to improve")
+		return nil
+	}
+	log := logger.GetLogger()
+	log.Info("Improving %d locations with Agent SDK, batch size %d", len(names), batchSize)
+	results := make(map[string]models.Location)
+	var errs []error
+	for _, batch := range craftNameBatches(names, batchSize) {
+		log.Info("[Agent SDK] Improving locations batch: %v", batch)
+		batchResults, err := agent.GenerateLocationsWithAgentSDK(ctx, batch, craftAgentSDKImprovePrompt("location"), agentApply)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("locations batch %v: %w", batch, err))
+			continue
+		}
+		for name, location := range batchResults {
+			results[name] = location
+		}
+	}
+	if agentApply {
+		_, loaded, _, _, err := loadAllElements()
+		if err != nil {
+			errs = append(errs, fmt.Errorf("reload agent-applied locations: %w", err))
+		} else {
+			results = collectRequestedCraftValues(names, loaded, func(v *models.Location) string { return v.Name })
+		}
+	}
+	for _, name := range missingGeneratedNames(names, results) {
+		errs = append(errs, fmt.Errorf("location %q was not returned by Agent SDK", name))
+	}
+	if len(results) > 0 && !agentApply {
+		if err := saveLocations(results); err != nil {
+			errs = append(errs, fmt.Errorf("save locations: %w", err))
+		} else {
+			log.Info("Saved %d Agent SDK improved locations", len(results))
+		}
+	} else if len(results) > 0 {
+		log.Info("Verified %d Agent SDK applied locations", len(results))
+	}
+	return errors.Join(errs...)
+}
+
+func improveItemsAgentSDK(ctx context.Context, agent *agents.CraftAgent, names []string, batchSize int, agentApply bool) error {
+	if len(names) == 0 {
+		logger.GetLogger().Info("No items to improve")
+		return nil
+	}
+	log := logger.GetLogger()
+	log.Info("Improving %d items with Agent SDK, batch size %d", len(names), batchSize)
+	results := make(map[string]models.Item)
+	var errs []error
+	for _, batch := range craftNameBatches(names, batchSize) {
+		log.Info("[Agent SDK] Improving items batch: %v", batch)
+		batchResults, err := agent.GenerateItemsWithAgentSDK(ctx, batch, craftAgentSDKImprovePrompt("item"), agentApply)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("items batch %v: %w", batch, err))
+			continue
+		}
+		for name, item := range batchResults {
+			results[name] = item
+		}
+	}
+	if agentApply {
+		_, _, loaded, _, err := loadAllElements()
+		if err != nil {
+			errs = append(errs, fmt.Errorf("reload agent-applied items: %w", err))
+		} else {
+			results = collectRequestedCraftValues(names, loaded, func(v *models.Item) string { return v.Name })
+		}
+	}
+	for _, name := range missingGeneratedNames(names, results) {
+		errs = append(errs, fmt.Errorf("item %q was not returned by Agent SDK", name))
+	}
+	if len(results) > 0 && !agentApply {
+		if err := saveItems(results); err != nil {
+			errs = append(errs, fmt.Errorf("save items: %w", err))
+		} else {
+			log.Info("Saved %d Agent SDK improved items", len(results))
+		}
+	} else if len(results) > 0 {
+		log.Info("Verified %d Agent SDK applied items", len(results))
+	}
+	return errors.Join(errs...)
+}
+
+func improveOrganizationsAgentSDK(ctx context.Context, agent *agents.CraftAgent, names []string, batchSize int, agentApply bool) error {
+	if len(names) == 0 {
+		logger.GetLogger().Info("No organizations to improve")
+		return nil
+	}
+	log := logger.GetLogger()
+	log.Info("Improving %d organizations with Agent SDK, batch size %d", len(names), batchSize)
+	results := make(map[string]models.Organization)
+	var errs []error
+	for _, batch := range craftNameBatches(names, batchSize) {
+		log.Info("[Agent SDK] Improving organizations batch: %v", batch)
+		batchResults, err := agent.GenerateOrganizationsWithAgentSDK(ctx, batch, craftAgentSDKImprovePrompt("organization"), agentApply)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("organizations batch %v: %w", batch, err))
+			continue
+		}
+		for name, organization := range batchResults {
+			results[name] = organization
+		}
+	}
+	if agentApply {
+		_, _, _, loaded, err := loadAllElements()
+		if err != nil {
+			errs = append(errs, fmt.Errorf("reload agent-applied organizations: %w", err))
+		} else {
+			results = collectRequestedCraftValues(names, loaded, func(v *models.Organization) string { return v.Name })
+		}
+	}
+	for _, name := range missingGeneratedNames(names, results) {
+		errs = append(errs, fmt.Errorf("organization %q was not returned by Agent SDK", name))
+	}
+	if len(results) > 0 && !agentApply {
+		if err := saveOrganizations(results); err != nil {
+			errs = append(errs, fmt.Errorf("save organizations: %w", err))
+		} else {
+			log.Info("Saved %d Agent SDK improved organizations", len(results))
+		}
+	} else if len(results) > 0 {
+		log.Info("Verified %d Agent SDK applied organizations", len(results))
+	}
+	return errors.Join(errs...)
+}
+
+func craftNameBatches(names []string, batchSize int) [][]string {
+	if batchSize <= 0 {
+		batchSize = 1
+	}
+	var batches [][]string
+	for i := 0; i < len(names); i += batchSize {
+		end := i + batchSize
+		if end > len(names) {
+			end = len(names)
+		}
+		batches = append(batches, names[i:end])
+	}
+	return batches
+}
+
+func sortedCraftMapKeys[T any](values map[string]*T) []string {
+	keys := make([]string, 0, len(values))
+	for key, value := range values {
+		if value == nil || strings.TrimSpace(key) == "" {
+			continue
+		}
+		keys = append(keys, strings.TrimSpace(key))
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func craftAgentSDKImprovePrompt(target string) string {
+	target = strings.TrimSpace(target)
+	prompt := fmt.Sprintf("Improve existing %s craft in place. Query current craft first, preserve grounded facts, fill missing important fields, fix schema or consistency issues, and keep changes minimal.", target)
+	if strings.TrimSpace(craftPromptFlag) != "" {
+		prompt += " User guidance: " + strings.TrimSpace(craftPromptFlag)
+	}
+	return prompt
 }
 
 // enrichReviewWithDSL runs DSL simulation and merges issues into the review result.
@@ -1576,6 +2230,7 @@ func loadAllElements() (map[string]*models.Character, map[string]*models.Locatio
 	// Load characters
 	charPath := filepath.Join(root, "story", "craft", "characters.json")
 	if data, err := os.ReadFile(charPath); err == nil {
+		data = utils.StripUTF8BOM(data)
 		if err := json.Unmarshal(data, &characters); err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("failed to parse characters: %w", err)
 		}
@@ -1584,6 +2239,7 @@ func loadAllElements() (map[string]*models.Character, map[string]*models.Locatio
 	// Load locations
 	locPath := filepath.Join(root, "story", "craft", "locations.json")
 	if data, err := os.ReadFile(locPath); err == nil {
+		data = utils.StripUTF8BOM(data)
 		if err := json.Unmarshal(data, &locations); err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("failed to parse locations: %w", err)
 		}
@@ -1592,6 +2248,7 @@ func loadAllElements() (map[string]*models.Character, map[string]*models.Locatio
 	// Load items
 	itemPath := filepath.Join(root, "story", "craft", "items.json")
 	if data, err := os.ReadFile(itemPath); err == nil {
+		data = utils.StripUTF8BOM(data)
 		if err := json.Unmarshal(data, &items); err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("failed to parse items: %w", err)
 		}
@@ -1599,6 +2256,7 @@ func loadAllElements() (map[string]*models.Character, map[string]*models.Locatio
 
 	orgPath := filepath.Join(root, "story", "craft", "organizations.json")
 	if data, err := os.ReadFile(orgPath); err == nil {
+		data = utils.StripUTF8BOM(data)
 		if err := json.Unmarshal(data, &organizations); err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("failed to parse organizations: %w", err)
 		}

@@ -74,8 +74,8 @@ type ProjectLLM struct {
 // DefaultProjectLLM returns default project LLM selection
 func DefaultProjectLLM() ProjectLLM {
 	return ProjectLLM{
-		Provider: "ollama",
-		Model:    "qwen3.5:4b",
+		Provider: "claude",
+		Model:    "sonnet",
 	}
 }
 

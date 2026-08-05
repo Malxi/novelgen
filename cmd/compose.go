@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -29,6 +30,8 @@ var (
 	composeConcurrencyFlag     int
 	composeHierarchicalFlag    bool
 	composeOneShotFlag         bool
+	composeAgentSDKFlag        bool
+	composeAgentApplyFlag      bool
 	composeForceImproveFlag    bool
 	composeForceGenFlag        bool
 	composeCheckJSONFlag       bool
@@ -47,7 +50,7 @@ var (
 var composeCmd = &cobra.Command{
 	Use:   "compose",
 	Short: "Generate story outline",
-	Long: `Generate a story outline with a rigid 3-level structure (parts → volumes → chapters).
+	Long: `Generate a story outline with a rigid 3-level structure (parts -> volumes -> chapters).
 
 The outline includes detailed information for each chapter:
   - Summary: What happens in this chapter
@@ -197,12 +200,15 @@ func init() {
 
 	composeGenCmd.Flags().BoolVar(&composeHierarchicalFlag, "hierarchical", false, "Use hierarchical generation (better quality, slower)")
 	composeGenCmd.Flags().BoolVar(&composeOneShotFlag, "one-shot", false, "Try one-shot generation first (falls back to hierarchical on failure)")
+	composeGenCmd.Flags().BoolVar(&composeAgentSDKFlag, "agent-sdk", false, "Use Claude Agent SDK workflow with read-only project query tools")
 	composeGenCmd.Flags().BoolVar(&composeForceGenFlag, "force", false, "Force regeneration even if outline exists (old outline will be backed up)")
 	composeRegenCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Suggestions for regeneration")
 	composeImproveCmd.Flags().IntVar(&composeMaxRoundsFlag, "max-rounds", 1, "Maximum number of improvement rounds")
 	composeImproveCmd.Flags().IntVar(&composeConcurrencyFlag, "concurrency", 3, "Maximum number of concurrent regeneration tasks")
 	composeImproveCmd.Flags().BoolVar(&composeHierarchicalFlag, "hierarchical", false, "Use hierarchical improvement (better quality, slower)")
 	composeImproveCmd.Flags().BoolVar(&composeOneShotFlag, "one-shot", false, "Try one-shot improvement first (falls back to hierarchical on failure)")
+	composeImproveCmd.Flags().BoolVar(&composeAgentSDKFlag, "agent-sdk", false, "Use Claude Agent SDK workflow with read-only project query tools")
+	composeImproveCmd.Flags().BoolVar(&composeAgentApplyFlag, "agent-apply", false, "With --agent-sdk, let the agent write outline patches through validated patch tools")
 	composeImproveCmd.Flags().BoolVar(&composeForceImproveFlag, "force", false, "Force improvement based on suggestions even if score meets threshold")
 	composeImproveCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional user suggestions for improvement")
 	composeImproveCmd.Flags().IntVar(&composeImproveVolume, "volume", 0, "Improve one 1-based global volume index")
@@ -219,6 +225,8 @@ func init() {
 	composePipelineCmd.Flags().BoolVar(&composePipelineSkipGen, "skip-gen", false, "Skip volume chapter generation")
 	composePipelineCmd.Flags().BoolVar(&composePipelineSkipImprove, "skip-improve", false, "Skip per-volume improvement")
 	composePipelineCmd.Flags().BoolVar(&composePipelineSkipCross, "skip-cross", false, "Skip deterministic setup/outline cross patch")
+	composePipelineCmd.Flags().BoolVar(&composeAgentSDKFlag, "agent-sdk", false, "Use Claude Agent SDK workflow with read-only project query tools")
+	composePipelineCmd.Flags().BoolVar(&composeAgentApplyFlag, "agent-apply", false, "With --agent-sdk, let the agent write outline patches through validated patch tools during improve")
 
 	// Register compose command using the new plugin mechanism
 	RegisterCommand(func() *cobra.Command {
@@ -226,10 +234,27 @@ func init() {
 	})
 }
 
+func validateComposeAgentSDKOption(agentSDK, oneShot bool) error {
+	if agentSDK && oneShot {
+		return fmt.Errorf("--agent-sdk cannot be used with --one-shot")
+	}
+	return nil
+}
+
+func validateComposeAgentApplyOption(agentSDK, agentApply bool) error {
+	if agentApply && !agentSDK {
+		return fmt.Errorf("--agent-apply requires --agent-sdk")
+	}
+	return nil
+}
+
 func runComposeGen(cmd *cobra.Command, args []string) error {
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN COMPOSE GEN")
+	if err := validateComposeAgentSDKOption(composeAgentSDKFlag, composeOneShotFlag); err != nil {
+		return err
+	}
 
 	// Check if we're in a novel project
 	if _, err := os.Stat("novel.json"); err != nil {
@@ -304,13 +329,19 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 	if composeHierarchicalFlag && composeOneShotFlag {
 		return fmt.Errorf("--hierarchical and --one-shot cannot be used together")
 	}
+	if err := validateComposeAgentSDKOption(composeAgentSDKFlag, composeOneShotFlag); err != nil {
+		return err
+	}
 
 	// AI generation mode. Default to hierarchical generation because it saves
 	// progress per volume and avoids asking the model to emit one huge outline.
 	var outline *models.Outline
 	useHierarchical := !composeOneShotFlag || composeHierarchicalFlag
 
-	if useHierarchical {
+	if composeAgentSDKFlag {
+		logger.Info("Using Claude Agent SDK hierarchical generation mode")
+		outline, err = generateOutlineHierarchicalAgentSDK(setup, projectConfig)
+	} else if useHierarchical {
 		logger.Info("Using hierarchical generation mode (better quality)")
 		outline, err = generateOutlineHierarchical(setup, projectConfig)
 	} else {
@@ -325,7 +356,12 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate outline with AI: %w", err)
 	}
 
-	outline, gate, err := repairOutlineWithQualityGate(cmd.Context(), outline, setup, projectConfig, "generation")
+	var gate qualityGateResult
+	if composeAgentSDKFlag {
+		outline, gate, err = repairOutlineWithQualityGateAgentSDK(cmd.Context(), outline, setup, projectConfig, "generation", false, false, "")
+	} else {
+		outline, gate, err = repairOutlineWithQualityGate(cmd.Context(), outline, setup, projectConfig, "generation", false)
+	}
 	if err != nil {
 		return err
 	}
@@ -343,7 +379,7 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Print summary
-	fmt.Printf("\n✓ Story outline saved to %s\n", outlinePath)
+	fmt.Printf("\n[ok] Story outline saved to %s\n", outlinePath)
 	fmt.Printf("\n📊 Story Structure: %d parts × %d volumes × %d chapters = %d total chapters\n",
 		projectConfig.Structure.TargetParts,
 		projectConfig.Structure.TargetVolumes,
@@ -413,7 +449,7 @@ func runComposeRegen(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
-	fmt.Printf("\n✓ Outline regenerated and saved to %s\n", outlinePath)
+	fmt.Printf("\n[ok] Outline regenerated and saved to %s\n", outlinePath)
 	fmt.Println("\nNext steps:")
 	fmt.Println("  - Edit story/compose/outline.json to refine your outline")
 	fmt.Println("  - Run 'novelgen craft' to create world elements")
@@ -425,6 +461,9 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN COMPOSE IMPROVE")
+	if err := validateComposeAgentSDKOption(composeAgentSDKFlag, composeOneShotFlag); err != nil {
+		return err
+	}
 
 	// Check if we're in a novel project
 	if _, err := os.Stat("novel.json"); err != nil {
@@ -459,12 +498,19 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load existing outline: %w", err)
 	}
 	logger.Info("Loaded existing outline for improvement")
+	originalOutline := cloneOutline(outline)
 	if countGeneratedVolumes(outline) == 0 {
 		return fmt.Errorf("outline has no generated volumes to improve; run 'novelgen compose gen' first")
 	}
 
 	if composeHierarchicalFlag && composeOneShotFlag {
 		return fmt.Errorf("--hierarchical and --one-shot cannot be used together")
+	}
+	if err := validateComposeAgentSDKOption(composeAgentSDKFlag, composeOneShotFlag); err != nil {
+		return err
+	}
+	if err := validateComposeAgentApplyOption(composeAgentSDKFlag, composeAgentApplyFlag); err != nil {
+		return err
 	}
 
 	// Default to hierarchical partial improvement for stability. --one-shot is
@@ -473,7 +519,8 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	useHierarchical := !composeOneShotFlag || composeHierarchicalFlag
 
 	improveOutline := outline
-	if composeImproveVolume > 0 || composeImproveFromVol > 0 || composeImproveToVol > 0 {
+	selectedImprove := composeImproveVolume > 0 || composeImproveFromVol > 0 || composeImproveToVol > 0
+	if selectedImprove {
 		improveOutline, err = outlineWithImproveVolumeSelection(outline, composeImproveVolume, composeImproveFromVol, composeImproveToVol)
 		if err != nil {
 			return err
@@ -485,28 +532,54 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	}
 
 	// Run improvement
-	if err := iterateOutlineImprovement(improveOutline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, useHierarchical, composeForceImproveFlag, composePromptFlag); err != nil {
+	if composeAgentSDKFlag {
+		agentSDKForceImprove := composeForceImproveFlag || selectedImprove
+		err = iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, composeMaxRoundsFlag, agentSDKForceImprove, composePromptFlag, composeAgentApplyFlag, improveOutline != outline)
+	} else {
+		err = iterateOutlineImprovement(improveOutline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, useHierarchical, composeForceImproveFlag, composePromptFlag)
+	}
+	if err != nil {
 		logger.Error("Improvement failed: %v", err)
 		return fmt.Errorf("improvement failed: %w", err)
 	}
 	var gate qualityGateResult
 	if improveOutline != outline {
-		improveOutline, gate, err = repairOutlineWithQualityGate(cmd.Context(), improveOutline, setup, projectConfig, "improvement")
+		if composeAgentSDKFlag {
+			improveOutline, gate, err = repairOutlineWithQualityGateAgentSDK(cmd.Context(), improveOutline, setup, projectConfig, "improvement", composeAgentApplyFlag, true, composePromptFlag)
+		} else {
+			improveOutline, gate, err = repairOutlineWithQualityGate(cmd.Context(), improveOutline, setup, projectConfig, "improvement", true)
+		}
 		if err != nil {
 			return err
 		}
 		logQualityGateResult("outline", gate)
 		mergeGeneratedVolumes(outline, improveOutline)
 	} else {
-		outline, gate, err = repairOutlineWithQualityGate(cmd.Context(), outline, setup, projectConfig, "improvement")
+		if composeAgentSDKFlag {
+			outline, gate, err = repairOutlineWithQualityGateAgentSDK(cmd.Context(), outline, setup, projectConfig, "improvement", composeAgentApplyFlag, false, composePromptFlag)
+		} else {
+			outline, gate, err = repairOutlineWithQualityGate(cmd.Context(), outline, setup, projectConfig, "improvement", false)
+		}
 		if err != nil {
 			return err
 		}
 		logQualityGateResult("outline", gate)
 	}
 
-	// Save improved outline
-	if err := outline.Save(outlinePath); err != nil {
+	// Save improved outline. In Agent SDK selected-volume mode the agent returns
+	// a bounded patch; avoid whole-outline normalization here so unselected
+	// volumes are not rewritten as a side effect of saving.
+	if composeAgentSDKFlag && selectedImprove && outlinesSemanticallyEqual(originalOutline, outline) {
+		logger.Info("Agent SDK selected-volume improve made no effective outline changes; skipping outline.json and outline.md rewrite")
+		fmt.Printf("\n[ok] Outline checked; no effective changes were applied to %s\n", outlinePath)
+		return nil
+	}
+	if composeAgentSDKFlag && selectedImprove {
+		err = savePartialOutline(outline, outlinePath)
+	} else {
+		err = outline.Save(outlinePath)
+	}
+	if err != nil {
 		return fmt.Errorf("failed to save improved outline: %w", err)
 	}
 
@@ -516,7 +589,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
-	fmt.Printf("\n✓ Outline improved and saved to %s\n", outlinePath)
+	fmt.Printf("\n[ok] Outline improved and saved to %s\n", outlinePath)
 	fmt.Println("\nNext steps:")
 	fmt.Println("  - Edit story/compose/outline.json to refine your outline")
 	fmt.Println("  - Run 'novelgen craft' to create world elements")
@@ -554,7 +627,7 @@ func runComposeSkeletonReview(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	printReviewResult("Outline skeleton review", review.Result)
-	fmt.Printf("✓ Skeleton review saved to %s\n", reportPath)
+	fmt.Printf("[ok] Skeleton review saved to %s\n", reportPath)
 	return nil
 }
 
@@ -601,11 +674,11 @@ func runComposeSkeletonImprove(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		printReviewResult("Outline skeleton improve review", *review)
-		fmt.Printf("✓ Skeleton improve review saved to %s\n", reportPath)
+		fmt.Printf("[ok] Skeleton improve review saved to %s\n", reportPath)
 	}
 
-	fmt.Printf("✓ Skeleton outline improved and saved to %s\n", outlinePath)
-	fmt.Printf("✓ Markdown updated at %s\n", mdPath)
+	fmt.Printf("[ok] Skeleton outline improved and saved to %s\n", outlinePath)
+	fmt.Printf("[ok] Markdown updated at %s\n", mdPath)
 	return nil
 }
 
@@ -666,16 +739,16 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 			countGeneratedVolumes(&modelOutline), countEmptyVolumes(&modelOutline))
 	}
 	if result.IsValid {
-		fmt.Println("✓ Outline passed validation")
+		fmt.Println("[ok] Outline passed validation")
 	} else {
-		fmt.Printf("✗ Issues: %d | Warnings: %d | Suggestions: %d\n\n",
+		fmt.Printf("[fail] Issues: %d | Warnings: %d | Suggestions: %d\n\n",
 			result.IssueCount, result.WarningCount, len(result.Suggestions))
 	}
 
 	for _, issue := range result.Issues {
-		icon := "✗"
+		icon := "[fail]"
 		if issue.Severity == "critical" {
-			icon = "⛔"
+			icon = "[critical]"
 		}
 		fmt.Printf("  %s [%s/%s] %s: %s\n", icon, issue.Type, issue.Severity, issue.Location, issue.Description)
 		if issue.Fix != "" {
@@ -689,7 +762,7 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 	for _, w := range result.Warnings {
 		fmt.Printf("  ⚠ [%s] %s: %s\n", w.Type, w.Location, w.Description)
 		if w.Suggestion != "" {
-			fmt.Printf("     → %s\n", w.Suggestion)
+			fmt.Printf("     -> %s\n", w.Suggestion)
 		}
 	}
 
@@ -699,7 +772,7 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 	for _, s := range result.Suggestions {
 		fmt.Printf("  💡 [%s] %s\n", s.Type, s.Location)
 		fmt.Printf("     Current: %s\n", s.Current)
-		fmt.Printf("     → %s\n", s.Suggested)
+		fmt.Printf("     -> %s\n", s.Suggested)
 	}
 
 	fmt.Printf("\n%s\n", result.Summary)
@@ -739,7 +812,7 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 						})
 					}
 					if saveErr := setup.Save(setupPath); saveErr == nil {
-						fmt.Printf("\n  ✓ Auto-patched setup: added %d missing resources\n", len(missingResources))
+						fmt.Printf("\n  [ok] Auto-patched setup: added %d missing resources\n", len(missingResources))
 					}
 				}
 
@@ -748,7 +821,7 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 					fmt.Printf("  ⚠ [cross] %s\n", w)
 				}
 				for _, i := range crossIssues {
-					fmt.Printf("  ✗ [cross] %s\n", i)
+					fmt.Printf("  [fail] [cross] %s\n", i)
 				}
 			}
 		}
@@ -768,7 +841,7 @@ func runComposeNormalize(cmd *cobra.Command, args []string) error {
 
 	report := models.NormalizeOutline(outline)
 	if !report.Changed() {
-		fmt.Println("✓ Outline already normalized")
+		fmt.Println("[ok] Outline already normalized")
 		return nil
 	}
 
@@ -798,15 +871,22 @@ func runComposeNormalize(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to write normalization report: %w", err)
 	}
 
-	fmt.Printf("✓ Applied %d deterministic outline cleanup(s)\n", len(report.Changes))
-	fmt.Printf("✓ Updated %s and %s\n", outlinePath, mdPath)
-	fmt.Printf("✓ Report saved to %s\n", reportPath)
+	fmt.Printf("[ok] Applied %d deterministic outline cleanup(s)\n", len(report.Changes))
+	fmt.Printf("[ok] Updated %s and %s\n", outlinePath, mdPath)
+	fmt.Printf("[ok] Report saved to %s\n", reportPath)
 	return nil
 }
 
 func runComposePipeline(cmd *cobra.Command, args []string) error {
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN COMPOSE PIPELINE")
+
+	if err := validateComposeAgentSDKOption(composeAgentSDKFlag, false); err != nil {
+		return err
+	}
+	if err := validateComposeAgentApplyOption(composeAgentSDKFlag, composeAgentApplyFlag); err != nil {
+		return err
+	}
 
 	if _, err := os.Stat("novel.json"); err != nil {
 		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first")
@@ -851,7 +931,7 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 
 	ctx := context.Background()
 	outlinePath := filepath.Join("story", "compose", "outline.json")
-	outline, err := ensureComposePipelineSkeleton(ctx, agent, setup, projectConfig, outlinePath)
+	outline, err := ensureComposePipelineSkeleton(ctx, agent, setup, projectConfig, outlinePath, composeAgentSDKFlag)
 	if err != nil {
 		return err
 	}
@@ -872,7 +952,12 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 			if len(volume.Chapters) > 0 && !composePipelineForce {
 				fmt.Printf("Generation skipped: volume already has %d chapter(s)\n", len(volume.Chapters))
 			} else {
-				if err := generateComposePipelineVolume(ctx, agent, setup, projectConfig, outline, partIdx, volIdx, globalVolume, totalVolumes); err != nil {
+				if composeAgentSDKFlag {
+					err = generateComposePipelineVolumeAgentSDK(ctx, agent, setup, projectConfig, outline, partIdx, volIdx, globalVolume, totalVolumes)
+				} else {
+					err = generateComposePipelineVolume(ctx, agent, setup, projectConfig, outline, partIdx, volIdx, globalVolume, totalVolumes)
+				}
+				if err != nil {
 					return err
 				}
 				if err := saveComposePipelineOutline(outline, outlinePath); err != nil {
@@ -890,7 +975,12 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			if err := iterateOutlineImprovement(improveOutline, setup, projectConfig, composePipelineMaxRounds, 1, true, composePipelineForce, composePromptFlag); err != nil {
+			if composeAgentSDKFlag {
+				err = iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, composePipelineMaxRounds, composePipelineForce, composePromptFlag, composeAgentApplyFlag, true)
+			} else {
+				err = iterateOutlineImprovement(improveOutline, setup, projectConfig, composePipelineMaxRounds, 1, true, composePipelineForce, composePromptFlag)
+			}
+			if err != nil {
 				return fmt.Errorf("failed to improve volume %d: %w", globalVolume, err)
 			}
 			mergeGeneratedVolumes(outline, improveOutline)
@@ -920,7 +1010,7 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func ensureComposePipelineSkeleton(ctx context.Context, agent *agents.ComposeAgent, setup *models.StorySetup, projectConfig *models.ProjectConfig, outlinePath string) (*models.Outline, error) {
+func ensureComposePipelineSkeleton(ctx context.Context, agent *agents.ComposeAgent, setup *models.StorySetup, projectConfig *models.ProjectConfig, outlinePath string, useAgentSDK bool) (*models.Outline, error) {
 	if _, err := os.Stat(outlinePath); err == nil {
 		outline, err := models.LoadOutline(outlinePath)
 		if err != nil {
@@ -941,10 +1031,17 @@ func ensureComposePipelineSkeleton(ctx context.Context, agent *agents.ComposeAge
 	}
 
 	fmt.Println("No outline.json found; generating compose skeleton")
-	skeletonOutput, err := agent.GenerateSkeleton(ctx, agents.ComposeSkeletonInput{
+	skeletonInput := agents.ComposeSkeletonInput{
 		Setup:     *setup,
 		Structure: projectConfig.Structure,
-	})
+	}
+	var skeletonOutput agents.ComposeSkeletonOutput
+	var err error
+	if useAgentSDK {
+		skeletonOutput, err = agent.GenerateSkeletonWithAgentSDK(ctx, skeletonInput)
+	} else {
+		skeletonOutput, err = agent.GenerateSkeleton(ctx, skeletonInput)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate skeleton: %w", err)
 	}
@@ -991,6 +1088,46 @@ func generateComposePipelineVolume(ctx context.Context, agent *agents.ComposeAge
 	volume.Chapters = output.Chapters
 	logic.NewIDManager(outline).AssignIDsToOutline()
 	applyOutlineNormalization(outline, fmt.Sprintf("pipeline_gen_v%02d", globalVolume))
+	return nil
+}
+
+func generateComposePipelineVolumeAgentSDK(ctx context.Context, agent *agents.ComposeAgent, setup *models.StorySetup, projectConfig *models.ProjectConfig, outline *models.Outline, partIdx, volIdx, globalVolume, totalVolumes int) error {
+	if outline == nil || setup == nil || projectConfig == nil {
+		return fmt.Errorf("pipeline generation requires setup, project config, and outline")
+	}
+	volume := &outline.Parts[partIdx].Volumes[volIdx]
+	var outlineContext string
+	if partIdx > 0 || volIdx > 0 {
+		outlineContext = agent.BuildHierarchicalContext(outline, partIdx, volIdx)
+	}
+
+	var previousVolume *models.Volume
+	if volIdx > 0 {
+		previousVolume = &outline.Parts[partIdx].Volumes[volIdx-1]
+	} else if partIdx > 0 {
+		prevPart := outline.Parts[partIdx-1]
+		if len(prevPart.Volumes) > 0 {
+			previousVolume = &prevPart.Volumes[len(prevPart.Volumes)-1]
+		}
+	}
+
+	output, err := agent.GenerateChaptersForVolumeWithAgentSDK(ctx, agents.ComposeChaptersInput{
+		Setup:          *setup,
+		Part:           outline.Parts[partIdx],
+		Volume:         *volume,
+		VolumeIndex:    globalVolume,
+		TotalVolumes:   totalVolumes,
+		ChaptersPerVol: projectConfig.Structure.TargetChapters,
+		PreviousVolume: previousVolume,
+		OutlineContext: outlineContext,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to generate chapters for volume %d: %w", globalVolume, err)
+	}
+
+	outline.Parts[partIdx].Volumes[volIdx] = output.Volume
+	logic.NewIDManager(outline).AssignIDsToOutline()
+	applyOutlineNormalization(outline, fmt.Sprintf("pipeline_agent_sdk_gen_v%02d", globalVolume))
 	return nil
 }
 
@@ -1094,12 +1231,9 @@ func missingSetupResources(setup *models.StorySetup, outline *rpg.StoryOutline) 
 
 func validateSetupOutlineCross(setup *models.StorySetup, outline *rpg.StoryOutline) (issues, warnings []string) {
 	// Collect defined faction tiers from setup premises
-	setupFactions := make(map[string]map[string]bool) // faction → tier → true
+	setupFactions := make(map[string]map[string]bool) // faction -> tier -> true
 	for _, p := range setup.Premises {
-		if p.Category == "" {
-			continue
-		}
-		for _, faction := range setupFactionAliases(p.Category) {
+		for _, faction := range setupPremiseFactionAliases(p) {
 			if setupFactions[faction] == nil {
 				setupFactions[faction] = make(map[string]bool)
 			}
@@ -1214,9 +1348,9 @@ func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.Proje
 	return &output.Outline, nil
 }
 
-func repairOutlineWithQualityGate(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string) (*models.Outline, qualityGateResult, error) {
+func repairOutlineWithQualityGate(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string, scoped bool) (*models.Outline, qualityGateResult, error) {
 	applyOutlineNormalization(outline, "pre_gate_"+stage)
-	gate := runOutlineQualityGate(setup, outline)
+	gate := runOutlineQualityGateForScope(setup, outline, scoped)
 	if !gate.Blocking {
 		return outline, gate, nil
 	}
@@ -1242,8 +1376,108 @@ func repairOutlineWithQualityGate(ctx context.Context, outline *models.Outline, 
 		return outline, gate, fmt.Errorf("outline quality gate repair failed: %w", err)
 	}
 	applyOutlineNormalization(repaired, "post_gate_"+stage)
-	finalGate := runOutlineQualityGate(setup, repaired)
+	finalGate := runOutlineQualityGateForScope(setup, repaired, scoped)
 	return repaired, finalGate, nil
+}
+
+func repairOutlineWithQualityGateAgentSDK(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string, agentApply bool, scoped bool, userPrompt string) (*models.Outline, qualityGateResult, error) {
+	applyOutlineNormalization(outline, "pre_gate_"+stage)
+	gate := runOutlineQualityGateForScope(setup, outline, scoped)
+	repairGate := filterQualityGateForAgentSDKPromptBoundary(gate, outline, userPrompt, "quality-gate repair")
+	if !gate.Blocking {
+		if agentApply && outlineGateHasPatchableGlobalIssues(repairGate, outline) {
+			repairedOutline, repairedGate, err := repairOutlineGlobalIssuesAgentSDK(ctx, outline, setup, projectConfig, repairGate, stage)
+			if err != nil {
+				return outline, gate, err
+			}
+			return repairedOutline, repairedGate, nil
+		}
+		return outline, gate, nil
+	}
+	if outline == nil {
+		return nil, gate, fmt.Errorf("outline quality gate failed: outline is nil")
+	}
+
+	logger.Info("Outline quality gate found blocking issues after %s; running one Agent SDK repair pass", stage)
+	if !repairGate.Blocking {
+		logger.Info("Skipping Agent SDK blocking repair after %s: user prompt boundary excludes blocking issue(s)", stage)
+		return outline, gate, nil
+	}
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return outline, gate, fmt.Errorf("failed to load LLM config for outline repair: %w", err)
+	}
+	client := cfg.CreateClient(&projectConfig.LLM)
+	if client == nil {
+		return outline, gate, fmt.Errorf("failed to create LLM client for outline repair")
+	}
+
+	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
+	agent.SetLanguage(projectConfig.Language)
+	review := qualityGateReviewResult("Repair outline quality gate findings before saving project state.", repairGate)
+	repaired, err := agent.RepairByReviewAgentSDK(ctx, outline, review, setup, agentApply)
+	if err != nil {
+		return outline, gate, fmt.Errorf("outline quality gate Agent SDK repair failed: %w", err)
+	}
+	applyOutlineNormalization(repaired, "post_gate_"+stage)
+	finalGate := runOutlineQualityGateForScope(setup, repaired, scoped)
+	return repaired, finalGate, nil
+}
+
+func runOutlineQualityGateForScope(setup *models.StorySetup, outline *models.Outline, scoped bool) qualityGateResult {
+	if scoped {
+		return runScopedOutlineQualityGate(setup, outline)
+	}
+	return runOutlineQualityGate(setup, outline)
+}
+
+func outlineGateHasPatchableGlobalIssues(gate qualityGateResult, outline *models.Outline) bool {
+	mysteryThreads := collectOutlineMysteryThreads(outline)
+	for _, suggestion := range gate.Suggestions {
+		targetID := strings.TrimSpace(suggestion.TargetID)
+		if targetID != "" && !strings.EqualFold(targetID, "global") && normalizeKey(suggestion.Category) != "faction_tier" {
+			continue
+		}
+		nav := toolIssueNavigation("all", "outline", "all", "", suggestion, 0)
+		if stringMapValue(nav, "patch_query") != "" && nav["patch_shape"] != nil {
+			return true
+		}
+		if normalizeKey(suggestion.Category) == "mysteries" && firstPatchableOutlineMysteryThread(mysteryThreads) != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func repairOutlineGlobalIssuesAgentSDK(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, gate qualityGateResult, stage string) (*models.Outline, qualityGateResult, error) {
+	logger.Info("Outline quality gate found patchable global issues after %s; running one Agent SDK global repair pass", stage)
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return outline, gate, fmt.Errorf("failed to load LLM config for global outline repair: %w", err)
+	}
+	client := cfg.CreateClient(&projectConfig.LLM)
+	if client == nil {
+		return outline, gate, fmt.Errorf("failed to create LLM client for global outline repair")
+	}
+	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
+	agent.SetLanguage(projectConfig.Language)
+	review := qualityGateReviewResult("Repair patchable global outline quality findings before saving project state.", gate)
+	if _, err := agent.RepairGlobalIssuesWithAgentSDK(ctx, *review, true); err != nil {
+		return outline, gate, fmt.Errorf("global outline quality gate Agent SDK repair failed: %w", err)
+	}
+	reloadedSetup := setup
+	if loaded, loadErr := models.LoadStorySetup(filepath.Join("story", "setup", "story_setup.json")); loadErr == nil {
+		reloadedSetup = loaded
+	} else {
+		logger.Warn("Failed to reload story setup after global repair: %v", loadErr)
+	}
+	reloadedOutline := outline
+	if loaded, loadErr := models.LoadOutline(filepath.Join("story", "compose", "outline.json")); loadErr == nil {
+		reloadedOutline = loaded
+	} else {
+		logger.Warn("Failed to reload outline after global repair; using in-memory outline: %v", loadErr)
+	}
+	return reloadedOutline, runOutlineQualityGate(reloadedSetup, reloadedOutline), nil
 }
 
 // generateOutlineHierarchical generates outline using hierarchical approach
@@ -1283,7 +1517,7 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 			fmt.Println("   Starting fresh generation...")
 		} else {
 			resumeMode = true
-			fmt.Println("✓ Resumed from outline.json")
+			fmt.Println("[ok] Resumed from outline.json")
 			printProgressStatus(outline, projectConfig.Structure)
 		}
 	} else if _, err := os.Stat(legacyProgressPath); err == nil && !composeForceGenFlag {
@@ -1297,7 +1531,7 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 			if err := savePartialOutline(outline, outlinePath); err != nil {
 				return nil, fmt.Errorf("failed to migrate legacy progress to outline.json: %w", err)
 			}
-			fmt.Println("✓ Migrated legacy progress to outline.json")
+			fmt.Println("[ok] Migrated legacy progress to outline.json")
 			printProgressStatus(outline, projectConfig.Structure)
 		}
 	}
@@ -1362,7 +1596,7 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 		}
 
 		os.Remove(legacyProgressPath)
-		fmt.Println("\n✓ Generation complete! outline.json is the canonical state.")
+		fmt.Println("\n[ok] Generation complete! outline.json is the canonical state.")
 	} else {
 		// Resume generation - continue from where we left off
 		fmt.Println("Continuing chapter generation...")
@@ -1378,9 +1612,118 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 		}
 
 		os.Remove(legacyProgressPath)
-		fmt.Println("\n✓ Generation complete! outline.json is the canonical state.")
+		fmt.Println("\n[ok] Generation complete! outline.json is the canonical state.")
 	}
 
+	return outline, nil
+}
+
+func generateOutlineHierarchicalAgentSDK(setup *models.StorySetup, projectConfig *models.ProjectConfig) (*models.Outline, error) {
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load LLM config: %w", err)
+	}
+	provider, model := cfg.GetActiveModel(&projectConfig.LLM)
+	if provider == nil || model == nil {
+		return nil, fmt.Errorf("failed to get active LLM configuration")
+	}
+
+	fmt.Printf("Using provider: %s, model: %s at %s\n", provider.Name, model.Name, provider.BaseURL)
+	fmt.Printf("Story structure: %d parts x %d volumes x %d chapters = %d total chapters\n",
+		projectConfig.Structure.TargetParts,
+		projectConfig.Structure.TargetVolumes,
+		projectConfig.Structure.TargetChapters,
+		projectConfig.Structure.TotalChapters())
+	fmt.Println("Mode: Claude Agent SDK with read-only novelgen tool queries")
+	fmt.Println()
+
+	outlinePath := filepath.Join("story", "compose", "outline.json")
+	legacyProgressPath := filepath.Join("story", "compose", "outline_progress.json")
+
+	var outline *models.Outline
+	var resumeMode bool
+	if _, err := os.Stat(outlinePath); err == nil && !composeForceGenFlag {
+		fmt.Println("[resume] Found existing outline.json. Resuming empty-volume Agent SDK chapter generation...")
+		outline, err = loadPartialOutline(outlinePath)
+		if err != nil {
+			fmt.Printf("[warn] Failed to load outline: %v\n", err)
+			fmt.Println("   Starting fresh generation...")
+		} else {
+			resumeMode = true
+			fmt.Println("[ok] Resumed from outline.json")
+			printProgressStatus(outline, projectConfig.Structure)
+		}
+	} else if _, err := os.Stat(legacyProgressPath); err == nil && !composeForceGenFlag {
+		fmt.Println("[resume] Found legacy outline_progress.json. Migrating to outline.json and resuming...")
+		outline, err = loadPartialOutline(legacyProgressPath)
+		if err != nil {
+			fmt.Printf("[warn] Failed to load legacy progress: %v\n", err)
+			fmt.Println("   Starting fresh generation...")
+		} else {
+			resumeMode = true
+			if err := savePartialOutline(outline, outlinePath); err != nil {
+				return nil, fmt.Errorf("failed to migrate legacy progress to outline.json: %w", err)
+			}
+			fmt.Println("[ok] Migrated legacy progress to outline.json")
+			printProgressStatus(outline, projectConfig.Structure)
+		}
+	}
+
+	client := cfg.CreateClient(&projectConfig.LLM)
+	if client == nil {
+		return nil, fmt.Errorf("failed to create LLM client")
+	}
+	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
+	agent.SetLanguage(projectConfig.Language)
+	ctx := context.Background()
+
+	onVolumeComplete := func(o *models.Outline, partIdx, volIdx, volumeCount int) {
+		if err := savePartialOutline(o, outlinePath); err != nil {
+			logger.GetLogger().Warn("Failed to save outline progress: %v", err)
+		} else {
+			fmt.Printf("[save] outline.json saved (%d volumes completed)\n", volumeCount)
+		}
+		if err := createOutlineMarkdown(o, filepath.Join("story", "compose", "outline.md")); err != nil {
+			logger.GetLogger().Warn("Failed to save outline markdown progress: %v", err)
+		}
+	}
+
+	if !resumeMode {
+		fmt.Println("Using Agent SDK hierarchical generation:")
+		fmt.Println("  Phase 1: Generate skeleton (parts and volumes)")
+		fmt.Printf("  Phase 2: Generate chapters for each of %d volumes\n",
+			projectConfig.Structure.TargetParts*projectConfig.Structure.TargetVolumes)
+		fmt.Println()
+
+		skeletonOutput, err := agent.GenerateSkeletonWithAgentSDK(ctx, agents.ComposeSkeletonInput{
+			Setup:     *setup,
+			Structure: projectConfig.Structure,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate skeleton: %w", err)
+		}
+		outline = &models.Outline{Parts: skeletonOutput.Parts}
+		logic.NewIDManager(outline).AssignIDsToOutline()
+		applyOutlineNormalization(outline, "agent_sdk_fresh_skeleton")
+		if err := savePartialOutline(outline, outlinePath); err != nil {
+			logger.GetLogger().Warn("Failed to save initial outline: %v", err)
+		}
+		fmt.Println("[save] Skeleton saved to outline.json")
+	} else {
+		fmt.Println("Continuing Agent SDK chapter generation...")
+		fmt.Println()
+	}
+
+	outline, err = agent.GenerateChaptersHierarchicalAgentSDK(ctx, *setup, projectConfig.Structure, outline, onVolumeComplete)
+	if err != nil {
+		if saveErr := savePartialOutline(outline, outlinePath); saveErr != nil {
+			logger.GetLogger().Warn("Failed to save outline on error: %v", saveErr)
+		}
+		return nil, err
+	}
+
+	os.Remove(legacyProgressPath)
+	fmt.Println("\n[ok] Agent SDK generation complete. outline.json is the canonical state.")
 	return outline, nil
 }
 
@@ -1598,6 +1941,29 @@ func setupFactionAliases(category string) []string {
 		return r == '/' || r == '\\' || r == '|' || r == ',' || r == '，' || r == ';' || r == '；' || r == ' '
 	}) {
 		add(part)
+	}
+	return aliases
+}
+
+func setupPremiseFactionAliases(p models.Premise) []string {
+	seen := map[string]bool{}
+	var aliases []string
+	add := func(value string) {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			return
+		}
+		seen[value] = true
+		aliases = append(aliases, value)
+	}
+	for _, alias := range setupFactionAliases(p.Category) {
+		add(alias)
+	}
+	text := strings.ToLower(p.Name + " " + p.Description + " " + p.Category)
+	for _, known := range []string{"zerg", "shen"} {
+		if strings.Contains(text, known) {
+			add(known)
+		}
 	}
 	return aliases
 }
@@ -1922,7 +2288,7 @@ func runOutlineValidatorOnModel(outline *models.Outline) []models.ReviewSuggesti
 	if outline == nil {
 		return nil
 	}
-	// Convert via JSON roundtrip (models.Outline → rpg.StoryOutline)
+	// Convert via JSON roundtrip (models.Outline -> rpg.StoryOutline)
 	data, err := json.Marshal(outline)
 	if err != nil {
 		return nil
@@ -1958,6 +2324,12 @@ func runOutlineValidatorOnModel(outline *models.Outline) []models.ReviewSuggesti
 		})
 	}
 	for _, s := range result.Suggestions {
+		if s.Type == "faction_tier" {
+			// The outline-only validator cannot see story_setup.json, so its
+			// "define faction tiers in setup" hint is not self-verifying. The
+			// setup+outline cross-check owns that contract.
+			continue
+		}
 		suggestions = append(suggestions, outlineSuggestionToReviewSuggestion(s))
 	}
 	return suggestions
@@ -2090,7 +2462,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 		gate := runOutlineQualityGate(setup, improvedOutline)
 		if len(gate.Suggestions) > 0 {
 			review.Suggestions = append(review.Suggestions, gate.Suggestions...)
-			logger.Info("Quality gate added %d suggestions to review", len(gate.Suggestions))
+			logger.Info("Quality gate added %d suggestion(s) to review", len(gate.Suggestions))
 		}
 
 		// Feed DSL simulation feedback back into outline improve. Critical
@@ -2123,6 +2495,196 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 		logger.Info("Final Review Score: %.1f/100", review.OverallScore)
 	}
 	return nil
+}
+
+func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, forceImprove bool, userPrompt string, agentApply bool, scoped bool) error {
+	logger.Section("Outline Agent SDK Iteration Improvement")
+	logger.Info("Maximum iterations: %d", maxIterations)
+	logger.Info("Mode: Agent SDK hierarchical per-volume review/improve")
+	if forceImprove {
+		logger.Info("Force improve enabled: will apply SDK volume output even if score meets threshold")
+	}
+	if agentApply {
+		logger.Info("Agent apply enabled: SDK may write outline patches through validated tool apply")
+	}
+
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load LLM config: %w", err)
+	}
+	client := cfg.CreateClient(&projectConfig.LLM)
+	if client == nil {
+		return fmt.Errorf("failed to create LLM client")
+	}
+	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
+	agent.SetLanguage(projectConfig.Language)
+
+	ctx := context.Background()
+	beforeOutline := cloneOutline(outline)
+	applyOutlineNormalization(outline, "pre_agent_sdk_improve")
+
+	preGate := runOutlineCombinedGateForScope(setup, outline, scoped)
+	var seedReview *models.ReviewResult
+	if len(preGate.Suggestions) > 0 {
+		seedReview = qualityGateReviewResult("Pre-check issues for targeted Agent SDK outline improvement.", preGate)
+		seedReview = filterAgentSDKReviewForPromptBoundary(seedReview, outline, userPrompt, "pre-check seed review")
+		logger.Info("Pre-check supplied %d quality/simulation issue(s) to Agent SDK", len(seedReview.Suggestions))
+	}
+
+	improvedOutline, review, err := agent.IterateHierarchicalAgentSDK(ctx, outline, seedReview, maxIterations, 80.0, forceImprove, userPrompt, setup, agentApply)
+	if err != nil {
+		return fmt.Errorf("iteration failed: %w", err)
+	}
+
+	applyOutlineNormalization(improvedOutline, "post_agent_sdk_improve")
+	*outline = *improvedOutline
+
+	if review != nil {
+		gate := runOutlineCombinedGateForScope(setup, improvedOutline, scoped)
+		if len(gate.Suggestions) > 0 {
+			review.Suggestions = append(review.Suggestions, gate.Suggestions...)
+			logger.Info("Quality/simulation gate added %d suggestion(s) to Agent SDK review", len(gate.Suggestions))
+		}
+		repairReview := qualityGateMediumReviewResult("Post-check medium-or-higher issues for Agent SDK targeted repair.", gate)
+		repairReview = filterAgentSDKReviewForPromptBoundary(repairReview, improvedOutline, userPrompt, "post-check repair pass")
+		if len(repairReview.Suggestions) > 0 && maxIterations > 0 {
+			repairBatch := limitReviewSuggestionsForAgentSDKRepair(repairReview, 4)
+			logger.Info("Quality/simulation gate found %d targetable medium-or-higher issue(s), running Agent SDK repair pass on %d issue(s)", len(repairReview.Suggestions), len(repairBatch.Suggestions))
+			repairOutput, repairErr := agent.RepairByReviewAgentSDK(ctx, improvedOutline, repairBatch, setup, agentApply)
+			if repairErr == nil {
+				improvedOutline = repairOutput
+				applyOutlineNormalization(improvedOutline, "post_agent_sdk_repair")
+				*outline = *improvedOutline
+				repairGate := runOutlineCombinedGateForScope(setup, improvedOutline, scoped)
+				remaining := filterMediumOrHigherOutlineTargetSuggestions(repairGate.Suggestions)
+				if len(remaining) > 0 {
+					logger.Warn("Agent SDK repair completed, but %d targetable medium-or-higher quality/simulation issue(s) remain", len(remaining))
+				} else {
+					logger.Info("Agent SDK partial compose repair pass completed; no targetable medium-or-higher quality/simulation issues remain")
+				}
+			} else {
+				logger.Warn("Agent SDK partial compose repair pass failed: %v", repairErr)
+			}
+		}
+	}
+
+	if outlinesSemanticallyEqual(beforeOutline, outline) {
+		logger.Info("Agent SDK iteration made no effective outline changes; skipping intermediate outline_iter_%d.json", maxIterations)
+	} else {
+		outlinePath := filepath.Join("story", "compose", fmt.Sprintf("outline_iter_%d.json", maxIterations))
+		if err := savePartialOutline(outline, outlinePath); err != nil {
+			logger.Error("Failed to save intermediate outline: %v", err)
+		} else {
+			logger.Info("Saved intermediate outline to %s", outlinePath)
+		}
+	}
+
+	logger.Section("Agent SDK Iteration Complete")
+	if review != nil {
+		logger.Info("Final Agent SDK Review Score: %.1f/100", review.OverallScore)
+	}
+	return nil
+}
+
+func filterAgentSDKReviewForPromptBoundary(review *models.ReviewResult, outline *models.Outline, userPrompt, purpose string) *models.ReviewResult {
+	if review == nil || outline == nil || strings.TrimSpace(userPrompt) == "" {
+		return review
+	}
+	boundaryIDs := collectAgentSDKRepairBoundaryChapterIDs(outline, userPrompt)
+	if len(boundaryIDs) == 0 {
+		return review
+	}
+	filtered := make([]models.ReviewSuggestion, 0, len(review.Suggestions))
+	for _, suggestion := range review.Suggestions {
+		if boundaryIDs[strings.TrimSpace(suggestion.TargetID)] {
+			filtered = append(filtered, suggestion)
+		}
+	}
+	limited := *review
+	limited.Suggestions = filtered
+	limited.Summary = fmt.Sprintf("%s Prompt boundary retained %d of %d targetable issue(s).", strings.TrimSpace(review.Summary), len(filtered), len(review.Suggestions))
+	if len(filtered) == 0 && len(review.Suggestions) > 0 {
+		if strings.TrimSpace(purpose) == "" {
+			purpose = "review"
+		}
+		logger.Info("Skipping Agent SDK %s: user prompt boundary does not include remaining targetable issue(s)", purpose)
+	}
+	return &limited
+}
+
+func filterQualityGateForAgentSDKPromptBoundary(gate qualityGateResult, outline *models.Outline, userPrompt, purpose string) qualityGateResult {
+	review := qualityGateReviewResult("Filter quality gate by Agent SDK prompt boundary.", gate)
+	filtered := filterAgentSDKReviewForPromptBoundary(review, outline, userPrompt, purpose)
+	if filtered == nil {
+		return gate
+	}
+	limited := gate
+	limited.Suggestions = append([]models.ReviewSuggestion(nil), filtered.Suggestions...)
+	limited.Blocking = hasBlockingSuggestions(limited.Suggestions)
+	return limited
+}
+
+func collectAgentSDKRepairBoundaryChapterIDs(outline *models.Outline, userPrompt string) map[string]bool {
+	ids := map[string]bool{}
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, id := range agents.AgentSDKImproveBoundaryChapterIDs(volume, userPrompt) {
+				if id = strings.TrimSpace(id); id != "" {
+					ids[id] = true
+				}
+			}
+		}
+	}
+	return ids
+}
+
+func limitReviewSuggestionsForAgentSDKRepair(review *models.ReviewResult, limit int) *models.ReviewResult {
+	if review == nil {
+		return nil
+	}
+	if limit <= 0 || len(review.Suggestions) <= limit {
+		return review
+	}
+	limited := *review
+	limited.Suggestions = append([]models.ReviewSuggestion(nil), review.Suggestions...)
+	sort.SliceStable(limited.Suggestions, func(i, j int) bool {
+		left := reviewSuggestionPriorityRank(limited.Suggestions[i].Priority)
+		right := reviewSuggestionPriorityRank(limited.Suggestions[j].Priority)
+		if left != right {
+			return left < right
+		}
+		leftTarget := strings.TrimSpace(limited.Suggestions[i].TargetID)
+		rightTarget := strings.TrimSpace(limited.Suggestions[j].TargetID)
+		if leftTarget != rightTarget {
+			return leftTarget < rightTarget
+		}
+		return strings.TrimSpace(limited.Suggestions[i].Category) < strings.TrimSpace(limited.Suggestions[j].Category)
+	})
+	limited.Suggestions = limited.Suggestions[:limit]
+	limited.Summary = fmt.Sprintf("%s Repairing the first %d of %d targetable issues in this pass.", strings.TrimSpace(review.Summary), limit, len(review.Suggestions))
+	return &limited
+}
+
+func reviewSuggestionPriorityRank(priority string) int {
+	switch strings.ToLower(strings.TrimSpace(priority)) {
+	case models.PriorityCritical:
+		return 0
+	case models.PriorityHigh:
+		return 1
+	case models.PriorityMedium:
+		return 2
+	case models.PriorityLow:
+		return 3
+	default:
+		return 4
+	}
+}
+
+func outlinesSemanticallyEqual(left, right *models.Outline) bool {
+	if left == nil || right == nil {
+		return left == right
+	}
+	return reflect.DeepEqual(left, right)
 }
 
 func applyOutlineNormalization(outline *models.Outline, stage string) {

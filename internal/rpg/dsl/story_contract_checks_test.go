@@ -122,6 +122,89 @@ func TestOutlinePhaseStorylineContractMatchesSanitizedNames(t *testing.T) {
 	}
 }
 
+func TestOutlinePhaseStorylineEventTargetingCharacterDoesNotCreateArcMovement(t *testing.T) {
+	setup := &models.StorySetup{
+		ProjectName: "Character Target Contract Test",
+		Storylines: []models.Storyline{{
+			Name:       "Infiltration Arc",
+			Type:       "subplot",
+			Importance: 7,
+			Desire:     "find the mole",
+			Opposition: "the mole is trusted",
+			Stakes:     "the base can be exposed",
+		}},
+	}
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1", Title: "Part", Volumes: []models.Volume{{
+			ID: "P1-V1", Title: "Volume", Chapters: []models.Chapter{{
+				ID: "P1-V1-C1", Title: "Spy",
+				Events: []models.Event{{
+					Type:       models.EventTypeStoryline,
+					Subject:    "mole contact",
+					Change:     "progressed",
+					Target:     "Liu San",
+					TargetType: models.TargetTypeCharacter,
+					Result:     "the protagonist learns Liu San is a mole",
+				}},
+				StateChange: "The protagonist identifies the mole.",
+			}},
+		}},
+	}}}
+
+	issues, err := NewModelAdapter(setup, outline, nil, nil, nil).Simulate(PhaseOutline)
+	if err != nil {
+		t.Fatalf("simulate outline: %v", err)
+	}
+	if hasIssueContaining(issues, "storyline movement for 'Liu San'") {
+		t.Fatalf("character target should not be treated as storyline movement, got %#v", issues)
+	}
+}
+
+func TestOutlinePhaseStorylineMovementUsesSameChapterAdvancePressure(t *testing.T) {
+	setup := &models.StorySetup{
+		ProjectName: "Storyline Evidence Contract Test",
+		Storylines: []models.Storyline{{
+			Name:       "Lost Signal",
+			Type:       "main",
+			Importance: 9,
+			Desire:     "decode the signal",
+			Opposition: "the signal is watched",
+			Stakes:     "the fleet is exposed",
+		}},
+	}
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1", Title: "Part", Volumes: []models.Volume{{
+			ID: "P1-V1", Title: "Volume", Chapters: []models.Chapter{{
+				ID: "P1-V1-C1", Title: "Signal",
+				Events: []models.Event{{
+					Type:       models.EventTypeStoryline,
+					Subject:    "Lost Signal",
+					Change:     "progressed",
+					Target:     "Lost Signal",
+					TargetType: models.TargetTypeStoryline,
+					Result:     "the signal source is partially revealed",
+				}},
+				StorylineAdvances: []models.StorylineAdvance{{
+					StorylineName: "Lost Signal",
+					Stage:         "reveal",
+					Change:        "the signal source is partially revealed",
+					Consequence:   "the enemy can now trace the receiver",
+					Pressure:      "the fleet must choose between decoding and hiding",
+				}},
+				StateChange: "The fleet learns the signal is watched.",
+			}},
+		}},
+	}}}
+
+	issues, err := NewModelAdapter(setup, outline, nil, nil, nil).Simulate(PhaseOutline)
+	if err != nil {
+		t.Fatalf("simulate outline: %v", err)
+	}
+	if hasIssueContaining(issues, "storyline movement for 'Lost Signal' has no visible cost") {
+		t.Fatalf("same-chapter storyline_advances pressure should satisfy movement evidence, got %#v", issues)
+	}
+}
+
 func TestOutlinePhaseLongScopePayoffAcceptsStagedReveal(t *testing.T) {
 	setup := &models.StorySetup{
 		ProjectName: "Long Scope Contract Test",

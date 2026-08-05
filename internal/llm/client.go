@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
+	"novelgen/internal/agentruntime"
 	"novelgen/internal/logger"
 )
 
@@ -60,6 +63,106 @@ type OpenAIClient struct {
 	baseURL    string
 	model      string
 	httpClient *http.Client
+}
+
+// RuntimeClient is a placeholder used when agent execution is handled by an
+// AgentRuntime instead of a chat-completions client.
+type RuntimeClient struct {
+	Name    string
+	runtime agentruntime.Runtime
+	initErr error
+}
+
+// NewRuntimeClient creates a placeholder runtime client.
+func NewRuntimeClient(name string) *RuntimeClient {
+	return &RuntimeClient{Name: name}
+}
+
+// NewRuntimeBackedClient creates a chat-completions compatible adapter over an
+// agent runtime.
+func NewRuntimeBackedClient(name string, runtime agentruntime.Runtime, initErr error) *RuntimeClient {
+	return &RuntimeClient{Name: name, runtime: runtime, initErr: initErr}
+}
+
+// Runtime returns the underlying agent runtime when one is available.
+func (c *RuntimeClient) Runtime() agentruntime.Runtime {
+	if c == nil {
+		return nil
+	}
+	return c.runtime
+}
+
+// ChatCompletion adapts simple chat-completion calls to the agent runtime.
+func (c *RuntimeClient) ChatCompletion(ctx context.Context, messages []Message, options *ChatOptions) (*ChatResponse, error) {
+	if c == nil {
+		return nil, fmt.Errorf("runtime client is nil")
+	}
+	if c.runtime == nil {
+		if c.initErr != nil {
+			return nil, fmt.Errorf("provider %s agent runtime is unavailable: %w", c.Name, c.initErr)
+		}
+		return nil, fmt.Errorf("provider %s agent runtime is unavailable", c.Name)
+	}
+	if options == nil {
+		options = &ChatOptions{}
+	}
+
+	systemPrompt, userPrompt := splitRuntimeMessages(messages)
+	result, err := c.runtime.Invoke(ctx, agentruntime.Invocation{
+		AgentName:     c.Name,
+		Command:       "chat completion",
+		WorkspaceRoot: runtimeWorkspaceRoot(),
+		SystemPrompt:  systemPrompt,
+		UserPrompt:    userPrompt,
+		Options: agentruntime.Options{
+			Model:       options.Model,
+			Temperature: options.Temperature,
+			MaxTokens:   options.MaxTokens,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &ChatResponse{
+		Content: result.Content,
+		Model:   result.Model,
+		Usage: Usage{
+			PromptTokens:     result.Usage.PromptTokens,
+			CompletionTokens: result.Usage.CompletionTokens,
+			TotalTokens:      result.Usage.TotalTokens,
+		},
+	}, nil
+}
+
+func runtimeWorkspaceRoot() string {
+	if dir := strings.TrimSpace(logger.Default().ProjectDir()); dir != "" {
+		return dir
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		return cwd
+	}
+	return ""
+}
+
+func splitRuntimeMessages(messages []Message) (string, string) {
+	var systemParts []string
+	var userParts []string
+	for _, message := range messages {
+		content := strings.TrimSpace(message.Content)
+		if content == "" {
+			continue
+		}
+		if strings.EqualFold(message.Role, "system") {
+			systemParts = append(systemParts, content)
+			continue
+		}
+		if strings.EqualFold(message.Role, "user") {
+			userParts = append(userParts, content)
+			continue
+		}
+		userParts = append(userParts, fmt.Sprintf("%s:\n%s", message.Role, content))
+	}
+	return strings.Join(systemParts, "\n\n"), strings.Join(userParts, "\n\n")
 }
 
 // OpenAIConfig contains configuration for OpenAI client

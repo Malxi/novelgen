@@ -41,6 +41,8 @@ Extract a canonical recap JSON from chapter text for continuity tracking.
 4. **Last line matters** - The final line is crucial for seamless chapter transitions
 5. **Track promises** - Any "I will..." or "We need to..." statements become promises
 6. **Note unresolved threads** - Anything left hanging should be recorded
+7. **Keep it compact** - `plot_beats` <= 8, `decisions` <= 5, `reveals` <= 6, `unresolved` <= 5, `promises` <= 4, `items`/`status` <= 6
+8. **No prose wrapper** - Do not output a summary, checklist, markdown, or explanation outside the JSON
 
 ## Output Format
 

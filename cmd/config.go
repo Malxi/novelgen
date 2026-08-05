@@ -1,9 +1,15 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 
+	"novelgen/internal/agentruntime"
 	"novelgen/internal/llm"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -20,7 +26,8 @@ You can configure multiple providers (OpenAI, Ollama, etc.) and switch between t
 
 Subcommands:
   show - Display current LLM configuration
-  set  - Configure LLM settings interactively`,
+  set  - Configure LLM settings interactively
+  agent - Configure Claude agent runtime interactively`,
 }
 
 var configShowCmd = &cobra.Command{
@@ -68,6 +75,193 @@ var configShowCmd = &cobra.Command{
 			fmt.Println()
 		}
 
+		fmt.Println("Agent Runtime Configuration:")
+		fmt.Println("============================")
+		agentCfg, agentErr := agentruntime.LoadConfig()
+		if agentErr != nil {
+			fmt.Printf("Agent Config: not found (%s)\n", agentruntime.ConfigPath())
+			return nil
+		}
+		fmt.Printf("Agent Config:    %s\n", agentruntime.ConfigPath())
+		fmt.Printf("Agent Home:      %s\n", agentCfg.AgentHome)
+		fmt.Printf("Default Runtime: %s\n", agentCfg.DefaultRuntime)
+		runtimeNames := make([]string, 0, len(agentCfg.Runtimes))
+		for name := range agentCfg.Runtimes {
+			runtimeNames = append(runtimeNames, name)
+		}
+		sort.Strings(runtimeNames)
+		for _, name := range runtimeNames {
+			runtime := agentCfg.Runtimes[name]
+			fmt.Printf("Runtime: %s\n", name)
+			fmt.Printf("  Type:    %s\n", runtime.Type)
+			fmt.Printf("  Command: %s %s\n", runtime.Command, strings.Join(runtime.Args, " "))
+			fmt.Printf("  BaseURL: %s\n", runtime.BaseURL)
+			fmt.Printf("  Model:   %s\n", runtime.Model)
+			fmt.Printf("  Max Turns: %d\n", agentMaxTurns(runtime))
+			fmt.Printf("  Settings: %s\n", runtime.Settings)
+			fmt.Printf("  Sources:  %s\n", strings.Join(runtime.SettingSources, ","))
+			fmt.Printf("  SDK Skills: %s\n", strings.Join(runtime.SDKSkills, ","))
+			fmt.Printf("  Add Dirs: %s\n", strings.Join(runtime.AddDirs, ","))
+			fmt.Printf("  Tools: %s\n", strings.Join(runtime.Tools, ","))
+			fmt.Printf("  Allowed Tools: %s\n", strings.Join(runtime.AllowedTools, ","))
+			fmt.Printf("  Permission Mode: %s\n", runtime.PermissionMode)
+			fmt.Printf("  Live Output: %t\n", agentLiveOutputEnabled(runtime))
+			fmt.Printf("  API Key: %s\n", maskAPIKey(runtime.APIKey))
+		}
+
+		return nil
+	},
+}
+
+var configAgentCmd = &cobra.Command{
+	Use:   "agent",
+	Short: "Set Claude agent runtime configuration interactively",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cfg, err := agentruntime.LoadConfig()
+		if err != nil {
+			cfg = &agentruntime.Config{
+				DefaultRuntime: agentruntime.DefaultRuntimeName,
+				AgentHome:      agentruntime.DefaultAgentHome(),
+				Runtimes:       map[string]agentruntime.RuntimeConfig{},
+			}
+		}
+		runtime := cfg.Runtimes[agentruntime.DefaultRuntimeName]
+		if runtime.Type == "" {
+			runtime.Type = "python_process"
+		}
+		if runtime.Command == "" {
+			runtime.Command = "python"
+		}
+		if len(runtime.Args) == 0 {
+			runtime.Args = []string{"internal/agentruntime/runners/claude_runner.py"}
+		}
+		if runtime.Timeout == 0 {
+			runtime.Timeout = 120
+		}
+		if runtime.MaxTurns == 0 {
+			runtime.MaxTurns = 8
+		}
+		if len(runtime.SettingSources) == 0 {
+			runtime.SettingSources = []string{"project", "local", "user"}
+		}
+
+		fmt.Println("Configure Claude Agent Runtime")
+		fmt.Println("==============================")
+
+		agentHomePrompt := &survey.Input{
+			Message: "Agent home:",
+			Default: cfg.AgentHome,
+		}
+		if err := survey.AskOne(agentHomePrompt, &cfg.AgentHome, survey.WithValidator(survey.Required)); err != nil {
+			return err
+		}
+
+		commandPrompt := &survey.Input{
+			Message: "Python command or full path:",
+			Default: runtime.Command,
+		}
+		if err := survey.AskOne(commandPrompt, &runtime.Command, survey.WithValidator(survey.Required)); err != nil {
+			return err
+		}
+
+		baseURLPrompt := &survey.Input{
+			Message: "Anthropic-compatible base URL:",
+			Default: runtime.BaseURL,
+		}
+		if err := survey.AskOne(baseURLPrompt, &runtime.BaseURL); err != nil {
+			return err
+		}
+
+		modelPrompt := &survey.Input{
+			Message: "Model:",
+			Default: firstNonEmpty(runtime.Model, "sonnet"),
+		}
+		if err := survey.AskOne(modelPrompt, &runtime.Model, survey.WithValidator(survey.Required)); err != nil {
+			return err
+		}
+
+		maxTurnsPrompt := &survey.Input{
+			Message: "Max agent turns:",
+			Default: strconv.Itoa(runtime.MaxTurns),
+			Help:    "Tool-using workflows need more than one turn; 8 is a safe default.",
+		}
+		var maxTurnsText string
+		if err := survey.AskOne(maxTurnsPrompt, &maxTurnsText, survey.WithValidator(survey.Required)); err != nil {
+			return err
+		}
+		maxTurns, err := strconv.Atoi(strings.TrimSpace(maxTurnsText))
+		if err != nil || maxTurns <= 0 {
+			return fmt.Errorf("max agent turns must be a positive integer")
+		}
+		runtime.MaxTurns = maxTurns
+
+		settingsPrompt := &survey.Input{
+			Message: "Claude settings path:",
+			Default: runtime.Settings,
+			Help:    "Optional path passed to ClaudeAgentOptions.settings.",
+		}
+		if err := survey.AskOne(settingsPrompt, &runtime.Settings); err != nil {
+			return err
+		}
+
+		sourcesPrompt := &survey.Input{
+			Message: "Setting sources:",
+			Default: strings.Join(runtime.SettingSources, ","),
+			Help:    "Comma-separated values such as project,local,user.",
+		}
+		var sources string
+		if err := survey.AskOne(sourcesPrompt, &sources); err != nil {
+			return err
+		}
+		runtime.SettingSources = splitCommaList(sources)
+
+		skillsPrompt := &survey.Input{
+			Message: "Claude SDK skills:",
+			Default: strings.Join(runtime.SDKSkills, ","),
+			Help:    "Optional comma-separated Claude SDK skill names; Novelgen stage skills are separate.",
+		}
+		var sdkSkills string
+		if err := survey.AskOne(skillsPrompt, &sdkSkills); err != nil {
+			return err
+		}
+		runtime.SDKSkills = splitCommaList(sdkSkills)
+
+		liveOutput := agentLiveOutputEnabled(runtime)
+		liveOutputPrompt := &survey.Confirm{
+			Message: "Write Claude agent live output logs?",
+			Default: liveOutput,
+		}
+		if err := survey.AskOne(liveOutputPrompt, &liveOutput); err != nil {
+			return err
+		}
+		runtime.LiveOutput = &liveOutput
+
+		apiKeyPrompt := &survey.Password{
+			Message: "API key:",
+		}
+		var apiKey string
+		if err := survey.AskOne(apiKeyPrompt, &apiKey); err != nil {
+			return err
+		}
+		if strings.TrimSpace(apiKey) != "" {
+			runtime.APIKey = apiKey
+		}
+
+		cfg.DefaultRuntime = agentruntime.DefaultRuntimeName
+		cfg.Runtimes[agentruntime.DefaultRuntimeName] = runtime
+
+		path := agentruntime.ConfigPath()
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			return fmt.Errorf("failed to create config directory: %w", err)
+		}
+		data, err := jsonMarshalIndent(cfg)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(path, data, 0600); err != nil {
+			return fmt.Errorf("failed to save agent config: %w", err)
+		}
+		fmt.Printf("\nAgent runtime configuration saved to %s\n", path)
 		return nil
 	},
 }
@@ -256,9 +450,37 @@ func maskAPIKey(key string) string {
 	return key[:4] + "****" + key[len(key)-4:]
 }
 
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func jsonMarshalIndent(v interface{}) ([]byte, error) {
+	return json.MarshalIndent(v, "", "  ")
+}
+
+func agentLiveOutputEnabled(runtime agentruntime.RuntimeConfig) bool {
+	if runtime.LiveOutput == nil {
+		return true
+	}
+	return *runtime.LiveOutput
+}
+
+func agentMaxTurns(runtime agentruntime.RuntimeConfig) int {
+	if runtime.MaxTurns == 0 {
+		return 8
+	}
+	return runtime.MaxTurns
+}
+
 func init() {
 	configCmd.AddCommand(configShowCmd)
 	configCmd.AddCommand(configSetCmd)
+	configCmd.AddCommand(configAgentCmd)
 	// Register config command using the new plugin mechanism
 	RegisterCommand(func() *cobra.Command {
 		return configCmd

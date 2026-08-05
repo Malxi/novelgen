@@ -3,6 +3,8 @@ run/
 *.exe
 *.exe~
 *.zip
+__pycache__/
+*.pyc
 .claude/
 bin/
 books/

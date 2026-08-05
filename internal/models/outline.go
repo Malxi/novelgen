@@ -53,6 +53,42 @@ func (p *VolumePayoffContract) IsZero() bool {
 		strings.TrimSpace(p.NextBiggerGame) == ""
 }
 
+// MergeVolumePayoffContract overlays non-empty patch fields onto base.
+func MergeVolumePayoffContract(base, patch *VolumePayoffContract) *VolumePayoffContract {
+	if patch == nil {
+		return nil
+	}
+	merged := VolumePayoffContract{}
+	if base != nil {
+		merged = *base
+	}
+	if strings.TrimSpace(patch.VolumeQuestion) != "" {
+		merged.VolumeQuestion = patch.VolumeQuestion
+	}
+	if strings.TrimSpace(patch.PowerPromise) != "" {
+		merged.PowerPromise = patch.PowerPromise
+	}
+	if strings.TrimSpace(patch.MainOpponentMisread) != "" {
+		merged.MainOpponentMisread = patch.MainOpponentMisread
+	}
+	if strings.TrimSpace(patch.BigWin) != "" {
+		merged.BigWin = patch.BigWin
+	}
+	if strings.TrimSpace(patch.VisibleReward) != "" {
+		merged.VisibleReward = patch.VisibleReward
+	}
+	if strings.TrimSpace(patch.ReputationShift) != "" {
+		merged.ReputationShift = patch.ReputationShift
+	}
+	if strings.TrimSpace(patch.NextBiggerGame) != "" {
+		merged.NextBiggerGame = patch.NextBiggerGame
+	}
+	if merged.IsZero() {
+		return nil
+	}
+	return &merged
+}
+
 // ChapterTimeline represents timeline information for a chapter
 type ChapterTimeline struct {
 	Anchor      string `json:"anchor,omitempty" md:"anchor" desc:"相对于故事开始的时间点，如：第3天傍晚、三个月后"`

@@ -446,10 +446,7 @@ func (ov *OutlineValidator) validatePlotLogic() {
 
 				// 检查冲突是否解决
 				if chapter.Conflict != "" && len(beats) > 1 {
-					if !strings.Contains(beats[len(beats)-1], "解决") &&
-						!strings.Contains(beats[len(beats)-1], "结束") &&
-						!strings.Contains(beats[len(beats)-1], "胜利") &&
-						!strings.Contains(beats[len(beats)-1], "失败") {
+					if !outlineChapterHasConflictOutcome(chapter, beats[len(beats)-1]) {
 						ov.Suggestions = append(ov.Suggestions, OutlineSuggestion{
 							Type:      "logic",
 							Location:  location,
@@ -464,6 +461,31 @@ func (ov *OutlineValidator) validatePlotLogic() {
 			}
 		}
 	}
+}
+
+func outlineChapterHasConflictOutcome(chapter StoryChapter, closingBeat string) bool {
+	textParts := []string{
+		closingBeat,
+		chapter.StateChange,
+		chapter.Summary,
+	}
+	for _, event := range chapter.Events {
+		textParts = append(textParts, event.Change, event.Result, event.Details, event.Context)
+	}
+	for _, advance := range chapter.StorylineAdvances {
+		textParts = append(textParts, advance.Stage, advance.Change, advance.Consequence, advance.Pressure)
+	}
+	for _, resolved := range chapter.Mysteries.Resolved {
+		textParts = append(textParts, resolved.Resolution)
+	}
+	text := normalizeOutlineValidatorText(strings.Join(textParts, " "))
+	if strings.TrimSpace(text) == "" {
+		return false
+	}
+	return containsAnyOutlineValidatorText(text,
+		"解决", "结束", "胜利", "失败", "击退", "击败", "逃生", "撤离", "脱困", "完成",
+		"升级", "恶化", "暴露", "追杀", "代价", "压力", "后果", "新局面", "决定", "获得",
+		"resolved", "completed", "defeated", "escaped", "survived", "upgraded", "revealed", "consequence", "pressure")
 }
 
 // validatePacing 验证节奏和张力
@@ -572,9 +594,7 @@ func (ov *OutlineValidator) validateTransitions() {
 					if len(currBeats) > 0 {
 						firstBeat = currBeats[0]
 					}
-					if !strings.Contains(firstBeat, "来到") &&
-						!strings.Contains(firstBeat, "前往") &&
-						!strings.Contains(firstBeat, "到达") {
+					if !outlineBeatHasLocationTransition(firstBeat) {
 						ov.Warnings = append(ov.Warnings, OutlineWarning{
 							Type:     "transition",
 							Location: currChapter.ID,
@@ -587,6 +607,19 @@ func (ov *OutlineValidator) validateTransitions() {
 			}
 		}
 	}
+}
+
+func outlineBeatHasLocationTransition(beat string) bool {
+	beat = strings.TrimSpace(beat)
+	if beat == "" {
+		return false
+	}
+	for _, marker := range []string{"来到", "前往", "到达", "回到", "返回", "抵达", "赶到", "进入"} {
+		if strings.Contains(beat, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 // validateRedundancy 验证重复和冗余
@@ -739,15 +772,7 @@ func (ov *OutlineValidator) validateStateAnchor() {
 				if !firstChapter && sa.Cultivation != "" && prev.Cultivation != "" {
 					if sa.Cultivation != prev.Cultivation {
 						// Cultivation changed — check if there was a breakthrough event
-						hasBreakthrough := false
-						for _, evt := range chapter.Events {
-							if evt.Type == "status" && (strings.Contains(evt.Change, "突破") ||
-								strings.Contains(evt.Subject, "修为") || strings.Contains(evt.Subject, "境界")) {
-								hasBreakthrough = true
-								break
-							}
-						}
-						if !hasBreakthrough {
+						if !hasCultivationChangeEvent(chapter.Events, prev.Cultivation, sa.Cultivation) {
 							ov.Warnings = append(ov.Warnings, OutlineWarning{
 								Type:        "state_anchor",
 								Location:    chapter.ID,
@@ -804,6 +829,89 @@ func (ov *OutlineValidator) validateStateAnchor() {
 			}
 		}
 	}
+}
+
+func hasCultivationChangeEvent(events []StoryEvent, from, to string) bool {
+	for _, evt := range events {
+		if storyEventSupportsCultivationChange(evt, from, to) {
+			return true
+		}
+	}
+	return false
+}
+
+func storyEventSupportsCultivationChange(evt StoryEvent, from, to string) bool {
+	eventType := normalizeOutlineValidatorText(evt.Type)
+	change := normalizeOutlineValidatorText(evt.Change)
+	subject := normalizeOutlineValidatorText(evt.Subject)
+	action := normalizeOutlineValidatorText(evt.Action)
+	targetType := normalizeOutlineValidatorText(evt.TargetType)
+	text := normalizeOutlineValidatorText(strings.Join([]string{
+		evt.Type,
+		evt.Subject,
+		evt.Change,
+		evt.Details,
+		evt.Actor,
+		evt.Action,
+		evt.Target,
+		evt.TargetType,
+		evt.Context,
+		evt.Result,
+	}, " "))
+
+	if eventType == "status" && (strings.Contains(change, "突破") ||
+		strings.Contains(subject, "修为") || strings.Contains(subject, "境界")) {
+		return true
+	}
+
+	if !containsAnyOutlineValidatorText(text,
+		"突破", "breakthrough", "进阶", "晋升", "升级", "upgrade", "觉醒", "awaken", "进化", "evolution") {
+		return false
+	}
+
+	if action == "breakthrough" || action == "upgrade" || action == "awaken" || action == "transform" {
+		return true
+	}
+	if eventType == "status" || eventType == "gate" || eventType == "premise" ||
+		targetType == "status" || targetType == "skill" || targetType == "premise" {
+		return true
+	}
+	if containsAnyOutlineValidatorText(text, "修为", "境界", "cultivation", "等级", "基因", "适配", "能力") {
+		return true
+	}
+	return cultivationTextMentionsEndpoint(text, from) || cultivationTextMentionsEndpoint(text, to)
+}
+
+func normalizeOutlineValidatorText(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func containsAnyOutlineValidatorText(text string, needles ...string) bool {
+	for _, needle := range needles {
+		if strings.Contains(text, normalizeOutlineValidatorText(needle)) {
+			return true
+		}
+	}
+	return false
+}
+
+func cultivationTextMentionsEndpoint(text, endpoint string) bool {
+	endpoint = normalizeOutlineValidatorText(endpoint)
+	if endpoint == "" {
+		return false
+	}
+	if strings.Contains(text, endpoint) {
+		return true
+	}
+	for _, token := range strings.FieldsFunc(endpoint, func(r rune) bool {
+		return r == '（' || r == '）' || r == '(' || r == ')' || r == ' ' || r == '，' || r == ',' || r == '/' || r == '、'
+	}) {
+		token = normalizeOutlineValidatorText(token)
+		if len([]rune(token)) >= 2 && strings.Contains(text, token) {
+			return true
+		}
+	}
+	return false
 }
 
 func (ov *OutlineValidator) validateEnemies() {

@@ -1,10 +1,15 @@
 package cmd
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"novelgen/internal/models"
+
+	"github.com/spf13/cobra"
 )
 
 func TestElementExtractorUsesRPGRelevantOutlineFields(t *testing.T) {
@@ -54,6 +59,142 @@ func TestElementExtractorUsesRPGRelevantOutlineFields(t *testing.T) {
 	}
 	if !containsString(elements.Organizations, "Iron Hive") {
 		t.Fatalf("missing organization %q in %+v", "Iron Hive", elements.Organizations)
+	}
+}
+
+func TestSaveJSONMergesExistingUTF8BOMFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "characters.json")
+	if err := os.WriteFile(path, append([]byte{0xEF, 0xBB, 0xBF}, []byte(`{"Lin":{"name":"Lin"}}`)...), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := saveJSON(path, map[string]models.Character{
+		"Mira": {Name: "Mira", RoleInStory: "ally"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]interface{}
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["Lin"] == nil || got["Mira"] == nil {
+		t.Fatalf("merged data missing existing or new key: %#v", got)
+	}
+}
+
+func TestCollectRequestedCharactersMatchesByName(t *testing.T) {
+	loaded := map[string]*models.Character{
+		"other-key": {Name: "林野", RoleInStory: "lead"},
+	}
+
+	got := collectRequestedCharacters([]string{"林野"}, loaded)
+	if len(got) != 1 || got["林野"].Name != "林野" {
+		t.Fatalf("expected requested character from loaded craft, got %#v", got)
+	}
+}
+
+func TestCraftGenAgentApplyRequiresAgentSDK(t *testing.T) {
+	oldAgentApply := craftAgentApplyFlag
+	oldAgentSDK := craftAgentSDKFlag
+	craftAgentApplyFlag = true
+	craftAgentSDKFlag = false
+	defer func() {
+		craftAgentApplyFlag = oldAgentApply
+		craftAgentSDKFlag = oldAgentSDK
+	}()
+
+	err := runCraftGen(&cobra.Command{}, nil)
+	if err == nil || !strings.Contains(err.Error(), "--agent-apply requires --agent-sdk") {
+		t.Fatalf("expected --agent-apply validation error, got %v", err)
+	}
+}
+
+func TestCraftImproveAgentApplyRequiresAgentSDK(t *testing.T) {
+	oldAgentApply := craftAgentApplyFlag
+	oldAgentSDK := craftAgentSDKFlag
+	craftAgentApplyFlag = true
+	craftAgentSDKFlag = false
+	defer func() {
+		craftAgentApplyFlag = oldAgentApply
+		craftAgentSDKFlag = oldAgentSDK
+	}()
+
+	err := runCraftImprove(&cobra.Command{}, nil)
+	if err == nil || !strings.Contains(err.Error(), "--agent-apply requires --agent-sdk") {
+		t.Fatalf("expected --agent-apply validation error, got %v", err)
+	}
+}
+
+func TestCraftNameBatchesAndSortedKeys(t *testing.T) {
+	got := craftNameBatches([]string{"a", "b", "c"}, 2)
+	if len(got) != 2 || strings.Join(got[0], ",") != "a,b" || strings.Join(got[1], ",") != "c" {
+		t.Fatalf("batches = %#v", got)
+	}
+
+	values := map[string]*models.Item{
+		"zeta":  {Name: "zeta"},
+		"alpha": {Name: "alpha"},
+		"nil":   nil,
+		"":      {Name: "blank"},
+	}
+	keys := sortedCraftMapKeys(values)
+	if strings.Join(keys, ",") != "alpha,zeta" {
+		t.Fatalf("sorted keys = %#v", keys)
+	}
+}
+
+func TestFilterCraftModelsByNameNarrowsSelectedType(t *testing.T) {
+	chars := map[string]*models.Character{
+		"李侑":  {Name: "李侑"},
+		"陆青禾": {Name: "陆青禾"},
+	}
+	locs := map[string]*models.Location{
+		"玄云宗": {Name: "玄云宗"},
+	}
+
+	gotChars, gotLocs, gotItems, gotOrgs, err := filterCraftModelsByName("characters", "李侑", chars, locs, nil, nil)
+	if err != nil {
+		t.Fatalf("filterCraftModelsByName() error = %v", err)
+	}
+	if len(gotChars) != 1 || gotChars["李侑"] == nil {
+		t.Fatalf("characters not narrowed to 李侑: %#v", gotChars)
+	}
+	if len(gotLocs) != 0 || len(gotItems) != 0 || len(gotOrgs) != 0 {
+		t.Fatalf("non-selected types should be empty: locs=%#v items=%#v orgs=%#v", gotLocs, gotItems, gotOrgs)
+	}
+}
+
+func TestFilterCraftModelsByNameMatchesObjectNameForOldKeys(t *testing.T) {
+	chars := map[string]*models.Character{
+		"legacy-key": {Name: "李侑"},
+	}
+
+	gotChars, _, _, _, err := filterCraftModelsByName("all", "李侑", chars, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("filterCraftModelsByName() error = %v", err)
+	}
+	if len(gotChars) != 1 || gotChars["legacy-key"] == nil {
+		t.Fatalf("expected legacy-key character match: %#v", gotChars)
+	}
+}
+
+func TestFilterCraftModelsByNameErrorsWhenMissing(t *testing.T) {
+	_, _, _, _, err := filterCraftModelsByName("characters", "李侑", map[string]*models.Character{
+		"陆青禾": {Name: "陆青禾"},
+	}, nil, nil, nil)
+	if err == nil || !strings.Contains(err.Error(), `李侑`) || !strings.Contains(err.Error(), "characters") {
+		t.Fatalf("expected missing target error, got %v", err)
+	}
+}
+
+func TestCraftImproveRegistersNameFlag(t *testing.T) {
+	if craftImproveCmd.Flags().Lookup("name") == nil {
+		t.Fatalf("craft improve should register --name")
 	}
 }
 

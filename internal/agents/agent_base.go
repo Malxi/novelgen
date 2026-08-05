@@ -12,7 +12,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
+	"novelgen/internal/agentruntime"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
@@ -24,6 +26,7 @@ import (
 type BaseAgent struct {
 	name        string
 	client      llm.Client
+	runtime     agentruntime.Runtime
 	config      *llm.Config
 	projectLLM  *models.ProjectLLM
 	skillLoader *SkillLoader
@@ -34,6 +37,7 @@ type BaseAgent struct {
 type BaseAgentConfig struct {
 	Name       string
 	Client     llm.Client
+	Runtime    agentruntime.Runtime
 	Config     *llm.Config
 	ProjectLLM *models.ProjectLLM
 	Language   string
@@ -48,6 +52,7 @@ func NewBaseAgent(cfg BaseAgentConfig) *BaseAgent {
 	return &BaseAgent{
 		name:        cfg.Name,
 		client:      cfg.Client,
+		runtime:     resolveRuntime(cfg.ProjectLLM, cfg.Runtime, cfg.Client),
 		config:      cfg.Config,
 		projectLLM:  cfg.ProjectLLM,
 		skillLoader: NewSkillLoader(skillsDir),
@@ -62,18 +67,54 @@ func (a *BaseAgent) SetLanguage(language string) {
 
 // InvokeParams holds the parameters for invoking an agent
 type InvokeParams struct {
-	Skills  []string
-	Command string
+	Skills                 []string
+	SDKSkills              []string
+	Tools                  []string
+	AllowedTools           []string
+	PermissionMode         string
+	RequireSDK             bool
+	ToolAllowlist          []string
+	ToolEvidence           ToolEvidenceRequirement
+	MaxTurns               int
+	Timeout                int
+	CompactOutputSchema    bool
+	DisableSDKOutputFormat bool
+	Command                string
+}
+
+// ToolEvidenceRequirement asserts minimum tool activity observed in the Agent
+// SDK live log. It lets Go reject successful-looking JSON when the agent skipped
+// required tool steps.
+type ToolEvidenceRequirement struct {
+	MinQueryCalls                  int
+	MinContextQueryCalls           int
+	MinCheckCalls                  int
+	MinPatchApplyCalls             int
+	MaxQueryCalls                  int
+	MaxContextQueryCalls           int
+	DisallowQueryBriefCalls        bool
+	DisallowQueryFullCalls         bool
+	RequirePatchApplyFollowupCheck bool
+	RequireNoDeniedTools           bool
+	RequiredToolCommands           []string
 }
 
 // Execute sends the input to AI and returns the result
 // This is the core method that all agents use
 func (a *BaseAgent) Execute(ctx context.Context, params InvokeParams, input interface{}, output interface{}) error {
+	_, err := a.ExecuteWithRuntimeResult(ctx, params, input, output)
+	return err
+}
+
+// ExecuteWithRuntimeResult sends the input to AI and returns the raw runtime
+// result when an Agent SDK runtime was used. Ordinary chat-client executions
+// return nil for the runtime result.
+func (a *BaseAgent) ExecuteWithRuntimeResult(ctx context.Context, params InvokeParams, input interface{}, output interface{}) (*agentruntime.Result, error) {
 	// Use provided params or fall back to agent defaults
 	// Load system prompt from skill files
 	skillPrompt, err := a.loadSystemPromptWithSkills(params.Skills)
 	if err != nil {
-		return fmt.Errorf("failed to load system prompt: %w", err)
+		return nil, fmt.Errorf("failed to load system prompt: %w", err)
 	}
 
 	// Build user prompt from input
@@ -100,10 +141,14 @@ func (a *BaseAgent) Execute(ctx context.Context, params InvokeParams, input inte
 	options := a.chatOptions()
 
 	logger.Info("[%s] Sending request to AI...", a.name)
-	resp, err := a.client.ChatCompletion(ctx, messages, options)
+	resp, runtimeResult, err := a.invokeAIWithRuntimeResult(ctx, params, messages, options, outputRequirements, output)
 	if err != nil {
+		logAgentRuntimeLiveSummary(a.name, runtimeResult)
 		logger.Error("[%s] AI request failed: %v", a.name, err)
-		return fmt.Errorf("AI request failed: %w", err)
+		return runtimeResult, fmt.Errorf("AI request failed: %w", err)
+	}
+	if err := validateAgentRuntimeToolEvidence(a.name, params.ToolEvidence, runtimeResult); err != nil {
+		return runtimeResult, err
 	}
 
 	logger.Info("[%s] Received response (%d tokens used)", a.name, resp.Usage.TotalTokens)
@@ -117,12 +162,12 @@ func (a *BaseAgent) Execute(ctx context.Context, params InvokeParams, input inte
 	if err := a.parseResponse(resp.Content, output); err != nil {
 		logger.Warn("[%s] Initial JSON parse failed; attempting JSON repair: %v", a.name, err)
 		if repairErr := a.repairJSONResponse(ctx, resp.Content, output, err); repairErr != nil {
-			return fmt.Errorf("failed to parse response: %w; JSON repair also failed: %v", err, repairErr)
+			return runtimeResult, fmt.Errorf("failed to parse response: %w; JSON repair also failed: %v", err, repairErr)
 		}
 		logger.Info("[%s] JSON repair succeeded", a.name)
 	}
 
-	return nil
+	return runtimeResult, nil
 }
 
 func (a *BaseAgent) repairJSONResponse(ctx context.Context, malformed string, output interface{}, parseErr error) error {
@@ -149,7 +194,7 @@ The repaired JSON must match the requested structure.`
 	}
 
 	logger.Info("[%s] Sending malformed JSON to repair pass...", a.name)
-	resp, err := a.client.ChatCompletion(ctx, messages, &repairOptions)
+	resp, err := a.invokeAI(ctx, InvokeParams{Command: "repair malformed JSON"}, messages, &repairOptions, schema, output)
 	if err != nil {
 		return fmt.Errorf("JSON repair request failed: %w", err)
 	}
@@ -162,6 +207,351 @@ The repaired JSON must match the requested structure.`
 		return fmt.Errorf("repaired response still invalid: %w", err)
 	}
 	return nil
+}
+
+func (a *BaseAgent) invokeAI(ctx context.Context, params InvokeParams, messages []llm.Message, options *llm.ChatOptions, outputSchemaText string, output interface{}) (*llm.ChatResponse, error) {
+	resp, _, err := a.invokeAIWithRuntimeResult(ctx, params, messages, options, outputSchemaText, output)
+	return resp, err
+}
+
+func (a *BaseAgent) invokeAIWithRuntimeResult(ctx context.Context, params InvokeParams, messages []llm.Message, options *llm.ChatOptions, outputSchemaText string, output interface{}) (*llm.ChatResponse, *agentruntime.Result, error) {
+	if options == nil {
+		options = &llm.ChatOptions{}
+	}
+	runtime := a.runtime
+	if runtime == nil && params.RequireSDK {
+		requiredRuntime, err := loadRequiredAgentRuntime()
+		if err != nil {
+			return nil, nil, err
+		}
+		runtime = requiredRuntime
+	}
+	if runtime != nil {
+		invocation := agentruntime.Invocation{
+			AgentName:              a.name,
+			Command:                params.Command,
+			Skills:                 append([]string(nil), params.Skills...),
+			SDKSkills:              append([]string(nil), params.SDKSkills...),
+			Language:               utils.GetLanguageName(a.language),
+			WorkspaceRoot:          agentWorkspaceRoot(),
+			Tools:                  append([]string(nil), params.Tools...),
+			AllowedTools:           append([]string(nil), params.AllowedTools...),
+			PermissionMode:         params.PermissionMode,
+			RequireSDK:             params.RequireSDK,
+			ToolAllowlist:          append([]string(nil), params.ToolAllowlist...),
+			SystemPrompt:           messageContent(messages, "system"),
+			UserPrompt:             messageContent(messages, "user"),
+			OutputSchemaText:       outputSchemaText,
+			OutputJSONSchema:       utils.StructToJSONSchemaObject(output),
+			CompactOutputSchema:    params.CompactOutputSchema,
+			DisableSDKOutputFormat: params.DisableSDKOutputFormat,
+			Options: agentruntime.Options{
+				Model:       agentRuntimeModel(params, options.Model),
+				Temperature: options.Temperature,
+				MaxTokens:   options.MaxTokens,
+				MaxTurns:    params.MaxTurns,
+				Timeout:     params.Timeout,
+			},
+		}
+		result, err := runtime.Invoke(ctx, invocation)
+		if err != nil {
+			return nil, result, err
+		}
+		logAgentRuntimeLiveSummary(a.name, result)
+		return &llm.ChatResponse{
+			Content: result.Content,
+			Model:   result.Model,
+			Usage: llm.Usage{
+				PromptTokens:     result.Usage.PromptTokens,
+				CompletionTokens: result.Usage.CompletionTokens,
+				TotalTokens:      result.Usage.TotalTokens,
+			},
+		}, result, nil
+	}
+	if params.RequireSDK {
+		return nil, nil, fmt.Errorf("Claude Agent SDK runtime is required for this workflow")
+	}
+	if a.client == nil {
+		return nil, nil, fmt.Errorf("no LLM client or agent runtime configured")
+	}
+	resp, err := a.client.ChatCompletion(ctx, messages, options)
+	return resp, nil, err
+}
+
+func validateAgentRuntimeToolEvidence(agentName string, requirement ToolEvidenceRequirement, result *agentruntime.Result) error {
+	if requirement.MinQueryCalls <= 0 &&
+		requirement.MinContextQueryCalls <= 0 &&
+		requirement.MinCheckCalls <= 0 &&
+		requirement.MinPatchApplyCalls <= 0 &&
+		requirement.MaxQueryCalls <= 0 &&
+		requirement.MaxContextQueryCalls <= 0 &&
+		!requirement.DisallowQueryBriefCalls &&
+		!requirement.DisallowQueryFullCalls &&
+		!requirement.RequirePatchApplyFollowupCheck &&
+		!requirement.RequireNoDeniedTools &&
+		len(requirement.RequiredToolCommands) == 0 {
+		return nil
+	}
+	if result == nil || result.LiveSummary == nil {
+		return fmt.Errorf("%s Agent SDK live summary is required to verify tool execution", agentName)
+	}
+	summary := result.LiveSummary
+	if summary.QueryCalls < requirement.MinQueryCalls {
+		return fmt.Errorf("%s Agent SDK tool evidence failed: query calls=%d, want at least %d", agentName, summary.QueryCalls, requirement.MinQueryCalls)
+	}
+	if summary.ContextQueryCalls < requirement.MinContextQueryCalls {
+		return fmt.Errorf("%s Agent SDK tool evidence failed: context query calls=%d, want at least %d", agentName, summary.ContextQueryCalls, requirement.MinContextQueryCalls)
+	}
+	if summary.CheckCalls < requirement.MinCheckCalls {
+		return fmt.Errorf("%s Agent SDK tool evidence failed: check calls=%d, want at least %d", agentName, summary.CheckCalls, requirement.MinCheckCalls)
+	}
+	if summary.PatchApplies < requirement.MinPatchApplyCalls {
+		return fmt.Errorf("%s Agent SDK tool evidence failed: patch apply calls=%d, want at least %d", agentName, summary.PatchApplies, requirement.MinPatchApplyCalls)
+	}
+	if requirement.MaxQueryCalls > 0 && summary.QueryCalls > requirement.MaxQueryCalls {
+		return fmt.Errorf("%s Agent SDK tool evidence failed: query calls=%d, want at most %d", agentName, summary.QueryCalls, requirement.MaxQueryCalls)
+	}
+	if requirement.MaxContextQueryCalls > 0 && summary.ContextQueryCalls > requirement.MaxContextQueryCalls {
+		return fmt.Errorf("%s Agent SDK tool evidence failed: context query calls=%d, want at most %d", agentName, summary.ContextQueryCalls, requirement.MaxContextQueryCalls)
+	}
+	if requirement.DisallowQueryBriefCalls && summary.QueryBriefCalls > 0 {
+		return fmt.Errorf("%s Agent SDK tool evidence failed: brief query calls=%d, want 0", agentName, summary.QueryBriefCalls)
+	}
+	if requirement.DisallowQueryFullCalls && summary.QueryFullCalls > 0 {
+		return fmt.Errorf("%s Agent SDK tool evidence failed: full query calls=%d, want 0", agentName, summary.QueryFullCalls)
+	}
+	if requirement.RequirePatchApplyFollowupCheck && summary.ApplyWithoutFollowupCheck > 0 {
+		return fmt.Errorf("%s Agent SDK tool evidence failed: patch apply calls without follow-up check=%d", agentName, summary.ApplyWithoutFollowupCheck)
+	}
+	if requirement.RequireNoDeniedTools && summary.ToolDenied > 0 {
+		blockingDenied := blockingDeniedToolCommands(summary, requirement)
+		if len(blockingDenied) > 0 {
+			return fmt.Errorf("%s Agent SDK tool evidence failed: denied tool calls=%d commands=%s", agentName, len(blockingDenied), strings.Join(blockingDenied, " | "))
+		}
+		if len(summary.DeniedToolCommands) == 0 {
+			return fmt.Errorf("%s Agent SDK tool evidence failed: denied tool calls=%d", agentName, summary.ToolDenied)
+		}
+	}
+	for _, required := range requirement.RequiredToolCommands {
+		if !liveSummaryHasToolCommand(summary, required) {
+			return fmt.Errorf("%s Agent SDK tool evidence failed: required tool command not observed: %s", agentName, required)
+		}
+	}
+	return nil
+}
+
+func liveSummaryHasToolCommand(summary *agentruntime.LiveSummary, required string) bool {
+	if summary == nil {
+		return false
+	}
+	required = normalizeToolEvidenceCommand(required)
+	if required == "" {
+		return true
+	}
+	for _, command := range summary.AllowedToolCommands {
+		observed := normalizeToolEvidenceCommand(command)
+		if observed == required || strings.Contains(observed, required) || strings.Contains(required, observed) {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizeToolEvidenceCommand(command string) string {
+	command = strings.ToLower(strings.TrimSpace(command))
+	command = strings.ReplaceAll(command, `"`, "")
+	command = strings.Join(strings.Fields(command), " ")
+	return command
+}
+
+func blockingDeniedToolCommands(summary *agentruntime.LiveSummary, requirement ToolEvidenceRequirement) []string {
+	if summary == nil {
+		return nil
+	}
+	commands := append([]string(nil), summary.DeniedToolCommands...)
+	if len(commands) == 0 {
+		return nil
+	}
+	toleratePatchApplyRetry := summary.PatchApplies >= maxInt(1, requirement.MinPatchApplyCalls)
+	if requirement.RequirePatchApplyFollowupCheck && summary.ApplyWithoutFollowupCheck > 0 {
+		toleratePatchApplyRetry = false
+	}
+	blocking := make([]string, 0, len(commands))
+	for _, command := range commands {
+		if toleratePatchApplyRetry && (isDeniedPatchCommand(command) || isDeniedPatchBufferCommand(command) || isDeniedClaudeToolResultRead(command) || isDeniedPostApplyInspectionCommand(command) || isDeniedPostApplyContextExpansionCommand(command) || isDeniedPostApplyRefreshCommand(command)) {
+			continue
+		}
+		blocking = append(blocking, command)
+	}
+	return blocking
+}
+
+func isDeniedPatchCommand(command string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(command))
+	return strings.Contains(normalized, " tool patch ")
+}
+
+func isDeniedPatchBufferCommand(command string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(command))
+	return strings.Contains(normalized, " tool patch-buffer ")
+}
+
+func isDeniedClaudeToolResultRead(command string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(command))
+	if (strings.HasPrefix(normalized, "type ") || strings.HasPrefix(normalized, "get-content ")) &&
+		strings.Contains(normalized, "tool-results") {
+		return true
+	}
+	if strings.Contains(normalized, "get-content") &&
+		strings.Contains(normalized, `\temp\claude\`) &&
+		strings.Contains(normalized, `\tasks\`) &&
+		strings.Contains(normalized, ".output") {
+		return true
+	}
+	return false
+}
+
+func isDeniedPostApplyInspectionCommand(command string) bool {
+	normalized := normalizeToolEvidenceCommand(command)
+	if strings.Contains(normalized, "novelgen tool query chapter") &&
+		strings.Contains(normalized, "--content") {
+		return true
+	}
+	return false
+}
+
+func isDeniedPostApplyContextExpansionCommand(command string) bool {
+	normalized := normalizeToolEvidenceCommand(command)
+	return strings.Contains(normalized, "novelgen tool query context --type chapter-repair") &&
+		strings.Contains(normalized, "--view brief")
+}
+
+func isDeniedPostApplyRefreshCommand(command string) bool {
+	normalized := normalizeToolEvidenceCommand(command)
+	return strings.Contains(normalized, "novelgen tool refresh chapter-dsl")
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func loadRequiredAgentRuntime() (agentruntime.Runtime, error) {
+	cfg, err := agentruntime.LoadConfig()
+	if err != nil {
+		return nil, fmt.Errorf("Claude Agent SDK runtime is required for this workflow: %w", err)
+	}
+	runtime, err := cfg.NewRuntime("")
+	if err != nil {
+		return nil, fmt.Errorf("Claude Agent SDK runtime is required for this workflow: %w", err)
+	}
+	return runtime, nil
+}
+
+func agentRuntimeModel(params InvokeParams, model string) string {
+	return strings.TrimSpace(model)
+}
+
+func messageContent(messages []llm.Message, role string) string {
+	for _, message := range messages {
+		if message.Role == role {
+			return message.Content
+		}
+	}
+	return ""
+}
+
+func agentWorkspaceRoot() string {
+	if dir := strings.TrimSpace(logger.Default().ProjectDir()); dir != "" {
+		return dir
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		return cwd
+	}
+	return ""
+}
+
+func logAgentRuntimeLiveSummary(agentName string, result *agentruntime.Result) {
+	if result == nil || result.LiveSummary == nil {
+		return
+	}
+	summary := result.LiveSummary
+	logger.Info("[%s] Agent live summary: model=%s final_model=%s query=%d index=%d brief=%d full=%d context=%d check=%d refresh=%d patch=%d tools=%d allowed=%d denied=%d messages=%d log=%s",
+		agentName,
+		summary.Model,
+		summary.FinalModel,
+		summary.QueryCalls,
+		summary.QueryIndexCalls,
+		summary.QueryBriefCalls,
+		summary.QueryFullCalls,
+		summary.ContextQueryCalls,
+		summary.CheckCalls,
+		summary.RefreshCalls,
+		summary.PatchCalls,
+		summary.ToolCalls,
+		summary.ToolAllowed,
+		summary.ToolDenied,
+		summary.Messages,
+		result.LiveLogPath,
+	)
+	if summary.PatchApplies > 0 {
+		logger.Info("[%s] Agent patch apply summary: apply=%d missing_followup_check=%d", agentName, summary.PatchApplies, summary.ApplyWithoutFollowupCheck)
+	}
+	if len(summary.SDKSkills) > 0 || len(summary.LoadedSDKSkills) > 0 || len(summary.MissingSDKSkills) > 0 {
+		logger.Info("[%s] Agent SDK skills: requested=%s loaded=%s missing=%s prompt_chars=%d",
+			agentName,
+			strings.Join(summary.SDKSkills, ","),
+			strings.Join(summary.LoadedSDKSkills, ","),
+			strings.Join(summary.MissingSDKSkills, ","),
+			summary.SDKSkillPromptChars,
+		)
+	}
+	if summary.SlowestToolDurationMS > 0 {
+		logger.Info("[%s] Agent slowest tool: duration_ms=%d command=%s", agentName, summary.SlowestToolDurationMS, summary.SlowestToolCommand)
+	}
+	if len(summary.DeniedToolCommands) > 0 {
+		logger.Warn("[%s] Agent denied tool commands: %s", agentName, strings.Join(summary.DeniedToolCommands, " | "))
+	}
+	if len(summary.MissingSDKSkills) > 0 {
+		logger.Warn("[%s] Agent missing SDK skills: %s", agentName, strings.Join(summary.MissingSDKSkills, ","))
+	}
+	if summary.ApplyWithoutFollowupCheck > 0 {
+		logger.Warn("[%s] Agent applied patches without a later tool check; Go post-save validation will still run when available", agentName)
+	}
+}
+
+func resolveRuntime(projectLLM *models.ProjectLLM, provided agentruntime.Runtime, client llm.Client) agentruntime.Runtime {
+	if provided != nil {
+		return provided
+	}
+	if carrier, ok := client.(interface{ Runtime() agentruntime.Runtime }); ok {
+		if runtime := carrier.Runtime(); runtime != nil {
+			return runtime
+		}
+	}
+	provider := ""
+	if projectLLM != nil {
+		provider = strings.TrimSpace(strings.ToLower(projectLLM.Provider))
+	}
+	if provider != "claude" && provider != "claude_sdk" && provider != "agent" {
+		return nil
+	}
+	cfg, err := agentruntime.LoadConfig()
+	if err != nil {
+		return nil
+	}
+	runtime, err := cfg.NewRuntime(provider)
+	if err == nil {
+		return runtime
+	}
+	runtime, err = cfg.NewRuntime(cfg.DefaultRuntime)
+	if err != nil {
+		return nil
+	}
+	_ = client
+	return runtime
 }
 
 func (a *BaseAgent) chatOptions() *llm.ChatOptions {
@@ -295,10 +685,7 @@ func (a *BaseAgent) parseResponse(content string, output interface{}) error {
 	}
 
 	// Check for common error patterns in AI response
-	contentPreview := content
-	if len(contentPreview) > 200 {
-		contentPreview = contentPreview[:200] + "..."
-	}
+	contentPreview := clipResponsePreview(content, 200)
 	logger.Debug("[%s] Parsing response (length: %d), preview: %s", a.name, len(content), contentPreview)
 
 	// Try to parse as JSON directly
@@ -330,10 +717,7 @@ func (a *BaseAgent) parseResponse(content string, output interface{}) error {
 
 			logger.Error("[%s] Failed to parse AI response as JSON: %v", a.name, err)
 			// Log more context about the error
-			errorPreview := jsonContent
-			if len(errorPreview) > 500 {
-				errorPreview = errorPreview[:500] + "..."
-			}
+			errorPreview := clipResponsePreview(jsonContent, 500)
 			logger.Error("[%s] JSON content that failed to parse: %s", a.name, errorPreview)
 			return fmt.Errorf("failed to parse AI response as JSON: %w\nResponse length: %d, JSON extraction length: %d", err, len(content), len(jsonContent))
 		}
@@ -341,13 +725,32 @@ func (a *BaseAgent) parseResponse(content string, output interface{}) error {
 	return nil
 }
 
+func clipResponsePreview(value string, maxRunes int) string {
+	if maxRunes <= 0 {
+		return ""
+	}
+	runes := []rune(value)
+	if len(runes) <= maxRunes {
+		return value
+	}
+	return string(runes[:maxRunes]) + "..."
+}
+
 func tryParseDeterministicallyRepairedJSON(content string, output interface{}) (string, error) {
 	var data interface{}
+	quoteChanges := 0
 	if err := json.Unmarshal([]byte(content), &data); err != nil {
-		return "", err
+		repairedQuotes, changes := escapeLikelyUnescapedStringQuotes(content)
+		if changes == 0 {
+			return "", err
+		}
+		if quoteErr := json.Unmarshal([]byte(repairedQuotes), &data); quoteErr != nil {
+			return "", err
+		}
+		quoteChanges = changes
 	}
-	changes := repairJSONNumericStrings(data)
-	if changes == 0 {
+	numericChanges := repairJSONNumericStrings(data)
+	if quoteChanges == 0 && numericChanges == 0 {
 		return "", fmt.Errorf("no deterministic JSON type repairs available")
 	}
 	repaired, err := json.Marshal(data)
@@ -357,7 +760,66 @@ func tryParseDeterministicallyRepairedJSON(content string, output interface{}) (
 	if err := json.Unmarshal(repaired, output); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%d numeric string field(s)", changes), nil
+	parts := []string{}
+	if quoteChanges > 0 {
+		parts = append(parts, fmt.Sprintf("%d unescaped quote(s)", quoteChanges))
+	}
+	if numericChanges > 0 {
+		parts = append(parts, fmt.Sprintf("%d numeric string field(s)", numericChanges))
+	}
+	return strings.Join(parts, ", "), nil
+}
+
+func escapeLikelyUnescapedStringQuotes(content string) (string, int) {
+	var b strings.Builder
+	b.Grow(len(content))
+	inString := false
+	escaped := false
+	changes := 0
+	for i, r := range content {
+		if escaped {
+			b.WriteRune(r)
+			escaped = false
+			continue
+		}
+		if r == '\\' && inString {
+			b.WriteRune(r)
+			escaped = true
+			continue
+		}
+		if r != '"' {
+			b.WriteRune(r)
+			continue
+		}
+		if !inString {
+			inString = true
+			b.WriteRune(r)
+			continue
+		}
+		if isLikelyJSONStringTerminator(content[i+1:]) {
+			inString = false
+			b.WriteRune(r)
+			continue
+		}
+		b.WriteString(`\"`)
+		changes++
+	}
+	return b.String(), changes
+}
+
+func isLikelyJSONStringTerminator(tail string) bool {
+	for _, r := range tail {
+		if unicode.IsSpace(r) {
+			continue
+		}
+		switch r {
+		case ':', ',', '}', ']':
+			return true
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func repairJSONNumericStrings(value interface{}) int {

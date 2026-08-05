@@ -31,6 +31,123 @@ func TestStateAnchorKeyItemsReplaceCurrentInventory(t *testing.T) {
 	}
 }
 
+func TestKnowledgeDeltaCountsAsChapterGrowth(t *testing.T) {
+	chapter := &Chapter{
+		ID: "C1",
+		Objectives: []Objective{{
+			Name: "Read system logs",
+			Steps: []Step{
+				{Order: 1, Description: "Wake up", Event: Event{Type: "knowledge"}},
+				{Order: 2, Description: "Find log window", Event: Event{Type: "knowledge"}},
+				{Order: 3, Description: "Read opponent plan", Event: Event{
+					Type: "knowledge",
+					StateDeltas: []StateDelta{{
+						Target: "protagonist",
+						Kind:   "knowledge",
+						Field:  "strategy",
+						To:     "use system logs to predict the opponent's daily plan",
+						Note:   "actionable information advantage",
+					}},
+				}},
+				{Order: 4, Description: "Decide next action", Event: Event{Type: "dialogue"}},
+			},
+		}},
+	}
+	sim := NewSimulator(&DSL{})
+	sim.Context.ChapterEvents["C1"] = []string{"Wake up", "Find log window", "Read opponent plan", "Decide next action"}
+
+	sim.checkChapterLogic(chapter)
+	for _, issue := range sim.Issues {
+		if issue.Type == IssueGrowth {
+			t.Fatalf("knowledge state delta should count as chapter growth, got %+v", issue)
+		}
+	}
+}
+
+func TestStrategyFieldStateDeltaCountsAsChapterGrowth(t *testing.T) {
+	chapter := &Chapter{
+		ID: "C1",
+		Objectives: []Objective{{
+			Name: "Reframe the system-log threat",
+			Steps: []Step{
+				{Order: 1, Description: "Reputation rises", Event: Event{Type: "status"}},
+				{Order: 2, Description: "Inspector questions the protagonist", Event: Event{Type: "dialogue"}},
+				{Order: 3, Description: "System log reveals multi-host risk", Event: Event{Type: "knowledge"}},
+				{Order: 4, Description: "Protagonist changes strategy", Event: Event{
+					Type: "status",
+					StateDeltas: []StateDelta{{
+						Target: "protagonist",
+						Kind:   "status",
+						Field:  "strategy",
+						To:     "dual-track plan",
+						Note:   "information advantage becomes an actionable system-log strategy",
+					}},
+				}},
+			},
+		}},
+	}
+	sim := NewSimulator(&DSL{})
+	sim.Context.ChapterEvents["C1"] = []string{"Reputation rises", "Inspector questions", "System log reveals risk", "Strategy changes"}
+
+	sim.checkChapterLogic(chapter)
+	for _, issue := range sim.Issues {
+		if issue.Type == IssueGrowth {
+			t.Fatalf("strategy field state_delta should count as chapter growth, got %+v", issue)
+		}
+	}
+}
+
+func TestAcquireWithoutItemRewardDoesNotUseInventoryCapacity(t *testing.T) {
+	sim := NewSimulator(&DSL{})
+	sim.Context.Protagonist.Inventory = Capacity{Type: "背包", Current: 0, Max: 0}
+	step := &Step{
+		Order:       1,
+		Description: "李侑吸收纯净灵力并突破练气四层",
+		Event: Event{
+			Type:       "acquire",
+			OnComplete: &EventResult{Narration: "灵力入体，经脉舒展，修为突破", Exp: 1},
+		},
+	}
+
+	sim.checkAcquireEvent("P1-V1-C4", step)
+
+	for _, issue := range sim.Issues {
+		if issue.Type == IssueEquipment {
+			t.Fatalf("non-item acquire should not trigger inventory issue, got %+v", issue)
+		}
+	}
+	if sim.Context.Protagonist.Inventory.Current != 0 {
+		t.Fatalf("non-item acquire should not increment inventory, got %+v", sim.Context.Protagonist.Inventory)
+	}
+}
+
+func TestAcquireStateDeltaCountsAsResultDescription(t *testing.T) {
+	sim := NewSimulator(&DSL{})
+	step := &Step{
+		Order:       1,
+		Description: "李侑在安全点吸收精纯灵力突破至练气四层。",
+		Event: Event{
+			Type: "acquire",
+			StateDeltas: []StateDelta{{
+				Target: "char_liyou",
+				Kind:   "breakthrough",
+				Field:  "realm",
+				From:   "练气三层",
+				To:     "练气四层",
+				Note:   "煞气淬炼灵脉后剥离的精纯灵力突破",
+			}},
+		},
+	}
+
+	sim.checkAcquireEvent("P1-V1-C4", step)
+
+	for _, issue := range sim.Issues {
+		if issue.Type == IssueDescription {
+			t.Fatalf("state_delta acquire result should not trigger missing result issue, got %+v", issue)
+		}
+	}
+}
+
 func TestStateAnchorEmitsStructuredGeneAndMechDeltas(t *testing.T) {
 	deltas := buildStateAnchorDeltas(models.Chapter{
 		StateAnchor: models.StateAnchor{
@@ -224,6 +341,24 @@ func TestStructuredGeneAndMechStateFeedsCombatResolver(t *testing.T) {
 		if issue.Type == IssueBalance {
 			t.Fatalf("expected structured gene/mech state to avoid balance issue, got %+v", issue)
 		}
+	}
+}
+
+func TestStrongCombatPreparationSuppressesOnlyWarningBand(t *testing.T) {
+	sim := NewSimulator(&DSL{})
+	sim.Context.Protagonist.Items = []string{"a", "b", "c", "d", "e"}
+	if !sim.hasStrongCombatPreparation(10, []string{"mech", "terrain"}) {
+		t.Fatalf("expected structured bonus, two tactical notes, and five items to count as strong preparation")
+	}
+	if sim.hasStrongCombatPreparation(0, []string{"mech", "terrain"}) {
+		t.Fatalf("preparation without structured bonus should not count as strong")
+	}
+	if sim.hasStrongCombatPreparation(10, []string{"mech"}) {
+		t.Fatalf("preparation with only one tactical note should not count as strong")
+	}
+	sim.Context.Protagonist.Items = []string{"a", "b", "c", "d"}
+	if sim.hasStrongCombatPreparation(10, []string{"mech", "terrain"}) {
+		t.Fatalf("preparation with fewer than five items should not count as strong")
 	}
 }
 

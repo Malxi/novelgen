@@ -236,6 +236,8 @@ func normalizeChapterScenes(chapter *Chapter, report *OutlineNormalizationReport
 		}
 	}
 
+	syncChapterEdgeBeats(chapter, report)
+
 	for i := range chapter.Scenes {
 		scene := &chapter.Scenes[i]
 		if scene.Order != i+1 {
@@ -290,6 +292,52 @@ func normalizeChapterScenes(chapter *Chapter, report *OutlineNormalizationReport
 				})
 			}
 		}
+	}
+}
+
+func syncChapterEdgeBeats(chapter *Chapter, report *OutlineNormalizationReport) {
+	opening := strings.TrimSpace(chapter.OpeningBeat)
+	if opening != "" && len(chapter.Scenes) > 0 {
+		scene := &chapter.Scenes[0]
+		if len(scene.Beats) == 0 {
+			scene.Beats = []string{opening}
+			report.Changes = append(report.Changes, OutlineNormalizationChange{
+				Path:   chapter.ID + ".scenes[0].beats[0]",
+				Action: "sync_opening_beat",
+				Value:  opening,
+			})
+		} else if strings.TrimSpace(scene.Beats[0]) != opening {
+			scene.Beats[0] = opening
+			report.Changes = append(report.Changes, OutlineNormalizationChange{
+				Path:   chapter.ID + ".scenes[0].beats[0]",
+				Action: "sync_opening_beat",
+				Value:  opening,
+			})
+		}
+	}
+
+	closing := strings.TrimSpace(chapter.ClosingBeat)
+	if closing == "" || len(chapter.Scenes) == 0 {
+		return
+	}
+	lastScene := &chapter.Scenes[len(chapter.Scenes)-1]
+	if len(lastScene.Beats) == 0 {
+		lastScene.Beats = []string{closing}
+		report.Changes = append(report.Changes, OutlineNormalizationChange{
+			Path:   fmt.Sprintf("%s.scenes[%d].beats[0]", chapter.ID, len(chapter.Scenes)-1),
+			Action: "sync_closing_beat",
+			Value:  closing,
+		})
+		return
+	}
+	lastBeat := len(lastScene.Beats) - 1
+	if strings.TrimSpace(lastScene.Beats[lastBeat]) != closing {
+		lastScene.Beats[lastBeat] = closing
+		report.Changes = append(report.Changes, OutlineNormalizationChange{
+			Path:   fmt.Sprintf("%s.scenes[%d].beats[%d]", chapter.ID, len(chapter.Scenes)-1, lastBeat),
+			Action: "sync_closing_beat",
+			Value:  closing,
+		})
 	}
 }
 

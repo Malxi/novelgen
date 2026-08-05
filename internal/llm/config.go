@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"novelgen/internal/agentruntime"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
 )
@@ -38,6 +40,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Providers: map[string]*ProviderConfig{
+			"claude": defaultClaudeProvider(),
 			"ollama": {
 				Name:    "ollama",
 				APIKey:  "local-llama",
@@ -53,8 +56,25 @@ func DefaultConfig() *Config {
 				},
 			},
 		},
-		DefaultProvider: "ollama",
-		DefaultModel:    "qwen3.5:4b",
+		DefaultProvider: "claude",
+		DefaultModel:    "sonnet",
+	}
+}
+
+func defaultClaudeProvider() *ProviderConfig {
+	return &ProviderConfig{
+		Name:    "claude",
+		APIKey:  "",
+		BaseURL: "",
+		Timeout: 120,
+		Models: map[string]*ModelConfig{
+			"sonnet": {
+				Name:      "sonnet",
+				Context:   200000,
+				MaxTokens: 8000,
+				Temp:      0.8,
+			},
+		},
 	}
 }
 
@@ -112,16 +132,22 @@ func LoadOrCreateConfig() (*Config, error) {
 	if _, err := os.Stat(path); err == nil {
 		return LoadConfig(path)
 	}
+	if agentruntime.Exists() {
+		return DefaultConfig(), nil
+	}
 
 	// Config not found - provide helpful error message
 	homeDir, _ := os.UserHomeDir()
 	globalConfigPath := filepath.Join(homeDir, ".novelgen", "llm_config.json")
 
-	return nil, fmt.Errorf("LLM configuration not found.\n\n"+
-		"Please create a configuration file at one of these locations:\n"+
-		"  1. Global: %s\n"+
-		"  2. Local:  llm_config.json (in current directory)\n\n"+
-		"Example configuration:\n"+
+	return nil, fmt.Errorf("AI configuration not found.\n\n"+
+		"For the default Claude agent runtime, create:\n"+
+		"  1. Agent:  %s\n"+
+		"     Run: novelgen config agent\n\n"+
+		"For legacy OpenAI-compatible providers, create one of:\n"+
+		"  2. Global: %s\n"+
+		"  3. Local:  llm_config.json (in current directory)\n\n"+
+		"Example legacy LLM configuration:\n"+
 		"{\n"+
 		"  \"providers\": {\n"+
 		"    \"ollama\": {\n"+
@@ -141,7 +167,7 @@ func LoadOrCreateConfig() (*Config, error) {
 		"  },\n"+
 		"  \"default_provider\": \"ollama\",\n"+
 		"  \"default_model\": \"qwen3.5:4b\"\n"+
-		"}", globalConfigPath)
+		"}", agentruntime.ConfigPath(), globalConfigPath)
 }
 
 // GetActiveProvider returns the active provider config based on project settings
@@ -157,6 +183,10 @@ func (c *Config) GetActiveProvider(projectLLM *models.ProjectLLM) *ProviderConfi
 	if provider, ok := c.Providers[providerName]; ok {
 		log.Debug("Found provider: %s", providerName)
 		return provider
+	}
+	if strings.EqualFold(providerName, "claude") {
+		log.Debug("Using built-in claude provider")
+		return defaultClaudeProvider()
 	}
 	// Fall back to default provider
 	log.Warn("Provider not found: %s, falling back to default: %s", providerName, c.DefaultProvider)
@@ -186,6 +216,15 @@ func (c *Config) GetActiveModel(projectLLM *models.ProjectLLM) (*ProviderConfig,
 		log.Info("Using model: %s (provider: %s)", modelName, provider.Name)
 		return provider, model
 	}
+	if strings.EqualFold(provider.Name, "claude") && modelName != "" {
+		log.Info("Using claude runtime model: %s", modelName)
+		return provider, &ModelConfig{
+			Name:      modelName,
+			Context:   200000,
+			MaxTokens: 8000,
+			Temp:      0.8,
+		}
+	}
 
 	// Fall back to first available model
 	log.Warn("Model not found: %s, falling back to first available model", modelName)
@@ -203,6 +242,10 @@ func (c *Config) CreateClient(projectLLM *models.ProjectLLM) Client {
 	if provider == nil || model == nil {
 		return nil
 	}
+	if strings.EqualFold(provider.Name, "claude") {
+		runtime, err := newAgentRuntime(provider.Name)
+		return NewRuntimeBackedClient(provider.Name, runtime, err)
+	}
 
 	return NewOpenAIClient(&OpenAIConfig{
 		APIKey:  provider.APIKey,
@@ -210,6 +253,18 @@ func (c *Config) CreateClient(projectLLM *models.ProjectLLM) Client {
 		Model:   model.Name,
 		Timeout: provider.Timeout,
 	})
+}
+
+func newAgentRuntime(providerName string) (agentruntime.Runtime, error) {
+	cfg, err := agentruntime.LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+	runtime, err := cfg.NewRuntime(providerName)
+	if err == nil {
+		return runtime, nil
+	}
+	return cfg.NewRuntime(cfg.DefaultRuntime)
 }
 
 // GetChatOptions returns ChatOptions from the config based on project settings

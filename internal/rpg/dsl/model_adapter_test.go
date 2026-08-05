@@ -38,6 +38,51 @@ func TestInferProtagonistNameFromSetupPrefersNamedAuthor(t *testing.T) {
 	}
 }
 
+func TestModelAdapterOutlinePlayerUsesCraftProtagonistDetails(t *testing.T) {
+	characters := map[string]*models.Character{
+		"Lin": {
+			Name:         "Lin",
+			RoleInStory:  "protagonist",
+			Background:   "old-world engineer",
+			Motivation:   "restore humanity",
+			Personality:  []string{"calm", "stubborn"},
+			CombatRole:   "mech pilot",
+			Skills:       []string{"engineering"},
+			Abilities:    []string{"fire core"},
+			Affiliations: []string{"Qingteng"},
+			DSLTags:      []string{"pilot"},
+		},
+		"bug": {
+			Name:        "Bug",
+			RoleInStory: "enemy scout",
+			Background:  "hostile swarm unit",
+			PowerLevel:  2,
+		},
+	}
+
+	got, err := NewModelAdapter(&models.StorySetup{ProjectName: "Fire"}, &models.Outline{}, characters, nil, nil).BuildDSL(PhaseOutline)
+	if err != nil {
+		t.Fatalf("build outline DSL: %v", err)
+	}
+	player := got.Characters.Player
+	if player == nil {
+		t.Fatalf("player missing")
+	}
+	if player.Name != "Lin" ||
+		player.Background != "old-world engineer" ||
+		player.Motivation != "restore humanity" ||
+		player.Class != "mech pilot" ||
+		len(player.Personality) != 2 ||
+		len(player.Skills) != 1 ||
+		len(player.Abilities) != 1 ||
+		len(player.Affiliations) != 1 {
+		t.Fatalf("craft protagonist details were not copied to player: %+v", player)
+	}
+	if len(got.Characters.Enemies) != 1 || got.Characters.Enemies[0].Name != "Bug" {
+		t.Fatalf("craft enemies should be available to outline simulation: %+v", got.Characters.Enemies)
+	}
+}
+
 func TestNovelgenAdapterOutlineAddsUsablePlayerLocationsAndEventTypes(t *testing.T) {
 	tmp := t.TempDir()
 	bookName := "mine-v2"
@@ -119,6 +164,44 @@ func TestNovelgenAdapterOutlineAddsUsablePlayerLocationsAndEventTypes(t *testing
 		if strings.Contains(joined, invalid) {
 			t.Fatalf("event type %q should have been normalized: %v", invalid, eventTypes)
 		}
+	}
+}
+
+func TestModelAdapterMapsEventResultToCompletion(t *testing.T) {
+	adapter := &ModelAdapter{}
+	event := adapter.buildEventFromModel(models.Event{
+		Type:       "combat",
+		Action:     models.ActionCombat,
+		Target:     "raiders",
+		TargetType: "character",
+		Context:    "ridge",
+		Result:     "Hero defeats the raiders and learns a better ambush tactic.",
+	}, nil)
+
+	if event.OnComplete == nil {
+		t.Fatalf("OnComplete was not populated")
+	}
+	if event.OnComplete.Narration != "Hero defeats the raiders and learns a better ambush tactic." {
+		t.Fatalf("Narration = %q", event.OnComplete.Narration)
+	}
+	if !stepHasNarrativeResult(&Step{Event: event}) {
+		t.Fatalf("mapped event result should count as narrative result")
+	}
+	if !stepHasCombatGrowthReward(&Step{Event: event}) {
+		t.Fatalf("combat result with learns should count as growth/reward")
+	}
+}
+
+func TestModelAdapterMapsAcquireResultItems(t *testing.T) {
+	adapter := &ModelAdapter{}
+	event := adapter.buildEventFromModel(models.Event{
+		Action: models.ActionAcquire,
+		Target: "Signal Key",
+		Result: "Hero obtains the Signal Key and opens the next route.",
+	}, nil)
+
+	if event.OnComplete == nil || len(event.OnComplete.Items) != 1 || event.OnComplete.Items[0] != "Signal Key" {
+		t.Fatalf("acquire result/items not mapped: %#v", event.OnComplete)
 	}
 }
 

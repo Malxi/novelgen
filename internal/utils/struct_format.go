@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -489,6 +490,8 @@ func StructToMarkdown(v interface{}, level int) string {
 		return structToMarkdown(val, level)
 	case reflect.Slice, reflect.Array:
 		return sliceToMarkdown(val, level)
+	case reflect.Map:
+		return mapToMarkdown(val, level)
 	default:
 		return fmt.Sprintf("%v", v)
 	}
@@ -581,15 +584,15 @@ func structToMarkdown(val reflect.Value, level int) string {
 				continue
 			}
 			result.WriteString(fmt.Sprintf("**%s:**\n", displayName))
-			for _, key := range field.MapKeys() {
-				val := field.MapIndex(key)
-				keyStr := fmt.Sprintf("%v", key.Interface())
-				valStr := StructToMarkdown(val.Interface(), level+1)
-				if valStr == "" {
-					valStr = fmt.Sprintf("%v", val.Interface())
-				}
-				result.WriteString(fmt.Sprintf("- %s: %s\n", keyStr, strings.TrimSpace(valStr)))
+			result.WriteString(mapToMarkdown(field, level+1))
+			result.WriteString("\n")
+
+		case reflect.Ptr:
+			if field.IsNil() {
+				continue
 			}
+			result.WriteString(fmt.Sprintf("**%s:**\n", displayName))
+			result.WriteString(StructToMarkdown(field.Interface(), level+1))
 			result.WriteString("\n")
 
 		default:
@@ -615,6 +618,61 @@ func sliceToMarkdown(val reflect.Value, level int) string {
 	}
 
 	return result.String()
+}
+
+func mapToMarkdown(val reflect.Value, level int) string {
+	if val.Len() == 0 {
+		return ""
+	}
+	type entry struct {
+		key   reflect.Value
+		label string
+	}
+	entries := make([]entry, 0, val.Len())
+	for _, key := range val.MapKeys() {
+		entries = append(entries, entry{key: key, label: fmt.Sprintf("%v", key.Interface())})
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].label < entries[j].label
+	})
+
+	var result strings.Builder
+	for _, item := range entries {
+		value := val.MapIndex(item.key)
+		result.WriteString(fmt.Sprintf("- %s: %s\n", item.label, strings.TrimSpace(markdownValueString(value, level+1))))
+	}
+	return result.String()
+}
+
+func markdownValueString(val reflect.Value, level int) string {
+	if !val.IsValid() {
+		return ""
+	}
+	for val.Kind() == reflect.Interface || val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return ""
+		}
+		val = val.Elem()
+	}
+	switch val.Kind() {
+	case reflect.String:
+		return val.String()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return fmt.Sprintf("%d", val.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return fmt.Sprintf("%d", val.Uint())
+	case reflect.Float32, reflect.Float64:
+		return fmt.Sprintf("%.2f", val.Float())
+	case reflect.Bool:
+		return fmt.Sprintf("%v", val.Bool())
+	case reflect.Struct, reflect.Slice, reflect.Array, reflect.Map:
+		return StructToMarkdown(val.Interface(), level)
+	default:
+		if val.CanInterface() {
+			return fmt.Sprintf("%v", val.Interface())
+		}
+		return ""
+	}
 }
 
 // isEmptyValue checks if a value is empty

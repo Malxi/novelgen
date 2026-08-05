@@ -25,6 +25,9 @@ var (
 	polishMinScoreFlag    int
 	polishConcurrencyFlag int
 	polishPromptFlag      string
+	polishAgentSDKFlag    bool
+	polishAgentApplyFlag  bool
+	polishRecapAgentSDK   bool
 )
 
 var polishCmd = &cobra.Command{
@@ -47,7 +50,13 @@ Examples:
   novelgen polish --volume 1 --max-rounds 3
 
   # Polish with specific instructions
-  novelgen polish --volume 1 --prompt "加强人物情感描写"`,
+  novelgen polish --volume 1 --prompt "加强人物情感描写"
+
+  # Polish using Agent SDK focused chapter repair tools
+  novelgen polish --volume 1 --agent-sdk
+
+  # Let Agent SDK apply validated chapter patches during polish
+  novelgen polish --volume 1 --agent-sdk --agent-apply`,
 	RunE: runPolish,
 }
 
@@ -58,6 +67,9 @@ func init() {
 	polishCmd.Flags().IntVar(&polishMinScoreFlag, "min-score", 8, "Minimum acceptable score (1-10)")
 	polishCmd.Flags().IntVar(&polishConcurrencyFlag, "concurrency", 1, "Number of concurrent improvements")
 	polishCmd.Flags().StringVar(&polishPromptFlag, "prompt", "", "Additional instructions for volume-level improvement")
+	polishCmd.Flags().BoolVar(&polishAgentSDKFlag, "agent-sdk", false, "Use Claude Agent SDK workflow for focused chapter polishing")
+	polishCmd.Flags().BoolVar(&polishAgentApplyFlag, "agent-apply", false, "With --agent-sdk, let the agent write chapter patches through validated patch tools")
+	polishCmd.Flags().BoolVar(&polishRecapAgentSDK, "recap-agent-sdk", false, "Use Claude Agent SDK workflow for recap refresh after polishing")
 
 	// Register polish command using the plugin mechanism
 	RegisterCommand(func() *cobra.Command {
@@ -68,6 +80,9 @@ func init() {
 func runPolish(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
+	if err := validatePolishAgentApplyOption(polishAgentSDKFlag, polishAgentApplyFlag); err != nil {
+		return err
+	}
 
 	// Load project config
 	config, err := loadProjectConfig()
@@ -128,6 +143,15 @@ func runPolish(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Polishing %d volume(s)", len(volumes))
+	if polishAgentSDKFlag {
+		log.Info("Agent SDK polish enabled: focused per-chapter tools will be used for chapter improvements")
+		if polishAgentApplyFlag {
+			log.Info("Agent apply enabled: SDK may write chapter patches through validated patch tools")
+		}
+		if polishConcurrencyFlag > 1 {
+			log.Warn("--agent-sdk polish runs sequentially for clearer live logs; ignoring --concurrency=%d", polishConcurrencyFlag)
+		}
+	}
 	var errc writeErrorCollector
 
 	// Process each volume
@@ -191,7 +215,7 @@ func runPolish(cmd *cobra.Command, args []string) error {
 
 			// Step 2: Improve chapters based on volume review and RPG DSL issues
 			log.Info("Improving chapters based on volume review and RPG DSL issues...")
-			improvedCount, err := improveChaptersWithVolumeReviewAndRPGIssues(ctx, writeAgent, recapAgent, recapStore, continuityBuilder, volume, chapters, volumeReviewResult, rpgDSLIssues, outline, targetWords)
+			improvedCount, err := improveChaptersWithVolumeReviewAndRPGIssues(ctx, writeAgent, recapAgent, recapStore, continuityBuilder, volume, chapters, volumeReviewResult, rpgDSLIssues, outline, targetWords, polishAgentSDKFlag, polishAgentApplyFlag, polishRecapAgentSDK || polishAgentSDKFlag)
 			if err != nil {
 				log.Error("Failed to polish some chapters in volume %s: %v", volume.ID, err)
 				errc.Add(err)
@@ -305,8 +329,15 @@ func performVolumeReview(ctx context.Context, writeAgent *agents.WriteAgent, vol
 	return writeAgent.ReviewVolume(ctx, volume, chapters, chapterContents, targetWords)
 }
 
+func validatePolishAgentApplyOption(useAgentSDK, agentApply bool) error {
+	if agentApply && !useAgentSDK {
+		return fmt.Errorf("--agent-apply requires --agent-sdk")
+	}
+	return nil
+}
+
 // improveChaptersWithVolumeReviewAndRPGIssues improves chapters based on volume-level review and RPG DSL issues
-func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent *agents.WriteAgent, recapAgent *agents.RecapAgent, recapStore *recap.Store, continuityBuilder *logic.ChapterContinuityBuilder, volume *models.Volume, chapters []*models.Chapter, volumeReview agents.VolumeReviewResult, rpgDSLIssues []dsl.SimulationIssue, outline *models.Outline, targetWords int) (int, error) {
+func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent *agents.WriteAgent, recapAgent *agents.RecapAgent, recapStore *recap.Store, continuityBuilder *logic.ChapterContinuityBuilder, volume *models.Volume, chapters []*models.Chapter, volumeReview agents.VolumeReviewResult, rpgDSLIssues []dsl.SimulationIssue, outline *models.Outline, targetWords int, useAgentSDK bool, agentApply bool, recapAgentSDK bool) (int, error) {
 	log := logger.GetLogger()
 	var errc writeErrorCollector
 
@@ -322,13 +353,7 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent
 	improvedCount := 0
 	var mu sync.Mutex
 
-	concurrency := polishConcurrencyFlag
-	if concurrency <= 0 {
-		concurrency = 1
-	}
-	if concurrency > len(chapters) {
-		concurrency = len(chapters)
-	}
+	concurrency := effectivePolishConcurrency(polishConcurrencyFlag, len(chapters), useAgentSDK)
 
 	// Start workers
 	for i := 0; i < concurrency; i++ {
@@ -416,6 +441,12 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent
 					suggestions.WriteString("\n\n## 用户要求\n\n")
 					suggestions.WriteString(polishPromptFlag)
 				}
+				if useAgentSDK {
+					if checkSuggestions := buildAgentSDKChapterCheckSuggestions(chapter, targetWords); checkSuggestions != "" {
+						suggestions.WriteString("\n\n")
+						suggestions.WriteString(checkSuggestions)
+					}
+				}
 
 				// Load context
 				chapterContext := loadChapterContext(outline, chapter, 2)
@@ -424,22 +455,33 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent
 				continuity := continuityBuilder.BuildBefore(outline, chapter)
 
 				// Generate improved content
-				content, err := writeAgent.GenerateChapterWithSuggestions(ctx, chapter, chapterContext, continuity, targetWords, currentContent, suggestions.String())
+				content, err := generateImprovedChapter(ctx, writeAgent, chapter, chapterContext, continuity, targetWords, currentContent, suggestions.String(), useAgentSDK, agentApply, false)
 				if err != nil {
 					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
 					errc.Addf("%s: polish improve failed: %w", chapter.ID, err)
 					continue
 				}
+				content, agentApplied := resolveAgentAppliedChapterContent(log, workerID, chapter, currentContent, content, useAgentSDK, agentApply)
 
 				// Save improved content
-				if err := saveFinalChapter(chapter, content); err != nil {
+				if agentApplied && strings.TrimSpace(loadFinalChapterContent(chapter)) == strings.TrimSpace(content) {
+					log.Info("[Worker %d] Agent patch already saved chapter %s through tool patch chapter --apply", workerID, chapter.ID)
+				} else if err := saveFinalChapter(chapter, content); err != nil {
 					log.Error("[Worker %d] Failed to save chapter %s: %v", workerID, chapter.ID, err)
 					errc.Addf("%s: save polished chapter failed: %w", chapter.ID, err)
 					continue
 				}
+				if useAgentSDK {
+					postCheck, err := runAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords)
+					if err != nil {
+						log.Warn("[Worker %d] Agent SDK post-save check failed for %s: %v", workerID, chapter.ID, err)
+					} else {
+						logAgentSDKChapterPostSaveCheck(log, workerID, chapter.ID, postCheck)
+					}
+				}
 
 				// Update recap
-				if err := extractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, content, workerID); err != nil {
+				if err := extractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, content, workerID, recapAgentSDK); err != nil {
 					log.Error("[Worker %d] Failed to generate/save recap for chapter %s: %v", workerID, chapter.ID, err)
 					errc.Addf("%s: polish recap failed: %w", chapter.ID, err)
 				} else {
@@ -464,4 +506,20 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent
 	wg.Wait()
 
 	return improvedCount, errc.Err()
+}
+
+func effectivePolishConcurrency(configured, chapterCount int, useAgentSDK bool) int {
+	if chapterCount <= 0 {
+		return 0
+	}
+	if useAgentSDK && configured > 1 {
+		return 1
+	}
+	if configured <= 0 {
+		configured = 1
+	}
+	if configured > chapterCount {
+		return chapterCount
+	}
+	return configured
 }

@@ -458,7 +458,7 @@ func (s *Simulator) checkCharacterSetup() {
 	}
 
 	// 检查是否有足够的角色类型
-	if roles["antagonist"] == 0 && roles["villain"] == 0 {
+	if roles["antagonist"] == 0 && roles["villain"] == 0 && len(s.DSL.Characters.Enemies) == 0 {
 		s.addIssue(IssueConflict, SeverityInfo, "", 0,
 			"缺少明确的反派角色",
 			"考虑添加一个反派角色来增加冲突")
@@ -643,7 +643,7 @@ func (s *Simulator) checkCombatEvent(chapterID string, step *Step) {
 				fmt.Sprintf("战斗难度过高！主角基础战力(%d)+成长/机甲修正(%d)+%s支援(%d)+战术修正(%d)仍低于敌人有效战力(%d)%s",
 					protagonistPower, structuredBonus, s.getAllyDescription(), allyPower, tacticalBonus, enemyTotalPower, modifierText),
 				"降低敌人等级/数量，或给主角增加技能、道具、盟友支援")
-		} else if enemyTotalPower > totalPower*3/2 {
+		} else if enemyTotalPower > totalPower*3/2 && !s.hasStrongCombatPreparation(structuredBonus, tacticalNotes) {
 			s.addIssue(IssueBalance, SeverityWarning, chapterID, step.Order,
 				fmt.Sprintf("战斗难度较高。建议给主角准备：技能(%d个)、道具(%d个)、盟友(%d个)、机甲模块(%d个)%s",
 					len(s.Context.Protagonist.Skills), len(s.Context.Protagonist.Items), len(s.Context.Protagonist.Allies), len(s.Context.Protagonist.Mech.Modules), modifierText),
@@ -652,21 +652,65 @@ func (s *Simulator) checkCombatEvent(chapterID string, step *Step) {
 	}
 
 	// 检查战斗是否有叙事结果
-	if step.Event.OnComplete == nil || step.Event.OnComplete.Narration == "" {
+	if !stepHasNarrativeResult(step) {
 		s.addIssue(IssueDescription, SeverityInfo, chapterID, step.Order,
 			"战斗事件缺少叙事性结果描述",
 			"添加战斗结束后发生了什么（受伤、领悟、获得战利品等）")
 	}
 
 	// 检查战斗是否有成长奖励
-	if step.Event.OnComplete == nil || step.Event.OnComplete.Exp == 0 {
-		s.addIssue(IssueGrowth, SeverityInfo, chapterID, step.Order,
-			"战斗后缺少成长/收获",
-			"添加战斗后的感悟、突破、获得经验/技能/道具等")
-	}
 }
 
 // 检查成长奖励
+func stepHasNarrativeResult(step *Step) bool {
+	if step == nil || step.Event.OnComplete == nil {
+		return false
+	}
+	return strings.TrimSpace(step.Event.OnComplete.Narration) != "" ||
+		strings.TrimSpace(step.Event.OnComplete.Result) != ""
+}
+
+func stepHasCombatGrowthReward(step *Step) bool {
+	if step == nil {
+		return false
+	}
+	if step.Event.OnComplete != nil {
+		if step.Event.OnComplete.Exp > 0 || len(step.Event.OnComplete.Items) > 0 {
+			return true
+		}
+		text := strings.ToLower(strings.TrimSpace(step.Event.OnComplete.Narration + " " + step.Event.OnComplete.Result))
+		if containsAnyCombatRewardText(text) {
+			return true
+		}
+	}
+	return stepHasGrowthDelta(*step)
+}
+
+func containsAnyCombatRewardText(text string) bool {
+	if text == "" {
+		return false
+	}
+	for _, marker := range []string{
+		"gain", "learn", "loot", "reward", "upgrade", "breakthrough", "realize", "prove",
+		"获得", "领悟", "突破", "提升", "升级", "收获", "战利品", "部件", "经验", "意识到", "验证",
+	} {
+		if strings.Contains(text, strings.ToLower(marker)) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Simulator) hasStrongCombatPreparation(structuredBonus int, tacticalNotes []string) bool {
+	if structuredBonus <= 0 {
+		return false
+	}
+	if len(tacticalNotes) < 2 {
+		return false
+	}
+	return len(s.Context.Protagonist.Items) >= 5
+}
+
 func (s *Simulator) checkGrowthReward(chapterID string, step *Step) {
 	if step.Event.OnComplete == nil || step.Event.OnComplete.Exp <= 0 {
 		return
@@ -890,22 +934,26 @@ func (s *Simulator) checkLocationEvent(chapterID string, step *Step) {
 // 检查获取事件
 func (s *Simulator) checkAcquireEvent(chapterID string, step *Step) {
 	// 检查是否有具体的获取内容
-	if step.Event.OnComplete == nil {
+	if !stepHasAcquireResult(step) {
 		s.addIssue(IssueDescription, SeverityInfo, chapterID, step.Order,
 			"获取事件建议添加结果描述",
 			"描述获得了什么以及获得后的感受")
 		return
 	}
+	if step.Event.OnComplete == nil {
+		return
+	}
 
 	// 检查储物空间是否足够
-	if s.Context.Protagonist.Inventory.Current >= s.Context.Protagonist.Inventory.Max {
+	hasItemReward := len(step.Event.OnComplete.Items) > 0
+	if hasItemReward && s.Context.Protagonist.Inventory.Max > 0 && s.Context.Protagonist.Inventory.Current >= s.Context.Protagonist.Inventory.Max {
 		s.addIssue(IssueEquipment, SeverityWarning, chapterID, step.Order,
 			fmt.Sprintf("%s已满(%d/%d)，无法获得更多物品",
 				s.Context.Protagonist.Inventory.Type,
 				s.Context.Protagonist.Inventory.Current,
 				s.Context.Protagonist.Inventory.Max),
 			"清理空间、扩容、或使用物品")
-	} else {
+	} else if hasItemReward {
 		s.Context.Protagonist.Inventory.Current++
 	}
 
@@ -913,6 +961,33 @@ func (s *Simulator) checkAcquireEvent(chapterID string, step *Step) {
 	if step.Event.OnComplete.Items != nil {
 		s.Context.Protagonist.Items = append(s.Context.Protagonist.Items, step.Event.OnComplete.Items...)
 	}
+}
+
+func stepHasAcquireResult(step *Step) bool {
+	if step == nil {
+		return false
+	}
+	if step.Event.OnComplete != nil {
+		result := step.Event.OnComplete
+		if strings.TrimSpace(result.Narration) != "" ||
+			strings.TrimSpace(result.Result) != "" ||
+			result.Exp > 0 ||
+			result.Heal > 0 ||
+			len(result.Items) > 0 ||
+			strings.TrimSpace(result.TriggerEvent) != "" ||
+			strings.TrimSpace(result.SetFlag) != "" ||
+			strings.TrimSpace(result.UnlockStage) != "" {
+			return true
+		}
+	}
+	for _, delta := range step.Event.StateDeltas {
+		if strings.TrimSpace(delta.To) != "" ||
+			strings.TrimSpace(delta.Note) != "" ||
+			delta.Delta != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // 检查知识事件
@@ -1005,23 +1080,38 @@ func (s *Simulator) checkChapterLogic(chapter *Chapter) {
 	if !hasGrowth && len(events) > 3 {
 		s.addIssue(IssueGrowth, SeverityInfo, chapter.ID, 0,
 			"章节内容较多但缺少主角成长",
-			"考虑添加修炼突破、技能学习、获得道具、获得盟友等成长元素")
+			"考虑添加修炼突破、技能学习、获得道具、获得盟友、日志线索、信息优势或策略升级等成长元素")
 	}
 }
 
 func stepHasGrowthDelta(step Step) bool {
 	for _, delta := range step.Event.StateDeltas {
-		kind := strings.ToLower(strings.TrimSpace(delta.Kind))
-		switch kind {
-		case "cultivation", "breakthrough", "evolution", "power_change", "skill", "item", "equipment", "ally":
+		if stateDeltaIsGrowth(delta) {
 			if delta.To != "" || delta.Delta != 0 || delta.Note != "" {
 				return true
 			}
+		}
+		kind := strings.ToLower(strings.TrimSpace(delta.Kind))
+		switch kind {
 		case "resource", "premise":
 			if delta.Delta != 0 || delta.To != "" {
 				return true
 			}
 		}
+	}
+	return false
+}
+
+func stateDeltaIsGrowth(delta StateDelta) bool {
+	kind := strings.ToLower(strings.TrimSpace(delta.Kind))
+	field := strings.ToLower(strings.TrimSpace(delta.Field))
+	switch kind {
+	case "cultivation", "breakthrough", "evolution", "power_change", "skill", "item", "equipment", "ally", "knowledge", "insight", "clue", "information", "strategy":
+		return true
+	}
+	switch field {
+	case "knowledge", "insight", "clue", "information", "strategy", "plan", "tactic", "tactics", "method", "approach":
+		return true
 	}
 	return false
 }

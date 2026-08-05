@@ -36,7 +36,7 @@ func init() {
 	initCmd.Flags().IntVar(&initChapterFlag, "chapter", 20, "Number of chapters")
 	initCmd.Flags().StringVar(&initGenreFlag, "genre", "", "Genre(s), comma-separated (e.g., '科幻,废土')")
 	initCmd.Flags().StringVar(&initModeFlag, "mode", "", "LLM model to use (e.g., 'gpt-5.2')")
-	initCmd.Flags().StringVar(&initProviderFlag, "provider", "ollama", "LLM provider (ollama, openai, etc.)")
+	initCmd.Flags().StringVar(&initProviderFlag, "provider", "claude", "LLM provider (claude, ollama, openai, etc.)")
 	initCmd.Flags().StringVar(&initLanguageFlag, "language", "zh", "Story language (zh, en, ja, etc.)")
 
 	// Register init command using the new plugin mechanism
@@ -89,7 +89,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Set default model if not specified
 	if config.LLM.Model == "" {
-		if initProviderFlag == "openai" {
+		if initProviderFlag == "claude" {
+			config.LLM.Model = "sonnet"
+		} else if initProviderFlag == "openai" {
 			// Keep in sync with llm_config.json defaults
 			config.LLM.Model = "gpt-5.2"
 		} else {

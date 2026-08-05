@@ -100,8 +100,7 @@ func ValidateConsistency(r *models.ChapterRecap) (ok bool, reasons []string) {
 		reasons = append(reasons, "next_opening_hint 过长（建议 1–3 句，避免跑题）")
 	}
 
-	key := firstMeaningfulToken(ll)
-	if key != "" && !strings.Contains(hint, key) {
+	if !hasVisibleContinuation(ll, hint) {
 		reasons = append(reasons, "next_opening_hint 与 last_line 缺少明显承接词（可能跑题）")
 	}
 
@@ -149,4 +148,47 @@ func firstMeaningfulToken(s string) string {
 		}
 	}
 	return string(buf)
+}
+
+func hasVisibleContinuation(lastLine, hint string) bool {
+	ll := normalizeContinuityText(lastLine)
+	nh := normalizeContinuityText(hint)
+	if len(ll) == 0 || len(nh) == 0 {
+		return false
+	}
+	return longestCommonRuneSubstring(ll, nh) >= 2
+}
+
+func normalizeContinuityText(s string) []rune {
+	s = strings.ToLower(strings.TrimSpace(s))
+	out := make([]rune, 0, len(s))
+	for _, c := range s {
+		if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+			(c >= '\u4e00' && c <= '\u9fff') {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+func longestCommonRuneSubstring(a, b []rune) int {
+	if len(a) == 0 || len(b) == 0 {
+		return 0
+	}
+	prev := make([]int, len(b)+1)
+	best := 0
+	for i := 1; i <= len(a); i++ {
+		cur := make([]int, len(b)+1)
+		for j := 1; j <= len(b); j++ {
+			if a[i-1] != b[j-1] {
+				continue
+			}
+			cur[j] = prev[j-1] + 1
+			if cur[j] > best {
+				best = cur[j]
+			}
+		}
+		prev = cur
+	}
+	return best
 }

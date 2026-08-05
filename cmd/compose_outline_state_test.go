@@ -80,6 +80,173 @@ func TestOutlineWithImproveVolumeSelection(t *testing.T) {
 	}
 }
 
+func TestFilterAgentSDKReviewForPromptBoundaryKeepsOnlyMentionedChapter(t *testing.T) {
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1",
+		Volumes: []models.Volume{{
+			ID: "P1-V1",
+			Chapters: []models.Chapter{
+				{ID: "P1-V1-C1"},
+				{ID: "P1-V1-C2"},
+				{ID: "P1-V1-C3"},
+			},
+		}},
+	}}}
+	review := &models.ReviewResult{
+		Summary: "post-check",
+		Suggestions: []models.ReviewSuggestion{
+			{TargetID: "P1-V1-C1", Category: "logic", Priority: models.PriorityMedium},
+			{TargetID: "P1-V1-C2", Category: "transition", Priority: models.PriorityMedium},
+			{TargetID: "P1-V1-C3", Category: "logic", Priority: models.PriorityMedium},
+		},
+	}
+
+	got := filterAgentSDKReviewForPromptBoundary(review, outline, "只修复 P1-V1-C2 的 transition/logic focused check", "test review")
+	if len(got.Suggestions) != 1 || got.Suggestions[0].TargetID != "P1-V1-C2" {
+		t.Fatalf("filtered suggestions = %#v", got.Suggestions)
+	}
+	if len(review.Suggestions) != 3 {
+		t.Fatalf("filter mutated original review: %#v", review.Suggestions)
+	}
+}
+
+func TestFilterAgentSDKReviewForPromptBoundaryLeavesUnboundedPromptAlone(t *testing.T) {
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1",
+		Volumes: []models.Volume{{
+			ID: "P1-V1",
+			Chapters: []models.Chapter{
+				{ID: "P1-V1-C1"},
+				{ID: "P1-V1-C2"},
+			},
+		}},
+	}}}
+	review := &models.ReviewResult{Suggestions: []models.ReviewSuggestion{
+		{TargetID: "P1-V1-C1", Category: "logic", Priority: models.PriorityMedium},
+		{TargetID: "P1-V1-C2", Category: "logic", Priority: models.PriorityMedium},
+	}}
+
+	got := filterAgentSDKReviewForPromptBoundary(review, outline, "强化整卷节奏", "test review")
+	if len(got.Suggestions) != 2 {
+		t.Fatalf("unbounded prompt should keep suggestions: %#v", got.Suggestions)
+	}
+	if got != review {
+		t.Fatalf("unbounded prompt should reuse original review")
+	}
+}
+
+func TestOutlineGateHasPatchableGlobalIssuesDetectsSetupBackedFactionTier(t *testing.T) {
+	gate := qualityGateResult{Suggestions: []models.ReviewSuggestion{{
+		Category: "faction_tier",
+		TargetID: "zerg",
+		Issue:    "missing faction tier ladder",
+		Priority: models.PriorityLow,
+	}}}
+	if !outlineGateHasPatchableGlobalIssues(gate, nil) {
+		t.Fatalf("expected setup-backed faction_tier issue to be patchable")
+	}
+}
+
+func TestOutlineGateHasPatchableGlobalIssuesIgnoresUnpatchableGlobalIssue(t *testing.T) {
+	gate := qualityGateResult{Suggestions: []models.ReviewSuggestion{{
+		Category: "mysteries",
+		TargetID: "global",
+		Issue:    "unresolved mystery needs story decision",
+		Priority: models.PriorityLow,
+	}}}
+	if outlineGateHasPatchableGlobalIssues(gate, nil) {
+		t.Fatalf("global mystery issue without outline evidence should not trigger apply-mode repair")
+	}
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1",
+		Volumes: []models.Volume{{
+			ID: "P1-V1",
+			Chapters: []models.Chapter{{
+				ID:        "P1-V1-C1",
+				Mysteries: models.ChapterMysteries{Planted: []models.MysteryPlanted{{ID: "myst_signal", Clue: "signal"}}},
+			}, {
+				ID: "P1-V1-C2",
+			}},
+		}},
+	}}}
+	if !outlineGateHasPatchableGlobalIssues(gate, outline) {
+		t.Fatalf("global mystery issue with a later chapter should trigger patchable repair")
+	}
+}
+
+func TestValidateSetupOutlineCrossInfersFactionFromPremiseName(t *testing.T) {
+	setup := &models.StorySetup{Premises: []models.Premise{{
+		Name:        "Zerg Faction Tier Ladder",
+		Category:    "faction",
+		Description: "zerg ranks: drone, soldier, captain",
+	}}}
+	outline := &rpg.StoryOutline{Parts: []rpg.StoryPart{{
+		Volumes: []rpg.StoryVolume{{
+			Chapters: []rpg.StoryChapter{{
+				ID: "P1-V1-C1",
+				Enemies: []rpg.StoryOutlineEnemy{{
+					Name:    "zerg_drone",
+					Faction: "zerg",
+					Tier:    "drone",
+					Count:   1,
+				}},
+			}},
+		}},
+	}}}
+
+	issues, warnings := validateSetupOutlineCross(setup, outline)
+	if len(issues) != 0 || len(warnings) != 0 {
+		t.Fatalf("expected inferred zerg faction tiers to satisfy cross-check, issues=%v warnings=%v", issues, warnings)
+	}
+}
+
+func TestRunOutlineValidatorOnModelSkipsSetupBackedFactionTierHint(t *testing.T) {
+	outline := &models.Outline{Parts: []models.Part{{
+		Volumes: []models.Volume{{
+			Chapters: []models.Chapter{{
+				ID: "P1-V1-C1",
+				Enemies: []models.OutlineEnemy{{
+					Name:    "zerg_drone",
+					Faction: "zerg",
+					Tier:    "drone",
+					Count:   1,
+				}, {
+					Name:    "zerg_soldier",
+					Faction: "zerg",
+					Tier:    "soldier",
+					Count:   1,
+				}},
+			}},
+		}},
+	}}}
+
+	for _, suggestion := range runOutlineValidatorOnModel(outline) {
+		if suggestion.Category == "faction_tier" && suggestion.TargetID == "zerg" {
+			t.Fatalf("outline-only validator should not emit setup-backed faction_tier hint: %#v", suggestion)
+		}
+	}
+}
+
+func TestOutlinesSemanticallyEqual(t *testing.T) {
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "part_1",
+		Volumes: []models.Volume{{
+			ID:       "volume_1",
+			Title:    "Generated",
+			Chapters: []models.Chapter{{ID: "ch1", Title: "Old"}},
+		}},
+	}}}
+	cloned := cloneOutline(outline)
+
+	if !outlinesSemanticallyEqual(outline, cloned) {
+		t.Fatalf("cloned outline should be semantically equal")
+	}
+	cloned.Parts[0].Volumes[0].Chapters[0].Title = "New"
+	if outlinesSemanticallyEqual(outline, cloned) {
+		t.Fatalf("changed outline should not be semantically equal")
+	}
+}
+
 func TestOutlineVolumePositionUsesGlobalVolumeIndex(t *testing.T) {
 	outline := &models.Outline{Parts: []models.Part{
 		{ID: "part_1", Volumes: []models.Volume{{ID: "v1"}, {ID: "v2"}}},
@@ -96,6 +263,81 @@ func TestOutlineVolumePositionUsesGlobalVolumeIndex(t *testing.T) {
 
 	if _, _, err := outlineVolumePosition(outline, 5); err == nil {
 		t.Fatalf("expected out-of-range volume to fail")
+	}
+}
+
+func TestValidateComposeAgentSDKOptionRejectsOneShot(t *testing.T) {
+	if err := validateComposeAgentSDKOption(true, true); err == nil {
+		t.Fatalf("expected --agent-sdk with --one-shot to fail")
+	}
+	if err := validateComposeAgentSDKOption(true, false); err != nil {
+		t.Fatalf("agent sdk without one-shot should pass: %v", err)
+	}
+}
+
+func TestValidateComposeAgentApplyOptionRequiresAgentSDK(t *testing.T) {
+	if err := validateComposeAgentApplyOption(false, true); err == nil {
+		t.Fatalf("expected --agent-apply without --agent-sdk to fail")
+	}
+	if err := validateComposeAgentApplyOption(true, true); err != nil {
+		t.Fatalf("agent apply with agent sdk should pass: %v", err)
+	}
+	if err := validateComposeAgentApplyOption(false, false); err != nil {
+		t.Fatalf("disabled agent apply should pass: %v", err)
+	}
+}
+
+func TestFilterQualityGateForAgentSDKPromptBoundaryKeepsOnlyPromptChapter(t *testing.T) {
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1",
+		Volumes: []models.Volume{{
+			ID: "P1-V2",
+			Chapters: []models.Chapter{
+				{ID: "P1-V2-C4", Title: "第四章"},
+				{ID: "P1-V2-C5", Title: "第五章"},
+			},
+		}},
+	}}}
+	gate := qualityGateResult{
+		Blocking: true,
+		Suggestions: []models.ReviewSuggestion{
+			{TargetID: "P1-V2-C4", Issue: "outside prompt", Priority: models.PriorityHigh},
+			{TargetID: "global", Issue: "global issue", Priority: models.PriorityLow},
+			{TargetID: "P1-V2-C5", Issue: "inside prompt", Priority: models.PriorityMedium},
+		},
+	}
+
+	filtered := filterQualityGateForAgentSDKPromptBoundary(gate, outline, "只改 P1-V2-C5，不要修改其他章节", "test")
+
+	if len(filtered.Suggestions) != 1 {
+		t.Fatalf("filtered suggestions = %d, want 1: %#v", len(filtered.Suggestions), filtered.Suggestions)
+	}
+	if filtered.Suggestions[0].TargetID != "P1-V2-C5" {
+		t.Fatalf("filtered target = %q, want P1-V2-C5", filtered.Suggestions[0].TargetID)
+	}
+	if filtered.Blocking {
+		t.Fatalf("filtered gate should not be blocking after high-priority outside-prompt issue is removed")
+	}
+}
+
+func TestFilterQualityGateForAgentSDKPromptBoundarySkipsGlobalWhenPromptNamesChapter(t *testing.T) {
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1",
+		Volumes: []models.Volume{{
+			ID:       "P1-V2",
+			Chapters: []models.Chapter{{ID: "P1-V2-C5", Title: "第五章"}},
+		}},
+	}}}
+	gate := qualityGateResult{
+		Suggestions: []models.ReviewSuggestion{
+			{TargetID: "global", Issue: "global issue", Priority: models.PriorityLow},
+		},
+	}
+
+	filtered := filterQualityGateForAgentSDKPromptBoundary(gate, outline, "只改 P1-V2-C5", "test")
+
+	if len(filtered.Suggestions) != 0 {
+		t.Fatalf("global suggestion should be outside chapter prompt boundary: %#v", filtered.Suggestions)
 	}
 }
 

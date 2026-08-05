@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"novelgen/internal/agents"
@@ -14,6 +15,7 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/rpg"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -23,6 +25,8 @@ var (
 	setupMaxRounds     int
 	setupImprovePrompt string
 	setupForceImprove  bool
+	setupAgentSDK      bool
+	setupAgentApply    bool
 )
 
 var setupCmd = &cobra.Command{
@@ -66,10 +70,17 @@ var setupRegenCmd = &cobra.Command{
 This command reads the existing story setup and regenerates it
 based on the optional prompt guidance.
 
+With --agent-sdk, regeneration runs as a focused setup repair workflow:
+the agent queries/checks the current setup through novelgen tools and
+returns or applies a validated setup patch instead of receiving the full
+setup JSON in prompt context.
+
 Examples:
   novelgen setup regen                      # Regenerate with current setup
-  novelgen setup regen --prompt "增加更多悬疑元素"
-  novelgen setup regen --prompt "改为喜剧风格"`,
+  novelgen setup regen --prompt "add more mystery pressure"
+  novelgen setup regen --prompt "make the tone more comedic"
+  novelgen setup regen --agent-sdk --prompt "sharpen the protagonist promise"
+  novelgen setup regen --agent-sdk --agent-apply --prompt "repair setup check issues"`,
 	RunE: runSetupRegen,
 }
 
@@ -134,11 +145,22 @@ func init() {
 
 	// Regen flags
 	setupRegenCmd.Flags().StringVar(&setupRegenPrompt, "prompt", "", "Guidance for regeneration")
+	setupRegenCmd.Flags().BoolVar(&setupAgentSDK, "agent-sdk", false, "Use Claude Agent SDK workflow with setup query/check/patch tools")
+	setupRegenCmd.Flags().BoolVar(&setupAgentApply, "agent-apply", false, "With --agent-sdk, let the agent write setup through validated patch tools")
 
 	// Improve flags
 	setupImproveCmd.Flags().IntVar(&setupMaxRounds, "max-rounds", 1, "Maximum improvement rounds")
 	setupImproveCmd.Flags().StringVar(&setupImprovePrompt, "prompt", "", "Manual improvement guidance (if provided, uses manual mode)")
 	setupImproveCmd.Flags().BoolVar(&setupForceImprove, "force", false, "Force improvement based on suggestions even if score meets threshold")
+	setupImproveCmd.Flags().BoolVar(&setupAgentSDK, "agent-sdk", false, "Use Claude Agent SDK workflow with setup query/check/patch tools")
+	setupImproveCmd.Flags().BoolVar(&setupAgentApply, "agent-apply", false, "With --agent-sdk, let the agent write setup through validated patch tools")
+}
+
+func validateSetupAgentApplyOption(agentSDK, agentApply bool) error {
+	if agentApply && !agentSDK {
+		return fmt.Errorf("--agent-apply requires --agent-sdk")
+	}
+	return nil
 }
 
 func runSetupGen(cmd *cobra.Command, args []string) error {
@@ -197,6 +219,9 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN SETUP REGEN")
+	if err := validateSetupAgentApplyOption(setupAgentSDK, setupAgentApply); err != nil {
+		return err
+	}
 
 	// Check if we're in a project directory
 	if _, err := os.Stat("novel.json"); err != nil {
@@ -220,6 +245,42 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load existing story setup: %w", err)
 	}
 	logger.Info("Loaded existing story setup")
+
+	if setupAgentSDK {
+		agent, err := newSetupAgentForProject(projectConfig)
+		if err != nil {
+			return err
+		}
+		prompt := strings.TrimSpace(setupRegenPrompt)
+		if prompt == "" {
+			prompt = "Regenerate and tighten the story setup using the current project facts. Preserve stable project identity, repair setup check issues, and make only justified patch changes."
+		}
+		improved, review, changed, err := runSetupImproveAgentSDK(cmd.Context(), agent, existingSetup, setupPath, 1, prompt, true, setupAgentApply)
+		if err != nil {
+			logger.Error("Failed to regenerate story setup with Agent SDK: %v", err)
+			return fmt.Errorf("failed to regenerate story setup with Agent SDK: %w", err)
+		}
+		if !setupAgentApply && changed {
+			if _, err := saveToolSetupPatchCheckpoint(".", *existingSetup); err != nil {
+				return fmt.Errorf("failed to checkpoint original story setup: %w", err)
+			}
+			if err := saveStorySetup(improved); err != nil {
+				return fmt.Errorf("failed to save regenerated story setup: %w", err)
+			}
+		}
+		if changed {
+			fmt.Printf("\n[ok] Story setup regenerated with Agent SDK!\n")
+		} else {
+			fmt.Printf("\n[ok] Story setup checked with Agent SDK; no effective changes were applied.\n")
+		}
+		if review != nil {
+			fmt.Printf("Final Agent SDK Review Score: %.1f/100\n", review.OverallScore)
+		}
+		fmt.Printf("\nProject: %s\n", improved.ProjectName)
+		fmt.Printf("Genre(s): %s\n", strings.Join(improved.Genres, ", "))
+		fmt.Printf("Premise: %.100s...\n", improved.Premise)
+		return nil
+	}
 
 	// Build prompt for regeneration with full context
 	setupJSON, err := json.MarshalIndent(existingSetup, "", "  ")
@@ -264,6 +325,9 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 	// Initialize logger
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN SETUP IMPROVE")
+	if err := validateSetupAgentApplyOption(setupAgentSDK, setupAgentApply); err != nil {
+		return err
+	}
 
 	// Check if we're in a project directory
 	if _, err := os.Stat("novel.json"); err != nil {
@@ -289,23 +353,40 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded existing story setup")
 
 	// Create LLM client and agent
-	cfg, err := llm.LoadOrCreateConfig()
+	agent, err := newSetupAgentForProject(projectConfig)
 	if err != nil {
-		return fmt.Errorf("failed to load LLM config: %w", err)
+		return err
 	}
 
-	provider, model := cfg.GetActiveModel(&projectConfig.LLM)
-	if provider == nil || model == nil {
-		return fmt.Errorf("failed to get active LLM configuration")
+	if setupAgentSDK {
+		originalSetup := cloneStorySetup(setup)
+		improved, review, changed, err := runSetupImproveAgentSDK(cmd.Context(), agent, setup, setupPath, setupMaxRounds, setupImprovePrompt, setupForceImprove, setupAgentApply)
+		if err != nil {
+			logger.Error("Failed to improve story setup with Agent SDK: %v", err)
+			return fmt.Errorf("failed to improve story setup with Agent SDK: %w", err)
+		}
+		setup = improved
+		if !setupAgentApply && changed {
+			if _, err := saveToolSetupPatchCheckpoint(".", originalSetup); err != nil {
+				return fmt.Errorf("failed to checkpoint original story setup: %w", err)
+			}
+			if err := saveStorySetup(setup); err != nil {
+				return fmt.Errorf("failed to save improved story setup: %w", err)
+			}
+		}
+		if changed {
+			fmt.Printf("\n[ok] Story setup improved with Agent SDK!\n")
+		} else {
+			fmt.Printf("\n[ok] Story setup checked with Agent SDK; no effective changes were applied.\n")
+		}
+		if review != nil {
+			fmt.Printf("Final Agent SDK Review Score: %.1f/100\n", review.OverallScore)
+		}
+		fmt.Printf("\nProject: %s\n", setup.ProjectName)
+		fmt.Printf("Genre(s): %s\n", strings.Join(setup.Genres, ", "))
+		fmt.Printf("Premise: %.100s...\n", setup.Premise)
+		return nil
 	}
-
-	client := cfg.CreateClient(&projectConfig.LLM)
-	if client == nil {
-		return fmt.Errorf("failed to create LLM client")
-	}
-
-	agent := agents.NewSetupAgent(client, cfg, &projectConfig.LLM)
-	agent.SetLanguage(projectConfig.Language)
 
 	// Improve story setup
 	if setupImprovePrompt != "" {
@@ -452,6 +533,27 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func newSetupAgentForProject(projectConfig *models.ProjectConfig) (*agents.SetupAgent, error) {
+	cfg, err := llm.LoadOrCreateConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load LLM config: %w", err)
+	}
+
+	provider, model := cfg.GetActiveModel(&projectConfig.LLM)
+	if provider == nil || model == nil {
+		return nil, fmt.Errorf("failed to get active LLM configuration")
+	}
+
+	client := cfg.CreateClient(&projectConfig.LLM)
+	if client == nil {
+		return nil, fmt.Errorf("failed to create LLM client")
+	}
+
+	agent := agents.NewSetupAgent(client, cfg, &projectConfig.LLM)
+	agent.SetLanguage(projectConfig.Language)
+	return agent, nil
+}
+
 func loadAndCrossCheckSetup(setup *models.StorySetup) (issues, warnings []string) {
 	outlinePath := filepath.Join("story", "compose", "outline.json")
 	data, err := os.ReadFile(outlinePath)
@@ -463,6 +565,145 @@ func loadAndCrossCheckSetup(setup *models.StorySetup) (issues, warnings []string
 		return nil, nil
 	}
 	return validateSetupOutlineCross(setup, &storyOutline)
+}
+
+func runSetupImproveAgentSDK(ctx context.Context, agent *agents.SetupAgent, setup *models.StorySetup, setupPath string, maxRounds int, userPrompt string, forceImprove bool, agentApply bool) (*models.StorySetup, *models.ReviewResult, bool, error) {
+	if setup == nil {
+		return nil, nil, false, fmt.Errorf("setup is nil")
+	}
+	if maxRounds <= 0 {
+		maxRounds = 1
+	}
+	logger.Section("SETUP AGENT SDK - Iteration Improvement")
+	logger.Info("Maximum iterations: %d", maxRounds)
+	if agentApply {
+		logger.Info("Agent apply enabled: SDK may write setup patches through validated tool apply")
+	}
+
+	current := cloneStorySetup(setup)
+	original := cloneStorySetup(setup)
+	changed := false
+	var finalReview *models.ReviewResult
+
+	for round := 1; round <= maxRounds; round++ {
+		check, err := runToolSetupCheck("all", &current)
+		if err != nil {
+			return &current, finalReview, changed, err
+		}
+		review := setupToolCheckReview("Setup Agent SDK pre-check for targeted repair.", check)
+		if strings.TrimSpace(userPrompt) != "" {
+			review.Suggestions = append([]models.ReviewSuggestion{{
+				Category:   "user_guidance",
+				TargetID:   "setup",
+				TargetName: "setup",
+				Issue:      "User requested setup improvement",
+				Suggestion: userPrompt,
+				Priority:   models.PriorityHigh,
+			}}, review.Suggestions...)
+			review.Summary = strings.TrimSpace(userPrompt) + "\n" + review.Summary
+		}
+
+		forceIssueRepair := forceImprove || strings.TrimSpace(userPrompt) != "" || len(review.Suggestions) > 0
+		output, err := agent.ImproveWithAgentSDK(ctx, agents.BuildSetupAgentSDKImprovePromptInput(review, userPrompt, agentApply, forceIssueRepair))
+		if err != nil {
+			return &current, finalReview, changed, fmt.Errorf("agent SDK setup improve round %d failed: %w", round, err)
+		}
+		output.ReviewResult.Iteration = round
+		finalReview = &output.ReviewResult
+
+		if !hasSetupPatch(output.SetupPatch) {
+			logger.Info("Agent SDK returned empty setup patch in round %d", round)
+			break
+		}
+
+		if agentApply {
+			reloaded, err := models.LoadStorySetup(setupPath)
+			if err != nil {
+				return &current, finalReview, changed, fmt.Errorf("failed to reload setup after agent apply: %w", err)
+			}
+			if !reflect.DeepEqual(current, *reloaded) {
+				changed = true
+			}
+			current = *reloaded
+		} else {
+			merged, check, changes, err := applySetupAgentSDKPatch(&current, output.SetupPatch)
+			if err != nil {
+				return &current, finalReview, changed, fmt.Errorf("failed to apply Agent SDK setup patch: %w", err)
+			}
+			if check != nil && check.Blocking {
+				return &current, finalReview, changed, fmt.Errorf("setup patch rejected: quality/simulation check found blocking issues (critical=%d high=%d total=%d)", check.Summary.Critical, check.Summary.High, check.Summary.Total)
+			}
+			if len(changes) > 0 {
+				current = *merged
+				changed = true
+				logger.Info("Agent SDK setup patch changed %d top-level field(s)", len(changes))
+			}
+		}
+
+		if round == maxRounds {
+			logger.Warn("Max Agent SDK setup iterations reached")
+			break
+		}
+	}
+
+	if !changed && !reflect.DeepEqual(original, current) {
+		changed = true
+	}
+	return &current, finalReview, changed, nil
+}
+
+func setupToolCheckReview(summary string, check *toolCheckResult) models.ReviewResult {
+	if check == nil {
+		return models.ReviewResult{Summary: summary}
+	}
+	return models.ReviewResult{
+		OverallScore: check.Score,
+		Summary:      summary,
+		Suggestions:  append([]models.ReviewSuggestion(nil), check.Issues...),
+	}
+}
+
+func hasSetupPatch(patch map[string]interface{}) bool {
+	for key, value := range patch {
+		if strings.TrimSpace(key) == "" || key == "id" {
+			continue
+		}
+		if value != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func applySetupAgentSDKPatch(setup *models.StorySetup, patch map[string]interface{}) (*models.StorySetup, *toolCheckResult, []toolPatchChange, error) {
+	if setup == nil {
+		return nil, nil, nil, fmt.Errorf("setup is nil")
+	}
+	if err := utils.ValidateNoSuspiciousPatchText(patch); err != nil {
+		return nil, nil, nil, fmt.Errorf("setup patch rejected: %w", err)
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if err := validateToolPatchBytes(patchBytes); err != nil {
+		return nil, nil, nil, fmt.Errorf("patch rejected: %w", err)
+	}
+	before := cloneStorySetup(setup)
+	merged, err := mergeJSONPatchObject(*setup, patchBytes)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if err := utils.ValidateNoSuspiciousPatchText(merged); err != nil {
+		return nil, nil, nil, fmt.Errorf("setup patch rejected: %w", err)
+	}
+	models.NormalizeStorySetup(&merged)
+	check, err := runToolSetupCheck("all", &merged)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	changes := diffStructFields("setup", before, merged)
+	return &merged, check, changes, nil
 }
 
 func runSetupImport(cmd *cobra.Command, args []string) error {

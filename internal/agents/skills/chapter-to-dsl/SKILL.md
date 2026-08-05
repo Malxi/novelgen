@@ -48,7 +48,7 @@ Convert full chapter markdown text plus optional recap JSON into parser-compatib
   - `move { to = "loc_x" }`
   - `spawn { actor = "char_x" location = "loc_x" }`
   - `on_complete { narration = "..." exp = 10 }`
-  - `state_delta { target = "char_x" kind = "cultivation|lifespan|injury|resource|death|revive|time|transition|power_change|breakthrough|plot_thread" field = "..." from = "..." to = "..." delta = -1 unit = "..." cost = "..." note = "..." }`
+  - `state_delta { target = "char_x" kind = "storyline|plot_thread|resource|cultivation|relationship|goal|status|premise|item|injury|death|revive|time|transition|gene|mech|ally|equipment|location|knowledge|story|power_change|breakthrough|evolution" field = "..." from = "..." to = "..." delta = -1 unit = "..." cost = "..." note = "..." }`
 
 Do not use `setup { ... }` inside `combat`.
 Use `combat { enemies = [...] }` directly.
@@ -76,6 +76,29 @@ Chapter text is the authoritative source for enemy details. Example from chapter
 ```
 
 → `enemies = [{id = "enemy_worker_bee", count = 1}]` (the scene describes one worker bee against Lu Chen)
+
+## Combat Simulation Repair Signals
+
+The simulator does not understand vague hype by itself. It reads explicit combat scale, state deltas, and tactical text signals. When chapter prose clearly supports them, make these signals extractable:
+
+- Enemy pressure:
+  - `combat.enemies[].count`, `level`, `elite`, and `boss` must match the current simultaneous enemy scale.
+  - If the enemy is already weakened, damaged, exhausted, at partial HP, or fighting a third party, include that in `description`, `on_complete`, or combat phase narration so the simulator can reduce effective enemy power.
+- Protagonist growth and support:
+  - Use `kind = "power_change"` for explicit combat-power increase.
+  - Use `kind = "breakthrough"` or `kind = "evolution"` for unlocked stages or abilities.
+  - Use `kind = "gene"` with `field = "level"` or `field = "stability"` for gene progression.
+  - Use `kind = "mech"` with `field = "form"`, `"energy"`, `"module"`, or `"damage"` for mech state. `damage` with `to = "none"` means repaired/cleared damage.
+  - Use `kind = "item"` or `kind = "equipment"` when usable items or gear affect the fight.
+  - Use `kind = "ally"` when named allies, turrets, drones, teams, or faction support directly help the protagonist.
+- Tactical modifiers:
+  - Preserve words such as `机甲`, `火种`, `装甲`, `伏击`, `偷袭`, `陷阱`, `地形`, `高地`, `狭道`, `三方`, `混战`, `互相消耗`, `两败俱伤`, `第三方` when the prose supports them.
+  - Put these signals in step descriptions, combat narration, combat environment, phase narration, or `state_delta.note`.
+- Combat result:
+  - Every combat event needs `on_complete { narration = "..." }` or a result field that states the visible consequence.
+  - Add durable `state_delta` entries for injuries, resources, power changes, clues, plot-thread updates, or transitions caused by the fight.
+
+Do not invent unsupported power-ups or allies just to satisfy simulation. If the prose only supports a smaller repair, prefer reducing simultaneous enemy count/level, making the fight less frontal, or adding a concrete consequence.
 
 ## Required Minimal Fields
 

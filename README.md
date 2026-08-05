@@ -81,7 +81,7 @@ novelgen init <book_name> [options]
 | `--chapter` | int | 20 | 章节数量 |
 | `--genre` | string | "" | 类型（逗号分隔，如"科幻,废土"） |
 | `--mode` | string | "" | LLM 模型 |
-| `--provider` | string | "ollama" | LLM 提供商 |
+| `--provider` | string | "claude" | LLM/agent runtime 提供商 |
 | `--language` | string | "zh" | 故事语言 |
 
 **示例：**
@@ -156,6 +156,7 @@ novelgen compose skeleton-improve --max-rounds 1
 | `--batch` | int | 1 | 每批生成数量 |
 | `--concurrency` | int | 1 | 并发数 |
 | `--type` | string | "all" | 元素类型（all/characters/locations/items） |
+| `--name` | string | "" | `craft improve` 精确改进一个元素名 |
 | `--max-rounds` | int | 1 | 改进轮数 |
 
 **示例：**
@@ -164,6 +165,7 @@ novelgen craft gen                        # 生成所有元素
 novelgen craft gen --chapter 1            # 生成第1章的元素
 novelgen craft gen --concurrency 3        # 并发生成
 novelgen craft improve --type characters --max-rounds 2
+novelgen craft improve --type characters --name "李侑" --agent-sdk --agent-apply
 ```
 
 ---
@@ -238,7 +240,15 @@ novelgen draft improve --volume 1 --max-rounds 3
 novelgen write pipeline --chapter P1-V1-C1
 novelgen write pipeline --volume P1-V1 --max-rounds 2
 novelgen write pipeline --all --rpg-batch-size 10
+novelgen write pipeline --chapter P1-V1-C1 --agent-sdk
+novelgen write pipeline --chapter P1-V1-C1 --agent-sdk --agent-apply
 ```
+
+| Option | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `--agent-sdk` | bool | false | 使用 Agent SDK 进行章节生成、改进和最终 recap 抽取，Go 仍负责校验与保存 |
+| `--agent-apply` | bool | false | 配合 `--agent-sdk`，允许 agent 通过 validated chapter patch 写入正文 |
+| `--recap-agent-sdk` | bool | false | 仅将自动 recap 抽取切到 Agent SDK |
 
 #### `write gen` - 生成最终章节
 | Option | 类型 | 默认值 | 说明 |
@@ -250,6 +260,8 @@ novelgen write pipeline --all --rpg-batch-size 10
 | `--all` | bool | false | 生成所有章节 |
 | `--context` | int | 2 | 上下文章节数 |
 | `--concurrency` | int | 1 | 并发数 |
+| `--agent-sdk` | bool | false | 使用 Agent SDK focused chapter workflow，Go 仍负责校验和保存 |
+| `--recap-agent-sdk` | bool | false | 使用 Agent SDK 抽取自动 recap |
 
 #### `write improve` - 改进最终章节
 | Option | 类型 | 默认值 | 说明 |
@@ -264,6 +276,10 @@ novelgen write pipeline --all --rpg-batch-size 10
 | `--enable-character-presence-auto-fix` | bool | true | 启用角色出场自动修复 |
 | `--bridge-retries` | int | 1 | 转场桥段重试次数 |
 | `--character-patch-retries` | int | 1 | 角色补丁重试次数 |
+| `--agent-sdk` | bool | false | 使用 Agent SDK 的逐章 focused repair workflow |
+| `--agent-apply` | bool | false | 配合 `--agent-sdk`，允许 agent 通过 validated chapter patch 写入 |
+
+Agent SDK 小修默认保持当前章节篇幅：除非问题明确要求扩写或补字数，否则不会为了项目目标字数重写整章。对 system log / 信息差题材，日志线索、可执行判断和信息优势也计入主角成长。
 
 **连续性/自动修复说明：**
 - 仅在 `write improve` 阶段生效。
@@ -279,7 +295,32 @@ novelgen write improve --volume 1 --min-score 75  # 手动改进第1卷，低于
 
 ---
 
-### 6. `novelgen export` - 导出小说
+### 6. `novelgen polish` - 卷级润色
+
+`polish` 会先做卷级整体评审，再逐章应用改进建议并刷新 recap。它适合在一卷章节已经生成后做整体连贯性、节奏和衔接修复。
+
+**常用选项：**
+| Option | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `--volume` | string | "" | 指定卷（如 "1", "P1-V1"） |
+| `--part` | string | "" | 指定部 |
+| `--max-rounds` | int | 2 | 最大润色轮数 |
+| `--min-score` | int | 8 | 最低可接受分数 (1-10) |
+| `--prompt` | string | "" | 额外润色要求 |
+| `--agent-sdk` | bool | false | 使用 Agent SDK 的逐章 focused repair workflow |
+| `--agent-apply` | bool | false | 配合 `--agent-sdk`，允许 agent 通过 validated chapter patch 写入 |
+| `--recap-agent-sdk` | bool | false | 使用 Agent SDK 刷新 recap |
+
+**示例：**
+```bash
+novelgen polish --volume 1 --prompt "加强人物情感描写"
+novelgen polish --volume 1 --agent-sdk
+novelgen polish --volume 1 --agent-sdk --agent-apply
+```
+
+---
+
+### 7. `novelgen export` - 导出小说
 
 将完成的小说导出为各种格式。
 
@@ -357,12 +398,19 @@ novelgen translate chapter.txt --source-lang zh --target-lang en --output chapte
 **子命令：**
 - `show` - 显示当前配置
 - `set` - 交互式配置
+- `agent` - configure Claude/Anthropic-compatible agent runtime
 
 **示例：**
 ```bash
 novelgen config show                      # 显示配置
 novelgen config set                       # 交互式设置
+novelgen config agent                     # configure Claude/Anthropic-compatible agent runtime
 ```
+
+Agent execution defaults to the Claude Python runner when the project provider
+is `claude`. Install Python and configure `~/.novelgen/agent_config.json`, or
+provide Claude-compatible environment values through `~/.claude/settings.json`
+such as `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, and `ANTHROPIC_MODEL`.
 
 ---
 

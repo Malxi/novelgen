@@ -24,6 +24,7 @@ var (
 	translateSourceLang string
 	translateTargetLang string
 	translateOutputFile string
+	translateAgentSDK   bool
 )
 
 var translateCmd = &cobra.Command{
@@ -37,7 +38,8 @@ while preserving the narrative style and formatting.
 Examples:
   novelgen translate story/chapters/chapter_001.txt
   novelgen translate story/setup/story_setup.md --target-lang en
-  novelgen translate chapter.txt --source-lang zh --target-lang en --output chapter_en.txt`,
+  novelgen translate chapter.txt --source-lang zh --target-lang en --output chapter_en.txt
+  novelgen translate chapter.txt --source-lang zh --target-lang en --agent-sdk --output chapter_en.txt`,
 	Args: cobra.ExactArgs(1),
 	RunE: runTranslate,
 }
@@ -47,6 +49,7 @@ func init() {
 	translateCmd.Flags().StringVar(&translateSourceLang, "source-lang", "zh", "Source language (auto-detect if not specified)")
 	translateCmd.Flags().StringVar(&translateTargetLang, "target-lang", "en", "Target language for translation")
 	translateCmd.Flags().StringVar(&translateOutputFile, "output", "", "Output file (default: stdout)")
+	translateCmd.Flags().BoolVar(&translateAgentSDK, "agent-sdk", false, "Use Claude Agent SDK workflow for translation")
 }
 
 func runTranslate(cmd *cobra.Command, args []string) error {
@@ -109,10 +112,15 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 	// Perform translation
 	logger.Info("Translating from %s to %s...", translateSourceLang, translateTargetLang)
 
-	systemPrompt := buildTranslationSystemPrompt()
-	userPrompt := buildTranslationUserPrompt(string(content), translateSourceLang, translateTargetLang)
-
-	translated, err := agent.Translate(systemPrompt, userPrompt)
+	var translated string
+	if translateAgentSDK {
+		logger.Info("Translation will use Agent SDK; Go still owns file input/output")
+		translated, err = agent.TranslateWithAgentSDK(cmd.Context(), string(content), translateSourceLang, translateTargetLang)
+	} else {
+		systemPrompt := buildTranslationSystemPrompt()
+		userPrompt := buildTranslationUserPrompt(string(content), translateSourceLang, translateTargetLang)
+		translated, err = agent.Translate(systemPrompt, userPrompt)
+	}
 	if err != nil {
 		logger.Error("Translation failed: %v", err)
 		return fmt.Errorf("translation failed: %w", err)

@@ -392,7 +392,7 @@ func (a *CraftIterationAgent) ImproveOrganizations(ctx context.Context, organiza
 		output.Organizations[name] = org
 	}
 
-	logger.Info("鉁?Improved %d organizations", len(output.Organizations))
+	logger.Info("[ok] Improved %d organizations", len(output.Organizations))
 	return output.Organizations, nil
 }
 
@@ -580,7 +580,7 @@ func (a *CraftIterationAgent) IterateOrganizations(ctx context.Context, organiza
 		finalReview = &review
 
 		if review.OverallScore >= qualityThreshold {
-			logger.Info("鉁?Quality threshold met (%.1f >= %.1f)", review.OverallScore, qualityThreshold)
+			logger.Info("[ok] Quality threshold met (%.1f >= %.1f)", review.OverallScore, qualityThreshold)
 			break
 		}
 		if i == maxIterations {

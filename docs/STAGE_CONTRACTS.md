@@ -38,6 +38,15 @@ Project root:
 - `story/reviews/*.json`: review outputs
 - `story/rpg/*.rpg`: RPG-DSL fragments
 
+Global user config:
+
+- `~/.novelgen/agent_config.json`: default agent runtime configuration for
+  Claude/Python SDK execution.
+- `~/.novelgen/agents/`: user-level agent home for runtime skills, KB, tools,
+  and runner-local cache. Project state is still written only by Go after typed
+  parsing and deterministic validation.
+- `~/.novelgen/llm_config.json`: legacy OpenAI-compatible provider fallback.
+
 ## Stage Matrix
 
 | Stage | Main producer | Main output | Main consumers |
@@ -182,6 +191,19 @@ Required invariants:
 - `setup improve` may pass a prompt-only `revision_context` between review and
   improve rounds. It is not persisted in `story_setup.json`; it only helps the
   agent remember what the current session already tried.
+- `setup improve --agent-sdk` and `setup regen --agent-sdk` use the Claude
+  Agent SDK workflow skill `setup-improve-workflow`. The agent receives compact
+  review/check findings plus optional user guidance, queries project facts with
+  `novelgen tool query`, validates candidate changes with
+  `novelgen tool patch setup`, and returns a minimal top-level `setup_patch`.
+  `setup regen --agent-sdk` is a focused regeneration/repair mode for an
+  existing setup; it does not send the full setup JSON as prompt context and it
+  does not allow the agent to replace project files directly. In the default
+  mode Go remains the writer: it merges, validates suspicious text, normalizes,
+  runs setup quality + simulation checks, checkpoints, exports markdown, and
+  saves. With `--agent-apply`, the agent may write only through
+  `novelgen tool patch setup ... --apply` after a successful dry-run, and Go
+  reloads the saved setup.
 
 Consumers:
 
@@ -299,6 +321,24 @@ Required invariants:
   and storyline advances.
 - `models.NormalizeOutline` and `Outline.Save` trim payoff fields and drop
   empty payoff containers before persistence.
+- `compose improve --agent-sdk` and `compose pipeline --agent-sdk` keep Go as
+  the orchestrator. In normal SDK mode the agent returns a compact
+  `volume_patch`, and Go merges, normalizes, validates, and saves. With
+  `--agent-apply`, the agent may write only through validated
+  `novelgen tool patch outline --target volume ... --apply`; after the tool
+  writes, Go reloads the target volume from `story/compose/outline.json` and
+  continues validation/checkpoint/export. Apply-mode final agent JSON is only
+  `review_result`, `applied_patches`, `applied_patch_count`, and `final_check`
+  so the prompt does not include the full outline patch schema.
+- Outline patch merge is recursive for nested JSON objects and replacement-based
+  for arrays. An agent can patch only `chapter_payoff.desire` and
+  `chapter_payoff.hook` without resending the full payoff object, while list
+  fields such as `events`, `storyline_advances`, and `resource_ledger` must be
+  supplied as complete replacement lists when changed.
+- When a user prompt or focused repair task is present, the Agent SDK workflow
+  may continue from a clean medium+ volume check into target-volume chapter and
+  event detail queries before deciding whether to patch. Clean-stop routing is
+  reserved for no-task probe runs where no focused detail queries are granted.
 - `Events` are consumable through `Event.GetActor`, `GetAction`, `GetTarget`,
   and `GetTargetType`.
 - Code that consumes events should use accessor methods rather than direct field
@@ -384,6 +424,9 @@ Required invariants:
   `encounter_tags`, `resource_tags`, `dsl_tags`, and `state_effects`.
 - Item RPG metadata includes `rpg_item_type`, `rarity`, `power_level`,
   `quantity_tracking`, `dsl_tags`, and `state_effects`.
+- Item `owner`, when present, should be a known craft character name/key or a
+  stable generic owner such as `主角`; `tool check schema --target craft --scope
+  item` reports unknown owners as medium consistency feedback.
 - Organization profiles describe durable factions, guilds, sects, companies,
   empires, clans, armies, agencies, alliances, or other power groups. They are
   produced by `craft gen` from explicit outline factions and faction-like setup
@@ -396,6 +439,16 @@ Required invariants:
   `StorySetup.Premises[]` names or progression stage names. Missing references
   are reported by `craft gen` as setup gaps; craft does not create a separate
   `ability_systems.json` fallback.
+- `craft gen/improve --agent-sdk` uses focused craft context queries and
+  validated craft patch dry-runs. In ordinary SDK mode Go still validates and
+  saves the returned typed craft data.
+- `craft improve --name <exact-name>` narrows the selected craft maps before any
+  LLM or Agent SDK call. If the name is absent from the selected `--type`, the
+  command fails rather than asking the agent to infer a target.
+- `craft gen/improve --agent-sdk --agent-apply` may write only through
+  name-scoped `tool patch craft --target <kind> --id <name> --apply` commands
+  granted for the current batch. Go reloads the saved craft files and verifies
+  the requested names; commands for other names or craft target kinds are denied.
 
 Consumers:
 
@@ -425,6 +478,9 @@ Producer:
 - `cmd/write.go`
 - `internal/agents/write_agent.go`
 - Skills: `write-generate`, `write-review`, `write-improve`, `volume-review`
+- Agent SDK workflow skills: `write-chapter-workflow` for
+  `write gen --agent-sdk`, and `write-improve-workflow` for
+  `write improve --agent-sdk`
 
 Inputs:
 
@@ -487,6 +543,68 @@ Required invariants:
 - Write generation and improvement agent outputs are JSON objects with a
   `content` field; `content` is validated as prose before writing. Empty prose,
   JSON-as-prose, fenced code blocks, and severe length shortfalls are rejected.
+- `write gen --agent-sdk` changes only the generation runtime. The SDK agent
+  may query focused project context through `novelgen tool query context --type
+  chapter-write` and run scoped checks, but it is not granted patch tools and
+  does not write chapter files. Go remains the only writer for final markdown,
+  using the same `content` validation and save path as ordinary `write gen`.
+  Focused chapter context omits recap briefs whose identity/title does not
+  match the outline or whose recap JSON is older than the saved chapter
+  markdown, and returns warnings instead of feeding stale continuity anchors to
+  the agent.
+- `write review --agent-sdk` changes only the chapter review runtime. Go still
+  selects chapters, loads saved final markdown, persists per-chapter review
+  JSON, updates volume review compatibility files, and applies deterministic
+  humanization/continuity checks. The SDK agent may query focused
+  `chapter-write`/`chapter-repair` context, run scoped chapter/outline checks,
+  and refresh stale chapter DSL when a simulation issue explicitly requires it.
+  It is not granted patch tools and cannot write project state. Its Agent SDK
+  output schema is compact and omits full `ReviewResult` fields such as
+  dimensions, continuity issues, and iteration; Go converts score, summary,
+  strengths, weaknesses, and suggestions into the persisted review contract.
+- `write improve --agent-sdk` changes only the suggestion-based rewrite runtime.
+  Review loading, chapter selection, deterministic transition/character fixers,
+  and final markdown saves remain in Go. The SDK agent receives the current
+  draft plus review suggestions, may query focused `chapter-write` or
+  `chapter-repair` context, run scoped checks, and use `tool patch chapter`
+  dry-run validation. With `--agent-apply`, the SDK agent may repeat a
+  successful chapter patch dry-run with `--apply`; Go then reloads the saved
+  chapter and continues deterministic fixers/post-save checks. Long chapter
+  edits are limited to the scoped patch buffer `<chapter_id>-draft`; once a
+  dry-run validates, the runner rejects further buffer mutation for that
+  chapter and requires apply or final JSON. Chapter applies should use
+  `--apply --refresh-derived` so the same validated patch write refreshes the
+  target chapter DSL and returns a post-refresh focused check. Standalone
+  `tool refresh chapter-dsl --id <chapter_id>` is reserved for workflows that
+  cannot use `--refresh-derived` or for explicit tool-returned `next_actions`.
+  The refresh path performs a target-chapter conversion and replaces only that
+  chapter block in `story/rpg/04_chapters.rpg`; it preserves other chapter
+  blocks so one repair loop does not rebuild or contaminate the whole chapter
+  DSL. Direct file writes remain forbidden. Go rejects non-prose, severe
+  shortfall, and severe Agent SDK overshoot before saving or accepting returned
+  content. For focused repairs on existing chapters, Go uses the current
+  chapter's narrative-unit count as the Agent SDK repair target unless review or
+  check feedback explicitly asks for length expansion; this keeps one-issue
+  repairs from drifting into whole-chapter rewrites. Chapter simulation treats
+  structured knowledge/insight/clue/information/strategy deltas as protagonist
+  growth (主角成长), so system-log and information-as-power (信息差) chapters do not need artificial
+  breakthroughs, items, or allies when the actual payoff is an actionable
+  information advantage.
+- `write pipeline --agent-sdk` applies the same Agent SDK contracts to the
+  pipeline generation, review, and improvement phases. The pipeline remains the
+  orchestrator: review persistence, deterministic fixers, post-save checks,
+  recap validation, RPG DSL refresh, and final file saves stay in Go. The review
+  phase uses the read-only `write-review-workflow` contract and is not granted
+  patch tools. With `--agent-apply`, only the improvement phase may use
+  validated `tool patch chapter --apply`; generation still returns typed JSON
+  content for Go to save. Pipeline `--agent-sdk` also routes final recap
+  extraction through the Agent SDK recap workflow, while Go still owns recap
+  validation, retry, and save.
+- `polish --agent-sdk` is an orchestration wrapper over the same write-improve
+  Agent SDK contract. Go still performs volume selection, holistic volume
+  review, RPG issue collection, chapter save/reload, post-save checks, and
+  recap refresh. With `--agent-apply`, only validated `tool patch chapter
+  --apply` may write prose before Go reloads and verifies the result.
 - If RPG DSL emission is enabled, generated or repaired DSL must parse and
   validate before it is treated as usable state. `write pipeline` refreshes
   chapter RPG DSL before improvement to gather simulation feedback, then once
@@ -499,6 +617,11 @@ Required invariants:
 - Recaps generated by write commands must pass the same minimal recap gate used
   by `recap.v1`: retry once with explicit feedback when required fields are
   missing, warn on consistency issues, and save only a minimally valid recap.
+- `write gen --recap-agent-sdk` and `write pipeline --recap-agent-sdk` route
+  automatic recap extraction through the Agent SDK recap workflow. For pipeline,
+  `--agent-sdk` also enables this recap runtime. This changes only the
+  invocation runtime; Go still owns validation, retry, saving, and any
+  subsequent recap check.
 
 Consumers:
 
@@ -522,12 +645,17 @@ Producer:
 - `internal/agents/recap_agent.go`
 - `cmd/write.go` through `write pipeline`
 - Skill: `recap-extract`
+- Agent SDK workflow skill: `recap-extract-workflow` when `recap gen --agent-sdk`
 
 Inputs:
 
 - `chapters/chapter-<chapter_id>.md`
 - Chapter ID and title from outline
 - Optional feedback when retrying extraction
+- In Agent SDK mode, the full chapter text is still supplied by Go.
+- In `--agent-apply` mode, the agent may query only chapter-scoped recap repair
+  context/checks and may write only through validated `tool patch recap --id
+  <chapter_id> --apply`.
 
 Outputs:
 
@@ -540,11 +668,27 @@ Go type:
 Required invariants:
 
 - `ChapterID` and `Title` match the outline chapter.
+- Recap agent output does not own identity fields: Go overwrites
+  `chapter_id` and `title` from the selected outline chapter before validation
+  or saving.
 - `Location`, `Present`, `LastLine`, and `NextOpeningHint` are present.
 - `PlotBeats`, `Decisions`, `Reveals`, `Unresolved`, `Promises`, `Items`, and
   `Status` summarize what actually happened, not what the outline planned.
 - `NextOpeningHint` is short and connects to `LastLine`.
 - `recap.ValidateMinimal` passes before a recap is considered available.
+- `recap gen --agent-sdk` uses the same typed output, retry, validation, and
+  save path as ordinary recap extraction; it only changes the invocation
+  runtime.
+- `recap gen --agent-sdk --agent-apply` does not save returned JSON through the
+  ordinary path. The saved recap must change via `tool patch recap`; Go reloads
+  that saved patch result and leaves the existing recap unchanged if no patch was
+  applied.
+- Recap extraction returns an error after retry if `recap.ValidateMinimal` still
+  fails. Consistency failures remain warnings because they are heuristic
+  continuity signals.
+- `novelgen tool check quality --target recap --scope chapter --id <chapter_id>`
+  exposes the saved recap gate to agents. It is deterministic and does not run
+  RPG/DSL simulation.
 
 Consumers:
 

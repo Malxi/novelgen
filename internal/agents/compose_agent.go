@@ -6,13 +6,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 
+	"novelgen/internal/agentruntime"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
+	"novelgen/internal/utils"
 )
 
 // ComposeGenInput is the input for outline generation
@@ -180,6 +184,24 @@ type composeChaptersPromptInput struct {
 	OutlineContext string         `json:"outline_context" md:"outline_context" desc:"Context from previously generated outline"`
 }
 
+type composeAgentSDKSkeletonPromptInput struct {
+	Structure       models.StoryStructure `json:"structure" md:"structure" desc:"Expected parts, volumes, and chapters per volume"`
+	RequiredQueries []string              `json:"required_queries" md:"required_queries" desc:"Read-only novelgen tool query commands that must be used before answering"`
+	Instructions    []string              `json:"instructions" md:"instructions" desc:"Workflow constraints for the SDK agent"`
+}
+
+type composeAgentSDKChaptersPromptInput struct {
+	TargetPartID     string   `json:"target_part_id" md:"target_part_id" desc:"Part ID containing the target volume"`
+	TargetVolumeID   string   `json:"target_volume_id" md:"target_volume_id" desc:"Volume ID to generate"`
+	TargetVolumeName string   `json:"target_volume_name" md:"target_volume_name" desc:"Current target volume title for display only"`
+	VolumeIndex      int      `json:"volume_index" md:"volume_index" desc:"1-based global volume index"`
+	TotalVolumes     int      `json:"total_volumes" md:"total_volumes" desc:"Total volume count"`
+	ChaptersPerVol   int      `json:"chapters_per_volume" md:"chapters_per_volume" desc:"Exact number of chapters to return"`
+	PreviousVolumeID string   `json:"previous_volume_id,omitempty" md:"previous_volume_id" desc:"Previous volume ID for continuity queries"`
+	RequiredQueries  []string `json:"required_queries" md:"required_queries" desc:"Read-only novelgen tool query commands that must be used before answering"`
+	Instructions     []string `json:"instructions" md:"instructions" desc:"Workflow constraints for the SDK agent"`
+}
+
 // ComposeReviewVolumeInput is the input for reviewing a specific volume
 type ComposeReviewVolumeInput struct {
 	Outline      models.Outline `json:"outline" md:"outline" desc:"Complete story outline"`
@@ -215,9 +237,156 @@ type composeImproveVolumePromptInput struct {
 	UserPrompt     string              `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for improvement"`
 }
 
+type composeAgentSDKImproveVolumePromptInput struct {
+	TargetPartID     string                            `json:"target_part_id" md:"target_part_id" desc:"Part ID containing the target volume"`
+	TargetVolumeID   string                            `json:"target_volume_id" md:"target_volume_id" desc:"Only this volume may be reviewed and returned"`
+	TargetVolumeName string                            `json:"target_volume_name" md:"target_volume_name" desc:"Current target volume title for display only"`
+	ChapterCount     int                               `json:"chapter_count" md:"chapter_count" desc:"Exact number of chapters that volume.chapters must contain"`
+	ReviewResult     composeAgentSDKPromptReviewResult `json:"review_result,omitempty" md:"review_result" desc:"Optional quality gate or user review feedback relevant to this volume, including focused navigation queries"`
+	UserPrompt       string                            `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for improvement"`
+	ApplyPatches     bool                              `json:"apply_patches" md:"apply_patches" desc:"Whether the workflow may use tool patch outline --apply after a successful dry-run"`
+	ForceIssueRepair bool                              `json:"force_issue_repair" md:"force_issue_repair" desc:"When true, focused review_result suggestions are an explicit repair task list, including directly fixable low-priority issues"`
+	RequiredQueries  []string                          `json:"required_queries" md:"required_queries" desc:"Read-only novelgen tool query commands that must be used before answering"`
+	Instructions     []string                          `json:"instructions" md:"instructions" desc:"Workflow constraints for the SDK agent"`
+}
+
+type composeAgentSDKGlobalRepairPromptInput struct {
+	ReviewResult     composeAgentSDKPromptReviewResult `json:"review_result" md:"review_result" desc:"Global outline check issues, including navigation when available"`
+	ApplyPatches     bool                              `json:"apply_patches" md:"apply_patches" desc:"Whether the workflow may use validated setup/outline patch --apply"`
+	ForceIssueRepair bool                              `json:"force_issue_repair" md:"force_issue_repair" desc:"Global issues are explicit repair tasks when they have patch_query and patch_shape"`
+	RequiredQueries  []string                          `json:"required_queries" md:"required_queries" desc:"Read-only novelgen tool query commands that must be used before answering"`
+	Instructions     []string                          `json:"instructions" md:"instructions" desc:"Workflow constraints for global repair"`
+}
+
+type composeAgentSDKPromptReviewResult struct {
+	OverallScore float64                                 `json:"overall_score,omitempty" md:"overall_score" desc:"0-100 score from deterministic checks or prior review"`
+	Summary      string                                  `json:"summary,omitempty" md:"summary" desc:"Compact review/check summary"`
+	Suggestions  []composeAgentSDKPromptReviewSuggestion `json:"suggestions,omitempty" md:"suggestions" desc:"Focused issues for this target volume"`
+}
+
+type composeAgentSDKPromptReviewSuggestion struct {
+	Category   string                               `json:"category,omitempty" md:"category" desc:"Issue category such as logic, structure, state_anchor, resource_ledger"`
+	TargetID   string                               `json:"target_id,omitempty" md:"target_id" desc:"Target volume or chapter ID"`
+	TargetName string                               `json:"target_name,omitempty" md:"target_name" desc:"Short target display name"`
+	Issue      string                               `json:"issue" md:"issue" desc:"Short issue description"`
+	Suggestion string                               `json:"suggestion,omitempty" md:"suggestion" desc:"Short suggested fix"`
+	Priority   string                               `json:"priority" md:"priority" desc:"critical, high, medium, or low"`
+	Navigation *composeAgentSDKSuggestionNavigation `json:"navigation,omitempty" md:"navigation" desc:"Focused commands to gather the smallest useful context for this issue"`
+}
+
+type composeAgentSDKSuggestionNavigation struct {
+	TargetKind         string                 `json:"target_kind,omitempty" md:"target_kind" desc:"chapter, volume, or outline"`
+	VolumeID           string                 `json:"volume_id,omitempty" md:"volume_id" desc:"Volume ID to patch when repairing this issue"`
+	DetailQueries      []string               `json:"detail_queries,omitempty" md:"detail_queries" desc:"Read-only queries to inspect before broadening context"`
+	FocusedCheckQuery  string                 `json:"focused_check_query,omitempty" md:"focused_check_query" desc:"Smallest useful check command for this issue"`
+	RepairRouteQuery   string                 `json:"repair_route_query,omitempty" md:"repair_route_query" desc:"Index-sized route query with next_actions for this issue"`
+	RepairContextQuery string                 `json:"repair_context_query,omitempty" md:"repair_context_query" desc:"Smallest useful context bundle for this issue"`
+	PatchQuery         string                 `json:"patch_query,omitempty" md:"patch_query" desc:"Patch command prefix for dry-run/apply"`
+	PatchShape         map[string]interface{} `json:"patch_shape,omitempty" md:"patch_shape" desc:"Minimal JSON patch shape hint"`
+}
+
 // ComposeImproveVolumeOutput is the output for volume improvement
 type ComposeImproveVolumeOutput struct {
 	Volume models.Volume `json:"volume" md:"volume" desc:"Improved volume with chapters"`
+}
+
+type ComposeAgentSDKImproveVolumeOutput struct {
+	ReviewResult models.ReviewResult `json:"review_result" md:"review_result" desc:"Review result for the target volume"`
+	Volume       models.Volume       `json:"volume" md:"volume" desc:"Improved target volume with chapters"`
+}
+
+type composeAgentSDKImprovePatchOutput struct {
+	ReviewResult composeAgentSDKReviewResult `json:"review_result" md:"review_result" desc:"Compact review result for the target volume. Keep it short and focused on applied or remaining issues."`
+	VolumePatch  composeVolumePatch          `json:"volume_patch" md:"volume_patch" desc:"Patch for the target volume. Return only changed volume fields and complete changed chapters; Go will merge it into the original volume."`
+}
+
+type composeAgentSDKApplyOutput struct {
+	ReviewResult      composeAgentSDKReviewResult `json:"review_result" md:"review_result" desc:"Compact review result for the target volume after any applied patches"`
+	AppliedPatches    bool                        `json:"applied_patches" md:"applied_patches" desc:"True only if the workflow successfully used tool patch outline --apply"`
+	AppliedPatchCount int                         `json:"applied_patch_count,omitempty" md:"applied_patch_count" desc:"Number of successful apply calls, if any"`
+	FinalCheck        string                      `json:"final_check,omitempty" md:"final_check" desc:"Compact final tool check summary, or why no patch/check was needed"`
+}
+
+type composeAgentSDKGlobalRepairOutput struct {
+	ReviewResult      composeAgentSDKReviewResult `json:"review_result" md:"review_result" desc:"Compact review result for global outline issues after any applied patches"`
+	AppliedPatches    bool                        `json:"applied_patches" md:"applied_patches" desc:"True only if the workflow successfully used a validated tool patch --apply"`
+	AppliedPatchCount int                         `json:"applied_patch_count,omitempty" md:"applied_patch_count" desc:"Number of successful apply calls, if any"`
+	FinalCheck        string                      `json:"final_check,omitempty" md:"final_check" desc:"Compact final tool check summary, or why no patch/check was needed"`
+}
+
+type composeAgentSDKReviewResult struct {
+	OverallScore float64                           `json:"overall_score" md:"overall_score" desc:"0-100 score for the target volume after the returned patch"`
+	Summary      string                            `json:"summary" md:"summary" desc:"Compact Chinese summary under 500 characters"`
+	Suggestions  []composeAgentSDKReviewSuggestion `json:"suggestions,omitempty" md:"suggestions" desc:"At most 8 remaining issues or applied patch notes"`
+}
+
+type composeAgentSDKReviewSuggestion struct {
+	Category   string `json:"category,omitempty" md:"category" desc:"Issue category such as logic, structure, state_anchor, resource_ledger"`
+	TargetID   string `json:"target_id,omitempty" md:"target_id" desc:"Target volume or chapter ID"`
+	TargetName string `json:"target_name,omitempty" md:"target_name" desc:"Short target display name"`
+	Issue      string `json:"issue" md:"issue" desc:"Short issue or applied-change description"`
+	Suggestion string `json:"suggestion,omitempty" md:"suggestion" desc:"Short fix, or why no patch is needed"`
+	Priority   string `json:"priority" md:"priority" desc:"critical, high, medium, or low"`
+}
+
+type composeVolumePatch struct {
+	ID             string                       `json:"id,omitempty" md:"id" desc:"Target volume ID. Must match target_volume_id when present"`
+	Title          string                       `json:"title,omitempty" md:"title" desc:"New volume title only if it changes"`
+	Summary        string                       `json:"summary,omitempty" md:"summary" desc:"New volume summary only if it changes"`
+	PayoffContract *models.VolumePayoffContract `json:"payoff_contract,omitempty" md:"payoff_contract" desc:"New payoff contract only if it changes"`
+	Chapters       []composeChapterPatch        `json:"changed_chapters,omitempty" md:"changed_chapters" desc:"Minimal patch objects for changed chapters only. Keep existing chapter IDs and omit unchanged chapters; Go overlays non-empty fields onto the original chapter."`
+	Events         []composeChangedEventPatch   `json:"changed_events,omitempty" md:"changed_events" desc:"Minimal patch objects for changed events only. Use chapter_id plus 0-based event_index from tool query outline --type events."`
+}
+
+type composeChangedEventPatch struct {
+	ChapterID  string   `json:"chapter_id" md:"chapter_id" desc:"Existing chapter ID that owns this event"`
+	EventIndex int      `json:"event_index" md:"event_index" desc:"0-based event index returned by tool query outline --type events"`
+	Type       string   `json:"type,omitempty" md:"type" desc:"New event type only if it changes"`
+	Characters []string `json:"characters,omitempty" md:"characters" desc:"Replacement character list only if it changes"`
+	Subject    string   `json:"subject,omitempty" md:"subject" desc:"Changed entity or state type"`
+	Change     string   `json:"change,omitempty" md:"change" desc:"Change verb such as started, progressed, completed, get, lost, resolved"`
+	Details    string   `json:"details,omitempty" md:"details" desc:"Short extra detail"`
+	Actor      string   `json:"actor,omitempty" md:"actor" desc:"Actor performing the action"`
+	Action     string   `json:"action,omitempty" md:"action" desc:"Action verb such as acquire, use, lose, move, combat, learn, discover"`
+	Target     string   `json:"target,omitempty" md:"target" desc:"Action target"`
+	TargetType string   `json:"target_type,omitempty" md:"target_type" desc:"item, character, location, skill, status, relationship, or knowledge"`
+	Context    string   `json:"context,omitempty" md:"context" desc:"Where or why it happens"`
+	Result     string   `json:"result,omitempty" md:"result" desc:"Narrative result"`
+}
+
+type composeChapterPatch struct {
+	ID                string                       `json:"id" md:"id" desc:"Existing target chapter ID"`
+	Title             string                       `json:"title,omitempty" md:"title" desc:"New chapter title only if it changes"`
+	Summary           string                       `json:"summary,omitempty" md:"summary" desc:"New chapter summary only if it changes"`
+	Characters        []string                     `json:"characters,omitempty" md:"characters" desc:"Replacement character list only if it changes"`
+	Location          string                       `json:"location,omitempty" md:"location" desc:"New chapter location only if it changes"`
+	Events            []composeEventPatch          `json:"events,omitempty" md:"events" desc:"Replacement event list only if events change"`
+	OpeningBeat       string                       `json:"opening_beat,omitempty" md:"opening_beat" desc:"New chapter opening beat only if it changes; transition checks read this through normalized beats"`
+	ClosingBeat       string                       `json:"closing_beat,omitempty" md:"closing_beat" desc:"New chapter closing beat only if it changes"`
+	StateChange       string                       `json:"state_change,omitempty" md:"state_change" desc:"Primary state change only if it changes"`
+	Conflict          string                       `json:"conflict,omitempty" md:"conflict" desc:"Conflict text only if it changes"`
+	Pacing            string                       `json:"pacing,omitempty" md:"pacing" desc:"Pacing text only if it changes"`
+	Timeline          models.ChapterTimeline       `json:"timeline,omitempty" md:"timeline" desc:"Replacement timeline only if timeline changes"`
+	StateAnchor       models.StateAnchor           `json:"state_anchor,omitempty" md:"state_anchor" desc:"Replacement state anchor only if it changes"`
+	Enemies           []models.OutlineEnemy        `json:"enemies,omitempty" md:"enemies" desc:"Replacement enemy list only if it changes"`
+	ResourceLedger    []models.ResourceLedgerEntry `json:"resource_ledger,omitempty" md:"resource_ledger" desc:"Replacement resource ledger only if it changes"`
+	Mysteries         models.ChapterMysteries      `json:"mysteries,omitempty" md:"mysteries" desc:"Mystery updates only if planted or resolved mysteries change"`
+	StorylineAdvances []models.StorylineAdvance    `json:"storyline_advances,omitempty" md:"storyline_advances" desc:"Replacement storyline advances only if they change"`
+	ChapterPayoff     *models.ChapterPayoff        `json:"chapter_payoff,omitempty" md:"chapter_payoff" desc:"Replacement chapter payoff only if it changes"`
+}
+
+type composeEventPatch struct {
+	Type       string   `json:"type" md:"type" desc:"relationship, goal, item, premise, storyline, gate, or status"`
+	Characters []string `json:"characters,omitempty" md:"characters" desc:"Characters involved in the event"`
+	Subject    string   `json:"subject" md:"subject" desc:"Changed entity or state type"`
+	Change     string   `json:"change" md:"change" desc:"Change verb such as started, progressed, completed, get, lost, resolved"`
+	Details    string   `json:"details,omitempty" md:"details" desc:"Short extra detail"`
+	Actor      string   `json:"actor,omitempty" md:"actor" desc:"Actor performing the action"`
+	Action     string   `json:"action,omitempty" md:"action" desc:"Action verb such as acquire, use, lose, move, combat, learn, discover"`
+	Target     string   `json:"target,omitempty" md:"target" desc:"Action target"`
+	TargetType string   `json:"target_type,omitempty" md:"target_type" desc:"item, character, location, skill, status, relationship, or knowledge"`
+	Context    string   `json:"context,omitempty" md:"context" desc:"Where or why it happens"`
+	Result     string   `json:"result,omitempty" md:"result" desc:"Narrative result"`
 }
 
 // ImproveProgress tracks the progress of hierarchical improvement
@@ -254,6 +423,1150 @@ func NewComposeAgent(client llm.Client, config *llm.Config, projectLLM *models.P
 // SetLanguage sets the output language
 func (a *ComposeAgent) SetLanguage(language string) {
 	a.base.SetLanguage(language)
+}
+
+func composeAgentSDKParams(command, workflowSkill string, maxTurns int, toolAllowlist []string) InvokeParams {
+	if maxTurns <= 0 {
+		maxTurns = 12
+	}
+	toolAllowlist = append(append([]string(nil), toolAllowlist...), agentSDKLogToolAllowlist()...)
+	return InvokeParams{
+		SDKSkills:      []string{"novel-tools-core", workflowSkill},
+		Tools:          []string{"Bash"},
+		AllowedTools:   []string{"Bash"},
+		PermissionMode: "dontAsk",
+		RequireSDK:     true,
+		ToolAllowlist:  dedupeComposeToolAllowlist(toolAllowlist),
+		MaxTurns:       maxTurns,
+		Timeout:        300,
+		Command:        command,
+	}
+}
+
+func composeRequiredQueryAllowlist(requiredQueries []string) []string {
+	return dedupeComposeToolAllowlist(requiredQueries)
+}
+
+func composeImproveToolAllowlist(volume models.Volume, promptInput composeAgentSDKImproveVolumePromptInput, applyPatches bool) []string {
+	allowlist := composeRequiredQueryAllowlist(promptInput.RequiredQueries)
+	volumeID := strings.TrimSpace(volume.ID)
+	detailChapterIDs, restrictDetailChapters := composeImproveDetailChapterIDs(volume, promptInput)
+	allowExploratoryDetail := composeImproveHasFocusedTasks(promptInput) && !composeImproveUsesCleanProbe(promptInput)
+	if volumeID != "" {
+		allowlist = append(allowlist,
+			fmt.Sprintf("novelgen tool query context --type outline-volume --id %s --view brief", volumeID),
+			fmt.Sprintf("novelgen tool query context --type outline-repair --id %s --name", volumeID),
+			fmt.Sprintf("novelgen tool check all --target outline --scope volume --id %q", volumeID),
+		)
+		if allowExploratoryDetail {
+			allowlist = append(allowlist,
+				fmt.Sprintf("novelgen tool query context --type outline-volume --id %s", volumeID),
+				fmt.Sprintf("novelgen tool query outline --type volume --id %q", volumeID),
+				"novelgen tool query outline --type refs --entity-type character --name",
+				"novelgen tool query outline --type refs --entity-type item --name",
+				"novelgen tool query outline --type refs --entity-type location --name",
+				"novelgen tool query story-setup --type search",
+				"novelgen tool query story-setup --type core-cast --name",
+				"novelgen tool query story-setup --type storyline --name",
+				"novelgen tool query story-setup --type premise --name",
+				"novelgen tool query story-setup --type resource --name",
+				"novelgen tool query story-setup --type timeline --name",
+				fmt.Sprintf("novelgen tool query outline --type events --volume-id %q --view brief", volumeID),
+				fmt.Sprintf("novelgen tool query outline --type events --volume-id %q --fields action,actor,target,target_type,type,details,result --view brief", volumeID),
+			)
+		}
+	}
+	for _, chapter := range volume.Chapters {
+		chapterID := strings.TrimSpace(chapter.ID)
+		if chapterID == "" {
+			continue
+		}
+		allowlist = append(allowlist,
+			fmt.Sprintf("novelgen tool query context --type outline-repair --id %s --name", chapterID),
+			fmt.Sprintf("novelgen tool check all --target outline --scope chapter --id %q", chapterID),
+		)
+		if allowExploratoryDetail && (!restrictDetailChapters || detailChapterIDs[chapterID]) {
+			allowlist = append(allowlist,
+				fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", chapterID),
+				fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q --view brief", chapterID),
+				fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q --fields result,details,target,target_type,actor,action --view brief", chapterID),
+			)
+		}
+	}
+	for _, suggestion := range promptInput.ReviewResult.Suggestions {
+		if suggestion.Navigation == nil {
+			continue
+		}
+		allowlist = append(allowlist, suggestion.Navigation.DetailQueries...)
+		allowlist = append(allowlist, suggestion.Navigation.FocusedCheckQuery)
+		allowlist = append(allowlist, suggestion.Navigation.RepairRouteQuery)
+		allowlist = append(allowlist, suggestion.Navigation.RepairContextQuery)
+	}
+	patchTool := "novelgen tool patch outline --target volume"
+	if volumeID != "" {
+		patchTool += fmt.Sprintf(" --id %q", volumeID)
+	}
+	if applyPatches {
+		patchTool += " --apply"
+	}
+	allowlist = append(allowlist, patchTool)
+	return dedupeComposeToolAllowlist(allowlist)
+}
+
+func composeImproveHasFocusedTasks(promptInput composeAgentSDKImproveVolumePromptInput) bool {
+	return promptInput.ForceIssueRepair ||
+		strings.TrimSpace(promptInput.UserPrompt) != "" ||
+		len(promptInput.ReviewResult.Suggestions) > 0
+}
+
+func composeImproveUsesCleanProbe(promptInput composeAgentSDKImproveVolumePromptInput) bool {
+	return len(promptInput.ReviewResult.Suggestions) == 0 && composePromptRequestsCheckFirstNoop(promptInput.UserPrompt)
+}
+
+func composeImproveDetailChapterIDs(volume models.Volume, promptInput composeAgentSDKImproveVolumePromptInput) (map[string]bool, bool) {
+	if !composeImproveHasFocusedTasks(promptInput) {
+		return nil, false
+	}
+	volumeChapterIDs := map[string]bool{}
+	for _, chapter := range volume.Chapters {
+		if id := strings.TrimSpace(chapter.ID); id != "" {
+			volumeChapterIDs[id] = true
+		}
+	}
+	ids := map[string]bool{}
+	for _, suggestion := range promptInput.ReviewResult.Suggestions {
+		targetID := strings.TrimSpace(suggestion.TargetID)
+		if targetID == strings.TrimSpace(volume.ID) {
+			return nil, false
+		}
+		if volumeChapterIDs[targetID] {
+			ids[targetID] = true
+			composeAddAdjacentChapterIDs(ids, volume, targetID)
+		}
+	}
+	for _, id := range composeImproveBoundaryChapterIDs(volume, promptInput.UserPrompt) {
+		if volumeChapterIDs[id] {
+			ids[id] = true
+		}
+	}
+	if len(ids) == 0 {
+		return nil, false
+	}
+	return ids, true
+}
+
+func composeAddAdjacentChapterIDs(ids map[string]bool, volume models.Volume, targetID string) {
+	for i, chapter := range volume.Chapters {
+		if strings.TrimSpace(chapter.ID) != targetID {
+			continue
+		}
+		if i > 0 {
+			if id := strings.TrimSpace(volume.Chapters[i-1].ID); id != "" {
+				ids[id] = true
+			}
+		}
+		if i+1 < len(volume.Chapters) {
+			if id := strings.TrimSpace(volume.Chapters[i+1].ID); id != "" {
+				ids[id] = true
+			}
+		}
+		return
+	}
+}
+
+func composeImproveBoundaryChapterIDs(volume models.Volume, prompt string) []string {
+	rawPrompt := strings.TrimSpace(prompt)
+	prompt = strings.ToLower(rawPrompt)
+	if prompt == "" || composeImprovePromptRequestsAllChapters(prompt) {
+		return nil
+	}
+	ids := []string{}
+	for i, chapter := range volume.Chapters {
+		id := strings.TrimSpace(chapter.ID)
+		if id == "" {
+			continue
+		}
+		if strings.Contains(prompt, strings.ToLower(id)) || composeImprovePromptMentionsChapterOrdinal(prompt, i+1) {
+			ids = append(ids, id)
+		}
+	}
+	if composeImprovePromptMentionsFirstChapter(prompt) && len(volume.Chapters) > 0 {
+		if id := strings.TrimSpace(volume.Chapters[0].ID); id != "" {
+			if !composeStringSliceContains(ids, id) {
+				ids = append(ids, id)
+			}
+		}
+	}
+	if composeImprovePromptMentionsLastChapter(prompt) && len(volume.Chapters) > 0 {
+		if id := strings.TrimSpace(volume.Chapters[len(volume.Chapters)-1].ID); id != "" && !composeStringSliceContains(ids, id) {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
+func AgentSDKImproveBoundaryChapterIDs(volume models.Volume, prompt string) []string {
+	return append([]string(nil), composeImproveBoundaryChapterIDs(volume, prompt)...)
+}
+
+func composeImproveRequiredFocusedChecks(volume models.Volume, prompt string) []string {
+	ids := composeImproveBoundaryChapterIDs(volume, prompt)
+	if len(ids) == 0 {
+		return nil
+	}
+	categories := composeImprovePromptCheckCategories(prompt)
+	checks := make([]string, 0, len(ids)*len(categories))
+	for _, id := range ids {
+		for _, category := range categories {
+			checks = append(checks, fmt.Sprintf("novelgen tool check all --target outline --scope chapter --id %q --category %s --min-priority low --max-issues 8", id, category))
+		}
+	}
+	return checks
+}
+
+func composeImprovePromptCheckCategories(prompt string) []string {
+	prompt = strings.ToLower(strings.TrimSpace(prompt))
+	categories := []string{}
+	if strings.Contains(prompt, "logic") || strings.Contains(prompt, "逻辑") || strings.Contains(prompt, "连贯") || strings.Contains(prompt, "承接") {
+		categories = append(categories, "logic")
+	}
+	if strings.Contains(prompt, "transition") || strings.Contains(prompt, "过渡") || strings.Contains(prompt, "地点") || strings.Contains(prompt, "移动") {
+		categories = append(categories, "transition")
+	}
+	if strings.Contains(prompt, "state_anchor") || strings.Contains(prompt, "状态锚点") || strings.Contains(prompt, "修炼境界") {
+		categories = append(categories, "state_anchor")
+	}
+	if len(categories) == 0 {
+		categories = append(categories, "all")
+	}
+	return categories
+}
+
+func composeStringSliceContains(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
+func composeImprovePromptRequestsAllChapters(prompt string) bool {
+	for _, marker := range []string{"每章", "每一章", "所有章节", "全部章节", "逐章", "全卷", "整卷", "all chapters", "every chapter", "whole volume"} {
+		if strings.Contains(prompt, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func composeImprovePromptMentionsChapterOrdinal(prompt string, ordinal int) bool {
+	if ordinal <= 0 {
+		return false
+	}
+	markers := []string{
+		fmt.Sprintf("第%d章", ordinal),
+		fmt.Sprintf("第 %d 章", ordinal),
+		fmt.Sprintf("chapter %d", ordinal),
+		fmt.Sprintf("ch%d", ordinal),
+	}
+	if cn := smallChineseOrdinal(ordinal); cn != "" {
+		markers = append(markers, "第"+cn+"章")
+	}
+	for _, marker := range markers {
+		if strings.Contains(prompt, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func smallChineseOrdinal(value int) string {
+	if value <= 0 || value > 99 {
+		return ""
+	}
+	digits := []string{"", "一", "二", "三", "四", "五", "六", "七", "八", "九"}
+	if value < 10 {
+		return digits[value]
+	}
+	if value == 10 {
+		return "十"
+	}
+	tens := value / 10
+	ones := value % 10
+	if tens == 1 {
+		if ones == 0 {
+			return "十"
+		}
+		return "十" + digits[ones]
+	}
+	if ones == 0 {
+		return digits[tens] + "十"
+	}
+	return digits[tens] + "十" + digits[ones]
+}
+
+func composeImprovePromptMentionsFirstChapter(prompt string) bool {
+	for _, marker := range []string{"首章", "第一章", "开头", "开篇", "卷首", "first chapter", "opening chapter"} {
+		if strings.Contains(prompt, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func composeImprovePromptMentionsLastChapter(prompt string) bool {
+	for _, marker := range []string{"卷尾", "尾章", "最后一章", "末章", "结尾", "收束", "卷末", "final chapter", "last chapter", "ending"} {
+		if strings.Contains(prompt, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func composeGlobalRepairToolAllowlist(applyPatches bool) []string {
+	allowlist := []string{
+		"novelgen tool query context --type outline-global-repair",
+		"novelgen tool query story-setup --type search",
+		"novelgen tool check all --target outline",
+		"novelgen tool check all --target setup",
+		"novelgen tool patch setup",
+		"novelgen tool patch outline --target volume --id",
+	}
+	if applyPatches {
+		allowlist = append(allowlist, "novelgen tool patch setup --apply")
+		allowlist = append(allowlist, "novelgen tool patch outline --target volume --id --apply")
+	}
+	return dedupeComposeToolAllowlist(allowlist)
+}
+
+func composeGlobalRepairToolAllowlistForReview(review models.ReviewResult, applyPatches bool) []string {
+	allowlist := []string{
+		"novelgen tool query context --type outline-global-repair",
+		"novelgen tool query story-setup --type search",
+		"novelgen tool patch setup",
+		"novelgen tool patch outline --target volume --id",
+	}
+	checks := composeGlobalRepairRequiredPostPatchChecks(review)
+	if len(checks) == 0 {
+		allowlist = append(allowlist,
+			"novelgen tool check all --target outline",
+			"novelgen tool check all --target setup",
+		)
+	} else {
+		allowlist = append(allowlist, checks...)
+	}
+	if applyPatches {
+		allowlist = append(allowlist, "novelgen tool patch setup --apply")
+		allowlist = append(allowlist, "novelgen tool patch outline --target volume --id --apply")
+	}
+	return dedupeComposeToolAllowlist(allowlist)
+}
+
+func composeGlobalRepairRequiredPostPatchChecks(review models.ReviewResult) []string {
+	for _, suggestion := range review.Suggestions {
+		category := composeAgentSDKCheckCategory(suggestion.Category)
+		if category == "" {
+			continue
+		}
+		targetID := strings.TrimSpace(suggestion.TargetID)
+		if category == "faction_tier" && targetID != "" && !strings.EqualFold(targetID, "global") {
+			return []string{fmt.Sprintf("novelgen tool check all --target setup --category %s --min-priority low --max-issues 12", category)}
+		}
+		return []string{fmt.Sprintf("novelgen tool check all --target outline --scope all --category %s --min-priority low --max-issues 12", category)}
+	}
+	return nil
+}
+
+func dedupeComposeToolAllowlist(values []string) []string {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		out = append(out, value)
+	}
+	return out
+}
+
+// GenerateSkeletonWithAgentSDK asks the Claude Agent SDK workflow to query
+// project facts and return an outline skeleton. Go still validates and saves.
+func (a *ComposeAgent) GenerateSkeletonWithAgentSDK(ctx context.Context, input ComposeSkeletonInput) (ComposeSkeletonOutput, error) {
+	logger.Section("COMPOSE AGENT SDK - Generating Outline Skeleton")
+	var output ComposeSkeletonOutput
+	promptInput := composeAgentSDKSkeletonPromptInput{
+		Structure: input.Structure,
+		RequiredQueries: []string{
+			"novelgen tool query story-setup --view brief",
+		},
+		Instructions: []string{
+			"Do not use the setup_brief shortcut; query the project facts with the required command.",
+			"Use --view brief or --view index before asking for full detail; avoid broad full-output queries.",
+			"Return only the parts/volumes skeleton. Chapters must be empty arrays.",
+		},
+	}
+	params := composeAgentSDKParams("generate the story outline skeleton using read-only project queries", "outline-compose-skeleton-workflow", 10, composeRequiredQueryAllowlist(promptInput.RequiredQueries))
+	if err := a.base.Execute(ctx, params, promptInput, &output); err != nil {
+		return ComposeSkeletonOutput{}, err
+	}
+	if len(output.Parts) != input.Structure.TargetParts {
+		return ComposeSkeletonOutput{}, fmt.Errorf("agent SDK generated %d parts, but %d were requested", len(output.Parts), input.Structure.TargetParts)
+	}
+	for i, part := range output.Parts {
+		if len(part.Volumes) != input.Structure.TargetVolumes {
+			return ComposeSkeletonOutput{}, fmt.Errorf("agent SDK part %d has %d volumes, but %d were requested", i+1, len(part.Volumes), input.Structure.TargetVolumes)
+		}
+	}
+	return output, nil
+}
+
+// GenerateChaptersForVolumeWithAgentSDK asks the SDK workflow to fill one
+// volume. Only returned chapters are accepted; volume identity stays in Go.
+func (a *ComposeAgent) GenerateChaptersForVolumeWithAgentSDK(ctx context.Context, input ComposeChaptersInput) (ComposeImproveVolumeOutput, error) {
+	logger.Section("COMPOSE AGENT SDK - Generating Chapters for Volume")
+	logger.Info("Volume: %s (%d/%d)", input.Volume.Title, input.VolumeIndex, input.TotalVolumes)
+
+	var output ComposeImproveVolumeOutput
+	promptInput := buildAgentSDKChaptersPromptInput(input)
+	params := composeAgentSDKParams("generate chapters for this volume using read-only project queries", "outline-compose-volume-workflow", 24, composeRequiredQueryAllowlist(promptInput.RequiredQueries))
+	if err := a.base.Execute(ctx, params, promptInput, &output); err != nil {
+		return ComposeImproveVolumeOutput{}, err
+	}
+	volume, err := prepareAgentSDKReturnedVolume(input.Volume, output.Volume, input.ChaptersPerVol)
+	if err != nil {
+		return ComposeImproveVolumeOutput{}, err
+	}
+	for i, chapter := range volume.Chapters {
+		if err := a.validateChapterOutput(&chapter); err != nil {
+			return ComposeImproveVolumeOutput{}, fmt.Errorf("chapter %d invalid: %w", i+1, err)
+		}
+	}
+	output.Volume = volume
+	return output, nil
+}
+
+// ImproveVolumeWithAgentSDK lets the SDK workflow query context, review a
+// target volume, and return an improved volume plus review metadata.
+func (a *ComposeAgent) ImproveVolumeWithAgentSDK(ctx context.Context, input ComposeImproveVolumeInput, applyPatches bool, forceIssueRepair bool) (ComposeAgentSDKImproveVolumeOutput, error) {
+	logger.Section("COMPOSE AGENT SDK - Volume Review/Improvement")
+	logger.Info("Volume: %s", input.Volume.Title)
+	if applyPatches {
+		logger.Info("Agent apply enabled: SDK may write through validated outline patch tools")
+	}
+	if forceIssueRepair {
+		logger.Info("Focused review issues are treated as repair tasks, including directly fixable low-priority issues")
+	}
+
+	promptInput := buildAgentSDKImproveVolumePromptInput(input, applyPatches, forceIssueRepair)
+	params := composeAgentSDKParams("review and improve this outline volume using project query/check/patch tools", "outline-improve-volume-workflow", 28, composeImproveToolAllowlist(input.Volume, promptInput, applyPatches))
+	params.ToolEvidence = composeImproveToolEvidence(promptInput, applyPatches)
+	if applyPatches {
+		params.ToolEvidence.RequirePatchApplyFollowupCheck = true
+	}
+
+	if applyPatches {
+		var applyOutput composeAgentSDKApplyOutput
+		runtimeResult, err := a.base.ExecuteWithRuntimeResult(ctx, params, promptInput, &applyOutput)
+		if err != nil {
+			if recovered, recoverErr := a.recoverAppliedVolumeAfterAgentSDKError(input.Volume, runtimeResult, err); recoverErr == nil {
+				return recovered, nil
+			}
+			return ComposeAgentSDKImproveVolumeOutput{}, err
+		}
+		if err := validateComposeImproveAgentSDKPatchApplyEvidence(runtimeResult, applyOutput.AppliedPatches, applyOutput.AppliedPatchCount); err != nil {
+			return ComposeAgentSDKImproveVolumeOutput{}, err
+		}
+		if err := validateAgentSDKApplyOutput(applyOutput); err != nil {
+			return ComposeAgentSDKImproveVolumeOutput{}, err
+		}
+		reviewResult := applyOutput.ReviewResult.toModelReviewResult()
+		reviewResult.NormalizeScoreScale()
+		volume := input.Volume
+		if applyOutput.AppliedPatches {
+			var err error
+			volume, err = loadAgentSDKAppliedOutlineVolume(input.Volume, true)
+			if err != nil {
+				return ComposeAgentSDKImproveVolumeOutput{}, err
+			}
+		}
+		for i, chapter := range volume.Chapters {
+			if err := a.validateChapterOutput(&chapter); err != nil {
+				return ComposeAgentSDKImproveVolumeOutput{}, fmt.Errorf("chapter %d invalid: %w", i+1, err)
+			}
+		}
+		return ComposeAgentSDKImproveVolumeOutput{
+			ReviewResult: reviewResult,
+			Volume:       volume,
+		}, nil
+	}
+
+	var patchOutput composeAgentSDKImprovePatchOutput
+	runtimeResult, err := a.base.ExecuteWithRuntimeResult(ctx, params, promptInput, &patchOutput)
+	if err != nil {
+		return ComposeAgentSDKImproveVolumeOutput{}, err
+	}
+	if err := validateComposeImproveAgentSDKPatchApplyEvidence(runtimeResult, false, 0); err != nil {
+		return ComposeAgentSDKImproveVolumeOutput{}, err
+	}
+	if err := validateAgentSDKImprovePatchOutput(patchOutput, input.Volume.ID); err != nil {
+		return ComposeAgentSDKImproveVolumeOutput{}, err
+	}
+	if err := utils.ValidateNoSuspiciousPatchText(patchOutput.VolumePatch); err != nil {
+		return ComposeAgentSDKImproveVolumeOutput{}, fmt.Errorf("agent SDK volume patch rejected: %w", err)
+	}
+	reviewResult := patchOutput.ReviewResult.toModelReviewResult()
+	reviewResult.NormalizeScoreScale()
+	volume, err := applyAgentSDKVolumePatch(input.Volume, patchOutput.VolumePatch, len(input.Volume.Chapters))
+	if err != nil {
+		return ComposeAgentSDKImproveVolumeOutput{}, err
+	}
+	for i, chapter := range volume.Chapters {
+		if err := a.validateChapterOutput(&chapter); err != nil {
+			return ComposeAgentSDKImproveVolumeOutput{}, fmt.Errorf("chapter %d invalid: %w", i+1, err)
+		}
+	}
+	return ComposeAgentSDKImproveVolumeOutput{
+		ReviewResult: reviewResult,
+		Volume:       volume,
+	}, nil
+}
+
+func composeImproveToolEvidence(promptInput composeAgentSDKImproveVolumePromptInput, applyPatches bool) ToolEvidenceRequirement {
+	evidence := ToolEvidenceRequirement{
+		MinContextQueryCalls: 1,
+		MinCheckCalls:        1,
+		RequireNoDeniedTools: true,
+	}
+	evidence.RequiredToolCommands = append(evidence.RequiredToolCommands, promptInputRequiredFocusedChecks(promptInput)...)
+	if !composeImproveHasFocusedTasks(promptInput) || composeImproveUsesCleanProbe(promptInput) {
+		evidence.MaxQueryCalls = 2
+		evidence.MaxContextQueryCalls = 2
+		evidence.DisallowQueryFullCalls = true
+	}
+	if applyPatches {
+		evidence.RequirePatchApplyFollowupCheck = true
+	}
+	return evidence
+}
+
+func promptInputRequiredFocusedChecks(promptInput composeAgentSDKImproveVolumePromptInput) []string {
+	const prefix = "Required focused checks before final JSON: "
+	for _, instruction := range promptInput.Instructions {
+		if !strings.HasPrefix(instruction, prefix) {
+			continue
+		}
+		raw := strings.TrimSpace(strings.TrimPrefix(instruction, prefix))
+		if raw == "" {
+			return nil
+		}
+		parts := strings.Split(raw, ";")
+		checks := make([]string, 0, len(parts))
+		for _, part := range parts {
+			if check := strings.TrimSpace(part); check != "" {
+				checks = append(checks, check)
+			}
+		}
+		return checks
+	}
+	return nil
+}
+
+func (a *ComposeAgent) RepairGlobalIssuesWithAgentSDK(ctx context.Context, review models.ReviewResult, applyPatches bool) (models.ReviewResult, error) {
+	logger.Section("COMPOSE AGENT SDK - Global Outline Repair")
+	if applyPatches {
+		logger.Info("Agent apply enabled: SDK may write global fixes through validated setup/outline patch tools")
+	}
+	promptInput := composeAgentSDKGlobalRepairPromptInput{
+		ReviewResult:     compactReviewForAgentSDKPrompt(review, ""),
+		ApplyPatches:     applyPatches,
+		ForceIssueRepair: true,
+		RequiredQueries: []string{
+			"novelgen tool query context --type outline-global-repair --view index",
+		},
+		Instructions: []string{
+			"Use the required outline-global-repair index query first. It returns check summary, issue_context, patch_task, navigation, workflow, next_actions, and stats without full setup/outline.",
+			"If patch_task is present, use patch_task.dry_run_command and patch_task.apply_command exactly. Do not run repair_context_query, outline-volume, outline-repair, chapter-repair, query outline, query chapter, source/RPG reads, or Claude tool-results reads.",
+			"Follow patch_task exactly: run dry_run_command once, run apply_command once only if dry-run succeeds, then patch_task.post_patch_check_query exactly.",
+			"If patch_task is absent, fall back to issue_context. Patch only entries that have both patch_query and patch_shape; patch_query may target setup or a specific outline volume.",
+			"When patch_task is absent, run at most one repair_context_query, and only the exact repair_context_query from the first patchable issue_context item. Do not invent combined category names such as logic,plot,structure.",
+			"Do not patch broad global issues that lack patch_shape. Return them as remaining diagnostics or route them to a smaller workflow.",
+			"Patch at most one item in this invocation. When patch_task has dry_run_command/apply_command, do not reconstruct the command; run those exact commands. If falling back to issue_context, dry-run exactly once with `printf '%s' '<compact-json>' | <patch_query>` using a concrete compact JSON object; do not run placeholder text such as `<json>`.",
+			"For global outline/setup repair, do not use --patch-json. For Chinese/non-ASCII patch JSON, do not run Python/Node/PowerShell/help commands to encode it.",
+			"If apply_patches=true and dry-run succeeds, repeat the same stdin-piped patch with --apply, then run the provided post_patch_check_query exactly; do not replace it with a volume-level or medium-only check.",
+			"Do not inspect source code, RPG files, full setup, full outline, or all chapters.",
+		},
+	}
+	requiredPostPatchChecks := composeGlobalRepairRequiredPostPatchChecks(review)
+	if len(requiredPostPatchChecks) > 0 {
+		promptInput.Instructions = append(promptInput.Instructions, "Required post-patch checks before final JSON: "+strings.Join(requiredPostPatchChecks, "; "))
+	}
+	params := composeAgentSDKParams("repair global outline issues using project query/check/patch tools", "outline-global-repair-workflow", 18, composeGlobalRepairToolAllowlistForReview(review, applyPatches))
+	params.ToolEvidence = ToolEvidenceRequirement{
+		MinContextQueryCalls:   1,
+		MinCheckCalls:          1,
+		MaxContextQueryCalls:   2,
+		DisallowQueryFullCalls: true,
+		RequireNoDeniedTools:   true,
+		RequiredToolCommands:   requiredPostPatchChecks,
+	}
+	if applyPatches {
+		params.ToolEvidence.RequirePatchApplyFollowupCheck = true
+	}
+
+	var output composeAgentSDKGlobalRepairOutput
+	runtimeResult, err := a.base.ExecuteWithRuntimeResult(ctx, params, promptInput, &output)
+	if err != nil {
+		if recovered, recoverErr := recoverAppliedGlobalAfterAgentSDKError(runtimeResult, err, requiredPostPatchChecks); recoverErr == nil {
+			logger.Warn("Agent SDK global repair ended with an error after applying a validated patch; recovered saved project state: %v", err)
+			return recovered, nil
+		}
+		return models.ReviewResult{}, err
+	}
+	if err := validateComposeImproveAgentSDKPatchApplyEvidence(runtimeResult, output.AppliedPatches, output.AppliedPatchCount); err != nil {
+		return models.ReviewResult{}, err
+	}
+	if output.ReviewResult.OverallScore == 0 &&
+		strings.TrimSpace(output.ReviewResult.Summary) == "" &&
+		len(output.ReviewResult.Suggestions) == 0 {
+		return models.ReviewResult{}, fmt.Errorf("agent SDK global repair output has empty review_result")
+	}
+	result := output.ReviewResult.toModelReviewResult()
+	result.NormalizeScoreScale()
+	return result, nil
+}
+
+func recoverAppliedGlobalAfterAgentSDKError(runtimeResult *agentruntime.Result, invokeErr error, requiredPostPatchChecks []string) (models.ReviewResult, error) {
+	if runtimeResult == nil || runtimeResult.LiveSummary == nil {
+		return models.ReviewResult{}, invokeErr
+	}
+	summary := runtimeResult.LiveSummary
+	if summary.PatchApplies == 0 || summary.CheckCalls == 0 || summary.ApplyWithoutFollowupCheck > 0 {
+		return models.ReviewResult{}, invokeErr
+	}
+	if len(requiredPostPatchChecks) > 0 && !liveSummaryHasAnyToolCommand(summary, requiredPostPatchChecks) {
+		return models.ReviewResult{}, invokeErr
+	}
+	return models.ReviewResult{
+		OverallScore: 80,
+		Summary:      fmt.Sprintf("Agent SDK applied %d validated global patch(es) and completed follow-up checks, but ended with tool evidence diagnostics; recovered saved project state.", summary.PatchApplies),
+		Suggestions: []models.ReviewSuggestion{{
+			Category:   "agent_sdk_recovery",
+			Issue:      "Agent SDK attempted disallowed or extra tools after a validated global patch.",
+			Suggestion: "Recovered the saved project state because patch apply and follow-up check evidence were present.",
+			Priority:   models.PriorityLow,
+		}},
+	}, nil
+}
+
+func liveSummaryHasAnyToolCommand(summary *agentruntime.LiveSummary, commands []string) bool {
+	for _, command := range commands {
+		if liveSummaryHasToolCommand(summary, command) {
+			return true
+		}
+	}
+	return false
+}
+
+func validateComposeImproveAgentSDKPatchApplyEvidence(result *agentruntime.Result, appliedPatches bool, appliedPatchCount int) error {
+	if result == nil || result.LiveSummary == nil {
+		return nil
+	}
+	summary := result.LiveSummary
+	if appliedPatches && summary.PatchApplies == 0 {
+		return fmt.Errorf("agent SDK reported applied outline patches but live log has no patch apply call")
+	}
+	if appliedPatchCount > summary.PatchApplies {
+		return fmt.Errorf("agent SDK reported %d applied outline patches but live log has %d patch apply call(s)", appliedPatchCount, summary.PatchApplies)
+	}
+	return nil
+}
+
+func (a *ComposeAgent) recoverAppliedVolumeAfterAgentSDKError(original models.Volume, runtimeResult *agentruntime.Result, invokeErr error) (ComposeAgentSDKImproveVolumeOutput, error) {
+	if runtimeResult == nil || runtimeResult.LiveSummary == nil {
+		return ComposeAgentSDKImproveVolumeOutput{}, invokeErr
+	}
+	summary := runtimeResult.LiveSummary
+	if summary.PatchApplies == 0 || summary.ApplyWithoutFollowupCheck > 0 {
+		return ComposeAgentSDKImproveVolumeOutput{}, invokeErr
+	}
+	volume, err := loadAgentSDKAppliedOutlineVolume(original, true)
+	if err != nil {
+		return ComposeAgentSDKImproveVolumeOutput{}, fmt.Errorf("recover applied Agent SDK outline patch: %w; original error: %v", err, invokeErr)
+	}
+	for i, chapter := range volume.Chapters {
+		if err := a.validateChapterOutput(&chapter); err != nil {
+			return ComposeAgentSDKImproveVolumeOutput{}, fmt.Errorf("recovered chapter %d invalid: %w; original error: %v", i+1, err, invokeErr)
+		}
+	}
+	review := models.ReviewResult{
+		OverallScore: 80,
+		Summary:      fmt.Sprintf("Agent SDK applied %d validated outline patch(es) and completed follow-up checks, but ended before final JSON; recovered saved outline.", summary.PatchApplies),
+		Suggestions: []models.ReviewSuggestion{{
+			Category:   "agent_sdk_recovery",
+			Issue:      "Agent SDK ended before returning final JSON.",
+			Suggestion: "Recovered the saved outline because patch apply and follow-up check evidence were present.",
+			Priority:   models.PriorityLow,
+		}},
+	}
+	return ComposeAgentSDKImproveVolumeOutput{ReviewResult: review, Volume: volume}, nil
+}
+
+func validateAgentSDKApplyOutput(output composeAgentSDKApplyOutput) error {
+	if output.ReviewResult.OverallScore == 0 &&
+		strings.TrimSpace(output.ReviewResult.Summary) == "" &&
+		len(output.ReviewResult.Suggestions) == 0 {
+		return fmt.Errorf("agent SDK apply output has empty review_result")
+	}
+	if output.AppliedPatchCount < 0 {
+		return fmt.Errorf("agent SDK apply output has negative applied_patch_count")
+	}
+	if output.AppliedPatchCount > 1 {
+		return fmt.Errorf("agent SDK apply output reports applied_patch_count=%d, want at most 1 per invocation", output.AppliedPatchCount)
+	}
+	if !output.AppliedPatches && output.AppliedPatchCount > 0 {
+		return fmt.Errorf("agent SDK apply output reports applied_patch_count=%d while applied_patches=false", output.AppliedPatchCount)
+	}
+	return nil
+}
+
+func loadAgentSDKAppliedOutlineVolume(original models.Volume, requireApplied bool) (models.Volume, error) {
+	root := agentWorkspaceRoot()
+	if strings.TrimSpace(root) == "" {
+		if requireApplied {
+			return models.Volume{}, fmt.Errorf("agent SDK applied outline patch but workspace root is unknown")
+		}
+		return original, nil
+	}
+	outlinePath := filepath.Join(root, "story", "compose", "outline.json")
+	outline, err := models.LoadOutline(outlinePath)
+	if err != nil {
+		if requireApplied {
+			return models.Volume{}, fmt.Errorf("agent SDK applied outline patch but reloading %s failed: %w", outlinePath, err)
+		}
+		return original, nil
+	}
+	volume := outline.GetVolumeByID(original.ID)
+	if volume == nil {
+		if requireApplied {
+			return models.Volume{}, fmt.Errorf("agent SDK applied outline patch but target volume %q is missing from %s", original.ID, outlinePath)
+		}
+		return original, nil
+	}
+	loaded, err := cloneVolumeForAgentSDKPatch(*volume)
+	if err != nil {
+		return models.Volume{}, err
+	}
+	preserveImprovedVolumeIdentity(&original, &loaded)
+	return loaded, nil
+}
+
+func validateAgentSDKImprovePatchOutput(output composeAgentSDKImprovePatchOutput, targetVolumeID string) error {
+	targetVolumeID = strings.TrimSpace(targetVolumeID)
+	if targetVolumeID == "" {
+		return fmt.Errorf("target volume id is empty")
+	}
+	if strings.TrimSpace(output.VolumePatch.ID) == "" {
+		return fmt.Errorf("agent SDK improve output missing volume_patch.id for target volume %q", targetVolumeID)
+	}
+	if strings.TrimSpace(output.VolumePatch.ID) != targetVolumeID {
+		return fmt.Errorf("agent SDK improve output volume_patch.id %q does not match target volume %q", output.VolumePatch.ID, targetVolumeID)
+	}
+	if output.ReviewResult.OverallScore == 0 &&
+		strings.TrimSpace(output.ReviewResult.Summary) == "" &&
+		len(output.ReviewResult.Suggestions) == 0 {
+		return fmt.Errorf("agent SDK improve output has empty review_result")
+	}
+	return nil
+}
+
+func (r composeAgentSDKReviewResult) toModelReviewResult() models.ReviewResult {
+	result := models.ReviewResult{
+		OverallScore: r.OverallScore,
+		Summary:      clipForPrompt(r.Summary, 500),
+	}
+	for _, suggestion := range r.Suggestions {
+		result.Suggestions = append(result.Suggestions, models.ReviewSuggestion{
+			Category:   strings.TrimSpace(suggestion.Category),
+			TargetID:   strings.TrimSpace(suggestion.TargetID),
+			TargetName: clipForPrompt(suggestion.TargetName, 120),
+			Issue:      clipForPrompt(suggestion.Issue, 360),
+			Suggestion: clipForPrompt(suggestion.Suggestion, 420),
+			Priority:   strings.TrimSpace(suggestion.Priority),
+		})
+		if len(result.Suggestions) >= 8 {
+			break
+		}
+	}
+	return result
+}
+
+func applyAgentSDKVolumePatch(original models.Volume, patch composeVolumePatch, expectedChapters int) (models.Volume, error) {
+	if err := utils.ValidateNoSuspiciousPatchText(patch); err != nil {
+		return models.Volume{}, fmt.Errorf("agent SDK volume patch rejected: %w", err)
+	}
+	if id := strings.TrimSpace(patch.ID); id != "" && id != strings.TrimSpace(original.ID) {
+		return models.Volume{}, fmt.Errorf("agent SDK volume patch id %q does not match target volume %q", id, original.ID)
+	}
+	if expectedChapters > 0 && len(original.Chapters) != expectedChapters {
+		return models.Volume{}, fmt.Errorf("target volume has %d chapter(s), expected %d", len(original.Chapters), expectedChapters)
+	}
+
+	merged, err := cloneVolumeForAgentSDKPatch(original)
+	if err != nil {
+		return models.Volume{}, err
+	}
+	if strings.TrimSpace(patch.Title) != "" {
+		merged.Title = patch.Title
+	}
+	if strings.TrimSpace(patch.Summary) != "" {
+		merged.Summary = patch.Summary
+	}
+	if !isEmptyPayoffContract(patch.PayoffContract) {
+		merged.PayoffContract = models.MergeVolumePayoffContract(merged.PayoffContract, patch.PayoffContract)
+	}
+
+	chapterByID := make(map[string]int, len(merged.Chapters))
+	for i, chapter := range merged.Chapters {
+		chapterByID[strings.TrimSpace(chapter.ID)] = i
+	}
+	for _, changed := range patch.Chapters {
+		id := strings.TrimSpace(changed.ID)
+		if id == "" {
+			return models.Volume{}, fmt.Errorf("agent SDK volume patch includes a changed chapter without id")
+		}
+		idx, ok := chapterByID[id]
+		if !ok {
+			return models.Volume{}, fmt.Errorf("agent SDK volume patch references unknown chapter id %q", id)
+		}
+		merged.Chapters[idx] = mergeAgentSDKChapterPatch(merged.Chapters[idx], changed)
+	}
+	if err := applyAgentSDKEventPatches(&merged, patch.Events); err != nil {
+		return models.Volume{}, err
+	}
+	if expectedChapters > 0 && len(merged.Chapters) != expectedChapters {
+		return models.Volume{}, fmt.Errorf("merged volume has %d chapter(s), expected %d", len(merged.Chapters), expectedChapters)
+	}
+	preserveImprovedVolumeIdentity(&original, &merged)
+	return merged, nil
+}
+
+func applyAgentSDKEventPatches(volume *models.Volume, patches []composeChangedEventPatch) error {
+	if len(patches) == 0 {
+		return nil
+	}
+	chapterByID := make(map[string]int, len(volume.Chapters))
+	for i, chapter := range volume.Chapters {
+		chapterByID[strings.TrimSpace(chapter.ID)] = i
+	}
+	for _, patch := range patches {
+		chapterID := strings.TrimSpace(patch.ChapterID)
+		if chapterID == "" {
+			return fmt.Errorf("agent SDK changed_events includes an event without chapter_id")
+		}
+		chapterIdx, ok := chapterByID[chapterID]
+		if !ok {
+			return fmt.Errorf("agent SDK changed_events references unknown chapter id %q", chapterID)
+		}
+		if patch.EventIndex < 0 || patch.EventIndex >= len(volume.Chapters[chapterIdx].Events) {
+			return fmt.Errorf("agent SDK changed_events index %d out of range for chapter %q", patch.EventIndex, chapterID)
+		}
+		volume.Chapters[chapterIdx].Events[patch.EventIndex] = mergeAgentSDKEventPatch(volume.Chapters[chapterIdx].Events[patch.EventIndex], patch)
+	}
+	return nil
+}
+
+func mergeAgentSDKEventPatch(original models.Event, patch composeChangedEventPatch) models.Event {
+	merged := original
+	if strings.TrimSpace(patch.Type) != "" {
+		merged.Type = patch.Type
+	}
+	if len(patch.Characters) > 0 {
+		merged.Characters = patch.Characters
+	}
+	if strings.TrimSpace(patch.Subject) != "" {
+		merged.Subject = patch.Subject
+	}
+	if strings.TrimSpace(patch.Change) != "" {
+		merged.Change = patch.Change
+	}
+	if strings.TrimSpace(patch.Details) != "" {
+		merged.Details = patch.Details
+	}
+	if strings.TrimSpace(patch.Actor) != "" {
+		merged.Actor = patch.Actor
+	}
+	if strings.TrimSpace(patch.Action) != "" {
+		merged.Action = patch.Action
+	}
+	if strings.TrimSpace(patch.Target) != "" {
+		merged.Target = patch.Target
+	}
+	if strings.TrimSpace(patch.TargetType) != "" {
+		merged.TargetType = patch.TargetType
+	}
+	if strings.TrimSpace(patch.Context) != "" {
+		merged.Context = patch.Context
+	}
+	if strings.TrimSpace(patch.Result) != "" {
+		merged.Result = patch.Result
+	}
+	return merged
+}
+
+func mergeAgentSDKChapterPatch(original models.Chapter, patch composeChapterPatch) models.Chapter {
+	merged := original
+	merged.ID = original.ID
+	if strings.TrimSpace(patch.Title) != "" {
+		merged.Title = patch.Title
+	}
+	if strings.TrimSpace(patch.Summary) != "" {
+		merged.Summary = patch.Summary
+	}
+	if len(patch.Characters) > 0 {
+		merged.Characters = patch.Characters
+	}
+	if strings.TrimSpace(patch.Location) != "" {
+		merged.Location = patch.Location
+	}
+	if len(patch.Events) > 0 {
+		merged.Events = composeEventPatchesToModelEvents(patch.Events)
+	}
+	if strings.TrimSpace(patch.OpeningBeat) != "" {
+		merged.OpeningBeat = patch.OpeningBeat
+	}
+	if strings.TrimSpace(patch.ClosingBeat) != "" {
+		merged.ClosingBeat = patch.ClosingBeat
+	}
+	if strings.TrimSpace(patch.StateChange) != "" {
+		merged.StateChange = patch.StateChange
+	}
+	if strings.TrimSpace(patch.Conflict) != "" {
+		merged.Conflict = patch.Conflict
+	}
+	if strings.TrimSpace(patch.Pacing) != "" {
+		merged.Pacing = patch.Pacing
+	}
+	if !reflect.DeepEqual(patch.Timeline, models.ChapterTimeline{}) {
+		merged.Timeline = patch.Timeline
+	}
+	if !reflect.DeepEqual(patch.StateAnchor, models.StateAnchor{}) {
+		merged.StateAnchor = patch.StateAnchor
+	}
+	if len(patch.Enemies) > 0 {
+		merged.Enemies = patch.Enemies
+	}
+	if len(patch.ResourceLedger) > 0 {
+		merged.ResourceLedger = patch.ResourceLedger
+	}
+	if !reflect.DeepEqual(patch.Mysteries, models.ChapterMysteries{}) {
+		merged.Mysteries = patch.Mysteries
+	}
+	if len(patch.StorylineAdvances) > 0 {
+		merged.StorylineAdvances = patch.StorylineAdvances
+	}
+	if patch.ChapterPayoff != nil && !patch.ChapterPayoff.IsZero() {
+		merged.ChapterPayoff = patch.ChapterPayoff
+	}
+	return merged
+}
+
+func composeEventPatchesToModelEvents(events []composeEventPatch) []models.Event {
+	result := make([]models.Event, 0, len(events))
+	for _, event := range events {
+		result = append(result, models.Event{
+			Type:       event.Type,
+			Characters: event.Characters,
+			Subject:    event.Subject,
+			Change:     event.Change,
+			Details:    event.Details,
+			Actor:      event.Actor,
+			Action:     event.Action,
+			Target:     event.Target,
+			TargetType: event.TargetType,
+			Context:    event.Context,
+			Result:     event.Result,
+		})
+	}
+	return result
+}
+
+func prepareAgentSDKReturnedVolume(original models.Volume, returned models.Volume, expectedChapters int) (models.Volume, error) {
+	if expectedChapters > 0 {
+		if len(returned.Chapters) > expectedChapters {
+			returned.Chapters = returned.Chapters[:expectedChapters]
+		}
+		if len(returned.Chapters) != expectedChapters {
+			return models.Volume{}, fmt.Errorf("agent SDK returned %d chapter(s), expected %d", len(returned.Chapters), expectedChapters)
+		}
+	}
+	merged, err := cloneVolumeForAgentSDKPatch(original)
+	if err != nil {
+		return models.Volume{}, err
+	}
+	if strings.TrimSpace(returned.Title) != "" {
+		merged.Title = returned.Title
+	}
+	if strings.TrimSpace(returned.Summary) != "" {
+		merged.Summary = returned.Summary
+	}
+	if !isEmptyPayoffContract(returned.PayoffContract) {
+		merged.PayoffContract = returned.PayoffContract
+	}
+	merged.Chapters = returned.Chapters
+	preserveImprovedVolumeIdentity(&original, &merged)
+	return merged, nil
+}
+
+func cloneVolumeForAgentSDKPatch(volume models.Volume) (models.Volume, error) {
+	data, err := json.Marshal(volume)
+	if err != nil {
+		return models.Volume{}, fmt.Errorf("clone agent SDK volume: %w", err)
+	}
+	var cloned models.Volume
+	if err := json.Unmarshal(data, &cloned); err != nil {
+		return models.Volume{}, fmt.Errorf("clone agent SDK volume: %w", err)
+	}
+	return cloned, nil
+}
+
+func isEmptyPayoffContract(payoff *models.VolumePayoffContract) bool {
+	return payoff == nil || payoff.IsZero()
+}
+
+func buildAgentSDKChaptersPromptInput(input ComposeChaptersInput) composeAgentSDKChaptersPromptInput {
+	required := []string{
+		"novelgen tool query context --type outline-volume --id " + input.Volume.ID + " --view brief",
+	}
+	previousID := ""
+	if input.PreviousVolume != nil && strings.TrimSpace(input.PreviousVolume.ID) != "" {
+		previousID = input.PreviousVolume.ID
+	}
+	return composeAgentSDKChaptersPromptInput{
+		TargetPartID:     input.Part.ID,
+		TargetVolumeID:   input.Volume.ID,
+		TargetVolumeName: input.Volume.Title,
+		VolumeIndex:      input.VolumeIndex,
+		TotalVolumes:     input.TotalVolumes,
+		ChaptersPerVol:   input.ChaptersPerVol,
+		PreviousVolumeID: previousID,
+		RequiredQueries:  required,
+		Instructions: []string{
+			"Use the required context query to fetch compact story setup, target volume, neighboring volumes, entity index, events, and navigation.",
+			"After the brief queries, use targeted detail queries only when needed: chapter by id, events by chapter id, craft by exact name.",
+			"Do not ask for, inspect, or modify source files.",
+			"Return exactly one volume object with exactly chapters_per_volume chapters.",
+			"Do not invent or change project-wide facts that are absent from tool query results.",
+		},
+	}
+}
+
+func buildAgentSDKImproveVolumePromptInput(input ComposeImproveVolumeInput, applyPatches bool, forceIssueRepair bool) composeAgentSDKImproveVolumePromptInput {
+	required := []string{
+		"novelgen tool query context --type outline-volume --id " + input.Volume.ID + " --view index",
+	}
+	hasFocusedTasks := len(input.ReviewResult.Suggestions) > 0 || strings.TrimSpace(input.UserPrompt) != ""
+	instructions := []string{
+		"Use the required context query before reviewing. It returns an index-sized target volume route, check summary, navigation, workflow, next_actions, and stats.",
+		"If review_result.suggestions contain navigation, execute repair_route_query first when present. It returns an index-sized route and next_actions. Execute repair_context_query only when the route indicates detailed facts are needed. If route/context are absent, execute detail_queries or focused_check_query before broadening context; treat these focused commands as the primary task list.",
+		"If review_result contains suggestions without navigation, query only the referenced target IDs unless more context is necessary.",
+	}
+	if strings.TrimSpace(input.UserPrompt) != "" {
+		instructions = append(instructions,
+			"Treat user_prompt as already scoped to target_volume_id. If it refers to a multi-volume user request, this invocation must execute only the target_volume_id portion. Do not query, check, or patch any other volume.",
+		)
+		if composePromptRequestsCheckFirstNoop(input.UserPrompt) {
+			instructions = append(instructions,
+				"The user_prompt asks for a check-first/no-op-if-clean run. After the required index query, run the target_volume_id check before any brief/full detail query. If that check returns zero issues, return final JSON immediately; do not run extra context just to keep reviewing.",
+			)
+		}
+	}
+	if !hasFocusedTasks {
+		noTaskInstruction := "No focused review suggestions or user repair request were supplied. In this case, run the required context query, at most one same-volume brief context query if needed, and the required medium+ volume check; do not run low-priority broad checks, do not run full context, and do not sweep chapter-by-chapter."
+		if applyPatches {
+			noTaskInstruction += " If the medium+ check is clean, return applied_patches=false and applied_patch_count=0."
+		} else {
+			noTaskInstruction += " If the medium+ check is clean, return an empty patch."
+		}
+		instructions = append(instructions,
+			noTaskInstruction,
+		)
+	}
+	if forceIssueRepair {
+		instructions = append(instructions,
+			"Treat review_result.suggestions as an explicit repair task list even when they are low priority. Build and validate a minimal patch for the directly fixable issues you can verify from focused tool results.",
+			"Do not dismiss low-priority focused issues only because the medium+ scoped check passes. If you decide a focused issue is a false positive, cite the exact queried facts in review_result.suggestions and leave it as a remaining false-positive note instead of saying it was fixed.",
+			"When apply_patches=true and at least one focused issue is directly fixable, prefer a small dry-run/apply/check cycle over returning an empty patch.",
+		)
+	}
+	detailInstruction := "If a focused issue, user prompt, or failed medium+ check requires more facts, use targeted detail queries only when needed: repair route/context first, then chapter by id, events by chapter id, or craft by exact name."
+	if hasFocusedTasks {
+		detailInstruction = "After the index query, use targeted detail queries only when needed: same target volume via `novelgen tool query context --type outline-volume --id <target_volume_id> --view brief`, repair context, chapter by id, events by chapter id, craft by exact name."
+	}
+	if boundaryIDs := composeImproveBoundaryChapterIDs(input.Volume, input.UserPrompt); len(boundaryIDs) > 0 {
+		instructions = append(instructions,
+			fmt.Sprintf("The user prompt is boundary-scoped. Prefer direct chapter/event detail queries only for these target chapter IDs: %s. Query other chapters only when a check result or next_actions explicitly names them.", strings.Join(boundaryIDs, ", ")),
+			"For a boundary-scoped chapter summary/title/beat patch, do not query story-setup, character refs, cross-volume context, or unrelated chapters. Use the target volume index, target volume brief, target chapter detail, and required focused check as sufficient evidence unless next_actions names a narrower repair context.",
+			"If the user prompt names a character, item, location, skill, or proper noun that is absent from the target chapter/volume facts, verify it once with an exact refs or story-setup search. If both focused facts and the verification query show no match, do not patch; return a compact review_result note that the user prompt conflicts with project facts.",
+		)
+		if checks := composeImproveRequiredFocusedChecks(input.Volume, input.UserPrompt); len(checks) > 0 {
+			instructions = append(instructions,
+				"Required focused checks before final JSON: "+strings.Join(checks, "; "),
+			)
+		}
+	}
+	instructions = append(instructions,
+		detailInstruction,
+		"Review and, only when needed, improve target_volume_id. Do not change any other volume.",
+		composeAgentSDKPatchInstruction(applyPatches),
+		composeAgentSDKCheckInstruction(applyPatches),
+		composeAgentSDKReturnInstruction(applyPatches),
+		"Keep review_result compact: summary under 500 Chinese characters and at most 8 suggestions, focused on remaining issues or applied patch targets.",
+		composeAgentSDKWriteInstruction(applyPatches),
+	)
+	return composeAgentSDKImproveVolumePromptInput{
+		TargetPartID:     input.Part.ID,
+		TargetVolumeID:   input.Volume.ID,
+		TargetVolumeName: input.Volume.Title,
+		ChapterCount:     len(input.Volume.Chapters),
+		ReviewResult:     compactReviewForAgentSDKPrompt(input.ReviewResult, input.Volume.ID),
+		UserPrompt:       input.UserPrompt,
+		ApplyPatches:     applyPatches,
+		ForceIssueRepair: forceIssueRepair,
+		RequiredQueries:  required,
+		Instructions:     instructions,
+	}
+}
+
+func composeAgentSDKPatchInstruction(applyPatches bool) string {
+	const jsonInput = "For Chinese/non-ASCII patch JSON, do not use --patch-json and do not run Python/Node/PowerShell/help commands to encode it. Pipe compact literal JSON on stdin instead: `printf '%s' '<compact-json>' | novelgen tool patch outline --target volume --id <target_volume_id>`. Use --patch-json only for small ASCII-only patches."
+	if applyPatches {
+		return "If you build a non-empty candidate patch JSON, first dry-run it with `printf '%s' '<compact-json>' | novelgen tool patch outline --target volume --id <target_volume_id>`; only after a successful dry-run, repeat the same stdin-piped patch command with `--apply`. Apply at most one successful outline volume patch in this invocation. " + jsonInput
+	}
+	return "If you build a non-empty volume_patch, dry-run it with `printf '%s' '<compact-json>' | novelgen tool patch outline --target volume --id <target_volume_id>` and do not use --apply. " + jsonInput
+}
+
+func composeAgentSDKCheckInstruction(applyPatches bool) string {
+	if applyPatches {
+		return "After a successful --apply, run `novelgen tool check all --target outline --scope volume --id <target_volume_id> --min-priority medium --max-issues 12`, summarize remaining issues, and return final JSON. Do not start another dry-run/apply cycle in the same invocation."
+	}
+	return "Use the quality/simulation result embedded in patch dry-run output as the validation signal."
+}
+
+func composeAgentSDKReturnInstruction(applyPatches bool) string {
+	if applyPatches {
+		return "Return only review_result, applied_patches, applied_patch_count, and final_check. Do not return volume_patch; Go reloads the saved outline after validated tool apply."
+	}
+	return "Return review_result and volume_patch. volume_patch.changed_chapters must contain only chapters you actually changed, and may include only changed fields plus the chapter id. Use volume_patch.changed_events for individual event field changes with chapter_id and 0-based event_index. If no changes are needed, return empty changed_chapters/changed_events arrays instead of echoing the whole volume."
+}
+
+func composeAgentSDKWriteInstruction(applyPatches bool) string {
+	if applyPatches {
+		return "Do not inspect source code or write files directly; do not read Claude tool-results temporary files. If you need more detail, rerun a narrower `novelgen tool query/check`. The only allowed write is `novelgen tool patch outline --target volume ... --apply` after dry-run validation."
+	}
+	return "Do not ask for, inspect, or modify source files. Go will merge and save the returned patch."
 }
 
 // Generate creates a story outline from setup and structure
@@ -1115,6 +2428,119 @@ func compactReviewForPrompt(review models.ReviewResult) models.ReviewResult {
 	return compact
 }
 
+func compactReviewForAgentSDKPrompt(review models.ReviewResult, volumeID string) composeAgentSDKPromptReviewResult {
+	compact := composeAgentSDKPromptReviewResult{
+		OverallScore: review.OverallScore,
+		Summary:      clipForPrompt(review.Summary, 700),
+	}
+	for _, suggestion := range review.Suggestions {
+		brief := composeAgentSDKPromptReviewSuggestion{
+			Category:   suggestion.Category,
+			TargetID:   suggestion.TargetID,
+			TargetName: clipForPrompt(suggestion.TargetName, 120),
+			Issue:      clipForPrompt(suggestion.Issue, 360),
+			Suggestion: clipForPrompt(suggestion.Suggestion, 420),
+			Priority:   suggestion.Priority,
+			Navigation: buildComposeAgentSDKSuggestionNavigation(volumeID, suggestion),
+		}
+		compact.Suggestions = append(compact.Suggestions, brief)
+	}
+	return compact
+}
+
+func buildComposeAgentSDKSuggestionNavigation(volumeID string, suggestion models.ReviewSuggestion) *composeAgentSDKSuggestionNavigation {
+	volumeID = strings.TrimSpace(volumeID)
+	targetID := strings.TrimSpace(suggestion.TargetID)
+	category := composeAgentSDKCheckCategory(suggestion.Category)
+	if volumeID == "" {
+		nav := &composeAgentSDKSuggestionNavigation{
+			TargetKind:         "outline.global",
+			FocusedCheckQuery:  fmt.Sprintf("novelgen tool check all --target outline --scope all --category %s --min-priority low --max-issues 12", category),
+			RepairRouteQuery:   fmt.Sprintf("novelgen tool query context --type outline-global-repair --name %q --view index", category),
+			RepairContextQuery: fmt.Sprintf("novelgen tool query context --type outline-global-repair --name %q --view brief", category),
+		}
+		if category == "faction_tier" && targetID != "" && !strings.EqualFold(targetID, "global") {
+			nav.TargetKind = "setup.faction_tier"
+			nav.DetailQueries = []string{
+				fmt.Sprintf("novelgen tool query story-setup --type search --name %q --view index", targetID),
+				fmt.Sprintf("novelgen tool query story-setup --type search --name %q --view brief", targetID),
+			}
+			nav.RepairRouteQuery = fmt.Sprintf("novelgen tool query story-setup --type search --name %q --view index", targetID)
+			nav.RepairContextQuery = fmt.Sprintf("novelgen tool query story-setup --type search --name %q --view brief", targetID)
+			nav.PatchQuery = "novelgen tool patch setup"
+			nav.PatchShape = map[string]interface{}{
+				"premises": []map[string]string{{
+					"name":        targetID + " faction tier ladder",
+					"category":    targetID,
+					"description": "<define stable tier ladder for " + targetID + ">",
+				}},
+			}
+		}
+		return nav
+	}
+	if targetID == "" || strings.EqualFold(targetID, "global") {
+		return nil
+	}
+	if targetID == volumeID {
+		return &composeAgentSDKSuggestionNavigation{
+			TargetKind: "volume",
+			VolumeID:   volumeID,
+			DetailQueries: []string{
+				fmt.Sprintf("novelgen tool query context --type outline-volume --id %q --view brief", volumeID),
+			},
+			FocusedCheckQuery:  fmt.Sprintf("novelgen tool check all --target outline --scope volume --id %q --category %s --min-priority low --max-issues 12", volumeID, category),
+			RepairRouteQuery:   fmt.Sprintf("novelgen tool query context --type outline-repair --id %q --name %q --view index", volumeID, category),
+			RepairContextQuery: fmt.Sprintf("novelgen tool query context --type outline-repair --id %q --name %q --view brief", volumeID, category),
+			PatchQuery:         fmt.Sprintf("novelgen tool patch outline --target volume --id %q", volumeID),
+		}
+	}
+	if strings.HasPrefix(targetID, volumeID+"-") {
+		return &composeAgentSDKSuggestionNavigation{
+			TargetKind: "chapter",
+			VolumeID:   volumeID,
+			DetailQueries: []string{
+				fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", targetID),
+				fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q --fields result,details,target,target_type,actor,action --view brief", targetID),
+			},
+			FocusedCheckQuery:  fmt.Sprintf("novelgen tool check all --target outline --scope chapter --id %q --category %s --min-priority low --max-issues 8", targetID, category),
+			RepairRouteQuery:   fmt.Sprintf("novelgen tool query context --type outline-repair --id %q --name %q --view index", targetID, category),
+			RepairContextQuery: fmt.Sprintf("novelgen tool query context --type outline-repair --id %q --name %q --view brief", targetID, category),
+			PatchQuery:         fmt.Sprintf("novelgen tool patch outline --target volume --id %q", volumeID),
+			PatchShape:         composeAgentSDKOutlineChapterPatchShape(targetID, suggestion),
+		}
+	}
+	return nil
+}
+
+func composeAgentSDKOutlineChapterPatchShape(targetID string, suggestion models.ReviewSuggestion) map[string]interface{} {
+	chapterPatch := map[string]string{"id": targetID}
+	if composeAgentSDKIssueNeedsOpeningBeat(suggestion) {
+		chapterPatch["opening_beat"] = "<rewrite the chapter opening beat; for continuity include 继续/随后/紧接着, and for location moves include 来到/前往/到达>"
+	}
+	return map[string]interface{}{
+		"changed_chapters": []map[string]string{chapterPatch},
+	}
+}
+
+func composeAgentSDKIssueNeedsOpeningBeat(suggestion models.ReviewSuggestion) bool {
+	category := strings.TrimSpace(strings.ToLower(suggestion.Category))
+	text := strings.Join([]string{suggestion.Issue, suggestion.Suggestion}, " ")
+	return category == "transition" ||
+		strings.Contains(text, "章节开场") ||
+		strings.Contains(text, "开场节拍") ||
+		strings.Contains(text, "缺少与上一章的过渡") ||
+		strings.Contains(text, "缺少过渡描述") ||
+		strings.Contains(text, "地点从")
+}
+
+func composeAgentSDKCheckCategory(category string) string {
+	category = strings.TrimSpace(strings.ToLower(category))
+	if category == "" {
+		return "all"
+	}
+	return category
+}
+
 func clipForPrompt(value string, maxRunes int) string {
 	value = strings.TrimSpace(value)
 	if maxRunes <= 0 || value == "" {
@@ -1221,6 +2647,56 @@ func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.
 	return &currentOutline, finalReview, nil
 }
 
+// IterateHierarchicalAgentSDK runs the per-volume review/improve loop through
+// Claude Agent SDK workflows. The SDK agent can query project facts, while Go
+// keeps validation, merge, checkpoint, and writes.
+func (a *ComposeAgent) IterateHierarchicalAgentSDK(ctx context.Context, outline *models.Outline, initialReview *models.ReviewResult, maxIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup, applyPatches bool) (*models.Outline, *models.ReviewResult, error) {
+	logger.Section("COMPOSE AGENT SDK - Hierarchical Iteration Loop")
+	logger.Info("Max iterations: %d", maxIterations)
+	logger.Info("Quality threshold: %.1f", qualityThreshold)
+	if forceImprove {
+		logger.Info("Force improve enabled: SDK workflow will apply targeted fixes even when score passes")
+	}
+	if applyPatches {
+		logger.Info("Agent apply enabled: SDK workflow may write through validated outline patch tools")
+	}
+
+	if outline == nil {
+		return nil, nil, fmt.Errorf("outline is nil")
+	}
+	currentOutline := *outline
+	finalReview := initialReview
+
+	for i := 1; i <= maxIterations; i++ {
+		logger.Info("=== Agent SDK iteration %d/%d ===", i, maxIterations)
+
+		volumesToImprove := generatedVolumeIndices(&currentOutline)
+		if len(volumesToImprove) == 0 {
+			logger.Info("No generated volumes to improve")
+			break
+		}
+
+		improvedOutline, review, improvedCount, err := a.improveVolumesWithCheckpointAgentSDK(ctx, &currentOutline, volumesToImprove, finalReview, i, maxIterations, qualityThreshold, forceImprove, userPrompt, setup, applyPatches)
+		if err != nil {
+			return nil, finalReview, fmt.Errorf("iteration %d failed: %w", i, err)
+		}
+		currentOutline = *improvedOutline
+		if review != nil {
+			finalReview = review
+		}
+		if improvedCount == 0 && !forceImprove {
+			logger.Info("Agent SDK review found no blocking fixes; stopping iteration loop")
+			break
+		}
+		if i == maxIterations {
+			logger.Warn("Max iterations reached, stopping iteration loop")
+			break
+		}
+	}
+
+	return &currentOutline, finalReview, nil
+}
+
 // RepairByReview applies an existing review result through bounded volume-level
 // repairs. It is intended for validator/DSL feedback after the main review pass,
 // where re-running a full-outline rewrite would be unnecessarily fragile.
@@ -1246,6 +2722,33 @@ func (a *ComposeAgent) RepairByReview(ctx context.Context, outline *models.Outli
 
 	logger.Info("Repairing %d volume(s) from enriched review feedback", len(volumesToImprove))
 	return a.improveVolumesWithCheckpoint(ctx, outline, volumesToImprove, reviewResult, 0, 1, setup)
+}
+
+// RepairByReviewAgentSDK applies an existing quality-gate review through the
+// SDK volume workflow.
+func (a *ComposeAgent) RepairByReviewAgentSDK(ctx context.Context, outline *models.Outline, reviewResult *models.ReviewResult, setup *models.StorySetup, applyPatches bool) (*models.Outline, error) {
+	if outline == nil {
+		return nil, fmt.Errorf("outline is nil")
+	}
+	if reviewResult == nil {
+		return outline, nil
+	}
+
+	volumesToImprove := a.identifyVolumesToImprove(outline, reviewResult)
+	if len(volumesToImprove) == 0 {
+		logger.Info("No specific volume targets in review; repairing generated volumes only")
+		volumesToImprove = generatedVolumeIndices(outline)
+	} else {
+		volumesToImprove = filterGeneratedVolumeIndices(outline, volumesToImprove)
+	}
+	if len(volumesToImprove) == 0 {
+		logger.Info("No generated volumes to repair")
+		return outline, nil
+	}
+
+	logger.Info("Repairing %d volume(s) with Agent SDK workflow", len(volumesToImprove))
+	improved, _, _, err := a.improveVolumesWithCheckpointAgentSDK(ctx, outline, volumesToImprove, reviewResult, 0, 1, 80.0, true, "", setup, applyPatches)
+	return improved, err
 }
 
 // improveVolumesWithCheckpoint improves volumes with checkpoint/resume support
@@ -1340,15 +2843,229 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 		if err := a.saveImproveProgress(progress, progressPath); err != nil {
 			logger.Warn("Failed to save progress: %v", err)
 		} else {
-			logger.Info("💾 Progress saved (%d/%d volumes completed)", len(progress.CompletedVolumes), progress.TotalVolumes)
+			logger.Info("[save] Progress saved (%d/%d volumes completed)", len(progress.CompletedVolumes), progress.TotalVolumes)
 		}
 	}
 
 	// Remove progress file on successful completion of this iteration
 	os.Remove(progressPath)
-	logger.Info("✓ Iteration %d complete! Progress file removed.", currentIteration)
+	logger.Info("[ok] Iteration %d complete. Progress file removed.", currentIteration)
 
 	return &currentOutline, nil
+}
+
+func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup, applyPatches bool) (*models.Outline, *models.ReviewResult, int, error) {
+	currentOutline := *outline
+	progressPath := "story/compose/outline_improve_progress.json"
+	targetVolumes := improveTargetVolumeIDs(outline, volumesToImprove)
+	var finalReview *models.ReviewResult
+
+	var progress *ImproveProgress
+	if _, err := os.Stat(progressPath); err == nil {
+		loadedProgress, err := a.loadImproveProgress(progressPath)
+		if err == nil && loadedProgress.Iteration == currentIteration && equalStringSlices(loadedProgress.TargetVolumes, targetVolumes) {
+			logger.Info("[resume] Found existing Agent SDK progress for iteration %d, resuming...", currentIteration)
+			progress = loadedProgress
+			currentOutline = progress.Outline
+			if !isEmptyReviewResult(&progress.ReviewResult) {
+				finalReview = &progress.ReviewResult
+			}
+			logger.Info("[ok] Resumed from checkpoint: %d/%d volumes completed", len(progress.CompletedVolumes), progress.TotalVolumes)
+		}
+	}
+
+	if progress == nil {
+		progress = &ImproveProgress{
+			Iteration:        currentIteration,
+			TotalIterations:  totalIterations,
+			CurrentVolumeIdx: 0,
+			TotalVolumes:     len(volumesToImprove),
+			TargetVolumes:    targetVolumes,
+			CompletedVolumes: []string{},
+			Outline:          currentOutline,
+		}
+		if reviewResult != nil {
+			progress.ReviewResult = *reviewResult
+		}
+		if err := a.saveImproveProgress(progress, progressPath); err != nil {
+			logger.Warn("Failed to save initial Agent SDK progress: %v", err)
+		}
+	}
+
+	improvedCount := 0
+	for idx := progress.CurrentVolumeIdx; idx < len(volumesToImprove); idx++ {
+		indices := volumesToImprove[idx]
+		partIdx, volIdx := indices[0], indices[1]
+		if partIdx < 0 || partIdx >= len(currentOutline.Parts) || volIdx < 0 || volIdx >= len(currentOutline.Parts[partIdx].Volumes) {
+			logger.Warn("Skipping invalid Agent SDK volume target part=%d volume=%d", partIdx+1, volIdx+1)
+			progress.CurrentVolumeIdx = idx + 1
+			continue
+		}
+		part := &currentOutline.Parts[partIdx]
+		volume := &part.Volumes[volIdx]
+		if len(volume.Chapters) == 0 {
+			logger.Warn("Skipping empty future volume target %s", volume.ID)
+			progress.CurrentVolumeIdx = idx + 1
+			continue
+		}
+
+		logger.Info("Agent SDK reviewing Volume %d.%d: %s (%d/%d)", partIdx+1, volIdx+1, volume.Title, idx+1, len(volumesToImprove))
+		var volumeReview models.ReviewResult
+		if reviewResult != nil {
+			volumeReview = a.filterReviewForVolume(reviewResult, volume.ID)
+			logger.Info("Agent SDK volume %s received %d filtered review issue(s)", volume.ID, len(volumeReview.Suggestions))
+		}
+		if reviewResult != nil && !forceImprove && !hasMediumOrHigherReviewSuggestion(volumeReview) {
+			logger.Info("[skip] Agent SDK skipping %s: no medium/high/critical volume issues after pre-check", volume.Title)
+			progress.CompletedVolumes = append(progress.CompletedVolumes, volume.ID)
+			progress.CurrentVolumeIdx = idx + 1
+			progress.Outline = currentOutline
+			if err := a.saveImproveProgress(progress, progressPath); err != nil {
+				logger.Warn("Failed to save Agent SDK progress after skip: %v", err)
+			}
+			continue
+		}
+		improveInput := ComposeImproveVolumeInput{
+			Outline:      currentOutline,
+			Part:         *part,
+			Volume:       *volume,
+			ReviewResult: volumeReview,
+			UserPrompt:   scopeComposeAgentSDKVolumeUserPrompt(userPrompt, volume.ID, volume.Title),
+		}
+		if setup != nil {
+			improveInput.Setup = *setup
+		}
+
+		forceIssueRepair := shouldForceAgentSDKIssueRepair(forceImprove, improveInput.UserPrompt, volumeReview)
+		improveOutput, err := a.ImproveVolumeWithAgentSDK(ctx, improveInput, applyPatches, forceIssueRepair)
+		if err != nil {
+			progress.CurrentVolumeIdx = idx
+			progress.Outline = currentOutline
+			if saveErr := a.saveImproveProgress(progress, progressPath); saveErr != nil {
+				logger.Warn("Failed to save Agent SDK progress on error: %v", saveErr)
+			}
+			return nil, finalReview, improvedCount, fmt.Errorf("failed to improve volume %d.%d: %w", partIdx+1, volIdx+1, err)
+		}
+
+		review := improveOutput.ReviewResult
+		review.Iteration = currentIteration
+		review.NormalizeScoreScale()
+		finalReview = &review
+		progress.ReviewResult = review
+
+		improvedVolume := improveOutput.Volume
+		patchChanged := agentSDKVolumeChanged(volume, &improvedVolume)
+		if patchChanged {
+			part.Volumes[volIdx] = improvedVolume
+			improvedCount++
+			logger.Info("[ok] Agent SDK applied volume fixes: %s", improvedVolume.Title)
+		} else {
+			scoreMeetsThreshold := review.OverallScore >= qualityThreshold
+			hasBlockingSuggestions := review.HasBlockingSuggestions()
+			if scoreMeetsThreshold && !hasBlockingSuggestions && (!forceImprove || !forceIssueRepair) {
+				logger.Info("[ok] Agent SDK review passed for %s (%.1f >= %.1f); no effective volume changes", volume.Title, review.OverallScore, qualityThreshold)
+			} else {
+				logger.Info("[warn] Agent SDK returned no volume changes for %s (score %.1f, blocking=%t)", volume.Title, review.OverallScore, hasBlockingSuggestions)
+			}
+		}
+
+		progress.CompletedVolumes = append(progress.CompletedVolumes, volume.ID)
+		progress.CurrentVolumeIdx = idx + 1
+		progress.Outline = currentOutline
+		if err := a.saveImproveProgress(progress, progressPath); err != nil {
+			logger.Warn("Failed to save Agent SDK progress: %v", err)
+		} else {
+			logger.Info("[save] Agent SDK progress saved (%d/%d volumes completed)", len(progress.CompletedVolumes), progress.TotalVolumes)
+		}
+	}
+
+	os.Remove(progressPath)
+	logger.Info("[ok] Agent SDK iteration %d complete. Progress file removed.", currentIteration)
+	return &currentOutline, finalReview, improvedCount, nil
+}
+
+func shouldForceAgentSDKIssueRepair(forceImprove bool, userPrompt string, review models.ReviewResult) bool {
+	if !forceImprove {
+		return false
+	}
+	return strings.TrimSpace(userPrompt) != "" || len(review.Suggestions) > 0
+}
+
+var (
+	composeChineseVolumeListPattern = regexp.MustCompile(`第\s*(?:\d+|[一二三四五六七八九十百]+)\s*卷(?:\s*(?:和|及|与|、|,|，)\s*第\s*(?:\d+|[一二三四五六七八九十百]+)\s*卷)+`)
+	composeChineseVolumePattern     = regexp.MustCompile(`第\s*(?:\d+|[一二三四五六七八九十百]+)\s*卷`)
+	composeVolumeIDListPattern      = regexp.MustCompile(`P\d+-V\d+(?:\s*(?:和|及|与|、|,|，)\s*P\d+-V\d+)+`)
+)
+
+func scopeComposeAgentSDKVolumeUserPrompt(userPrompt, volumeID, volumeTitle string) string {
+	prompt := strings.TrimSpace(userPrompt)
+	if prompt == "" {
+		return ""
+	}
+	localized := composeVolumeIDListPattern.ReplaceAllString(prompt, nonEmpty(volumeID, "target_volume_id"))
+	localized = composeChineseVolumeListPattern.ReplaceAllString(localized, "当前卷")
+	localized = composeChineseVolumePattern.ReplaceAllString(localized, "当前卷")
+
+	target := strings.TrimSpace(volumeID)
+	if title := strings.TrimSpace(volumeTitle); title != "" {
+		if target != "" {
+			target += " / "
+		}
+		target += title
+	}
+	if target == "" {
+		target = "target_volume_id"
+	}
+	return fmt.Sprintf("当前调用只处理 %s。已将用户请求局部化到当前卷；如果原始请求包含多个卷，只执行当前卷这一份，不要查询、检查或 patch 其它卷。局部化用户请求：%s", target, localized)
+}
+
+func composePromptRequestsCheckFirstNoop(prompt string) bool {
+	normalized := strings.ToLower(strings.Join(strings.Fields(strings.TrimSpace(prompt)), " "))
+	if normalized == "" {
+		return false
+	}
+	hasCheckIntent := strings.Contains(normalized, "check") ||
+		strings.Contains(normalized, "检查") ||
+		strings.Contains(normalized, "校验") ||
+		strings.Contains(normalized, "验证")
+	hasCleanCondition := strings.Contains(normalized, "0 issue") ||
+		strings.Contains(normalized, "0issue") ||
+		strings.Contains(normalized, "无 issue") ||
+		strings.Contains(normalized, "无问题") ||
+		strings.Contains(normalized, "没有问题") ||
+		strings.Contains(normalized, "返回 0") ||
+		strings.Contains(normalized, "返回0")
+	hasNoopIntent := strings.Contains(normalized, "不要 patch") ||
+		strings.Contains(normalized, "不要patch") ||
+		strings.Contains(normalized, "不要改") ||
+		strings.Contains(normalized, "不要修改") ||
+		(strings.Contains(normalized, "不要") && strings.Contains(normalized, "改写")) ||
+		(strings.Contains(normalized, "不要") && strings.Contains(normalized, "patch")) ||
+		strings.Contains(normalized, "不改写") ||
+		strings.Contains(normalized, "no-op") ||
+		strings.Contains(normalized, "no patch")
+	return hasCheckIntent && hasCleanCondition && hasNoopIntent
+}
+
+func isEmptyReviewResult(review *models.ReviewResult) bool {
+	if review == nil {
+		return true
+	}
+	return review.OverallScore == 0 &&
+		len(review.Dimensions) == 0 &&
+		strings.TrimSpace(review.Summary) == "" &&
+		len(review.Strengths) == 0 &&
+		len(review.Weaknesses) == 0 &&
+		len(review.Suggestions) == 0 &&
+		len(review.ContinuityIssues) == 0
+}
+
+func agentSDKVolumeChanged(original *models.Volume, improved *models.Volume) bool {
+	if original == nil || improved == nil {
+		return false
+	}
+	preserveImprovedVolumeIdentity(original, improved)
+	return !reflect.DeepEqual(*original, *improved)
 }
 
 func preserveImprovedVolumeIdentity(original *models.Volume, improved *models.Volume) {
@@ -1564,23 +3281,72 @@ func resolveVolumeTarget(outline *models.Outline, targetID string) ([2]int, bool
 
 // filterReviewForVolume filters review results for a specific volume
 func (a *ComposeAgent) filterReviewForVolume(review *models.ReviewResult, volumeID string) models.ReviewResult {
+	if review == nil {
+		return models.ReviewResult{}
+	}
 	filtered := models.ReviewResult{
 		OverallScore: review.OverallScore,
 		Dimensions:   review.Dimensions,
 		Summary:      review.Summary,
-		Strengths:    review.Strengths,
-		Weaknesses:   review.Weaknesses,
 	}
 
-	// Filter suggestions for this volume
 	for _, suggestion := range review.Suggestions {
 		targetID := strings.TrimSpace(suggestion.TargetID)
-		if targetID == "" || strings.EqualFold(targetID, "global") || strings.HasPrefix(targetID, volumeID) {
+		if strings.HasPrefix(targetID, volumeID) || isBlockingGlobalSuggestion(suggestion) {
 			filtered.Suggestions = append(filtered.Suggestions, suggestion)
 		}
 	}
+	sort.SliceStable(filtered.Suggestions, func(i, j int) bool {
+		left := reviewPriorityRank(filtered.Suggestions[i].Priority)
+		right := reviewPriorityRank(filtered.Suggestions[j].Priority)
+		if left != right {
+			return left < right
+		}
+		return strings.TrimSpace(filtered.Suggestions[i].TargetID) < strings.TrimSpace(filtered.Suggestions[j].TargetID)
+	})
+	if len(filtered.Suggestions) > 12 {
+		filtered.Suggestions = filtered.Suggestions[:12]
+	}
 
 	return filtered
+}
+
+func reviewPriorityRank(priority string) int {
+	switch strings.ToLower(strings.TrimSpace(priority)) {
+	case models.PriorityCritical:
+		return 0
+	case models.PriorityHigh:
+		return 1
+	case models.PriorityMedium:
+		return 2
+	case models.PriorityLow:
+		return 3
+	default:
+		return 4
+	}
+}
+
+func isBlockingGlobalSuggestion(suggestion models.ReviewSuggestion) bool {
+	targetID := strings.TrimSpace(suggestion.TargetID)
+	if targetID != "" && !strings.EqualFold(targetID, "global") {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(suggestion.Priority)) {
+	case models.PriorityCritical, models.PriorityHigh:
+		return true
+	default:
+		return false
+	}
+}
+
+func hasMediumOrHigherReviewSuggestion(review models.ReviewResult) bool {
+	for _, suggestion := range review.Suggestions {
+		switch strings.ToLower(strings.TrimSpace(suggestion.Priority)) {
+		case models.PriorityCritical, models.PriorityHigh, models.PriorityMedium:
+			return true
+		}
+	}
+	return false
 }
 
 // BuildVolumeContext builds context for volume regeneration
@@ -2002,6 +3768,23 @@ func (a *ComposeAgent) GenerateOutlineHierarchical(ctx context.Context, setup mo
 	return a.GenerateChaptersHierarchical(ctx, setup, structure, outline, nil)
 }
 
+// GenerateOutlineHierarchicalAgentSDK generates a full outline with SDK
+// workflows for skeleton and per-volume chapter generation.
+func (a *ComposeAgent) GenerateOutlineHierarchicalAgentSDK(ctx context.Context, setup models.StorySetup, structure models.StoryStructure) (*models.Outline, error) {
+	logger.Section("COMPOSE AGENT SDK - Hierarchical Outline Generation")
+	skeletonOutput, err := a.GenerateSkeletonWithAgentSDK(ctx, ComposeSkeletonInput{
+		Setup:     setup,
+		Structure: structure,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate skeleton: %w", err)
+	}
+	outline := &models.Outline{Parts: skeletonOutput.Parts}
+	logic.NewIDManager(outline).AssignIDsToOutline()
+	models.NormalizeOutline(outline)
+	return a.GenerateChaptersHierarchicalAgentSDK(ctx, setup, structure, outline, nil)
+}
+
 // GenerateChaptersHierarchical generates chapters for each volume in hierarchical mode
 // Supports incremental generation with save callback
 func (a *ComposeAgent) GenerateChaptersHierarchical(ctx context.Context, setup models.StorySetup, structure models.StoryStructure, outline *models.Outline, onVolumeComplete func(*models.Outline, int, int, int)) (*models.Outline, error) {
@@ -2084,6 +3867,73 @@ func (a *ComposeAgent) GenerateChaptersHierarchical(ctx context.Context, setup m
 	logger.Info("Generated complete outline with %d part(s), %d volume(s), %d chapter(s)",
 		len(outline.Parts), structure.TargetVolumes*structure.TargetParts, totalChapters)
 
+	return outline, nil
+}
+
+// GenerateChaptersHierarchicalAgentSDK generates chapters one volume at a time
+// through SDK workflows and preserves Go-owned IDs/checkpoints.
+func (a *ComposeAgent) GenerateChaptersHierarchicalAgentSDK(ctx context.Context, setup models.StorySetup, structure models.StoryStructure, outline *models.Outline, onVolumeComplete func(*models.Outline, int, int, int)) (*models.Outline, error) {
+	if outline == nil {
+		return nil, fmt.Errorf("outline is nil")
+	}
+	totalVolumes := structure.TargetParts * structure.TargetVolumes
+	volumeCount := 0
+
+	for partIdx := range outline.Parts {
+		for volIdx := range outline.Parts[partIdx].Volumes {
+			volumeCount++
+			volume := &outline.Parts[partIdx].Volumes[volIdx]
+			if len(volume.Chapters) > 0 {
+				logger.Info("[ok] Volume %d.%d: %s - already has %d chapters (skipping)",
+					partIdx+1, volIdx+1, volume.Title, len(volume.Chapters))
+				continue
+			}
+
+			logger.Info("Agent SDK generating chapters for Volume %d.%d: %s",
+				partIdx+1, volIdx+1, volume.Title)
+
+			var outlineContext string
+			if partIdx > 0 || volIdx > 0 {
+				outlineContext = a.buildHierarchicalContext(outline, partIdx, volIdx)
+			}
+
+			var previousVolume *models.Volume
+			if volIdx > 0 {
+				previousVolume = &outline.Parts[partIdx].Volumes[volIdx-1]
+			} else if partIdx > 0 {
+				prevPart := outline.Parts[partIdx-1]
+				if len(prevPart.Volumes) > 0 {
+					previousVolume = &prevPart.Volumes[len(prevPart.Volumes)-1]
+				}
+			}
+
+			output, err := a.GenerateChaptersForVolumeWithAgentSDK(ctx, ComposeChaptersInput{
+				Setup:          setup,
+				Part:           outline.Parts[partIdx],
+				Volume:         *volume,
+				VolumeIndex:    volumeCount,
+				TotalVolumes:   totalVolumes,
+				ChaptersPerVol: structure.TargetChapters,
+				PreviousVolume: previousVolume,
+				OutlineContext: outlineContext,
+			})
+			if err != nil {
+				return outline, fmt.Errorf("failed to generate chapters for volume %d.%d: %w", partIdx+1, volIdx+1, err)
+			}
+
+			outline.Parts[partIdx].Volumes[volIdx] = output.Volume
+			logic.NewIDManager(outline).AssignIDsToOutline()
+			logger.Info("[ok] Agent SDK volume %d.%d: %s - %d chapters generated",
+				partIdx+1, volIdx+1, output.Volume.Title, len(output.Volume.Chapters))
+
+			if onVolumeComplete != nil {
+				onVolumeComplete(outline, partIdx, volIdx, volumeCount)
+			}
+		}
+	}
+
+	logic.NewIDManager(outline).AssignIDsToOutline()
+	logger.Info("Assigned IDs to all outline elements")
 	return outline, nil
 }
 

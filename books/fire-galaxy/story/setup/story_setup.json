@@ -24,6 +24,7 @@
   "tone": "热血激昂，硬核科幻，末世苍凉，爽感充足",
   "tense": "过去时",
   "pov_style": "第三人称有限视角",
+  "writing_style": {},
   "storylines": [
     {
       "name": "荒骨苏醒",
@@ -254,7 +255,7 @@
         {
           "level": 1,
           "name": "初醒异变者",
-          "description": "刚完成异变时保留理智，拥有基础异能（如巨力、短距离飞行），异变时基因稳定性需>40%。",
+          "description": "刚完成异变时保留理智，拥有基础异能（如巨力、短距离飞行），异变时基因稳定性需\u003e40%。",
           "requirements": "异变后基因稳定性≥70%（人类基因占比），吸收过1枚低级晶核"
         },
         {
@@ -418,6 +419,18 @@
           "requirements": "联军打赢全面收割战役"
         }
       ]
+    },
+    {
+      "name": "Zerg Faction Tier Ladder",
+      "description": "zerg ranks: drone (worker), soldier (combat), captain (commander), overlord (high commander), broodmother (hive core)",
+      "category": "faction",
+      "progression": []
+    },
+    {
+      "name": "Shen Faction Tier Ladder",
+      "description": "stable tier ladder for shen: agent (level 1 operative), informant (level 2 intelligence), soldier (level 3 enforcer), mech (level 4 elite mech pilot)",
+      "category": "faction",
+      "progression": []
     }
   ],
   "world_timeline": [

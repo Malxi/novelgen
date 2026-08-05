@@ -196,6 +196,47 @@ func TestNormalizeOutlineMigratesLegacyChapterShape(t *testing.T) {
 	}
 }
 
+func TestNormalizeOutlineSyncsOpeningAndClosingBeatIntoExistingScenes(t *testing.T) {
+	outline := &Outline{
+		Parts: []Part{{
+			ID: "P1",
+			Volumes: []Volume{{
+				ID: "P1-V1",
+				Chapters: []Chapter{{
+					ID:          "P1-V1-C2",
+					Title:       "承接章",
+					Summary:     "林砚从旧矿道前往执法堂继续追查。",
+					Characters:  []string{"林砚"},
+					Location:    "执法堂",
+					OpeningBeat: "紧接着上一章结尾，林砚前往执法堂核验禁术线索。",
+					ClosingBeat: "林砚在执法堂确认线索已经指向内门。",
+					Scenes: []OutlineScene{{
+						Order:      1,
+						POV:        "林砚",
+						Goal:       "旧目标",
+						Location:   "执法堂",
+						Characters: []string{"林砚"},
+						Beats:      []string{"旧开场", "中段推进", "旧收束"},
+					}},
+				}},
+			}},
+		}},
+	}
+
+	report := NormalizeOutline(outline)
+	chapter := outline.Parts[0].Volumes[0].Chapters[0]
+
+	if !report.Changed() {
+		t.Fatal("expected normalization changes")
+	}
+	if got := chapter.Scenes[0].Beats[0]; got != chapter.OpeningBeat {
+		t.Fatalf("opening scene beat = %q, want %q", got, chapter.OpeningBeat)
+	}
+	if got := chapter.Scenes[0].Beats[len(chapter.Scenes[0].Beats)-1]; got != chapter.ClosingBeat {
+		t.Fatalf("closing scene beat = %q, want %q", got, chapter.ClosingBeat)
+	}
+}
+
 func TestNormalizeOutlineFillsLegacyEventTriples(t *testing.T) {
 	outline := &Outline{
 		Parts: []Part{{

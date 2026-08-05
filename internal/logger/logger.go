@@ -99,6 +99,12 @@ func (l *Logger) EnableFileLogging() error {
 	if err != nil {
 		return fmt.Errorf("failed to open log file: %w", err)
 	}
+	if info, statErr := file.Stat(); statErr == nil && info.Size() == 0 {
+		if _, err := file.Write([]byte{0xEF, 0xBB, 0xBF}); err != nil {
+			file.Close()
+			return fmt.Errorf("failed to write UTF-8 BOM: %w", err)
+		}
+	}
 
 	if l.file != nil {
 		l.file.Close()
