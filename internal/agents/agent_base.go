@@ -245,6 +245,7 @@ func (a *BaseAgent) invokeAIWithRuntimeResult(ctx context.Context, params Invoke
 			OutputJSONSchema:       utils.StructToJSONSchemaObject(output),
 			CompactOutputSchema:    params.CompactOutputSchema,
 			DisableSDKOutputFormat: params.DisableSDKOutputFormat,
+			ToolEvidence:           agentEvidenceConfig(params.ToolEvidence),
 			Options: agentruntime.Options{
 				Model:       agentRuntimeModel(params, options.Model),
 				Temperature: options.Temperature,
@@ -276,6 +277,19 @@ func (a *BaseAgent) invokeAIWithRuntimeResult(ctx context.Context, params Invoke
 	}
 	resp, err := a.client.ChatCompletion(ctx, messages, options)
 	return resp, nil, err
+}
+
+// agentEvidenceConfig maps a Go-side evidence requirement into the runner
+// contract so the runner can enforce it in-flight (before the agent stops).
+func agentEvidenceConfig(req ToolEvidenceRequirement) agentruntime.ToolEvidence {
+	return agentruntime.ToolEvidence{
+		MinQueryCalls:        req.MinQueryCalls,
+		MinContextQueryCalls: req.MinContextQueryCalls,
+		MinCheckCalls:        req.MinCheckCalls,
+		MinPatchApplyCalls:   req.MinPatchApplyCalls,
+		RequiredToolCommands: append([]string(nil), req.RequiredToolCommands...),
+		RequireNoDeniedTools: req.RequireNoDeniedTools,
+	}
 }
 
 func validateAgentRuntimeToolEvidence(agentName string, requirement ToolEvidenceRequirement, result *agentruntime.Result) error {
@@ -325,10 +339,10 @@ func validateAgentRuntimeToolEvidence(agentName string, requirement ToolEvidence
 	}
 	if requirement.RequireNoDeniedTools && summary.ToolDenied > 0 {
 		blockingDenied := blockingDeniedToolCommands(summary, requirement)
-		if len(blockingDenied) > 0 {
+		if len(blockingDenied) > 0 && !summary.DenialsResolved {
 			return fmt.Errorf("%s Agent SDK tool evidence failed: denied tool calls=%d commands=%s", agentName, len(blockingDenied), strings.Join(blockingDenied, " | "))
 		}
-		if len(summary.DeniedToolCommands) == 0 {
+		if len(summary.DeniedToolCommands) == 0 && len(summary.WorkflowDeniedToolCommands) == 0 {
 			return fmt.Errorf("%s Agent SDK tool evidence failed: denied tool calls=%d", agentName, summary.ToolDenied)
 		}
 	}
@@ -378,12 +392,29 @@ func blockingDeniedToolCommands(summary *agentruntime.LiveSummary, requirement T
 	}
 	blocking := make([]string, 0, len(commands))
 	for _, command := range commands {
+		if summaryHasWorkflowDeniedCommand(summary, command) {
+			continue
+		}
 		if toleratePatchApplyRetry && (isDeniedPatchCommand(command) || isDeniedPatchBufferCommand(command) || isDeniedClaudeToolResultRead(command) || isDeniedPostApplyInspectionCommand(command) || isDeniedPostApplyContextExpansionCommand(command) || isDeniedPostApplyRefreshCommand(command)) {
 			continue
 		}
 		blocking = append(blocking, command)
 	}
 	return blocking
+}
+
+func summaryHasWorkflowDeniedCommand(summary *agentruntime.LiveSummary, command string) bool {
+	if summary == nil {
+		return false
+	}
+	normalized := normalizeToolEvidenceCommand(command)
+	for _, workflowCommand := range summary.WorkflowDeniedToolCommands {
+		observed := normalizeToolEvidenceCommand(workflowCommand)
+		if observed == normalized {
+			return true
+		}
+	}
+	return false
 }
 
 func isDeniedPatchCommand(command string) bool {
@@ -511,8 +542,18 @@ func logAgentRuntimeLiveSummary(agentName string, result *agentruntime.Result) {
 	if summary.SlowestToolDurationMS > 0 {
 		logger.Info("[%s] Agent slowest tool: duration_ms=%d command=%s", agentName, summary.SlowestToolDurationMS, summary.SlowestToolCommand)
 	}
+	if len(summary.WorkflowDeniedToolCommands) > 0 {
+		logger.Info("[%s] Agent workflow guard blocked tool commands: %s", agentName, strings.Join(summary.WorkflowDeniedToolCommands, " | "))
+	}
 	if len(summary.DeniedToolCommands) > 0 {
-		logger.Warn("[%s] Agent denied tool commands: %s", agentName, strings.Join(summary.DeniedToolCommands, " | "))
+		if summary.DenialsResolved {
+			logger.Info("[%s] Agent denied tool commands (corrected in-turn): %s", agentName, strings.Join(summary.DeniedToolCommands, " | "))
+		} else {
+			logger.Warn("[%s] Agent denied tool commands: %s", agentName, strings.Join(summary.DeniedToolCommands, " | "))
+		}
+	}
+	if len(summary.HookErrors) > 0 {
+		logger.Warn("[%s] Agent hook errors: %s", agentName, strings.Join(summary.HookErrors, " | "))
 	}
 	if len(summary.MissingSDKSkills) > 0 {
 		logger.Warn("[%s] Agent missing SDK skills: %s", agentName, strings.Join(summary.MissingSDKSkills, ","))

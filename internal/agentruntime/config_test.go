@@ -384,6 +384,77 @@ func TestSummarizeLiveLogCountsToolActivity(t *testing.T) {
 	}
 }
 
+func TestSummarizeLiveLogSeparatesWorkflowDenials(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "live.jsonl")
+	content := strings.Join([]string{
+		`{"event":"start","model":"deepseek-v4-flash"}`,
+		`{"event":"tool_hook","hook":"PreToolUse","command":"novelgen tool patch outline --target volume --id P1-V1","allowed":false,"workflow_denial":true,"reason":"This patch target already has a successful dry-run and this workflow does not allow --apply. Return final JSON now."}`,
+		`{"event":"tool_hook","hook":"PreToolUse","command":"novelgen tool query outline --type chapter --id P1-V1-C1 --view full","allowed":false}`,
+		`{"event":"final","content":"{}","model":"deepseek-v4-flash"}`,
+		``,
+	}, "\n")
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write live log: %v", err)
+	}
+
+	got := summarizeLiveLog(path)
+	if got == nil {
+		t.Fatalf("summary is nil")
+	}
+	if got.ToolDenied != 2 {
+		t.Fatalf("ToolDenied = %d, want 2", got.ToolDenied)
+	}
+	if len(got.DeniedToolCommands) != 1 || !strings.Contains(got.DeniedToolCommands[0], "--view full") {
+		t.Fatalf("permission denied commands = %#v", got.DeniedToolCommands)
+	}
+	if len(got.WorkflowDeniedToolCommands) != 1 || !strings.Contains(got.WorkflowDeniedToolCommands[0], "tool patch outline") {
+		t.Fatalf("workflow denied commands = %#v", got.WorkflowDeniedToolCommands)
+	}
+}
+
+func TestSummarizeLiveLogParsesStopGuardDenialsResolved(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "live.jsonl")
+	content := strings.Join([]string{
+		`{"event":"start","model":"deepseek-v4-flash"}`,
+		`{"event":"stop_guard","decision":"block","denials_resolved":false}`,
+		`{"event":"stop_guard","decision":"allow","denials_resolved":true}`,
+		`{"event":"final","content":"{}","model":"deepseek-v4-flash"}`,
+		``,
+	}, "\n")
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write live log: %v", err)
+	}
+
+	got := summarizeLiveLog(path)
+	if got == nil {
+		t.Fatalf("summary is nil")
+	}
+	if !got.DenialsResolved {
+		t.Fatalf("DenialsResolved = false, want true (last stop_guard record wins)")
+	}
+}
+
+func TestSummarizeLiveLogParsesHookErrors(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "live.jsonl")
+	content := strings.Join([]string{
+		`{"event":"start","model":"deepseek-v4-flash"}`,
+		`{"event":"hook_error","hook":"Stop","error":"RuntimeError: hook exploded"}`,
+		`{"event":"final","content":"{}","model":"deepseek-v4-flash"}`,
+		``,
+	}, "\n")
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write live log: %v", err)
+	}
+
+	got := summarizeLiveLog(path)
+	if got == nil {
+		t.Fatalf("summary is nil")
+	}
+	if len(got.HookErrors) != 1 || !strings.Contains(got.HookErrors[0], "Stop") || !strings.Contains(got.HookErrors[0], "hook exploded") {
+		t.Fatalf("HookErrors = %#v", got.HookErrors)
+	}
+}
+
 func TestSummarizeLiveLogCountsQueryViewsAndContext(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "live.jsonl")
 	content := strings.Join([]string{

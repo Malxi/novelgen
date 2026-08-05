@@ -462,11 +462,38 @@ The craft schema check also reports non-blocking item consistency issues when
 `owner` is neither a known craft character nor a stable generic owner such as
 `主角`.
 
+## Agent SDK Tool Evidence Guard
+
+Agent SDK workflows that require tool activity (queries, checks, patches)
+enforce the requirement **in-flight**: the runner registers a Stop hook that
+blocks the agent from ending its turn until the required `novelgen tool ...`
+commands have actually been observed. When the agent tries to stop without the
+required evidence (for example, without running `novelgen tool check`), the
+runner returns a Stop-hook `decision: "block"` with the missing-command
+instruction, so the agent continues the same turn and completes the work
+instead of being rejected after the fact.
+
+Go still revalidates the live log after the run (`tool evidence` counters such
+as `check_calls`), so the in-flight guard is an early correction loop rather
+than a replacement for the deterministic post-run validation. If the agent
+still exits without the required evidence (for example after hitting the turn
+limit), the run fails with the same evidence error and checkpoint/resume
+handling applies as before.
+
+`compose improve --agent-sdk` additionally retries transient runner/network
+failures (up to 3 attempts total): because each volume is checkpointed to
+`story/compose/outline_improve_progress.json`, a retry resumes from the last
+completed volume instead of restarting the whole range.
+
 ## Agent SDK Outline Apply
 
 `compose improve --agent-sdk` defaults to the conservative flow: the agent uses
 query/check/patch dry-runs, returns `volume_patch`, and Go merges/saves. This
 keeps Go as the final writer for ordinary compose workflows.
+
+The per-volume workflow may also read the immediately adjacent volumes'
+`payoff_contract/summary` (read-only) to verify cross-volume continuity facts;
+adjacent volumes are never patchable in this workflow.
 
 Use `--agent-apply` when you want the Agent SDK workflow to write through the
 validated patch tool, closer to an edit/check loop:
@@ -475,6 +502,12 @@ validated patch tool, closer to an edit/check loop:
 novelgen compose improve --agent-sdk --agent-apply --volume 1 --max-rounds 1
 novelgen compose pipeline --agent-sdk --agent-apply --from-volume 1 --to-volume 1
 ```
+
+`compose improve --agent-sdk --repair-budget <n>` controls how many targetable
+quality/simulation issues each post-check repair pass processes (default 20).
+After the run completes, a Markdown improvement report is written to
+`logs/compose_improve_report_<timestamp>.md` with per-volume scores, change
+summaries, remaining issues, and the post-gate remaining issue count.
 
 Even in apply mode, the agent still cannot write files directly. It may only
 run `novelgen tool patch outline --target volume ... --apply` after a successful

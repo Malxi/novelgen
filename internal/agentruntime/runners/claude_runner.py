@@ -132,7 +132,7 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
     if tool_allowlist and "can_use_tool" in accepted:
         options_kwargs["can_use_tool"] = build_tool_permission_callback(tool_allowlist, live_log, cwd)
     if tool_allowlist and "hooks" in accepted:
-        options_kwargs["hooks"] = build_tool_hooks(tool_allowlist, live_log, cwd)
+        options_kwargs["hooks"] = build_tool_hooks(tool_allowlist, live_log, cwd, invocation.get("tool_evidence"))
 
     schema = invocation.get("output_json_schema")
     output_schema_chars = schema_json_length(schema)
@@ -203,6 +203,21 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
             if message_usage:
                 usage = normalize_usage(message_usage)
             live_log.write("message", summarize_live_message(message, message_text, structured, result, message_usage))
+
+        if final_structured is not None:
+            text = encode_content(final_structured)
+        elif final_result is not None:
+            text = final_result
+        else:
+            text = assistant_text
+        text = repair_text_encoding(text)
+        live_log.write("final", {"content": text.strip(), "model": model or "", "usage": usage})
+
+        return {
+            "content": text.strip(),
+            "model": model or "",
+            "usage": usage,
+        }
     except Exception as exc:  # noqa: BLE001 - preserve SDK exception across process boundary.
         detail = sdk_exception_detail(exc, assistant_text, final_result)
         live_log.write("error", {
@@ -211,21 +226,8 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
             "repr": repr(exc),
         })
         raise RuntimeError(f"{type(exc).__name__}: {detail}") from exc
-
-    if final_structured is not None:
-        text = encode_content(final_structured)
-    elif final_result is not None:
-        text = final_result
-    else:
-        text = assistant_text
-    text = repair_text_encoding(text)
-    live_log.write("final", {"content": text.strip(), "model": model or "", "usage": usage})
-
-    return {
-        "content": text.strip(),
-        "model": model or "",
-        "usage": usage,
-    }
+    finally:
+        live_log.close()
 
 
 def sdk_exception_detail(exc: Exception, assistant_text: str = "", final_result: Optional[str] = None) -> str:
@@ -288,6 +290,7 @@ def run_with_anthropic_http(invocation: Dict[str, Any]) -> Dict[str, Any]:
                 parsed = json.loads(resp.read().decode("utf-8"))
                 result = parse_anthropic_response(parsed, model)
                 live_log.write("final", result)
+                live_log.close()
                 return result
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
@@ -296,6 +299,7 @@ def run_with_anthropic_http(invocation: Dict[str, Any]) -> Dict[str, Any]:
         except urllib.error.URLError as exc:
             errors.append(f"{url}: {exc}")
             live_log.write("error", {"url": url, "detail": str(exc)})
+    live_log.close()
     raise RuntimeError("; ".join(errors))
 
 
@@ -525,12 +529,45 @@ def build_tool_permission_callback(allowlist: list[str], live_log: Optional["Liv
     return can_use_tool
 
 
-def build_tool_hooks(allowlist: list[str], live_log: Optional["LiveLogger"] = None, workspace_root: str = "") -> Dict[str, Any]:
+def hook_safe(hook_name: str, live_log: Optional["LiveLogger"], fallback: Dict[str, Any], callback: Any):
+    """Wrap a hook callback so an exception is recorded instead of crashing the
+    whole agent turn. The fallback keeps the workflow moving; Go-side evidence
+    validation still runs after the turn as the final safety net."""
+
+    async def wrapped(input_data: Any, tool_use_id: Optional[str], context: Any):
+        try:
+            return await callback(input_data, tool_use_id, context)
+        except Exception as exc:  # noqa: BLE001 - hook errors must not kill the run.
+            if live_log is not None:
+                live_log.write("hook_error", {
+                    "hook": hook_name,
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "repr": repr(exc),
+                })
+            return fallback
+
+    return wrapped
+
+
+def build_tool_hooks(
+    allowlist: list[str],
+    live_log: Optional["LiveLogger"] = None,
+    workspace_root: str = "",
+    tool_evidence: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     from claude_agent_sdk.types import HookMatcher  # type: ignore
 
     required_queries = exact_required_queries(allowlist)
     stop_after_required_queries = stop_after_required_queries_enabled(allowlist)
     deny_repeated_required_queries = stop_after_required_queries
+    evidence_minimums_map = evidence_minimums(tool_evidence)
+    evidence_required_commands = [c for c in ((tool_evidence or {}).get("required_tool_commands") or []) if c]
+    evidence_counts: Dict[str, int] = {"query": 0, "context": 0, "check": 0, "patch_apply": 0}
+    observed_commands: set[str] = set()
+    deny_guard_enabled = bool((tool_evidence or {}).get("require_no_denied_tools"))
+    tool_call_counter = 0
+    last_permission_denial_call = -1
+    denials_resolved = False
     completed_queries: set[str] = set()
     utf8_retry_queries: set[str] = set()
     followup_checks_allowed: set[str] = set()
@@ -548,10 +585,12 @@ def build_tool_hooks(allowlist: list[str], live_log: Optional["LiveLogger"] = No
     tool_started_at: Dict[str, float] = {}
 
     async def pre_tool_use(input_data: Any, tool_use_id: Optional[str], context: Any):
+        nonlocal tool_call_counter, last_permission_denial_call, denials_resolved
         tool_name = extract_message_value(input_data, "tool_name") or ""
         tool_input = extract_message_value(input_data, "tool_input") or {}
         command = extract_tool_command(tool_input)
-        reason = tool_call_denial_reason(tool_name, tool_input, allowlist, workspace_root)
+        allowlist_reason = tool_call_denial_reason(tool_name, tool_input, allowlist, workspace_root)
+        reason = allowlist_reason
         allowed = reason == ""
         matched_query = matching_required_query(command, required_queries)
         canonical_command = canonical_novelgen_command(normalize_command(command))
@@ -705,6 +744,13 @@ def build_tool_hooks(allowlist: list[str], live_log: Optional["LiveLogger"] = No
                             patch_dry_runs[patch_key] = attempts + 1
         patch_attempts = patch_dry_runs.get(patch_key, 0) + patch_applies.get(patch_key, 0) if patch_key else 0
         patch_apply = command_uses_apply(command) if patch_key else False
+        workflow_denial = (not allowed) and (allowlist_reason == "")
+        tool_call_counter += 1
+        if not allowed and not workflow_denial:
+            last_permission_denial_call = tool_call_counter
+            denials_resolved = False
+        elif allowed and last_permission_denial_call >= 0:
+            denials_resolved = True
         if allowed:
             tool_started_at[tool_timing_key(tool_use_id, command)] = _time.monotonic()
         if live_log is not None:
@@ -718,6 +764,7 @@ def build_tool_hooks(allowlist: list[str], live_log: Optional["LiveLogger"] = No
                 "patch_attempts": patch_attempts,
                 "patch_apply": patch_apply,
                 "reason": reason,
+                "workflow_denial": workflow_denial,
             })
         if allowed:
             return {
@@ -741,6 +788,7 @@ def build_tool_hooks(allowlist: list[str], live_log: Optional["LiveLogger"] = No
         command = extract_tool_command(tool_input)
         matched_query = matching_required_query(command, required_queries)
         canonical_command = canonical_novelgen_command(normalize_command(command))
+        count_evidence_tool_call(command, evidence_counts, observed_commands)
         exact_log_brief_key = exact_log_brief_query_key(canonical_command)
         patch_key = patch_target_key(command)
         duration_ms = tool_elapsed_ms(tool_started_at, tool_timing_key(tool_use_id, command))
@@ -918,10 +966,137 @@ def build_tool_hooks(allowlist: list[str], live_log: Optional["LiveLogger"] = No
             }
         return {}
 
+    async def stop_hook(input_data: Any, tool_use_id: Optional[str], context: Any):
+        missing = missing_evidence_instruction(
+            evidence_minimums_map,
+            evidence_required_commands,
+            evidence_counts,
+            observed_commands,
+        )
+        denial_instruction = denial_guard_instruction(
+            deny_guard_enabled,
+            last_permission_denial_call >= 0,
+            denials_resolved,
+        )
+        instruction = combine_guard_instructions(missing, denial_instruction)
+        guard_active = (
+            deny_guard_enabled
+            or any(value > 0 for value in evidence_minimums_map.values())
+            or bool(evidence_required_commands)
+        )
+        if not instruction:
+            if guard_active and live_log is not None:
+                live_log.write("stop_guard", {
+                    "decision": "allow",
+                    "counts": dict(evidence_counts),
+                    "minimums": dict(evidence_minimums_map),
+                    "denials_resolved": denials_resolved,
+                })
+            return {}
+        if live_log is not None:
+            live_log.write("stop_guard", {
+                "decision": "block",
+                "reason": instruction,
+                "counts": dict(evidence_counts),
+                "minimums": dict(evidence_minimums_map),
+                "denials_resolved": denials_resolved,
+            })
+        return {
+            "hookSpecificOutput": {
+                "hookEventName": "Stop",
+                "decision": "block",
+                "reason": instruction,
+            },
+        }
+
     return {
-        "PreToolUse": [HookMatcher(matcher="Bash", hooks=[pre_tool_use])],
-        "PostToolUse": [HookMatcher(matcher="Bash", hooks=[post_tool_use])],
+        "PreToolUse": [HookMatcher(matcher="Bash", hooks=[hook_safe("PreToolUse", live_log, {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "allow",
+                "permissionDecisionReason": "hook error fallback; allowlist still enforced by can_use_tool",
+            },
+        }, pre_tool_use)])],
+        "PostToolUse": [HookMatcher(matcher="Bash", hooks=[hook_safe("PostToolUse", live_log, {}, post_tool_use)])],
+        "Stop": [HookMatcher(matcher=None, hooks=[hook_safe("Stop", live_log, {}, stop_hook)])],
     }
+
+
+def evidence_minimums(tool_evidence: Optional[Dict[str, Any]]) -> Dict[str, int]:
+    evidence = tool_evidence or {}
+    return {
+        "query": int(evidence.get("min_query_calls") or 0),
+        "context": int(evidence.get("min_context_query_calls") or 0),
+        "check": int(evidence.get("min_check_calls") or 0),
+        "patch_apply": int(evidence.get("min_patch_apply_calls") or 0),
+    }
+
+
+def count_evidence_tool_call(
+    command: str,
+    counts: Dict[str, int],
+    observed: Optional[set] = None,
+) -> None:
+    canonical = canonical_novelgen_command(normalize_command(command))
+    if not canonical:
+        return
+    if observed is not None:
+        observed.add(canonical)
+    if " tool query " in canonical:
+        counts["query"] += 1
+        if canonical.startswith("novelgen tool query context"):
+            counts["context"] += 1
+    if " tool check " in canonical:
+        counts["check"] += 1
+    if " --apply" in canonical and "novelgen tool patch" in canonical:
+        counts["patch_apply"] += 1
+
+
+def missing_evidence_instruction(
+    minimums: Dict[str, int],
+    required_commands: list[str],
+    counts: Dict[str, int],
+    observed: Optional[set] = None,
+) -> str:
+    observed = observed or set()
+    missing: list[str] = []
+    if minimums.get("check", 0) > counts.get("check", 0):
+        missing.append("run a `novelgen tool check` for the target scope")
+    if minimums.get("context", 0) > counts.get("context", 0):
+        missing.append("run the required `novelgen tool query context` command")
+    if minimums.get("query", 0) > counts.get("query", 0):
+        missing.append("run the required `novelgen tool query` command")
+    if minimums.get("patch_apply", 0) > counts.get("patch_apply", 0):
+        missing.append("apply the validated patch with `--apply`")
+    for required in required_commands:
+        canonical = canonical_novelgen_command(normalize_command(required))
+        if canonical and canonical not in observed:
+            missing.append(f"run exactly: {required.strip()}")
+    if not missing:
+        return ""
+    return (
+        "Your turn cannot end yet because required tool evidence is missing: "
+        + "; ".join(missing)
+        + ". Complete the missing tool call(s) now, then return your final answer. "
+        "Do not repeat already-completed work."
+    )
+
+
+def denial_guard_instruction(enabled: bool, had_denial: bool, resolved: bool) -> str:
+    if not enabled or not had_denial or resolved:
+        return ""
+    return (
+        "One or more of your earlier tool command(s) were denied because they were outside the "
+        "workflow allowlist. Before ending the turn, re-run the denied `novelgen tool` command(s) "
+        "using only the allowed forms from the skill, then return your final answer."
+    )
+
+
+def combine_guard_instructions(*parts: str) -> str:
+    joined = [part for part in parts if part]
+    if not joined:
+        return ""
+    return " ".join(joined)
 
 
 def tool_timing_key(tool_use_id: Optional[str], command: str) -> str:
@@ -2303,29 +2478,80 @@ def extract_message_text(message: Any) -> str:
 
 
 class LiveLogger:
+    """Append JSONL records for the agent run.
+
+    Keeps the file handle open for the run (per-write open/close on Windows is
+    slow and turns any transient IO/serialization error into a permanently
+    silent logger). Failures are isolated per record: an unserializable payload
+    falls back to a repr record, and a transient IO error retries once before
+    falling back to stderr for that record. The logger stays alive so later
+    events (especially final/error) are never dropped silently.
+    """
+
     def __init__(self, path: Optional[str]) -> None:
         self.path = path
+        self._file: Optional[object] = None
         self._disabled = not path
         if self.path:
             try:
                 os.makedirs(os.path.dirname(self.path), exist_ok=True)
-            except Exception:
+                self._file = open(self.path, "a", encoding="utf-8")
+            except Exception as exc:
                 self._disabled = True
+                sys.stderr.write(f"[novelgen] live log disabled: {exc}\n")
 
     def write(self, event: str, payload: Dict[str, Any]) -> None:
-        if self._disabled or not self.path:
+        if self._disabled or self._file is None:
             return
         record = {
             "ts": _datetime.datetime.now(_datetime.UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
             "event": event,
             **payload,
         }
+        line = self._serialize(record, event, payload)
+        if line is None:
+            return
         try:
-            with open(self.path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(record, ensure_ascii=False, default=json_default))
-                f.write("\n")
+            self._file.write(line)
+            self._file.write("\n")
+            self._file.flush()
+        except Exception as exc:
+            # Transient IO errors (antivirus scans, editors, sharing locks)
+            # must not permanently silence the run log: reopen once and retry
+            # this record, then keep the logger alive for later writes.
+            try:
+                self._file = open(self.path, "a", encoding="utf-8")
+                self._file.write(line)
+                self._file.write("\n")
+                self._file.flush()
+            except Exception as exc2:
+                sys.stderr.write(f"[novelgen] live log write failed: {exc2}\n")
+
+    @staticmethod
+    def _serialize(record: Dict[str, Any], event: str, payload: Dict[str, Any]) -> Optional[str]:
+        try:
+            return json.dumps(record, ensure_ascii=False, default=json_default)
         except Exception:
-            self._disabled = True
+            # A single unserializable record must not kill the log stream:
+            # fall back to a repr so the event is still visible.
+            try:
+                fallback = {
+                    "ts": record.get("ts"),
+                    "event": event,
+                    "fallback": True,
+                    "payload_repr": repr(payload),
+                }
+                return json.dumps(fallback, ensure_ascii=False)
+            except Exception:
+                return None
+
+    def close(self) -> None:
+        if self._file is not None:
+            try:
+                self._file.close()
+            except Exception:
+                pass
+            self._file = None
 
 
 def summarize_live_message(message: Any, text: str, structured: Any, result: Any, usage: Any) -> Dict[str, Any]:

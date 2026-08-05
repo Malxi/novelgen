@@ -5,6 +5,7 @@ import sys
 import tempfile
 import types
 import unittest
+import unittest.mock
 from dataclasses import dataclass
 
 
@@ -1578,6 +1579,177 @@ class ClaudeRunnerTests(unittest.IsolatedAsyncioTestCase):
                 sys.modules.pop("claude_agent_sdk.types", None)
             else:
                 sys.modules["claude_agent_sdk.types"] = previous_types
+
+    async def test_tool_hooks_mark_workflow_denials(self):
+        runner = load_runner()
+        fake_sdk = types.ModuleType("claude_agent_sdk")
+        fake_types = types.ModuleType("claude_agent_sdk.types")
+
+        @dataclass
+        class HookMatcher:
+            matcher: str | None = None
+            hooks: list | None = None
+            timeout: float | None = None
+
+        fake_types.HookMatcher = HookMatcher
+        fake_sdk.types = fake_types
+
+        class FakeLiveLog:
+            def __init__(self):
+                self.records = []
+
+            def write(self, event, payload):
+                self.records.append((event, payload))
+
+        previous = sys.modules.get("claude_agent_sdk")
+        previous_types = sys.modules.get("claude_agent_sdk.types")
+        sys.modules["claude_agent_sdk"] = fake_sdk
+        sys.modules["claude_agent_sdk.types"] = fake_types
+        try:
+            live_log = FakeLiveLog()
+            hooks = runner.build_tool_hooks(["novelgen tool patch outline"], live_log)
+            pre_hook = hooks["PreToolUse"][0].hooks[0]
+            post_hook = hooks["PostToolUse"][0].hooks[0]
+            patch = {
+                "tool_name": "Bash",
+                "tool_input": {"command": "novelgen tool patch outline --target volume --id P1-V1 --patch-json '{\"summary\":\"fix\"}'"},
+            }
+            await pre_hook(patch, None, None)
+            await post_hook(patch, None, None)
+            denied = await pre_hook(patch, None, None)
+            self.assertEqual(denied["hookSpecificOutput"]["permissionDecision"], "deny")
+            self.assertIn("successful dry-run", denied["hookSpecificOutput"]["permissionDecisionReason"])
+            denied_records = [
+                payload
+                for event, payload in live_log.records
+                if event == "tool_hook"
+                and payload.get("hook") == "PreToolUse"
+                and not payload.get("allowed")
+            ]
+            self.assertEqual(len(denied_records), 1)
+            self.assertTrue(denied_records[0].get("workflow_denial"))
+            allowed_records = [
+                payload
+                for event, payload in live_log.records
+                if event == "tool_hook"
+                and payload.get("hook") == "PreToolUse"
+                and payload.get("allowed")
+            ]
+            self.assertEqual(len(allowed_records), 1)
+            self.assertFalse(allowed_records[0].get("workflow_denial"))
+        finally:
+            if previous is None:
+                sys.modules.pop("claude_agent_sdk", None)
+            else:
+                sys.modules["claude_agent_sdk"] = previous
+            if previous_types is None:
+                sys.modules.pop("claude_agent_sdk.types", None)
+            else:
+                sys.modules["claude_agent_sdk.types"] = previous_types
+
+    async def test_tool_hooks_stop_guard_blocks_until_denial_resolved(self):
+        runner = load_runner()
+        fake_sdk = types.ModuleType("claude_agent_sdk")
+        fake_types = types.ModuleType("claude_agent_sdk.types")
+
+        @dataclass
+        class HookMatcher:
+            matcher: str | None = None
+            hooks: list | None = None
+            timeout: float | None = None
+
+        fake_types.HookMatcher = HookMatcher
+        fake_sdk.types = fake_types
+
+        class FakeLiveLog:
+            def __init__(self):
+                self.records = []
+
+            def write(self, event, payload):
+                self.records.append((event, payload))
+
+        previous = sys.modules.get("claude_agent_sdk")
+        previous_types = sys.modules.get("claude_agent_sdk.types")
+        sys.modules["claude_agent_sdk"] = fake_sdk
+        sys.modules["claude_agent_sdk.types"] = fake_types
+        try:
+            live_log = FakeLiveLog()
+            allowlist = ['novelgen tool check all --target outline --scope volume --id "P1-V3"']
+            hooks = runner.build_tool_hooks(
+                allowlist,
+                live_log,
+                tool_evidence={"require_no_denied_tools": True},
+            )
+            pre_hook = hooks["PreToolUse"][0].hooks[0]
+            stop_hook = hooks["Stop"][0].hooks[0]
+            denied_command = {
+                "tool_name": "Bash",
+                "tool_input": {"command": "novelgen tool query outline --type chapter --id P1-V3-C1 --view brief"},
+            }
+            denied = await pre_hook(denied_command, None, None)
+            self.assertEqual(denied["hookSpecificOutput"]["permissionDecision"], "deny")
+            blocked = await stop_hook(None, None, None)
+            self.assertEqual(blocked["hookSpecificOutput"]["decision"], "block")
+            self.assertIn("denied", blocked["hookSpecificOutput"]["reason"])
+
+            allowed_command = {
+                "tool_name": "Bash",
+                "tool_input": {"command": 'novelgen tool check all --target outline --scope volume --id "P1-V3" --min-priority low --max-issues 12'},
+            }
+            allowed = await pre_hook(allowed_command, None, None)
+            self.assertEqual(allowed["hookSpecificOutput"]["permissionDecision"], "allow")
+            passed = await stop_hook(None, None, None)
+            self.assertEqual(passed, {})
+            guard_records = [
+                payload
+                for event, payload in live_log.records
+                if event == "stop_guard"
+            ]
+            self.assertEqual(len(guard_records), 2)
+            self.assertEqual(guard_records[0]["decision"], "block")
+            self.assertFalse(guard_records[0]["denials_resolved"])
+            self.assertEqual(guard_records[1]["decision"], "allow")
+            self.assertTrue(guard_records[1]["denials_resolved"])
+        finally:
+            if previous is None:
+                sys.modules.pop("claude_agent_sdk", None)
+            else:
+                sys.modules["claude_agent_sdk"] = previous
+            if previous_types is None:
+                sys.modules.pop("claude_agent_sdk.types", None)
+            else:
+                sys.modules["claude_agent_sdk.types"] = previous_types
+
+    async def test_hook_safe_records_errors_and_returns_fallback(self):
+        runner = load_runner()
+
+        class FakeLiveLog:
+            def __init__(self):
+                self.records = []
+
+            def write(self, event, payload):
+                self.records.append((event, payload))
+
+        async def boom(input_data, tool_use_id, context):
+            raise RuntimeError("hook exploded")
+
+        live_log = FakeLiveLog()
+        wrapped = runner.hook_safe("Stop", live_log, {}, boom)
+        result = await wrapped(None, None, None)
+        self.assertEqual(result, {})
+        self.assertEqual(len(live_log.records), 1)
+        event, payload = live_log.records[0]
+        self.assertEqual(event, "hook_error")
+        self.assertEqual(payload["hook"], "Stop")
+        self.assertIn("hook exploded", payload["error"])
+
+        # A non-crashing callback passes through untouched.
+        async def fine(input_data, tool_use_id, context):
+            return {"ok": True}
+
+        wrapped_ok = runner.hook_safe("Stop", live_log, {}, fine)
+        self.assertEqual(await wrapped_ok(None, None, None), {"ok": True})
+        self.assertEqual(len(live_log.records), 1)
 
     async def test_tool_hooks_limit_exact_history_log_briefs(self):
         runner = load_runner()
@@ -3473,6 +3645,181 @@ class ClaudeRunnerTests(unittest.IsolatedAsyncioTestCase):
         repaired = runner.repair_text_encoding(text)
         self.assertEqual(repaired, text)
         self.assertIn(chr(0x706B) + chr(0x79CD) + chr(0x6838) + chr(0x5FC3), repaired)
+
+
+class EvidenceGuardTests(unittest.TestCase):
+    def setUp(self):
+        self.runner = load_runner()
+
+    def test_evidence_minimums_parses_config(self):
+        minimums = self.runner.evidence_minimums({
+            "min_query_calls": 1,
+            "min_context_query_calls": 2,
+            "min_check_calls": 3,
+            "min_patch_apply_calls": 4,
+        })
+        self.assertEqual(minimums["query"], 1)
+        self.assertEqual(minimums["context"], 2)
+        self.assertEqual(minimums["check"], 3)
+        self.assertEqual(minimums["patch_apply"], 4)
+        self.assertEqual(self.runner.evidence_minimums(None), {
+            "query": 0,
+            "context": 0,
+            "check": 0,
+            "patch_apply": 0,
+        })
+
+    def test_count_evidence_tool_call_counts_queries_and_checks(self):
+        counts = {"query": 0, "context": 0, "check": 0, "patch_apply": 0}
+        observed = set()
+        self.runner.count_evidence_tool_call(
+            "novelgen tool query outline --type chapter --id P1-V1-C1 --view brief",
+            counts,
+            observed,
+        )
+        self.runner.count_evidence_tool_call(
+            "novelgen tool query context --type outline-volume --id P1-V1 --view index",
+            counts,
+            observed,
+        )
+        self.runner.count_evidence_tool_call(
+            'novelgen tool check all --target outline --scope volume --id "P1-V1" --min-priority medium --max-issues 12',
+            counts,
+            observed,
+        )
+        self.assertEqual(counts["query"], 2)
+        self.assertEqual(counts["context"], 1)
+        self.assertEqual(counts["check"], 1)
+        self.assertEqual(counts["patch_apply"], 0)
+        self.assertIn("novelgen tool check all --target outline --scope volume --id p1-v1 --min-priority medium --max-issues 12", observed)
+
+    def test_count_evidence_tool_call_counts_patch_apply(self):
+        counts = {"query": 0, "context": 0, "check": 0, "patch_apply": 0}
+        self.runner.count_evidence_tool_call(
+            "novelgen tool patch outline --target volume --id P1-V1 --apply",
+            counts,
+        )
+        self.assertEqual(counts["patch_apply"], 1)
+        self.runner.count_evidence_tool_call(
+            "novelgen tool patch outline --target volume --id P1-V1",
+            counts,
+        )
+        self.assertEqual(counts["patch_apply"], 1)
+
+    def test_missing_evidence_instruction_empty_when_satisfied(self):
+        minimums = {"query": 1, "context": 0, "check": 1, "patch_apply": 0}
+        counts = {"query": 2, "context": 0, "check": 1, "patch_apply": 0}
+        self.assertEqual(
+            self.runner.missing_evidence_instruction(minimums, [], counts),
+            "",
+        )
+
+    def test_missing_evidence_instruction_reports_check_and_required_command(self):
+        minimums = {"query": 0, "context": 0, "check": 1, "patch_apply": 0}
+        counts = {"query": 3, "context": 1, "check": 0, "patch_apply": 0}
+        observed = {"novelgen tool query context --type outline-volume --id p1-v1 --view index"}
+        instruction = self.runner.missing_evidence_instruction(
+            minimums,
+            ["novelgen tool check all --target outline --scope volume --id P1-V1"],
+            counts,
+            observed,
+        )
+        self.assertIn("novelgen tool check", instruction)
+        self.assertIn("tool evidence is missing", instruction)
+        self.assertIn("run exactly", instruction)
+
+    def test_missing_evidence_instruction_reports_context_and_patch(self):
+        minimums = {"query": 1, "context": 1, "check": 0, "patch_apply": 1}
+        counts = {"query": 1, "context": 0, "check": 0, "patch_apply": 0}
+        instruction = self.runner.missing_evidence_instruction(minimums, [], counts)
+        self.assertIn("query context", instruction)
+        self.assertIn("--apply", instruction)
+
+    def test_denial_guard_instruction(self):
+        self.assertEqual(self.runner.denial_guard_instruction(False, True, False), "")
+        self.assertEqual(self.runner.denial_guard_instruction(True, False, False), "")
+        self.assertEqual(self.runner.denial_guard_instruction(True, True, True), "")
+        instruction = self.runner.denial_guard_instruction(True, True, False)
+        self.assertIn("denied", instruction)
+        self.assertIn("workflow allowlist", instruction)
+
+    def test_combine_guard_instructions(self):
+        self.assertEqual(self.runner.combine_guard_instructions("", ""), "")
+        self.assertEqual(
+            self.runner.combine_guard_instructions("one", "", "two"),
+            "one two",
+        )
+
+
+class LiveLoggerTests(unittest.TestCase):
+    def setUp(self):
+        self.runner = load_runner()
+
+    def test_write_then_close_persists_all_records(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "live.jsonl")
+            logger = self.runner.LiveLogger(path)
+            logger.write("start", {"a": 1})
+            logger.write("final", {"b": 2})
+            logger.close()
+            with open(path, "r", encoding="utf-8") as f:
+                records = [json.loads(line) for line in f]
+            self.assertEqual([r["event"] for r in records], ["start", "final"])
+            self.assertEqual(records[0]["a"], 1)
+            self.assertEqual(records[1]["b"], 2)
+
+    def test_unserializable_payload_falls_back_and_logger_survives(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "live.jsonl")
+            logger = self.runner.LiveLogger(path)
+            circular = {}
+            circular["self"] = circular
+            logger.write("message", {"payload": circular})
+            logger.write("final", {"ok": True})
+            logger.close()
+            with open(path, "r", encoding="utf-8") as f:
+                records = [json.loads(line) for line in f]
+            self.assertEqual(len(records), 2)
+            self.assertTrue(records[0].get("fallback"))
+            self.assertIn("payload", records[0].get("payload_repr", ""))
+            self.assertEqual(records[1]["event"], "final")
+
+    def test_io_error_retries_without_disabling_logger(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "live.jsonl")
+            logger = self.runner.LiveLogger(path)
+            real_file = logger._file
+
+            class FlakyFile:
+                def __init__(self, inner):
+                    self._inner = inner
+                    self._fail = True
+
+                def write(self, data):
+                    if self._fail:
+                        self._fail = False
+                        raise OSError("simulated transient failure")
+                    return self._inner.write(data)
+
+                def flush(self):
+                    return self._inner.flush()
+
+                def close(self):
+                    return self._inner.close()
+
+            logger._file = FlakyFile(real_file)
+            with unittest.mock.patch.object(self.runner, "open", wraps=open):
+                logger.write("message", {"n": 1})
+            # The failed write's retry replaced logger._file with a fresh
+            # handle; release the orphaned original so the temp dir unlocks.
+            real_file.close()
+            logger.write("message", {"n": 2})
+            logger.close()
+            with open(path, "r", encoding="utf-8") as f:
+                records = [json.loads(line) for line in f]
+            self.assertEqual(len(records), 2)
+            self.assertEqual(records[0]["n"], 1)
+            self.assertEqual(records[1]["n"], 2)
 
 
 if __name__ == "__main__":

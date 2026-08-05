@@ -286,7 +286,15 @@ func TestBaseAgentExecuteUsesRuntime(t *testing.T) {
 }
 
 func TestBaseAgentExecutePassesPerCallAgentSDKOptions(t *testing.T) {
-	runtime := &fakeRuntime{}
+	runtime := &fakeRuntime{summary: &agentruntime.LiveSummary{
+		QueryCalls:        5,
+		ContextQueryCalls: 4,
+		CheckCalls:        3,
+		PatchApplies:      4,
+		AllowedToolCommands: []string{
+			"novelgen tool check all --target outline --scope volume --id p1-v1",
+		},
+	}}
 	agent := &BaseAgent{
 		name:    "TestAgent",
 		runtime: runtime,
@@ -304,6 +312,14 @@ func TestBaseAgentExecutePassesPerCallAgentSDKOptions(t *testing.T) {
 		PermissionMode: "dontAsk",
 		RequireSDK:     true,
 		ToolAllowlist:  []string{"novelgen tool query"},
+		ToolEvidence: ToolEvidenceRequirement{
+			MinQueryCalls:        1,
+			MinContextQueryCalls: 2,
+			MinCheckCalls:        3,
+			MinPatchApplyCalls:   4,
+			RequiredToolCommands: []string{"novelgen tool check all --target outline --scope volume --id P1-V1"},
+			RequireNoDeniedTools: true,
+		},
 		MaxTurns:       10,
 		Timeout:        300,
 	}, struct{}{}, &output)
@@ -327,6 +343,15 @@ func TestBaseAgentExecutePassesPerCallAgentSDKOptions(t *testing.T) {
 	}
 	if got := runtime.invocation.ToolAllowlist; len(got) != 1 || got[0] != "novelgen tool query" {
 		t.Fatalf("ToolAllowlist = %#v", got)
+	}
+	if got := runtime.invocation.ToolEvidence; got.MinQueryCalls != 1 || got.MinContextQueryCalls != 2 || got.MinCheckCalls != 3 || got.MinPatchApplyCalls != 4 {
+		t.Fatalf("ToolEvidence minimums = %#v", got)
+	}
+	if got := runtime.invocation.ToolEvidence.RequiredToolCommands; len(got) != 1 || got[0] != "novelgen tool check all --target outline --scope volume --id P1-V1" {
+		t.Fatalf("ToolEvidence.RequiredToolCommands = %#v", got)
+	}
+	if !runtime.invocation.ToolEvidence.RequireNoDeniedTools {
+		t.Fatalf("ToolEvidence.RequireNoDeniedTools = false, want true")
 	}
 	if runtime.invocation.Options.MaxTurns != 10 {
 		t.Fatalf("MaxTurns = %d, want 10", runtime.invocation.Options.MaxTurns)
@@ -658,6 +683,46 @@ func TestBaseAgentExecuteVerifiesRuntimeToolEvidence(t *testing.T) {
 	}, struct{}{}, &output)
 	if err == nil || !strings.Contains(err.Error(), "denied tool calls=1") {
 		t.Fatalf("expected project file Get-Content denial to remain blocking, got %v", err)
+	}
+
+	runtime.summary = &agentruntime.LiveSummary{
+		ContextQueryCalls:          1,
+		CheckCalls:                 1,
+		ToolDenied:                 1,
+		ApplyWithoutFollowupCheck:  0,
+		WorkflowDeniedToolCommands: []string{`novelgen tool patch outline --target volume --id "P1-V3"`},
+	}
+	err = agent.Execute(context.Background(), InvokeParams{
+		Command: "return a test object",
+		ToolEvidence: ToolEvidenceRequirement{
+			MinContextQueryCalls: 1,
+			MinCheckCalls:        1,
+			RequireNoDeniedTools: true,
+		},
+	}, struct{}{}, &output)
+	if err != nil {
+		t.Fatalf("workflow-enforced denial should be tolerated, got %v", err)
+	}
+
+	runtime.summary = &agentruntime.LiveSummary{
+		ContextQueryCalls: 1,
+		CheckCalls:        1,
+		ToolDenied:        1,
+		DenialsResolved:   true,
+		DeniedToolCommands: []string{
+			`novelgen tool query outline --type chapter --id "P1-V3-C1" --fields chapter_payoff --view brief`,
+		},
+	}
+	err = agent.Execute(context.Background(), InvokeParams{
+		Command: "return a test object",
+		ToolEvidence: ToolEvidenceRequirement{
+			MinContextQueryCalls: 1,
+			MinCheckCalls:        1,
+			RequireNoDeniedTools: true,
+		},
+	}, struct{}{}, &output)
+	if err != nil {
+		t.Fatalf("denial resolved by a later allowed tool call should be tolerated, got %v", err)
 	}
 
 	runtime.summary = &agentruntime.LiveSummary{

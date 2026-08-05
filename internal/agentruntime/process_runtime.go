@@ -252,7 +252,15 @@ func (t *liveProgressTailer) handleLine(line string) {
 		command := summarizeToolCommand(strings.TrimSpace(fmt.Sprint(record["command"])))
 		allowed, hasAllowed := record["allowed"].(bool)
 		if hasAllowed && !allowed {
-			if reason := summarizeToolDenialReason(record["reason"]); reason != "" {
+			workflowDenial, _ := record["workflow_denial"].(bool)
+			reason := summarizeToolDenialReason(record["reason"])
+			if workflowDenial {
+				if reason != "" {
+					logger.Info("[%s] Agent workflow guard blocked tool: %s reason=%s", agent, command, reason)
+				} else {
+					logger.Info("[%s] Agent workflow guard blocked tool: %s", agent, command)
+				}
+			} else if reason != "" {
 				logger.Warn("[%s] Agent denied tool: %s reason=%s", agent, command, reason)
 			} else {
 				logger.Warn("[%s] Agent denied tool: %s", agent, command)
@@ -453,6 +461,10 @@ func summarizeLiveLog(path string) *LiveSummary {
 		case "final":
 			summary.FinalRecords++
 			summary.FinalModel = firstNonEmpty(liveRecordString(record, "model"), summary.FinalModel)
+		case "stop_guard":
+			summary.DenialsResolved = liveRecordBool(record, "denials_resolved")
+		case "hook_error":
+			addHookError(summary, record)
 		case "tool_hook", "tool_permission":
 			hook := strings.TrimSpace(fmt.Sprint(record["hook"]))
 			command := strings.TrimSpace(fmt.Sprint(record["command"]))
@@ -475,7 +487,11 @@ func summarizeLiveLog(path string) *LiveSummary {
 						countToolCommand(summary, command)
 					} else {
 						summary.ToolDenied++
-						addDeniedToolCommand(summary, command)
+						if workflowDenied, ok := record["workflow_denial"].(bool); ok && workflowDenied {
+							addWorkflowDeniedToolCommand(summary, command)
+						} else {
+							addDeniedToolCommand(summary, command)
+						}
 					}
 				}
 				if allowed, ok := record["allowed"].(bool); ok && allowed {
@@ -606,6 +622,53 @@ func addDeniedToolCommand(summary *LiveSummary, command string) {
 	summary.DeniedToolCommands = append(summary.DeniedToolCommands, command)
 }
 
+func addWorkflowDeniedToolCommand(summary *LiveSummary, command string) {
+	if summary == nil {
+		return
+	}
+	command = summarizeToolCommand(command)
+	if command == "" {
+		return
+	}
+	for _, existing := range summary.WorkflowDeniedToolCommands {
+		if existing == command {
+			return
+		}
+	}
+	if len(summary.WorkflowDeniedToolCommands) >= 5 {
+		return
+	}
+	summary.WorkflowDeniedToolCommands = append(summary.WorkflowDeniedToolCommands, command)
+}
+
+func addHookError(summary *LiveSummary, record map[string]interface{}) {
+	if summary == nil {
+		return
+	}
+	hook := strings.TrimSpace(fmt.Sprint(record["hook"]))
+	detail := strings.TrimSpace(fmt.Sprint(record["error"]))
+	if detail == "" {
+		detail = strings.TrimSpace(fmt.Sprint(record["repr"]))
+	}
+	entry := hook
+	if detail != "" {
+		entry += ": " + detail
+	}
+	entry = clipLiveProgressText(entry, 220)
+	if entry == "" {
+		return
+	}
+	for _, existing := range summary.HookErrors {
+		if existing == entry {
+			return
+		}
+	}
+	if len(summary.HookErrors) >= 5 {
+		return
+	}
+	summary.HookErrors = append(summary.HookErrors, entry)
+}
+
 func liveRecordInt(record map[string]interface{}, key string) int {
 	if record == nil {
 		return 0
@@ -623,6 +686,24 @@ func liveRecordInt(record map[string]interface{}, key string) int {
 		return n
 	default:
 		return 0
+	}
+}
+
+func liveRecordBool(record map[string]interface{}, key string) bool {
+	if record == nil {
+		return false
+	}
+	value, ok := record[key]
+	if !ok || value == nil {
+		return false
+	}
+	switch typed := value.(type) {
+	case bool:
+		return typed
+	case string:
+		return strings.EqualFold(strings.TrimSpace(typed), "true")
+	default:
+		return false
 	}
 }
 

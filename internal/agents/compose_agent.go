@@ -513,6 +513,50 @@ func composeImproveToolAllowlist(volume models.Volume, promptInput composeAgentS
 	return dedupeComposeToolAllowlist(allowlist)
 }
 
+// composeAdjacentVolumeIDs returns the IDs of the volumes immediately before
+// and after the given volume in the flattened outline order. The current
+// volume itself is never included, and volumes at part boundaries still
+// consider the neighboring part's first/last volume as adjacent.
+func composeAdjacentVolumeIDs(outline models.Outline, volumeID string) []string {
+	volumeIDs := make([]string, 0)
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			volumeIDs = append(volumeIDs, volume.ID)
+		}
+	}
+	for index, id := range volumeIDs {
+		if id != volumeID {
+			continue
+		}
+		adjacent := make([]string, 0, 2)
+		if index > 0 {
+			adjacent = append(adjacent, volumeIDs[index-1])
+		}
+		if index+1 < len(volumeIDs) {
+			adjacent = append(adjacent, volumeIDs[index+1])
+		}
+		return adjacent
+	}
+	return nil
+}
+
+// composeAdjacentVolumeQueryAllowlist adds read-only payoff_contract/summary
+// queries for the immediately adjacent volumes, so the Agent SDK workflow can
+// verify cross-volume continuity facts without being denied by the allowlist.
+// Adjacent volumes are never patchable in this workflow.
+func composeAdjacentVolumeQueryAllowlist(outline models.Outline, volumeID string) []string {
+	allowlist := make([]string, 0, 2)
+	for _, adjacentID := range composeAdjacentVolumeIDs(outline, volumeID) {
+		if strings.TrimSpace(adjacentID) == "" {
+			continue
+		}
+		allowlist = append(allowlist,
+			fmt.Sprintf("novelgen tool query outline --type volume --id %q --fields payoff_contract,summary --view brief", adjacentID),
+		)
+	}
+	return allowlist
+}
+
 func composeImproveHasFocusedTasks(promptInput composeAgentSDKImproveVolumePromptInput) bool {
 	return promptInput.ForceIssueRepair ||
 		strings.TrimSpace(promptInput.UserPrompt) != "" ||
@@ -861,7 +905,9 @@ func (a *ComposeAgent) ImproveVolumeWithAgentSDK(ctx context.Context, input Comp
 	}
 
 	promptInput := buildAgentSDKImproveVolumePromptInput(input, applyPatches, forceIssueRepair)
-	params := composeAgentSDKParams("review and improve this outline volume using project query/check/patch tools", "outline-improve-volume-workflow", 28, composeImproveToolAllowlist(input.Volume, promptInput, applyPatches))
+	allowlist := composeImproveToolAllowlist(input.Volume, promptInput, applyPatches)
+	allowlist = append(allowlist, composeAdjacentVolumeQueryAllowlist(input.Outline, input.Volume.ID)...)
+	params := composeAgentSDKParams("review and improve this outline volume using project query/check/patch tools", "outline-improve-volume-workflow", 28, dedupeComposeToolAllowlist(allowlist))
 	params.ToolEvidence = composeImproveToolEvidence(promptInput, applyPatches)
 	if applyPatches {
 		params.ToolEvidence.RequirePatchApplyFollowupCheck = true
@@ -1519,6 +1565,7 @@ func buildAgentSDKImproveVolumePromptInput(input ComposeImproveVolumeInput, appl
 	}
 	instructions = append(instructions,
 		detailInstruction,
+		"If continuity facts require cross-volume context, you may read the payoff_contract/summary of the immediately adjacent volumes only (the allowed query list includes them). Do not query non-adjacent volumes and never patch an adjacent volume.",
 		"Review and, only when needed, improve target_volume_id. Do not change any other volume.",
 		composeAgentSDKPatchInstruction(applyPatches),
 		composeAgentSDKCheckInstruction(applyPatches),
@@ -2854,6 +2901,47 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 	return &currentOutline, nil
 }
 
+// ComposeImproveReportEntry is a per-volume improvement summary recorded during
+// Agent SDK outline improvement. The CLI aggregates these into an end-of-run
+// Markdown report.
+type ComposeImproveReportEntry struct {
+	Iteration           int     `json:"iteration"`
+	VolumeID            string  `json:"volume_id"`
+	VolumeTitle         string  `json:"volume_title"`
+	Score               float64 `json:"score"`
+	Changed             bool    `json:"changed"`
+	Skipped             bool    `json:"skipped"`
+	Summary             string  `json:"summary"`
+	RemainingMediumPlus int     `json:"remaining_medium_plus"`
+}
+
+const composeImproveReportPath = "story/compose/outline_improve_report.jsonl"
+
+func appendComposeImproveReport(entry ComposeImproveReportEntry) error {
+	data, err := json.Marshal(entry)
+	if err != nil {
+		return err
+	}
+	file, err := os.OpenFile(composeImproveReportPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.Write(append(data, '\n'))
+	return err
+}
+
+func countMediumOrHigherReviewSuggestions(review models.ReviewResult) int {
+	count := 0
+	for _, suggestion := range review.Suggestions {
+		switch strings.ToLower(strings.TrimSpace(suggestion.Priority)) {
+		case models.PriorityCritical, models.PriorityHigh, models.PriorityMedium:
+			count++
+		}
+	}
+	return count
+}
+
 func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup, applyPatches bool) (*models.Outline, *models.ReviewResult, int, error) {
 	currentOutline := *outline
 	progressPath := "story/compose/outline_improve_progress.json"
@@ -2923,6 +3011,15 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 			if err := a.saveImproveProgress(progress, progressPath); err != nil {
 				logger.Warn("Failed to save Agent SDK progress after skip: %v", err)
 			}
+			if err := appendComposeImproveReport(ComposeImproveReportEntry{
+				Iteration:   currentIteration,
+				VolumeID:    volume.ID,
+				VolumeTitle: volume.Title,
+				Skipped:     true,
+				Summary:     "Pre-check found no medium/high/critical volume issues; skipped.",
+			}); err != nil {
+				logger.Warn("Failed to append improve report entry: %v", err)
+			}
 			continue
 		}
 		improveInput := ComposeImproveVolumeInput{
@@ -2976,6 +3073,17 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 			logger.Warn("Failed to save Agent SDK progress: %v", err)
 		} else {
 			logger.Info("[save] Agent SDK progress saved (%d/%d volumes completed)", len(progress.CompletedVolumes), progress.TotalVolumes)
+		}
+		if err := appendComposeImproveReport(ComposeImproveReportEntry{
+			Iteration:           currentIteration,
+			VolumeID:            volume.ID,
+			VolumeTitle:         volume.Title,
+			Score:               review.OverallScore,
+			Changed:             patchChanged,
+			Summary:             review.Summary,
+			RemainingMediumPlus: countMediumOrHigherReviewSuggestions(review),
+		}); err != nil {
+			logger.Warn("Failed to append improve report entry: %v", err)
 		}
 	}
 

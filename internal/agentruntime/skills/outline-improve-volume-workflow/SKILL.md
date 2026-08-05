@@ -18,6 +18,7 @@ description: 单卷大纲改进 workflow，通过 query/check/patch 工具局部
 - 每次 invocation 最多一个 patch cycle：一次 dry-run，同一份 JSON 一次 apply，随后一次对应的 check。
 - 中文或复杂 JSON 必须用 stdin pipe 传给 patch 命令；不要使用 `--patch-json`、`<json>`、`<compact-json>`、临时文件、`Get-Content`、`type`、`findstr`、`echo test`、Python/Node/PowerShell helper，或 shell redirection `2>&1`。
 - 不要读取源码、story 文件、RPG 文件、Claude 临时 `tool-results`。
+- 跨卷连续性事实只允许读取相邻卷的 `payoff_contract/summary`（调用方已把对应命令加入允许列表）；禁止查询非相邻卷，禁止 patch 目标卷以外的任何卷。
 
 ## 没有可修复问题时
 

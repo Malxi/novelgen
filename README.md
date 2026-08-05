@@ -132,9 +132,15 @@ novelgen compose pipeline --from-volume 2 --to-volume 7 --max-rounds 1
 novelgen compose regen 1_1_1              # 重新生成第1部第1卷第1章
 novelgen compose regen 1_1_1 --prompt "加强冲突"
 novelgen compose improve --max-rounds 3   # 改进大纲3轮
+novelgen compose improve --agent-sdk --from-volume 1 --to-volume 3   # Agent SDK 逐卷改进
 novelgen compose skeleton-review          # 只评审大纲骨架
 novelgen compose skeleton-improve --max-rounds 1
 ```
+
+Agent SDK 模式（`--agent-sdk`）的逐卷改进支持：
+- `--repair-budget`（int，默认 20）：每次门禁修复 pass 最多处理的目标问题数。
+- 允许只读查询相邻卷的 `payoff_contract/summary`，用于跨卷连续性核对（不可修改其它卷）。
+- 运行结束后自动在 `logs/` 下生成 `compose_improve_report_<时间戳>.md` 改进报告（每卷评分、改动摘要、剩余问题、门禁修复后剩余问题）。
 
 ---
 

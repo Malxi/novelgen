@@ -32,6 +32,7 @@ var (
 	composeOneShotFlag         bool
 	composeAgentSDKFlag        bool
 	composeAgentApplyFlag      bool
+	composeRepairBudgetFlag    int
 	composeForceImproveFlag    bool
 	composeForceGenFlag        bool
 	composeCheckJSONFlag       bool
@@ -209,6 +210,7 @@ func init() {
 	composeImproveCmd.Flags().BoolVar(&composeOneShotFlag, "one-shot", false, "Try one-shot improvement first (falls back to hierarchical on failure)")
 	composeImproveCmd.Flags().BoolVar(&composeAgentSDKFlag, "agent-sdk", false, "Use Claude Agent SDK workflow with read-only project query tools")
 	composeImproveCmd.Flags().BoolVar(&composeAgentApplyFlag, "agent-apply", false, "With --agent-sdk, let the agent write outline patches through validated patch tools")
+	composeImproveCmd.Flags().IntVar(&composeRepairBudgetFlag, "repair-budget", 20, "Maximum number of repair suggestions per Agent SDK repair pass")
 	composeImproveCmd.Flags().BoolVar(&composeForceImproveFlag, "force", false, "Force improvement based on suggestions even if score meets threshold")
 	composeImproveCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional user suggestions for improvement")
 	composeImproveCmd.Flags().IntVar(&composeImproveVolume, "volume", 0, "Improve one 1-based global volume index")
@@ -533,8 +535,16 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 
 	// Run improvement
 	if composeAgentSDKFlag {
+		// A fresh run (no resume checkpoint) starts an empty improvement report.
+		// A resume run keeps the existing report file so already-completed
+		// volumes are not re-appended after a transient failure.
+		progressPath := filepath.Join("story", "compose", "outline_improve_progress.json")
+		keepReport := resumeProgressMatchesRun(progressPath, improveOutline, composeMaxRoundsFlag)
+		if !keepReport {
+			_ = os.Remove(filepath.Join("story", "compose", "outline_improve_report.jsonl"))
+		}
 		agentSDKForceImprove := composeForceImproveFlag || selectedImprove
-		err = iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, composeMaxRoundsFlag, agentSDKForceImprove, composePromptFlag, composeAgentApplyFlag, improveOutline != outline)
+		err = runAgentSDKImproveWithResume(improveOutline, setup, projectConfig, composeMaxRoundsFlag, agentSDKForceImprove, composePromptFlag, composeAgentApplyFlag, improveOutline != outline)
 	} else {
 		err = iterateOutlineImprovement(improveOutline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, useHierarchical, composeForceImproveFlag, composePromptFlag)
 	}
@@ -571,6 +581,9 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	// volumes are not rewritten as a side effect of saving.
 	if composeAgentSDKFlag && selectedImprove && outlinesSemanticallyEqual(originalOutline, outline) {
 		logger.Info("Agent SDK selected-volume improve made no effective outline changes; skipping outline.json and outline.md rewrite")
+		if reportErr := writeComposeImproveReport(-1); reportErr != nil {
+			logger.Warn("Failed to write compose improve report: %v", reportErr)
+		}
 		fmt.Printf("\n[ok] Outline checked; no effective changes were applied to %s\n", outlinePath)
 		return nil
 	}
@@ -589,11 +602,245 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
+	if composeAgentSDKFlag {
+		remainingGateIssues := len(filterMediumOrHigherOutlineTargetSuggestions(gate.Suggestions))
+		if reportErr := writeComposeImproveReport(remainingGateIssues); reportErr != nil {
+			logger.Warn("Failed to write compose improve report: %v", reportErr)
+		}
+	}
+
 	fmt.Printf("\n[ok] Outline improved and saved to %s\n", outlinePath)
 	fmt.Println("\nNext steps:")
 	fmt.Println("  - Edit story/compose/outline.json to refine your outline")
 	fmt.Println("  - Run 'novelgen craft' to create world elements")
 
+	return nil
+}
+
+// composeAgentSDKImproveResumeAttempts bounds how many times an Agent SDK
+// improvement run is retried after a transient runner/network failure. The
+// checkpoint file (outline_improve_progress.json) makes each retry resume from
+// the last completed volume instead of restarting the whole range.
+const composeAgentSDKImproveResumeAttempts = 3
+
+func runAgentSDKImproveWithResume(
+	improveOutline *models.Outline,
+	setup *models.StorySetup,
+	projectConfig *models.ProjectConfig,
+	maxRounds int,
+	forceImprove bool,
+	userPrompt string,
+	applyPatches bool,
+	scoped bool,
+) error {
+	return retryAgentSDKImproveWithResume(composeAgentSDKImproveResumeAttempts, func() error {
+		return iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, maxRounds, forceImprove, userPrompt, applyPatches, scoped)
+	})
+}
+
+func retryAgentSDKImproveWithResume(attempts int, run func() error) error {
+	if attempts < 1 {
+		attempts = 1
+	}
+	var lastErr error
+	for attempt := 1; attempt <= attempts; attempt++ {
+		lastErr = run()
+		if lastErr == nil {
+			return nil
+		}
+		if attempt < attempts {
+			logger.Warn("Agent SDK outline improvement failed (attempt %d/%d): %v; resuming from saved checkpoint", attempt, attempts, lastErr)
+		}
+	}
+	return lastErr
+}
+
+// repairAgentSDKWithTransientRetry runs the Agent SDK repair pass, retrying up
+// to maxRepairAttempts when the failure looks like a transient CLI/SDK
+// transport error (e.g. the CLI control-channel "Stream closed" crash family).
+// The repair pass writes its own per-iteration checkpoint, so each retry
+// resumes from the last completed volume instead of restarting the whole
+// batch. Permanent failures return immediately, and a leftover repair
+// checkpoint is removed so a later invocation never resumes stale work.
+func repairAgentSDKWithTransientRetry(repair func() (*models.Outline, error)) (*models.Outline, error) {
+	const maxRepairAttempts = 3
+	var lastErr error
+	for attempt := 1; attempt <= maxRepairAttempts; attempt++ {
+		output, err := repair()
+		if err == nil {
+			return output, nil
+		}
+		lastErr = err
+		if attempt < maxRepairAttempts && isTransientAgentSDKError(err) {
+			logger.Warn("Agent SDK repair pass failed with transient CLI/SDK error (attempt %d/%d): %v; resuming from repair checkpoint", attempt, maxRepairAttempts, err)
+			continue
+		}
+		break
+	}
+	// The repair pass's checkpoint (iteration 0) is only removed on success;
+	// clear it on permanent failure so the next invocation starts clean.
+	if removeErr := os.Remove("story/compose/outline_improve_progress.json"); removeErr != nil && !os.IsNotExist(removeErr) {
+		logger.Warn("Failed to remove stale Agent SDK repair checkpoint: %v", removeErr)
+	}
+	return nil, lastErr
+}
+
+// isTransientAgentSDKError reports whether an Agent SDK runner failure is a
+// transient CLI/SDK transport issue that a retry can recover from (the CLI
+// control-channel "Stream closed" crash family and network resets), as opposed
+// to a deterministic prompt/parse failure that will fail the same way again.
+func isTransientAgentSDKError(err error) bool {
+	if err == nil {
+		return false
+	}
+	text := strings.ToLower(err.Error())
+	for _, marker := range []string{
+		"error in hook callback",
+		"stream closed",
+		"connection reset",
+		"broken pipe",
+	} {
+		if strings.Contains(text, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+type composeImproveResumeProgress struct {
+	Iteration     int      `json:"iteration"`
+	TargetVolumes []string `json:"target_volumes"`
+}
+
+// resumeProgressMatchesRun reports whether the on-disk improvement progress
+// belongs to this command invocation (same iteration window and same target
+// volumes). Only then is the improvement report jsonl kept across a restart.
+func resumeProgressMatchesRun(progressPath string, outline *models.Outline, maxRounds int) bool {
+	data, err := os.ReadFile(progressPath)
+	if err != nil {
+		return false
+	}
+	var progress composeImproveResumeProgress
+	if err := json.Unmarshal(data, &progress); err != nil {
+		return false
+	}
+	if progress.Iteration < 1 || progress.Iteration > maxInt(1, maxRounds) {
+		return false
+	}
+	targets := make(map[string]bool, len(progress.TargetVolumes))
+	for _, target := range progress.TargetVolumes {
+		targets[target] = true
+	}
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			if !targets[volume.ID] {
+				return false
+			}
+		}
+	}
+	return len(progress.TargetVolumes) == outlineVolumeCount(outline)
+}
+
+func outlineVolumeCount(outline *models.Outline) int {
+	count := 0
+	if outline == nil {
+		return count
+	}
+	for _, part := range outline.Parts {
+		count += len(part.Volumes)
+	}
+	return count
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func loadComposeImproveReportEntries(path string) ([]agents.ComposeImproveReportEntry, error) {
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	entriesByKey := make(map[string]agents.ComposeImproveReportEntry)
+	order := make([]string, 0)
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		var entry agents.ComposeImproveReportEntry
+		if err := json.Unmarshal([]byte(line), &entry); err != nil {
+			logger.Warn("Skipping malformed improve report line: %v", err)
+			continue
+		}
+		key := fmt.Sprintf("%d:%s", entry.Iteration, entry.VolumeID)
+		if _, seen := entriesByKey[key]; !seen {
+			order = append(order, key)
+		}
+		entriesByKey[key] = entry
+	}
+	entries := make([]agents.ComposeImproveReportEntry, 0, len(order))
+	for _, key := range order {
+		entries = append(entries, entriesByKey[key])
+	}
+	return entries, nil
+}
+
+// writeComposeImproveReport aggregates the per-volume report entries recorded
+// by the Agent SDK improvement run into a Markdown file under logs/. Pass a
+// negative remainingGateIssues when no gate result is available.
+func writeComposeImproveReport(remainingGateIssues int) error {
+	entries, err := loadComposeImproveReportEntries(filepath.Join("story", "compose", "outline_improve_report.jsonl"))
+	if err != nil {
+		return err
+	}
+	if len(entries) == 0 && remainingGateIssues < 0 {
+		return nil
+	}
+	if err := os.MkdirAll("logs", 0o755); err != nil {
+		return err
+	}
+	now := time.Now()
+	reportPath := filepath.Join("logs", fmt.Sprintf("compose_improve_report_%s.md", now.Format("20060102_150405")))
+
+	var builder strings.Builder
+	builder.WriteString("# Compose Improve 报告\n\n")
+	fmt.Fprintf(&builder, "- 生成时间: %s\n", now.Format("2006-01-02 15:04:05"))
+	fmt.Fprintf(&builder, "- 改进卷数: %d\n\n", len(entries))
+
+	for index, entry := range entries {
+		status := "已应用修复"
+		if entry.Skipped {
+			status = "跳过（预检无中高优问题）"
+		} else if !entry.Changed {
+			status = "评审通过（无有效改动）"
+		}
+		fmt.Fprintf(&builder, "## %d. %s（%s）\n\n", index+1, entry.VolumeTitle, entry.VolumeID)
+		fmt.Fprintf(&builder, "- 状态: %s\n", status)
+		if !entry.Skipped {
+			fmt.Fprintf(&builder, "- 评分: %.1f\n", entry.Score)
+			fmt.Fprintf(&builder, "- 剩余中高优问题: %d\n", entry.RemainingMediumPlus)
+		}
+		if summary := strings.TrimSpace(entry.Summary); summary != "" {
+			fmt.Fprintf(&builder, "- 摘要: %s\n", summary)
+		}
+		builder.WriteString("\n")
+	}
+	if remainingGateIssues >= 0 {
+		fmt.Fprintf(&builder, "## 门禁修复后\n\n- 剩余中高优问题: %d\n", remainingGateIssues)
+	}
+
+	if err := os.WriteFile(reportPath, []byte(builder.String()), 0o644); err != nil {
+		return err
+	}
+	logger.Info("Compose improve report written: %s", reportPath)
+	fmt.Printf("\n[report] 改进报告: %s\n", reportPath)
 	return nil
 }
 
@@ -2548,9 +2795,11 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 		repairReview := qualityGateMediumReviewResult("Post-check medium-or-higher issues for Agent SDK targeted repair.", gate)
 		repairReview = filterAgentSDKReviewForPromptBoundary(repairReview, improvedOutline, userPrompt, "post-check repair pass")
 		if len(repairReview.Suggestions) > 0 && maxIterations > 0 {
-			repairBatch := limitReviewSuggestionsForAgentSDKRepair(repairReview, 4)
+			repairBatch := limitReviewSuggestionsForAgentSDKRepair(repairReview, composeRepairBudgetFlag)
 			logger.Info("Quality/simulation gate found %d targetable medium-or-higher issue(s), running Agent SDK repair pass on %d issue(s)", len(repairReview.Suggestions), len(repairBatch.Suggestions))
-			repairOutput, repairErr := agent.RepairByReviewAgentSDK(ctx, improvedOutline, repairBatch, setup, agentApply)
+			repairOutput, repairErr := repairAgentSDKWithTransientRetry(func() (*models.Outline, error) {
+				return agent.RepairByReviewAgentSDK(ctx, improvedOutline, repairBatch, setup, agentApply)
+			})
 			if repairErr == nil {
 				improvedOutline = repairOutput
 				applyOutlineNormalization(improvedOutline, "post_agent_sdk_repair")

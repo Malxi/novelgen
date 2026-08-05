@@ -30,8 +30,23 @@ type Invocation struct {
 	OutputJSONSchema       map[string]interface{} `json:"output_json_schema,omitempty"`
 	CompactOutputSchema    bool                   `json:"compact_output_schema,omitempty"`
 	DisableSDKOutputFormat bool                   `json:"disable_sdk_output_format,omitempty"`
+	ToolEvidence           ToolEvidence           `json:"tool_evidence,omitempty"`
 	Options                Options                `json:"options,omitempty"`
 	Metadata               map[string]string      `json:"metadata,omitempty"`
+}
+
+// ToolEvidence is the in-flight evidence contract passed to the SDK runner.
+// The runner blocks the agent from stopping until the listed tool activity has
+// been observed, so required queries/checks/patches are corrected inside the
+// same agent turn instead of being rejected after the fact. Go revalidates the
+// live log after the run as the final safety net.
+type ToolEvidence struct {
+	MinQueryCalls        int      `json:"min_query_calls,omitempty"`
+	MinContextQueryCalls int      `json:"min_context_query_calls,omitempty"`
+	MinCheckCalls        int      `json:"min_check_calls,omitempty"`
+	MinPatchApplyCalls   int      `json:"min_patch_apply_calls,omitempty"`
+	RequiredToolCommands []string `json:"required_tool_commands,omitempty"`
+	RequireNoDeniedTools bool     `json:"require_no_denied_tools,omitempty"`
 }
 
 // Options contains common generation options used by process runners.
@@ -63,31 +78,34 @@ type Usage struct {
 // command counters count allowed tool calls only; denied attempts are tracked
 // separately through ToolDenied and DeniedToolCommands.
 type LiveSummary struct {
-	Events                    int      `json:"events,omitempty"`
-	Messages                  int      `json:"messages,omitempty"`
-	Model                     string   `json:"model,omitempty"`
-	FinalModel                string   `json:"final_model,omitempty"`
-	ToolCalls                 int      `json:"tool_calls,omitempty"`
-	ToolAllowed               int      `json:"tool_allowed,omitempty"`
-	ToolDenied                int      `json:"tool_denied,omitempty"`
-	AllowedToolCommands       []string `json:"allowed_tool_commands,omitempty"`
-	DeniedToolCommands        []string `json:"denied_tool_commands,omitempty"`
-	SDKSkills                 []string `json:"sdk_skills,omitempty"`
-	LoadedSDKSkills           []string `json:"loaded_sdk_skills,omitempty"`
-	MissingSDKSkills          []string `json:"missing_sdk_skills,omitempty"`
-	SDKSkillPromptChars       int      `json:"sdk_skill_prompt_chars,omitempty"`
-	QueryCalls                int      `json:"query_calls,omitempty"`
-	QueryIndexCalls           int      `json:"query_index_calls,omitempty"`
-	QueryBriefCalls           int      `json:"query_brief_calls,omitempty"`
-	QueryFullCalls            int      `json:"query_full_calls,omitempty"`
-	ContextQueryCalls         int      `json:"context_query_calls,omitempty"`
-	CheckCalls                int      `json:"check_calls,omitempty"`
-	RefreshCalls              int      `json:"refresh_calls,omitempty"`
-	PatchCalls                int      `json:"patch_calls,omitempty"`
-	PatchApplies              int      `json:"patch_applies,omitempty"`
-	ToolDurationMS            int      `json:"tool_duration_ms,omitempty"`
-	SlowestToolDurationMS     int      `json:"slowest_tool_duration_ms,omitempty"`
-	SlowestToolCommand        string   `json:"slowest_tool_command,omitempty"`
-	ApplyWithoutFollowupCheck int      `json:"apply_without_followup_check,omitempty"`
-	FinalRecords              int      `json:"final_records,omitempty"`
+	Events                     int      `json:"events,omitempty"`
+	Messages                   int      `json:"messages,omitempty"`
+	Model                      string   `json:"model,omitempty"`
+	FinalModel                 string   `json:"final_model,omitempty"`
+	ToolCalls                  int      `json:"tool_calls,omitempty"`
+	ToolAllowed                int      `json:"tool_allowed,omitempty"`
+	ToolDenied                 int      `json:"tool_denied,omitempty"`
+	AllowedToolCommands        []string `json:"allowed_tool_commands,omitempty"`
+	DeniedToolCommands         []string `json:"denied_tool_commands,omitempty"`
+	WorkflowDeniedToolCommands []string `json:"workflow_denied_tool_commands,omitempty"`
+	DenialsResolved            bool     `json:"denials_resolved,omitempty"`
+	HookErrors                 []string `json:"hook_errors,omitempty"`
+	SDKSkills                  []string `json:"sdk_skills,omitempty"`
+	LoadedSDKSkills            []string `json:"loaded_sdk_skills,omitempty"`
+	MissingSDKSkills           []string `json:"missing_sdk_skills,omitempty"`
+	SDKSkillPromptChars        int      `json:"sdk_skill_prompt_chars,omitempty"`
+	QueryCalls                 int      `json:"query_calls,omitempty"`
+	QueryIndexCalls            int      `json:"query_index_calls,omitempty"`
+	QueryBriefCalls            int      `json:"query_brief_calls,omitempty"`
+	QueryFullCalls             int      `json:"query_full_calls,omitempty"`
+	ContextQueryCalls          int      `json:"context_query_calls,omitempty"`
+	CheckCalls                 int      `json:"check_calls,omitempty"`
+	RefreshCalls               int      `json:"refresh_calls,omitempty"`
+	PatchCalls                 int      `json:"patch_calls,omitempty"`
+	PatchApplies               int      `json:"patch_applies,omitempty"`
+	ToolDurationMS             int      `json:"tool_duration_ms,omitempty"`
+	SlowestToolDurationMS      int      `json:"slowest_tool_duration_ms,omitempty"`
+	SlowestToolCommand         string   `json:"slowest_tool_command,omitempty"`
+	ApplyWithoutFollowupCheck  int      `json:"apply_without_followup_check,omitempty"`
+	FinalRecords               int      `json:"final_records,omitempty"`
 }
