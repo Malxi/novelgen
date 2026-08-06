@@ -4275,12 +4275,29 @@ func applyToolView(resp *toolResponse, view string) {
 	if view == "full" || resp.Results == nil {
 		return
 	}
+	// Explicit scene/beats field requests project from the full object: the
+	// brief/index summaries strip scenes, so trimming first would make
+	// applyToolFields return "no requested fields found". Skipping the trim
+	// keeps the payload bounded because applyToolFields projects only the
+	// requested fields.
+	if fieldsRequestScenes(resp.Query["fields"]) {
+		return
+	}
 	switch view {
 	case "index":
 		resp.Results = indexToolResults(resp.Section, resp.Results)
 	case "brief":
 		resp.Results = briefToolResults(resp.Section, resp.Results)
 	}
+}
+
+func fieldsRequestScenes(rawFields string) bool {
+	for _, field := range parseToolFields(rawFields) {
+		if field == "scenes" || strings.HasPrefix(field, "scenes.") {
+			return true
+		}
+	}
+	return false
 }
 
 func applyToolContextBudget(resp *toolResponse, view string) {

@@ -321,7 +321,7 @@ func TestBaseAgentExecutePassesPerCallAgentSDKOptions(t *testing.T) {
 			RequireNoDeniedTools: true,
 		},
 		MaxTurns:       10,
-		Timeout:        300,
+		Timeout:        900,
 	}, struct{}{}, &output)
 	if err != nil {
 		t.Fatalf("Execute() returned error: %v", err)
@@ -356,8 +356,8 @@ func TestBaseAgentExecutePassesPerCallAgentSDKOptions(t *testing.T) {
 	if runtime.invocation.Options.MaxTurns != 10 {
 		t.Fatalf("MaxTurns = %d, want 10", runtime.invocation.Options.MaxTurns)
 	}
-	if runtime.invocation.Options.Timeout != 300 {
-		t.Fatalf("Timeout = %d, want 300", runtime.invocation.Options.Timeout)
+	if runtime.invocation.Options.Timeout != 900 {
+		t.Fatalf("Timeout = %d, want 900", runtime.invocation.Options.Timeout)
 	}
 }
 

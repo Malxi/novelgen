@@ -112,7 +112,7 @@ func (a *TranslateAgent) TranslateWithAgentSDK(ctx context.Context, content, sou
 		PermissionMode: "dontAsk",
 		RequireSDK:     true,
 		MaxTurns:       4,
-		Timeout:        300,
+		Timeout:        900,
 		Command:        "translate the provided text without reading or writing files",
 	}
 	if err := a.base.Execute(ctx, params, input, &output); err != nil {

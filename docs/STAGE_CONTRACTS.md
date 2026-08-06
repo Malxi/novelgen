@@ -267,6 +267,11 @@ Outputs:
     it creates or loads the skeleton, optionally generates one global volume
     range, improves each generated volume in isolation, then merges it back
     into `outline.json`.
+  - `compose improve --agent-sdk` volume patches may update
+    `Volume.Chapters[].Scenes[].Beats` through `changed_chapters[].scenes`
+    (query with `--fields scenes`; the brief view intentionally strips scenes,
+    and Go merges patch scenes into the original chapter by scene order, so a
+    partial scenes list never truncates untouched scenes).
   - Older interrupted projects may still have
     `story/compose/outline_progress.json`; `compose gen` treats it as a legacy
     resume source and migrates it into `outline.json`.

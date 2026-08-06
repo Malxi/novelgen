@@ -69,6 +69,7 @@ func (r *ProcessRuntime) Invoke(ctx context.Context, invocation Invocation) (*Re
 	if invocation.Options.Timeout == 0 {
 		invocation.Options.Timeout = r.config.Timeout
 	}
+	invocation.Options.Timeout = agentTimeoutOverride(invocation.Options.Timeout)
 	r.applyRuntimeDefaults(&invocation)
 
 	timeout := time.Duration(invocation.Options.Timeout) * time.Second
@@ -127,6 +128,20 @@ func (r *ProcessRuntime) Invoke(ctx context.Context, invocation Invocation) (*Re
 	result.LiveLogPath = invocation.LiveLogPath
 	result.LiveSummary = summarizeLiveLog(invocation.LiveLogPath)
 	return &result, nil
+}
+
+// agentTimeoutOverride lets NOVELGEN_AGENT_TIMEOUT (seconds) override the
+// per-invocation runner timeout. Agent sessions routinely exceed the default
+// 300s on long prompts or slow models; without this knob the Go side kills the
+// runner mid-session and the orphaned CLI dies later with a confusing
+// "Error in hook callback" message.
+func agentTimeoutOverride(defaultSeconds int) int {
+	if raw := os.Getenv("NOVELGEN_AGENT_TIMEOUT"); raw != "" {
+		if seconds, err := strconv.Atoi(raw); err == nil && seconds > 0 {
+			return seconds
+		}
+	}
+	return defaultSeconds
 }
 
 func trimRunnerDetail(value string) string {

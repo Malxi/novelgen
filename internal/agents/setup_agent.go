@@ -235,7 +235,7 @@ func setupAgentSDKParams(applyPatches bool) InvokeParams {
 		ToolAllowlist:  toolAllowlist,
 		ToolEvidence:   evidence,
 		MaxTurns:       22,
-		Timeout:        300,
+		Timeout:        900,
 		Command:        "review and improve story setup using project query/check/patch tools",
 	}
 }

@@ -110,8 +110,8 @@ func TestRecapAgentExtractWithAgentSDKUsesWorkflowSkill(t *testing.T) {
 		t.Fatalf("recap workflow should not grant tools: tools=%#v allowed=%#v allowlist=%#v",
 			runtime.invocation.Tools, runtime.invocation.AllowedTools, runtime.invocation.ToolAllowlist)
 	}
-	if runtime.invocation.Options.MaxTurns != 3 || runtime.invocation.Options.Timeout != 300 {
-		t.Fatalf("MaxTurns/Timeout = %d/%d, want 3/300", runtime.invocation.Options.MaxTurns, runtime.invocation.Options.Timeout)
+	if runtime.invocation.Options.MaxTurns != 3 || runtime.invocation.Options.Timeout != 900 {
+		t.Fatalf("MaxTurns/Timeout = %d/%d, want 3/900", runtime.invocation.Options.MaxTurns, runtime.invocation.Options.Timeout)
 	}
 	if !strings.Contains(runtime.invocation.UserPrompt, "蓝色火光") {
 		t.Fatalf("UserPrompt did not include chapter text")

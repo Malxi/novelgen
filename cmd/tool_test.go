@@ -52,6 +52,67 @@ func TestToolQueryOutlineRefsFindsCharacterItemAndLocation(t *testing.T) {
 	}
 }
 
+func TestFieldsRequestScenes(t *testing.T) {
+	cases := map[string]bool{
+		"":                     false,
+		"summary":              false,
+		"summary,opening_beat": false,
+		"scenes":               true,
+		"scenes.beats":         true,
+		"scenes,summary":       true,
+	}
+	for fields, want := range cases {
+		if got := fieldsRequestScenes(fields); got != want {
+			t.Fatalf("fieldsRequestScenes(%q) = %v, want %v", fields, got, want)
+		}
+	}
+}
+
+func TestToolQueryChapterFieldsScenesBypassesBriefTrim(t *testing.T) {
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1",
+		Volumes: []models.Volume{{
+			ID: "P1-V1",
+			Chapters: []models.Chapter{{
+				ID:      "P1-V1-C1",
+				Summary: "chapter summary",
+				Scenes: []models.OutlineScene{{
+					Order: 1,
+					POV:   "Lin",
+					Goal:  "scene goal",
+					Beats: []string{"scene beat one"},
+				}},
+			}},
+		}},
+	}}}
+
+	// Plain brief view must strip scenes so ordinary queries stay compact.
+	brief := queryOutlineNode(outline, "chapter", "P1-V1-C1")
+	brief.Section = "outline"
+	applyToolView(&brief, "brief")
+	briefData, err := json.Marshal(brief.Results)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(briefData), "scene beat one") {
+		t.Fatalf("brief chapter query leaked scenes: %s", briefData)
+	}
+
+	// --fields scenes --view brief must return the beats from the full object.
+	withFields := queryOutlineNode(outline, "chapter", "P1-V1-C1")
+	withFields.Section = "outline"
+	withFields.Query = map[string]string{"fields": "scenes"}
+	applyToolView(&withFields, "brief")
+	applyToolFields(&withFields, "scenes")
+	fieldData, err := json.Marshal(withFields.Results)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(fieldData), "scene beat one") {
+		t.Fatalf("--fields scenes --view brief did not return beats: %s", fieldData)
+	}
+}
+
 func TestWriteToolJSONUsesCommandOutput(t *testing.T) {
 	var out bytes.Buffer
 	cmd := &cobra.Command{}

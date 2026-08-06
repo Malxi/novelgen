@@ -132,7 +132,13 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
     if tool_allowlist and "can_use_tool" in accepted:
         options_kwargs["can_use_tool"] = build_tool_permission_callback(tool_allowlist, live_log, cwd)
     if tool_allowlist and "hooks" in accepted:
-        options_kwargs["hooks"] = build_tool_hooks(tool_allowlist, live_log, cwd, invocation.get("tool_evidence"))
+        options_kwargs["hooks"] = build_tool_hooks(
+            tool_allowlist,
+            live_log,
+            cwd,
+            invocation.get("tool_evidence"),
+            user_prompt_driven=bool((invocation.get("user_prompt") or "").strip()),
+        )
 
     schema = invocation.get("output_json_schema")
     output_schema_chars = schema_json_length(schema)
@@ -185,7 +191,10 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
         "hooks": list((options_kwargs.get("hooks") or {}).keys()),
     })
 
-    try:
+    runner_deadline = agent_runner_deadline(invocation)
+
+    async def consume() -> Dict[str, Any]:
+        nonlocal assistant_text, final_result, final_structured, usage
         async for message in query(prompt=sdk_prompt, options=options):
             structured = extract_message_value(message, "structured_output")
             if structured is not None:
@@ -218,8 +227,16 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
             "model": model or "",
             "usage": usage,
         }
+
+    try:
+        if runner_deadline is None:
+            return await consume()
+        async with asyncio.timeout(runner_deadline):
+            return await consume()
     except Exception as exc:  # noqa: BLE001 - preserve SDK exception across process boundary.
         detail = sdk_exception_detail(exc, assistant_text, final_result)
+        if isinstance(exc, TimeoutError) and not detail:
+            detail = f"agent session timed out after {runner_deadline}s"
         live_log.write("error", {
             "type": type(exc).__name__,
             "message": detail,
@@ -248,6 +265,34 @@ def first_streamed_api_error(*values: Any) -> str:
             line = text[marker:].splitlines()[0].strip()
             return line
     return ""
+
+
+def agent_runner_deadline(invocation: Dict[str, Any]) -> Optional[float]:
+    """Return the runner-side session deadline in seconds, or None when unset.
+
+    The Go side hard-kills the runner after ``options.timeout`` seconds. The
+    runner enforces its own deadline slightly earlier (60s grace, minimum 60s)
+    so it can close the SDK transport and terminate the CLI child cleanly
+    instead of being hard-killed and orphaning the CLI, which later dies with
+    a confusing "Error in hook callback" message.
+    """
+    timeout = 0
+    raw = invocation.get("options", {}).get("timeout")
+    if raw:
+        try:
+            timeout = int(raw)
+        except (TypeError, ValueError):
+            timeout = 0
+    if timeout <= 0:
+        raw = os.getenv("NOVELGEN_AGENT_TIMEOUT", "")
+        if raw:
+            try:
+                timeout = int(raw)
+            except ValueError:
+                timeout = 0
+    if timeout <= 0:
+        return None
+    return float(min(timeout, max(timeout - 60, 60)))
 
 
 def run_with_anthropic_http(invocation: Dict[str, Any]) -> Dict[str, Any]:
@@ -554,6 +599,7 @@ def build_tool_hooks(
     live_log: Optional["LiveLogger"] = None,
     workspace_root: str = "",
     tool_evidence: Optional[Dict[str, Any]] = None,
+    user_prompt_driven: bool = False,
 ) -> Dict[str, Any]:
     from claude_agent_sdk.types import HookMatcher  # type: ignore
 
@@ -803,11 +849,12 @@ def build_tool_hooks(
             completed_check_targets.add(check_key)
             pending_post_apply_checks.discard(check_key)
         if check_key and check_output_is_clean(input_data):
-            clean_check_targets.add(check_key)
+            if not user_prompt_driven:
+                clean_check_targets.add(check_key)
+                if check_key.startswith("chapter:"):
+                    clean_check_targets.add("craft-context")
             if patch_applies.get(check_key, 0) > 0:
                 post_apply_clean_targets.add(check_key)
-            if check_key.startswith("chapter:"):
-                clean_check_targets.add("craft-context")
         final_json_target_keys = context_final_json_target_keys(command, input_data)
         if final_json_target_keys:
             clean_check_targets.update(final_json_target_keys)

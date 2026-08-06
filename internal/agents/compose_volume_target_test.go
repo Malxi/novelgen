@@ -278,6 +278,48 @@ func TestApplyAgentSDKVolumePatchMergesPayoffContractFields(t *testing.T) {
 	}
 }
 
+func TestApplyAgentSDKVolumePatchMergesScenes(t *testing.T) {
+	original := models.Volume{
+		ID: "P1-V2",
+		Chapters: []models.Chapter{{
+			ID: "P1-V2-C1",
+			Scenes: []models.OutlineScene{
+				{Order: 1, POV: "Lin", Goal: "old goal 1", Beats: []string{"old beat 1"}},
+				{Order: 2, POV: "Lin", Goal: "old goal 2", Beats: []string{"old beat 2"}},
+				{Order: 3, POV: "Lin", Goal: "old goal 3", Beats: []string{"old beat 3"}},
+			},
+		}},
+	}
+	got, err := applyAgentSDKVolumePatch(original, composeVolumePatch{
+		ID: "P1-V2",
+		Chapters: []composeChapterPatch{{
+			ID: "P1-V2-C1",
+			Scenes: []models.OutlineScene{{
+				Order: 2,
+				POV:   "Lin",
+				Goal:  "new goal 2",
+				Beats: []string{"new beat 2"},
+			}},
+		}},
+	}, 1)
+	if err != nil {
+		t.Fatalf("apply Agent SDK patch: %v", err)
+	}
+	scenes := got.Chapters[0].Scenes
+	if len(scenes) != 3 {
+		t.Fatalf("partial scene patch truncated the scene list: %#v", scenes)
+	}
+	if scenes[0].Goal != "old goal 1" || scenes[0].Beats[0] != "old beat 1" {
+		t.Fatalf("untouched scene 1 should be preserved: %#v", scenes[0])
+	}
+	if scenes[1].Goal != "new goal 2" || scenes[1].Beats[0] != "new beat 2" {
+		t.Fatalf("scene 2 should be replaced by order: %#v", scenes[1])
+	}
+	if scenes[2].Goal != "old goal 3" || scenes[2].Beats[0] != "old beat 3" {
+		t.Fatalf("untouched scene 3 should be preserved: %#v", scenes[2])
+	}
+}
+
 func TestApplyAgentSDKVolumePatchChangedEvents(t *testing.T) {
 	original := models.Volume{
 		ID: "P1-V2",
@@ -370,8 +412,8 @@ func TestValidateAgentSDKImprovePatchOutputAllowsZeroScoreWithSummary(t *testing
 
 func TestComposeVolumePatchSchemaUsesCompactChapterPatch(t *testing.T) {
 	schema := utils.StructToJSONSchema(composeAgentSDKImprovePatchOutput{}, "")
-	if strings.Contains(schema, "scenes") {
-		t.Fatalf("compact Agent SDK patch schema should not expose full chapter fields:\n%s", schema)
+	if !strings.Contains(schema, "scenes") {
+		t.Fatalf("compact Agent SDK patch schema should expose scene/beat patches (changed_chapters[].scenes):\n%s", schema)
 	}
 	if strings.Contains(schema, "strengths") || strings.Contains(schema, "weaknesses") || strings.Contains(schema, "continuity_issues") || strings.Contains(schema, "dimensions") {
 		t.Fatalf("compact Agent SDK review schema should not expose full review fields:\n%s", schema)
@@ -801,8 +843,8 @@ func TestComposeAgentSDKParamsUseClaudeToolsAndGenerousTurns(t *testing.T) {
 	if params.MaxTurns != 28 {
 		t.Fatalf("MaxTurns = %d, want 28", params.MaxTurns)
 	}
-	if params.Timeout != 300 {
-		t.Fatalf("Timeout = %d, want 300", params.Timeout)
+	if params.Timeout != 900 {
+		t.Fatalf("Timeout = %d, want 900", params.Timeout)
 	}
 	if len(params.SDKSkills) != 2 || params.SDKSkills[0] != "novel-tools-core" || params.SDKSkills[1] != "outline-improve-volume-workflow" {
 		t.Fatalf("SDKSkills = %#v", params.SDKSkills)
@@ -1189,6 +1231,21 @@ func TestComposeImproveBoundaryChapterIDsFindsExplicitAndOrdinalTargets(t *testi
 	byChineseOrdinal := composeImproveBoundaryChapterIDs(volume, "只修复第二章的开场过渡")
 	if len(byChineseOrdinal) != 1 || byChineseOrdinal[0] != "P1-V1-C2" {
 		t.Fatalf("chinese ordinal boundary = %#v", byChineseOrdinal)
+	}
+}
+
+func TestComposeImproveBoundaryChapterIDsWholeVolumeEnumerationHasNoBoundary(t *testing.T) {
+	volume := models.Volume{ID: "P1-V1", Chapters: []models.Chapter{
+		{ID: "P1-V1-C1"},
+		{ID: "P1-V1-C2"},
+		{ID: "P1-V1-C3"},
+	}}
+	prompt := "第1章无改动；第2章修复过渡；第3章修逻辑；第4章检查节奏；覆盖第1到第3章"
+	if ids := composeImproveBoundaryChapterIDs(volume, prompt); ids != nil {
+		t.Fatalf("whole-volume enumeration should have no boundary restriction: %#v", ids)
+	}
+	if checks := composeImproveRequiredFocusedChecks(volume, prompt); len(checks) != 0 {
+		t.Fatalf("whole-volume enumeration should not force per-chapter checks: %#v", checks)
 	}
 }
 

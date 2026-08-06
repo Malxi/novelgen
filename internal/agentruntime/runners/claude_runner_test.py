@@ -3822,5 +3822,34 @@ class LiveLoggerTests(unittest.TestCase):
             self.assertEqual(records[1]["n"], 2)
 
 
+class AgentDeadlineTests(unittest.TestCase):
+    def setUp(self):
+        self.runner = load_runner()
+        self._old_env = os.environ.get("NOVELGEN_AGENT_TIMEOUT")
+        os.environ.pop("NOVELGEN_AGENT_TIMEOUT", None)
+
+    def tearDown(self):
+        if self._old_env is None:
+            os.environ.pop("NOVELGEN_AGENT_TIMEOUT", None)
+        else:
+            os.environ["NOVELGEN_AGENT_TIMEOUT"] = self._old_env
+
+    def test_deadline_from_options_with_grace(self):
+        deadline = self.runner.agent_runner_deadline({"options": {"timeout": 300}})
+        self.assertEqual(deadline, 240.0)
+
+    def test_deadline_minimum_grace(self):
+        deadline = self.runner.agent_runner_deadline({"options": {"timeout": 30}})
+        self.assertEqual(deadline, 30.0)
+
+    def test_deadline_falls_back_to_env(self):
+        os.environ["NOVELGEN_AGENT_TIMEOUT"] = "1500"
+        deadline = self.runner.agent_runner_deadline({"options": {}})
+        self.assertEqual(deadline, 1440.0)
+
+    def test_deadline_none_when_unset(self):
+        self.assertIsNone(self.runner.agent_runner_deadline({"options": {}}))
+
+
 if __name__ == "__main__":
     unittest.main()

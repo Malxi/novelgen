@@ -75,8 +75,8 @@ func TestSetupAgentSDKParamsAllowApplyOnlyWhenRequested(t *testing.T) {
 		hasExactString(got, "novelgen tool patch setup") {
 		t.Fatalf("apply allowlist = %#v", got)
 	}
-	if apply.MaxTurns != 22 || apply.Timeout != 300 {
-		t.Fatalf("MaxTurns/Timeout = %d/%d, want 22/300", apply.MaxTurns, apply.Timeout)
+	if apply.MaxTurns != 22 || apply.Timeout != 900 {
+		t.Fatalf("MaxTurns/Timeout = %d/%d, want 22/900", apply.MaxTurns, apply.Timeout)
 	}
 	if apply.ToolEvidence.MinQueryCalls != 1 || apply.ToolEvidence.MinCheckCalls != 1 ||
 		apply.ToolEvidence.MinPatchApplyCalls != 1 || !apply.ToolEvidence.RequirePatchApplyFollowupCheck {

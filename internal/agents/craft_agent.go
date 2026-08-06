@@ -426,7 +426,7 @@ func craftAgentSDKParams(command, workflowSkill, target string, maxTurns int, ap
 		ToolAllowlist:  allowlist,
 		ToolEvidence:   evidence,
 		MaxTurns:       maxTurns,
-		Timeout:        300,
+		Timeout:        900,
 		Command:        command,
 	}
 }

@@ -361,6 +361,7 @@ type composeChapterPatch struct {
 	Characters        []string                     `json:"characters,omitempty" md:"characters" desc:"Replacement character list only if it changes"`
 	Location          string                       `json:"location,omitempty" md:"location" desc:"New chapter location only if it changes"`
 	Events            []composeEventPatch          `json:"events,omitempty" md:"events" desc:"Replacement event list only if events change"`
+	Scenes            []models.OutlineScene        `json:"scenes,omitempty" md:"scenes" desc:"Scenes you change, matched to the original chapter by scene order. Scenes not included in this list are preserved; keep existing scene orders and indexes, and query scenes via tool query outline --type chapter --fields scenes."`
 	OpeningBeat       string                       `json:"opening_beat,omitempty" md:"opening_beat" desc:"New chapter opening beat only if it changes; transition checks read this through normalized beats"`
 	ClosingBeat       string                       `json:"closing_beat,omitempty" md:"closing_beat" desc:"New chapter closing beat only if it changes"`
 	StateChange       string                       `json:"state_change,omitempty" md:"state_change" desc:"Primary state change only if it changes"`
@@ -438,7 +439,7 @@ func composeAgentSDKParams(command, workflowSkill string, maxTurns int, toolAllo
 		RequireSDK:     true,
 		ToolAllowlist:  dedupeComposeToolAllowlist(toolAllowlist),
 		MaxTurns:       maxTurns,
-		Timeout:        300,
+		Timeout:        900,
 		Command:        command,
 	}
 }
@@ -488,6 +489,7 @@ func composeImproveToolAllowlist(volume models.Volume, promptInput composeAgentS
 		if allowExploratoryDetail && (!restrictDetailChapters || detailChapterIDs[chapterID]) {
 			allowlist = append(allowlist,
 				fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", chapterID),
+				fmt.Sprintf("novelgen tool query outline --type chapter --id %q --fields scenes --view brief", chapterID),
 				fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q --view brief", chapterID),
 				fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q --fields result,details,target,target_type,actor,action --view brief", chapterID),
 			)
@@ -645,6 +647,16 @@ func composeImproveBoundaryChapterIDs(volume models.Volume, prompt string) []str
 		if id := strings.TrimSpace(volume.Chapters[len(volume.Chapters)-1].ID); id != "" && !composeStringSliceContains(ids, id) {
 			ids = append(ids, id)
 		}
+	}
+	// A prompt that enumerates every chapter in a multi-chapter volume is a
+	// whole-volume revision, not a boundary-scoped request: there is no
+	// narrower subset to restrict queries to, and demanding a focused check
+	// per chapter would be redundant with the count-based evidence minimums
+	// (and would fail runs where the agent reasonably skips checks for
+	// unchanged chapters). Single-chapter volumes keep the boundary so a
+	// specific chapter target still filters global suggestions.
+	if len(volume.Chapters) > 1 && len(ids) == len(volume.Chapters) {
+		return nil
 	}
 	return ids
 }
@@ -1380,6 +1392,9 @@ func mergeAgentSDKChapterPatch(original models.Chapter, patch composeChapterPatc
 	if len(patch.Events) > 0 {
 		merged.Events = composeEventPatchesToModelEvents(patch.Events)
 	}
+	if len(patch.Scenes) > 0 {
+		merged.Scenes = mergeOutlineScenesByOrder(merged.Scenes, patch.Scenes)
+	}
 	if strings.TrimSpace(patch.OpeningBeat) != "" {
 		merged.OpeningBeat = patch.OpeningBeat
 	}
@@ -1417,6 +1432,33 @@ func mergeAgentSDKChapterPatch(original models.Chapter, patch composeChapterPatc
 		merged.ChapterPayoff = patch.ChapterPayoff
 	}
 	return merged
+}
+
+// mergeOutlineScenesByOrder overlays patch scenes onto the original list by
+// scene order: an existing scene with the same order is replaced, and new
+// orders are appended. Partial scene lists therefore never truncate chapters
+// whose other scenes the agent did not touch.
+func mergeOutlineScenesByOrder(original, patch []models.OutlineScene) []models.OutlineScene {
+	if len(patch) == 0 {
+		return original
+	}
+	out := append([]models.OutlineScene(nil), original...)
+	indexByOrder := map[int]int{}
+	for i, scene := range out {
+		indexByOrder[scene.Order] = i
+	}
+	for _, scene := range patch {
+		if scene.Order <= 0 {
+			continue
+		}
+		if idx, ok := indexByOrder[scene.Order]; ok {
+			out[idx] = scene
+			continue
+		}
+		indexByOrder[scene.Order] = len(out)
+		out = append(out, scene)
+	}
+	return out
 }
 
 func composeEventPatchesToModelEvents(events []composeEventPatch) []models.Event {
@@ -1522,6 +1564,7 @@ func buildAgentSDKImproveVolumePromptInput(input ComposeImproveVolumeInput, appl
 	if strings.TrimSpace(input.UserPrompt) != "" {
 		instructions = append(instructions,
 			"Treat user_prompt as already scoped to target_volume_id. If it refers to a multi-volume user request, this invocation must execute only the target_volume_id portion. Do not query, check, or patch any other volume.",
+			"user_prompt requests are explicit tasks. If they describe concrete narrative changes (character motivation, scene beats, foreshadowing, wording, mystery clues), implement them in volume_patch fields (summary/opening_beat/scenes/events/mysteries) even when scoped checks are clean. Do not decline creative changes as 'not check-verifiable'; the user request is the task list.",
 		)
 		if composePromptRequestsCheckFirstNoop(input.UserPrompt) {
 			instructions = append(instructions,

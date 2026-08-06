@@ -7,6 +7,25 @@ import (
 	"testing"
 )
 
+func TestAgentTimeoutOverride(t *testing.T) {
+	t.Setenv("NOVELGEN_AGENT_TIMEOUT", "")
+	if got := agentTimeoutOverride(300); got != 300 {
+		t.Fatalf("agentTimeoutOverride(300) without env = %d, want 300", got)
+	}
+	t.Setenv("NOVELGEN_AGENT_TIMEOUT", "1500")
+	if got := agentTimeoutOverride(300); got != 1500 {
+		t.Fatalf("agentTimeoutOverride(300) with env 1500 = %d, want 1500", got)
+	}
+	t.Setenv("NOVELGEN_AGENT_TIMEOUT", "bogus")
+	if got := agentTimeoutOverride(900); got != 900 {
+		t.Fatalf("agentTimeoutOverride(900) with bogus env = %d, want 900", got)
+	}
+	t.Setenv("NOVELGEN_AGENT_TIMEOUT", "-5")
+	if got := agentTimeoutOverride(900); got != 900 {
+		t.Fatalf("agentTimeoutOverride(900) with negative env = %d, want 900", got)
+	}
+}
+
 func TestConfigNormalizeAddsDefaultClaudeRuntime(t *testing.T) {
 	cfg := &Config{}
 	cfg.normalize()
