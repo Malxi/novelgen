@@ -24,13 +24,14 @@ import (
 // BaseAgent is the base struct for all agents.
 // It loads prompts from skill files and provides common LLM interaction logic.
 type BaseAgent struct {
-	name        string
-	client      llm.Client
-	runtime     agentruntime.Runtime
-	config      *llm.Config
-	projectLLM  *models.ProjectLLM
-	skillLoader *SkillLoader
-	language    string
+	name          string
+	client        llm.Client
+	runtime       agentruntime.Runtime
+	config        *llm.Config
+	projectLLM    *models.ProjectLLM
+	skillLoader   *SkillLoader
+	language      string
+	modelOverride string
 }
 
 // BaseAgentConfig holds configuration for creating a BaseAgent
@@ -63,6 +64,13 @@ func NewBaseAgent(cfg BaseAgentConfig) *BaseAgent {
 // SetLanguage sets the output language
 func (a *BaseAgent) SetLanguage(language string) {
 	a.language = language
+}
+
+// SetModelOverride overrides the project model for this agent's chat options.
+// When the model exists in the active provider's llm_config, its max_tokens
+// and temperature are applied as well; otherwise only the model name changes.
+func (a *BaseAgent) SetModelOverride(model string) {
+	a.modelOverride = strings.TrimSpace(model)
 }
 
 // InvokeParams holds the parameters for invoking an agent
@@ -605,6 +613,15 @@ func (a *BaseAgent) chatOptions() *llm.ChatOptions {
 	options := a.config.GetChatOptions(a.projectLLM)
 	if options == nil {
 		return &llm.ChatOptions{}
+	}
+	if strings.TrimSpace(a.modelOverride) != "" {
+		options.Model = strings.TrimSpace(a.modelOverride)
+		if provider := a.config.GetActiveProvider(a.projectLLM); provider != nil {
+			if model, ok := provider.Models[options.Model]; ok && model != nil {
+				options.MaxTokens = model.MaxTokens
+				options.Temperature = float64(model.Temp)
+			}
+		}
 	}
 	return options
 }

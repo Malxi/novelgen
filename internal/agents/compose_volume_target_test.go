@@ -894,6 +894,93 @@ func TestComposeAgentSDKParamsAllowApplyOnlyWhenRequested(t *testing.T) {
 	}
 }
 
+func TestComposeOutlineReviewAgentSDKUsesReadOnlyWorkflow(t *testing.T) {
+	outline := models.Outline{Parts: []models.Part{{
+		ID: "P1",
+		Volumes: []models.Volume{{
+			ID:       "P1-V1",
+			Title:    "第一卷",
+			Chapters: []models.Chapter{{ID: "P1-V1-C1"}, {ID: "P1-V1-C2"}},
+		}},
+	}}}
+	runtime := &fakeComposeImproveRuntime{result: &agentruntime.Result{Content: `{
+		"overall_score": 85,
+		"summary": "整体不错",
+		"strengths": ["结构清晰"],
+		"suggestions": [
+			{"category": "character", "target_id": "P1-V1-C2", "target_name": "第二章", "issue": "动机不足", "suggestion": "补充铺垫", "priority": "high"}
+		]
+	}`, LiveSummary: &agentruntime.LiveSummary{
+		QueryCalls:          1,
+		AllowedToolCommands: []string{"novelgen tool query outline --type all --view index"},
+	}}}
+	agent := &ComposeAgent{base: &BaseAgent{name: "ComposeAgent", runtime: runtime, config: &llm.Config{}, language: "zh"}}
+	review, err := agent.ReviewOutlineWithAgentSDK(context.Background(), ComposeOutlineReviewInput{Outline: outline, UserPrompt: "检查角色动机"})
+	if err != nil {
+		t.Fatalf("ReviewOutlineWithAgentSDK() error = %v", err)
+	}
+	if review.OverallScore != 85 || len(review.Suggestions) != 1 || review.Suggestions[0].TargetID != "P1-V1-C2" {
+		t.Fatalf("review = %#v", review)
+	}
+
+	invocation := runtime.invocation
+	if len(invocation.SDKSkills) != 2 || invocation.SDKSkills[0] != "novel-tools-core" || invocation.SDKSkills[1] != "outline-review-workflow" {
+		t.Fatalf("SDKSkills = %#v", invocation.SDKSkills)
+	}
+	if !invocation.RequireSDK {
+		t.Fatalf("RequireSDK = false")
+	}
+	joined := strings.Join(invocation.ToolAllowlist, "\n")
+	if strings.Contains(joined, " tool patch ") || strings.Contains(joined, " tool check ") || strings.Contains(joined, " tool patch-buffer ") {
+		t.Fatalf("review allowlist must be read-only: %#v", invocation.ToolAllowlist)
+	}
+	if !containsExactString(invocation.ToolAllowlist, "novelgen tool query outline --type all --view index") {
+		t.Fatalf("whole-outline review allowlist missing index query: %#v", invocation.ToolAllowlist)
+	}
+	if !containsExactString(invocation.ToolAllowlist, `novelgen tool query outline --type volume --id "P1-V1" --view brief`) {
+		t.Fatalf("review allowlist missing volume brief: %#v", invocation.ToolAllowlist)
+	}
+	if !containsExactString(invocation.ToolAllowlist, `novelgen tool query outline --type chapter --id "P1-V1-C2" --view brief`) ||
+		!containsExactString(invocation.ToolAllowlist, `novelgen tool query outline --type events --chapter-id "P1-V1-C1" --view brief`) {
+		t.Fatalf("review allowlist missing chapter-level reads: %#v", invocation.ToolAllowlist)
+	}
+	if invocation.ToolEvidence.MinQueryCalls != 1 || !invocation.ToolEvidence.RequireNoDeniedTools {
+		t.Fatalf("tool evidence = %#v", invocation.ToolEvidence)
+	}
+	if len(invocation.ToolEvidence.RequiredToolCommands) != 1 || invocation.ToolEvidence.RequiredToolCommands[0] != "novelgen tool query outline --type all --view index" {
+		t.Fatalf("required tool commands = %#v", invocation.ToolEvidence.RequiredToolCommands)
+	}
+	if invocation.Options.MaxTurns != 20 || invocation.Options.Timeout != 600 {
+		t.Fatalf("options = %#v", invocation.Options)
+	}
+}
+
+func TestComposeOutlineReviewAgentSDKScopedVolume(t *testing.T) {
+	runtime := &fakeComposeImproveRuntime{result: &agentruntime.Result{
+		Content: `{"overall_score": 90, "summary": "ok"}`,
+		LiveSummary: &agentruntime.LiveSummary{
+			QueryCalls:          1,
+			AllowedToolCommands: []string{"novelgen tool query context --type outline-volume --id P1-V2 --view index"},
+		},
+	}}
+	agent := &ComposeAgent{base: &BaseAgent{name: "ComposeAgent", runtime: runtime, config: &llm.Config{}, language: "zh"}}
+	outline := models.Outline{Parts: []models.Part{{ID: "P1", Volumes: []models.Volume{{ID: "P1-V1"}, {ID: "P1-V2"}}}}}
+	if _, err := agent.ReviewOutlineWithAgentSDK(context.Background(), ComposeOutlineReviewInput{Outline: outline, VolumeID: "P1-V2"}); err != nil {
+		t.Fatalf("ReviewOutlineWithAgentSDK() error = %v", err)
+	}
+	joined := strings.Join(runtime.invocation.ToolAllowlist, "\n")
+	if strings.Contains(joined, "P1-V1") {
+		t.Fatalf("scoped review allowlist must not include other volumes: %#v", runtime.invocation.ToolAllowlist)
+	}
+	if !containsExactString(runtime.invocation.ToolAllowlist, `novelgen tool query outline --type volume --id "P1-V2" --view brief`) {
+		t.Fatalf("scoped review allowlist missing target volume: %#v", runtime.invocation.ToolAllowlist)
+	}
+	if len(runtime.invocation.ToolEvidence.RequiredToolCommands) != 1 ||
+		runtime.invocation.ToolEvidence.RequiredToolCommands[0] != "novelgen tool query context --type outline-volume --id P1-V2 --view index" {
+		t.Fatalf("scoped required tool commands = %#v", runtime.invocation.ToolEvidence.RequiredToolCommands)
+	}
+}
+
 func TestComposeImproveAgentSDKRequiresContextAndCheckEvidence(t *testing.T) {
 	input := ComposeImproveVolumeInput{
 		Part:   models.Part{ID: "P1"},

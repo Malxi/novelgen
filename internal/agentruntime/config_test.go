@@ -107,7 +107,7 @@ func TestNewProcessRuntimeMaterializesEmbeddedClaudeRunner(t *testing.T) {
 	for _, skill := range []string{
 		"novel-tools", "novel-tools-core", "protagonist-craft-workflow",
 		"outline-compose-skeleton-workflow", "outline-compose-volume-workflow",
-		"outline-global-repair-workflow", "outline-improve-volume-workflow",
+		"outline-global-repair-workflow", "outline-improve-volume-workflow", "outline-review-workflow",
 		"craft-character-workflow", "craft-element-workflow", "recap-extract-workflow",
 		"setup-improve-workflow", "write-chapter-workflow", "write-review-workflow",
 		"write-improve-workflow", "translate-workflow",
@@ -126,6 +126,7 @@ func TestNewProcessRuntimeMaterializesEmbeddedClaudeRunner(t *testing.T) {
 		"2>&1",
 	)
 	assertSkillContains(t, skillsDir, "outline-improve-volume-workflow", "单卷大纲改进 Workflow", "不要使用 `tool patch outline --target chapter`", "最终 JSON 不要返回完整 `volume_patch`")
+	assertSkillContains(t, skillsDir, "outline-review-workflow", "大纲审查 Workflow", "只读 review", "不要凭空断言", "不要运行 `tool check`、`tool patch`")
 	assertSkillContains(t, skillsDir, "recap-extract-workflow", "Recap 抽取 Workflow", "apply_patches=false", "novelgen tool patch recap")
 	assertSkillContains(t, skillsDir, "write-review-workflow", "summary.total=0", "不要再查询 outline/events/craft", "不要运行 `echo`", "tool check all --target chapter --scope chapter")
 	assertSkillContains(t, skillsDir, "write-improve-workflow", "chapter-repair", "tool check all --target chapter", "chapter-write", "tool patch chapter")
@@ -184,7 +185,7 @@ func TestMaterializedWorkflowSkillsAreNotMojibake(t *testing.T) {
 	for _, skill := range []string{
 		"novel-tools-core", "protagonist-craft-workflow",
 		"outline-compose-skeleton-workflow", "outline-compose-volume-workflow",
-		"outline-global-repair-workflow", "outline-improve-volume-workflow",
+		"outline-global-repair-workflow", "outline-improve-volume-workflow", "outline-review-workflow",
 		"craft-character-workflow", "craft-element-workflow", "recap-extract-workflow",
 		"setup-improve-workflow", "write-chapter-workflow", "write-review-workflow",
 		"write-improve-workflow", "translate-workflow",

@@ -295,6 +295,25 @@ type ComposeAgentSDKImproveVolumeOutput struct {
 	Volume       models.Volume       `json:"volume" md:"volume" desc:"Improved target volume with chapters"`
 }
 
+// ComposeOutlineReviewInput is the input for an Agent SDK outline review.
+// VolumeID is optional; empty means the whole outline.
+type ComposeOutlineReviewInput struct {
+	Outline    models.Outline
+	Setup      models.StorySetup
+	UserPrompt string
+	VolumeID   string
+}
+
+type composeAgentSDKOutlineReviewPromptInput struct {
+	TargetVolumeID  string   `json:"target_volume_id,omitempty" md:"target_volume_id" desc:"Optional volume scope to review; empty means the whole outline"`
+	VolumeCount     int      `json:"volume_count,omitempty" md:"volume_count" desc:"Total number of volumes in scope"`
+	ChapterCount    int      `json:"chapter_count,omitempty" md:"chapter_count" desc:"Total number of chapters in scope"`
+	UserPrompt      string   `json:"user_prompt,omitempty" md:"user_prompt" desc:"Optional user review focus; the highest-priority review task when present"`
+	ReviewFocus     string   `json:"review_focus,omitempty" md:"review_focus" desc:"Review dimensions to cover when no user prompt is given"`
+	RequiredQueries []string `json:"required_queries" md:"required_queries" desc:"Exact tool commands to run first, in order"`
+	Instructions    []string `json:"instructions,omitempty" md:"instructions" desc:"Workflow rules for this review run"`
+}
+
 type composeAgentSDKImprovePatchOutput struct {
 	ReviewResult composeAgentSDKReviewResult `json:"review_result" md:"review_result" desc:"Compact review result for the target volume. Keep it short and focused on applied or remaining issues."`
 	VolumePatch  composeVolumePatch          `json:"volume_patch" md:"volume_patch" desc:"Patch for the target volume. Return only changed volume fields and complete changed chapters; Go will merge it into the original volume."`
@@ -424,6 +443,13 @@ func NewComposeAgent(client llm.Client, config *llm.Config, projectLLM *models.P
 // SetLanguage sets the output language
 func (a *ComposeAgent) SetLanguage(language string) {
 	a.base.SetLanguage(language)
+}
+
+// SetModelOverride overrides the project model for this agent's chat options.
+func (a *ComposeAgent) SetModelOverride(model string) {
+	if a != nil && a.base != nil {
+		a.base.SetModelOverride(model)
+	}
 }
 
 func composeAgentSDKParams(command, workflowSkill string, maxTurns int, toolAllowlist []string) InvokeParams {
@@ -990,6 +1016,193 @@ func (a *ComposeAgent) ImproveVolumeWithAgentSDK(ctx context.Context, input Comp
 		ReviewResult: reviewResult,
 		Volume:       volume,
 	}, nil
+}
+
+// ReviewOutlineWithAgentSDK reviews the outline (whole book or one volume)
+// through the read-only Agent SDK workflow and returns a ReviewResult. The
+// review is deliberately orthogonal to deterministic checks: it reports
+// open-ended issues (pacing, motivation, theme, information warfare) that
+// rule-based checks cannot judge, and never patches project state.
+func (a *ComposeAgent) ReviewOutlineWithAgentSDK(ctx context.Context, input ComposeOutlineReviewInput) (models.ReviewResult, error) {
+	logger.Section("COMPOSE AGENT SDK - Outline Review")
+	scope := "whole outline"
+	if strings.TrimSpace(input.VolumeID) != "" {
+		scope = "volume " + strings.TrimSpace(input.VolumeID)
+	}
+	logger.Info("Scope: %s", scope)
+
+	promptInput := buildAgentSDKOutlineReviewPromptInput(input)
+	params := composeOutlineReviewAgentSDKParams("review the story outline and provide focused improvement suggestions", input.Outline, input.VolumeID)
+	var output models.ReviewResult
+	if err := a.base.Execute(ctx, params, promptInput, &output); err != nil {
+		return models.ReviewResult{}, err
+	}
+	output.NormalizeScoreScale()
+	clipOutlineReviewResult(&output)
+	logger.Section("Outline Agent SDK Review Result")
+	logger.Info("Overall Score: %.1f/100", output.OverallScore)
+	logger.Info("Suggestions: %d", len(output.Suggestions))
+	return output, nil
+}
+
+func buildAgentSDKOutlineReviewPromptInput(input ComposeOutlineReviewInput) composeAgentSDKOutlineReviewPromptInput {
+	volumeCount, chapterCount := countOutlineScope(input.Outline, input.VolumeID)
+	instructions := []string{
+		"Run the required first query exactly as given before anything else. It returns the overall structure of the review scope.",
+		"This is a read-only review: do not patch, do not run check, do not write files, do not read source/RPG/Claude tool-results.",
+		"Base every claim on facts visible in tool query results. Do not assert an unresolved mystery or contradiction unless the queried facts show it.",
+		"Every suggestion target_id must exist in the review scope. If a suggestion is not tied to a concrete volume/chapter, omit target_id.",
+		"Keep review_result compact: summary under 300 Chinese characters, at most 8 suggestions, at most 4 strengths and 4 weaknesses.",
+		"Return only the JSON object; no Markdown, no code fences, no extra text.",
+	}
+	focus := "按以下维度自由审查：结构、节奏、连贯性、人物动机、情节逻辑、信息差博弈。"
+	if strings.TrimSpace(input.UserPrompt) != "" {
+		instructions = append(instructions,
+			"user_prompt 是本次审查的最高优先级任务清单。围绕它逐条分析，再补充你发现的其他开放性问题。",
+		)
+		focus = "以 user_prompt 为最高优先级；在此基础上补充结构、节奏、连贯性、人物动机、情节逻辑、信息差博弈等维度的开放性问题。"
+	}
+	return composeAgentSDKOutlineReviewPromptInput{
+		TargetVolumeID:  strings.TrimSpace(input.VolumeID),
+		VolumeCount:     volumeCount,
+		ChapterCount:    chapterCount,
+		UserPrompt:      strings.TrimSpace(input.UserPrompt),
+		ReviewFocus:     focus,
+		RequiredQueries: composeOutlineReviewRequiredQueries(input.Outline, input.VolumeID),
+		Instructions:    instructions,
+	}
+}
+
+func countOutlineScope(outline models.Outline, volumeID string) (int, int) {
+	volumes, chapters := 0, 0
+	volumeID = strings.TrimSpace(volumeID)
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			if volumeID != "" && !strings.EqualFold(strings.TrimSpace(volume.ID), volumeID) {
+				continue
+			}
+			volumes++
+			chapters += len(volume.Chapters)
+		}
+	}
+	return volumes, chapters
+}
+
+func composeOutlineReviewRequiredQueries(outline models.Outline, volumeID string) []string {
+	volumeID = strings.TrimSpace(volumeID)
+	if volumeID != "" {
+		return []string{fmt.Sprintf("novelgen tool query context --type outline-volume --id %s --view index", volumeID)}
+	}
+	return []string{"novelgen tool query outline --type all --view index"}
+}
+
+func composeOutlineReviewAgentSDKParams(command string, outline models.Outline, volumeID string) InvokeParams {
+	allowlist := composeOutlineReviewToolAllowlist(outline, volumeID)
+	return InvokeParams{
+		SDKSkills:      []string{"novel-tools-core", "outline-review-workflow"},
+		Tools:          []string{"Bash"},
+		AllowedTools:   []string{"Bash"},
+		PermissionMode: "dontAsk",
+		RequireSDK:     true,
+		ToolAllowlist:  dedupeComposeToolAllowlist(allowlist),
+		ToolEvidence: ToolEvidenceRequirement{
+			MinQueryCalls:        1,
+			RequireNoDeniedTools: true,
+			RequiredToolCommands: composeOutlineReviewRequiredQueries(outline, volumeID),
+		},
+		MaxTurns: 20,
+		Timeout:  600,
+		Command:  command,
+	}
+}
+
+func composeOutlineReviewToolAllowlist(outline models.Outline, volumeID string) []string {
+	allowlist := []string{
+		"novelgen tool query story-setup --type search",
+		"novelgen tool query story-setup --type core-cast",
+		"novelgen tool query story-setup --type storyline",
+		"novelgen tool query story-setup --type premise",
+		"novelgen tool query story-setup --type resource",
+		"novelgen tool query story-setup --type timeline",
+		"novelgen tool query context --type outline-volume",
+	}
+	addVolume := func(volume models.Volume) {
+		vid := strings.TrimSpace(volume.ID)
+		if vid == "" {
+			return
+		}
+		allowlist = append(allowlist,
+			fmt.Sprintf("novelgen tool query outline --type volume --id %q --view brief", vid),
+			fmt.Sprintf("novelgen tool query outline --type events --volume-id %q --view brief", vid),
+		)
+		for _, chapter := range volume.Chapters {
+			cid := strings.TrimSpace(chapter.ID)
+			if cid == "" {
+				continue
+			}
+			allowlist = append(allowlist,
+				fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", cid),
+				fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q --view brief", cid),
+			)
+		}
+	}
+	volumeID = strings.TrimSpace(volumeID)
+	if volumeID != "" {
+		allowlist = append(allowlist, fmt.Sprintf("novelgen tool query context --type outline-volume --id %s --view index", volumeID))
+		for _, part := range outline.Parts {
+			for _, volume := range part.Volumes {
+				if strings.EqualFold(strings.TrimSpace(volume.ID), volumeID) {
+					addVolume(volume)
+				}
+			}
+		}
+		return dedupeComposeToolAllowlist(allowlist)
+	}
+	allowlist = append(allowlist, "novelgen tool query outline --type all --view index")
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			addVolume(volume)
+		}
+	}
+	return dedupeComposeToolAllowlist(allowlist)
+}
+
+func clipOutlineReviewResult(result *models.ReviewResult) {
+	if result == nil {
+		return
+	}
+	result.Summary = clipForPrompt(result.Summary, 300)
+	result.Strengths = clipReviewStringList(result.Strengths, 4, 180)
+	result.Weaknesses = clipReviewStringList(result.Weaknesses, 4, 220)
+	suggestions := make([]models.ReviewSuggestion, 0, len(result.Suggestions))
+	for _, s := range result.Suggestions {
+		s.Category = strings.TrimSpace(s.Category)
+		s.TargetID = strings.TrimSpace(s.TargetID)
+		s.TargetName = clipForPrompt(s.TargetName, 120)
+		s.Issue = clipForPrompt(s.Issue, 360)
+		s.Suggestion = clipForPrompt(s.Suggestion, 420)
+		s.Priority = strings.TrimSpace(s.Priority)
+		suggestions = append(suggestions, s)
+		if len(suggestions) >= 8 {
+			break
+		}
+	}
+	result.Suggestions = suggestions
+}
+
+func clipReviewStringList(values []string, maxItems int, maxRunes int) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		value = clipForPrompt(value, maxRunes)
+		if strings.TrimSpace(value) == "" {
+			continue
+		}
+		out = append(out, value)
+		if len(out) >= maxItems {
+			break
+		}
+	}
+	return out
 }
 
 func composeImproveToolEvidence(promptInput composeAgentSDKImproveVolumePromptInput, applyPatches bool) ToolEvidenceRequirement {

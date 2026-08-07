@@ -8,6 +8,7 @@ import (
 
 	"novelgen/internal/agentruntime"
 	"novelgen/internal/llm"
+	"novelgen/internal/models"
 )
 
 type fakeRepairClient struct {
@@ -42,6 +43,41 @@ func TestBaseAgentExecuteRepairsMalformedJSON(t *testing.T) {
 	}
 	if client.calls != 2 {
 		t.Fatalf("calls = %d, want 2", client.calls)
+	}
+}
+
+func TestBaseAgentSetModelOverrideAppliesModelAndProviderTokens(t *testing.T) {
+	cfg := &llm.Config{
+		Providers: map[string]*llm.ProviderConfig{
+			"deepseek": {
+				Name: "deepseek",
+				Models: map[string]*llm.ModelConfig{
+					"deepseek-v4-flash": {Name: "deepseek-v4-flash", MaxTokens: 32000, Temp: 0.7},
+					"deepseek-v4-pro":   {Name: "deepseek-v4-pro", MaxTokens: 120000, Temp: 0.7},
+				},
+			},
+		},
+		DefaultProvider: "deepseek",
+		DefaultModel:    "deepseek-v4-flash",
+	}
+	projectLLM := &models.ProjectLLM{Provider: "deepseek", Model: "deepseek-v4-flash"}
+	agent := &BaseAgent{config: cfg, projectLLM: projectLLM}
+
+	base := agent.chatOptions()
+	if base.Model != "deepseek-v4-flash" || base.MaxTokens != 32000 {
+		t.Fatalf("base options = %#v", base)
+	}
+
+	agent.SetModelOverride("deepseek-v4-pro")
+	opts := agent.chatOptions()
+	if opts.Model != "deepseek-v4-pro" || opts.MaxTokens != 120000 {
+		t.Fatalf("override options = %#v", opts)
+	}
+
+	agent.SetModelOverride("unknown-model")
+	opts = agent.chatOptions()
+	if opts.Model != "unknown-model" {
+		t.Fatalf("unknown override should still change model, got %#v", opts)
 	}
 }
 
@@ -320,8 +356,8 @@ func TestBaseAgentExecutePassesPerCallAgentSDKOptions(t *testing.T) {
 			RequiredToolCommands: []string{"novelgen tool check all --target outline --scope volume --id P1-V1"},
 			RequireNoDeniedTools: true,
 		},
-		MaxTurns:       10,
-		Timeout:        900,
+		MaxTurns: 10,
+		Timeout:  900,
 	}, struct{}{}, &output)
 	if err != nil {
 		t.Fatalf("Execute() returned error: %v", err)

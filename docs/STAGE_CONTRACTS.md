@@ -38,6 +38,21 @@ Project root:
 - `story/reviews/*.json`: review outputs
 - `story/rpg/*.rpg`: RPG-DSL fragments
 
+Review suggestion reports:
+
+- `story/compose/outline_review.json` (optional): `models.ReviewResult` produced
+  by `novelgen compose review` (legacy single-shot or Agent SDK read-only
+  review) or by `novelgen compose check --suggestions-out` (deterministic
+  check converted through the quality gate).
+- Consumer: `novelgen compose improve --agent-sdk --suggestions <paths>` reads
+  any combination of these reports, dedups the `suggestions`, filters them to
+  the run's prompt boundary, and seeds the per-volume Agent SDK improve loop.
+  Both producers share the same `models.ReviewResult` shape, so AI review and
+  deterministic check are interchangeable suggestion sources.
+- The Agent SDK review workflow (`outline-review-workflow`) is read-only: its
+  tool allowlist contains only query commands, never check/patch/refresh, and
+  its output is validated and clipped by Go before it is written to disk.
+
 Global user config:
 
 - `~/.novelgen/agent_config.json`: default agent runtime configuration for

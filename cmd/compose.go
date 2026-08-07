@@ -36,9 +36,13 @@ var (
 	composeForceImproveFlag    bool
 	composeForceGenFlag        bool
 	composeCheckJSONFlag       bool
+	composeCheckSuggestionsOut string
 	composeImproveVolume       int
 	composeImproveFromVol      int
 	composeImproveToVol        int
+	composeSuggestionsFlag     string
+	composeReviewOutFlag       string
+	composeModelFlag           string
 	composePipelineFromVol     int
 	composePipelineToVol       int
 	composePipelineMaxRounds   int
@@ -130,6 +134,23 @@ and payoff contracts. It does not require chapters and does not modify files.`,
 	RunE: runComposeSkeletonReview,
 }
 
+var composeReviewCmd = &cobra.Command{
+	Use:   "review",
+	Short: "Review the outline and save an AI review report",
+	Long: `Review the current outline and save a review report without modifying files.
+
+The default path uses the legacy single-shot review. With --agent-sdk the review
+runs through the agent runtime: the model reads the outline with read-only
+novelgen tool queries and returns open-ended review_result suggestions.
+
+Examples:
+  novelgen compose review --agent-sdk
+  novelgen compose review --agent-sdk --prompt "重点检查角色动机和伏笔回收节奏"
+  novelgen compose review --agent-sdk --volume 2
+  novelgen compose review --agent-sdk --out story/reviews/outline_review.json`,
+	RunE: runComposeReview,
+}
+
 var composeSkeletonImproveCmd = &cobra.Command{
 	Use:   "skeleton-improve",
 	Short: "Improve the outline skeleton without generating chapters",
@@ -190,9 +211,11 @@ Examples:
 
 func init() {
 	composeCheckCmd.Flags().BoolVar(&composeCheckJSONFlag, "json", false, "Output results as JSON")
+	composeCheckCmd.Flags().StringVar(&composeCheckSuggestionsOut, "suggestions-out", "", "Write deterministic check suggestions as a ReviewResult JSON report to this path")
 	composeCmd.AddCommand(composeGenCmd)
 	composeCmd.AddCommand(composeRegenCmd)
 	composeCmd.AddCommand(composeImproveCmd)
+	composeCmd.AddCommand(composeReviewCmd)
 	composeCmd.AddCommand(composeSkeletonReviewCmd)
 	composeCmd.AddCommand(composeSkeletonImproveCmd)
 	composeCmd.AddCommand(composeCheckCmd)
@@ -216,6 +239,14 @@ func init() {
 	composeImproveCmd.Flags().IntVar(&composeImproveVolume, "volume", 0, "Improve one 1-based global volume index")
 	composeImproveCmd.Flags().IntVar(&composeImproveFromVol, "from-volume", 0, "Improve from this 1-based global volume index")
 	composeImproveCmd.Flags().IntVar(&composeImproveToVol, "to-volume", 0, "Improve through this 1-based global volume index")
+	composeImproveCmd.Flags().StringVar(&composeSuggestionsFlag, "suggestions", "", "Comma-separated ReviewResult JSON report paths whose suggestions seed Agent SDK improve (requires --agent-sdk)")
+	composeImproveCmd.Flags().StringVar(&composeModelFlag, "model", "", "Override the project model for this improve run (e.g. deepseek-v4-pro)")
+
+	composeReviewCmd.Flags().BoolVar(&composeAgentSDKFlag, "agent-sdk", false, "Use Agent SDK workflow with read-only project query tools")
+	composeReviewCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional user suggestions for review focus")
+	composeReviewCmd.Flags().IntVar(&composeImproveVolume, "volume", 0, "Review one 1-based global volume index")
+	composeReviewCmd.Flags().StringVar(&composeReviewOutFlag, "out", "story/compose/outline_review.json", "Review report output path")
+	composeReviewCmd.Flags().StringVar(&composeModelFlag, "model", "", "Override the project model for this review run (e.g. deepseek-v4-pro)")
 	composeSkeletonReviewCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional review focus")
 	composeSkeletonImproveCmd.Flags().IntVar(&composeMaxRoundsFlag, "max-rounds", 1, "Maximum skeleton improvement rounds")
 	composeSkeletonImproveCmd.Flags().BoolVar(&composeForceImproveFlag, "force", false, "Force improvement based on suggestions even if score meets threshold")
@@ -544,7 +575,14 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 			_ = os.Remove(filepath.Join("story", "compose", "outline_improve_report.jsonl"))
 		}
 		agentSDKForceImprove := composeForceImproveFlag || selectedImprove
-		err = runAgentSDKImproveWithResume(improveOutline, setup, projectConfig, composeMaxRoundsFlag, agentSDKForceImprove, composePromptFlag, composeAgentApplyFlag, improveOutline != outline)
+		var suggestions []models.ReviewSuggestion
+		if strings.TrimSpace(composeSuggestionsFlag) != "" {
+			suggestions, err = loadReviewSuggestionReports(composeSuggestionsFlag)
+			if err != nil {
+				return err
+			}
+		}
+		err = runAgentSDKImproveWithResume(improveOutline, setup, projectConfig, composeMaxRoundsFlag, agentSDKForceImprove, composePromptFlag, composeAgentApplyFlag, improveOutline != outline, suggestions, composeModelFlag)
 	} else {
 		err = iterateOutlineImprovement(improveOutline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, useHierarchical, composeForceImproveFlag, composePromptFlag)
 	}
@@ -632,10 +670,36 @@ func runAgentSDKImproveWithResume(
 	userPrompt string,
 	applyPatches bool,
 	scoped bool,
+	suggestions []models.ReviewSuggestion,
+	modelOverride string,
 ) error {
 	return retryAgentSDKImproveWithResume(composeAgentSDKImproveResumeAttempts, func() error {
-		return iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, maxRounds, forceImprove, userPrompt, applyPatches, scoped)
+		return iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, maxRounds, forceImprove, userPrompt, applyPatches, scoped, suggestions, modelOverride)
 	})
+}
+
+// loadReviewSuggestionReports reads comma-separated ReviewResult JSON report
+// paths and returns their combined suggestions. Both compose review and
+// compose check --suggestions-out emit this shape, so any combination of AI
+// review and deterministic check reports can seed an Agent SDK improve run.
+func loadReviewSuggestionReports(raw string) ([]models.ReviewSuggestion, error) {
+	var out []models.ReviewSuggestion
+	for _, part := range strings.Split(raw, ",") {
+		path := strings.TrimSpace(part)
+		if path == "" {
+			continue
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read suggestion report %s: %w", path, err)
+		}
+		var report models.ReviewResult
+		if err := json.Unmarshal(data, &report); err != nil {
+			return nil, fmt.Errorf("failed to parse suggestion report %s: %w", path, err)
+		}
+		out = append(out, report.Suggestions...)
+	}
+	return out, nil
 }
 
 func retryAgentSDKImproveWithResume(attempts int, run func() error) error {
@@ -878,6 +942,88 @@ func runComposeSkeletonReview(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func runComposeReview(cmd *cobra.Command, args []string) error {
+	logger.SetDefault(logger.New(logger.DebugLevel))
+	logger.Section("NOVELGEN COMPOSE REVIEW")
+
+	projectConfig, setup, outline, err := loadComposeProjectState()
+	if err != nil {
+		return err
+	}
+	agent, err := newComposeAgentForProject(projectConfig)
+	if err != nil {
+		return err
+	}
+	agent.SetLanguage(projectConfig.Language)
+	if strings.TrimSpace(composeModelFlag) != "" {
+		agent.SetModelOverride(composeModelFlag)
+	}
+
+	var review models.ReviewResult
+	if composeAgentSDKFlag {
+		input := agents.ComposeOutlineReviewInput{
+			Outline:    *outline,
+			Setup:      *setup,
+			UserPrompt: composePromptFlag,
+		}
+		if composeImproveVolume > 0 {
+			volumeID, resolveErr := resolveGlobalVolumeID(outline, composeImproveVolume)
+			if resolveErr != nil {
+				return resolveErr
+			}
+			input.VolumeID = volumeID
+		}
+		review, err = agent.ReviewOutlineWithAgentSDK(cmd.Context(), input)
+		if err != nil {
+			return fmt.Errorf("outline review failed: %w", err)
+		}
+	} else {
+		result, reviewErr := agent.Review(cmd.Context(), agents.ComposeReviewInput{
+			ExistingOutline: *outline,
+			Setup:           *setup,
+			UserPrompt:      composePromptFlag,
+		})
+		if reviewErr != nil {
+			return fmt.Errorf("outline review failed: %w", reviewErr)
+		}
+		review = result.Result
+	}
+
+	reportPath := strings.TrimSpace(composeReviewOutFlag)
+	if reportPath == "" {
+		reportPath = filepath.Join("story", "compose", "outline_review.json")
+	}
+	if err := os.MkdirAll(filepath.Dir(reportPath), 0755); err != nil {
+		return fmt.Errorf("failed to create review report directory: %w", err)
+	}
+	if err := saveReviewResult(reportPath, review); err != nil {
+		return err
+	}
+	printReviewResult("Outline review", review)
+	fmt.Printf("[ok] Outline review saved to %s\n", reportPath)
+	return nil
+}
+
+func resolveGlobalVolumeID(outline *models.Outline, index int) (string, error) {
+	if outline == nil || index <= 0 {
+		return "", fmt.Errorf("invalid volume index %d", index)
+	}
+	seen := 0
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			seen++
+			if seen == index {
+				vid := strings.TrimSpace(volume.ID)
+				if vid == "" {
+					return "", fmt.Errorf("volume %d has no ID", index)
+				}
+				return vid, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("volume index %d out of range (total %d)", index, seen)
+}
+
 func runComposeSkeletonImprove(cmd *cobra.Command, args []string) error {
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN COMPOSE SKELETON IMPROVE")
@@ -969,6 +1115,14 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 			setupForGate = loadedSetup
 		}
 		logQualityGateResult("outline", runOutlineQualityGate(setupForGate, checkOutline))
+		if strings.TrimSpace(composeCheckSuggestionsOut) != "" {
+			gate := runOutlineCombinedGateForScope(setupForGate, checkOutline, false)
+			report := qualityGateReviewResult("Deterministic outline check suggestions.", gate)
+			if err := saveReviewResult(composeCheckSuggestionsOut, *report); err != nil {
+				return err
+			}
+			fmt.Printf("[ok] Check suggestions report saved to %s\n", composeCheckSuggestionsOut)
+		}
 	}
 
 	validator := rpg.NewOutlineValidator(&storyOutline)
@@ -1223,7 +1377,7 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 				return err
 			}
 			if composeAgentSDKFlag {
-				err = iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, composePipelineMaxRounds, composePipelineForce, composePromptFlag, composeAgentApplyFlag, true)
+				err = iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, composePipelineMaxRounds, composePipelineForce, composePromptFlag, composeAgentApplyFlag, true, nil, "")
 			} else {
 				err = iterateOutlineImprovement(improveOutline, setup, projectConfig, composePipelineMaxRounds, 1, true, composePipelineForce, composePromptFlag)
 			}
@@ -2744,7 +2898,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 	return nil
 }
 
-func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, forceImprove bool, userPrompt string, agentApply bool, scoped bool) error {
+func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, forceImprove bool, userPrompt string, agentApply bool, scoped bool, suggestions []models.ReviewSuggestion, modelOverride string) error {
 	logger.Section("Outline Agent SDK Iteration Improvement")
 	logger.Info("Maximum iterations: %d", maxIterations)
 	logger.Info("Mode: Agent SDK hierarchical per-volume review/improve")
@@ -2765,6 +2919,9 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 	}
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
+	if strings.TrimSpace(modelOverride) != "" {
+		agent.SetModelOverride(modelOverride)
+	}
 
 	ctx := context.Background()
 	beforeOutline := cloneOutline(outline)
@@ -2776,6 +2933,20 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 		seedReview = qualityGateReviewResult("Pre-check issues for targeted Agent SDK outline improvement.", preGate)
 		seedReview = filterAgentSDKReviewForPromptBoundary(seedReview, outline, userPrompt, "pre-check seed review")
 		logger.Info("Pre-check supplied %d quality/simulation issue(s) to Agent SDK", len(seedReview.Suggestions))
+	}
+	if len(suggestions) > 0 {
+		merged := qualityGateResult{Suggestions: append([]models.ReviewSuggestion(nil), suggestions...)}
+		if seedReview != nil {
+			merged.Suggestions = append(merged.Suggestions, seedReview.Suggestions...)
+		}
+		merged.dedup()
+		seedReview = &models.ReviewResult{
+			OverallScore: scoreFromGate(merged),
+			Summary:      fmt.Sprintf("Agent SDK outline improvement seeded by %d suggestion report item(s).", len(merged.Suggestions)),
+			Suggestions:  merged.Suggestions,
+		}
+		seedReview = filterAgentSDKReviewForPromptBoundary(seedReview, outline, userPrompt, "suggestion report seed")
+		logger.Info("Suggestion report(s) provided %d issue(s) to Agent SDK", len(merged.Suggestions))
 	}
 
 	improvedOutline, review, err := agent.IterateHierarchicalAgentSDK(ctx, outline, seedReview, maxIterations, 80.0, forceImprove, userPrompt, setup, agentApply)

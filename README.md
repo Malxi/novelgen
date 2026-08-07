@@ -133,6 +133,7 @@ novelgen compose regen 1_1_1              # 重新生成第1部第1卷第1章
 novelgen compose regen 1_1_1 --prompt "加强冲突"
 novelgen compose improve --max-rounds 3   # 改进大纲3轮
 novelgen compose improve --agent-sdk --from-volume 1 --to-volume 3   # Agent SDK 逐卷改进
+novelgen compose review --agent-sdk --prompt "重点检查角色动机和伏笔回收节奏"   # Agent SDK 只读审阅
 novelgen compose skeleton-review          # 只评审大纲骨架
 novelgen compose skeleton-improve --max-rounds 1
 ```
@@ -141,6 +142,17 @@ Agent SDK 模式（`--agent-sdk`）的逐卷改进支持：
 - `--repair-budget`（int，默认 20）：每次门禁修复 pass 最多处理的目标问题数。
 - 允许只读查询相邻卷的 `payoff_contract/summary`，用于跨卷连续性核对（不可修改其它卷）。
 - 运行结束后自动在 `logs/` 下生成 `compose_improve_report_<时间戳>.md` 改进报告（每卷评分、改动摘要、剩余问题、门禁修复后剩余问题）。
+
+建议报告流水线（AI 审阅与确定性检查解耦，统一喂给 Agent SDK 改进）：
+```bash
+novelgen compose review --agent-sdk --prompt "..." --out story/reviews/outline_review.json
+novelgen compose check --suggestions-out story/reviews/outline_check.json
+novelgen compose improve --agent-sdk --suggestions story/reviews/outline_review.json,story/reviews/outline_check.json
+```
+
+`compose review --agent-sdk` 是只读审阅（不 patch、不写项目文件），输出 `models.ReviewResult` JSON；
+`compose check --suggestions-out` 把确定性检查结果转成同样的 `models.ReviewResult` 形状；
+`compose improve --agent-sdk --suggestions` 读取这些报告并合并（去重、按 prompt 边界过滤）为改进种子。
 
 ---
 
