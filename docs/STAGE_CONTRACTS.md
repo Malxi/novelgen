@@ -41,11 +41,22 @@ Project root:
 Global user config:
 
 - `~/.novelgen/agent_config.json`: default agent runtime configuration for
-  Claude/Python SDK execution.
+  Claude/Python SDK execution. A runtime may set `provider` to reference a
+  provider from `~/.novelgen/llm_config.json`; base URL, API key, and timeout
+  are then resolved at runtime (explicit runtime fields win). When the
+  effective runtime carries Anthropic-compatible credentials and no explicit
+  `settings`, novelgen auto-generates a Claude flag-settings file under
+  `~/.novelgen/agents/settings/<runtime>.json` containing
+  `ANTHROPIC_BASE_URL`, `ANTHROPIC_API_KEY`, model defaults, and runtime
+  `env` overrides. `ANTHROPIC_AUTH_TOKEN` is never generated because Claude
+  Code prefers it (Bearer auth) over `ANTHROPIC_API_KEY` (x-api-key).
 - `~/.novelgen/agents/`: user-level agent home for runtime skills, KB, tools,
   and runner-local cache. Project state is still written only by Go after typed
   parsing and deterministic validation.
-- `~/.novelgen/llm_config.json`: legacy OpenAI-compatible provider fallback.
+- `~/.novelgen/llm_config.json`: OpenAI-compatible provider config shared by
+  the legacy pipeline and agent runtime provider references. Optional
+  `agent_base_url` pins the Anthropic-compatible base URL used by the agent
+  runtime; otherwise a trailing `/v1` is stripped from `base_url`.
 
 ## Stage Matrix
 

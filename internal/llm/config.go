@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"novelgen/internal/agentruntime"
@@ -22,11 +23,12 @@ type ModelConfig struct {
 
 // ProviderConfig represents configuration for a provider with multiple models
 type ProviderConfig struct {
-	Name    string                  `json:"name"`
-	APIKey  string                  `json:"api_key"`
-	BaseURL string                  `json:"base_url"`
-	Timeout int                     `json:"timeout"` // seconds
-	Models  map[string]*ModelConfig `json:"models"`  // Map of model name to config
+	Name         string                  `json:"name"`
+	APIKey       string                  `json:"api_key"`
+	BaseURL      string                  `json:"base_url"`
+	AgentBaseURL string                  `json:"agent_base_url,omitempty"` // Anthropic-compatible base URL for the agent runtime
+	Timeout      int                     `json:"timeout"`                  // seconds
+	Models       map[string]*ModelConfig `json:"models"`                   // Map of model name to config
 }
 
 // Config represents the LLM configuration with multiple providers
@@ -76,6 +78,79 @@ func defaultClaudeProvider() *ProviderConfig {
 			},
 		},
 	}
+}
+
+func init() {
+	agentruntime.SetProviderResolver(resolveProviderCredentials)
+}
+
+// Provider returns the named provider, matching case-insensitively.
+func (c *Config) Provider(name string) *ProviderConfig {
+	if c == nil || name == "" {
+		return nil
+	}
+	if provider, ok := c.Providers[name]; ok {
+		return provider
+	}
+	for key, provider := range c.Providers {
+		if strings.EqualFold(key, name) {
+			return provider
+		}
+	}
+	return nil
+}
+
+// resolveProviderCredentials maps an llm_config.json provider into agent
+// runtime credentials. Claude Code appends /v1/messages itself, so an
+// OpenAI-style trailing /v1 is stripped from base_url unless the provider pins
+// agent_base_url explicitly.
+func resolveProviderCredentials(providerName string) (agentruntime.ProviderCredentials, error) {
+	return resolveProviderCredentialsFrom(GetConfigPath(), providerName)
+}
+
+func resolveProviderCredentialsFrom(path, providerName string) (agentruntime.ProviderCredentials, error) {
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		return agentruntime.ProviderCredentials{}, err
+	}
+	provider := cfg.Provider(providerName)
+	if provider == nil {
+		return agentruntime.ProviderCredentials{}, fmt.Errorf("provider %q not found in %s", providerName, path)
+	}
+	return providerCredentials(provider), nil
+}
+
+func providerCredentials(provider *ProviderConfig) agentruntime.ProviderCredentials {
+	base := strings.TrimSpace(provider.AgentBaseURL)
+	if base == "" {
+		base = anthropicBaseURL(provider.BaseURL)
+	}
+	return agentruntime.ProviderCredentials{
+		APIKey:  strings.TrimSpace(provider.APIKey),
+		BaseURL: base,
+		Model:   firstProviderModel(provider.Models),
+		Timeout: provider.Timeout,
+	}
+}
+
+func anthropicBaseURL(baseURL string) string {
+	base := strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if strings.HasSuffix(base, "/v1") {
+		base = strings.TrimSuffix(base, "/v1")
+	}
+	return base
+}
+
+func firstProviderModel(models map[string]*ModelConfig) string {
+	names := make([]string, 0, len(models))
+	for name := range models {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	if len(names) == 0 {
+		return ""
+	}
+	return names[0]
 }
 
 // Save writes the config to a file

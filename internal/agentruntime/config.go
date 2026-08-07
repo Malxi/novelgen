@@ -34,6 +34,7 @@ type RuntimeConfig struct {
 	Type           string            `json:"type"`
 	Command        string            `json:"command,omitempty"`
 	Args           []string          `json:"args,omitempty"`
+	Provider       string            `json:"provider,omitempty"`
 	APIKey         string            `json:"api_key,omitempty"`
 	BaseURL        string            `json:"base_url,omitempty"`
 	Model          string            `json:"model,omitempty"`
@@ -48,6 +49,30 @@ type RuntimeConfig struct {
 	PermissionMode string            `json:"permission_mode,omitempty"`
 	LiveOutput     *bool             `json:"live_output,omitempty"`
 	Env            map[string]string `json:"env,omitempty"`
+}
+
+// ProviderCredentials are the runtime credentials resolved from a named LLM
+// provider. BaseURL must be Anthropic-compatible (Claude Code appends
+// /v1/messages itself, so the value must not carry a trailing /v1).
+type ProviderCredentials struct {
+	APIKey  string
+	BaseURL string
+	Model   string
+	Timeout int
+}
+
+// ProviderResolver resolves a named llm_config.json provider into runtime
+// credentials. Registered by internal/llm at package init so agentruntime does
+// not depend on the LLM config package.
+type ProviderResolver func(provider string) (ProviderCredentials, error)
+
+var providerResolver ProviderResolver
+
+// SetProviderResolver registers the LLM provider resolver used when an agent
+// runtime references a provider by name. Replacing the resolver is intended
+// for tests; production registers it once from internal/llm.
+func SetProviderResolver(resolver ProviderResolver) {
+	providerResolver = resolver
 }
 
 // ConfigPath returns the canonical global agent config path.
@@ -114,12 +139,52 @@ func (c *Config) NewRuntime(name string) (Runtime, error) {
 	if !ok {
 		return nil, fmt.Errorf("agent runtime %q not found", name)
 	}
+	rc, err := c.resolveProviderRuntime(name, rc)
+	if err != nil {
+		return nil, err
+	}
+	rc, err = c.ensureRuntimeSettings(name, rc)
+	if err != nil {
+		return nil, err
+	}
 	switch strings.TrimSpace(rc.Type) {
 	case "", "python_process", "process":
 		return NewProcessRuntime(c.AgentHome, rc)
 	default:
 		return nil, fmt.Errorf("unsupported agent runtime type %q", rc.Type)
 	}
+}
+
+// resolveProviderRuntime fills missing runtime credentials from the named LLM
+// provider. Explicit runtime fields always win over provider-derived values.
+func (c *Config) resolveProviderRuntime(name string, rc RuntimeConfig) (RuntimeConfig, error) {
+	provider := strings.TrimSpace(rc.Provider)
+	if provider == "" {
+		return rc, nil
+	}
+	if providerResolver == nil {
+		return rc, fmt.Errorf("agent runtime %q references provider %q, but no LLM provider resolver is registered", name, provider)
+	}
+	creds, err := providerResolver(provider)
+	if err != nil {
+		return rc, fmt.Errorf("agent runtime %q: resolve provider %q: %w", name, provider, err)
+	}
+	if strings.TrimSpace(rc.BaseURL) == "" {
+		rc.BaseURL = strings.TrimSpace(creds.BaseURL)
+	}
+	if strings.TrimSpace(rc.APIKey) == "" {
+		rc.APIKey = strings.TrimSpace(creds.APIKey)
+	}
+	if strings.TrimSpace(rc.Model) == "" {
+		rc.Model = sanitizeModelName(creds.Model)
+	}
+	if rc.Timeout == 0 {
+		rc.Timeout = creds.Timeout
+	}
+	if strings.TrimSpace(rc.BaseURL) == "" || strings.TrimSpace(rc.APIKey) == "" {
+		return rc, fmt.Errorf("agent runtime %q references provider %q, but the provider has no base_url/api_key", name, provider)
+	}
+	return rc, nil
 }
 
 func (c *Config) normalize() {
@@ -154,7 +219,11 @@ func (c *Config) normalize() {
 			"CLAUDE_CODE_SUBAGENT_MODEL",
 		} {
 			if runtimeConfig.Env != nil {
-				runtimeConfig.Env[key] = sanitizeModelName(runtimeConfig.Env[key])
+				// Only sanitize keys that already exist; the zero value for a
+				// missing key is "" and must not be written into the map.
+				if value, ok := runtimeConfig.Env[key]; ok {
+					runtimeConfig.Env[key] = sanitizeModelName(value)
+				}
 			}
 		}
 		c.Runtimes[name] = runtimeConfig

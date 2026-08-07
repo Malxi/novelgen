@@ -95,6 +95,9 @@ var configShowCmd = &cobra.Command{
 			fmt.Printf("Runtime: %s\n", name)
 			fmt.Printf("  Type:    %s\n", runtime.Type)
 			fmt.Printf("  Command: %s %s\n", runtime.Command, strings.Join(runtime.Args, " "))
+			if runtime.Provider != "" {
+				fmt.Printf("  Provider: %s\n", runtime.Provider)
+			}
 			fmt.Printf("  BaseURL: %s\n", runtime.BaseURL)
 			fmt.Printf("  Model:   %s\n", runtime.Model)
 			fmt.Printf("  Max Turns: %d\n", agentMaxTurns(runtime))
@@ -164,12 +167,31 @@ var configAgentCmd = &cobra.Command{
 			return err
 		}
 
-		baseURLPrompt := &survey.Input{
-			Message: "Anthropic-compatible base URL:",
-			Default: runtime.BaseURL,
+		providerPrompt := &survey.Input{
+			Message: "LLM provider from llm_config.json (optional):",
+			Default: runtime.Provider,
+			Help:    "When set, base URL/API key are resolved from ~/.novelgen/llm_config.json and Claude settings are auto-generated.",
 		}
-		if err := survey.AskOne(baseURLPrompt, &runtime.BaseURL); err != nil {
+		if err := survey.AskOne(providerPrompt, &runtime.Provider); err != nil {
 			return err
+		}
+		runtime.Provider = strings.TrimSpace(runtime.Provider)
+		if runtime.Provider != "" {
+			// Provider mode owns these fields; stale explicit values would win
+			// over the resolved provider and silently keep the old endpoint.
+			runtime.BaseURL = ""
+			runtime.APIKey = ""
+			runtime.Settings = ""
+		}
+
+		if runtime.Provider == "" {
+			baseURLPrompt := &survey.Input{
+				Message: "Anthropic-compatible base URL:",
+				Default: runtime.BaseURL,
+			}
+			if err := survey.AskOne(baseURLPrompt, &runtime.BaseURL); err != nil {
+				return err
+			}
 		}
 
 		modelPrompt := &survey.Input{
@@ -195,13 +217,15 @@ var configAgentCmd = &cobra.Command{
 		}
 		runtime.MaxTurns = maxTurns
 
-		settingsPrompt := &survey.Input{
-			Message: "Claude settings path:",
-			Default: runtime.Settings,
-			Help:    "Optional path passed to ClaudeAgentOptions.settings.",
-		}
-		if err := survey.AskOne(settingsPrompt, &runtime.Settings); err != nil {
-			return err
+		if runtime.Provider == "" {
+			settingsPrompt := &survey.Input{
+				Message: "Claude settings path:",
+				Default: runtime.Settings,
+				Help:    "Optional path passed to ClaudeAgentOptions.settings.",
+			}
+			if err := survey.AskOne(settingsPrompt, &runtime.Settings); err != nil {
+				return err
+			}
 		}
 
 		sourcesPrompt := &survey.Input{
@@ -236,15 +260,17 @@ var configAgentCmd = &cobra.Command{
 		}
 		runtime.LiveOutput = &liveOutput
 
-		apiKeyPrompt := &survey.Password{
-			Message: "API key:",
-		}
-		var apiKey string
-		if err := survey.AskOne(apiKeyPrompt, &apiKey); err != nil {
-			return err
-		}
-		if strings.TrimSpace(apiKey) != "" {
-			runtime.APIKey = apiKey
+		if runtime.Provider == "" {
+			apiKeyPrompt := &survey.Password{
+				Message: "API key:",
+			}
+			var apiKey string
+			if err := survey.AskOne(apiKeyPrompt, &apiKey); err != nil {
+				return err
+			}
+			if strings.TrimSpace(apiKey) != "" {
+				runtime.APIKey = apiKey
+			}
 		}
 
 		cfg.DefaultRuntime = agentruntime.DefaultRuntimeName

@@ -26,6 +26,12 @@ type ProcessRuntime struct {
 	config    RuntimeConfig
 }
 
+// Config returns the effective runtime configuration after provider
+// resolution and settings generation.
+func (r *ProcessRuntime) Config() RuntimeConfig {
+	return r.config
+}
+
 // NewProcessRuntime creates a process-backed runtime.
 func NewProcessRuntime(agentHome string, config RuntimeConfig) (*ProcessRuntime, error) {
 	agentHome = expandHome(agentHome)
@@ -946,7 +952,14 @@ func looksLikeMissingExecutable(err error) bool {
 }
 
 func (r *ProcessRuntime) env(invocation Invocation) []string {
-	env := os.Environ()
+	// Never leak an inherited ANTHROPIC_AUTH_TOKEN into the CLI child. Claude
+	// Code sends that variable as `Authorization: Bearer`, which wins over
+	// ANTHROPIC_API_KEY (sent as `x-api-key`) whenever both are present.
+	// Anthropic-compatible third-party endpoints such as the OpenCode provider
+	// only accept `x-api-key`, so the runner must not forward a stray bearer
+	// token from the parent shell or from ~/.claude/settings.json. Runtimes
+	// that genuinely need the bearer form can still opt in via RuntimeConfig.Env.
+	env := stripEnvVar(os.Environ(), "ANTHROPIC_AUTH_TOKEN")
 	appendKV := func(key, value string) {
 		if strings.TrimSpace(value) != "" {
 			env = append(env, key+"="+value)
@@ -980,7 +993,6 @@ func (r *ProcessRuntime) env(invocation Invocation) []string {
 	appendKV("LANG", "C.UTF-8")
 	appendKV("LC_ALL", "C.UTF-8")
 	appendKV("ANTHROPIC_BASE_URL", r.config.BaseURL)
-	appendKV("ANTHROPIC_AUTH_TOKEN", r.config.APIKey)
 	appendKV("ANTHROPIC_API_KEY", r.config.APIKey)
 	appendKV("ANTHROPIC_MODEL", r.config.Model)
 	if r.config.Timeout > 0 {
@@ -993,4 +1005,21 @@ func (r *ProcessRuntime) env(invocation Invocation) []string {
 		appendKV(key, value)
 	}
 	return env
+}
+
+// stripEnvVar removes inherited entries whose name matches key
+// (case-insensitively, since Windows environment variables are
+// case-insensitive).
+func stripEnvVar(env []string, key string) []string {
+	if len(env) == 0 {
+		return env
+	}
+	out := make([]string, 0, len(env))
+	for _, entry := range env {
+		name, _, _ := strings.Cut(entry, "=")
+		if !strings.EqualFold(name, key) {
+			out = append(out, entry)
+		}
+	}
+	return out
 }

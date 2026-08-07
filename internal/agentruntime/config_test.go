@@ -1,6 +1,8 @@
 package agentruntime
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,6 +50,31 @@ func TestConfigNormalizeAddsDefaultClaudeRuntime(t *testing.T) {
 	}
 	if runtime.MaxTurns != 8 {
 		t.Fatalf("runtime.MaxTurns = %d, want 8", runtime.MaxTurns)
+	}
+}
+
+func TestConfigNormalizeDoesNotInjectEmptyModelEnvKeys(t *testing.T) {
+	cfg := &Config{
+		Runtimes: map[string]RuntimeConfig{
+			"claude": {
+				Type:    "python_process",
+				Model:   "deepseek-v4-flash",
+				Env:     map[string]string{"CLAUDE_CODE_EFFORT_LEVEL": "max"},
+				Command: "python",
+				Args:    []string{defaultClaudeRunnerPath()},
+			},
+		},
+	}
+	cfg.normalize()
+	runtime := cfg.Runtimes["claude"]
+	if got := runtime.Env["ANTHROPIC_MODEL"]; got != "" {
+		t.Fatalf("normalize injected ANTHROPIC_MODEL=%q into Env; missing keys must stay absent", got)
+	}
+	if got := runtime.Env["ANTHROPIC_DEFAULT_SONNET_MODEL"]; got != "" {
+		t.Fatalf("normalize injected ANTHROPIC_DEFAULT_SONNET_MODEL=%q into Env", got)
+	}
+	if got := runtime.Env["CLAUDE_CODE_EFFORT_LEVEL"]; got != "max" {
+		t.Fatalf("existing Env entry was lost: %q", got)
 	}
 }
 
@@ -318,6 +345,223 @@ func TestProcessRuntimeEnvAllowsExplicitOverride(t *testing.T) {
 	env := envMap(runtime.env(Invocation{}))
 	if got := env["PYTHONIOENCODING"]; got != "utf-8:replace" {
 		t.Fatalf("PYTHONIOENCODING = %q, want explicit override", got)
+	}
+}
+
+func TestProcessRuntimeEnvUsesAPIKeyAndStripsAuthToken(t *testing.T) {
+	t.Setenv("ANTHROPIC_AUTH_TOKEN", "ambient-token")
+	runtime, err := NewProcessRuntime(t.TempDir(), RuntimeConfig{
+		Type:    "python_process",
+		Command: "python",
+		Args:    []string{defaultClaudeRunnerPath()},
+		APIKey:  "config-key",
+		BaseURL: "https://opencode.ai/zen/go",
+		Model:   "deepseek-v4-pro",
+	})
+	if err != nil {
+		t.Fatalf("NewProcessRuntime() error = %v", err)
+	}
+
+	env := envMap(runtime.env(Invocation{}))
+	if got := env["ANTHROPIC_API_KEY"]; got != "config-key" {
+		t.Fatalf("ANTHROPIC_API_KEY = %q, want %q", got, "config-key")
+	}
+	if got := env["ANTHROPIC_BASE_URL"]; got != "https://opencode.ai/zen/go" {
+		t.Fatalf("ANTHROPIC_BASE_URL = %q, want opencode base URL", got)
+	}
+	if got := env["ANTHROPIC_MODEL"]; got != "deepseek-v4-pro" {
+		t.Fatalf("ANTHROPIC_MODEL = %q, want %q", got, "deepseek-v4-pro")
+	}
+	if _, ok := env["ANTHROPIC_AUTH_TOKEN"]; ok {
+		t.Fatalf("ANTHROPIC_AUTH_TOKEN must not be inherited; Claude Code would send Authorization: Bearer instead of x-api-key")
+	}
+}
+
+func TestProcessRuntimeEnvAllowsExplicitAuthTokenOptIn(t *testing.T) {
+	t.Setenv("ANTHROPIC_AUTH_TOKEN", "ambient-token")
+	runtime, err := NewProcessRuntime(t.TempDir(), RuntimeConfig{
+		Type:    "python_process",
+		Command: "python",
+		Args:    []string{defaultClaudeRunnerPath()},
+		Env:     map[string]string{"ANTHROPIC_AUTH_TOKEN": "explicit-token"},
+	})
+	if err != nil {
+		t.Fatalf("NewProcessRuntime() error = %v", err)
+	}
+
+	env := envMap(runtime.env(Invocation{}))
+	if got := env["ANTHROPIC_AUTH_TOKEN"]; got != "explicit-token" {
+		t.Fatalf("ANTHROPIC_AUTH_TOKEN = %q, want explicit runtime opt-in", got)
+	}
+}
+
+func TestNewRuntimeResolvesProviderAndGeneratesSettings(t *testing.T) {
+	previous := providerResolver
+	providerResolver = func(provider string) (ProviderCredentials, error) {
+		if provider != "opencode" {
+			return ProviderCredentials{}, fmt.Errorf("unknown provider %q", provider)
+		}
+		return ProviderCredentials{
+			APIKey:  "provider-key",
+			BaseURL: "https://opencode.ai/zen/go",
+			Model:   "deepseek-v4-pro",
+			Timeout: 1800,
+		}, nil
+	}
+	t.Cleanup(func() { providerResolver = previous })
+
+	agentHome := t.TempDir()
+	cfg := &Config{
+		DefaultRuntime: "claude",
+		AgentHome:      agentHome,
+		Runtimes: map[string]RuntimeConfig{
+			"claude": {
+				Type:     "python_process",
+				Command:  "python",
+				Args:     []string{defaultClaudeRunnerPath()},
+				Provider: "opencode",
+				Model:    "deepseek-v4-flash",
+			},
+		},
+	}
+	runtime, err := cfg.NewRuntime("claude")
+	if err != nil {
+		t.Fatalf("NewRuntime() error = %v", err)
+	}
+	processRuntime, ok := runtime.(*ProcessRuntime)
+	if !ok {
+		t.Fatalf("runtime type = %T, want *ProcessRuntime", runtime)
+	}
+	if got := processRuntime.config.APIKey; got != "provider-key" {
+		t.Fatalf("APIKey = %q, want provider key", got)
+	}
+	if got := processRuntime.config.BaseURL; got != "https://opencode.ai/zen/go" {
+		t.Fatalf("BaseURL = %q, want provider base URL", got)
+	}
+	if got := processRuntime.config.Timeout; got != 1800 {
+		t.Fatalf("Timeout = %d, want provider timeout", got)
+	}
+	if got := processRuntime.config.Settings; got == "" {
+		t.Fatalf("Settings was not auto-generated")
+	}
+
+	data, err := os.ReadFile(processRuntime.config.Settings)
+	if err != nil {
+		t.Fatalf("read generated settings: %v", err)
+	}
+	var settings struct {
+		Env map[string]string `json:"env"`
+	}
+	if err := json.Unmarshal(data, &settings); err != nil {
+		t.Fatalf("parse generated settings: %v", err)
+	}
+	for key, want := range map[string]string{
+		"ANTHROPIC_BASE_URL":             "https://opencode.ai/zen/go",
+		"ANTHROPIC_API_KEY":              "provider-key",
+		"ANTHROPIC_MODEL":                "deepseek-v4-flash",
+		"ANTHROPIC_DEFAULT_OPUS_MODEL":   "deepseek-v4-flash",
+		"ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-v4-flash",
+		"ANTHROPIC_DEFAULT_HAIKU_MODEL":  "deepseek-v4-flash",
+		"CLAUDE_CODE_SUBAGENT_MODEL":     "deepseek-v4-flash",
+	} {
+		if got := settings.Env[key]; got != want {
+			t.Fatalf("generated settings %s = %q, want %q", key, got, want)
+		}
+	}
+	if _, ok := settings.Env["ANTHROPIC_AUTH_TOKEN"]; ok {
+		t.Fatalf("generated settings must not contain ANTHROPIC_AUTH_TOKEN")
+	}
+}
+
+func TestNewRuntimeExplicitFieldsWinOverProvider(t *testing.T) {
+	previous := providerResolver
+	providerResolver = func(provider string) (ProviderCredentials, error) {
+		return ProviderCredentials{
+			APIKey:  "provider-key",
+			BaseURL: "https://provider.example",
+			Model:   "provider-model",
+			Timeout: 999,
+		}, nil
+	}
+	t.Cleanup(func() { providerResolver = previous })
+
+	cfg := &Config{
+		DefaultRuntime: "claude",
+		AgentHome:      t.TempDir(),
+		Runtimes: map[string]RuntimeConfig{
+			"claude": {
+				Type:     "python_process",
+				Command:  "python",
+				Args:     []string{defaultClaudeRunnerPath()},
+				Provider: "opencode",
+				APIKey:   "explicit-key",
+				BaseURL:  "https://explicit.example",
+				Model:    "explicit-model",
+				Timeout:  321,
+			},
+		},
+	}
+	runtime, err := cfg.NewRuntime("claude")
+	if err != nil {
+		t.Fatalf("NewRuntime() error = %v", err)
+	}
+	processRuntime := runtime.(*ProcessRuntime)
+	if got := processRuntime.config.APIKey; got != "explicit-key" {
+		t.Fatalf("APIKey = %q, want explicit key", got)
+	}
+	if got := processRuntime.config.BaseURL; got != "https://explicit.example" {
+		t.Fatalf("BaseURL = %q, want explicit base URL", got)
+	}
+	if got := processRuntime.config.Timeout; got != 321 {
+		t.Fatalf("Timeout = %d, want explicit timeout", got)
+	}
+}
+
+func TestNewRuntimeProviderErrorIsSurfaced(t *testing.T) {
+	previous := providerResolver
+	providerResolver = func(provider string) (ProviderCredentials, error) {
+		return ProviderCredentials{}, fmt.Errorf("provider %q not found", provider)
+	}
+	t.Cleanup(func() { providerResolver = previous })
+
+	cfg := &Config{
+		DefaultRuntime: "claude",
+		AgentHome:      t.TempDir(),
+		Runtimes: map[string]RuntimeConfig{
+			"claude": {Type: "python_process", Provider: "missing"},
+		},
+	}
+	if _, err := cfg.NewRuntime("claude"); err == nil {
+		t.Fatalf("NewRuntime() with missing provider should fail")
+	}
+}
+
+func TestEnsureRuntimeSettingsWritesModelEnv(t *testing.T) {
+	cfg := &Config{AgentHome: t.TempDir()}
+	rc, err := cfg.ensureRuntimeSettings("claude", RuntimeConfig{
+		BaseURL: "https://opencode.ai/zen/go",
+		APIKey:  "key",
+		Model:   "deepseek-v4-flash",
+	})
+	if err != nil {
+		t.Fatalf("ensureRuntimeSettings() error = %v", err)
+	}
+	if rc.Settings == "" {
+		t.Fatalf("settings path is empty")
+	}
+	data, err := os.ReadFile(rc.Settings)
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	t.Logf("settings file:\n%s", string(data))
+	var settings struct {
+		Env map[string]string `json:"env"`
+	}
+	if err := json.Unmarshal(data, &settings); err != nil {
+		t.Fatalf("parse settings: %v", err)
+	}
+	if got := settings.Env["ANTHROPIC_MODEL"]; got != "deepseek-v4-flash" {
+		t.Fatalf("ANTHROPIC_MODEL = %q, want deepseek-v4-flash", got)
 	}
 }
 

@@ -418,6 +418,26 @@ is `claude`. Install Python and configure `~/.novelgen/agent_config.json`, or
 provide Claude-compatible environment values through `~/.claude/settings.json`
 such as `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, and `ANTHROPIC_MODEL`.
 
+Agent runtimes can also reference an LLM provider already configured in
+`~/.novelgen/llm_config.json`:
+
+```json
+{
+  "default_runtime": "claude",
+  "runtimes": {
+    "claude": {
+      "type": "python_process",
+      "provider": "opencode",
+      "model": "deepseek-v4-flash"
+    }
+  }
+}
+```
+
+The base URL, API key, and timeout are resolved from the provider at runtime
+(explicit fields win), and a Claude flag-settings file is auto-generated under
+`~/.novelgen/agents/settings/` so no manual `settings` path is needed.
+
 ---
 
 ## 完整工作流程示例
