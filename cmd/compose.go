@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"novelgen/internal/agents"
@@ -27,6 +28,11 @@ var (
 	composeIDFlag              string
 	composePromptFlag          string
 	composeReviewFocusFlag     string
+	composeReviewMatrixFlag    bool
+	composeReviewModelsFlag    string
+	composeReviewSampleFlag    int
+	composeReviewSeedFlag      int64
+	composeReviewParallelFlag  int
 	composeMaxRoundsFlag       int
 	composeConcurrencyFlag     int
 	composeHierarchicalFlag    bool
@@ -246,6 +252,11 @@ func init() {
 	composeReviewCmd.Flags().BoolVar(&composeAgentSDKFlag, "agent-sdk", false, "Use Agent SDK workflow with read-only project query tools")
 	composeReviewCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional user suggestions for review focus")
 	composeReviewCmd.Flags().StringVar(&composeReviewFocusFlag, "focus", "", "Built-in review focus: reader,logic,character,commercial,storyline,deai,protagonist,foreshadowing,setup-fidelity,emotion,power-system,novelty (comma-separated, or 'all')")
+	composeReviewCmd.Flags().BoolVar(&composeReviewMatrixFlag, "matrix", false, "Run a multi-model x multi-focus review matrix with clustered sampling")
+	composeReviewCmd.Flags().StringVar(&composeReviewModelsFlag, "models", "", "Comma-separated model list for --matrix (default: project model)")
+	composeReviewCmd.Flags().IntVar(&composeReviewSampleFlag, "sample", 10, "Stratified sample size for --matrix output")
+	composeReviewCmd.Flags().Int64Var(&composeReviewSeedFlag, "seed", 42, "Random seed for --matrix sampling")
+	composeReviewCmd.Flags().IntVar(&composeReviewParallelFlag, "parallel", 4, "Concurrent reviews in --matrix mode")
 	composeReviewCmd.Flags().IntVar(&composeImproveVolume, "volume", 0, "Review one 1-based global volume index")
 	composeReviewCmd.Flags().StringVar(&composeReviewOutFlag, "out", "story/compose/outline_review.json", "Review report output path")
 	composeReviewCmd.Flags().StringVar(&composeModelFlag, "model", "", "Override the project model for this review run (e.g. deepseek-v4-pro)")
@@ -958,6 +969,10 @@ func runComposeReview(cmd *cobra.Command, args []string) error {
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN COMPOSE REVIEW")
 
+	if composeReviewMatrixFlag {
+		return runComposeReviewMatrix(cmd, args)
+	}
+
 	projectConfig, setup, outline, err := loadComposeProjectState()
 	if err != nil {
 		return err
@@ -1022,6 +1037,229 @@ func runComposeReview(cmd *cobra.Command, args []string) error {
 	}
 	printReviewResult("Outline review", review)
 	fmt.Printf("[ok] Outline review saved to %s\n", reportPath)
+	return nil
+}
+
+// runComposeReviewMatrix 运行多模型 × 多 focus 的 review 矩阵:
+// 每个 (model, focus) 组合跑一轮只读 review, 合并所有建议, 按主题聚类,
+// 分层抽样后输出 sampled JSON (可直接喂 --suggestions) 和合理化 prompt。
+func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
+	projectConfig, setup, outline, err := loadComposeProjectState()
+	if err != nil {
+		return err
+	}
+
+	// 解析模型列表
+	var modelList []string
+	if strings.TrimSpace(composeReviewModelsFlag) != "" {
+		for _, m := range strings.Split(composeReviewModelsFlag, ",") {
+			if m = strings.TrimSpace(m); m != "" {
+				modelList = append(modelList, m)
+			}
+		}
+	}
+	if len(modelList) == 0 && strings.TrimSpace(projectConfig.LLM.Model) != "" {
+		modelList = []string{strings.TrimSpace(projectConfig.LLM.Model)}
+	}
+	if len(modelList) == 0 {
+		return fmt.Errorf("no models to run matrix with; pass --models or set project model")
+	}
+
+	// 解析 focus 列表
+	var focusNames []string
+	rawFocus := strings.TrimSpace(composeReviewFocusFlag)
+	if rawFocus == "" || rawFocus == "all" {
+		focusNames = agents.ListReviewFocusNames()
+	} else {
+		for _, f := range strings.Split(rawFocus, ",") {
+			if f = strings.TrimSpace(f); f != "" {
+				focusNames = append(focusNames, f)
+			}
+		}
+	}
+	if len(focusNames) == 0 {
+		return fmt.Errorf("no focus selected for matrix")
+	}
+
+	totalRuns := len(modelList) * len(focusNames)
+	logger.Info("Review matrix: %d models × %d focuses = %d runs", len(modelList), len(focusNames), totalRuns)
+	fmt.Printf("=== Review matrix: %d models × %d focuses = %d runs ===\n", len(modelList), len(focusNames), totalRuns)
+
+	// 并发跑 review
+	parallel := composeReviewParallelFlag
+	if parallel <= 0 {
+		parallel = 4
+	}
+	if parallel > totalRuns {
+		parallel = totalRuns
+	}
+	sem := make(chan struct{}, parallel)
+	type runResult struct {
+		model  string
+		focus  string
+		score  float64
+		review models.ReviewResult
+		err    error
+	}
+	results := make([]runResult, 0, totalRuns)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	for _, model := range modelList {
+		for _, focus := range focusNames {
+			wg.Add(1)
+			go func(model, focus string) {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+
+				agent, aerr := newComposeAgentForProject(projectConfig)
+				if aerr != nil {
+					mu.Lock()
+					results = append(results, runResult{model: model, focus: focus, err: aerr})
+					mu.Unlock()
+					return
+				}
+				agent.SetLanguage(projectConfig.Language)
+				if model != "" {
+					agent.SetModelOverride(model)
+				}
+				focusPrompt := agents.ResolveReviewFocusPrompt(focus)
+				userPrompt := focusPrompt
+				if strings.TrimSpace(composePromptFlag) != "" {
+					if userPrompt != "" {
+						userPrompt = userPrompt + "\n\n" + composePromptFlag
+					} else {
+						userPrompt = composePromptFlag
+					}
+				}
+				input := agents.ComposeOutlineReviewInput{
+					Outline:    *outline,
+					Setup:      *setup,
+					UserPrompt: userPrompt,
+				}
+				if composeImproveVolume > 0 {
+					volumeID, resolveErr := resolveGlobalVolumeID(outline, composeImproveVolume)
+					if resolveErr != nil {
+						mu.Lock()
+						results = append(results, runResult{model: model, focus: focus, err: resolveErr})
+						mu.Unlock()
+						return
+					}
+					input.VolumeID = volumeID
+				}
+				review, rerr := agent.ReviewOutlineWithAgentSDK(cmd.Context(), input)
+				mu.Lock()
+				results = append(results, runResult{model: model, focus: focus, score: review.OverallScore, review: review, err: rerr})
+				mu.Unlock()
+			}(model, focus)
+		}
+	}
+	wg.Wait()
+
+	// 汇总: 收集所有建议
+	var allSugs []agents.ReviewMatrixSuggestion
+	okCount := 0
+	for _, r := range results {
+		status := "ok"
+		if r.err != nil {
+			status = fmt.Sprintf("ERR: %v", r.err)
+			logger.Error("Matrix run %s/%s failed: %v", r.model, r.focus, r.err)
+		} else {
+			okCount++
+			for _, s := range r.review.Suggestions {
+				allSugs = append(allSugs, agents.ReviewMatrixSuggestion{
+					ReviewSuggestion: s,
+					Src:              r.model + "/" + r.focus,
+					ReviewCore:       int(r.score),
+				})
+			}
+		}
+		fmt.Printf("  [%s/%s] score=%v %s\n", r.model, r.focus, r.score, status)
+	}
+	fmt.Printf("成功 %d/%d 轮\n", okCount, totalRuns)
+	if len(allSugs) == 0 {
+		return fmt.Errorf("matrix collected no suggestions (all runs failed)")
+	}
+
+	agents.AnnotateMatrixSuggestions(allSugs)
+
+	// 主题分布
+	themeCount := map[string]int{}
+	for _, s := range allSugs {
+		if len(s.Themes) > 0 {
+			themeCount[s.Themes[0]]++
+		}
+	}
+	fmt.Printf("合并建议总数: %d\n", len(allSugs))
+	fmt.Printf("主题分布: %v\n", themeCount)
+
+	// 输出目录: story/reviews/matrix_<timestamp>/
+	outDir := filepath.Join("story", "reviews", fmt.Sprintf("matrix_%s", time.Now().Format("20060102_150405")))
+	if err := os.MkdirAll(outDir, 0755); err != nil {
+		return err
+	}
+
+	// 保存全部建议
+	allPath := filepath.Join(outDir, "all_suggestions.json")
+	if data, err := json.MarshalIndent(allSugs, "", "  "); err == nil {
+		if err := os.WriteFile(allPath, data, 0644); err != nil {
+			return err
+		}
+	}
+
+	// 分层抽样
+	sampleN := composeReviewSampleFlag
+	if sampleN <= 0 {
+		sampleN = 10
+	}
+	picked := agents.StratifiedSample(allSugs, sampleN, composeReviewSeedFlag)
+	var sampled []agents.ReviewMatrixSuggestion
+	for _, idx := range picked {
+		sampled = append(sampled, allSugs[idx])
+	}
+
+	samplePath := filepath.Join(outDir, fmt.Sprintf("sampled_%d.json", len(sampled)))
+	if data, err := json.MarshalIndent(sampled, "", "  "); err == nil {
+		if err := os.WriteFile(samplePath, data, 0644); err != nil {
+			return err
+		}
+	}
+
+	// 合理化 prompt
+	rp := agents.BuildRationalizePrompt(sampled)
+	rpPath := filepath.Join(outDir, "rationalize_prompt.txt")
+	if err := os.WriteFile(rpPath, []byte(rp), 0644); err != nil {
+		return err
+	}
+
+	// 汇总报告
+	reportPath := filepath.Join(outDir, "matrix_report.txt")
+	var rb strings.Builder
+	fmt.Fprintf(&rb, "review 矩阵: %d 模型 × %d focus = %d 轮\n", len(modelList), len(focusNames), totalRuns)
+	fmt.Fprintf(&rb, "成功: %d/%d\n", okCount, totalRuns)
+	fmt.Fprintf(&rb, "合并建议: %d\n", len(allSugs))
+	fmt.Fprintf(&rb, "主题分布: %v\n", themeCount)
+	fmt.Fprintf(&rb, "抽样(分层): %d 条, seed=%d\n", len(sampled), composeReviewSeedFlag)
+	sampleThemes := map[string]int{}
+	for _, s := range sampled {
+		primary := "其他"
+		if len(s.Themes) > 0 {
+			primary = s.Themes[0]
+		}
+		sampleThemes[primary]++
+	}
+	fmt.Fprintf(&rb, "抽样主题覆盖: %v\n", sampleThemes)
+	if err := os.WriteFile(reportPath, []byte(rb.String()), 0644); err != nil {
+		return err
+	}
+
+	fmt.Printf("\n[ok] Matrix review complete. Outputs in %s\n", outDir)
+	fmt.Printf("  - all suggestions:   %s\n", allPath)
+	fmt.Printf("  - stratified sample: %s\n", samplePath)
+	fmt.Printf("  - rationalize:       %s\n", rpPath)
+	fmt.Printf("  - report:            %s\n", reportPath)
+	fmt.Printf("\n下一步: novelgen compose improve --agent-sdk --suggestions %s\n", samplePath)
 	return nil
 }
 
