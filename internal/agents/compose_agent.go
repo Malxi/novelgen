@@ -1119,6 +1119,8 @@ func composeOutlineReviewAgentSDKParams(command string, outline models.Outline, 
 func composeOutlineReviewToolAllowlist(outline models.Outline, volumeID string) []string {
 	allowlist := []string{
 		"novelgen tool query story-setup --type search",
+		"novelgen tool query story-setup --type index",
+		"novelgen tool query story-setup --type all",
 		"novelgen tool query story-setup --type core-cast",
 		"novelgen tool query story-setup --type storyline",
 		"novelgen tool query story-setup --type premise",

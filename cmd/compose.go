@@ -245,7 +245,7 @@ func init() {
 
 	composeReviewCmd.Flags().BoolVar(&composeAgentSDKFlag, "agent-sdk", false, "Use Agent SDK workflow with read-only project query tools")
 	composeReviewCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional user suggestions for review focus")
-	composeReviewCmd.Flags().StringVar(&composeReviewFocusFlag, "focus", "", "Built-in review focus: reader,logic,character,commercial,storyline,deai (comma-separated, or 'all')")
+	composeReviewCmd.Flags().StringVar(&composeReviewFocusFlag, "focus", "", "Built-in review focus: reader,logic,character,commercial,storyline,deai,protagonist,foreshadowing,setup-fidelity,emotion,power-system,novelty (comma-separated, or 'all')")
 	composeReviewCmd.Flags().IntVar(&composeImproveVolume, "volume", 0, "Review one 1-based global volume index")
 	composeReviewCmd.Flags().StringVar(&composeReviewOutFlag, "out", "story/compose/outline_review.json", "Review report output path")
 	composeReviewCmd.Flags().StringVar(&composeModelFlag, "model", "", "Override the project model for this review run (e.g. deepseek-v4-pro)")

@@ -667,6 +667,8 @@ func queryStorySetup(ctx toolProjectContext, queryType, name string) toolRespons
 		return toolResponse{OK: true, Count: 0, Results: nil}
 	}
 	switch normalizeSetupType(queryType) {
+	case "index":
+		return setupIndexResponse(ctx.Setup)
 	case "", "all":
 		return toolResponse{OK: true, Count: 1, Results: ctx.Setup}
 	case "search", "find", "refs":
@@ -690,6 +692,37 @@ func queryStorySetup(ctx toolProjectContext, queryType, name string) toolRespons
 	default:
 		return toolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported story-setup type %q", queryType)}}
 	}
+}
+
+// setupIndexResponse 返回 setup 的轻量索引: 各主要字段的数量与名称列表,
+// 供 agent 快速了解设定书全貌而不拉取完整数据(省 token)。
+func setupIndexResponse(setup *models.StorySetup) toolResponse {
+	if setup == nil {
+		return toolResponse{OK: true, Count: 0, Results: nil}
+	}
+	index := map[string]interface{}{
+		"project_name":     setup.ProjectName,
+		"genres":           setup.Genres,
+		"premise":          setup.Premise,
+		"theme":            setup.Theme,
+		"rules":            setup.Rules,
+		"target_audience":  setup.TargetAudience,
+		"tone":             setup.Tone,
+		"pov_style":        setup.POVStyle,
+		"core_cast":        setup.CoreCast,
+		"storylines":       setup.Storylines,
+		"premises":         setup.Premises,
+		"world_timeline":   setup.WorldTimeline,
+		"world_resources":  setup.WorldResources,
+		"long_form_plan":   setup.LongFormPlan,
+		"core_cast_count":  len(setup.CoreCast),
+		"storyline_count":  len(setup.Storylines),
+		"premise_count":    len(setup.Premises),
+		"timeline_count":   len(setup.WorldTimeline),
+		"resource_count":   len(setup.WorldResources),
+		"has_long_form":    setup.LongFormPlan != nil,
+	}
+	return toolResponse{OK: true, Count: 1, Results: index}
 }
 
 func queryLogs(root, queryType, id, name string, includeContent bool) toolResponse {
