@@ -2323,14 +2323,20 @@ def broad_allowed_tool_prefixes(normalized_allowlist: list[str]) -> list[str]:
 
 
 def story_setup_query_type_prefixes() -> set[str]:
-    return {
+    prefixes = {
         "novelgen tool query story-setup --type search",
         "novelgen tool query story-setup --type core-cast",
         "novelgen tool query story-setup --type storyline",
         "novelgen tool query story-setup --type premise",
         "novelgen tool query story-setup --type resource",
         "novelgen tool query story-setup --type timeline",
+        "novelgen tool query story-setup --type index",
+        "novelgen tool query story-setup --type all",
+        # 裸前缀: agent 常以 story-setup --view brief/index 查询整个设定书,
+        # 工具侧无 --type 时走 all 分支返回整个 setup, 是合法的只读查询。
+        "novelgen tool query story-setup",
     }
+    return prefixes
 
 
 def extract_tool_command(tool_input: Any) -> str:
