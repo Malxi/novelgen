@@ -26,6 +26,7 @@ import (
 var (
 	composeIDFlag              string
 	composePromptFlag          string
+	composeReviewFocusFlag     string
 	composeMaxRoundsFlag       int
 	composeConcurrencyFlag     int
 	composeHierarchicalFlag    bool
@@ -244,6 +245,7 @@ func init() {
 
 	composeReviewCmd.Flags().BoolVar(&composeAgentSDKFlag, "agent-sdk", false, "Use Agent SDK workflow with read-only project query tools")
 	composeReviewCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional user suggestions for review focus")
+	composeReviewCmd.Flags().StringVar(&composeReviewFocusFlag, "focus", "", "Built-in review focus: reader,logic,character,commercial,storyline,deai (comma-separated, or 'all')")
 	composeReviewCmd.Flags().IntVar(&composeImproveVolume, "volume", 0, "Review one 1-based global volume index")
 	composeReviewCmd.Flags().StringVar(&composeReviewOutFlag, "out", "story/compose/outline_review.json", "Review report output path")
 	composeReviewCmd.Flags().StringVar(&composeModelFlag, "model", "", "Override the project model for this review run (e.g. deepseek-v4-pro)")
@@ -535,6 +537,16 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	if countGeneratedVolumes(outline) == 0 {
 		return fmt.Errorf("outline has no generated volumes to improve; run 'novelgen compose gen' first")
 	}
+
+	// Backup the current outline before any improvement pass mutates it. Both
+	// legacy and Agent SDK improve paths overwrite outline.json in place; the
+	// in-memory clone above only guards against a no-op run, so a disk backup
+	// is the only way to recover the pre-improve outline after a bad iteration.
+	if err := backupOutlineFiles(); err != nil {
+		logger.Error("Failed to backup outline before improve: %v", err)
+		return err
+	}
+	logger.Info("Backed up outline before improvement")
 
 	if composeHierarchicalFlag && composeOneShotFlag {
 		return fmt.Errorf("--hierarchical and --one-shot cannot be used together")
@@ -960,11 +972,20 @@ func runComposeReview(cmd *cobra.Command, args []string) error {
 	}
 
 	var review models.ReviewResult
+	// --focus 提供内置审查视角，与 --prompt 自由文本可组合使用。
+	userPrompt := composePromptFlag
+	if focusPrompt := agents.ResolveReviewFocusPrompt(composeReviewFocusFlag); focusPrompt != "" {
+		if userPrompt != "" {
+			userPrompt = focusPrompt + "\n\n" + userPrompt
+		} else {
+			userPrompt = focusPrompt
+		}
+	}
 	if composeAgentSDKFlag {
 		input := agents.ComposeOutlineReviewInput{
 			Outline:    *outline,
 			Setup:      *setup,
-			UserPrompt: composePromptFlag,
+			UserPrompt: userPrompt,
 		}
 		if composeImproveVolume > 0 {
 			volumeID, resolveErr := resolveGlobalVolumeID(outline, composeImproveVolume)
@@ -981,7 +1002,7 @@ func runComposeReview(cmd *cobra.Command, args []string) error {
 		result, reviewErr := agent.Review(cmd.Context(), agents.ComposeReviewInput{
 			ExistingOutline: *outline,
 			Setup:           *setup,
-			UserPrompt:      composePromptFlag,
+			UserPrompt:      userPrompt,
 		})
 		if reviewErr != nil {
 			return fmt.Errorf("outline review failed: %w", reviewErr)

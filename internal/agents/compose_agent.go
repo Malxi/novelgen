@@ -1125,6 +1125,10 @@ func composeOutlineReviewToolAllowlist(outline models.Outline, volumeID string) 
 		"novelgen tool query story-setup --type resource",
 		"novelgen tool query story-setup --type timeline",
 		"novelgen tool query context --type outline-volume",
+		"novelgen tool query outline --type refs --entity-type storyline --name",
+		"novelgen tool query outline --type refs --entity-type character --name",
+		"novelgen tool query outline --type refs --entity-type item --name",
+		"novelgen tool query outline --type refs --entity-type location --name",
 	}
 	addVolume := func(volume models.Volume) {
 		vid := strings.TrimSpace(volume.ID)

@@ -3895,6 +3895,8 @@ func chapterEntityReasons(chapter *models.Chapter, entityType, name string) []st
 		return itemChapterReasons(chapter, name)
 	case "location":
 		return locationChapterReasons(chapter, name)
+	case "storyline":
+		return storylineChapterReasons(chapter, name)
 	default:
 		reasons := make([]string, 0)
 		reasons = append(reasons, prefixedReasons("character", characterChapterReasons(chapter, name))...)
@@ -3959,6 +3961,28 @@ func locationChapterReasons(chapter *models.Chapter, name string) []string {
 	for idx, event := range chapter.Events {
 		if eventMatchesEntity(event, "location", name) {
 			reasons = append(reasons, fmt.Sprintf("events[%d]", idx))
+		}
+	}
+	return compactStrings(reasons)
+}
+
+// storylineChapterReasons reports where a chapter advances a named storyline.
+func storylineChapterReasons(chapter *models.Chapter, name string) []string {
+	var reasons []string
+	for idx, advance := range chapter.StorylineAdvances {
+		if textMatches(advance.StorylineName, name) {
+			reasons = append(reasons, fmt.Sprintf("storyline_advances[%d]", idx))
+		}
+	}
+	if len(reasons) > 0 {
+		return compactStrings(reasons)
+	}
+	// Fall back to free-text matching against the advance payload fields,
+	// so a query with no exact storyline name can still surface mentions.
+	for idx, advance := range chapter.StorylineAdvances {
+		payload := advance.StorylineName + " " + advance.Stage + " " + advance.Change + " " + advance.Consequence + " " + advance.Pressure
+		if textMatches(payload, name) {
+			reasons = append(reasons, fmt.Sprintf("storyline_advances[%d].text", idx))
 		}
 	}
 	return compactStrings(reasons)
