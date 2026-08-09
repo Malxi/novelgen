@@ -704,6 +704,12 @@ func composeImproveRequiredFocusedChecks(volume models.Volume, prompt string) []
 	checks := make([]string, 0, len(ids)*len(categories))
 	for _, id := range ids {
 		for _, category := range categories {
+			if strings.EqualFold(strings.TrimSpace(category), "all") {
+				// "all" 意味着任意 category 均可：用裸命令(不带 --category)作为要求，
+				// 这样 agent 实际跑的 --category pacing/logic/... 变体都能被 contains 匹配。
+				checks = append(checks, fmt.Sprintf("novelgen tool check all --target outline --scope chapter --id %q", id))
+				continue
+			}
 			checks = append(checks, fmt.Sprintf("novelgen tool check all --target outline --scope chapter --id %q --category %s --min-priority low --max-issues 8", id, category))
 		}
 	}
