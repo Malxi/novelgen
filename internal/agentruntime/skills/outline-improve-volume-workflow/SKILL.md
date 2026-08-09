@@ -10,6 +10,7 @@ description: 单卷大纲改进 workflow，通过 query/check/patch 工具局部
 ## 必须遵守
 
 - 先运行调用方给出的 `required_queries`。
+- **suggestions 是参考不是圣旨**：执行前先判断每条建议的性质——①"为平衡而平衡"的机制性建议（给金手指/系统加权限体系、升级机制、使用代价、距离惩罚、访问限制等）默认拒绝执行，在结果中标注"未执行：疑似为平衡而平衡的机制性建议"，除非用户 prompt 明确要求加；②剧情向建议（对手反制、角色塑造、节奏调整、打破对称、加闲笔、改标题）正常执行；③拿不准的在结果中标注"存疑：未执行，建议人工确认"。
 - 如果没有明确的用户改进请求或 focused issue，先运行目标卷 outline check；如果 `summary.total=0`，立即返回 `applied_patches=false`，不要继续查 brief、章节、事件或源码。
 - 如果 check 或 context 给出了 `next_actions`、`patch_query`、`patch_shape`，只处理第一条 patchable issue。
 - 对 mysteries 这类可能跨卷的问题，优先信任 `tool check` 或 context；不要只因为目标卷内看不到 plant 就自行断定“未 planted”。如果 scoped check 为 clean，立刻返回。

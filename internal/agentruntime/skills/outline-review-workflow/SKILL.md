@@ -18,6 +18,7 @@ description: 只读审查整本或单卷大纲，使用查询工具返回 review
 - **每次只能执行一条命令**。严禁用 `&&`、`||`、`;`、`|` 或 `echo` 把多条命令串联或拼接输出分隔符；一次查询只查一个目标，需要查多个目标就分多次独立调用。链式命令会被门禁拒绝并导致整个审查失败。
 - 章节级细节（如 `storyline_advances`、`chapter_payoff`、`conflict`、章节事件）用 `novelgen tool query outline --type chapter --id "<id>" --view brief` 或 `novelgen tool query outline --type events --chapter-id "<id>" --view brief` 查询；不要使用 `context --type outline-chapter` 或 `context --type outline-events`（不支持的类型）。
 - 每个 suggestion 的 `target_id` 必须是指定范围内真实存在的 volume/chapter ID（如 `P1-V1`、`P1-V1-C2`）；不确定就不要写 `target_id`。
+- **禁止输出"为平衡而平衡"的机制性建议**：不得建议给金手指/系统添加权限体系、升级机制、使用代价、距离惩罚、访问限制等（如"高级信息点附近日志失真""需要长老授权""权限被回收"）。平衡主角强度只能通过对手反制、剧情冲突、策略变化实现；主角的金手指本身是爽点，不需要额外机制制衡。识别并指出大纲里已有的这类"自缚手脚"设定，但不要在建议里发明新的。
 - 不要凭空断言"伏笔未回收/设定矛盾"——除非从查询结果中看到了对应事实。宁可少列，不要编造。
 - 用户 prompt 是审查任务的最高优先级；没有用户 prompt 时，按结构、节奏、连贯性、人物、情节、信息差等维度自由审查。
 - 保持克制：`suggestions` 最多 8 条，只列真正影响阅读质量的问题；`strengths` 最多 4 条；`weaknesses` 最多 4 条。
