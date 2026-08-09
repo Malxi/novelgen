@@ -15,6 +15,7 @@ description: 只读审查整本或单卷大纲，使用查询工具返回 review
 
 - 先通过 index 了解整体结构，再按需查询 volume brief、events、story-setup；不要一次性拉取全部章节详情，不要查询章节正文。
 - 只允许调用允许列表内的命令。不要运行 `tool check`、`tool patch`、`tool patch-buffer`、`tool refresh`，不要读取源码、故事文件、RPG 文件或 Claude 临时 `tool-results`。
+- **每次只能执行一条命令**。严禁用 `&&`、`||`、`;`、`|` 或 `echo` 把多条命令串联或拼接输出分隔符；一次查询只查一个目标，需要查多个目标就分多次独立调用。链式命令会被门禁拒绝并导致整个审查失败。
 - 章节级细节（如 `storyline_advances`、`chapter_payoff`、`conflict`、章节事件）用 `novelgen tool query outline --type chapter --id "<id>" --view brief` 或 `novelgen tool query outline --type events --chapter-id "<id>" --view brief` 查询；不要使用 `context --type outline-chapter` 或 `context --type outline-events`（不支持的类型）。
 - 每个 suggestion 的 `target_id` 必须是指定范围内真实存在的 volume/chapter ID（如 `P1-V1`、`P1-V1-C2`）；不确定就不要写 `target_id`。
 - 不要凭空断言"伏笔未回收/设定矛盾"——除非从查询结果中看到了对应事实。宁可少列，不要编造。

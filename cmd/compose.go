@@ -25,38 +25,41 @@ import (
 )
 
 var (
-	composeIDFlag              string
-	composePromptFlag          string
-	composeReviewFocusFlag     string
-	composeReviewMatrixFlag    bool
-	composeReviewModelsFlag    string
-	composeReviewSampleFlag    int
-	composeReviewSeedFlag      int64
-	composeReviewParallelFlag  int
-	composeMaxRoundsFlag       int
-	composeConcurrencyFlag     int
-	composeHierarchicalFlag    bool
-	composeOneShotFlag         bool
-	composeAgentSDKFlag        bool
-	composeAgentApplyFlag      bool
-	composeRepairBudgetFlag    int
-	composeForceImproveFlag    bool
-	composeForceGenFlag        bool
-	composeCheckJSONFlag       bool
-	composeCheckSuggestionsOut string
-	composeImproveVolume       int
-	composeImproveFromVol      int
-	composeImproveToVol        int
-	composeSuggestionsFlag     string
-	composeReviewOutFlag       string
-	composeModelFlag           string
-	composePipelineFromVol     int
-	composePipelineToVol       int
-	composePipelineMaxRounds   int
-	composePipelineForce       bool
-	composePipelineSkipGen     bool
-	composePipelineSkipImprove bool
-	composePipelineSkipCross   bool
+	composeIDFlag               string
+	composePromptFlag           string
+	composeReviewFocusFlag      string
+	composeReviewMatrixFlag     bool
+	composeCrossVolumeFlag      bool
+	composeReviewFromVolumeFlag int
+	composeReviewToVolumeFlag   int
+	composeReviewModelsFlag     string
+	composeReviewSampleFlag     int
+	composeReviewSeedFlag       int64
+	composeReviewParallelFlag   int
+	composeMaxRoundsFlag        int
+	composeConcurrencyFlag      int
+	composeHierarchicalFlag     bool
+	composeOneShotFlag          bool
+	composeAgentSDKFlag         bool
+	composeAgentApplyFlag       bool
+	composeRepairBudgetFlag     int
+	composeForceImproveFlag     bool
+	composeForceGenFlag         bool
+	composeCheckJSONFlag        bool
+	composeCheckSuggestionsOut  string
+	composeImproveVolume        int
+	composeImproveFromVol       int
+	composeImproveToVol         int
+	composeSuggestionsFlag      string
+	composeReviewOutFlag        string
+	composeModelFlag            string
+	composePipelineFromVol      int
+	composePipelineToVol        int
+	composePipelineMaxRounds    int
+	composePipelineForce        bool
+	composePipelineSkipGen      bool
+	composePipelineSkipImprove  bool
+	composePipelineSkipCross    bool
 )
 
 var composeCmd = &cobra.Command{
@@ -253,6 +256,9 @@ func init() {
 	composeReviewCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional user suggestions for review focus")
 	composeReviewCmd.Flags().StringVar(&composeReviewFocusFlag, "focus", "", "Built-in review focus: reader,logic,character,commercial,storyline,deai,protagonist,foreshadowing,setup-fidelity,emotion,power-system,novelty (comma-separated, or 'all')")
 	composeReviewCmd.Flags().BoolVar(&composeReviewMatrixFlag, "matrix", false, "Run a multi-model x multi-focus review matrix with clustered sampling")
+	composeReviewCmd.Flags().BoolVar(&composeCrossVolumeFlag, "cross-volume", false, "Review cross-volume continuity across a volume range in one agent session")
+	composeReviewCmd.Flags().IntVar(&composeReviewFromVolumeFlag, "from-volume", 0, "Cross-volume review start (1-based global volume index)")
+	composeReviewCmd.Flags().IntVar(&composeReviewToVolumeFlag, "to-volume", 0, "Cross-volume review end (1-based global volume index, default: last)")
 	composeReviewCmd.Flags().StringVar(&composeReviewModelsFlag, "models", "", "Comma-separated model list for --matrix (default: project model)")
 	composeReviewCmd.Flags().IntVar(&composeReviewSampleFlag, "sample", 10, "Stratified sample size for --matrix output")
 	composeReviewCmd.Flags().Int64Var(&composeReviewSeedFlag, "seed", 42, "Random seed for --matrix sampling")
@@ -973,6 +979,10 @@ func runComposeReview(cmd *cobra.Command, args []string) error {
 		return runComposeReviewMatrix(cmd, args)
 	}
 
+	if composeCrossVolumeFlag {
+		return runComposeCrossVolumeReview(cmd, args)
+	}
+
 	projectConfig, setup, outline, err := loadComposeProjectState()
 	if err != nil {
 		return err
@@ -1260,6 +1270,67 @@ func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  - rationalize:       %s\n", rpPath)
 	fmt.Printf("  - report:            %s\n", reportPath)
 	fmt.Printf("\n下一步: novelgen compose improve --agent-sdk --suggestions %s\n", samplePath)
+	return nil
+}
+
+// runComposeCrossVolumeReview 跨卷审查: 单 agent session 内审查卷范围的连续性。
+func runComposeCrossVolumeReview(cmd *cobra.Command, args []string) error {
+	projectConfig, setup, outline, err := loadComposeProjectState()
+	if err != nil {
+		return err
+	}
+	fromIdx := composeReviewFromVolumeFlag
+	if fromIdx <= 0 {
+		return fmt.Errorf("--from-volume is required for --cross-volume review")
+	}
+	toIdx := composeReviewToVolumeFlag
+	if toIdx > 0 && toIdx < fromIdx {
+		return fmt.Errorf("--to-volume %d must be >= --from-volume %d", toIdx, fromIdx)
+	}
+
+	agent, err := newComposeAgentForProject(projectConfig)
+	if err != nil {
+		return err
+	}
+	agent.SetLanguage(projectConfig.Language)
+	if strings.TrimSpace(composeModelFlag) != "" {
+		agent.SetModelOverride(composeModelFlag)
+	}
+
+	input := agents.ComposeOutlineReviewInput{
+		Outline:         *outline,
+		Setup:           *setup,
+		UserPrompt:      composePromptFlag,
+		CrossVolume:     true,
+		FromVolumeIndex: fromIdx,
+		ToVolumeIndex:   toIdx,
+	}
+	// --focus 拼进 prompt
+	if focusPrompt := agents.ResolveReviewFocusPrompt(composeReviewFocusFlag); focusPrompt != "" {
+		if input.UserPrompt != "" {
+			input.UserPrompt = focusPrompt + "\n\n" + input.UserPrompt
+		} else {
+			input.UserPrompt = focusPrompt
+		}
+	}
+
+	review, err := agent.ReviewOutlineWithAgentSDK(cmd.Context(), input)
+	if err != nil {
+		return fmt.Errorf("cross-volume review failed: %w", err)
+	}
+
+	reportPath := strings.TrimSpace(composeReviewOutFlag)
+	if reportPath == "" {
+		reportPath = filepath.Join("story", "reviews", "cross_volume_review.json")
+	}
+	if err := os.MkdirAll(filepath.Dir(reportPath), 0755); err != nil {
+		return fmt.Errorf("failed to create review report directory: %w", err)
+	}
+	if err := saveReviewResult(reportPath, review); err != nil {
+		return err
+	}
+	printReviewResult("Cross-volume review", review)
+	fmt.Printf("[ok] Cross-volume review saved to %s\n", reportPath)
 	return nil
 }
 

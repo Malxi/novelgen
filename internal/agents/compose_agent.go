@@ -302,6 +302,10 @@ type ComposeOutlineReviewInput struct {
 	Setup      models.StorySetup
 	UserPrompt string
 	VolumeID   string
+	// CrossVolume 为 true 时按跨卷模式审查 (范围: FromVolumeIndex..ToVolumeIndex, 1-based 全局索引)。
+	CrossVolume     bool
+	FromVolumeIndex int
+	ToVolumeIndex   int
 }
 
 type composeAgentSDKOutlineReviewPromptInput struct {
@@ -1026,10 +1030,16 @@ func (a *ComposeAgent) ImproveVolumeWithAgentSDK(ctx context.Context, input Comp
 func (a *ComposeAgent) ReviewOutlineWithAgentSDK(ctx context.Context, input ComposeOutlineReviewInput) (models.ReviewResult, error) {
 	logger.Section("COMPOSE AGENT SDK - Outline Review")
 	scope := "whole outline"
-	if strings.TrimSpace(input.VolumeID) != "" {
+	if input.CrossVolume && input.FromVolumeIndex > 0 {
+		scope = fmt.Sprintf("volumes %d-%d (cross-volume)", input.FromVolumeIndex, input.ToVolumeIndex)
+	} else if strings.TrimSpace(input.VolumeID) != "" {
 		scope = "volume " + strings.TrimSpace(input.VolumeID)
 	}
 	logger.Info("Scope: %s", scope)
+
+	if input.CrossVolume {
+		return a.reviewOutlineCrossVolumeAgentSDK(ctx, input)
+	}
 
 	promptInput := buildAgentSDKOutlineReviewPromptInput(input)
 	params := composeOutlineReviewAgentSDKParams("review the story outline and provide focused improvement suggestions", input.Outline, input.VolumeID)
@@ -1043,6 +1053,136 @@ func (a *ComposeAgent) ReviewOutlineWithAgentSDK(ctx context.Context, input Comp
 	logger.Info("Overall Score: %.1f/100", output.OverallScore)
 	logger.Info("Suggestions: %d", len(output.Suggestions))
 	return output, nil
+}
+
+// reviewOutlineCrossVolumeAgentSDK 跨卷审查: 一次 session 内按"线"审查多卷之间的连续性问题。
+func (a *ComposeAgent) reviewOutlineCrossVolumeAgentSDK(ctx context.Context, input ComposeOutlineReviewInput) (models.ReviewResult, error) {
+	logger.Section("COMPOSE AGENT SDK - Cross-Volume Outline Review")
+
+	// 收集范围内的卷
+	var inScope []models.Volume
+	for _, part := range input.Outline.Parts {
+		for _, volume := range part.Volumes {
+			idx := globalVolumeIndex(input.Outline, volume.ID)
+			if idx >= input.FromVolumeIndex && (input.ToVolumeIndex <= 0 || idx <= input.ToVolumeIndex) {
+				inScope = append(inScope, volume)
+			}
+		}
+	}
+	if len(inScope) == 0 {
+		return models.ReviewResult{}, fmt.Errorf("cross-volume review: no volumes in range %d-%d", input.FromVolumeIndex, input.ToVolumeIndex)
+	}
+	volCount, chapCount := 0, 0
+	for _, v := range inScope {
+		volCount++
+		chapCount += len(v.Chapters)
+	}
+	logger.Info("Cross-volume scope: %d volumes, %d chapters", volCount, chapCount)
+
+	instructions := []string{
+		"Run the required first query exactly as given before anything else. It returns the overall structure of the review scope.",
+		"This is a read-only cross-volume review: do not patch, do not run check, do not write files, do not read source/RPG/Claude tool-results.",
+		"Focus on CROSS-VOLUME issues only: foreshadowing lifecycle, setup consistency drift, repeated tropes across volumes, macro pacing, volume-end hook handoff, character arc continuity. Single-volume issues are out of scope.",
+		"Every suggestion must cite facts from at least TWO different volumes/chapters in scope. Base every claim on facts visible in tool query results; do not assert an unresolved mystery or contradiction unless the queried facts show it.",
+		"Use `novelgen tool query outline --type refs --entity-type storyline|character|item --name \"<name>\" --view brief` to trace a line across volumes. Cross-check setup book via story-setup queries for promise-vs-delivery gaps.",
+		"Every suggestion target_id must exist in the review scope. For cross-volume issues not tied to one target, point at the most relevant volume/chapter or omit target_id.",
+		"Keep review_result compact: summary under 300 Chinese characters, at most 10 suggestions, at most 4 strengths and 4 weaknesses.",
+		"Return only the JSON object; no Markdown, no code fences, no extra text.",
+	}
+	focus := "按跨卷维度自由审查：伏笔生命周期、设定一致性漂移、跨卷重复套路、宏观节奏、卷间钩子衔接、角色跨卷弧线。"
+	if strings.TrimSpace(input.UserPrompt) != "" {
+		instructions = append(instructions,
+			"user_prompt 是本次审查的最高优先级任务清单。围绕它逐条分析，再补充你发现的跨卷问题。",
+		)
+		focus = "以 user_prompt 为最高优先级；在此基础上补充伏笔生命周期、设定一致性漂移、跨卷重复套路、宏观节奏、卷间钩子衔接、角色跨卷弧线等跨卷维度。"
+	}
+
+	promptInput := composeAgentSDKOutlineReviewPromptInput{
+		TargetVolumeID:  fmt.Sprintf("%d-%d (cross-volume)", input.FromVolumeIndex, input.ToVolumeIndex),
+		VolumeCount:     volCount,
+		ChapterCount:    chapCount,
+		UserPrompt:      strings.TrimSpace(input.UserPrompt),
+		ReviewFocus:     focus,
+		RequiredQueries: []string{"novelgen tool query outline --type all --view index"},
+		Instructions:    instructions,
+	}
+
+	allowlist := []string{
+		"novelgen tool query story-setup --type search",
+		"novelgen tool query story-setup --type index",
+		"novelgen tool query story-setup --type all",
+		"novelgen tool query story-setup --type core-cast",
+		"novelgen tool query story-setup --type storyline",
+		"novelgen tool query story-setup --type premise",
+		"novelgen tool query story-setup --type resource",
+		"novelgen tool query story-setup --type timeline",
+		"novelgen tool query outline --type all --view index",
+		"novelgen tool query outline --type refs --entity-type storyline --name",
+		"novelgen tool query outline --type refs --entity-type character --name",
+		"novelgen tool query outline --type refs --entity-type item --name",
+		"novelgen tool query outline --type refs --entity-type location --name",
+	}
+	for _, v := range inScope {
+		vid := strings.TrimSpace(v.ID)
+		if vid == "" {
+			continue
+		}
+		allowlist = append(allowlist,
+			fmt.Sprintf("novelgen tool query outline --type volume --id %q --view brief", vid),
+			fmt.Sprintf("novelgen tool query outline --type events --volume-id %q --view brief", vid),
+		)
+		for _, chapter := range v.Chapters {
+			cid := strings.TrimSpace(chapter.ID)
+			if cid == "" {
+				continue
+			}
+			allowlist = append(allowlist,
+				fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", cid),
+				fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q --view brief", cid),
+			)
+		}
+	}
+
+	params := InvokeParams{
+		SDKSkills:      []string{"novel-tools-core", "outline-review-workflow", "cross-volume-review-workflow"},
+		Tools:          []string{"Bash"},
+		AllowedTools:   []string{"Bash"},
+		PermissionMode: "dontAsk",
+		RequireSDK:     true,
+		ToolAllowlist:  dedupeComposeToolAllowlist(allowlist),
+		ToolEvidence: ToolEvidenceRequirement{
+			MinQueryCalls:        2,
+			RequireNoDeniedTools: true,
+			RequiredToolCommands: []string{"novelgen tool query outline --type all --view index"},
+		},
+		MaxTurns: 30,
+		Timeout:  900,
+		Command:  "review the cross-volume continuity of the story outline and provide focused improvement suggestions",
+	}
+
+	var output models.ReviewResult
+	if err := a.base.Execute(ctx, params, promptInput, &output); err != nil {
+		return models.ReviewResult{}, err
+	}
+	output.NormalizeScoreScale()
+	clipOutlineReviewResult(&output)
+	logger.Section("Cross-Volume Agent SDK Review Result")
+	logger.Info("Overall Score: %.1f/100", output.OverallScore)
+	logger.Info("Suggestions: %d", len(output.Suggestions))
+	return output, nil
+}
+
+func globalVolumeIndex(outline models.Outline, volumeID string) int {
+	idx := 0
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			idx++
+			if strings.EqualFold(strings.TrimSpace(volume.ID), strings.TrimSpace(volumeID)) {
+				return idx
+			}
+		}
+	}
+	return 0
 }
 
 func buildAgentSDKOutlineReviewPromptInput(input ComposeOutlineReviewInput) composeAgentSDKOutlineReviewPromptInput {
