@@ -410,7 +410,7 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 
 	var gate qualityGateResult
 	if composeAgentSDKFlag {
-		outline, gate, err = repairOutlineWithQualityGateAgentSDK(cmd.Context(), outline, setup, projectConfig, "generation", false, false, "")
+		outline, gate, err = repairOutlineWithQualityGateAgentSDK(cmd.Context(), outline, setup, projectConfig, "generation", false, false, "", nil)
 	} else {
 		outline, gate, err = repairOutlineWithQualityGate(cmd.Context(), outline, setup, projectConfig, "generation", false)
 	}
@@ -611,7 +611,15 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 				return err
 			}
 		}
-		err = runAgentSDKImproveWithResume(improveOutline, setup, projectConfig, composeMaxRoundsFlag, agentSDKForceImprove, composePromptFlag, composeAgentApplyFlag, improveOutline != outline, suggestions, composeModelFlag)
+		// When the run is scoped to selected volume(s), the iteration outline
+		// only contains those volumes. Pass the full outline as the
+		// cross-volume context so apply mode can patch adjacent volumes in the
+		// same session.
+		var improveCrossOutline *models.Outline
+		if selectedImprove {
+			improveCrossOutline = outline
+		}
+		err = runAgentSDKImproveWithResume(improveOutline, setup, projectConfig, composeMaxRoundsFlag, agentSDKForceImprove, composePromptFlag, composeAgentApplyFlag, improveOutline != outline, suggestions, composeModelFlag, improveCrossOutline)
 	} else {
 		err = iterateOutlineImprovement(improveOutline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, useHierarchical, composeForceImproveFlag, composePromptFlag)
 	}
@@ -622,7 +630,11 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	var gate qualityGateResult
 	if improveOutline != outline {
 		if composeAgentSDKFlag {
-			improveOutline, gate, err = repairOutlineWithQualityGateAgentSDK(cmd.Context(), improveOutline, setup, projectConfig, "improvement", composeAgentApplyFlag, true, composePromptFlag)
+			var repairCrossOutline *models.Outline
+			if selectedImprove {
+				repairCrossOutline = outline
+			}
+			improveOutline, gate, err = repairOutlineWithQualityGateAgentSDK(cmd.Context(), improveOutline, setup, projectConfig, "improvement", composeAgentApplyFlag, true, composePromptFlag, repairCrossOutline)
 		} else {
 			improveOutline, gate, err = repairOutlineWithQualityGate(cmd.Context(), improveOutline, setup, projectConfig, "improvement", true)
 		}
@@ -633,7 +645,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		mergeGeneratedVolumes(outline, improveOutline)
 	} else {
 		if composeAgentSDKFlag {
-			outline, gate, err = repairOutlineWithQualityGateAgentSDK(cmd.Context(), outline, setup, projectConfig, "improvement", composeAgentApplyFlag, false, composePromptFlag)
+			outline, gate, err = repairOutlineWithQualityGateAgentSDK(cmd.Context(), outline, setup, projectConfig, "improvement", composeAgentApplyFlag, false, composePromptFlag, nil)
 		} else {
 			outline, gate, err = repairOutlineWithQualityGate(cmd.Context(), outline, setup, projectConfig, "improvement", false)
 		}
@@ -701,9 +713,10 @@ func runAgentSDKImproveWithResume(
 	scoped bool,
 	suggestions []models.ReviewSuggestion,
 	modelOverride string,
+	crossOutline *models.Outline,
 ) error {
 	return retryAgentSDKImproveWithResume(composeAgentSDKImproveResumeAttempts, func() error {
-		return iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, maxRounds, forceImprove, userPrompt, applyPatches, scoped, suggestions, modelOverride)
+		return iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, maxRounds, forceImprove, userPrompt, applyPatches, scoped, suggestions, modelOverride, crossOutline)
 	})
 }
 
@@ -1707,7 +1720,7 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 				return err
 			}
 			if composeAgentSDKFlag {
-				err = iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, composePipelineMaxRounds, composePipelineForce, composePromptFlag, composeAgentApplyFlag, true, nil, "")
+				err = iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, composePipelineMaxRounds, composePipelineForce, composePromptFlag, composeAgentApplyFlag, true, nil, "", outline)
 			} else {
 				err = iterateOutlineImprovement(improveOutline, setup, projectConfig, composePipelineMaxRounds, 1, true, composePipelineForce, composePromptFlag)
 			}
@@ -2111,7 +2124,7 @@ func repairOutlineWithQualityGate(ctx context.Context, outline *models.Outline, 
 	return repaired, finalGate, nil
 }
 
-func repairOutlineWithQualityGateAgentSDK(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string, agentApply bool, scoped bool, userPrompt string) (*models.Outline, qualityGateResult, error) {
+func repairOutlineWithQualityGateAgentSDK(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string, agentApply bool, scoped bool, userPrompt string, crossOutline *models.Outline) (*models.Outline, qualityGateResult, error) {
 	applyOutlineNormalization(outline, "pre_gate_"+stage)
 	gate := runOutlineQualityGateForScope(setup, outline, scoped)
 	repairGate := filterQualityGateForAgentSDKPromptBoundary(gate, outline, userPrompt, "quality-gate repair")
@@ -2146,7 +2159,7 @@ func repairOutlineWithQualityGateAgentSDK(ctx context.Context, outline *models.O
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
 	review := qualityGateReviewResult("Repair outline quality gate findings before saving project state.", repairGate)
-	repaired, err := agent.RepairByReviewAgentSDK(ctx, outline, review, setup, agentApply)
+	repaired, err := agent.RepairByReviewAgentSDK(ctx, outline, review, setup, agentApply, crossOutline)
 	if err != nil {
 		return outline, gate, fmt.Errorf("outline quality gate Agent SDK repair failed: %w", err)
 	}
@@ -3228,7 +3241,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 	return nil
 }
 
-func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, forceImprove bool, userPrompt string, agentApply bool, scoped bool, suggestions []models.ReviewSuggestion, modelOverride string) error {
+func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, forceImprove bool, userPrompt string, agentApply bool, scoped bool, suggestions []models.ReviewSuggestion, modelOverride string, crossOutline *models.Outline) error {
 	logger.Section("Outline Agent SDK Iteration Improvement")
 	logger.Info("Maximum iterations: %d", maxIterations)
 	logger.Info("Mode: Agent SDK hierarchical per-volume review/improve")
@@ -3279,7 +3292,7 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 		logger.Info("Suggestion report(s) provided %d issue(s) to Agent SDK", len(merged.Suggestions))
 	}
 
-	improvedOutline, review, err := agent.IterateHierarchicalAgentSDK(ctx, outline, seedReview, maxIterations, 80.0, forceImprove, userPrompt, setup, agentApply)
+	improvedOutline, review, err := agent.IterateHierarchicalAgentSDK(ctx, outline, crossOutline, seedReview, maxIterations, 80.0, forceImprove, userPrompt, setup, agentApply)
 	if err != nil {
 		return fmt.Errorf("iteration failed: %w", err)
 	}
@@ -3299,7 +3312,7 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 			repairBatch := limitReviewSuggestionsForAgentSDKRepair(repairReview, composeRepairBudgetFlag)
 			logger.Info("Quality/simulation gate found %d targetable medium-or-higher issue(s), running Agent SDK repair pass on %d issue(s)", len(repairReview.Suggestions), len(repairBatch.Suggestions))
 			repairOutput, repairErr := repairAgentSDKWithTransientRetry(func() (*models.Outline, error) {
-				return agent.RepairByReviewAgentSDK(ctx, improvedOutline, repairBatch, setup, agentApply)
+				return agent.RepairByReviewAgentSDK(ctx, improvedOutline, repairBatch, setup, agentApply, crossOutline)
 			})
 			if repairErr == nil {
 				improvedOutline = repairOutput

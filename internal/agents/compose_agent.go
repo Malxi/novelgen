@@ -224,6 +224,11 @@ type ComposeImproveVolumeInput struct {
 	ReviewResult models.ReviewResult `json:"review_result" md:"review_result" desc:"Review result for improvement guidance"`
 	UserPrompt   string              `json:"user_prompt,omitempty" md:"user_prompt" desc:"Additional user suggestions for improvement"`
 	Setup        models.StorySetup   `json:"setup,omitempty" md:"setup" desc:"Story setup including premise, genres, themes, rules"`
+	// CrossVolumeIDs, when non-empty, switches this session into cross-volume mode:
+	// the agent may query/check/patch ALL of the listed volumes in one session,
+	// so cross-volume issues (e.g. volume-end hook + next-volume payoff) can be
+	// fixed consistently instead of per-volume in isolation.
+	CrossVolumeIDs []string `json:"cross_volume_ids,omitempty" md:"cross_volume_ids" desc:"Optional list of additional volume IDs this session may patch, enabling cross-volume improvement in one session"`
 }
 
 // composeImproveVolumePromptInput is the compact prompt payload sent to the LLM.
@@ -480,6 +485,24 @@ func composeRequiredQueryAllowlist(requiredQueries []string) []string {
 
 func composeImproveToolAllowlist(volume models.Volume, promptInput composeAgentSDKImproveVolumePromptInput, applyPatches bool) []string {
 	allowlist := composeRequiredQueryAllowlist(promptInput.RequiredQueries)
+	allowlist = append(allowlist, composeImproveVolumeToolAllowlist(volume, promptInput, applyPatches)...)
+	for _, suggestion := range promptInput.ReviewResult.Suggestions {
+		if suggestion.Navigation == nil {
+			continue
+		}
+		allowlist = append(allowlist, suggestion.Navigation.DetailQueries...)
+		allowlist = append(allowlist, suggestion.Navigation.FocusedCheckQuery)
+		allowlist = append(allowlist, suggestion.Navigation.RepairRouteQuery)
+		allowlist = append(allowlist, suggestion.Navigation.RepairContextQuery)
+	}
+	return dedupeComposeToolAllowlist(allowlist)
+}
+
+// composeImproveVolumeToolAllowlist returns the query/check/patch allowlist for
+// ONE volume (used by single-volume improve and reused per volume in
+// cross-volume mode so the agent can patch several volumes in one session).
+func composeImproveVolumeToolAllowlist(volume models.Volume, promptInput composeAgentSDKImproveVolumePromptInput, applyPatches bool) []string {
+	allowlist := composeRequiredQueryAllowlist(promptInput.RequiredQueries)
 	volumeID := strings.TrimSpace(volume.ID)
 	detailChapterIDs, restrictDetailChapters := composeImproveDetailChapterIDs(volume, promptInput)
 	allowExploratoryDetail := composeImproveHasFocusedTasks(promptInput) && !composeImproveUsesCleanProbe(promptInput)
@@ -525,15 +548,6 @@ func composeImproveToolAllowlist(volume models.Volume, promptInput composeAgentS
 			)
 		}
 	}
-	for _, suggestion := range promptInput.ReviewResult.Suggestions {
-		if suggestion.Navigation == nil {
-			continue
-		}
-		allowlist = append(allowlist, suggestion.Navigation.DetailQueries...)
-		allowlist = append(allowlist, suggestion.Navigation.FocusedCheckQuery)
-		allowlist = append(allowlist, suggestion.Navigation.RepairRouteQuery)
-		allowlist = append(allowlist, suggestion.Navigation.RepairContextQuery)
-	}
 	patchTool := "novelgen tool patch outline --target volume"
 	if volumeID != "" {
 		patchTool += fmt.Sprintf(" --id %q", volumeID)
@@ -542,7 +556,7 @@ func composeImproveToolAllowlist(volume models.Volume, promptInput composeAgentS
 		patchTool += " --apply"
 	}
 	allowlist = append(allowlist, patchTool)
-	return dedupeComposeToolAllowlist(allowlist)
+	return allowlist
 }
 
 // composeAdjacentVolumeIDs returns the IDs of the volumes immediately before
@@ -944,7 +958,12 @@ func (a *ComposeAgent) GenerateChaptersForVolumeWithAgentSDK(ctx context.Context
 // target volume, and return an improved volume plus review metadata.
 func (a *ComposeAgent) ImproveVolumeWithAgentSDK(ctx context.Context, input ComposeImproveVolumeInput, applyPatches bool, forceIssueRepair bool) (ComposeAgentSDKImproveVolumeOutput, error) {
 	logger.Section("COMPOSE AGENT SDK - Volume Review/Improvement")
-	logger.Info("Volume: %s", input.Volume.Title)
+	crossVolume := len(input.CrossVolumeIDs) > 0
+	if crossVolume {
+		logger.Info("Cross-volume mode: target=%s cross=%v", input.Volume.ID, input.CrossVolumeIDs)
+	} else {
+		logger.Info("Volume: %s (single-volume mode, CrossVolumeIDs=%d)", input.Volume.Title, len(input.CrossVolumeIDs))
+	}
 	if applyPatches {
 		logger.Info("Agent apply enabled: SDK may write through validated outline patch tools")
 	}
@@ -954,9 +973,34 @@ func (a *ComposeAgent) ImproveVolumeWithAgentSDK(ctx context.Context, input Comp
 
 	promptInput := buildAgentSDKImproveVolumePromptInput(input, applyPatches, forceIssueRepair)
 	allowlist := composeImproveToolAllowlist(input.Volume, promptInput, applyPatches)
+	if crossVolume {
+		// Cross-volume mode: allow query/check/patch on every target volume in one session.
+		for _, vid := range input.CrossVolumeIDs {
+			vid = strings.TrimSpace(vid)
+			if vid == "" {
+				continue
+			}
+			for _, vol := range input.Outline.Parts {
+				for _, v := range vol.Volumes {
+					if strings.EqualFold(strings.TrimSpace(v.ID), vid) {
+						allowlist = append(allowlist, composeImproveVolumeToolAllowlist(v, promptInput, applyPatches)...)
+					}
+				}
+			}
+		}
+		allowlist = append(allowlist,
+			"novelgen tool query outline --type refs --entity-type storyline --name",
+			"novelgen tool query outline --type refs --entity-type character --name",
+			"novelgen tool query outline --type refs --entity-type item --name",
+			"novelgen tool query outline --type refs --entity-type location --name",
+		)
+	}
 	allowlist = append(allowlist, composeAdjacentVolumeQueryAllowlist(input.Outline, input.Volume.ID)...)
 	params := composeAgentSDKParams("review and improve this outline volume using project query/check/patch tools", "outline-improve-volume-workflow", 28, dedupeComposeToolAllowlist(allowlist))
 	params.ToolEvidence = composeImproveToolEvidence(promptInput, applyPatches)
+	if crossVolume {
+		params.MaxTurns = 45
+	}
 	if applyPatches {
 		params.ToolEvidence.RequirePatchApplyFollowupCheck = true
 	}
@@ -1920,15 +1964,29 @@ func buildAgentSDKImproveVolumePromptInput(input ComposeImproveVolumeInput, appl
 	required := []string{
 		"novelgen tool query context --type outline-volume --id " + input.Volume.ID + " --view index",
 	}
+	crossVolume := len(input.CrossVolumeIDs) > 0
 	hasFocusedTasks := len(input.ReviewResult.Suggestions) > 0 || strings.TrimSpace(input.UserPrompt) != ""
 	instructions := []string{
 		"Use the required context query before reviewing. It returns an index-sized target volume route, check summary, navigation, workflow, next_actions, and stats.",
 		"If review_result.suggestions contain navigation, execute repair_route_query first when present. It returns an index-sized route and next_actions. Execute repair_context_query only when the route indicates detailed facts are needed. If route/context are absent, execute detail_queries or focused_check_query before broadening context; treat these focused commands as the primary task list.",
 		"If review_result contains suggestions without navigation, query only the referenced target IDs unless more context is necessary.",
 	}
-	if strings.TrimSpace(input.UserPrompt) != "" {
+	if crossVolume {
 		instructions = append(instructions,
-			"Treat user_prompt as already scoped to target_volume_id. If it refers to a multi-volume user request, this invocation must execute only the target_volume_id portion. Do not query, check, or patch any other volume.",
+			fmt.Sprintf("CROSS-VOLUME MODE: this session may query, check, and patch the target volume %s AND all listed cross-volume volumes: %v. Cross-volume issues (e.g. a volume-end hook that must be resolved at the start of the next volume, a setup planted in one volume and paid off in another, consistency drift across volumes) should be fixed consistently across the involved volumes IN THIS SAME SESSION, not deferred. Use `novelgen tool query outline --type refs --entity-type storyline|character|item|location --name \"<name>\" --view brief` to trace lines across volumes when needed. Every patched volume still needs a check command run for it (volume or chapter scope) before finishing.", input.Volume.ID, strings.Join(input.CrossVolumeIDs, ",")),
+		)
+	} else {
+		instructions = append(instructions,
+			"Single-volume mode: only the target_volume_id may be queried, checked, and patched. Do not patch other volumes.",
+		)
+	}
+	if strings.TrimSpace(input.UserPrompt) != "" {
+		userPromptInstruction := "Treat user_prompt as already scoped to target_volume_id. If it refers to a multi-volume user request, this invocation must execute only the target_volume_id portion. Do not query, check, or patch any other volume."
+		if crossVolume {
+			userPromptInstruction = "Treat user_prompt as scoped to the target volume plus the listed cross-volume volumes. Multi-volume user requests should be executed across the involved volumes in this session."
+		}
+		instructions = append(instructions,
+			userPromptInstruction,
 			"user_prompt requests are explicit tasks. If they describe concrete narrative changes (character motivation, scene beats, foreshadowing, wording, mystery clues), implement them in volume_patch fields (summary/opening_beat/scenes/events/mysteries) even when scoped checks are clean. Do not decline creative changes as 'not check-verifiable'; the user request is the task list.",
 		)
 		if composePromptRequestsCheckFirstNoop(input.UserPrompt) {
@@ -3105,7 +3163,11 @@ func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.
 // IterateHierarchicalAgentSDK runs the per-volume review/improve loop through
 // Claude Agent SDK workflows. The SDK agent can query project facts, while Go
 // keeps validation, merge, checkpoint, and writes.
-func (a *ComposeAgent) IterateHierarchicalAgentSDK(ctx context.Context, outline *models.Outline, initialReview *models.ReviewResult, maxIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup, applyPatches bool) (*models.Outline, *models.ReviewResult, error) {
+// crossOutline, when non-nil, is the full outline used for cross-volume
+// adjacency in apply mode. It can differ from outline when the caller scoped
+// the run to a subset of volumes (outline only contains the selected volumes,
+// while crossOutline still contains their neighbors).
+func (a *ComposeAgent) IterateHierarchicalAgentSDK(ctx context.Context, outline *models.Outline, crossOutline *models.Outline, initialReview *models.ReviewResult, maxIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup, applyPatches bool) (*models.Outline, *models.ReviewResult, error) {
 	logger.Section("COMPOSE AGENT SDK - Hierarchical Iteration Loop")
 	logger.Info("Max iterations: %d", maxIterations)
 	logger.Info("Quality threshold: %.1f", qualityThreshold)
@@ -3131,7 +3193,7 @@ func (a *ComposeAgent) IterateHierarchicalAgentSDK(ctx context.Context, outline 
 			break
 		}
 
-		improvedOutline, review, improvedCount, err := a.improveVolumesWithCheckpointAgentSDK(ctx, &currentOutline, volumesToImprove, finalReview, i, maxIterations, qualityThreshold, forceImprove, userPrompt, setup, applyPatches)
+		improvedOutline, review, improvedCount, err := a.improveVolumesWithCheckpointAgentSDK(ctx, &currentOutline, volumesToImprove, finalReview, i, maxIterations, qualityThreshold, forceImprove, userPrompt, setup, applyPatches, crossOutline)
 		if err != nil {
 			return nil, finalReview, fmt.Errorf("iteration %d failed: %w", i, err)
 		}
@@ -3181,7 +3243,7 @@ func (a *ComposeAgent) RepairByReview(ctx context.Context, outline *models.Outli
 
 // RepairByReviewAgentSDK applies an existing quality-gate review through the
 // SDK volume workflow.
-func (a *ComposeAgent) RepairByReviewAgentSDK(ctx context.Context, outline *models.Outline, reviewResult *models.ReviewResult, setup *models.StorySetup, applyPatches bool) (*models.Outline, error) {
+func (a *ComposeAgent) RepairByReviewAgentSDK(ctx context.Context, outline *models.Outline, reviewResult *models.ReviewResult, setup *models.StorySetup, applyPatches bool, crossOutline *models.Outline) (*models.Outline, error) {
 	if outline == nil {
 		return nil, fmt.Errorf("outline is nil")
 	}
@@ -3202,7 +3264,7 @@ func (a *ComposeAgent) RepairByReviewAgentSDK(ctx context.Context, outline *mode
 	}
 
 	logger.Info("Repairing %d volume(s) with Agent SDK workflow", len(volumesToImprove))
-	improved, _, _, err := a.improveVolumesWithCheckpointAgentSDK(ctx, outline, volumesToImprove, reviewResult, 0, 1, 80.0, true, "", setup, applyPatches)
+	improved, _, _, err := a.improveVolumesWithCheckpointAgentSDK(ctx, outline, volumesToImprove, reviewResult, 0, 1, 80.0, true, "", setup, applyPatches, crossOutline)
 	return improved, err
 }
 
@@ -3350,7 +3412,7 @@ func countMediumOrHigherReviewSuggestions(review models.ReviewResult) int {
 	return count
 }
 
-func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup, applyPatches bool) (*models.Outline, *models.ReviewResult, int, error) {
+func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup, applyPatches bool, crossOutline *models.Outline) (*models.Outline, *models.ReviewResult, int, error) {
 	currentOutline := *outline
 	progressPath := "story/compose/outline_improve_progress.json"
 	targetVolumes := improveTargetVolumeIDs(outline, volumesToImprove)
@@ -3436,6 +3498,24 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 			Volume:       *volume,
 			ReviewResult: volumeReview,
 			UserPrompt:   scopeComposeAgentSDKVolumeUserPrompt(userPrompt, volume.ID, volume.Title),
+		}
+		// Cross-volume by default (apply mode only): the session may also patch
+		// adjacent volumes (previous + next), so volume-end hooks and next-volume
+		// payoffs can be fixed consistently in one session instead of being
+		// deferred as "outside this volume's boundary". Non-apply mode merges a
+		// single volume_patch in Go, so cross-volume patching is only available
+		// when the agent writes through tool patch --apply.
+		if applyPatches {
+			adjacencyOutline := currentOutline
+			if crossOutline != nil {
+				adjacencyOutline = *crossOutline
+			}
+			if adjacent := composeAdjacentVolumeIDs(adjacencyOutline, volume.ID); len(adjacent) > 0 {
+				improveInput.CrossVolumeIDs = adjacent
+				// The session must see the full outline so the cross-volume
+				// patch/query allowlist expansion can find the adjacent volumes.
+				improveInput.Outline = adjacencyOutline
+			}
 		}
 		if setup != nil {
 			improveInput.Setup = *setup
