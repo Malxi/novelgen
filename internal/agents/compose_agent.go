@@ -3502,7 +3502,12 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 			volumeReview = a.filterReviewForVolume(reviewResult, volume.ID)
 			logger.Info("Agent SDK volume %s received %d filtered review issue(s)", volume.ID, len(volumeReview.Suggestions))
 		}
-		if reviewResult != nil && !forceImprove && !hasMediumOrHigherReviewSuggestion(volumeReview) {
+		// Skip volumes with no medium/high/critical suggestions: there is
+		// nothing for the agent to do. forceImprove (--force or selected
+		// volume scope) no longer disables this skip - a volume without
+		// suggestions has no tasks regardless of force, so running a full
+		// agent session on it only burns tokens.
+		if reviewResult != nil && !hasMediumOrHigherReviewSuggestion(volumeReview) {
 			logger.Info("[skip] Agent SDK skipping %s: no medium/high/critical volume issues after pre-check", volume.Title)
 			progress.CompletedVolumes = append(progress.CompletedVolumes, volume.ID)
 			progress.CurrentVolumeIdx = idx + 1
