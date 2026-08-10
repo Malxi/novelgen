@@ -998,8 +998,15 @@ func (a *ComposeAgent) ImproveVolumeWithAgentSDK(ctx context.Context, input Comp
 	allowlist = append(allowlist, composeAdjacentVolumeQueryAllowlist(input.Outline, input.Volume.ID)...)
 	params := composeAgentSDKParams("review and improve this outline volume using project query/check/patch tools", "outline-improve-volume-workflow", 28, dedupeComposeToolAllowlist(allowlist))
 	params.ToolEvidence = composeImproveToolEvidence(promptInput, applyPatches)
+	// An explicit user prompt makes this an explicit task list: clean scoped
+	// checks must not close targets or stop the agent before the patch cycle.
+	params.UserPromptDriven = strings.TrimSpace(input.UserPrompt) != ""
 	if crossVolume {
+		// Cross-volume sessions cover 2-3 volumes (target + adjacent) with up to
+		// 45 turns; the default 900s timeout is too tight and caused TimeoutError
+		// mid-run. Give them a 30-minute budget.
 		params.MaxTurns = 45
+		params.Timeout = 1800
 	}
 	if applyPatches {
 		params.ToolEvidence.RequirePatchApplyFollowupCheck = true
@@ -1093,6 +1100,7 @@ func (a *ComposeAgent) ReviewOutlineWithAgentSDK(ctx context.Context, input Comp
 
 	promptInput := buildAgentSDKOutlineReviewPromptInput(input)
 	params := composeOutlineReviewAgentSDKParams("review the story outline and provide focused improvement suggestions", input.Outline, input.VolumeID)
+	params.UserPromptDriven = strings.TrimSpace(input.UserPrompt) != ""
 	var output models.ReviewResult
 	if err := a.base.Execute(ctx, params, promptInput, &output); err != nil {
 		return models.ReviewResult{}, err
@@ -1209,6 +1217,7 @@ func (a *ComposeAgent) reviewOutlineCrossVolumeAgentSDK(ctx context.Context, inp
 		Timeout:  900,
 		Command:  "review the cross-volume continuity of the story outline and provide focused improvement suggestions",
 	}
+	params.UserPromptDriven = strings.TrimSpace(input.UserPrompt) != ""
 
 	var output models.ReviewResult
 	if err := a.base.Execute(ctx, params, promptInput, &output); err != nil {
@@ -2035,16 +2044,18 @@ func buildAgentSDKImproveVolumePromptInput(input ComposeImproveVolumeInput, appl
 	if hasFocusedTasks {
 		detailInstruction = "After the index query, use targeted detail queries only when needed: same target volume via `novelgen tool query context --type outline-volume --id <target_volume_id> --view brief`, repair context, chapter by id, events by chapter id, craft by exact name."
 	}
-	if boundaryIDs := composeImproveBoundaryChapterIDs(input.Volume, input.UserPrompt); len(boundaryIDs) > 0 {
-		instructions = append(instructions,
-			fmt.Sprintf("The user prompt is boundary-scoped. Prefer direct chapter/event detail queries only for these target chapter IDs: %s. Query other chapters only when a check result or next_actions explicitly names them.", strings.Join(boundaryIDs, ", ")),
-			"For a boundary-scoped chapter summary/title/beat patch, do not query story-setup, character refs, cross-volume context, or unrelated chapters. Use the target volume index, target volume brief, target chapter detail, and required focused check as sufficient evidence unless next_actions names a narrower repair context.",
-			"If the user prompt names a character, item, location, skill, or proper noun that is absent from the target chapter/volume facts, verify it once with an exact refs or story-setup search. If both focused facts and the verification query show no match, do not patch; return a compact review_result note that the user prompt conflicts with project facts.",
-		)
-		if checks := composeImproveRequiredFocusedChecks(input.Volume, input.UserPrompt); len(checks) > 0 {
+	if !crossVolume {
+		if boundaryIDs := composeImproveBoundaryChapterIDs(input.Volume, input.UserPrompt); len(boundaryIDs) > 0 {
 			instructions = append(instructions,
-				"Required focused checks before final JSON: "+strings.Join(checks, "; "),
+				fmt.Sprintf("The user prompt is boundary-scoped. Prefer direct chapter/event detail queries only for these target chapter IDs: %s. Query other chapters only when a check result or next_actions explicitly names them.", strings.Join(boundaryIDs, ", ")),
+				"For a boundary-scoped chapter summary/title/beat patch, do not query story-setup, character refs, cross-volume context, or unrelated chapters. Use the target volume index, target volume brief, target chapter detail, and required focused check as sufficient evidence unless next_actions names a narrower repair context.",
+				"If the user prompt names a character, item, location, skill, or proper noun that is absent from the target chapter/volume facts, verify it once with an exact refs or story-setup search. If both focused facts and the verification query show no match, do not patch; return a compact review_result note that the user prompt conflicts with project facts.",
 			)
+			if checks := composeImproveRequiredFocusedChecks(input.Volume, input.UserPrompt); len(checks) > 0 {
+				instructions = append(instructions,
+					"Required focused checks before final JSON: "+strings.Join(checks, "; "),
+				)
+			}
 		}
 	}
 	instructions = append(instructions,

@@ -137,7 +137,7 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
             live_log,
             cwd,
             invocation.get("tool_evidence"),
-            user_prompt_driven=bool((invocation.get("user_prompt") or "").strip()),
+            user_prompt_driven=user_prompt_driven_flag(invocation),
         )
 
     schema = invocation.get("output_json_schema")
@@ -433,6 +433,20 @@ def build_prompt(invocation: Dict[str, Any]) -> str:
     return sanitize_model_text(user_prompt)
 
 
+def user_prompt_driven_flag(invocation: Dict[str, Any]) -> bool:
+    """True when the invocation carries an explicit user task.
+
+    The runner uses this to keep clean scoped checks from closing targets or
+    stopping the agent before the requested work is done. It prefers the
+    explicit Go-side marker and falls back to a non-empty user_prompt (the
+    rendered user message) so existing callers keep the previous behavior.
+    """
+    explicit = invocation.get("user_prompt_driven")
+    if isinstance(explicit, bool):
+        return explicit
+    return bool((invocation.get("user_prompt") or "").strip())
+
+
 def load_sdk_skill_prompt(skill_names: list[str], add_dirs: list[str]) -> tuple[str, list[str], list[str]]:
     if not skill_names:
         return "", [], []
@@ -658,6 +672,7 @@ def build_tool_hooks(
             and completed_queries.issuperset(required_queries)
             and not is_allowed_followup_check
             and not is_utf8_required_query_retry
+            and not user_prompt_driven
         ):
             allowed = False
             reason = (
@@ -715,7 +730,7 @@ def build_tool_hooks(
                 "Repeat the same stdin-piped patch command with --apply now, or return final JSON. "
                 "Do not call the patch tool again without --apply."
             )
-        if allowed and deny_repeated_required_queries and matched_query and matched_query in completed_queries and not is_allowed_followup_check and not is_utf8_required_query_retry:
+        if allowed and deny_repeated_required_queries and not user_prompt_driven and matched_query and matched_query in completed_queries and not is_allowed_followup_check and not is_utf8_required_query_retry:
             allowed = False
             reason = "This required query has already been executed. Use the previous tool result and return final JSON."
         if allowed and exact_log_brief_key and exact_log_brief_queries and exact_log_brief_key not in exact_log_brief_queries:
@@ -991,6 +1006,18 @@ def build_tool_hooks(
                 },
             }
         if check_key and check_output_is_clean(input_data) and not clean_check_has_focused_detail_override(check_key, allowlist):
+            if user_prompt_driven:
+                return {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PostToolUse",
+                        "additionalContext": (
+                            "The focused check is clean, but this invocation is user-prompt-driven: the user request is an explicit task list. "
+                            "Clean checks are evidence only. If the user request describes concrete narrative changes, continue with the minimal "
+                            "patch dry-run/apply cycle instead of returning final JSON. If the user request explicitly asked for a "
+                            "check-first/no-op-if-clean run and this check was the requested gate, return final JSON now."
+                        ),
+                    },
+                }
             return {
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
@@ -1004,7 +1031,7 @@ def build_tool_hooks(
                     "additionalContext": tool_returned_final_json_instruction(command),
                 },
             }
-        if stop_after_required_queries and required_queries and completed_queries.issuperset(required_queries):
+        if stop_after_required_queries and required_queries and completed_queries.issuperset(required_queries) and not user_prompt_driven:
             return {
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",

@@ -88,6 +88,11 @@ type InvokeParams struct {
 	CompactOutputSchema    bool
 	DisableSDKOutputFormat bool
 	Command                string
+	// UserPromptDriven marks SDK invocations where the user supplied an
+	// explicit task/prompt. The runner treats clean scoped checks as
+	// evidence rather than a stop signal in this mode, so the agent still
+	// proceeds to the patch cycle when the user request describes changes.
+	UserPromptDriven bool
 }
 
 // ToolEvidenceRequirement asserts minimum tool activity observed in the Agent
@@ -249,6 +254,7 @@ func (a *BaseAgent) invokeAIWithRuntimeResult(ctx context.Context, params Invoke
 			ToolAllowlist:          append([]string(nil), params.ToolAllowlist...),
 			SystemPrompt:           messageContent(messages, "system"),
 			UserPrompt:             messageContent(messages, "user"),
+			UserPromptDriven:       params.UserPromptDriven,
 			OutputSchemaText:       outputSchemaText,
 			OutputJSONSchema:       utils.StructToJSONSchemaObject(output),
 			CompactOutputSchema:    params.CompactOutputSchema,

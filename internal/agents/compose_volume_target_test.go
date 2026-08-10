@@ -964,13 +964,16 @@ func TestComposeOutlineReviewAgentSDKScopedVolume(t *testing.T) {
 		},
 	}}
 	agent := &ComposeAgent{base: &BaseAgent{name: "ComposeAgent", runtime: runtime, config: &llm.Config{}, language: "zh"}}
-	outline := models.Outline{Parts: []models.Part{{ID: "P1", Volumes: []models.Volume{{ID: "P1-V1"}, {ID: "P1-V2"}}}}}
+	outline := models.Outline{Parts: []models.Part{{ID: "P1", Volumes: []models.Volume{{ID: "P1-V1"}, {ID: "P1-V2"}, {ID: "P1-V3"}, {ID: "P1-V4"}}}}}
 	if _, err := agent.ReviewOutlineWithAgentSDK(context.Background(), ComposeOutlineReviewInput{Outline: outline, VolumeID: "P1-V2"}); err != nil {
 		t.Fatalf("ReviewOutlineWithAgentSDK() error = %v", err)
 	}
 	joined := strings.Join(runtime.invocation.ToolAllowlist, "\n")
-	if strings.Contains(joined, "P1-V1") {
-		t.Fatalf("scoped review allowlist must not include other volumes: %#v", runtime.invocation.ToolAllowlist)
+	if !strings.Contains(joined, `novelgen tool query outline --type volume --id "P1-V1" --view brief`) {
+		t.Fatalf("scoped review allowlist must include adjacent volume reads: %#v", runtime.invocation.ToolAllowlist)
+	}
+	if strings.Contains(joined, "P1-V4") {
+		t.Fatalf("scoped review allowlist must not include non-adjacent volumes: %#v", runtime.invocation.ToolAllowlist)
 	}
 	if !containsExactString(runtime.invocation.ToolAllowlist, `novelgen tool query outline --type volume --id "P1-V2" --view brief`) {
 		t.Fatalf("scoped review allowlist missing target volume: %#v", runtime.invocation.ToolAllowlist)
@@ -1736,6 +1739,72 @@ func TestImproveVolumeWithAgentSDKRequiresLiveCheckEvidence(t *testing.T) {
 	runtime.result.LiveSummary.CheckCalls = 0
 	if _, err := agent.ImproveVolumeWithAgentSDK(context.Background(), input, false, false); err == nil || !strings.Contains(err.Error(), "check calls=0") {
 		t.Fatalf("expected missing check evidence error, got %v", err)
+	}
+}
+
+func TestImproveVolumeWithAgentSDKUserPromptDrivenFlag(t *testing.T) {
+	output := `{"review_result":{"overall_score":100,"summary":"检查干净","suggestions":[]},"applied_patches":false,"applied_patch_count":0,"final_check":"clean"}`
+	newAgent := func() (*ComposeAgent, *fakeComposeImproveRuntime) {
+		runtime := &fakeComposeImproveRuntime{result: &agentruntime.Result{
+			Content: output,
+			Usage:   agentruntime.Usage{TotalTokens: 10},
+			LiveSummary: &agentruntime.LiveSummary{
+				ContextQueryCalls: 1,
+				CheckCalls:        1,
+			},
+		}}
+		agent := &ComposeAgent{base: &BaseAgent{name: "ComposeAgent", runtime: runtime, config: &llm.Config{}, language: "zh"}}
+		return agent, runtime
+	}
+	input := ComposeImproveVolumeInput{
+		Part: models.Part{ID: "P1", Title: "第一部", Summary: "测试"},
+		Volume: models.Volume{
+			ID:      "P1-V1",
+			Title:   "第一卷",
+			Summary: "测试卷",
+			Chapters: []models.Chapter{{
+				ID:      "P1-V1-C1",
+				Title:   "第一章",
+				Summary: "测试章",
+				Events: []models.Event{{
+					Actor:      "林野",
+					Action:     models.ActionDiscover,
+					Target:     "信号",
+					TargetType: models.TargetTypeKnowledge,
+				}},
+				Scenes: []models.OutlineScene{{
+					Order: 1,
+					POV:   "林野",
+					Goal:  "确认信号",
+					Beats: []string{"林野确认信号来自废墟深处。"},
+				}},
+			}},
+		},
+	}
+
+	// Cross-volume improve with an explicit user prompt must be flagged
+	// user-prompt-driven so the runner never closes clean-check targets or
+	// stops the agent before the patch cycle.
+	agentWithPrompt, runtimeWithPrompt := newAgent()
+	inputWithPrompt := input
+	inputWithPrompt.CrossVolumeIDs = []string{"P1-V2", "P1-V3"}
+	inputWithPrompt.UserPrompt = "修复第1-3卷的时间锚点与卷末钩子衔接问题。"
+	if _, err := agentWithPrompt.ImproveVolumeWithAgentSDK(context.Background(), inputWithPrompt, true, false); err != nil {
+		t.Fatalf("cross-volume apply improve failed: %v", err)
+	}
+	if !runtimeWithPrompt.invocation.UserPromptDriven {
+		t.Fatalf("cross-volume improve with user prompt: UserPromptDriven = false, want true")
+	}
+
+	// Without a user prompt the invocation stays non-user-driven.
+	agentNoPrompt, runtimeNoPrompt := newAgent()
+	inputNoPrompt := input
+	inputNoPrompt.CrossVolumeIDs = []string{"P1-V2"}
+	if _, err := agentNoPrompt.ImproveVolumeWithAgentSDK(context.Background(), inputNoPrompt, true, false); err != nil {
+		t.Fatalf("cross-volume apply improve without prompt failed: %v", err)
+	}
+	if runtimeNoPrompt.invocation.UserPromptDriven {
+		t.Fatalf("cross-volume improve without user prompt: UserPromptDriven = true, want false")
 	}
 }
 

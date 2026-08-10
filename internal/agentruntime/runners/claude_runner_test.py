@@ -2506,6 +2506,126 @@ class ClaudeRunnerTests(unittest.IsolatedAsyncioTestCase):
             else:
                 sys.modules["claude_agent_sdk.types"] = previous_types
 
+    async def test_tool_hooks_user_prompt_driven_clean_check_does_not_stop_patch_cycle(self):
+        runner = load_runner()
+        fake_sdk = types.ModuleType("claude_agent_sdk")
+        fake_types = types.ModuleType("claude_agent_sdk.types")
+
+        @dataclass
+        class HookMatcher:
+            matcher: str | None = None
+            hooks: list | None = None
+            timeout: float | None = None
+
+        fake_types.HookMatcher = HookMatcher
+        fake_sdk.types = fake_types
+        previous = sys.modules.get("claude_agent_sdk")
+        previous_types = sys.modules.get("claude_agent_sdk.types")
+        sys.modules["claude_agent_sdk"] = fake_sdk
+        sys.modules["claude_agent_sdk.types"] = fake_types
+        try:
+            hooks = runner.build_tool_hooks([
+                'novelgen tool query outline --type chapter --id "P1-V1-C1" --view brief',
+                'novelgen tool check all --target outline --scope chapter --id "P1-V1-C1"',
+                'novelgen tool patch outline --target volume --id "P1-V1"',
+            ], None, user_prompt_driven=True)
+            pre_hook = hooks["PreToolUse"][0].hooks[0]
+            post_hook = hooks["PostToolUse"][0].hooks[0]
+            check = {
+                "tool_name": "Bash",
+                "tool_input": {"command": 'novelgen tool check all --target outline --scope chapter --id "P1-V1-C1" --max-issues 8'},
+                "tool_response": json.dumps({"blocking": False, "summary": {"total": 0}, "issues": []}),
+            }
+            self.assertEqual((await pre_hook(check, None, None))["hookSpecificOutput"]["permissionDecision"], "allow")
+            complete = await post_hook(check, None, None)
+            context = complete["hookSpecificOutput"]["additionalContext"]
+            self.assertNotIn("Return final JSON now", context)
+            self.assertIn("user-prompt-driven", context)
+            self.assertIn("patch dry-run/apply cycle", context)
+
+            # The clean check must not close the target: detail queries and the
+            # patch cycle remain allowed in user-prompt-driven mode.
+            chapter_detail = await pre_hook({
+                "tool_name": "Bash",
+                "tool_input": {"command": 'novelgen tool query outline --type chapter --id "P1-V1-C1" --view brief'},
+            }, None, None)
+            self.assertEqual(chapter_detail["hookSpecificOutput"]["permissionDecision"], "allow")
+
+            patch_dry_run = await pre_hook({
+                "tool_name": "Bash",
+                "tool_input": {"command": "printf '%s' '{\"summary\":\"fixed\"}' | novelgen tool patch outline --target volume --id \"P1-V1\""},
+            }, None, None)
+            self.assertEqual(patch_dry_run["hookSpecificOutput"]["permissionDecision"], "allow")
+        finally:
+            if previous is None:
+                sys.modules.pop("claude_agent_sdk", None)
+            else:
+                sys.modules["claude_agent_sdk"] = previous
+            if previous_types is None:
+                sys.modules.pop("claude_agent_sdk.types", None)
+            else:
+                sys.modules["claude_agent_sdk.types"] = previous_types
+
+    async def test_tool_hooks_user_prompt_driven_disables_stop_after_required_queries(self):
+        runner = load_runner()
+        fake_sdk = types.ModuleType("claude_agent_sdk")
+        fake_types = types.ModuleType("claude_agent_sdk.types")
+
+        @dataclass
+        class HookMatcher:
+            matcher: str | None = None
+            hooks: list | None = None
+            timeout: float | None = None
+
+        fake_types.HookMatcher = HookMatcher
+        fake_sdk.types = fake_types
+        previous = sys.modules.get("claude_agent_sdk")
+        previous_types = sys.modules.get("claude_agent_sdk.types")
+        sys.modules["claude_agent_sdk"] = fake_sdk
+        sys.modules["claude_agent_sdk.types"] = fake_types
+        try:
+            hooks = runner.build_tool_hooks([
+                "novelgen tool query context --type outline-volume --id P1-V1 --view index",
+                'novelgen tool query outline --type refs --entity-type storyline --name "主线" --view brief',
+            ], None, user_prompt_driven=True)
+            pre_hook = hooks["PreToolUse"][0].hooks[0]
+            post_hook = hooks["PostToolUse"][0].hooks[0]
+            setup_input = {
+                "tool_name": "Bash",
+                "tool_input": {"command": "novelgen tool query context --type outline-volume --id P1-V1 --view index"},
+            }
+            volume_input = {
+                "tool_name": "Bash",
+                "tool_input": {"command": "D:/Code/nolvegen/bin/novelgen.exe tool query outline --type refs --entity-type storyline --name \"主线\" --view brief"},
+            }
+            self.assertEqual((await pre_hook(setup_input, None, None))["hookSpecificOutput"]["permissionDecision"], "allow")
+            await post_hook(setup_input, None, None)
+            self.assertEqual((await pre_hook(volume_input, None, None))["hookSpecificOutput"]["permissionDecision"], "allow")
+            complete = await post_hook(volume_input, None, None)
+            self.assertEqual(complete, {})
+            duplicate_query = await pre_hook({
+                "tool_name": "Bash",
+                "tool_input": {"command": "novelgen tool query context --type outline-volume --id P1-V1 --view index"},
+            }, None, None)
+            self.assertEqual(duplicate_query["hookSpecificOutput"]["permissionDecision"], "allow")
+        finally:
+            if previous is None:
+                sys.modules.pop("claude_agent_sdk", None)
+            else:
+                sys.modules["claude_agent_sdk"] = previous
+            if previous_types is None:
+                sys.modules.pop("claude_agent_sdk.types", None)
+            else:
+                sys.modules["claude_agent_sdk.types"] = previous_types
+
+    def test_user_prompt_driven_flag_prefers_explicit_marker(self):
+        runner = load_runner()
+        self.assertTrue(runner.user_prompt_driven_flag({"user_prompt_driven": True}))
+        self.assertFalse(runner.user_prompt_driven_flag({"user_prompt_driven": False, "user_prompt": "task"}))
+        self.assertTrue(runner.user_prompt_driven_flag({"user_prompt": "task"}))
+        self.assertFalse(runner.user_prompt_driven_flag({"user_prompt": ""}))
+        self.assertFalse(runner.user_prompt_driven_flag({}))
+
     async def test_tool_hooks_stop_patch_cycle_after_post_apply_clean_check(self):
         runner = load_runner()
         fake_sdk = types.ModuleType("claude_agent_sdk")
@@ -3491,18 +3611,18 @@ class ClaudeRunnerTests(unittest.IsolatedAsyncioTestCase):
         sys.modules["claude_agent_sdk.types"] = fake_types
         try:
             hooks = runner.build_tool_hooks([
-                "novelgen tool query story-setup",
-                "novelgen tool query outline --type volume --id P1-V1",
+                "novelgen tool query context --type outline-volume --id P1-V1 --view index",
+                'novelgen tool query outline --type refs --entity-type storyline --name "主线" --view brief',
             ], None)
             pre_hook = hooks["PreToolUse"][0].hooks[0]
             post_hook = hooks["PostToolUse"][0].hooks[0]
             setup_input = {
                 "tool_name": "Bash",
-                "tool_input": {"command": "novelgen tool query story-setup"},
+                "tool_input": {"command": "novelgen tool query context --type outline-volume --id P1-V1 --view index"},
             }
             volume_input = {
                 "tool_name": "Bash",
-                "tool_input": {"command": "D:/Code/nolvegen/bin/novelgen.exe tool query outline --type volume --id P1-V1"},
+                "tool_input": {"command": "D:/Code/nolvegen/bin/novelgen.exe tool query outline --type refs --entity-type storyline --name \"主线\" --view brief"},
             }
             first = await pre_hook(setup_input, None, None)
             await post_hook(setup_input, None, None)

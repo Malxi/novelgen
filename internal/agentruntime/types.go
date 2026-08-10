@@ -26,6 +26,7 @@ type Invocation struct {
 	LiveLogPath            string                 `json:"live_log_path,omitempty"`
 	SystemPrompt           string                 `json:"system_prompt"`
 	UserPrompt             string                 `json:"user_prompt"`
+	UserPromptDriven       bool                   `json:"user_prompt_driven,omitempty"`
 	OutputSchemaText       string                 `json:"output_schema_text,omitempty"`
 	OutputJSONSchema       map[string]interface{} `json:"output_json_schema,omitempty"`
 	CompactOutputSchema    bool                   `json:"compact_output_schema,omitempty"`

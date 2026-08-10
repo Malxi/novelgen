@@ -356,8 +356,9 @@ func TestBaseAgentExecutePassesPerCallAgentSDKOptions(t *testing.T) {
 			RequiredToolCommands: []string{"novelgen tool check all --target outline --scope volume --id P1-V1"},
 			RequireNoDeniedTools: true,
 		},
-		MaxTurns: 10,
-		Timeout:  900,
+		MaxTurns:         10,
+		Timeout:          900,
+		UserPromptDriven: true,
 	}, struct{}{}, &output)
 	if err != nil {
 		t.Fatalf("Execute() returned error: %v", err)
@@ -394,6 +395,9 @@ func TestBaseAgentExecutePassesPerCallAgentSDKOptions(t *testing.T) {
 	}
 	if runtime.invocation.Options.Timeout != 900 {
 		t.Fatalf("Timeout = %d, want 900", runtime.invocation.Options.Timeout)
+	}
+	if !runtime.invocation.UserPromptDriven {
+		t.Fatalf("UserPromptDriven = false, want true")
 	}
 }
 
