@@ -1245,6 +1245,11 @@ func buildAgentSDKOutlineReviewPromptInput(input ComposeOutlineReviewInput) comp
 		"Keep review_result compact: summary under 300 Chinese characters, at most 8 suggestions, at most 4 strengths and 4 weaknesses.",
 		"Return only the JSON object; no Markdown, no code fences, no extra text.",
 	}
+	if strings.TrimSpace(input.VolumeID) != "" && !input.CrossVolume {
+		instructions = append(instructions,
+			"Cross-volume context available: the immediately adjacent volumes (previous + next) can be queried read-only (volume/events/chapter queries are allowlisted). When an issue involves a volume-end hook, a next-volume payoff, setup planted elsewhere, or continuity drift, query the adjacent volumes and cite the cross-volume evidence instead of guessing. Keep the review focused on the target volume; adjacent volumes are evidence context, not the review target.",
+		)
+	}
 	focus := "按以下维度自由审查：结构、节奏、连贯性、人物动机、情节逻辑、信息差博弈。"
 	if strings.TrimSpace(input.UserPrompt) != "" {
 		instructions = append(instructions,
@@ -1349,6 +1354,19 @@ func composeOutlineReviewToolAllowlist(outline models.Outline, volumeID string) 
 			for _, volume := range part.Volumes {
 				if strings.EqualFold(strings.TrimSpace(volume.ID), volumeID) {
 					addVolume(volume)
+					// Cross-volume by default: also allow read-only queries of the
+					// adjacent volumes (previous + next) so the review can check
+					// volume-end hooks, next-volume payoffs, and continuity drift
+					// without a separate --cross-volume run.
+					for _, adjID := range composeAdjacentVolumeIDs(outline, volume.ID) {
+						for _, part2 := range outline.Parts {
+							for _, adj := range part2.Volumes {
+								if strings.EqualFold(strings.TrimSpace(adj.ID), adjID) {
+									addVolume(adj)
+								}
+							}
+						}
+					}
 				}
 			}
 		}
