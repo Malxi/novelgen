@@ -254,7 +254,7 @@ func init() {
 
 	composeReviewCmd.Flags().BoolVar(&composeAgentSDKFlag, "agent-sdk", false, "Use Agent SDK workflow with read-only project query tools")
 	composeReviewCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional user suggestions for review focus")
-	composeReviewCmd.Flags().StringVar(&composeReviewFocusFlag, "focus", "", "Built-in review focus: reader,logic,character,commercial,storyline,deai,protagonist,foreshadowing,setup-fidelity,emotion,power-system,novelty (comma-separated, or 'all')")
+	composeReviewCmd.Flags().StringVar(&composeReviewFocusFlag, "focus", "", "Built-in review focus: reader,logic,character,commercial,storyline,deai,protagonist,foreshadowing,setup-fidelity,emotion,power-system,novelty,shuangwen (comma-separated, or 'all')")
 	composeReviewCmd.Flags().BoolVar(&composeReviewMatrixFlag, "matrix", false, "Run a multi-model x multi-focus review matrix with clustered sampling")
 	composeReviewCmd.Flags().BoolVar(&composeCrossVolumeFlag, "cross-volume", false, "Review cross-volume continuity across a volume range in one agent session")
 	composeReviewCmd.Flags().IntVar(&composeReviewFromVolumeFlag, "from-volume", 0, "Cross-volume review start (1-based global volume index)")
