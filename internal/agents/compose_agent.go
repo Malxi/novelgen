@@ -1213,8 +1213,8 @@ func (a *ComposeAgent) reviewOutlineCrossVolumeAgentSDK(ctx context.Context, inp
 			RequireNoDeniedTools: true,
 			RequiredToolCommands: []string{"novelgen tool query outline --type all --view index"},
 		},
-		MaxTurns: 30,
-		Timeout:  900,
+		MaxTurns: 45,
+		Timeout:  1800,
 		Command:  "review the cross-volume continuity of the story outline and provide focused improvement suggestions",
 	}
 	params.UserPromptDriven = strings.TrimSpace(input.UserPrompt) != ""
