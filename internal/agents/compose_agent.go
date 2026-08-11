@@ -3196,7 +3196,7 @@ func (a *ComposeAgent) IterateHierarchical(ctx context.Context, outline *models.
 // adjacency in apply mode. It can differ from outline when the caller scoped
 // the run to a subset of volumes (outline only contains the selected volumes,
 // while crossOutline still contains their neighbors).
-func (a *ComposeAgent) IterateHierarchicalAgentSDK(ctx context.Context, outline *models.Outline, crossOutline *models.Outline, initialReview *models.ReviewResult, maxIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup, applyPatches bool) (*models.Outline, *models.ReviewResult, error) {
+func (a *ComposeAgent) IterateHierarchicalAgentSDK(ctx context.Context, outline *models.Outline, crossOutline *models.Outline, initialReview *models.ReviewResult, maxIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup, applyPatches bool, allVolumes bool) (*models.Outline, *models.ReviewResult, error) {
 	logger.Section("COMPOSE AGENT SDK - Hierarchical Iteration Loop")
 	logger.Info("Max iterations: %d", maxIterations)
 	logger.Info("Quality threshold: %.1f", qualityThreshold)
@@ -3222,7 +3222,7 @@ func (a *ComposeAgent) IterateHierarchicalAgentSDK(ctx context.Context, outline 
 			break
 		}
 
-		improvedOutline, review, improvedCount, err := a.improveVolumesWithCheckpointAgentSDK(ctx, &currentOutline, volumesToImprove, finalReview, i, maxIterations, qualityThreshold, forceImprove, userPrompt, setup, applyPatches, crossOutline)
+		improvedOutline, review, improvedCount, err := a.improveVolumesWithCheckpointAgentSDK(ctx, &currentOutline, volumesToImprove, finalReview, i, maxIterations, qualityThreshold, forceImprove, userPrompt, setup, applyPatches, crossOutline, allVolumes)
 		if err != nil {
 			return nil, finalReview, fmt.Errorf("iteration %d failed: %w", i, err)
 		}
@@ -3272,7 +3272,7 @@ func (a *ComposeAgent) RepairByReview(ctx context.Context, outline *models.Outli
 
 // RepairByReviewAgentSDK applies an existing quality-gate review through the
 // SDK volume workflow.
-func (a *ComposeAgent) RepairByReviewAgentSDK(ctx context.Context, outline *models.Outline, reviewResult *models.ReviewResult, setup *models.StorySetup, applyPatches bool, crossOutline *models.Outline) (*models.Outline, error) {
+func (a *ComposeAgent) RepairByReviewAgentSDK(ctx context.Context, outline *models.Outline, reviewResult *models.ReviewResult, setup *models.StorySetup, applyPatches bool, crossOutline *models.Outline, allVolumes bool) (*models.Outline, error) {
 	if outline == nil {
 		return nil, fmt.Errorf("outline is nil")
 	}
@@ -3293,7 +3293,7 @@ func (a *ComposeAgent) RepairByReviewAgentSDK(ctx context.Context, outline *mode
 	}
 
 	logger.Info("Repairing %d volume(s) with Agent SDK workflow", len(volumesToImprove))
-	improved, _, _, err := a.improveVolumesWithCheckpointAgentSDK(ctx, outline, volumesToImprove, reviewResult, 0, 1, 80.0, true, "", setup, applyPatches, crossOutline)
+	improved, _, _, err := a.improveVolumesWithCheckpointAgentSDK(ctx, outline, volumesToImprove, reviewResult, 0, 1, 80.0, true, "", setup, applyPatches, crossOutline, allVolumes)
 	return improved, err
 }
 
@@ -3441,7 +3441,7 @@ func countMediumOrHigherReviewSuggestions(review models.ReviewResult) int {
 	return count
 }
 
-func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup, applyPatches bool, crossOutline *models.Outline) (*models.Outline, *models.ReviewResult, int, error) {
+func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup, applyPatches bool, crossOutline *models.Outline, allVolumes bool) (*models.Outline, *models.ReviewResult, int, error) {
 	currentOutline := *outline
 	progressPath := "story/compose/outline_improve_progress.json"
 	targetVolumes := improveTargetVolumeIDs(outline, volumesToImprove)
@@ -3481,6 +3481,11 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 
 	improvedCount := 0
 	for idx := progress.CurrentVolumeIdx; idx < len(volumesToImprove); idx++ {
+		// Full-book mode hands the whole book-level task to the FIRST volume's
+		// session (it may patch every volume); the remaining volumes then run
+		// as ordinary per-volume sessions to avoid every session re-fixing the
+		// same book-level issues.
+		fullBookSession := allVolumes && idx == 0
 		indices := volumesToImprove[idx]
 		partIdx, volIdx := indices[0], indices[1]
 		if partIdx < 0 || partIdx >= len(currentOutline.Parts) || volIdx < 0 || volIdx >= len(currentOutline.Parts[partIdx].Volumes) {
@@ -3531,7 +3536,20 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 			Part:         *part,
 			Volume:       *volume,
 			ReviewResult: volumeReview,
-			UserPrompt:   scopeComposeAgentSDKVolumeUserPrompt(userPrompt, volume.ID, volume.Title),
+		}
+		if fullBookSession {
+			// Full-book mode: keep the user prompt unscoped so the session knows
+			// this is a book-level task spanning many volumes, and let the
+			// session see ALL suggestions (not just its own target), so a
+			// book-level issue (e.g. a cost that inflates across 13 volumes)
+			// can be rooted out in one session.
+			improveInput.UserPrompt = userPrompt
+			if reviewResult != nil {
+				improveInput.ReviewResult = *reviewResult
+			}
+		} else {
+			improveInput.UserPrompt = scopeComposeAgentSDKVolumeUserPrompt(userPrompt, volume.ID, volume.Title)
+			improveInput.ReviewResult = volumeReview
 		}
 		// Cross-volume by default (apply mode only): the session may also patch
 		// adjacent volumes (previous + next), so volume-end hooks and next-volume
@@ -3544,7 +3562,23 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 			if crossOutline != nil {
 				adjacencyOutline = *crossOutline
 			}
-			if adjacent := composeAdjacentVolumeIDs(adjacencyOutline, volume.ID); len(adjacent) > 0 {
+			if fullBookSession {
+				// Full-book cross-volume mode: every volume in the outline is
+				// patchable in this session, so book-level issues (a golden
+				// finger cost that inflates across 13 volumes, a character
+				// whose intelligence drifts per-volume) can be rooted out in
+				// one session instead of being chased volume by volume.
+				allIDs := make([]string, 0)
+				for _, part := range adjacencyOutline.Parts {
+					for _, v := range part.Volumes {
+						if strings.TrimSpace(v.ID) != "" {
+							allIDs = append(allIDs, v.ID)
+						}
+					}
+				}
+				improveInput.CrossVolumeIDs = allIDs
+				improveInput.Outline = adjacencyOutline
+			} else if adjacent := composeAdjacentVolumeIDs(adjacencyOutline, volume.ID); len(adjacent) > 0 {
 				improveInput.CrossVolumeIDs = adjacent
 				// The session must see the full outline so the cross-volume
 				// patch/query allowlist expansion can find the adjacent volumes.
