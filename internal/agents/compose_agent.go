@@ -311,6 +311,10 @@ type ComposeOutlineReviewInput struct {
 	CrossVolume     bool
 	FromVolumeIndex int
 	ToVolumeIndex   int
+	// SurfaceOnly 为 true 时只暴露读者可见字段 (title/summary/opening_beat/scenes),
+	// 不暴露 events/payoff_contract/state_anchor 等内部结构字段——用于审"读者读到的",
+	// 而非"作者的面板"(后者常被误判为 AI 味)。
+	SurfaceOnly bool
 }
 
 type composeAgentSDKOutlineReviewPromptInput struct {
@@ -1154,6 +1158,11 @@ func (a *ComposeAgent) reviewOutlineCrossVolumeAgentSDK(ctx context.Context, inp
 		)
 		focus = "以 user_prompt 为最高优先级；在此基础上补充伏笔生命周期、设定一致性漂移、跨卷重复套路、宏观节奏、卷间钩子衔接、角色跨卷弧线等跨卷维度。"
 	}
+	if input.SurfaceOnly {
+		instructions = append(instructions,
+			"SURFACE-ONLY REVIEW: you can ONLY see reader-visible fields (volume summary, chapter title/summary/opening_beat/scenes). Internal structure fields (events, payoff_contract, state_anchor, state_change, conflicts) are NOT available and MUST NOT be assumed or guessed. Judge the outline the way a reader experiences it: pacing, hooks, character motivation, emotional beats, foreshadowing as it reads — not as data-structure panels. Do not report issues that would be invisible to a reader (e.g. a forced data-slot value, a field format, an engine check artifact).",
+		)
+	}
 
 	promptInput := composeAgentSDKOutlineReviewPromptInput{
 		TargetVolumeID:  fmt.Sprintf("%d-%d (cross-volume)", input.FromVolumeIndex, input.ToVolumeIndex),
@@ -1175,6 +1184,8 @@ func (a *ComposeAgent) reviewOutlineCrossVolumeAgentSDK(ctx context.Context, inp
 		"novelgen tool query story-setup --type resource",
 		"novelgen tool query story-setup --type timeline",
 		"novelgen tool query outline --type all --view index",
+		"novelgen tool query outline --type all --view brief",
+		"novelgen tool query outline --type part --id",
 		"novelgen tool query outline --type refs --entity-type storyline --name",
 		"novelgen tool query outline --type refs --entity-type character --name",
 		"novelgen tool query outline --type refs --entity-type item --name",
@@ -1183,6 +1194,26 @@ func (a *ComposeAgent) reviewOutlineCrossVolumeAgentSDK(ctx context.Context, inp
 	for _, v := range inScope {
 		vid := strings.TrimSpace(v.ID)
 		if vid == "" {
+			continue
+		}
+		if input.SurfaceOnly {
+			// Reader-visible fields only: title/summary/opening_beat/scenes.
+			// No events, no payoff_contract, no state_anchor — the AI-flavor
+			// review judges what a reader actually sees, not the author's
+			// internal structure panels (which are routinely misread as
+			// 'AI flavor' — e.g. the forced opponent-misread slot).
+			allowlist = append(allowlist,
+				fmt.Sprintf("novelgen tool query outline --type volume --id %q --fields summary --view brief", vid),
+			)
+			for _, chapter := range v.Chapters {
+				cid := strings.TrimSpace(chapter.ID)
+				if cid == "" {
+					continue
+				}
+				allowlist = append(allowlist,
+					fmt.Sprintf("novelgen tool query outline --type chapter --id %q --fields title,summary,opening_beat,scenes --view brief", cid),
+				)
+			}
 			continue
 		}
 		allowlist = append(allowlist,
@@ -3543,7 +3574,12 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 			// session see ALL suggestions (not just its own target), so a
 			// book-level issue (e.g. a cost that inflates across 13 volumes)
 			// can be rooted out in one session.
-			improveInput.UserPrompt = userPrompt
+			bookLevelInstruction := "FULL-BOOK CROSS-VOLUME SESSION: you are authorized to query, check, and patch EVERY volume of the outline (P1-V1 through P5-V5), not just the target volume. The suggestions below are book-level issues spanning multiple volumes. For each one: locate ALL affected volumes/chapters, patch them consistently in this session, and run checks for every volume you touch. Do NOT defer issues to another volume's session, do NOT mark book-level suggestions as 'outside this volume's boundary' — the boundary is the whole book. If a suggestion references specific chapter IDs in other volumes, query and patch those too."
+			if strings.TrimSpace(userPrompt) != "" {
+				improveInput.UserPrompt = bookLevelInstruction + "\n\n" + userPrompt
+			} else {
+				improveInput.UserPrompt = bookLevelInstruction
+			}
 			if reviewResult != nil {
 				improveInput.ReviewResult = *reviewResult
 			}

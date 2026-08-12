@@ -25,42 +25,43 @@ import (
 )
 
 var (
-	composeIDFlag               string
-	composePromptFlag           string
-	composeReviewFocusFlag      string
-	composeReviewMatrixFlag     bool
-	composeCrossVolumeFlag      bool
-	composeReviewFromVolumeFlag int
-	composeReviewToVolumeFlag   int
-	composeReviewModelsFlag     string
-	composeReviewSampleFlag     int
-	composeReviewSeedFlag       int64
-	composeReviewParallelFlag   int
-	composeMaxRoundsFlag        int
-	composeConcurrencyFlag      int
-	composeHierarchicalFlag     bool
-	composeOneShotFlag          bool
-	composeAgentSDKFlag         bool
-	composeAgentApplyFlag       bool
-	composeRepairBudgetFlag     int
-	composeForceImproveFlag     bool
-	composeForceGenFlag         bool
-	composeCheckJSONFlag        bool
-	composeCheckSuggestionsOut  string
-	composeImproveVolume        int
-	composeImproveFromVol       int
-	composeImproveToVol         int
-	composeSuggestionsFlag      string
-	composeCrossVolumeAllFlag   bool
-	composeReviewOutFlag        string
-	composeModelFlag            string
-	composePipelineFromVol      int
-	composePipelineToVol        int
-	composePipelineMaxRounds    int
-	composePipelineForce        bool
-	composePipelineSkipGen      bool
-	composePipelineSkipImprove  bool
-	composePipelineSkipCross    bool
+	composeIDFlag                string
+	composePromptFlag            string
+	composeReviewFocusFlag       string
+	composeReviewMatrixFlag      bool
+	composeCrossVolumeFlag       bool
+	composeReviewFromVolumeFlag  int
+	composeReviewToVolumeFlag    int
+	composeReviewModelsFlag      string
+	composeReviewSampleFlag      int
+	composeReviewSeedFlag        int64
+	composeReviewParallelFlag    int
+	composeMaxRoundsFlag         int
+	composeConcurrencyFlag       int
+	composeHierarchicalFlag      bool
+	composeOneShotFlag           bool
+	composeAgentSDKFlag          bool
+	composeAgentApplyFlag        bool
+	composeRepairBudgetFlag      int
+	composeForceImproveFlag      bool
+	composeForceGenFlag          bool
+	composeCheckJSONFlag         bool
+	composeCheckSuggestionsOut   string
+	composeImproveVolume         int
+	composeImproveFromVol        int
+	composeImproveToVol          int
+	composeSuggestionsFlag       string
+	composeCrossVolumeAllFlag    bool
+	composeReviewOutFlag         string
+	composeReviewSurfaceOnlyFlag bool
+	composeModelFlag             string
+	composePipelineFromVol       int
+	composePipelineToVol         int
+	composePipelineMaxRounds     int
+	composePipelineForce         bool
+	composePipelineSkipGen       bool
+	composePipelineSkipImprove   bool
+	composePipelineSkipCross     bool
 )
 
 var composeCmd = &cobra.Command{
@@ -262,6 +263,7 @@ func init() {
 	composeReviewCmd.Flags().IntVar(&composeReviewFromVolumeFlag, "from-volume", 0, "Cross-volume review start (1-based global volume index)")
 	composeReviewCmd.Flags().IntVar(&composeReviewToVolumeFlag, "to-volume", 0, "Cross-volume review end (1-based global volume index, default: last)")
 	composeReviewCmd.Flags().StringVar(&composeReviewModelsFlag, "models", "", "Comma-separated model list for --matrix (default: project model)")
+	composeReviewCmd.Flags().BoolVar(&composeReviewSurfaceOnlyFlag, "surface-only", false, "With --cross-volume, review only reader-visible fields (title/summary/opening_beat/scenes); skip events/payoff_contract/state_anchor internal panels (for judging reader experience, not author panels)")
 	composeReviewCmd.Flags().IntVar(&composeReviewSampleFlag, "sample", 10, "Stratified sample size for --matrix output")
 	composeReviewCmd.Flags().Int64Var(&composeReviewSeedFlag, "seed", 42, "Random seed for --matrix sampling")
 	composeReviewCmd.Flags().IntVar(&composeReviewParallelFlag, "parallel", 4, "Concurrent reviews in --matrix mode")
@@ -1319,6 +1321,7 @@ func runComposeCrossVolumeReview(cmd *cobra.Command, args []string) error {
 		CrossVolume:     true,
 		FromVolumeIndex: fromIdx,
 		ToVolumeIndex:   toIdx,
+		SurfaceOnly:     composeReviewSurfaceOnlyFlag,
 	}
 	// --focus 拼进 prompt
 	if focusPrompt := agents.ResolveReviewFocusPrompt(composeReviewFocusFlag); focusPrompt != "" {
