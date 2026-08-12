@@ -256,7 +256,8 @@ type Event struct {
 const (
 	// 物品相关
 	ActionAcquire = "acquire" // 获得物品
-	ActionUse     = "use"     // 使用物品
+	ActionUse     = "use"     // 使用工具/能力/资源（不消耗）
+	ActionConsume = "consume" // 消耗物品（一次性，用完即没）
 	ActionLose    = "lose"    // 失去物品
 	ActionCraft   = "craft"   // 制造/合成物品
 

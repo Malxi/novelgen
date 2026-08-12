@@ -2152,7 +2152,7 @@ func outlineKnownItemNames(outline *StoryOutline) []string {
 					action := strings.ToLower(normalizeOutlineName(evt.GetAction()))
 					evtType := strings.ToLower(normalizeOutlineName(evt.Type))
 					if evtType == "item" || action == models.ActionAcquire || action == models.ActionUse ||
-						action == models.ActionCraft || action == "consume" || action == "consumed" ||
+						action == models.ActionConsume || action == models.ActionCraft || action == "consumed" ||
 						action == "utilize" || action == "使用" || action == "消耗" {
 						if outlineEventTargetIsItem(evt) {
 							add(evt.GetTarget())
@@ -2402,25 +2402,61 @@ func (ov *OutlineValidator) validateEventSemantics() {
 								break
 							}
 						}
-						if !isConsumable {
-							for _, nt := range nonConsumableTargets {
-								if strings.Contains(target, nt) {
-									if flagged[key] {
-										break
-									}
-									flagged[key] = true
-									ov.Issues = append(ov.Issues, OutlineIssue{
-										Type:        "event_semantics",
-										Severity:    "minor",
-										Location:    chapter.ID,
-										Description: fmt.Sprintf("use 事件 target %q 是工具/资源/能力而非消耗性物品，use 语义被误用", target),
-										Impact:      "物品使用链被非消耗目标污染，无法区分'消耗了物品'与'使用了工具'",
-										Fix:         "消耗物品（符/丹/药）用 use；使用工具/资源/能力改用 utilize/operate/employ/leverage",
-									})
+						if isConsumable {
+							// 消耗品（符/丹/药/残片）用 use 语义不精确——应使用 consume（一次性消耗）
+							if flagged[key] {
+								continue
+							}
+							flagged[key] = true
+							ov.Issues = append(ov.Issues, OutlineIssue{
+								Type:        "event_semantics",
+								Severity:    "minor",
+								Location:    chapter.ID,
+								Description: fmt.Sprintf("use 事件 target %q 是消耗性物品（符/丹/药），应改用 consume 语义（一次性消耗）", target),
+								Impact:      "use 与 consume 混用使物品消耗链无法机器追踪（acquire→consume），库存与损耗校验失真",
+								Fix:         "消耗性物品（符/丹/药/残片/灵石）的消耗用 consume；use 仅保留给不消耗的工具/能力/资源操作",
+							})
+							continue
+						}
+						// 非消耗 target：use 可接受，但若命中工具/资源/能力词，提示用 utilize/operate/employ 更精确
+						for _, nt := range nonConsumableTargets {
+							if strings.Contains(target, nt) {
+								if flagged[key] {
 									break
 								}
+								flagged[key] = true
+								ov.Issues = append(ov.Issues, OutlineIssue{
+									Type:        "event_semantics",
+									Severity:    "minor",
+									Location:    chapter.ID,
+									Description: fmt.Sprintf("use 事件 target %q 是工具/资源/能力而非消耗性物品，use 语义被误用", target),
+									Impact:      "物品使用链被非消耗目标污染，无法区分'消耗了物品'与'使用了工具'",
+									Fix:         "使用工具/资源/能力改用 utilize/operate/employ/leverage；消耗性物品（符/丹/药）用 consume",
+								})
+								break
 							}
 						}
+					case "consume":
+						// consume 只应作用于消耗性物品
+						if target == "" {
+							continue
+						}
+						if outlineIsNonItemConcept(target) {
+							if flagged[key] {
+								continue
+							}
+							flagged[key] = true
+							ov.Issues = append(ov.Issues, OutlineIssue{
+								Type:        "event_semantics",
+								Severity:    "minor",
+								Location:    chapter.ID,
+								Description: fmt.Sprintf("consume 事件 target %q 是非物品概念（能力/资源/初始物），不应消耗", target),
+								Impact:      "消耗语义被用于非消耗目标，追踪失真",
+								Fix:         "consume 只用于一次性消耗品（符/丹/药/残片/灵石）；能力/工具消耗改用 use/utilize",
+							})
+							continue
+						}
+						_ = target // 消耗品 consume 正常，无需处理
 					}
 				}
 			}

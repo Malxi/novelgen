@@ -33,11 +33,25 @@ func TestValidateEventSemantics(t *testing.T) {
 			wantIssue: true,
 		},
 		{
-			name: "use of consumable item is accepted",
+			name: "use of consumable item raises consume hint",
 			events: []StoryEvent{
 				{Type: "item", Actor: "李侑", Action: "use", Change: "consumed", Target: "爆灵符"},
 			},
+			wantIssue: true,
+		},
+		{
+			name: "consume of consumable item is accepted",
+			events: []StoryEvent{
+				{Type: "item", Actor: "李侑", Action: "consume", Change: "consumed", Target: "爆灵符"},
+			},
 			wantIssue: false,
+		},
+		{
+			name: "consume of non-item concept raises issue",
+			events: []StoryEvent{
+				{Type: "item", Actor: "李侑", Action: "consume", Change: "consumed", Target: "神魂之力"},
+			},
+			wantIssue: true,
 		},
 		{
 			name: "use of non-consumable target raises issue",

@@ -106,7 +106,8 @@ The outline should be satisfying to read, not only coherent to simulate.
 
 **物品相关：**
 - `acquire` - 获得物品（例：林跃 acquire 生存刀）
-- `use` - 使用物品
+- `consume` - 消耗物品（一次性，用完即没：符箓/丹药/药草/灵石/残片）
+- `use` - 使用工具/能力/资源（不消耗，可重复使用）
 - `lose` - 失去物品
 - `craft` - 制造/合成物品
 
@@ -162,6 +163,22 @@ The outline should be satisfying to read, not only coherent to simulate.
   target_type: "item"
   context: "低温设施地下三层"
   result: "林跃从杂物间找到生锈的生存刀"
+
+# 消耗物品（一次性）
+- actor: "林跃"
+  action: "consume"
+  target: "爆灵符"
+  target_type: "item"
+  context: "被三名虫族包围"
+  result: "林跃捏碎爆灵符，一声轰鸣清出通路，符纸化作飞灰"
+
+# 使用工具（不消耗）
+- actor: "林跃"
+  action: "use"
+  target: "扫描仪"
+  target_type: "item"
+  context: "废弃动力室"
+  result: "林跃用扫描仪探测墙后是否有生命反应"
 
 # 觉醒能力
 - actor: "林跃"
