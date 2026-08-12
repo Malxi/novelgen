@@ -3,6 +3,8 @@ package rpg
 import (
 	"fmt"
 	"strings"
+
+	"novelgen/internal/models"
 )
 
 // OutlineValidator 大纲验证器
@@ -170,6 +172,18 @@ func (ov *OutlineValidator) Validate() *ValidationResult {
 
 	// 16. 阵营/等级体系检查
 	ov.validateFactionTiers()
+
+	// 17. 角色死亡/复活连续性检查
+	ov.validateCharacterDeathContinuity()
+
+	// 18. 全角色修为单调性检查
+	ov.validateCultivationContinuity()
+
+	// 19. 物品获得→使用连续性检查
+	ov.validateItemUsageContinuity()
+
+	// 20. 事件语义完整性检查（结构化字段缺失/误用）
+	ov.validateEventSemantics()
 
 	// Optional storyline texture hints. These stay as suggestions only, so the
 	// outline can remain loose when a chapter does not need explicit arc notes.
@@ -1299,6 +1313,968 @@ func (ov *OutlineValidator) validateStorylineTexture() {
 	}
 }
 
+// deathInfo 角色死亡记录
+type deathInfo struct {
+	chapterID string
+	how       string
+}
+
+// 死亡关键词（用于 defeat/combat 结果与 kill/die/devour/swallow 动作）
+var outlineDeathKeywords = []string{"吞噬", "死亡", "击杀", "杀死", "陨落", "毙命", "灰飞烟灭", "身亡"}
+
+// 文本死亡关键词（details/result 中提到角色名 + 以下关键词判定死亡）
+var outlineDeathTextKeywords = []string{"吞噬成功", "已死", "死亡", "陨落", "灰飞烟灭"}
+
+// 非真实死亡语境：模拟/推演/预演/幻境/梦境/测试中的"死亡"不算死亡
+var outlineNonDeathContexts = []string{"模拟死亡", "推演死亡", "预演死亡", "幻境中死亡", "梦里死亡", "梦境死亡", "模拟器", "推演中", "预演中", "幻境", "梦境", "模拟场景", "测试死亡"}
+
+// 吞噬类能力/系统词：出现这些词时"吞噬"是能力名而非死亡动作
+var outlineDevourAbilityWords = []string{"吞噬系统", "吞噬能力", "吞噬外挂", "吞噬属性", "吞噬之力", "吞噬功法", "吞噬能量", "吞噬气运"}
+
+// outlineTextHasNonDeathContext 判断文本是否处于非真实死亡语境（模拟/推演/幻境等）
+func outlineTextHasNonDeathContext(text string) bool {
+	for _, ctx := range outlineNonDeathContexts {
+		if strings.Contains(text, ctx) {
+			return true
+		}
+	}
+	return false
+}
+
+// outlineTextHasDevourAbility 判断文本中的"吞噬"是否只是能力/系统名（非死亡动作）
+func outlineTextHasDevourAbility(text string) bool {
+	for _, w := range outlineDevourAbilityWords {
+		if strings.Contains(text, w) {
+			return true
+		}
+	}
+	return false
+}
+
+// validateCharacterDeathContinuity 角色死亡/复活连续性检查
+// 扫描全部章节，记录已死亡角色；后续章节中该角色再次出场即报 major 问题；
+// 若后续事件明确复活该角色，则清除死亡标记。
+func (ov *OutlineValidator) validateCharacterDeathContinuity() {
+	if ov.Outline == nil {
+		return
+	}
+
+	deaths := make(map[string]deathInfo) // 规范化角色名 → 死亡信息
+	flagged := make(map[string]bool)     // 角色名|章节 → 已报过
+
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				chapterChars := outlineChapterCharacterNames(chapter)
+
+				// 先处理本章复活事件：复活后同章出场不报问题
+				for _, evt := range chapter.Events {
+					// 时间线重置/回档 = 群体复活，清空全部死亡标记
+					evtText := normalizeOutlineValidatorText(evt.Details + " " + evt.Result + " " + evt.Change)
+					if strings.Contains(evtText, "时间线重置") || strings.Contains(evtText, "回档") {
+						deaths = make(map[string]deathInfo)
+						break
+					}
+					for _, revived := range outlineEventRevivedCharacters(evt, chapterChars) {
+						delete(deaths, revived)
+					}
+				}
+
+				// 检查本章出场的已死亡角色
+				for _, name := range chapterChars {
+					info, ok := deaths[name]
+					if !ok {
+						continue
+					}
+					key := name + "\x00" + chapter.ID
+					if flagged[key] {
+						continue
+					}
+					flagged[key] = true
+					ov.Issues = append(ov.Issues, OutlineIssue{
+						Type:        "death_continuity",
+						Severity:    "major",
+						Location:    chapter.ID,
+						Description: fmt.Sprintf("角色 %s 已在 %s 死亡/被吞噬，本章不应再出场", name, info.chapterID),
+						Impact:      "死亡角色再次出场会破坏死亡事件的严肃性与剧情连贯性",
+						Fix:         "为该角色补充复活/重生事件，或移除本章中的出场",
+					})
+				}
+
+				// 按事件顺序更新死亡/复活标记
+				for _, evt := range chapter.Events {
+					for _, victim := range outlineEventDeadVictims(evt, chapterChars) {
+						deaths[victim] = deathInfo{chapterID: chapter.ID, how: normalizeOutlineValidatorText(evt.GetAction())}
+					}
+					for _, revived := range outlineEventRevivedCharacters(evt, chapterChars) {
+						delete(deaths, revived)
+					}
+				}
+			}
+		}
+	}
+}
+
+// outlineChapterCharacterNames 收集章节中所有出场角色名（结构化字段，不含 summary）
+func outlineChapterCharacterNames(chapter StoryChapter) []string {
+	var names []string
+	add := func(name string) {
+		name = normalizeOutlineName(name)
+		if name != "" && !contains(names, name) {
+			names = append(names, name)
+		}
+	}
+	for _, name := range chapter.Characters {
+		add(name)
+	}
+	for _, evt := range chapter.Events {
+		for _, name := range evt.Characters {
+			add(name)
+		}
+		add(evt.GetActor())
+		add(evt.GetTarget())
+		for _, enemy := range evt.Enemies {
+			add(enemy.Name)
+		}
+	}
+	for _, enemy := range chapter.Enemies {
+		add(enemy.Name)
+	}
+	return names
+}
+
+// outlineEventDeadVictims 判定事件中的死亡角色
+// 概念/机制名：出现在 events 里但不是真实角色（不应参与死亡追踪）
+var outlineNonCharacterConcepts = []string{"死亡回档", "回档", "时间线", "日志系统", "系统", "天道", "规则", "世界意志"}
+
+// outlineIsConceptName 判断名字是否为概念/机制名（非真实角色）
+func outlineIsConceptName(name string) bool {
+	for _, c := range outlineNonCharacterConcepts {
+		if name == c {
+			return true
+		}
+	}
+	return false
+}
+
+func outlineEventDeadVictims(evt StoryEvent, chapterChars []string) []string {
+	var victims []string
+	add := func(name string) {
+		name = normalizeOutlineName(name)
+		if name != "" && !outlineIsConceptName(name) && !contains(victims, name) {
+			victims = append(victims, name)
+		}
+	}
+
+	action := strings.ToLower(normalizeOutlineName(evt.GetAction()))
+	target := normalizeOutlineName(evt.GetTarget())
+	change := normalizeOutlineName(evt.Change)
+	text := normalizeOutlineValidatorText(evt.Details + " " + evt.Result)
+
+	// 文本层守卫：非真实死亡语境（模拟/推演/幻境/梦境）中的"死亡"不算死亡。
+	// 结构化字段（action/change）是主信号，因此该守卫现在很少触发。
+	if outlineTextHasNonDeathContext(text) {
+		return victims
+	}
+	// 文本层守卫："吞噬"仅是能力/系统名（吞噬系统/吞噬能力/吞噬外挂）时不算死亡动作。
+	if outlineTextHasDevourAbility(text) {
+		return victims
+	}
+
+	// 1. 结构化动作：kill/die/devour/swallow/defeat 直接判定死亡。
+	//    die 类动作死亡的是执行者，其余动作死亡的是目标。
+	switch {
+	case strings.Contains(action, "die"):
+		add(evt.GetActor())
+	case strings.Contains(action, "kill"), strings.Contains(action, "devour"),
+		strings.Contains(action, "swallow"), strings.Contains(action, "defeat"):
+		add(target)
+	}
+
+	// 2. 结构化 change 明确为死亡结果：目标死亡（若 actor==target 且为自我死亡则记执行者）。
+	if outlineChangeImpliesDeath(change) {
+		if outlineChangeImpliesSelfDeath(change) && target != "" && normalizeOutlineName(evt.GetActor()) == target {
+			add(evt.GetActor())
+		} else {
+			add(target)
+		}
+	}
+
+	// 3. change 含"吞噬"且目标是真实角色名（且文本未把它当能力名）→ 目标被吞噬死亡。
+	if strings.Contains(change, "吞噬") && target != "" && !outlineTextHasDevourAbility(text) {
+		add(target)
+	}
+
+	// 4. 仅作为兜底：combat/defeat 动作 + 结果文本含死亡关键词。
+	//    文本路径必须通过上面的非真实死亡语境守卫；不再扫描章节角色名共现。
+	if (action == "combat" || action == "defeat") &&
+		containsAnyOutlineValidatorText(text, outlineDeathTextKeywords...) {
+		if outlineEventActorDied(evt, text) {
+			add(evt.GetActor())
+		} else {
+			add(target)
+		}
+	}
+
+	return victims
+}
+
+// outlineChangeImpliesDeath 判断结构化的 change 是否为死亡结果。
+func outlineChangeImpliesDeath(change string) bool {
+	switch strings.ToLower(strings.TrimSpace(change)) {
+	case "temporary_death", "defeated", "died", "dead", "killed",
+		"死亡", "战死", "身亡", "陨落", "被吞噬", "吞噬成功":
+		return true
+	}
+	return false
+}
+
+// outlineChangeImpliesSelfDeath 判断该 change 是否表示执行者自身的死亡（actor==target 时适用）。
+func outlineChangeImpliesSelfDeath(change string) bool {
+	switch strings.ToLower(strings.TrimSpace(change)) {
+	case "temporary_death", "died", "dead", "killed",
+		"死亡", "战死", "身亡", "陨落", "被吞噬", "吞噬成功":
+		return true
+	}
+	return false
+}
+
+// outlineEventActorDied 判断事件文本是否明确表明执行者死亡
+func outlineEventActorDied(evt StoryEvent, text string) bool {
+	actor := normalizeOutlineName(evt.GetActor())
+	if actor == "" {
+		return false
+	}
+	actorLower := normalizeOutlineValidatorText(actor)
+	if strings.Contains(text, actorLower+"被") && containsAnyOutlineValidatorText(text, outlineDeathKeywords...) {
+		return true
+	}
+	return containsAnyOutlineValidatorText(text, actorLower+"已死", actorLower+"身亡", actorLower+"陨落")
+}
+
+var outlineReviveKeywords = []string{"revive", "复活", "重生", "时间线重置", "回档"}
+
+// outlineEventRevivedCharacters 返回复活事件中被复活的角色
+// 判定依据：action 含 revive/复活/重生，或事件文本（change/details/result）含复活/重生标记
+// 且文本中出现角色名（结构化字段优先，其次按文本共现归因）。
+func outlineEventRevivedCharacters(evt StoryEvent, chapterChars []string) []string {
+	action := strings.ToLower(normalizeOutlineName(evt.GetAction()))
+	text := normalizeOutlineValidatorText(strings.Join([]string{evt.Change, evt.Details, evt.Result}, " "))
+	if !containsAnyOutlineValidatorText(action, outlineReviveKeywords...) &&
+		!containsAnyOutlineValidatorText(text, "复活", "重生") {
+		return nil
+	}
+	var revived []string
+	add := func(name string) {
+		name = normalizeOutlineName(name)
+		if name != "" && !contains(revived, name) {
+			revived = append(revived, name)
+		}
+	}
+	add(evt.GetTarget())
+	add(evt.GetActor())
+	for _, name := range evt.Characters {
+		add(name)
+	}
+	// 事件文本中同现角色名与复活/重生标记
+	if containsAnyOutlineValidatorText(text, "复活", "重生") {
+		for _, name := range chapterChars {
+			if strings.Contains(text, normalizeOutlineValidatorText(name)) {
+				add(name)
+			}
+		}
+	}
+	return revived
+}
+
+// cultivationSighting 角色修为记录
+type cultivationSighting struct {
+	raw     string
+	tier    int
+	layer   int
+	phase   int
+	parsed  bool
+	chapter string
+	index   int
+}
+
+// 修为大境界（由低到高）与小境界（由低到高）
+var outlineCultivationTiers = []string{"练气", "筑基", "金丹", "元婴", "化神", "炼虚", "合体", "大乘", "渡劫"}
+var outlineCultivationPhases = []string{"大圆满", "巅峰", "后期", "中期", "初期"}
+
+var outlineBreakthroughKeywords = []string{"突破", "breakthrough", "进阶", "晋升", "升级", "upgrade", "觉醒", "awaken", "进化", "evolution"}
+var outlineDowngradeKeywords = []string{"跌境", "跌落", "修为倒退", "修为被废", "反噬修为受损", "掉到", "跌至", "降至", "压制", "被废", "反噬损失修为"}
+
+// validateCultivationContinuity 全角色修为单调性检查
+// 来源：chapter.StateAnchor.Cultivation（仅主角）与 chapter.StateChange 自然语言（任意角色）。
+// 修为下降且缺少跌境事件报 major；修为上升且缺少突破事件报 minor 警告。
+func (ov *OutlineValidator) validateCultivationContinuity() {
+	if ov.Outline == nil {
+		return
+	}
+
+	protagonist := ov.outlineProtagonistName()
+	knownNames := outlineKnownCharacterNames(ov.Outline)
+	chapters := outlineOrderedChapters(ov.Outline)
+	states := make(map[string]cultivationSighting)
+
+	for idx, chapter := range chapters {
+		// 1. StateAnchor 仅追踪主角，且作为本章主角修为的权威来源。
+		anchor := strings.TrimSpace(chapter.StateAnchor.Cultivation)
+		if anchor != "" {
+			ov.recordCultivationSighting(states, protagonist, anchor, idx, chapters)
+		}
+		// 2. StateChange 自然语言追踪任意角色；
+		//    主角在同一章已有 state_anchor 时，忽略 StateChange 文本提取的修为
+		//    （state_anchor 优先），避免"练气五层"（摘要句）与"练气四层中期"（锚点）
+		//    这类跨来源矛盾造成的误报。
+		for name, cultivation := range outlineExtractCultivationsFromStateChange(chapter.StateChange, knownNames) {
+			if name == protagonist && anchor != "" {
+				continue
+			}
+			ov.recordCultivationSighting(states, name, cultivation, idx, chapters)
+		}
+	}
+}
+
+// recordCultivationSighting 记录一次修为出现并做升降级检查
+func (ov *OutlineValidator) recordCultivationSighting(states map[string]cultivationSighting, name, raw string, idx int, chapters []StoryChapter) {
+	name = normalizeOutlineName(name)
+	raw = strings.TrimSpace(raw)
+	if name == "" || raw == "" {
+		return
+	}
+
+	chapter := chapters[idx]
+	sighting := cultivationSighting{raw: raw, chapter: chapter.ID, index: idx}
+	sighting.tier, sighting.phase, sighting.parsed = cultivateTierRank(raw)
+	sighting.layer = cultivateLayerRank(raw)
+
+	prev, ok := states[name]
+	states[name] = sighting
+	if !ok || !prev.parsed || !sighting.parsed {
+		return
+	}
+
+	cmp := cultivateCompareRanks(prev, sighting)
+	switch {
+	case cmp > 0:
+		// 升级：缺少突破事件则警告（minor）
+		if !outlineChapterHasBreakthroughExplanation(chapter, name) {
+			ov.Warnings = append(ov.Warnings, OutlineWarning{
+				Type:        "cultivation_continuity",
+				Location:    chapter.ID,
+				Description: fmt.Sprintf("角色 %s 修为从 %s 提升到 %s (%s → %s)，但缺少突破事件", name, prev.raw, raw, prev.chapter, chapter.ID),
+				Suggestion:  "添加突破/进阶相关事件，或修正修为描述",
+			})
+		}
+	case cmp < 0:
+		// 降级：缺少跌境事件则报 major
+		if !ov.outlineChapterHasDowngradeExplanation(chapters, prev.index, idx, name) {
+			ov.Issues = append(ov.Issues, OutlineIssue{
+				Type:        "cultivation_continuity",
+				Severity:    "major",
+				Location:    chapter.ID,
+				Description: fmt.Sprintf("角色 %s 修为从 %s 跌到 %s (chapter %s → %s)，缺少跌境事件", name, prev.raw, raw, prev.chapter, chapter.ID),
+				Impact:      "修为倒退缺乏合理解释会破坏修炼体系的一致性",
+				Fix:         "添加跌境/跌落/修为倒退/被废等事件，或修正修为描述",
+			})
+		}
+	}
+}
+
+// cultivateTierRank 解析修为字符串，返回大境界排名与小境界排名
+func cultivateTierRank(s string) (tier int, phase int, ok bool) {
+	s = normalizeOutlineValidatorText(strings.TrimSpace(s))
+	if s == "" {
+		return 0, 0, false
+	}
+	tier = -1
+	for i, t := range outlineCultivationTiers {
+		if strings.Contains(s, t) {
+			tier = i
+			break
+		}
+	}
+	if tier < 0 {
+		return 0, 0, false
+	}
+	phase = 0
+	for i, p := range outlineCultivationPhases {
+		if strings.Contains(s, p) {
+			phase = len(outlineCultivationPhases) - 1 - i
+			break
+		}
+	}
+	return tier, phase, true
+}
+
+// cultivateLayerRank 解析修为中的层数（如“练气五层后期”返回5；无层数返回0）
+func cultivateLayerRank(s string) int {
+	runes := []rune(normalizeOutlineValidatorText(strings.TrimSpace(s)))
+	for i := 1; i < len(runes); i++ {
+		if runes[i] != '层' {
+			continue
+		}
+		if runes[i-1] == '十' {
+			if i >= 2 {
+				if v, ok := outlineChineseNumberValue(runes[i-2]); ok && v < 10 {
+					return v * 10
+				}
+			}
+			return 10
+		}
+		if v, ok := outlineChineseNumberValue(runes[i-1]); ok {
+			return v
+		}
+	}
+	return 0
+}
+
+// outlineChineseNumberValue 中文数字转数值
+func outlineChineseNumberValue(r rune) (int, bool) {
+	switch r {
+	case '一':
+		return 1, true
+	case '二', '两':
+		return 2, true
+	case '三':
+		return 3, true
+	case '四':
+		return 4, true
+	case '五':
+		return 5, true
+	case '六':
+		return 6, true
+	case '七':
+		return 7, true
+	case '八':
+		return 8, true
+	case '九':
+		return 9, true
+	case '十':
+		return 10, true
+	}
+	return 0, false
+}
+
+// cultivateCompareRanks 比较两次修为：大境界 → 层数 → 小境界
+func cultivateCompareRanks(prev, cur cultivationSighting) int {
+	if cur.tier != prev.tier {
+		return cur.tier - prev.tier
+	}
+	if prev.layer > 0 && cur.layer > 0 && cur.layer != prev.layer {
+		return cur.layer - prev.layer
+	}
+	return cur.phase - prev.phase
+}
+
+// outlineExtractCultivationsFromStateChange 从 StateChange 自然语言中提取各角色修为
+// 按标点切分句子，取每个分句中最后一个修为短语作为该分句提及角色的当前修为。
+func outlineExtractCultivationsFromStateChange(text string, knownNames []string) map[string]string {
+	result := make(map[string]string)
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return result
+	}
+	lower := normalizeOutlineValidatorText(text)
+	if !containsAnyOutlineValidatorText(lower, "修为", "境界", "cultivation", "突破", "跌落", "跌境", "跌至", "掉到", "降至") {
+		return result
+	}
+
+	for _, clause := range strings.FieldsFunc(text, outlineClauseSplit) {
+		phrases := extractCultivationPhrases(clause)
+		if len(phrases) == 0 {
+			continue
+		}
+		clauseLower := normalizeOutlineValidatorText(clause)
+		last := phrases[len(phrases)-1]
+		for _, name := range knownNames {
+			if name != "" && strings.Contains(clauseLower, normalizeOutlineValidatorText(name)) {
+				result[name] = last
+			}
+		}
+	}
+	return result
+}
+
+// extractCultivationPhrases 从文本中提取修为短语（如：练气五层后期、筑基大圆满、金丹初期）
+func extractCultivationPhrases(text string) []string {
+	var phrases []string
+	runes := []rune(text)
+	n := len(runes)
+	i := 0
+	for i < n {
+		found := -1
+		foundLen := 0
+		for _, tier := range outlineCultivationTiers {
+			tr := []rune(tier)
+			if i+len(tr) <= n && string(runes[i:i+len(tr)]) == tier {
+				found = i
+				foundLen = len(tr)
+				break
+			}
+		}
+		if found < 0 {
+			i++
+			continue
+		}
+		end := found + foundLen
+		for end < n {
+			progressed := false
+			for _, phase := range outlineCultivationPhases {
+				pr := []rune(phase)
+				if end+len(pr) <= n && string(runes[end:end+len(pr)]) == phase {
+					end += len(pr)
+					progressed = true
+					break
+				}
+			}
+			if progressed {
+				continue
+			}
+			if outlineIsCultivationSpecifierRune(runes[end]) {
+				end++
+				continue
+			}
+			break
+		}
+		phrases = append(phrases, string(runes[found:end]))
+		i = end
+	}
+	return phrases
+}
+
+func outlineIsCultivationSpecifierRune(r rune) bool {
+	switch r {
+	case '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '百', '千', '万', '零', '两',
+		'层', '期', '阶', '重', '品', '星', '段', '级':
+		return true
+	}
+	return false
+}
+
+// outlineChapterHasBreakthroughExplanation 判断本章是否有突破事件解释修为上升
+func outlineChapterHasBreakthroughExplanation(chapter StoryChapter, name string) bool {
+	if outlineStateChangeExplains(chapter.StateChange, name, outlineBreakthroughKeywords) {
+		return true
+	}
+	for _, evt := range chapter.Events {
+		if storyEventSupportsCultivationChange(evt, "", "") {
+			return true
+		}
+	}
+	return false
+}
+
+// outlineChapterHasDowngradeExplanation 判断从 from 到 to 章节之间是否存在跌境解释
+func (ov *OutlineValidator) outlineChapterHasDowngradeExplanation(chapters []StoryChapter, from, to int, name string) bool {
+	if from < 0 {
+		from = 0
+	}
+	if to >= len(chapters) {
+		to = len(chapters) - 1
+	}
+	for i := from; i <= to; i++ {
+		chapter := chapters[i]
+		if outlineStateChangeExplains(chapter.StateChange, name, outlineDowngradeKeywords) {
+			return true
+		}
+		for _, evt := range chapter.Events {
+			evtText := outlineEventText(evt)
+			if outlineEventMentionsName(evt, name) &&
+				containsAnyOutlineValidatorText(evtText, outlineDowngradeKeywords...) &&
+				outlineTextMentionsCultivation(evtText) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// outlineStateChangeExplains 判断 StateChange 是否包含解释关键词并提及修为相关文本
+func outlineStateChangeExplains(stateChange, name string, keywords []string) bool {
+	scText := normalizeOutlineValidatorText(stateChange)
+	if !containsAnyOutlineValidatorText(scText, keywords...) {
+		return false
+	}
+	if name != "" && strings.Contains(scText, normalizeOutlineValidatorText(name)) {
+		return true
+	}
+	return outlineTextMentionsCultivation(scText)
+}
+
+// outlineTextMentionsCultivation 判断文本是否与修为相关（出现修为/境界关键词或任一境界名）
+func outlineTextMentionsCultivation(text string) bool {
+	if containsAnyOutlineValidatorText(text, "修为", "境界", "cultivation") {
+		return true
+	}
+	for _, tier := range outlineCultivationTiers {
+		if strings.Contains(text, tier) {
+			return true
+		}
+	}
+	return false
+}
+
+// outlineEventText 拼接事件全部文本用于关键词检查
+func outlineEventText(evt StoryEvent) string {
+	return normalizeOutlineValidatorText(strings.Join([]string{
+		evt.Type,
+		evt.Subject,
+		evt.Change,
+		evt.Details,
+		evt.Actor,
+		evt.Action,
+		evt.Target,
+		evt.TargetType,
+		evt.Context,
+		evt.Result,
+	}, " "))
+}
+
+// outlineEventMentionsName 判断事件是否提到指定角色名
+func outlineEventMentionsName(evt StoryEvent, name string) bool {
+	name = normalizeOutlineValidatorText(name)
+	if name == "" {
+		return true
+	}
+	if strings.Contains(outlineEventText(evt), name) {
+		return true
+	}
+	for _, c := range evt.Characters {
+		if normalizeOutlineValidatorText(c) == name {
+			return true
+		}
+	}
+	return false
+}
+
+// outlineOrderedChapters 按顺序展开所有章节
+func outlineOrderedChapters(outline *StoryOutline) []StoryChapter {
+	var chapters []StoryChapter
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			chapters = append(chapters, volume.Chapters...)
+		}
+	}
+	return chapters
+}
+
+// outlineProtagonistName 推断主角名（第一章第一个角色名，找不到时用“主角”）
+func (ov *OutlineValidator) outlineProtagonistName() string {
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				for _, name := range chapter.Characters {
+					if n := normalizeOutlineName(name); n != "" {
+						return n
+					}
+				}
+			}
+		}
+	}
+	return "主角"
+}
+
+// outlineKnownCharacterNames 收集大纲中所有命名角色
+func outlineKnownCharacterNames(outline *StoryOutline) []string {
+	set := make(map[string]bool)
+	var names []string
+	add := func(name string) {
+		name = normalizeOutlineName(name)
+		if name != "" && !set[name] {
+			set[name] = true
+			names = append(names, name)
+		}
+	}
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				for _, name := range chapter.Characters {
+					add(name)
+				}
+				for _, evt := range chapter.Events {
+					for _, name := range evt.Characters {
+						add(name)
+					}
+					add(evt.GetActor())
+					targetType := normalizeOutlineName(evt.GetTargetType())
+					if targetType == "" || targetType == "character" {
+						add(evt.GetTarget())
+					}
+				}
+				for _, enemy := range chapter.Enemies {
+					add(enemy.Name)
+				}
+			}
+		}
+	}
+	return names
+}
+
+// validateItemUsageContinuity 物品获得→使用连续性检查
+// 记录每个物品首次获得章节；物品在获得前被使用即报 major 问题。
+func (ov *OutlineValidator) validateItemUsageContinuity() {
+	if ov.Outline == nil {
+		return
+	}
+
+	candidates := outlineKnownItemNames(ov.Outline)
+	acquired := make(map[string]string) // 规范化物品名 → 首次获得章节
+	flagged := make(map[string]bool)    // 物品名|章节 → 已报过
+
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				for _, evt := range chapter.Events {
+					// 先记录获得（结构化 + details 文本）
+					for _, name := range outlineEventAcquiredItems(evt, candidates) {
+						if _, ok := acquired[name]; !ok {
+							acquired[name] = chapter.ID
+						}
+					}
+					// 再检查使用
+					for _, name := range outlineEventUsedItems(evt, candidates) {
+						if outlineIsNonItemConcept(name) {
+							continue
+						}
+						if _, ok := acquired[name]; ok {
+							continue
+						}
+						key := name + "\x00" + chapter.ID
+						if flagged[key] {
+							continue
+						}
+						flagged[key] = true
+						ov.Issues = append(ov.Issues, OutlineIssue{
+							Type:        "item_usage_continuity",
+							Severity:    "major",
+							Location:    chapter.ID,
+							Description: fmt.Sprintf("物品 %s 在 %s 被使用，但此前从未获得", name, chapter.ID),
+							Impact:      "物品在获得前被使用会破坏资源与道具的连贯性",
+							Fix:         "在前面章节添加获得该物品的事件，或移除本次使用",
+						})
+					}
+				}
+			}
+		}
+	}
+}
+
+// outlineNonItemConcepts 非物品概念/初始资源/能力名：这些词即使出现在 item 事件中
+// 也跳过（不追踪、不报"使用前未获得"），例如灵石是初始资源、血色校验/神魂之力是能力。
+var outlineNonItemConcepts = []string{
+	"灵石", "血色校验", "神魂之力", "玉简使用次数", "回溯读取", "跨系统解析",
+	"日志", "时间线重置", "时间线", "模拟器", "规则", "权限", "情报",
+}
+
+// outlineIsNonItemConcept 判断规范化后的物品名是否命中非物品概念/能力/初始资源。
+func outlineIsNonItemConcept(name string) bool {
+	name = normalizeOutlineName(name)
+	if name == "" {
+		return false
+	}
+	for _, c := range outlineNonItemConcepts {
+		if strings.Contains(name, c) {
+			return true
+		}
+	}
+	return false
+}
+
+// normalizeOutlineItemName 规范化物品名作为追踪 KEY：
+// 去引号/空白、去除括号注释（破阵符（签到应急奖励）→破阵符、隐息符（最后一张）→隐息符），
+// 并去掉尾部数量后缀（隐息符×2→隐息符）。
+func normalizeOutlineItemName(s string) string {
+	s = normalizeOutlineName(s)
+	for {
+		start := -1
+		closer := ""
+		if i := strings.Index(s, "（"); i >= 0 {
+			start, closer = i, "）"
+		}
+		if i := strings.Index(s, "("); i >= 0 && (start < 0 || i < start) {
+			start, closer = i, ")"
+		}
+		if start < 0 {
+			break
+		}
+		endRel := strings.Index(s[start+len(closer):], closer)
+		if endRel < 0 {
+			break
+		}
+		end := start + len(closer) + endRel + len(closer)
+		s = s[:start] + s[end:]
+	}
+	s = strings.TrimSpace(s)
+	for _, marker := range []string{"×", "x", "X", "*"} {
+		if idx := strings.LastIndex(s, marker); idx >= 0 && outlineIsAllDigits(s[idx+len(marker):]) {
+			s = strings.TrimSpace(s[:idx])
+		}
+	}
+	return strings.Trim(s, "\"'“”‘’「」『』")
+}
+
+func outlineIsAllDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// outlineKnownItemNames 收集大纲中的候选物品名
+func outlineKnownItemNames(outline *StoryOutline) []string {
+	set := make(map[string]bool)
+	var names []string
+	add := func(name string) {
+		name = normalizeOutlineItemName(name)
+		if name != "" && !outlineIsNonItemConcept(name) && !set[name] {
+			set[name] = true
+			names = append(names, name)
+		}
+	}
+	for _, part := range outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				for _, name := range chapter.StateAnchor.KeyItems {
+					add(name)
+				}
+				for _, entry := range chapter.ResourceLedger {
+					add(entry.Item)
+				}
+				for _, evt := range chapter.Events {
+					action := strings.ToLower(normalizeOutlineName(evt.GetAction()))
+					evtType := strings.ToLower(normalizeOutlineName(evt.Type))
+					if evtType == "item" || action == models.ActionAcquire || action == models.ActionUse ||
+						action == models.ActionCraft || action == "consume" || action == "consumed" ||
+						action == "utilize" || action == "使用" || action == "消耗" {
+						if outlineEventTargetIsItem(evt) {
+							add(evt.GetTarget())
+						}
+					}
+				}
+			}
+		}
+	}
+	return names
+}
+
+var outlineAcquireKeywords = []string{"获得", "得到", "捡到", "拿到", "入手"}
+var outlineUseKeywords = []string{"使用", "消耗", "用掉"}
+
+// outlineEventAcquiredItems 判定事件中获得的物品
+func outlineEventAcquiredItems(evt StoryEvent, candidates []string) []string {
+	var items []string
+	add := func(name string) {
+		name = normalizeOutlineItemName(name)
+		if name != "" && !outlineIsNonItemConcept(name) && !contains(items, name) {
+			items = append(items, name)
+		}
+	}
+
+	action := strings.ToLower(normalizeOutlineName(evt.GetAction()))
+	target := normalizeOutlineName(evt.GetTarget())
+	change := normalizeOutlineName(evt.Change)
+	evtType := strings.ToLower(normalizeOutlineName(evt.Type))
+
+	// 结构化获得：acquire / craft（含旧格式 item 事件推断出的动作）且目标非空。
+	if (action == models.ActionAcquire || action == models.ActionCraft) &&
+		target != "" && outlineEventTargetIsItem(evt) {
+		add(target)
+	}
+	if evtType == "item" && (change == "acquired" || change == "obtained" || change == "got" ||
+		change == "获得" || change == "得到") && target != "" {
+		add(target)
+	}
+
+	// 仅当结构化 action 为 acquire 且 target 为空时，才回退到 details 文本解析。
+	if action == models.ActionAcquire && target == "" {
+		for _, name := range candidates {
+			if outlineDetailsContainsKeywordNearItem(evt.Details, name, outlineAcquireKeywords) {
+				add(name)
+			}
+		}
+	}
+	return items
+}
+
+// outlineEventUsedItems 判定事件中使用的物品
+func outlineEventUsedItems(evt StoryEvent, candidates []string) []string {
+	var items []string
+	add := func(name string) {
+		name = normalizeOutlineItemName(name)
+		if name != "" && !outlineIsNonItemConcept(name) && !contains(items, name) {
+			items = append(items, name)
+		}
+	}
+
+	action := strings.ToLower(normalizeOutlineName(evt.GetAction()))
+	target := normalizeOutlineName(evt.GetTarget())
+	// 结构化使用：use/consume/consumed/utilize（含中文别名 使用/消耗）且目标非空。
+	if (action == models.ActionUse || action == "使用" || action == "消耗" || action == "utilize" ||
+		strings.Contains(action, "consume")) &&
+		target != "" && outlineEventTargetIsItem(evt) {
+		add(target)
+	}
+
+	// 仅当结构化 action 为 use 且 target 为空时，才回退到 details 文本解析。
+	if action == models.ActionUse && target == "" {
+		for _, name := range candidates {
+			if outlineDetailsContainsKeywordNearItem(evt.Details, name, outlineUseKeywords) {
+				add(name)
+			}
+		}
+	}
+	return items
+}
+
+// outlineEventTargetIsItem 判断事件 target 是否可视为物品名
+// 仅接受 target_type 为 item/空 或旧格式 type 为 item 的事件，避免把技能/知识/地点当作物品。
+func outlineEventTargetIsItem(evt StoryEvent) bool {
+	targetType := strings.ToLower(normalizeOutlineName(evt.GetTargetType()))
+	return targetType == "" || targetType == "item"
+}
+
+// outlineDetailsContainsKeywordNearItem 判断 details 中某物品名是否与关键词出现在同一分句
+func outlineDetailsContainsKeywordNearItem(details, name string, keywords []string) bool {
+	details = normalizeOutlineValidatorText(details)
+	name = normalizeOutlineValidatorText(name)
+	if name == "" {
+		return false
+	}
+	for _, clause := range strings.FieldsFunc(details, outlineClauseSplit) {
+		if !strings.Contains(clause, name) {
+			continue
+		}
+		for _, kw := range keywords {
+			if strings.Contains(clause, kw) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// outlineClauseSplit 用于按标点/空白切分句子
+func outlineClauseSplit(r rune) bool {
+	switch r {
+	case '，', '。', '；', '、', ',', '.', ';', '！', '？', '!', '?', '\n', '\r', '\t', ' ':
+		return true
+	}
+	return false
+}
+
+// normalizeOutlineName 规范化角色/物品名：去首尾空白并剥离引号
+func normalizeOutlineName(s string) string {
+	return strings.Trim(strings.TrimSpace(s), "\"'“”‘’「」『』")
+}
+
 // generateSummary 生成验证摘要
 func (ov *OutlineValidator) generateSummary() string {
 	if len(ov.Issues) == 0 && len(ov.Warnings) == 0 {
@@ -1339,4 +2315,115 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+// outlineCombatResultChanges 战斗事件的可接受结果语义（change 应为这些受控词，而非散文）
+var outlineCombatResultChanges = []string{
+	"progressed", "completed", "achieved", "started", "defeated", "resolved",
+	"worsened", "transformed", "activated", "injured", "climax", "solidified",
+	"temporary_death", "deepened", "launched", "escalated", "ended", "won",
+	"lost", "retreated", "escaped", "survived", "victory", "defeat", "pyrrhic",
+	"confronted", "surrendered", "captured", "repelled", "stalemate", "partial",
+}
+
+// validateEventSemantics 事件语义完整性检查
+// 目标：确保事件的结构化字段（action/change/target）携带机器可读的语义，
+// 而不是把语义丢在 details 散文里。这样下游验证器（死亡/修为/物品）与模拟器
+// 都能直接消费事件，而非靠关键词猜。检测三类问题：
+//  1. combat 事件的 change 是散文（不在受控结果词表）→ 缺战斗结果语义
+//  2. acquire 事件缺 target（不知道获得了什么）→ 缺物品名
+//  3. use 事件的 target 是"工具/资源/能力"而非消耗性物品 → use 语义误用
+func (ov *OutlineValidator) validateEventSemantics() {
+	if ov.Outline == nil {
+		return
+	}
+	flagged := make(map[string]bool) // 事件描述|章节 → 已报过
+
+	// 非消耗性 target：use 的目标是工具/资源/能力时，use 应改为 utilize/operate/employ
+	nonConsumableTargets := []string{"日志", "模拟器", "系统", "权限", "经脉", "阵眼", "阵法",
+		"执法堂", "情报", "规则", "能力", "功法", "深度扫描", "反侦察干扰", "血幕大阵",
+		"优先出发权", "灵脉", "通道", "空间", "残页", "灵石"}
+
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				for _, evt := range chapter.Events {
+					action := strings.ToLower(normalizeOutlineName(evt.GetAction()))
+					change := normalizeOutlineName(evt.Change)
+					target := normalizeOutlineName(evt.GetTarget())
+					key := chapter.ID + "\x00" + action + "\x00" + change + "\x00" + target
+
+					switch action {
+					case "combat":
+						if change == "" {
+							continue // 无 change 交给其他检查
+						}
+						if !containsAnyOutlineValidatorText(change, outlineCombatResultChanges...) &&
+							!outlineTextHasNonDeathContext(change) {
+							if flagged[key] {
+								continue
+							}
+							flagged[key] = true
+							ov.Issues = append(ov.Issues, OutlineIssue{
+								Type:        "event_semantics",
+								Severity:    "minor",
+								Location:    chapter.ID,
+								Description: fmt.Sprintf("combat 事件 change 是散文（%q），缺少受控结果语义（如 defeated/injured/escaped/completed）", change),
+								Impact:      "战斗结果无法被下游验证器与模拟器消费，死亡/伤势追踪会漏报或误报",
+								Fix:         "将 change 改为受控结果词（defeated/injured/escaped/completed/achieved），细节保留在 details 中",
+							})
+						}
+					case "acquire":
+						if target == "" {
+							if flagged[key] {
+								continue
+							}
+							flagged[key] = true
+							ov.Issues = append(ov.Issues, OutlineIssue{
+								Type:        "event_semantics",
+								Severity:    "minor",
+								Location:    chapter.ID,
+								Description: "acquire 事件缺少 target（不知道获得了什么物品/资源）",
+								Impact:      "物品获得链无法建立，物品使用校验会漏报或误报",
+								Fix:         "在 target 字段填写获得的物品/资源名，details 保留具体描述",
+							})
+						}
+					case "use":
+						if target == "" {
+							continue
+						}
+						if outlineIsNonItemConcept(target) {
+							continue
+						}
+						isConsumable := false
+						for _, suf := range []string{"符", "丹", "药", "散", "液", "髓", "残片", "碎片", "果", "草", "石"} {
+							if strings.HasSuffix(target, suf) {
+								isConsumable = true
+								break
+							}
+						}
+						if !isConsumable {
+							for _, nt := range nonConsumableTargets {
+								if strings.Contains(target, nt) {
+									if flagged[key] {
+										break
+									}
+									flagged[key] = true
+									ov.Issues = append(ov.Issues, OutlineIssue{
+										Type:        "event_semantics",
+										Severity:    "minor",
+										Location:    chapter.ID,
+										Description: fmt.Sprintf("use 事件 target %q 是工具/资源/能力而非消耗性物品，use 语义被误用", target),
+										Impact:      "物品使用链被非消耗目标污染，无法区分'消耗了物品'与'使用了工具'",
+										Fix:         "消耗物品（符/丹/药）用 use；使用工具/资源/能力改用 utilize/operate/employ/leverage",
+									})
+									break
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
