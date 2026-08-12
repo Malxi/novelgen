@@ -2072,6 +2072,8 @@ func buildAgentSDKImproveVolumePromptInput(input ComposeImproveVolumeInput, appl
 		)
 	}
 	detailInstruction := "If a focused issue, user prompt, or failed medium+ check requires more facts, use targeted detail queries only when needed: repair route/context first, then chapter by id, events by chapter id, or craft by exact name."
+	fieldSyncInstruction := "FIELD-SYNC RULE: when a change affects a chapter's narrative (a character's fate, a timeline/date, a fight outcome, an object's species/name, a death, a mystery payoff), apply it consistently to EVERY reader-visible field of that chapter and its volume: summary, opening_beat, scenes[*].beats, events[*].details/result, chapter_payoff (clever_move/reward/hook), state_change, state_anchor notes, AND the volume-level summary/payoff_contract if it references the same fact. A chapter whose summary says one thing while its events say another is a continuity bug, not a patch. After patching, re-check the patched chapters' events/beats for stale references to the old fact (e.g. a character who died in the summary but is still alive in events) and fix them in the same session."
+	instructions = append(instructions, fieldSyncInstruction)
 	if hasFocusedTasks {
 		detailInstruction = "After the index query, use targeted detail queries only when needed: same target volume via `novelgen tool query context --type outline-volume --id <target_volume_id> --view brief`, repair context, chapter by id, events by chapter id, craft by exact name."
 	}
