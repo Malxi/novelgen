@@ -2,6 +2,8 @@ package rpg
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"novelgen/internal/models"
@@ -184,6 +186,18 @@ func (ov *OutlineValidator) Validate() *ValidationResult {
 
 	// 20. 事件语义完整性检查（结构化字段缺失/误用）
 	ov.validateEventSemantics()
+
+	// 21. 时间单调性检查（相邻章天数倒流）
+	ov.validateTimelineMonotonicity()
+
+	// 22. 标题唯一性检查（章节重名）
+	ov.validateTitleUniqueness()
+
+	// 23. 时间锚点格式检查（"第N章"误用为锚点）
+	ov.validateAnchorFormat()
+
+	// 24. 位置连续性检查（角色瞬移）
+	ov.validateLocationContinuity()
 
 	// Optional storyline texture hints. These stay as suggestions only, so the
 	// outline can remain loose when a chapter does not need explicit arc notes.
@@ -2458,6 +2472,154 @@ func (ov *OutlineValidator) validateEventSemantics() {
 						}
 						_ = target // 消耗品 consume 正常，无需处理
 					}
+				}
+			}
+		}
+	}
+}
+
+// outlineParseDayNumber 从时间锚点文本中提取"第N天"的数字，解析失败返回 0
+func outlineParseDayNumber(anchor string) int {
+	m := regexp.MustCompile(`第(\d+)天`).FindStringSubmatch(anchor)
+	if len(m) < 2 {
+		return 0
+	}
+	n, err := strconv.Atoi(m[1])
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+// validateTimelineMonotonicity 检查相邻章节时间是否倒流（第N天必须单调不减）
+func (ov *OutlineValidator) validateTimelineMonotonicity() {
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			var prevDay int
+			hasPrev := false
+			for i, chapter := range volume.Chapters {
+				day := outlineParseDayNumber(chapter.Timeline.Anchor)
+				if day == 0 {
+					continue // 无天数锚点，跳过
+				}
+				if hasPrev && day < prevDay {
+					// 倒叙/回溯章不报: duration/transition 提到回溯、回顾、倒叙、闪回时时间倒退是设计使然
+					ctx := chapter.Timeline.Duration + " " + chapter.Timeline.Transition + " " + chapter.Summary
+					if containsAnyOutlineValidatorText(ctx, "回溯", "回顾", "倒叙", "闪回", "回放", "回忆") {
+						prevDay, hasPrev = day, true
+						continue
+					}
+					ov.Issues = append(ov.Issues, OutlineIssue{
+						Type:        "timeline_monotonicity",
+						Severity:    "major",
+						Location:    chapter.ID,
+						Description: fmt.Sprintf("时间倒流: 本章时间锚点 %q (第%d天) 早于上一章 %q (第%d天)", chapter.Timeline.Anchor, day, volume.Chapters[i-1].Timeline.Anchor, prevDay),
+						Impact:      "读者盯着倒计时读，天数倒退直接暴露编排粗糙",
+						Fix:         "修正本章 anchor 为不小于上一章的天数；若确为倒叙，需在 transition 说明",
+					})
+				}
+				prevDay, hasPrev = day, true
+			}
+		}
+	}
+}
+
+// validateTitleUniqueness 检查章节标题是否重复（重名会让读者和系统都无法定位）
+func (ov *OutlineValidator) validateTitleUniqueness() {
+	stripTitle := func(title string) string {
+		// 只去掉"第N章："前缀（章号不同、标题本体相同也算重名）
+		// 注意: （一）（二）（三）序号后缀是区分手段, 不 strip
+		return regexp.MustCompile(`^第\d+章[：:]`).ReplaceAllString(title, "")
+	}
+	seen := make(map[string]string)
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				base := stripTitle(chapter.Title)
+				if base == "" {
+					continue
+				}
+				if prevID, ok := seen[base]; ok {
+					ov.Issues = append(ov.Issues, OutlineIssue{
+						Type:        "title_uniqueness",
+						Severity:    "major",
+						Location:    chapter.ID,
+						Description: fmt.Sprintf("章节标题与 %s 重复: %q", prevID, base),
+						Impact:      "重名章节无法区分，读者和工具引用都会错位",
+						Fix:         "给同标题连续章节加序号后缀（一）（二）（三）或改写标题",
+					})
+				} else {
+					seen[base] = chapter.ID
+				}
+			}
+		}
+	}
+}
+
+// validateAnchorFormat 检查 timeline.anchor 是否用了"第N章"等错误格式（应为"第N天"或日期/时间）
+func (ov *OutlineValidator) validateAnchorFormat() {
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				anchor := chapter.Timeline.Anchor
+				if anchor == "" {
+					continue
+				}
+				if regexp.MustCompile(`^第\d+章$`).MatchString(anchor) {
+					ov.Issues = append(ov.Issues, OutlineIssue{
+						Type:        "anchor_format",
+						Severity:    "minor",
+						Location:    chapter.ID,
+						Description: fmt.Sprintf("时间锚点格式错误: %q 是章号不是时间", anchor),
+						Impact:      "锚点无法参与时间连续性校验，且暴露批量生成的粗糙",
+						Fix:         "改为日期/天数锚点，如: 第N天",
+					})
+				}
+			}
+		}
+	}
+}
+
+// validateLocationContinuity 检查角色位置瞬移（跨大区域移动但无过渡说明）
+func (ov *OutlineValidator) validateLocationContinuity() {
+	// 区域提取: "玄云宗·外门·灵药园" → "玄云宗"; 只比较顶层区域, 区域内移动(外门内不同地点)不报
+	regionOf := func(loc string) string {
+		if i := strings.Index(loc, "·"); i > 0 {
+			return strings.TrimSpace(loc[:i])
+		}
+		return strings.TrimSpace(loc)
+	}
+	for _, part := range ov.Outline.Parts {
+		for _, volume := range part.Volumes {
+			for i, chapter := range volume.Chapters {
+				if i == 0 || chapter.StateAnchor.Location == "" {
+					continue
+				}
+				prev := volume.Chapters[i-1].StateAnchor.Location
+				if prev == "" {
+					continue
+				}
+				prevRegion := regionOf(prev)
+				curRegion := regionOf(chapter.StateAnchor.Location)
+				if prevRegion == "" || prevRegion == curRegion {
+					continue // 同区域或未知区域，不报
+				}
+				// 跨大区域移动: 需要有过渡说明（transition 或 beats 提及移动）
+				transition := chapter.Timeline.Transition
+				opening := ""
+				if len(chapter.Beats) > 0 {
+					opening = chapter.Beats[0]
+				}
+				hasTransition := transition != "" || containsAnyOutlineValidatorText(opening, "前往", "抵达", "来到", "回到", "赶到", "离开", "进入", "传送", "转移到")
+				if !hasTransition {
+					ov.Issues = append(ov.Issues, OutlineIssue{
+						Type:        "location_continuity",
+						Severity:    "medium",
+						Location:    chapter.ID,
+						Description: fmt.Sprintf("跨区域瞬移: 上一章在 %q，本章在 %q，但 transition/beats 无移动说明", prev, chapter.StateAnchor.Location),
+						Impact:      "角色瞬间跨越大区域破坏空间连贯性",
+						Fix:         "在 timeline.transition 或 beats 补充移动过程（前往/抵达/传送）",
+					})
 				}
 			}
 		}
