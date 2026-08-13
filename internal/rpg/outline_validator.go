@@ -2581,6 +2581,8 @@ func (ov *OutlineValidator) validateAnchorFormat() {
 }
 
 // validateLocationContinuity 检查角色位置瞬移（跨大区域移动但无过渡说明）
+// 结构化优先: 只查 timeline.transition 是否填写（这是生成时本就该填的结构化字段）
+// 不用 beats 文本匹配移动动词——那会误报（用户原则: 缺失结构化字段=缺陷, 喂 improve 补, 不猜文本）
 func (ov *OutlineValidator) validateLocationContinuity() {
 	// 区域提取: "玄云宗·外门·灵药园" → "玄云宗"; 只比较顶层区域, 区域内移动(外门内不同地点)不报
 	regionOf := func(loc string) string {
@@ -2604,21 +2606,15 @@ func (ov *OutlineValidator) validateLocationContinuity() {
 				if prevRegion == "" || prevRegion == curRegion {
 					continue // 同区域或未知区域，不报
 				}
-				// 跨大区域移动: 需要有过渡说明（transition 或 beats 提及移动）
-				transition := chapter.Timeline.Transition
-				opening := ""
-				if len(chapter.Beats) > 0 {
-					opening = chapter.Beats[0]
-				}
-				hasTransition := transition != "" || containsAnyOutlineValidatorText(opening, "前往", "抵达", "来到", "回到", "赶到", "离开", "进入", "传送", "转移到")
-				if !hasTransition {
+				// 跨大区域移动: 结构化字段 timeline.transition 必须非空
+				if chapter.Timeline.Transition == "" {
 					ov.Issues = append(ov.Issues, OutlineIssue{
 						Type:        "location_continuity",
 						Severity:    "medium",
 						Location:    chapter.ID,
-						Description: fmt.Sprintf("跨区域瞬移: 上一章在 %q，本章在 %q，但 transition/beats 无移动说明", prev, chapter.StateAnchor.Location),
+						Description: fmt.Sprintf("跨区域移动缺过渡说明: 上一章在 %q，本章在 %q，但 timeline.transition 为空", prev, chapter.StateAnchor.Location),
 						Impact:      "角色瞬间跨越大区域破坏空间连贯性",
-						Fix:         "在 timeline.transition 或 beats 补充移动过程（前往/抵达/传送）",
+						Fix:         "在 timeline.transition 填写移动过程（前往/抵达/传送/离开），供后续阶段参考",
 					})
 				}
 			}

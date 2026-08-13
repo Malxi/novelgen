@@ -105,15 +105,15 @@ func TestValidateLocationContinuity(t *testing.T) {
 	ov := NewOutlineValidator(nil)
 	chs := []StoryChapter{
 		{ID: "C1", StateAnchor: StoryStateAnchor{Location: "玄云宗·外门"}},
-		{ID: "C2", StateAnchor: StoryStateAnchor{Location: "玄云宗·内门"}, Beats: []string{"李侑离开外门前往内门"}},
-		{ID: "C3", StateAnchor: StoryStateAnchor{Location: "须弥秘境·入口"}, Beats: []string{"直接出现在秘境"}},
+		{ID: "C2", StateAnchor: StoryStateAnchor{Location: "玄云宗·内门"}, Timeline: StoryChapterTimeline{Transition: "离开外门前往内门"}},
+		{ID: "C3", StateAnchor: StoryStateAnchor{Location: "须弥秘境·入口"}}, // 跨区域 + transition 空
 	}
 	ov.Outline = &StoryOutline{Parts: []StoryPart{{ID: "P1", Volumes: []StoryVolume{{ID: "V1", Chapters: chs}}}}}
 	ov.validateLocationContinuity()
 	if len(ov.Issues) != 1 {
 		t.Errorf("want 1 location issue, got %d: %+v", len(ov.Issues), ov.Issues)
 	}
-	if !strings.Contains(ov.Issues[0].Description, "跨区域瞬移") {
-		t.Errorf("issue should mention 跨区域瞬移, got: %s", ov.Issues[0].Description)
+	if !strings.Contains(ov.Issues[0].Description, "transition 为空") {
+		t.Errorf("issue should mention transition 为空, got: %s", ov.Issues[0].Description)
 	}
 }
