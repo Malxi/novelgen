@@ -85,6 +85,10 @@ var (
 	reBalancedNotOnly = regexp.MustCompile(`不仅[^。！？\n]{0,30}(而且|还|更|也)`)
 	reAsA             = regexp.MustCompile(`作为[^，。！？\n]{1,18}[，,]`)
 	reLongSentence    = regexp.MustCompile(`[。！？!?]`)
+	// 不是X，是Y 短句转折 (AI 强调句母句式): 不是+2-8字+，是+2-10字
+	reNotIsShort = regexp.MustCompile(`不是[^，。！？；\n]{2,8}，是[^，。！？；\n]{2,10}`)
+	// 排除合理因果: 不是因为...而是因为 (正常归因)
+	reNotBecause = regexp.MustCompile(`不是因为[^，。！？；\n]{1,15}，而是因为`)
 )
 
 // CheckAIFlavor detects formulaic prose patterns and returns an editing-oriented result.
@@ -115,6 +119,26 @@ func CheckAIFlavor(text string, threshold int) AIFlavorResult {
 		result.Matches = append(result.Matches, AIFlavorMatch{Rule: "不仅/而且平衡句", Example: firstMatch(reBalancedNotOnly, clean), Count: count})
 		result.Issues = append(result.Issues, fmt.Sprintf("检测到 %d 处“不仅/而且/更是”式平衡句，容易显得模板化", count))
 		result.Suggestions = appendUnique(result.Suggestions, "拆掉“不仅/而且/更是”式平衡句，改成角色当下能感知到的一到两个具体变化。")
+	}
+
+	// 不是X，是Y 短句转折 (AI 强调句母句式), 排除"不是因为...而是因为"正常归因
+	notIsMatches := reNotIsShort.FindAllString(clean, -1)
+	notIsCount := 0
+	example := ""
+	for _, m := range notIsMatches {
+		if reNotBecause.MatchString(m) {
+			continue
+		}
+		notIsCount++
+		if example == "" {
+			example = m
+		}
+	}
+	if notIsCount > 0 {
+		penalty += notIsCount * 5
+		result.Matches = append(result.Matches, AIFlavorMatch{Rule: "不是X，是Y短句转折", Example: firstMatch(reNotIsShort, clean), Count: notIsCount})
+		result.Issues = append(result.Issues, fmt.Sprintf("检测到 %d 处“不是X，是Y”短句转折（如“不是他慢，是他快”），AI 强调句痕迹明显", notIsCount))
+		result.Suggestions = appendUnique(result.Suggestions, "“不是X，是Y”短句转折（如“不是他慢，是他快”）改成直接陈述或动作呈现，一句最多保留一次。")
 	}
 
 	if count := len(reAsA.FindAllString(clean, -1)); count > 2 {
