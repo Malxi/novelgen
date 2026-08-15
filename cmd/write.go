@@ -81,6 +81,7 @@ var (
 	writeRPGBatchSizeFlag          int
 	writeHumanizeFlag              bool
 	writeHumanizeThresholdFlag     int
+	writeFocusFlag                 string
 	writeAgentSDKFlag              bool
 	writeAgentApplyFlag            bool
 	writeAgentHistoryFlag          bool
@@ -250,6 +251,7 @@ func init() {
 	writeReviewCmd.Flags().IntVar(&writeConcurrencyFlag, "concurrency", 1, "Number of concurrent reviews")
 	writeReviewCmd.Flags().BoolVar(&writeHumanizeFlag, "humanize", true, "Enable deterministic AI-flavor checks in write review")
 	writeReviewCmd.Flags().IntVar(&writeHumanizeThresholdFlag, "humanize-threshold", 75, "Minimum humanization score before review marks style issues (0-100)")
+	writeReviewCmd.Flags().StringVar(&writeFocusFlag, "focus", "", "Review focus (comma-separated, e.g. deai,protagonist; 'all' for all). Uses the same AI review focuses as compose review (see --focus list). Empty = generic chapter review.")
 	writeReviewCmd.Flags().BoolVar(&writeAgentSDKFlag, "agent-sdk", false, "Use Claude Agent SDK workflow for chapter review")
 
 	writePipelineCmd.Flags().StringVar(&writeChapterFlag, "chapter", "", "Chapter to process (e.g., '1' or 'P1-V1-C1')")
@@ -1779,7 +1781,7 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 				var reviewResult models.ReviewResult
 				var err error
 				if writeAgentSDKFlag {
-					reviewResult, err = writeAgent.ReviewChapterWithAgentSDK(ctx, chapter, chapterContext, continuity, content, targetWords, 1)
+					reviewResult, err = writeAgent.ReviewChapterWithAgentSDKFocus(ctx, chapter, chapterContext, continuity, content, targetWords, 1, writeFocusFlag)
 				} else {
 					reviewResult, err = writeAgent.ReviewChapter(ctx, chapter, chapterContext, continuity, content, targetWords, 1)
 				}

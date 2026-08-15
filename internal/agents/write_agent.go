@@ -839,6 +839,11 @@ func (a *WriteAgent) ReviewChapter(ctx context.Context, chapter *models.Chapter,
 // ReviewChapterWithAgentSDK reviews a saved final chapter through the Agent SDK.
 // The agent may query focused project facts and checks, but it cannot write files.
 func (a *WriteAgent) ReviewChapterWithAgentSDK(ctx context.Context, chapter *models.Chapter, context *ChapterContext, continuity *models.ChapterContinuity, content string, targetWords int, iteration int) (models.ReviewResult, error) {
+	return a.ReviewChapterWithAgentSDKFocus(ctx, chapter, context, continuity, content, targetWords, iteration, "")
+}
+
+// ReviewChapterWithAgentSDKFocus 同 ReviewChapterWithAgentSDK, 但支持 --focus 审查视角(复用 compose review 的 focus, 如 deai/protagonist)。
+func (a *WriteAgent) ReviewChapterWithAgentSDKFocus(ctx context.Context, chapter *models.Chapter, context *ChapterContext, continuity *models.ChapterContinuity, content string, targetWords int, iteration int, focus string) (models.ReviewResult, error) {
 	logger.Section("WRITE AGENT SDK - Chapter Review")
 	logger.Info("Chapter: %s", chapter.ID)
 	logger.Info("Iteration: %d", iteration)
@@ -867,7 +872,14 @@ func (a *WriteAgent) ReviewChapterWithAgentSDK(ctx context.Context, chapter *mod
 	}
 
 	var output writeAgentSDKReviewOutput
-	params := writeReviewAgentSDKParams("review final chapter content using focused project tools", chapter.ID, targetWords)
+	reviewCommand := "review final chapter content using focused project tools"
+	if strings.TrimSpace(focus) != "" {
+		focusPrompt := ResolveReviewFocusPrompt(focus)
+		if strings.TrimSpace(focusPrompt) != "" {
+			reviewCommand += ". Additional review focus (最高优先级审查视角): " + focusPrompt
+		}
+	}
+	params := writeReviewAgentSDKParams(reviewCommand, chapter.ID, targetWords)
 	if err := a.base.Execute(ctx, params, input, &output); err != nil {
 		return models.ReviewResult{}, err
 	}
