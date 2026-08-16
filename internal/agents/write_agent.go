@@ -66,6 +66,32 @@ type WriteGenOutput struct {
 	Content string `json:"content" md:"content" desc:"The final polished chapter content"`
 }
 
+// ChapterScoreInput is the lightweight input for the best-of chapter scorer.
+// It deliberately omits story setup, continuity, and craft state: scoring is a
+// single cheap reader-experience pass, not a full review.
+type ChapterScoreInput struct {
+	ChapterID          string   `json:"chapter_id" md:"chapter_id" desc:"Chapter ID"`
+	ChapterTitle       string   `json:"chapter_title" md:"chapter_title" desc:"Chapter title"`
+	ChapterContent     string   `json:"chapter_content" md:"chapter_content" desc:"Full generated chapter content to score"`
+	ChapterSummary     string   `json:"chapter_summary,omitempty" md:"chapter_summary,omitempty" desc:"Outline summary of the chapter, when available"`
+	ChapterBeats       []string `json:"chapter_beats,omitempty" md:"chapter_beats,omitempty" desc:"Outline beats the chapter was supposed to cover, when available"`
+	NextChapterSummary string   `json:"next_chapter_summary,omitempty" md:"next_chapter_summary,omitempty" desc:"Summary of the next chapter for hook evaluation, when available"`
+}
+
+// ChapterScoreOutput is the lightweight output of the best-of scorer.
+type ChapterScoreOutput struct {
+	Score  float64 `json:"score" md:"score" desc:"Overall reader-experience score 0-100"`
+	Reason string  `json:"reason" md:"reason" desc:"Short reason (at most 300 characters) covering the five reader-facing dimensions"`
+}
+
+// ScoredChapterCopy is one generated copy plus its normalized scorer result.
+type ScoredChapterCopy struct {
+	CopyIndex int
+	Content   string
+	Score     int
+	Reason    string
+}
+
 // WriteImproveInput is the input for chapter improvement
 type WriteImproveInput struct {
 	StorySetup   CompactStorySetup `json:"story_setup" md:"story_setup" desc:"Core story setup including premise, genres, themes, rules"`
@@ -1257,4 +1283,101 @@ func isCJK(r rune) bool {
 // formatContinuityForWrite formats the continuity snapshot for the prompt.
 func formatContinuityForWrite(continuity *models.ChapterContinuity, chapter *models.Chapter) string {
 	return logic.FormatChapterContinuity(continuity, chapter)
+}
+
+// ChapterScorerAgent scores a generated chapter from a reader-experience
+// perspective (opening hook, tension, flow, character liveliness, payoff).
+// It is intentionally lightweight: a single BaseAgent chat call, no Agent SDK
+// tool loop and no multi-pass review.
+type ChapterScorerAgent struct {
+	base *BaseAgent
+}
+
+// NewChapterScorerAgent creates a new ChapterScorerAgent.
+func NewChapterScorerAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM) *ChapterScorerAgent {
+	base := NewBaseAgent(BaseAgentConfig{
+		Name:       "ChapterScorerAgent",
+		Client:     client,
+		Config:     config,
+		ProjectLLM: projectLLM,
+		Language:   "zh",
+	})
+	return &ChapterScorerAgent{base: base}
+}
+
+// SetLanguage sets the output language.
+func (a *ChapterScorerAgent) SetLanguage(language string) {
+	a.base.SetLanguage(language)
+}
+
+// ScoreChapter scores one generated chapter copy in a single LLM call.
+// The raw AI output is normalized deterministically before it is returned:
+// 0-10 scale is converted to 0-100, the score is clamped to [0,100], and the
+// reason is trimmed and clipped so it cannot become unbounded state.
+func (a *ChapterScorerAgent) ScoreChapter(ctx context.Context, input ChapterScoreInput) (ChapterScoreOutput, error) {
+	if strings.TrimSpace(input.ChapterContent) == "" {
+		return ChapterScoreOutput{}, fmt.Errorf("cannot score empty chapter content for %s", input.ChapterID)
+	}
+
+	logger.Section("CHAPTER SCORER - BestOf Chapter Score")
+	logger.Info("Chapter: %s", input.ChapterID)
+	logger.Info("Content length: %d characters", len(input.ChapterContent))
+
+	var output ChapterScoreOutput
+	params := InvokeParams{
+		Skills:  []string{"chapter-score"},
+		Command: "score the generated chapter from a reader perspective",
+	}
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return ChapterScoreOutput{}, err
+	}
+
+	normalizeChapterScore(&output)
+	logger.Info("[ok] Scored chapter %s: %.0f/100", input.ChapterID, output.Score)
+	return output, nil
+}
+
+// normalizeChapterScore applies deterministic normalization to a raw scorer
+// output: converts an accidental 0-10 score to 0-100, rounds to an integer,
+// clamps to [0,100], and clips the reason.
+func normalizeChapterScore(output *ChapterScoreOutput) {
+	if output == nil {
+		return
+	}
+	if output.Score > 0 && output.Score <= 10 {
+		logger.Warn("Chapter scorer returned a 0-10 scale score %.1f; converting to 0-100", output.Score)
+		output.Score *= 10
+	}
+	rounded := int(output.Score + 0.5)
+	if rounded < 0 {
+		rounded = 0
+	}
+	if rounded > 100 {
+		rounded = 100
+	}
+	output.Score = float64(rounded)
+	output.Reason = clipChapterScoreReason(output.Reason)
+}
+
+func clipChapterScoreReason(reason string) string {
+	reason = strings.Join(strings.Fields(strings.TrimSpace(reason)), " ")
+	if len([]rune(reason)) <= 300 {
+		return reason
+	}
+	return string([]rune(reason)[:299]) + "…"
+}
+
+// SelectBestScoredChapter deterministically picks the highest-scoring copy.
+// Ties are broken by the lowest copy index so selection is stable across runs.
+func SelectBestScoredChapter(copies []ScoredChapterCopy) (ScoredChapterCopy, error) {
+	if len(copies) == 0 {
+		return ScoredChapterCopy{}, fmt.Errorf("no scored chapter copies to select from")
+	}
+	best := copies[0]
+	for _, candidate := range copies[1:] {
+		if candidate.Score > best.Score || (candidate.Score == best.Score && candidate.CopyIndex < best.CopyIndex) {
+			best = candidate
+		}
+	}
+	return best, nil
 }

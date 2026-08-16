@@ -267,6 +267,7 @@ novelgen write pipeline --chapter P1-V1-C1 --agent-sdk --agent-apply
 | `--agent-sdk` | bool | false | 使用 Agent SDK 进行章节生成、改进和最终 recap 抽取，Go 仍负责校验与保存 |
 | `--agent-apply` | bool | false | 配合 `--agent-sdk`，允许 agent 通过 validated chapter patch 写入正文 |
 | `--recap-agent-sdk` | bool | false | 仅将自动 recap 抽取切到 Agent SDK |
+| `--best-of` | int | 0 | 每章并行生成 N 个独立副本并用 AI 按阅读体验评分，选最高分落盘（0 关闭，最大 5） |
 
 #### `write gen` - 生成最终章节
 | Option | 类型 | 默认值 | 说明 |
@@ -280,6 +281,9 @@ novelgen write pipeline --chapter P1-V1-C1 --agent-sdk --agent-apply
 | `--concurrency` | int | 1 | 并发数 |
 | `--agent-sdk` | bool | false | 使用 Agent SDK focused chapter workflow，Go 仍负责校验和保存 |
 | `--recap-agent-sdk` | bool | false | 使用 Agent SDK 抽取自动 recap |
+| `--best-of` | int | 0 | 每章并行生成 N 个独立副本并用 AI 按阅读体验评分，选最高分落盘（0 关闭，最大 5） |
+
+`--best-of N` 用于结构性问题靠重写才能解决的场景：同一章用独立采样并行生成 N 个副本，再由轻量评分 agent 从开篇吸引力、剧情张力、阅读流畅度、人物鲜活度、爽点/情绪五个读者维度打分，最终只有最高分副本通过现有校验与保存路径落盘。各副本分数对比会写入运行日志。
 
 #### `write improve` - 改进最终章节
 | Option | 类型 | 默认值 | 说明 |

@@ -1,6 +1,6 @@
 # Novelgen Stage Contracts
 
-Last updated: 2026-05-07
+Last updated: 2026-08-16
 
 This document defines the persistent data contracts between Novelgen workflow
 stages. Treat these contracts as part of the public behavior of the repository:
@@ -508,7 +508,8 @@ Producer:
 
 - `cmd/write.go`
 - `internal/agents/write_agent.go`
-- Skills: `write-generate`, `write-review`, `write-improve`, `volume-review`
+- Skills: `write-generate`, `write-review`, `write-improve`, `volume-review`,
+  `chapter-score`
 - Agent SDK workflow skills: `write-chapter-workflow` for
   `write gen --agent-sdk`, and `write-improve-workflow` for
   `write improve --agent-sdk`
@@ -542,6 +543,8 @@ Go types:
 - `models.RPGState`
 - `models.ReviewResult`
 - `models.ChapterRecap` through recap extraction
+- `agents.ChapterScoreInput` / `agents.ChapterScoreOutput` /
+  `agents.ScoredChapterCopy` for best-of scoring
 
 Required invariants:
 
@@ -574,6 +577,23 @@ Required invariants:
 - Write generation and improvement agent outputs are JSON objects with a
   `content` field; `content` is validated as prose before writing. Empty prose,
   JSON-as-prose, fenced code blocks, and severe length shortfalls are rejected.
+- `write gen --best-of N` and `write pipeline --best-of N` (0 = off, max 5)
+  generate N independent copies of the same chapter in parallel through the
+  exact same `GenerateChapter`/`GenerateChapterWithAgentSDK` path — no prompt
+  variation — then score each successful copy with the lightweight
+  `chapter-score` agent. Scoring is a single `BaseAgent.Execute` chat call with
+  typed JSON input/output; it never runs the Agent SDK tool loop and is not an
+  AI-flavor scan. The scorer output is normalized deterministically before it
+  is used: a 0-10 scale score is converted to 0-100, the score is rounded and
+  clamped to [0,100], and the reason is clipped to 300 characters. Copies and
+  scores never become project state: only the selected best-scoring content is
+  saved through the existing `saveFinalChapter` path. Selection is
+  deterministic (highest score; lowest copy index breaks ties), and the
+  per-copy score comparison is written to the run log. Generation failures are
+  isolated per copy: surviving copies still proceed, and the command errors
+  only when every copy fails. If every scoring attempt fails, the first
+  successfully generated copy is used with a warning so generation can
+  continue. `write pipeline --best-of` applies only to the generation step.
 - `write gen --agent-sdk` changes only the generation runtime. The SDK agent
   may query focused project context through `novelgen tool query context --type
   chapter-write` and run scoped checks, but it is not granted patch tools and

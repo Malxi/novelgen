@@ -58,6 +58,13 @@ func validateWriteMinScoreFlag() error {
 	return nil
 }
 
+func validateWriteBestOfFlag() error {
+	if writeBestOfFlag < 0 || writeBestOfFlag > 5 {
+		return fmt.Errorf("--best-of must be between 0 and 5, got %d", writeBestOfFlag)
+	}
+	return nil
+}
+
 func writeMinScorePercent() float64 {
 	return float64(writeMinScoreFlag)
 }
@@ -86,6 +93,7 @@ var (
 	writeAgentApplyFlag            bool
 	writeAgentHistoryFlag          bool
 	writeRecapAgentSDKFlag         bool
+	writeBestOfFlag                int
 )
 
 var writeCmd = &cobra.Command{
@@ -133,7 +141,10 @@ Examples:
   novelgen write gen --chapter 1 --words 2000
 
   # Generate with 3 chapters of context on each side
-  novelgen write gen --chapter 5 --context 3`,
+  novelgen write gen --chapter 5 --context 3
+
+  # Generate 3 independent copies and save the highest-scoring one
+  novelgen write gen --chapter 1 --best-of 3`,
 	RunE: runWriteGen,
 }
 
@@ -221,6 +232,7 @@ func init() {
 	writeGenCmd.Flags().BoolVar(&writeAllFlag, "all", false, "Generate content for all chapters")
 	writeGenCmd.Flags().IntVar(&writeContextFlag, "context", 1, "Number of surrounding chapters to include as context")
 	writeGenCmd.Flags().IntVar(&writeConcurrencyFlag, "concurrency", 1, "Number of concurrent chapter generations")
+	writeGenCmd.Flags().IntVar(&writeBestOfFlag, "best-of", 0, "Generate N independent copies of each chapter, score them, and save the best (0 disables, max 5)")
 	writeGenCmd.Flags().BoolVar(&writeAgentSDKFlag, "agent-sdk", false, "Use Claude Agent SDK workflow for chapter generation")
 	writeGenCmd.Flags().BoolVar(&writeAgentHistoryFlag, "agent-history", false, "With --agent-sdk, let the agent consult copied prompt/response/agent-live logs before writing")
 	writeGenCmd.Flags().BoolVar(&writeRecapAgentSDKFlag, "recap-agent-sdk", false, "Use Claude Agent SDK workflow for automatic recap extraction")
@@ -264,6 +276,7 @@ func init() {
 	writePipelineCmd.Flags().IntVar(&writeContextFlag, "context", 1, "Number of surrounding chapters to include as context")
 	writePipelineCmd.Flags().IntVar(&writeConcurrencyFlag, "concurrency", 1, "Number of concurrent operations")
 	_ = writePipelineCmd.Flags().MarkHidden("concurrency")
+	writePipelineCmd.Flags().IntVar(&writeBestOfFlag, "best-of", 0, "Generate N independent copies of each chapter, score them, and save the best (0 disables, max 5)")
 	writePipelineCmd.Flags().BoolVar(&writeTeleportFixFlag, "enable-teleport-auto-fix", true, "Enable automatic teleport transition fixes")
 	writePipelineCmd.Flags().IntVar(&writeBridgeRetriesFlag, "bridge-retries", 1, "Max retries for teleport transition bridge patch")
 	writePipelineCmd.Flags().BoolVar(&writeCharacterFixFlag, "enable-character-presence-auto-fix", true, "Enable automatic character presence fixes")
@@ -287,6 +300,9 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
 	if err := validateWriteAgentHistoryOption(writeAgentSDKFlag, writeAgentHistoryFlag); err != nil {
+		return err
+	}
+	if err := validateWriteBestOfFlag(); err != nil {
 		return err
 	}
 	setupWriteAgentHistoryCutoff(writeAgentHistoryFlag)
@@ -344,6 +360,9 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
 	recapAgent.SetLanguage(config.Language)
 	recapStore := recap.NewStore(root)
+	// Create lightweight best-of scorer (used only when --best-of is enabled)
+	scorer := agents.NewChapterScorerAgent(client, cfg, &config.LLM)
+	scorer.SetLanguage(config.Language)
 	var errc writeErrorCollector
 
 	// Get list of chapters to generate
@@ -353,6 +372,9 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Generating final content for %d chapter(s) with concurrency %d", len(chapters), writeConcurrencyFlag)
+	if writeBestOfFlag > 1 {
+		log.Info("Best-of mode enabled: %d independent copies per chapter, scored and best saved", writeBestOfFlag)
+	}
 	if writeAgentSDKFlag {
 		log.Info("Chapter generation will use Agent SDK; Go still validates and saves final markdown")
 		if writeAgentHistoryFlag {
@@ -390,14 +412,8 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 				// Calculate chapter continuity
 				continuity := continuityBuilder.BuildBefore(outline, chapter)
 
-				// Generate final content
-				var content string
-				var err error
-				if writeAgentSDKFlag {
-					content, err = agent.GenerateChapterWithAgentSDK(ctx, chapter, context, continuity, targetWords, writeAgentHistoryFlag)
-				} else {
-					content, err = agent.GenerateChapter(ctx, chapter, context, continuity, targetWords)
-				}
+				// Generate final content (optionally best-of-N with AI scoring)
+				content, err := generateChapterContentForRun(ctx, agent, scorer, chapter, context, continuity, targetWords, writeBestOfFlag, writeAgentSDKFlag, writeAgentHistoryFlag)
 				if err != nil {
 					log.Error("Failed to generate content for chapter %s: %v", chapter.ID, err)
 					errc.Addf("%s: generate failed: %w", chapter.ID, err)
@@ -461,6 +477,164 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 
 	log.Info("Chapter writing complete")
 	return nil
+}
+
+// generateChapterContentForRun produces chapter content either through the
+// existing single-copy path or, when --best-of is enabled, through the
+// parallel best-of-N generation + AI scoring flow.
+func generateChapterContentForRun(
+	ctx context.Context,
+	agent *agents.WriteAgent,
+	scorer *agents.ChapterScorerAgent,
+	chapter *models.Chapter,
+	context *agents.ChapterContext,
+	continuity *models.ChapterContinuity,
+	targetWords int,
+	bestOf int,
+	useAgentSDK bool,
+	useHistory bool,
+) (string, error) {
+	if bestOf <= 1 {
+		if useAgentSDK {
+			return agent.GenerateChapterWithAgentSDK(ctx, chapter, context, continuity, targetWords, useHistory)
+		}
+		return agent.GenerateChapter(ctx, chapter, context, continuity, targetWords)
+	}
+	return generateChapterBestOf(ctx, agent, scorer, chapter, context, continuity, targetWords, bestOf, useAgentSDK, useHistory)
+}
+
+// generateChapterBestOf generates N independent copies of the same chapter in
+// parallel, scores each successful copy with the lightweight reader scorer,
+// and returns the highest-scoring content. Failures are isolated per copy:
+// a failed copy is skipped, and if every scoring attempt fails the first
+// successfully generated copy is used so generation can still proceed.
+func generateChapterBestOf(
+	ctx context.Context,
+	agent *agents.WriteAgent,
+	scorer *agents.ChapterScorerAgent,
+	chapter *models.Chapter,
+	context *agents.ChapterContext,
+	continuity *models.ChapterContinuity,
+	targetWords int,
+	bestOf int,
+	useAgentSDK bool,
+	useHistory bool,
+) (string, error) {
+	log := logger.GetLogger()
+
+	type generationResult struct {
+		index   int
+		content string
+		err     error
+	}
+	results := make([]generationResult, bestOf)
+	var genWg sync.WaitGroup
+	for i := 0; i < bestOf; i++ {
+		genWg.Add(1)
+		go func(index int) {
+			defer genWg.Done()
+			log.Info("[BestOf] Generating copy %d/%d for chapter %s", index+1, bestOf, chapter.ID)
+			var content string
+			var err error
+			if useAgentSDK {
+				content, err = agent.GenerateChapterWithAgentSDK(ctx, chapter, context, continuity, targetWords, useHistory)
+			} else {
+				content, err = agent.GenerateChapter(ctx, chapter, context, continuity, targetWords)
+			}
+			results[index] = generationResult{index: index, content: content, err: err}
+		}(i)
+	}
+	genWg.Wait()
+
+	type scoredResult struct {
+		index   int
+		content string
+		score   int
+		reason  string
+		err     error
+	}
+	copies := make([]scoredResult, 0, bestOf)
+	for _, result := range results {
+		if result.err != nil {
+			log.Error("[BestOf] Copy %d/%d generation failed for chapter %s: %v", result.index+1, bestOf, chapter.ID, result.err)
+			continue
+		}
+		copies = append(copies, scoredResult{index: result.index, content: result.content})
+	}
+	if len(copies) == 0 {
+		return "", fmt.Errorf("all %d best-of copies failed to generate for chapter %s", bestOf, chapter.ID)
+	}
+
+	// Score all successful copies in parallel; each scoring call is one cheap
+	// LLM request.
+	var scoreWg sync.WaitGroup
+	for i := range copies {
+		scoreWg.Add(1)
+		go func(c *scoredResult) {
+			defer scoreWg.Done()
+			output, err := scorer.ScoreChapter(ctx, buildChapterScoreInput(chapter, c.content, context))
+			if err != nil {
+				c.err = err
+				return
+			}
+			c.score = int(output.Score)
+			c.reason = output.Reason
+		}(&copies[i])
+	}
+	scoreWg.Wait()
+
+	scored := make([]agents.ScoredChapterCopy, 0, len(copies))
+	for _, c := range copies {
+		if c.err != nil {
+			log.Error("[BestOf] Scoring copy %d/%d failed for chapter %s: %v", c.index+1, bestOf, chapter.ID, c.err)
+			continue
+		}
+		scored = append(scored, agents.ScoredChapterCopy{
+			CopyIndex: c.index,
+			Content:   c.content,
+			Score:     c.score,
+			Reason:    c.reason,
+		})
+	}
+
+	if len(scored) == 0 {
+		log.Warn("[BestOf] All scoring attempts failed for chapter %s; falling back to copy %d/%d", chapter.ID, copies[0].index+1, bestOf)
+		return copies[0].content, nil
+	}
+
+	best, err := agents.SelectBestScoredChapter(scored)
+	if err != nil {
+		return "", fmt.Errorf("best-of selection failed for chapter %s: %w", chapter.ID, err)
+	}
+
+	log.Info("[BestOf] Chapter %s copy score comparison:", chapter.ID)
+	for _, c := range scored {
+		marker := " "
+		if c.CopyIndex == best.CopyIndex {
+			marker = "*"
+		}
+		log.Info("[BestOf]   %s copy %d/%d: score %d/100 - %s", marker, c.CopyIndex+1, bestOf, c.Score, c.Reason)
+	}
+	log.Info("[BestOf] Selected copy %d/%d (score %d/100) for chapter %s", best.CopyIndex+1, bestOf, best.Score, chapter.ID)
+	return best.Content, nil
+}
+
+// buildChapterScoreInput builds the lightweight scorer input from the outline
+// chapter and its generated content. Outline info is optional: only the
+// chapter's own summary/beats and the immediate next chapter's summary are
+// included so the scorer can judge beat coverage and the ending hook.
+func buildChapterScoreInput(chapter *models.Chapter, content string, context *agents.ChapterContext) agents.ChapterScoreInput {
+	input := agents.ChapterScoreInput{
+		ChapterID:      chapter.ID,
+		ChapterTitle:   chapter.Title,
+		ChapterContent: content,
+		ChapterSummary: chapter.Summary,
+		ChapterBeats:   chapter.GetBeats(),
+	}
+	if context != nil && len(context.Next) > 0 && context.Next[0] != nil && context.Next[0].Chapter != nil {
+		input.NextChapterSummary = context.Next[0].Chapter.Summary
+	}
+	return input
 }
 
 // loadChapterContent loads chapter content, preferring final version over draft
@@ -949,6 +1123,9 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
 	if err := validateWriteMinScoreFlag(); err != nil {
+		return err
+	}
+	if err := validateWriteBestOfFlag(); err != nil {
 		return err
 	}
 	if err := validateWriteAgentApplyOption(writeAgentSDKFlag, writeAgentApplyFlag); err != nil {
@@ -2136,6 +2313,9 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	log.Info("RPG DSL export: enabled=%t batch_size=%d output=%s", writeEmitRPGDSLFlag, writeRPGBatchSizeFlag, filepath.Join(root, "story", "rpg", "04_chapters.rpg"))
 	minScorePercent := writeMinScorePercent()
 	log.Info("Minimum acceptable score: %.0f/100", minScorePercent)
+	if writeBestOfFlag > 1 {
+		log.Info("Best-of mode enabled: %d independent copies per chapter, scored and best saved", writeBestOfFlag)
+	}
 	if writeAgentSDKFlag {
 		log.Info("Chapter generation/review/improvement will use Agent SDK; Go still validates and saves final markdown and review JSON")
 		if writeAgentHistoryFlag {
@@ -2154,6 +2334,9 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
 	recapAgent.SetLanguage(config.Language)
 	recapStore := recap.NewStore(root)
+	// Create lightweight best-of scorer (used only when --best-of is enabled)
+	scorer := agents.NewChapterScorerAgent(client, cfg, &config.LLM)
+	scorer.SetLanguage(config.Language)
 
 	// RPG DSL issues are refreshed after chapter content changes. Running this
 	// before generation would analyze stale or missing chapter files.
@@ -2174,13 +2357,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 			log.Info("Generating chapter: %s - %s", chapter.ID, chapter.Title)
 			chapterContext := loadChapterContext(outline, chapter, writeContextFlag)
 			continuity := continuityBuilder.BuildBefore(outline, chapter)
-			var generatedContent string
-			var err error
-			if writeAgentSDKFlag {
-				generatedContent, err = writeAgent.GenerateChapterWithAgentSDK(ctx, chapter, chapterContext, continuity, targetWords, writeAgentHistoryFlag)
-			} else {
-				generatedContent, err = writeAgent.GenerateChapter(ctx, chapter, chapterContext, continuity, targetWords)
-			}
+			generatedContent, err := generateChapterContentForRun(ctx, writeAgent, scorer, chapter, chapterContext, continuity, targetWords, writeBestOfFlag, writeAgentSDKFlag, writeAgentHistoryFlag)
 			if err != nil {
 				log.Error("Failed to generate chapter %s: %v", chapter.ID, err)
 				errc.Addf("%s: generate failed: %w", chapter.ID, err)
