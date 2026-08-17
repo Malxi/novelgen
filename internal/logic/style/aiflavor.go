@@ -87,8 +87,8 @@ var phraseRules = []phraseRule{
 	},
 	{
 		Name:       "互联网/职场黑话",
-		Phrases:    []string{"复盘", "闭环", "赋能", "抓手", "颗粒度", "对齐", "沉淀", "透传", "拉通", "底层逻辑", "认知升级", "破圈", "链路", "KPI", "OKR", "私域", "公域", "心智", "打透", "击穿", "扣实", "拿捏", "整活", "内卷", "躺平", "破防", "爆点", "卡点", "燃点"},
-		Suggestion: "“复盘/闭环/赋能/抓手”等互联网职场黑话混入古风/玄幻网文非常违和。换成古风表达：复盘→回想/梳理/过一遍，拿捏→把握/掌控，破防→失态/绷不住。",
+		Phrases:    []string{"复盘", "闭环", "赋能", "抓手", "颗粒度", "对齐", "沉淀", "透传", "拉通", "底层逻辑", "认知升级", "破圈", "链路", "KPI", "OKR", "私域", "公域", "心智", "打透", "击穿", "扣实", "拿捏", "整活", "内卷", "躺平", "破防", "爆点", "卡点", "燃点", "落地"},
+		Suggestion: "“复盘/闭环/赋能/抓手/落地”等互联网职场黑话混入古风/玄幻网文非常违和。换成古风表达：复盘→回想/梳理/过一遍，落地→办成/做完/到位，拿捏→把握/掌控，破防→失态/绷不住。",
 		Weight:     8,
 	},
 	{
@@ -107,8 +107,6 @@ var (
 	reNotIsShort = regexp.MustCompile(`不是[^，。！？；\n]{2,8}，是[^，。！？；\n]{2,10}`)
 	// 排除合理因果: 不是因为...而是因为 (正常归因)
 	reNotBecause = regexp.MustCompile(`不是因为[^，。！？；\n]{1,15}，而是因为`)
-	// 落地黑话用法: 方案/计划/布局/项目/任务/干预/想法/念头+落地 (职场黑话)
-	reBlackFall = regexp.MustCompile(`(方案|计划|布局|项目|任务|干预|想法|念头|策略|布局|措施|决定|打算)[^，。！？；\n]{0,6}落地`)
 )
 
 // CheckAIFlavor detects formulaic prose patterns and returns an editing-oriented result.
@@ -166,14 +164,6 @@ func CheckAIFlavor(text string, threshold int) AIFlavorResult {
 		result.Matches = append(result.Matches, AIFlavorMatch{Rule: "作为句式过密", Example: firstMatch(reAsA, clean), Count: count})
 		result.Issues = append(result.Issues, fmt.Sprintf("“作为……”句式出现 %d 次，叙述声音偏说明文", count))
 		result.Suggestions = appendUnique(result.Suggestions, "把“作为……”身份说明改为人物行为、称呼、环境反应或对话中的自然信息。")
-	}
-
-	// 落地黑话: 方案/计划/布局+落地 (职场黑话, 区别于"话没落地"正常成语)
-	if count := len(reBlackFall.FindAllString(clean, -1)); count > 0 {
-		penalty += count * 8
-		result.Matches = append(result.Matches, AIFlavorMatch{Rule: "落地黑话", Example: firstMatch(reBlackFall, clean), Count: count})
-		result.Issues = append(result.Issues, fmt.Sprintf("检测到 %d 处“方案/计划…落地”式职场黑话", count))
-		result.Suggestions = appendUnique(result.Suggestions, "“方案落地/计划落地”是职场黑话，古风文里违和；改成“办成/做成/施行/到位”。")
 	}
 
 	longCount := countLongSentences(clean, 90)
