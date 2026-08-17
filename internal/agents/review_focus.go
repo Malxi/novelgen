@@ -83,6 +83,8 @@ var reviewFocuses = []ReviewFocus{
     - 心理描写 AI 腔："他不禁想""他忍不住想""某种说不清道不明的情绪"
     - 英文 AI slop 词（如出现英文场景）：delve, tapestry, realm, testament, bustling, seamless, elevate, leverage, robust, myriad, "it is worth noting", "in today is fast-paced world", "not just X but Y", em-dash 滥用
     - 万能总结句：每个段落/场景结尾都有一句"道理升华"，仿佛作者在给读者划重点
+    - 互联网/职场黑话混入：复盘/闭环/赋能/抓手/颗粒度/对齐/沉淀/透传/拉通/底层逻辑/认知升级/破圈/KPI/OKR/拿捏/整活/内卷/躺平/破防/扣实（古风/玄幻文里出现即违和，应改古风表达）
+    - "钉"字动词滥用：钉进记忆/钉死/钉在原地/钉入——除非真是道具钉子，否则换"记住/刻进/定住/扎下"
 输出要求：每条建议必须指出具体章节、具体的"AI 味"现象，并给出让这段大纲更像人写的修改方向。不要泛泛而谈"增强真实感"这种空话。`,
 	},
 	{
