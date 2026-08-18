@@ -81,7 +81,7 @@ var phraseRules = []phraseRule{
 	},
 	{
 		Name:       "金手指失灵措辞",
-		Phrases:    []string{"乱码", "糊成碎片", "刷新不回", "提示失效", "系统坏了", "出bug", "出故障", "低能耗", "被屏蔽", "故障了", "宕机"},
+		Phrases:    []string{"乱码", "糊成碎片", "刷新不回", "提示失效", "低能耗", "被屏蔽", "故障了", "宕机", "吞了内容", "少了一块"},
 		Suggestion: "“乱码/糊成碎片/提示失效”等金手指故障措辞违背“金手指从不失灵”铁律——信息获取不到只能是信息差（环境特性/对手反制/物理痕迹），不是系统坏。改成“该区域暂无日志/查无此条/信息天然残缺”。",
 		Weight:     10,
 	},
@@ -144,13 +144,6 @@ func CheckAIFlavor(text string, threshold int) AIFlavorResult {
 		result.Matches = append(result.Matches, AIFlavorMatch{Rule: rule.Name, Example: example, Count: count})
 		result.Issues = append(result.Issues, fmt.Sprintf("%s命中 %d 次，例如「%s」", rule.Name, count, example))
 		result.Suggestions = appendUnique(result.Suggestions, rule.Suggestion)
-	}
-
-	if count := len(reBalancedNotOnly.FindAllString(clean, -1)); count > 0 {
-		penalty += count * 10
-		result.Matches = append(result.Matches, AIFlavorMatch{Rule: "不仅/而且平衡句", Example: firstMatch(reBalancedNotOnly, clean), Count: count})
-		result.Issues = append(result.Issues, fmt.Sprintf("检测到 %d 处“不仅/而且/更是”式平衡句，容易显得模板化", count))
-		result.Suggestions = appendUnique(result.Suggestions, "拆掉“不仅/而且/更是”式平衡句，改成角色当下能感知到的一到两个具体变化。")
 	}
 
 	// 不是X，是Y 短句转折 (AI 强调句母句式), 排除"不是因为...而是因为"正常归因
