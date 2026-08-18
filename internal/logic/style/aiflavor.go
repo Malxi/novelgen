@@ -103,6 +103,12 @@ var phraseRules = []phraseRule{
 		Suggestion: "“算账/记账/这笔账”AI 爱用作比喻（把得失、恩怨、算计说成账）。真实账目（账册/灵石账）合理，但比喻用法（“把今天的账记下”指记教训）显 AI 味。删掉或换“记下/盘算/权衡”。",
 		Weight:     5,
 	},
+	{
+		Name:       "抽象评述/解释句",
+		Phrases:    []string{"坐实不了任何人", "坐不实任何人", "这个问号太软", "这个疑点太软", "说到底", "说白了", "本质上", "换句话说", "这恰恰说明", "这足以证明", "这印证了", "坐实了", "一语道破", "意味深长"},
+		Suggestion: "“坐实/说到底/说白了/这恰恰说明”是 AI 爱用的抽象评述句，替读者做总结、划重点。删掉，让动作、情节、对话自己表达。同一表达在章节内不要重复，结尾禁止用“升华总结”凑字数。",
+		Weight:     7,
+	},
 }
 
 var (
@@ -113,6 +119,8 @@ var (
 	reNotIsShort = regexp.MustCompile(`不是[^，。！？；\n]{2,8}，是[^，。！？；\n]{2,10}`)
 	// 排除合理因果: 不是因为...而是因为 (正常归因)
 	reNotBecause = regexp.MustCompile(`不是因为[^，。！？；\n]{1,15}，而是因为`)
+	// 指挥式动作清单: 先/再+动词短语 连续, 像战术简报/操作手册 (AI 味)
+	reActionList = regexp.MustCompile(`(先|再|随即|然后|最后)[^，。！？；\n]{2,8}[，、](?:再|然后)?[^，。！？；\n]{2,8}[，、][^，。！？；\n]{2,8}`)
 )
 
 // CheckAIFlavor detects formulaic prose patterns and returns an editing-oriented result.
@@ -163,6 +171,14 @@ func CheckAIFlavor(text string, threshold int) AIFlavorResult {
 		result.Matches = append(result.Matches, AIFlavorMatch{Rule: "不是X，是Y短句转折", Example: firstMatch(reNotIsShort, clean), Count: notIsCount})
 		result.Issues = append(result.Issues, fmt.Sprintf("检测到 %d 处“不是X，是Y”短句转折（如“不是他慢，是他快”），AI 强调句痕迹明显", notIsCount))
 		result.Suggestions = appendUnique(result.Suggestions, "“不是X，是Y”短句转折（如“不是他慢，是他快”）改成直接陈述或动作呈现，一句最多保留一次。")
+	}
+
+	// 指挥式动作清单: 先/再/然后+动词短语连续 (战术简报/操作手册式 AI 味)
+	if count := len(reActionList.FindAllString(clean, -1)); count > 0 {
+		penalty += count * 4
+		result.Matches = append(result.Matches, AIFlavorMatch{Rule: "指挥式动作清单", Example: firstMatch(reActionList, clean), Count: count})
+		result.Issues = append(result.Issues, fmt.Sprintf("检测到 %d 处“先/再/然后+动作”式指令清单，像战术简报或操作手册", count))
+		result.Suggestions = appendUnique(result.Suggestions, "“先观察、再接近、拖人出来、不恋战”式行动清单像操作手册，缺乏画面。改成连贯的动作白描：主语+具体动作+感官，让行动在画面中自然展开。")
 	}
 
 	if count := len(reAsA.FindAllString(clean, -1)); count > 2 {
