@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"strings"
@@ -263,6 +264,9 @@ func (c *OpenAIClient) ChatCompletion(ctx context.Context, messages []Message, o
 	if thinking != nil {
 		logger.Debug("Thinking mode: %s", thinking.Type)
 	}
+
+	// some strict providers (e.g. ox-alpha) reject temperature with >2 decimals
+	temperature = math.Round(temperature*100) / 100
 
 	reqBody := openAIRequest{
 		Model:       model,
