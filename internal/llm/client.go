@@ -3,6 +3,8 @@ package llm
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -63,6 +65,7 @@ type OpenAIClient struct {
 	apiKey     string
 	baseURL    string
 	model      string
+	sessionID  string
 	httpClient *http.Client
 }
 
@@ -186,10 +189,16 @@ func NewOpenAIClient(config *OpenAIConfig) *OpenAIClient {
 		config.Model = "gpt-3.5-turbo"
 	}
 
+	sessionID, err := newSessionID()
+	if err != nil {
+		logger.Error("Failed to generate session ID: %v", err)
+	}
+
 	return &OpenAIClient{
-		apiKey:  config.APIKey,
-		baseURL: config.BaseURL,
-		model:   config.Model,
+		apiKey:    config.APIKey,
+		baseURL:   config.BaseURL,
+		model:     config.Model,
+		sessionID: sessionID,
 		httpClient: &http.Client{
 			Timeout: time.Duration(config.Timeout) * time.Second,
 			Transport: &http.Transport{
@@ -200,6 +209,15 @@ func NewOpenAIClient(config *OpenAIConfig) *OpenAIClient {
 			},
 		},
 	}
+}
+
+// newSessionID generates a stable random session ID (32 hex chars).
+func newSessionID() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }
 
 // thinkingConfig represents the thinking configuration for the model
@@ -290,6 +308,9 @@ func (c *OpenAIClient) ChatCompletion(ctx context.Context, messages []Message, o
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
+	if strings.Contains(strings.ToLower(c.baseURL), "opencode.ai") && c.sessionID != "" {
+		req.Header.Set("x-opencode-session", c.sessionID)
+	}
 
 	startTime := time.Now()
 
