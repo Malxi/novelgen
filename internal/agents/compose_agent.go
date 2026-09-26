@@ -1345,10 +1345,24 @@ func composeOutlineReviewAgentSDKParams(command string, outline models.Outline, 
 			RequireNoDeniedTools: true,
 			RequiredToolCommands: composeOutlineReviewRequiredQueries(outline, volumeID),
 		},
-		MaxTurns: 20,
+		MaxTurns: composeOutlineReviewAgentSDKMaxTurns(),
 		Timeout:  600,
 		Command:  command,
 	}
+}
+
+// composeOutlineReviewAgentSDKMaxTurns 返回单次 outline review 的 agent 回合上限。
+// 默认 30：review 要跨读本卷全部章节 + setup（storylines/premises/main_loop 三张承诺表）
+// + 相邻卷，章节内容变厚后 20 回合常在"查证收敛"阶段被掐断（报 Reached maximum number of turns）。
+// 可用 NOVELGEN_REVIEW_MAX_TURNS 覆盖。
+func composeOutlineReviewAgentSDKMaxTurns() int {
+	const defaultTurns = 30
+	raw := strings.TrimSpace(os.Getenv("NOVELGEN_REVIEW_MAX_TURNS"))
+	var n int
+	if _, err := fmt.Sscanf(raw, "%d", &n); err == nil && n > 0 {
+		return n
+	}
+	return defaultTurns
 }
 
 func composeOutlineReviewToolAllowlist(outline models.Outline, volumeID string) []string {

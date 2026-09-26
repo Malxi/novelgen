@@ -950,8 +950,22 @@ func TestComposeOutlineReviewAgentSDKUsesReadOnlyWorkflow(t *testing.T) {
 	if len(invocation.ToolEvidence.RequiredToolCommands) != 1 || invocation.ToolEvidence.RequiredToolCommands[0] != "novelgen tool query outline --type all --view index" {
 		t.Fatalf("required tool commands = %#v", invocation.ToolEvidence.RequiredToolCommands)
 	}
-	if invocation.Options.MaxTurns != 20 || invocation.Options.Timeout != 600 {
+	if invocation.Options.MaxTurns != composeOutlineReviewAgentSDKMaxTurns() || invocation.Options.Timeout != 600 {
 		t.Fatalf("options = %#v", invocation.Options)
+	}
+}
+
+func TestComposeOutlineReviewAgentSDKMaxTurnsAllowsEnvOverride(t *testing.T) {
+	if got := composeOutlineReviewAgentSDKMaxTurns(); got != 30 {
+		t.Fatalf("default MaxTurns = %d, want 30", got)
+	}
+	t.Setenv("NOVELGEN_REVIEW_MAX_TURNS", "45")
+	if got := composeOutlineReviewAgentSDKMaxTurns(); got != 45 {
+		t.Fatalf("env MaxTurns = %d, want 45", got)
+	}
+	t.Setenv("NOVELGEN_REVIEW_MAX_TURNS", "0")
+	if got := composeOutlineReviewAgentSDKMaxTurns(); got != 30 {
+		t.Fatalf("zero env MaxTurns = %d, want fallback 30", got)
 	}
 }
 
