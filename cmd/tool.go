@@ -683,6 +683,10 @@ func queryStorySetup(ctx toolProjectContext, queryType, name string) toolRespons
 		return querySetupSlice("resource", name, ctx.Setup.WorldResources, func(v models.WorldResource) string { return v.Name })
 	case "timeline":
 		return querySetupSlice("timeline", name, ctx.Setup.WorldTimeline, func(v models.WorldTimelineEntry) string { return v.Event })
+	case "rules":
+		// 创作铁律（日志边界、能力边界等）。review/setup 核对时按名字直查，
+		// 免得只能靠 "--type search" 撞关键词或整本 --type all 拉全量。
+		return querySetupSlice("rules", name, ctx.Setup.Rules, func(v string) string { return v })
 	case "long-form-plan":
 		count := 0
 		if ctx.Setup.LongFormPlan != nil {
@@ -701,26 +705,26 @@ func setupIndexResponse(setup *models.StorySetup) toolResponse {
 		return toolResponse{OK: true, Count: 0, Results: nil}
 	}
 	index := map[string]interface{}{
-		"project_name":     setup.ProjectName,
-		"genres":           setup.Genres,
-		"premise":          setup.Premise,
-		"theme":            setup.Theme,
-		"rules":            setup.Rules,
-		"target_audience":  setup.TargetAudience,
-		"tone":             setup.Tone,
-		"pov_style":        setup.POVStyle,
-		"core_cast":        setup.CoreCast,
-		"storylines":       setup.Storylines,
-		"premises":         setup.Premises,
-		"world_timeline":   setup.WorldTimeline,
-		"world_resources":  setup.WorldResources,
-		"long_form_plan":   setup.LongFormPlan,
-		"core_cast_count":  len(setup.CoreCast),
-		"storyline_count":  len(setup.Storylines),
-		"premise_count":    len(setup.Premises),
-		"timeline_count":   len(setup.WorldTimeline),
-		"resource_count":   len(setup.WorldResources),
-		"has_long_form":    setup.LongFormPlan != nil,
+		"project_name":    setup.ProjectName,
+		"genres":          setup.Genres,
+		"premise":         setup.Premise,
+		"theme":           setup.Theme,
+		"rules":           setup.Rules,
+		"target_audience": setup.TargetAudience,
+		"tone":            setup.Tone,
+		"pov_style":       setup.POVStyle,
+		"core_cast":       setup.CoreCast,
+		"storylines":      setup.Storylines,
+		"premises":        setup.Premises,
+		"world_timeline":  setup.WorldTimeline,
+		"world_resources": setup.WorldResources,
+		"long_form_plan":  setup.LongFormPlan,
+		"core_cast_count": len(setup.CoreCast),
+		"storyline_count": len(setup.Storylines),
+		"premise_count":   len(setup.Premises),
+		"timeline_count":  len(setup.WorldTimeline),
+		"resource_count":  len(setup.WorldResources),
+		"has_long_form":   setup.LongFormPlan != nil,
 	}
 	return toolResponse{OK: true, Count: 1, Results: index}
 }
@@ -4244,6 +4248,8 @@ func normalizeSetupType(value string) string {
 		return "resource"
 	case "world-timeline":
 		return "timeline"
+	case "rule", "rules", "setup-rules", "iron-rules":
+		return "rules"
 	case "longform", "long_form_plan", "long-form":
 		return "long-form-plan"
 	default:

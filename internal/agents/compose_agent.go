@@ -1365,8 +1365,12 @@ func composeOutlineReviewAgentSDKMaxTurns() int {
 	return defaultTurns
 }
 
+// composeOutlineReviewToolAllowlist 列出单卷/全书 review 允许的只读查询。
+// 说明：review 要核对 setup 铁律，必须放行 story-setup --type rules（cmd/tool.go 的
+// 合法类型集合里含 rules），否则 agent 会撞 deny 白耗一个回合。
 func composeOutlineReviewToolAllowlist(outline models.Outline, volumeID string) []string {
 	allowlist := []string{
+		"novelgen tool query story-setup --type rules",
 		"novelgen tool query story-setup --type search",
 		"novelgen tool query story-setup --type index",
 		"novelgen tool query story-setup --type all",

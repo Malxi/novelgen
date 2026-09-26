@@ -2761,3 +2761,25 @@ func TestLoadToolChapterContentUsesFinalChapterPath(t *testing.T) {
 func containsJSONString(data []byte, needle string) bool {
 	return strings.Contains(string(data), `"`+needle+`"`)
 }
+
+func TestQueryStorySetupRulesType(t *testing.T) {
+	ctx := toolProjectContext{Setup: &models.StorySetup{
+		Rules: []string{
+			"李侑的日志只能看到系统宿主使用系统时的行为记录",
+			"日志由系统自动生成，宿主不能写入或修改",
+			"顾恒的模拟器一天只能走一次，多用吃不消",
+		},
+	}}
+	resp := queryStorySetup(ctx, "rules", "")
+	if !resp.OK || resp.Count != 3 {
+		t.Fatalf("rules all = ok %v count %d warnings %v", resp.OK, resp.Count, resp.Warnings)
+	}
+	resp = queryStorySetup(ctx, "rule", "模拟器")
+	hits, ok := resp.Results.([]string)
+	if !ok || resp.Count != 1 || len(hits) != 1 {
+		t.Fatalf("rules filtered = ok %v count %d results %T %#v", resp.OK, resp.Count, resp.Results, resp.Results)
+	}
+	if !strings.Contains(hits[0], "模拟器") {
+		t.Fatalf("rules filtered hit = %q", hits[0])
+	}
+}
