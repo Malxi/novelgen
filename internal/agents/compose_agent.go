@@ -1346,9 +1346,23 @@ func composeOutlineReviewAgentSDKParams(command string, outline models.Outline, 
 			RequiredToolCommands: composeOutlineReviewRequiredQueries(outline, volumeID),
 		},
 		MaxTurns: composeOutlineReviewAgentSDKMaxTurns(),
-		Timeout:  600,
+		Timeout:  composeOutlineReviewAgentSDKTimeout(),
 		Command:  command,
 	}
+}
+
+// composeOutlineReviewAgentSDKTimeout 返回单次 outline review 的 agent 超时（秒）。
+// 默认 1800（与 improve 路径对齐）：600 秒对本项目 10 章的大卷不够——agent 要读完本卷
+// 全部章节 + setup 三张承诺表 + 相邻卷，实测每次跑到 ~9 分钟就撞 TimeoutError、无产出。
+// 可用 NOVELGEN_REVIEW_TIMEOUT 覆盖。
+func composeOutlineReviewAgentSDKTimeout() int {
+	const defaultSeconds = 1800
+	raw := strings.TrimSpace(os.Getenv("NOVELGEN_REVIEW_TIMEOUT"))
+	var n int
+	if _, err := fmt.Sscanf(raw, "%d", &n); err == nil && n > 0 {
+		return n
+	}
+	return defaultSeconds
 }
 
 // composeOutlineReviewAgentSDKMaxTurns 返回单次 outline review 的 agent 回合上限。

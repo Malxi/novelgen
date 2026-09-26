@@ -950,7 +950,7 @@ func TestComposeOutlineReviewAgentSDKUsesReadOnlyWorkflow(t *testing.T) {
 	if len(invocation.ToolEvidence.RequiredToolCommands) != 1 || invocation.ToolEvidence.RequiredToolCommands[0] != "novelgen tool query outline --type all --view index" {
 		t.Fatalf("required tool commands = %#v", invocation.ToolEvidence.RequiredToolCommands)
 	}
-	if invocation.Options.MaxTurns != composeOutlineReviewAgentSDKMaxTurns() || invocation.Options.Timeout != 600 {
+	if invocation.Options.MaxTurns != composeOutlineReviewAgentSDKMaxTurns() || invocation.Options.Timeout != composeOutlineReviewAgentSDKTimeout() {
 		t.Fatalf("options = %#v", invocation.Options)
 	}
 }
@@ -966,6 +966,20 @@ func TestComposeOutlineReviewAgentSDKMaxTurnsAllowsEnvOverride(t *testing.T) {
 	t.Setenv("NOVELGEN_REVIEW_MAX_TURNS", "0")
 	if got := composeOutlineReviewAgentSDKMaxTurns(); got != 30 {
 		t.Fatalf("zero env MaxTurns = %d, want fallback 30", got)
+	}
+}
+
+func TestComposeOutlineReviewAgentSDKTimeoutAllowsEnvOverride(t *testing.T) {
+	if got := composeOutlineReviewAgentSDKTimeout(); got != 1800 {
+		t.Fatalf("default Timeout = %d, want 1800", got)
+	}
+	t.Setenv("NOVELGEN_REVIEW_TIMEOUT", "900")
+	if got := composeOutlineReviewAgentSDKTimeout(); got != 900 {
+		t.Fatalf("env Timeout = %d, want 900", got)
+	}
+	t.Setenv("NOVELGEN_REVIEW_TIMEOUT", "-5")
+	if got := composeOutlineReviewAgentSDKTimeout(); got != 1800 {
+		t.Fatalf("negative env Timeout = %d, want fallback 1800", got)
 	}
 }
 
