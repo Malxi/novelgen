@@ -493,8 +493,8 @@ func TestWriteAgentImproveWithAgentSDKUsesFocusedWorkflow(t *testing.T) {
 	if strings.Contains(strings.Join(runtime.invocation.ToolAllowlist, " "), "--apply") {
 		t.Fatalf("write improvement should not grant apply patch tools: %#v", runtime.invocation.ToolAllowlist)
 	}
-	if runtime.invocation.Options.MaxTurns != 32 || runtime.invocation.Options.Timeout != 600 {
-		t.Fatalf("MaxTurns/Timeout = %d/%d, want 32/600", runtime.invocation.Options.MaxTurns, runtime.invocation.Options.Timeout)
+	if runtime.invocation.Options.MaxTurns != 32 || runtime.invocation.Options.Timeout != writeImproveAgentSDKTimeout() {
+		t.Fatalf("MaxTurns/Timeout = %d/%d, want 32/%d", runtime.invocation.Options.MaxTurns, runtime.invocation.Options.Timeout, writeImproveAgentSDKTimeout())
 	}
 	if !strings.Contains(runtime.invocation.UserPrompt, "old draft") || !strings.Contains(runtime.invocation.UserPrompt, "tighten the action") {
 		t.Fatalf("UserPrompt did not include current draft and suggestions")

@@ -695,9 +695,22 @@ func writeImproveAgentSDKParams(command string, chapterID string, applyPatches b
 		ToolAllowlist:  writeImproveToolAllowlist(chapterID, applyPatches, targetWordCount),
 		ToolEvidence:   evidence,
 		MaxTurns:       writeImproveAgentSDKMaxTurns(applyPatches),
-		Timeout:        600,
+		Timeout:        writeImproveAgentSDKTimeout(),
 		Command:        command,
 	}
+}
+
+// writeImproveAgentSDKTimeout 返回正文 improve 的 agent 超时（秒）。
+// 默认 1800：原值 600 在本项目章节遇到链路偏慢时不够（apply 模式要跑 64 回合的
+// 检查—打补丁—复检循环）。可用 NOVELGEN_WRITE_IMPROVE_TIMEOUT 覆盖。
+func writeImproveAgentSDKTimeout() int {
+	const defaultSeconds = 1800
+	raw := strings.TrimSpace(os.Getenv("NOVELGEN_WRITE_IMPROVE_TIMEOUT"))
+	var n int
+	if _, err := fmt.Sscanf(raw, "%d", &n); err == nil && n > 0 {
+		return n
+	}
+	return defaultSeconds
 }
 
 func writeImproveAgentSDKMaxTurns(applyPatches bool) int {
