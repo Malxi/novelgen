@@ -771,8 +771,8 @@ func TestWriteAgentReviewWithAgentSDKUsesFocusedReadOnlyWorkflow(t *testing.T) {
 	if strings.Contains(strings.Join(runtime.invocation.ToolAllowlist, " "), "tool query chapter") {
 		t.Fatalf("write review should not grant final chapter content query; content is typed input: %#v", runtime.invocation.ToolAllowlist)
 	}
-	if runtime.invocation.Options.MaxTurns != 18 || runtime.invocation.Options.Timeout != 600 {
-		t.Fatalf("MaxTurns/Timeout = %d/%d, want 18/600", runtime.invocation.Options.MaxTurns, runtime.invocation.Options.Timeout)
+	if runtime.invocation.Options.MaxTurns != writeReviewAgentSDKMaxTurns() || runtime.invocation.Options.Timeout != writeReviewAgentSDKTimeout() {
+		t.Fatalf("MaxTurns/Timeout = %d/%d, want %d/%d", runtime.invocation.Options.MaxTurns, runtime.invocation.Options.Timeout, writeReviewAgentSDKMaxTurns(), writeReviewAgentSDKTimeout())
 	}
 	if !strings.Contains(runtime.invocation.UserPrompt, "final chapter content") || !strings.Contains(runtime.invocation.UserPrompt, "Opening") {
 		t.Fatalf("UserPrompt did not include chapter content/title")

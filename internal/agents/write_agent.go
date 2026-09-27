@@ -1009,10 +1009,35 @@ func writeReviewAgentSDKParams(command string, chapterID string, targetWords ...
 		RequireSDK:     true,
 		ToolAllowlist:  dedupeWriteToolAllowlist(allowlist),
 		ToolEvidence:   ToolEvidenceRequirement{MinContextQueryCalls: 1, MinCheckCalls: 1, RequireNoDeniedTools: true},
-		MaxTurns:       18,
-		Timeout:        600,
+		MaxTurns:       writeReviewAgentSDKMaxTurns(),
+		Timeout:        writeReviewAgentSDKTimeout(),
 		Command:        command,
 	}
+}
+
+// writeReviewAgentSDKTimeout 返回单章正文 review 的 agent 超时（秒）。
+// 默认 1800：原值 600 在本项目章节（1300-1500 字）遇到链路偏慢时不够用——实测 agent
+// 只发到 2 个工具调用就撞 TimeoutError、无产出。可用 NOVELGEN_WRITE_REVIEW_TIMEOUT 覆盖。
+func writeReviewAgentSDKTimeout() int {
+	const defaultSeconds = 1800
+	raw := strings.TrimSpace(os.Getenv("NOVELGEN_WRITE_REVIEW_TIMEOUT"))
+	var n int
+	if _, err := fmt.Sscanf(raw, "%d", &n); err == nil && n > 0 {
+		return n
+	}
+	return defaultSeconds
+}
+
+// writeReviewAgentSDKMaxTurns 返回单章正文 review 的 agent 回合上限。
+// 默认 18（原值），可用 NOVELGEN_WRITE_REVIEW_MAX_TURNS 覆盖。
+func writeReviewAgentSDKMaxTurns() int {
+	const defaultTurns = 18
+	raw := strings.TrimSpace(os.Getenv("NOVELGEN_WRITE_REVIEW_MAX_TURNS"))
+	var n int
+	if _, err := fmt.Sscanf(raw, "%d", &n); err == nil && n > 0 {
+		return n
+	}
+	return defaultTurns
 }
 
 // ReviewVolume performs a holistic review of all chapters in a volume
