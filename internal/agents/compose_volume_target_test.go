@@ -969,6 +969,20 @@ func TestComposeOutlineReviewAgentSDKMaxTurnsAllowsEnvOverride(t *testing.T) {
 	}
 }
 
+func TestComposeCrossVolumeReviewAgentSDKMaxTurnsAllowsEnvOverride(t *testing.T) {
+	if got := composeCrossVolumeReviewAgentSDKMaxTurns(); got != 60 {
+		t.Fatalf("default cross MaxTurns = %d, want 60", got)
+	}
+	t.Setenv("NOVELGEN_CROSS_REVIEW_MAX_TURNS", "90")
+	if got := composeCrossVolumeReviewAgentSDKMaxTurns(); got != 90 {
+		t.Fatalf("env cross MaxTurns = %d, want 90", got)
+	}
+	t.Setenv("NOVELGEN_CROSS_REVIEW_MAX_TURNS", "0")
+	if got := composeCrossVolumeReviewAgentSDKMaxTurns(); got != 60 {
+		t.Fatalf("zero env cross MaxTurns = %d, want fallback 60", got)
+	}
+}
+
 func TestComposeOutlineReviewAgentSDKTimeoutAllowsEnvOverride(t *testing.T) {
 	if got := composeOutlineReviewAgentSDKTimeout(); got != 1800 {
 		t.Fatalf("default Timeout = %d, want 1800", got)

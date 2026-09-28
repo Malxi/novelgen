@@ -1244,7 +1244,7 @@ func (a *ComposeAgent) reviewOutlineCrossVolumeAgentSDK(ctx context.Context, inp
 			RequireNoDeniedTools: true,
 			RequiredToolCommands: []string{"novelgen tool query outline --type all --view index"},
 		},
-		MaxTurns: 45,
+		MaxTurns: composeCrossVolumeReviewAgentSDKMaxTurns(),
 		Timeout:  1800,
 		Command:  "review the cross-volume continuity of the story outline and provide focused improvement suggestions",
 	}
@@ -1349,6 +1349,20 @@ func composeOutlineReviewAgentSDKParams(command string, outline models.Outline, 
 		Timeout:  composeOutlineReviewAgentSDKTimeout(),
 		Command:  command,
 	}
+}
+
+// composeCrossVolumeReviewAgentSDKMaxTurns 返回跨卷 review 的 agent 回合上限。
+// 默认 60：原值 45 对"一次审三卷"（3 卷 × ~30 章正文级大纲 + setup 承诺表）不够，
+// 实测撞 Reached maximum number of turns (45)、无产出。可用 NOVELGEN_CROSS_REVIEW_MAX_TURNS 覆盖；
+// 卷数更多时建议拆成逐个 focus 串行跑，而不是无上限加回合（回合越多越容易空转）。
+func composeCrossVolumeReviewAgentSDKMaxTurns() int {
+	const defaultTurns = 60
+	raw := strings.TrimSpace(os.Getenv("NOVELGEN_CROSS_REVIEW_MAX_TURNS"))
+	var n int
+	if _, err := fmt.Sscanf(raw, "%d", &n); err == nil && n > 0 {
+		return n
+	}
+	return defaultTurns
 }
 
 // composeOutlineReviewAgentSDKTimeout 返回单次 outline review 的 agent 超时（秒）。
