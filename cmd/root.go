@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -26,9 +27,30 @@ Use "novelgen <command> --help" for more information about a command.`,
 }
 
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	ExecuteContext(context.Background())
+}
+
+// ExecuteContext runs the command tree with the given context so callers can
+// cancel long-running workflows (for example on SIGINT).
+func ExecuteContext(ctx context.Context) {
+	rootContext = ctx
+	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		os.Exit(1)
 	}
+}
+
+// rootContext carries the process context (cancelled by SIGINT/SIGTERM) so
+// helper functions that do not receive a *cobra.Command can still observe
+// cancellation. It is set once, before any command runs.
+var rootContext = context.Background()
+
+// commandContext returns the process context for helpers called from RunE
+// functions that do not thread a context through their signature.
+func commandContext() context.Context {
+	if rootContext == nil {
+		return context.Background()
+	}
+	return rootContext
 }
 
 // init is called after all other init() functions in the cmd package

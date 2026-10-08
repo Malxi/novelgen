@@ -15,6 +15,7 @@ import (
 
 	"novelgen/internal/agentruntime"
 	"novelgen/internal/models"
+	"novelgen/internal/usage"
 
 	"github.com/spf13/cobra"
 )
@@ -69,18 +70,121 @@ var projectDoctorCmd = &cobra.Command{
 	RunE:  runProjectDoctor,
 }
 
+var (
+	projectUsageJSON  bool
+	projectUsageSince string
+)
+
+var projectUsageCmd = &cobra.Command{
+	Use:   "usage",
+	Short: "Report LLM token usage recorded under logs/usage.jsonl",
+	Long: `Summarize the token usage of every recorded LLM call in this project.
+
+Usage entries are appended by the agents as they run, so this command is
+read-only and works while a run is in progress. Use --since to focus on a
+specific time window, for example the current writing session.`,
+	Args: cobra.NoArgs,
+	RunE: runProjectUsage,
+}
+
 func init() {
 	projectCloneCmd.Flags().StringVar(&projectCloneSource, "source", "", "Source project directory (default: current project root)")
 	projectCloneCmd.Flags().StringVar(&projectCloneBook, "book", "", "Source book name under a books/ directory, e.g. system-log")
 	projectCloneCmd.Flags().StringVar(&projectCloneName, "name", "", "Override cloned project name in novel.json")
 	projectCloneCmd.Flags().BoolVar(&projectCloneWithLogs, "with-logs", false, "Copy logs/ into the cloned project")
 	projectDoctorCmd.Flags().BoolVar(&projectDoctorJSON, "json", false, "Print machine-readable JSON report")
+	projectUsageCmd.Flags().BoolVar(&projectUsageJSON, "json", false, "Print machine-readable JSON report")
+	projectUsageCmd.Flags().StringVar(&projectUsageSince, "since", "", "Only count calls at or after this time (RFC3339 or 2006-01-02)")
 	projectCmd.AddCommand(projectCloneCmd)
 	projectCmd.AddCommand(projectRenameCmd)
 	projectCmd.AddCommand(projectDoctorCmd)
+	projectCmd.AddCommand(projectUsageCmd)
 	RegisterCommand(func() *cobra.Command {
 		return projectCmd
 	})
+}
+
+func runProjectUsage(cmd *cobra.Command, args []string) error {
+	root, err := findProjectRoot()
+	if err != nil {
+		return err
+	}
+	entries, err := usage.Read(root)
+	if err != nil {
+		return fmt.Errorf("read usage log: %w", err)
+	}
+	if strings.TrimSpace(projectUsageSince) != "" {
+		since, err := parseUsageSince(projectUsageSince)
+		if err != nil {
+			return err
+		}
+		entries = usage.FilterSince(entries, since)
+	}
+
+	summary := usage.Summarize(entries)
+	if projectUsageJSON {
+		data, err := json.MarshalIndent(summary, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(cmd.OutOrStdout(), string(data))
+		return nil
+	}
+
+	out := cmd.OutOrStdout()
+	fmt.Fprintf(out, "LLM usage for %s\n", root)
+	fmt.Fprintf(out, "Log: %s\n", filepath.Join(root, filepath.FromSlash(usage.RelativeLogPath)))
+	if summary.Calls == 0 {
+		fmt.Fprintln(out, "No usage recorded yet. Run a command that calls the model first.")
+		return nil
+	}
+	fmt.Fprintf(out, "Calls: %d (%d failed)\n", summary.Calls, summary.FailedCalls)
+	fmt.Fprintf(out, "Tokens: %d total (%d prompt + %d completion)\n",
+		summary.TotalTokens, summary.PromptTokens, summary.CompletionTokens)
+	if summary.FirstCall != "" {
+		fmt.Fprintf(out, "Window: %s .. %s\n", summary.FirstCall, summary.LastCall)
+	}
+	writeUsageBuckets(out, "By agent", summary.ByAgent)
+	writeUsageBuckets(out, "By model", summary.ByModel)
+	writeUsageBuckets(out, "By day", summary.ByDay)
+	if len(summary.Failures) > 0 {
+		fmt.Fprintln(out, "\nFailures:")
+		for _, bucket := range summary.Failures {
+			fmt.Fprintf(out, "  %4d x %s\n", bucket.Failures, truncateUsageText(bucket.Key, 120))
+		}
+	}
+	return nil
+}
+
+func parseUsageSince(value string) (time.Time, error) {
+	trimmed := strings.TrimSpace(value)
+	for _, layout := range []string{time.RFC3339, "2006-01-02 15:04:05", "2006-01-02"} {
+		if parsed, err := time.ParseInLocation(layout, trimmed, time.Local); err == nil {
+			return parsed, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("invalid --since value %q (expected RFC3339 or 2006-01-02)", value)
+}
+
+func writeUsageBuckets(out io.Writer, title string, buckets []usage.Bucket) {
+	if len(buckets) == 0 {
+		return
+	}
+	fmt.Fprintf(out, "\n%s:\n", title)
+	for _, bucket := range buckets {
+		fmt.Fprintf(out, "  %-28s %5d calls %12d tokens\n", truncateUsageText(bucket.Key, 28), bucket.Calls, bucket.TotalTokens)
+	}
+}
+
+func truncateUsageText(value string, limit int) string {
+	runes := []rune(value)
+	if len(runes) <= limit {
+		return value
+	}
+	if limit <= 1 {
+		return string(runes[:limit])
+	}
+	return string(runes[:limit-1]) + "…"
 }
 
 type projectCloneOptions struct {

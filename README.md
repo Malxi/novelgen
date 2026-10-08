@@ -6,8 +6,8 @@ Novelgen 是一个命令行工具，用于 AI 辅助小说创作。它提供了�
 
 | 文档 | 说明 |
 |------|------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | 项目架构总览 |
-| [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | 开发者指南 |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 项目架构总览 |
+| [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | 开发者指南 |
 | [docs/RPG_DSL_DOCUMENTATION_INDEX.md](docs/RPG_DSL_DOCUMENTATION_INDEX.md) | RPG-DSL 系统文档索引 |
 | [docs/](docs/) | 技术文档目录 |
 
@@ -456,6 +456,48 @@ The base URL, API key, and timeout are resolved from the provider at runtime
 
 ---
 
+### 11. `novelgen project usage` - 查看 token 用量
+
+每次调用模型都会在项目内追加一行 `logs/usage.jsonl`（agent、命令、模型、token、耗时、是否成功）。该命令是只读的，运行中也可以查看。
+
+**用法：**
+```bash
+novelgen project usage                       # 按 agent / 模型 / 日期汇总
+novelgen project usage --since 2026-09-01    # 只看某个时间点之后
+novelgen project usage --json                # 机器可读输出
+```
+
+**示例输出：**
+```
+Calls: 412 (3 failed)
+Tokens: 1843220 total (1500330 prompt + 342890 completion)
+By agent:
+  ComposeAgent                  120 calls       520300 tokens
+  WriteAgent                    292 calls      1322920 tokens
+```
+
+### 12. `novelgen project doctor` - 项目自检
+
+只读检查当前项目是否具备 Agent SDK 创作条件（项目元数据、setup、outline、日志可用性），适合在长流程开始前先跑一次：
+
+```bash
+novelgen project doctor
+novelgen project doctor --json
+```
+
+---
+
+## 环境变量
+
+| 变量 | 说明 |
+|------|------|
+| `NOVELGEN_LLM_MAX_ATTEMPTS` | 单次 LLM 调用的最大尝试次数（默认 4）。仅对 429、5xx、超时和网络错误重试 |
+| `NOVELGEN_LLM_RETRY_BASE_MS` | 重试基础退避毫秒数（默认 1000），指数增长并带抖动，上限 60 秒 |
+| `NOVELGEN_DISABLE_AGENT_LOGS` | 设为 `1`/`true` 时不再写 `logs/prompts` 与 `logs/responses`，只保留用量记录 |
+| `NOVELGEN_SKILLS_DIR` | 覆盖 agent 技能目录；默认优先使用可执行文件旁的 `skills/`，其次构建时源码目录，最后使用二进制内嵌副本 |
+
+---
+
 ## 完整工作流程示例
 
 ```bash
@@ -626,15 +668,15 @@ storyline {
 | [RPG-DSL 文档索引](docs/RPG_DSL_DOCUMENTATION_INDEX.md) | 文档导航和快速开始 |
 | [DSL-RPG 集成规范](docs/DSL_RPG_INTEGRATION_SPEC.md) | 完整的架构设计和数据流 |
 | [DSL 规格文档](docs/RPG_DSL_SPEC.md) | 详细的语法定义和函数库 |
-| [约束系统集成](docs/RPG_CONSTRAINT_INTEGRATION.md) | RPG 约束指导写作方案 |
+| [RPG 集成指南](docs/NOVELGEN_RPG_INTEGRATION.md) | RPG 集成概念与使用方式 |
 | [RPG 写作指南](docs/RPG_WRITE_USAGE.md) | 使用 RPG 约束进行写作 |
 
 ---
 
 ## 📖 更多文档
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - 项目架构总览
-- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - 开发者指南
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - 项目架构总览
+- [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) - 开发者指南
 - [docs/](docs/) - 技术文档目录
 
 ---

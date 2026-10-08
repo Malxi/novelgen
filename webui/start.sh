@@ -14,4 +14,4 @@ fi
 # Start backend
 echo "🔧 Starting backend server..."
 cd "$(dirname "$0")"
-go run main.go
+go run .

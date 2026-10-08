@@ -18,6 +18,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/usage"
 	"novelgen/internal/utils"
 )
 
@@ -46,19 +47,39 @@ type BaseAgentConfig struct {
 
 // NewBaseAgent creates a new BaseAgent
 func NewBaseAgent(cfg BaseAgentConfig) *BaseAgent {
-	// Get the directory of the current file to locate skills
-	_, filename, _, _ := runtime.Caller(0)
-	skillsDir := filepath.Join(filepath.Dir(filename), "skills")
-
 	return &BaseAgent{
 		name:        cfg.Name,
 		client:      cfg.Client,
 		runtime:     resolveRuntime(cfg.ProjectLLM, cfg.Runtime, cfg.Client),
 		config:      cfg.Config,
 		projectLLM:  cfg.ProjectLLM,
-		skillLoader: NewSkillLoader(skillsDir),
+		skillLoader: NewSkillLoader(resolveSkillsDir()),
 		language:    cfg.Language,
 	}
+}
+
+// SkillsDirEnv overrides where agent skills are read from. Useful when a
+// deployment wants to ship edited prompts next to the binary.
+const SkillsDirEnv = "NOVELGEN_SKILLS_DIR"
+
+// resolveSkillsDir finds the best on-disk skills directory. It prefers an
+// explicit override, then a "skills" folder next to the executable, and finally
+// the source tree recorded at build time. When none of these exist the loader
+// falls back to the skills embedded in the binary.
+func resolveSkillsDir() string {
+	if dir := strings.TrimSpace(os.Getenv(SkillsDirEnv)); dir != "" {
+		return dir
+	}
+	if exe, err := os.Executable(); err == nil {
+		candidate := filepath.Join(filepath.Dir(exe), "skills")
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			return candidate
+		}
+	}
+	if _, filename, _, ok := runtime.Caller(0); ok {
+		return filepath.Join(filepath.Dir(filename), "skills")
+	}
+	return ""
 }
 
 // SetLanguage sets the output language
@@ -154,12 +175,15 @@ func (a *BaseAgent) ExecuteWithRuntimeResult(ctx context.Context, params InvokeP
 	options := a.chatOptions()
 
 	logger.Info("[%s] Sending request to AI...", a.name)
+	callStartedAt := time.Now()
 	resp, runtimeResult, err := a.invokeAIWithRuntimeResult(ctx, params, messages, options, outputRequirements, output)
 	if err != nil {
 		logAgentRuntimeLiveSummary(a.name, runtimeResult)
 		logger.Error("[%s] AI request failed: %v", a.name, err)
+		a.recordUsage(params, "chat", "", llm.Usage{}, time.Since(callStartedAt), err)
 		return runtimeResult, fmt.Errorf("AI request failed: %w", err)
 	}
+	a.recordUsage(params, "chat", resp.Model, resp.Usage, time.Since(callStartedAt), nil)
 	if err := validateAgentRuntimeToolEvidence(a.name, params.ToolEvidence, runtimeResult); err != nil {
 		return runtimeResult, err
 	}
@@ -207,10 +231,13 @@ The repaired JSON must match the requested structure.`
 	}
 
 	logger.Info("[%s] Sending malformed JSON to repair pass...", a.name)
+	repairStartedAt := time.Now()
 	resp, err := a.invokeAI(ctx, InvokeParams{Command: "repair malformed JSON"}, messages, &repairOptions, schema, output)
 	if err != nil {
+		a.recordUsage(InvokeParams{Command: "repair malformed JSON"}, "json-repair", "", llm.Usage{}, time.Since(repairStartedAt), err)
 		return fmt.Errorf("JSON repair request failed: %w", err)
 	}
+	a.recordUsage(InvokeParams{Command: "repair malformed JSON"}, "json-repair", resp.Model, resp.Usage, time.Since(repairStartedAt), nil)
 	logger.Info("[%s] JSON repair response received (%d tokens used)", a.name, resp.Usage.TotalTokens)
 	if err := a.saveResponseToFile(a.name+"_JSONRepair", resp.Content); err != nil {
 		logger.Debug("[%s] Failed to save JSON repair response: %v", a.name, err)
@@ -671,17 +698,6 @@ Structure:
 
 // savePromptsToFile saves the prompts to a file for debugging
 func (a *BaseAgent) savePromptsToFile(agentName, systemPrompt, userPrompt string) error {
-	// Create logs directory if it doesn't exist
-	logsDir := filepath.Join(agentLogRoot(), "logs", "prompts")
-	if err := os.MkdirAll(logsDir, 0755); err != nil {
-		return fmt.Errorf("failed to create logs directory: %w", err)
-	}
-
-	// Generate filename with timestamp
-	timestamp := time.Now().Format("20060102_150405")
-	filename := fmt.Sprintf("%s_%s.md", agentName, timestamp)
-	filepath := filepath.Join(logsDir, filename)
-
 	// Build content
 	var content strings.Builder
 	content.WriteString(fmt.Sprintf("# Agent: %s\n", agentName))
@@ -693,28 +709,18 @@ func (a *BaseAgent) savePromptsToFile(agentName, systemPrompt, userPrompt string
 	content.WriteString("# USER PROMPT\n\n")
 	content.WriteString(userPrompt)
 
-	// Write to file
-	if err := os.WriteFile(filepath, []byte(content.String()), 0644); err != nil {
+	path, err := writeAgentLogFile("prompts", agentName, content.String())
+	if err != nil {
 		return fmt.Errorf("failed to write prompts file: %w", err)
 	}
-
-	logger.Info("[%s] Prompt log: %s", a.name, filepath)
+	if path != "" {
+		logger.Info("[%s] Prompt log: %s", a.name, path)
+	}
 	return nil
 }
 
 // saveResponseToFile saves the AI response to a file for debugging
 func (a *BaseAgent) saveResponseToFile(agentName, response string) error {
-	// Create logs directory if it doesn't exist
-	logsDir := filepath.Join(agentLogRoot(), "logs", "responses")
-	if err := os.MkdirAll(logsDir, 0755); err != nil {
-		return fmt.Errorf("failed to create logs directory: %w", err)
-	}
-
-	// Generate filename with timestamp
-	timestamp := time.Now().Format("20060102_150405")
-	filename := fmt.Sprintf("%s_%s.md", agentName, timestamp)
-	filepath := filepath.Join(logsDir, filename)
-
 	// Build content
 	var content strings.Builder
 	content.WriteString(fmt.Sprintf("# Agent: %s\n", agentName))
@@ -725,13 +731,96 @@ func (a *BaseAgent) saveResponseToFile(agentName, response string) error {
 	content.WriteString(response)
 	content.WriteString("\n```\n")
 
-	// Write to file
-	if err := os.WriteFile(filepath, []byte(content.String()), 0644); err != nil {
+	path, err := writeAgentLogFile("responses", agentName, content.String())
+	if err != nil {
 		return fmt.Errorf("failed to write response file: %w", err)
 	}
-
-	logger.Info("[%s] Response log: %s (%d chars)", a.name, filepath, len(response))
+	if path != "" {
+		logger.Info("[%s] Response log: %s (%d chars)", a.name, path, len(response))
+	}
 	return nil
+}
+
+// AgentLogsDisabledEnv turns off prompt/response log files when set to a
+// truthy value. Large runs can produce tens of thousands of files.
+const AgentLogsDisabledEnv = "NOVELGEN_DISABLE_AGENT_LOGS"
+
+// writeAgentLogFile stores one agent log file and returns its path. Names are
+// allocated with O_EXCL so concurrent workers writing in the same second can
+// never overwrite each other.
+func writeAgentLogFile(kind, agentName, content string) (string, error) {
+	if agentLogsDisabled() {
+		return "", nil
+	}
+	logsDir := filepath.Join(agentLogRoot(), "logs", kind)
+	if err := os.MkdirAll(logsDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create logs directory: %w", err)
+	}
+
+	now := time.Now()
+	stamp := now.Format("20060102_150405")
+	candidates := []string{
+		filepath.Join(logsDir, fmt.Sprintf("%s_%s.md", agentName, stamp)),
+		// A single second is not enough resolution when best-of-N, craft
+		// concurrency, or write workers fire at the same moment.
+		filepath.Join(logsDir, fmt.Sprintf("%s_%s_%09d.md", agentName, stamp, now.Nanosecond())),
+	}
+	for attempt := 2; attempt < 64; attempt++ {
+		candidates = append(candidates, filepath.Join(logsDir,
+			fmt.Sprintf("%s_%s_%09d_%d.md", agentName, stamp, now.Nanosecond(), attempt)))
+	}
+
+	for _, path := range candidates {
+		file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+		if err != nil {
+			if os.IsExist(err) {
+				continue
+			}
+			return "", err
+		}
+		if _, err := file.WriteString(content); err != nil {
+			_ = file.Close()
+			return "", err
+		}
+		if err := file.Close(); err != nil {
+			return "", err
+		}
+		return path, nil
+	}
+	return "", fmt.Errorf("could not allocate a unique log file name in %s", logsDir)
+}
+
+func agentLogsDisabled() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(AgentLogsDisabledEnv))) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
+
+// recordUsage appends one line to logs/usage.jsonl so a long creative run can
+// be costed afterwards (novelgen project usage). Failures here must never break
+// the creative pipeline, so they are only logged at debug level.
+func (a *BaseAgent) recordUsage(params InvokeParams, kind, model string, tokens llm.Usage, elapsed time.Duration, callErr error) {
+	entry := usage.Entry{
+		Time:             time.Now(),
+		Agent:            a.name,
+		Command:          params.Command,
+		Kind:             kind,
+		Model:            model,
+		PromptTokens:     tokens.PromptTokens,
+		CompletionTokens: tokens.CompletionTokens,
+		TotalTokens:      tokens.TotalTokens,
+		DurationMS:       elapsed.Milliseconds(),
+		Success:          callErr == nil,
+	}
+	if callErr != nil {
+		entry.Error = callErr.Error()
+	}
+	if err := usage.Append(agentLogRoot(), entry); err != nil {
+		logger.Debug("[%s] Failed to record usage: %v", a.name, err)
+	}
 }
 
 func agentLogRoot() string {

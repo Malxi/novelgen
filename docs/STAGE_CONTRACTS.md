@@ -37,6 +37,21 @@ Project root:
 - `story/recaps/<chapter_id>.json`: `models.ChapterRecap`
 - `story/reviews/*.json`: review outputs
 - `story/rpg/*.rpg`: RPG-DSL fragments
+- `logs/usage.jsonl`: append-only `usage.Entry` records (one per LLM call)
+
+Usage records (observability, not story state):
+
+- Producer: `internal/agents.BaseAgent` appends one line per chat call and per
+  JSON-repair call, including failures. It is written best-effort; a failure to
+  record usage never fails the creative stage.
+- Consumer: `novelgen project usage` (`--since`, `--json`) aggregates the log by
+  agent, model, and day. The web UI does not read it.
+- Fields: `time`, `agent`, `command`, `kind` (`chat`/`json-repair`), `model`,
+  `prompt_tokens`, `completion_tokens`, `total_tokens`, `duration_ms`,
+  `success`, `error`. Readers must tolerate unknown/missing fields and skip
+  unparseable lines.
+- Old projects simply have no `logs/usage.jsonl`; every consumer must treat a
+  missing file as "no usage recorded yet".
 
 Review suggestion reports:
 

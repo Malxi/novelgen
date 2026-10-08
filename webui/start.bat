@@ -15,6 +15,6 @@ if errorlevel 1 (
 :: Start backend
 echo 🔧 Starting backend server...
 cd /d "%~dp0"
-go run main.go
+go run .
 
 pause

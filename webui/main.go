@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,7 +29,9 @@ import (
 var (
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
-			return true
+			// Browsers always send Origin on WebSocket handshakes; only
+			// accept handshakes that started from this machine.
+			return isLocalOrigin(r.Header.Get("Origin"))
 		},
 	}
 	clients   = make(map[string]*websocket.Conn)
@@ -160,21 +164,75 @@ var (
 )
 
 func main() {
+	host := flag.String("host", "127.0.0.1", "Interface to bind (use 0.0.0.0 to expose on the LAN; a token is then required)")
 	port := flag.String("port", "8080", "Server port")
+	authTokenFlag := flag.String("auth-token", "", "API token; generated automatically when binding a non-loopback address")
+	projectsRootFlag := flag.String("projects-root", "", "Directory that holds novel projects (default: ../books next to the server)")
+	extraRootsFlag := flag.String("allow-project-root", "", "Comma-separated extra directories that may be served as projects")
+	noBrowserFlag := flag.Bool("no-browser", false, "Do not open a browser window on startup")
 	flag.Parse()
 
-	gin.SetMode(gin.ReleaseMode)
-	r := gin.Default()
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("resolve working directory: %v", err)
+	}
+	booksRoot, roots, err := configureProjectRoots(cwd, *projectsRootFlag, splitCommaList(*extraRootsFlag))
+	if err != nil {
+		log.Fatalf("configure project roots: %v", err)
+	}
+	projectsRootAbs = booksRoot
+	allowedProjectRoots = roots
 
-	// CORS
+	authToken = strings.TrimSpace(*authTokenFlag)
+	if authToken == "" && !isLoopbackHost(*host) {
+		generated, err := newAuthToken()
+		if err != nil {
+			log.Fatalf("generate API token: %v", err)
+		}
+		authToken = generated
+	}
+
+	gin.SetMode(gin.ReleaseMode)
+	r := buildRouter(true)
+
+	// Open browser
+	if !*noBrowserFlag {
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			openBrowser(startupURL(*host, *port, authToken))
+		}()
+	}
+
+	fmt.Printf("🚀 NovelGen Web UI is running at %s\n", startupURL(*host, *port, authToken))
+	fmt.Printf("   Project roots: %s\n", strings.Join(allowedProjectRoots, ", "))
+	if authToken != "" {
+		fmt.Printf("   API token: %s (also accepted via the %s header)\n", authToken, authTokenHeader)
+	}
+	log.Fatal(r.Run(net.JoinHostPort(*host, *port)))
+}
+
+// buildRouter wires the HTTP surface. Tests build the router with logging
+// disabled; the server builds it with gin's request logger enabled.
+func buildRouter(withLogging bool) *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	if withLogging {
+		r.Use(gin.Logger())
+	}
+	r.Use(gin.Recovery())
+
+	// CORS: only local origins may talk to this server.
 	config := cors.DefaultConfig()
-	config.AllowAllOrigins = true
+	config.AllowOriginFunc = isLocalOrigin
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	config.AllowHeaders = []string{"*"}
 	r.Use(cors.New(config))
+	r.Use(originGuard())
 
 	// API routes
 	api := r.Group("/api")
+	api.Use(authGuard())
+	api.Use(projectGuard())
 	{
 		// Project management
 		api.GET("/projects", listProjects)
@@ -224,22 +282,43 @@ func main() {
 	}
 
 	// WebSocket for real-time updates
-	r.GET("/ws", handleWebSocket)
+	r.GET("/ws", authGuard(), handleWebSocket)
 
 	// Static files (frontend)
+	r.Use(bootstrapAuthCookie())
 	r.Use(static.Serve("/", static.LocalFile("./frontend/dist", false)))
 	r.NoRoute(func(c *gin.Context) {
 		c.File("./frontend/dist/index.html")
 	})
+	return r
+}
 
-	// Open browser
-	go func() {
-		time.Sleep(500 * time.Millisecond)
-		openBrowser(fmt.Sprintf("http://localhost:%s", *port))
-	}()
+// startupURL builds the URL the user should open, keeping loopback URLs
+// friendly while still including the token when one is required.
+func startupURL(host, port, token string) string {
+	displayHost := host
+	if displayHost == "" || displayHost == "0.0.0.0" || displayHost == "::" {
+		displayHost = "localhost"
+	}
+	raw := fmt.Sprintf("http://%s:%s", displayHost, port)
+	if token == "" {
+		return raw
+	}
+	return raw + "/?token=" + url.QueryEscape(token)
+}
 
-	fmt.Printf("🚀 NovelGen Web UI is running at http://localhost:%s\n", *port)
-	log.Fatal(r.Run(":" + *port))
+func splitCommaList(value string) []string {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }
 
 func handleWebSocket(c *gin.Context) {
@@ -311,7 +390,7 @@ func updateTask(task *Task, update func(*Task)) *Task {
 }
 
 func listProjects(c *gin.Context) {
-	booksDir := "../books"
+	booksDir := projectsRootAbs
 	projects := []ProjectInfo{}
 
 	entries, err := os.ReadDir(booksDir)
@@ -324,6 +403,7 @@ func listProjects(c *gin.Context) {
 		if entry.IsDir() {
 			projectPath := filepath.Join(booksDir, entry.Name())
 			info := loadProjectInfo(projectPath)
+			info.Path = displayProjectPath(projectPath)
 			if info.Exists {
 				projects = append(projects, *info)
 			}
@@ -331,6 +411,44 @@ func listProjects(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, APIResponse{Success: true, Data: projects})
+}
+
+// displayProjectPath keeps the short "../books/<name>" shape the frontend
+// expects while the server works with absolute paths internally.
+func displayProjectPath(abs string) string {
+	rel, err := filepath.Rel(mustGetwd(), abs)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)+"..") {
+		return abs
+	}
+	return rel
+}
+
+func mustGetwd() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "."
+	}
+	return cwd
+}
+
+// firstProjectInBooks returns the first project directory under the projects
+// root, mirroring the previous "../books" scan without depending on the
+// process working directory.
+func firstProjectInBooks() string {
+	entries, err := os.ReadDir(projectsRootAbs)
+	if err != nil {
+		return ""
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		candidate := filepath.Join(projectsRootAbs, entry.Name())
+		if _, err := os.Stat(filepath.Join(candidate, "novel.json")); err == nil {
+			return candidate
+		}
+	}
+	return ""
 }
 
 func loadProjectInfo(path string) *ProjectInfo {
@@ -403,8 +521,14 @@ func createProject(c *gin.Context) {
 		return
 	}
 
+	projectName, err := safeSegment(req.Name)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "invalid project name"})
+		return
+	}
+
 	// Create project using novelgen CLI
-	args := []string{"init", req.Name}
+	args := []string{"init", projectName}
 	if req.Chapters > 0 {
 		args = append(args, "--chapter", fmt.Sprintf("%d", req.Chapters))
 	}
@@ -421,11 +545,19 @@ func createProject(c *gin.Context) {
 		args = append(args, "--language", req.Language)
 	}
 
-	projectPath := filepath.Join("../books", req.Name)
-	os.MkdirAll(projectPath, 0755)
-	os.Chdir(projectPath)
+	projectPath := filepath.Join(projectsRootAbs, projectName)
+	if err := os.MkdirAll(projectPath, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Error:   fmt.Sprintf("Failed to create project directory: %s", err.Error()),
+		})
+		return
+	}
 
 	cmd := exec.Command(getNovelGenPath(), args...)
+	// Run in the project directory instead of changing the process working
+	// directory, which would race with every other concurrent request.
+	cmd.Dir = projectPath
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -463,8 +595,12 @@ func getCurrentProject(c *gin.Context) {
 }
 
 func getProject(c *gin.Context) {
-	path := c.Param("path")
-	projectPath := filepath.Join("../books", path)
+	name, err := safeSegment(c.Param("path"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "invalid project name"})
+		return
+	}
+	projectPath := filepath.Join(projectsRootAbs, name)
 	info := loadProjectInfo(projectPath)
 	if !info.Exists {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "Project not found"})
@@ -516,22 +652,20 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 	// Find project directory first (needed for backup)
 	projectPath := ""
 	if projectDir, ok := args["project_dir"].(string); ok && projectDir != "" {
-		projectPath = projectDir
+		resolved, err := resolveProjectDir(projectDir)
+		if err != nil {
+			broadcastTaskUpdate(updateTask(task, func(t *Task) {
+				t.Status = "failed"
+				t.Message = "Invalid project directory: " + err.Error()
+			}))
+			return
+		}
+		projectPath = resolved
 	}
 
 	if projectPath == "" {
 		// Try to find project in books directory
-		booksDir := "../books"
-		entries, _ := os.ReadDir(booksDir)
-		for _, entry := range entries {
-			if entry.IsDir() {
-				possiblePath := filepath.Join(booksDir, entry.Name())
-				if _, err := os.Stat(filepath.Join(possiblePath, "novel.json")); err == nil {
-					projectPath = possiblePath
-					break
-				}
-			}
-		}
+		projectPath = firstProjectInBooks()
 	}
 
 	// Auto-backup outline before compose gen/regen
@@ -616,23 +750,15 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 	// Re-find project directory (it was already found earlier for backup)
 	if projectPath == "" {
 		if projectDir, ok := args["project_dir"].(string); ok && projectDir != "" {
-			projectPath = projectDir
+			if resolved, err := resolveProjectDir(projectDir); err == nil {
+				projectPath = resolved
+			}
 		}
 	}
 
 	if projectPath == "" {
 		// Try to find project in books directory
-		booksDir := "../books"
-		entries, _ := os.ReadDir(booksDir)
-		for _, entry := range entries {
-			if entry.IsDir() {
-				possiblePath := filepath.Join(booksDir, entry.Name())
-				if _, err := os.Stat(filepath.Join(possiblePath, "novel.json")); err == nil {
-					projectPath = possiblePath
-					break
-				}
-			}
-		}
+		projectPath = firstProjectInBooks()
 	}
 
 	if projectPath != "" {
@@ -744,10 +870,7 @@ func deleteTask(c *gin.Context) {
 }
 
 func getOutline(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	outlinePath := filepath.Join(projectPath, "story", "compose", "outline.json")
 	data, err := os.ReadFile(outlinePath)
@@ -775,12 +898,14 @@ func backupStorySetup(projectPath string) (string, error) {
 }
 
 func backupFile(projectPath, contentPath string) (string, error) {
+	sourcePath, err := resolveWithinRoot(projectPath, contentPath)
+	if err != nil {
+		return "", err
+	}
 	cleanPath, err := cleanContentPath(contentPath)
 	if err != nil {
 		return "", err
 	}
-
-	sourcePath := filepath.Join(projectPath, cleanPath)
 	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
 		return "", nil
 	}
@@ -814,15 +939,12 @@ func backupFile(projectPath, contentPath string) (string, error) {
 	return backupFilename, nil
 }
 
-func cleanContentPath(path string) (string, error) {
-	cleanPath := filepath.Clean(strings.TrimPrefix(path, "/"))
-	if cleanPath == "." || strings.HasPrefix(cleanPath, "..") || filepath.IsAbs(cleanPath) {
-		return "", fmt.Errorf("invalid path")
-	}
-	return cleanPath, nil
-}
-
 func projectPathFromQuery(c *gin.Context) string {
+	if resolved, ok := c.Get(projectContextKey); ok {
+		if path, ok := resolved.(string); ok && path != "" {
+			return path
+		}
+	}
 	projectPath := c.Query("project")
 	if projectPath == "" {
 		return "."
@@ -891,6 +1013,9 @@ func fileVersions(projectPath, contentPath string) ([]FileVersion, error) {
 	if err != nil {
 		return nil, err
 	}
+	if _, err := resolveWithinRoot(projectPath, contentPath); err != nil {
+		return nil, err
+	}
 
 	ext := filepath.Ext(cleanPath)
 	base := strings.TrimSuffix(filepath.Base(cleanPath), ext)
@@ -943,8 +1068,14 @@ func restoreVersion(projectPath, contentPath, filename string) error {
 		return fmt.Errorf("backup does not match target file")
 	}
 
-	backupPath := filepath.Join(projectPath, filepath.Dir(cleanPath), "backups", filename)
-	targetPath := filepath.Join(projectPath, cleanPath)
+	targetPath, err := resolveWithinRoot(projectPath, cleanPath)
+	if err != nil {
+		return err
+	}
+	backupPath, err := resolveWithinRoot(projectPath, filepath.Join(filepath.Dir(cleanPath), "backups", filename))
+	if err != nil {
+		return err
+	}
 	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
 		return fmt.Errorf("backup not found")
 	}
@@ -975,10 +1106,7 @@ func versionCreatedAt(base, ext, filename string, fallback time.Time) string {
 }
 
 func getStorySetup(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	setupPath := filepath.Join(projectPath, "story", "setup", "story_setup.json")
 	data, err := os.ReadFile(setupPath)
@@ -997,10 +1125,7 @@ func getStorySetup(c *gin.Context) {
 }
 
 func getCharacters(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	charactersPath := filepath.Join(projectPath, "story", "craft", "characters.json")
 	data, err := os.ReadFile(charactersPath)
@@ -1025,10 +1150,7 @@ func getCharacters(c *gin.Context) {
 }
 
 func getLocations(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	locationsPath := filepath.Join(projectPath, "story", "craft", "locations.json")
 	data, err := os.ReadFile(locationsPath)
@@ -1053,10 +1175,7 @@ func getLocations(c *gin.Context) {
 }
 
 func getItems(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	itemsPath := filepath.Join(projectPath, "story", "craft", "items.json")
 	data, err := os.ReadFile(itemsPath)
@@ -1081,10 +1200,7 @@ func getItems(c *gin.Context) {
 }
 
 func getChapters(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	chaptersDir := filepath.Join(projectPath, "chapters")
 	entries, err := os.ReadDir(chaptersDir)
@@ -1107,11 +1223,12 @@ func getChapters(c *gin.Context) {
 }
 
 func getChapter(c *gin.Context) {
-	id := c.Param("id")
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
+	id, err := safeSegment(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Invalid chapter id"})
+		return
 	}
+	projectPath := projectPathFromQuery(c)
 
 	chapterPath := filepath.Join(projectPath, "chapters", id+".md")
 	data, err := os.ReadFile(chapterPath)
@@ -1130,10 +1247,7 @@ func getChapter(c *gin.Context) {
 }
 
 func getDrafts(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	draftsDir := filepath.Join(projectPath, "drafts")
 	entries, err := os.ReadDir(draftsDir)
@@ -1156,11 +1270,12 @@ func getDrafts(c *gin.Context) {
 }
 
 func getDraft(c *gin.Context) {
-	id := c.Param("id")
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
+	id, err := safeSegment(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Invalid draft id"})
+		return
 	}
+	projectPath := projectPathFromQuery(c)
 
 	draftPath := filepath.Join(projectPath, "drafts", id+".md")
 	data, err := os.ReadFile(draftPath)
@@ -1179,10 +1294,7 @@ func getDraft(c *gin.Context) {
 }
 
 func getRecaps(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	recapsDir := filepath.Join(projectPath, "story", "recaps")
 	entries, err := os.ReadDir(recapsDir)
@@ -1205,10 +1317,7 @@ func getRecaps(c *gin.Context) {
 }
 
 func getReviews(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	reviewsDir := filepath.Join(projectPath, "story", "reviews")
 	entries, err := os.ReadDir(reviewsDir)
@@ -1230,7 +1339,9 @@ func getReviews(c *gin.Context) {
 	c.JSON(http.StatusOK, APIResponse{Success: true, Data: reviews})
 }
 
-var aiLogFilenamePattern = regexp.MustCompile(`^(.+)_(\d{8}_\d{6})(?:_\d+)?\.(md|json)$`)
+// Agent logs use <agent>_<timestamp>[_<nanos>[_<attempt>]] so concurrent
+// writers never overwrite each other; accept any number of numeric suffixes.
+var aiLogFilenamePattern = regexp.MustCompile(`^(.+)_(\d{8}_\d{6})(?:_\d+)*\.(md|json)$`)
 
 type legacyAILog struct {
 	Name  string
@@ -1241,10 +1352,7 @@ type legacyAILog struct {
 }
 
 func listAICalls(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	calls := make([]AICallSummary, 0)
 	structured, err := listStructuredAICalls(projectPath)
@@ -1263,10 +1371,7 @@ func listAICalls(c *gin.Context) {
 }
 
 func getAICall(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	id := c.Param("id")
 	if strings.HasPrefix(id, "structured:") {
@@ -1610,12 +1715,13 @@ func safeLogName(name string) bool {
 
 func getFile(c *gin.Context) {
 	path := c.Param("path")
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
-	fullPath := filepath.Join(projectPath, path)
+	fullPath, err := resolveWithinRoot(projectPath, path)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Invalid path"})
+		return
+	}
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "File not found"})
@@ -1640,10 +1746,7 @@ func getFile(c *gin.Context) {
 
 func saveFile(c *gin.Context) {
 	path := c.Param("path")
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	var req struct {
 		Content string `json:"content"`
@@ -1654,6 +1757,11 @@ func saveFile(c *gin.Context) {
 		return
 	}
 
+	fullPath, err := resolveWithinRoot(projectPath, path)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Invalid path"})
+		return
+	}
 	cleanPath, err := cleanContentPath(path)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Invalid path"})
@@ -1670,8 +1778,6 @@ func saveFile(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: "Failed to backup existing file: " + err.Error()})
 		return
 	}
-
-	fullPath := filepath.Join(projectPath, cleanPath)
 
 	// Ensure directory exists
 	dir := filepath.Dir(fullPath)
@@ -1737,10 +1843,7 @@ func openBrowser(url string) {
 // RPG API handlers
 
 func getRPGData(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	rpgPath := filepath.Join(projectPath, "rpg_data.json")
 	data, err := os.ReadFile(rpgPath)
@@ -1759,10 +1862,7 @@ func getRPGData(c *gin.Context) {
 }
 
 func getRPGCharacters(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	rpgPath := filepath.Join(projectPath, "rpg_data.json")
 	data, err := os.ReadFile(rpgPath)
@@ -1805,10 +1905,7 @@ func getRPGCharacters(c *gin.Context) {
 }
 
 func getRPGSkills(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	rpgPath := filepath.Join(projectPath, "rpg_data.json")
 	data, err := os.ReadFile(rpgPath)
@@ -1851,10 +1948,7 @@ func getRPGSkills(c *gin.Context) {
 }
 
 func getRPGItems(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	rpgPath := filepath.Join(projectPath, "rpg_data.json")
 	data, err := os.ReadFile(rpgPath)
@@ -1897,10 +1991,7 @@ func getRPGItems(c *gin.Context) {
 }
 
 func getRPGClasses(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	rpgPath := filepath.Join(projectPath, "rpg_data.json")
 	data, err := os.ReadFile(rpgPath)
@@ -1943,10 +2034,7 @@ func getRPGClasses(c *gin.Context) {
 }
 
 func getRPGEvents(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	rpgPath := filepath.Join(projectPath, "rpg_data.json")
 	data, err := os.ReadFile(rpgPath)
@@ -1989,10 +2077,7 @@ func getRPGEvents(c *gin.Context) {
 }
 
 func getRPGQuests(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	rpgPath := filepath.Join(projectPath, "rpg_data.json")
 	data, err := os.ReadFile(rpgPath)
@@ -2035,10 +2120,7 @@ func getRPGQuests(c *gin.Context) {
 }
 
 func listSimulationReports(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	reportsDir := filepath.Join(projectPath, "simulation_reports")
 	reports := []map[string]interface{}{}
@@ -2085,10 +2167,7 @@ func listSimulationReports(c *gin.Context) {
 }
 
 func getSimulationReport(c *gin.Context) {
-	projectPath := c.Query("project")
-	if projectPath == "" {
-		projectPath = "."
-	}
+	projectPath := projectPathFromQuery(c)
 
 	reportID := c.Param("id")
 	if reportID == "" {

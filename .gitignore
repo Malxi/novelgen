@@ -11,6 +11,16 @@ books/
 .gocache/
 .codex_go_cache/
 *.log
+*.bak
+
+# Generated story artifacts (created by novelgen init / write / compose).
+chapters/
+drafts/
+simulation_reports/
+
+# Frontend dependencies and build output.
+node_modules/
+webui/frontend/dist/
 
 # LLM Config files (may contain API keys)
 llm_config.json

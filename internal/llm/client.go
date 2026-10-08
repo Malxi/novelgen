@@ -6,11 +6,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -67,6 +69,13 @@ type OpenAIClient struct {
 	model      string
 	sessionID  string
 	httpClient *http.Client
+
+	// maxAttempts includes the first try. Retries cover transient transport
+	// failures and retryable HTTP status codes (429, 5xx, ...).
+	maxAttempts    int
+	retryBaseDelay time.Duration
+	// sleep is swappable so tests do not have to wait for real backoff.
+	sleep func(ctx context.Context, d time.Duration) error
 }
 
 // RuntimeClient is a placeholder used when agent execution is handled by an
@@ -195,10 +204,13 @@ func NewOpenAIClient(config *OpenAIConfig) *OpenAIClient {
 	}
 
 	return &OpenAIClient{
-		apiKey:    config.APIKey,
-		baseURL:   config.BaseURL,
-		model:     config.Model,
-		sessionID: sessionID,
+		apiKey:         config.APIKey,
+		baseURL:        config.BaseURL,
+		model:          config.Model,
+		sessionID:      sessionID,
+		maxAttempts:    defaultMaxAttempts(),
+		retryBaseDelay: defaultRetryBaseDelay(),
+		sleep:          sleepWithContext,
 		httpClient: &http.Client{
 			Timeout: time.Duration(config.Timeout) * time.Second,
 			Transport: &http.Transport{
@@ -300,46 +312,84 @@ func (c *OpenAIClient) ChatCompletion(ctx context.Context, messages []Message, o
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
+	attempts := c.maxAttempts
+	if attempts < 1 {
+		attempts = 1
+	}
+	var lastErr error
+	for attempt := 1; attempt <= attempts; attempt++ {
+		// A fresh request per attempt: the request body is consumed by the
+		// first try and must not be reused.
+		req, err := c.newChatRequest(ctx, jsonData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+		response, retryAfter, err := c.doChatCompletion(ctx, req)
+		if err == nil {
+			return response, nil
+		}
+		lastErr = err
+
+		if attempt == attempts || !isRetryableError(err) {
+			return nil, err
+		}
+
+		delay := c.backoffDelay(attempt, retryAfter)
+		logger.Warn("LLM request failed (attempt %d/%d): %v; retrying in %s", attempt, attempts, err, delay.Round(time.Millisecond))
+		if sleepErr := c.sleep(ctx, delay); sleepErr != nil {
+			return nil, fmt.Errorf("%w (last error: %v)", sleepErr, err)
+		}
+	}
+	return nil, lastErr
+}
+
+// newChatRequest builds the HTTP request for one attempt.
+func (c *OpenAIClient) newChatRequest(ctx context.Context, jsonData []byte) (*http.Request, error) {
 	url := fmt.Sprintf("%s/chat/completions", c.baseURL)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, err
 	}
-
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
 	if strings.Contains(strings.ToLower(c.baseURL), "opencode.ai") && c.sessionID != "" {
 		req.Header.Set("x-opencode-session", c.sessionID)
 	}
+	return req, nil
+}
 
+// doChatCompletion performs one HTTP attempt. It returns the parsed response
+// plus the server requested retry delay when the failure is retryable.
+func (c *OpenAIClient) doChatCompletion(ctx context.Context, req *http.Request) (*ChatResponse, time.Duration, error) {
 	startTime := time.Now()
-
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		return nil, 0, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	elapsed := time.Since(startTime)
-	logger.Debug("Response received in %v", elapsed)
+	logger.Debug("Response received in %v", time.Since(startTime))
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		return nil, 0, fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
+		return nil, retryAfterFromHeader(resp.Header), &httpStatusError{
+			StatusCode: resp.StatusCode,
+			Body:       string(body),
+		}
 	}
 
 	var openAIResp openAIResponse
 	if err := json.Unmarshal(body, &openAIResp); err != nil {
 		logger.Debug("Response body: %s", string(body))
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+		return nil, 0, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	if len(openAIResp.Choices) == 0 {
-		return nil, fmt.Errorf("no choices in response")
+		return nil, 0, fmt.Errorf("no choices in response")
 	}
 
 	return &ChatResponse{
@@ -350,7 +400,138 @@ func (c *OpenAIClient) ChatCompletion(ctx context.Context, messages []Message, o
 			CompletionTokens: openAIResp.Usage.CompletionTokens,
 			TotalTokens:      openAIResp.Usage.TotalTokens,
 		},
-	}, nil
+	}, 0, nil
+}
+
+// httpStatusError carries the status code so the retry policy can decide.
+type httpStatusError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *httpStatusError) Error() string {
+	return fmt.Sprintf("API request failed with status %d: %s", e.StatusCode, e.Body)
+}
+
+// isRetryableError retries only failures that a second attempt can plausibly
+// fix: transport errors, rate limits, and server-side problems.
+func isRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	var statusErr *httpStatusError
+	if errors.As(err, &statusErr) {
+		return isRetryableStatus(statusErr.StatusCode)
+	}
+	// Anything without an HTTP status is a transport-level problem.
+	return true
+}
+
+func isRetryableStatus(code int) bool {
+	switch code {
+	case http.StatusRequestTimeout, http.StatusConflict, http.StatusTooEarly, http.StatusTooManyRequests:
+		return true
+	}
+	return code >= 500
+}
+
+// backoffDelay returns the wait before the next attempt, preferring the
+// server's Retry-After hint and otherwise using exponential backoff with
+// jitter.
+func (c *OpenAIClient) backoffDelay(attempt int, serverHint time.Duration) time.Duration {
+	base := c.retryBaseDelay
+	if base <= 0 {
+		base = defaultRetryBaseDelay()
+	}
+	if serverHint > 0 {
+		if serverHint > maxRetryDelay {
+			return maxRetryDelay
+		}
+		return serverHint
+	}
+	delay := base
+	for i := 1; i < attempt; i++ {
+		delay *= 2
+		if delay >= maxRetryDelay {
+			return maxRetryDelay
+		}
+	}
+	return jitter(delay)
+}
+
+func retryAfterFromHeader(header http.Header) time.Duration {
+	value := strings.TrimSpace(header.Get("Retry-After"))
+	if value == "" {
+		return 0
+	}
+	if seconds, err := strconv.Atoi(value); err == nil {
+		if seconds <= 0 {
+			return 0
+		}
+		return time.Duration(seconds) * time.Second
+	}
+	if when, err := http.ParseTime(value); err == nil {
+		if delay := time.Until(when); delay > 0 {
+			return delay
+		}
+	}
+	return 0
+}
+
+// jitter spreads retries so several workers do not hammer the API together.
+func jitter(delay time.Duration) time.Duration {
+	if delay <= 0 {
+		return 0
+	}
+	span := int64(delay) / 4
+	if span <= 0 {
+		return delay
+	}
+	buf := make([]byte, 1)
+	if _, err := rand.Read(buf); err != nil {
+		return delay
+	}
+	offset := int64(buf[0]) % (2*span + 1)
+	return time.Duration(int64(delay) - span + offset)
+}
+
+func sleepWithContext(ctx context.Context, d time.Duration) error {
+	if d <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
+const maxRetryDelay = 60 * time.Second
+
+// defaultMaxAttempts and defaultRetryBaseDelay can be tuned per deployment
+// without a rebuild.
+func defaultMaxAttempts() int {
+	if value := strings.TrimSpace(os.Getenv("NOVELGEN_LLM_MAX_ATTEMPTS")); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil && parsed > 0 {
+			return parsed
+		}
+	}
+	return 4
+}
+
+func defaultRetryBaseDelay() time.Duration {
+	if value := strings.TrimSpace(os.Getenv("NOVELGEN_LLM_RETRY_BASE_MS")); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil && parsed > 0 {
+			return time.Duration(parsed) * time.Millisecond
+		}
+	}
+	return time.Second
 }
 
 // truncateString truncates a string to max length

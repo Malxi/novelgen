@@ -1678,7 +1678,7 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
 
-	ctx := context.Background()
+	ctx := commandContext()
 	outlinePath := filepath.Join("story", "compose", "outline.json")
 	outline, err := ensureComposePipelineSkeleton(ctx, agent, setup, projectConfig, outlinePath, composeAgentSDKFlag)
 	if err != nil {
@@ -2085,7 +2085,7 @@ func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.Proje
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
 
-	ctx := context.Background()
+	ctx := commandContext()
 	input := agents.ComposeGenInput{
 		Setup:     *setup,
 		Structure: projectConfig.Structure,
@@ -2293,7 +2293,7 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
 
-	ctx := context.Background()
+	ctx := commandContext()
 
 	// Save callback for incremental saves (used in both fresh and resume modes)
 	onVolumeComplete := func(o *models.Outline, partIdx, volIdx, volumeCount int) {
@@ -2424,7 +2424,7 @@ func generateOutlineHierarchicalAgentSDK(setup *models.StorySetup, projectConfig
 	}
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
-	ctx := context.Background()
+	ctx := commandContext()
 
 	onVolumeComplete := func(o *models.Outline, partIdx, volIdx, volumeCount int) {
 		if err := savePartialOutline(o, outlinePath); err != nil {
@@ -2814,7 +2814,7 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 	// Create IDManager for ID resolution
 	idManager := logic.NewIDManager(outline)
 
-	ctx := context.Background()
+	ctx := commandContext()
 
 	switch len(parts) {
 	case 1:
@@ -3179,7 +3179,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
 
-	ctx := context.Background()
+	ctx := commandContext()
 
 	applyOutlineNormalization(outline, "pre_improve")
 
@@ -3271,7 +3271,7 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 		agent.SetModelOverride(modelOverride)
 	}
 
-	ctx := context.Background()
+	ctx := commandContext()
 	beforeOutline := cloneOutline(outline)
 	applyOutlineNormalization(outline, "pre_agent_sdk_improve")
 

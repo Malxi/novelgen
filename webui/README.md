@@ -45,10 +45,25 @@ cd ..
 2. 启动后端:
 ```bash
 go mod tidy
-go run main.go
+go run .
 ```
 
 3. 打开浏览器访问 `http://localhost:8080`
+
+### 安全说明
+
+后端默认只监听 `127.0.0.1`，并且只接受来自本机的浏览器请求（其它站点发起的跨站请求会被拒绝）。
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `-host` | `127.0.0.1` | 监听地址。绑定到非回环地址（如 `0.0.0.0`）时会自动生成 API token，必须在启动日志给出的带 `?token=` 的 URL 打开页面 |
+| `-port` | `8080` | 监听端口 |
+| `-auth-token` | 自动生成 | 固定 API token；也可通过 `X-NovelGen-Token` 请求头传递 |
+| `-projects-root` | `../books` | 项目目录；只有该目录和服务器工作目录下的项目可以访问 |
+| `-allow-project-root` | 空 | 额外的可访问项目根目录，逗号分隔 |
+| `-no-browser` | `false` | 启动时不自动打开浏览器 |
+
+不要在没有 token 的情况下把服务暴露到公网或不可信的局域网。
 
 ## 开发模式
 
@@ -64,7 +79,7 @@ npm run dev
 ### 后端开发
 
 ```bash
-go run main.go
+go run .
 ```
 
 后端 API 服务器运行在 `http://localhost:8080`。

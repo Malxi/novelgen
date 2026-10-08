@@ -506,11 +506,11 @@ novelgen check-novel -b mine
 ## 9. 相关文档
 
 - [README.md](../README.md) - 主文档和命令参考
-- [docs/DSL_RPG_INTEGRATION_SPEC.md](docs/DSL_RPG_INTEGRATION_SPEC.md) - DSL-RPG 集成规范
-- [docs/RPG_DSL_SPEC.md](docs/RPG_DSL_SPEC.md) - DSL 规格文档
-- [docs/RPG_WRITE_USAGE.md](docs/RPG_WRITE_USAGE.md) - RPG 写作指南
-- [docs/DSL_INCREMENTAL_WORKFLOW.md](docs/DSL_INCREMENTAL_WORKFLOW.md) - 渐进式工作流
-- [docs/NOVELGEN_RPG_INTEGRATION.md](docs/NOVELGEN_RPG_INTEGRATION.md) - RPG 集成指南
+- [DSL_RPG_INTEGRATION_SPEC.md](DSL_RPG_INTEGRATION_SPEC.md) - DSL-RPG 集成规范
+- [RPG_DSL_SPEC.md](RPG_DSL_SPEC.md) - DSL 规格文档
+- [RPG_WRITE_USAGE.md](RPG_WRITE_USAGE.md) - RPG 写作指南
+- [DSL_INCREMENTAL_WORKFLOW.md](DSL_INCREMENTAL_WORKFLOW.md) - 渐进式工作流
+- [NOVELGEN_RPG_INTEGRATION.md](NOVELGEN_RPG_INTEGRATION.md) - RPG 集成指南
 
 ---
 

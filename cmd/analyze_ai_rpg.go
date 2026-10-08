@@ -53,7 +53,7 @@ func runAnalyzeAIRPG(cmd *cobra.Command, args []string) error {
 
 	// 创建 Pipeline
 	pipeline := agents.NewAIRPGPipeline(client, config, projectLLM)
-	ctx := context.Background()
+	ctx := cmd.Context()
 
 	if batchMode {
 		// 批量模式

@@ -1712,6 +1712,9 @@ func runCraftImprove(cmd *cobra.Command, args []string) error {
 
 	// DSL simulation bridge for enrichment
 	bridge := dsl.NewSimulationBridge()
+	// Collect failures so the command exits non-zero instead of reporting
+	// success after a partial improvement run.
+	var improveErrs []error
 
 	// Improve characters
 	if elemType == "all" || elemType == "characters" {
@@ -1727,18 +1730,25 @@ func runCraftImprove(cmd *cobra.Command, args []string) error {
 			improved, review, iterErr := agent.IterateCharacters(ctx, chars, maxRounds, threshold, craftPromptFlag)
 			if iterErr != nil {
 				log.Error("Character improvement failed: %v", iterErr)
+				improveErrs = append(improveErrs, fmt.Errorf("improve characters: %w", iterErr))
 			} else {
 				// Enrich with DSL simulation
 				if review != nil {
 					enrichReviewWithDSL(log, bridge, setup, outline, charModels, locModels, itemModels, orgModels, dsl.PhaseCraft, review)
 					// Extra improve if critical DSL issues found
 					if hasCriticalDSLIssues(bridge, setup, outline, charModels, locModels, itemModels, orgModels, dsl.PhaseCraft) {
-						improved, _, _ = agent.IterateCharacters(ctx, improved, 1, threshold, craftPromptFlag)
-						log.Info("Extra character improve pass for DSL-critical issues")
+						if extra, _, extraErr := agent.IterateCharacters(ctx, improved, 1, threshold, craftPromptFlag); extraErr != nil {
+							log.Error("Extra character improve pass failed: %v", extraErr)
+							improveErrs = append(improveErrs, fmt.Errorf("extra improve characters: %w", extraErr))
+						} else {
+							improved = extra
+							log.Info("Extra character improve pass for DSL-critical issues")
+						}
 					}
 				}
 				if saveErr := saveCharacters(improved); saveErr != nil {
 					log.Error("Failed to save characters: %v", saveErr)
+					improveErrs = append(improveErrs, fmt.Errorf("save characters: %w", saveErr))
 				} else {
 					log.Info("✓ Improved characters saved")
 				}
@@ -1760,16 +1770,23 @@ func runCraftImprove(cmd *cobra.Command, args []string) error {
 			improved, review, iterErr := agent.IterateLocations(ctx, locs, maxRounds, threshold, craftPromptFlag)
 			if iterErr != nil {
 				log.Error("Location improvement failed: %v", iterErr)
+				improveErrs = append(improveErrs, fmt.Errorf("improve locations: %w", iterErr))
 			} else {
 				if review != nil {
 					enrichReviewWithDSL(log, bridge, setup, outline, charModels, locModels, itemModels, orgModels, dsl.PhaseCraft, review)
 					if hasCriticalDSLIssues(bridge, setup, outline, charModels, locModels, itemModels, orgModels, dsl.PhaseCraft) {
-						improved, _, _ = agent.IterateLocations(ctx, improved, 1, threshold, craftPromptFlag)
-						log.Info("Extra location improve pass for DSL-critical issues")
+						if extra, _, extraErr := agent.IterateLocations(ctx, improved, 1, threshold, craftPromptFlag); extraErr != nil {
+							log.Error("Extra location improve pass failed: %v", extraErr)
+							improveErrs = append(improveErrs, fmt.Errorf("extra improve locations: %w", extraErr))
+						} else {
+							improved = extra
+							log.Info("Extra location improve pass for DSL-critical issues")
+						}
 					}
 				}
 				if saveErr := saveLocations(improved); saveErr != nil {
 					log.Error("Failed to save locations: %v", saveErr)
+					improveErrs = append(improveErrs, fmt.Errorf("save locations: %w", saveErr))
 				} else {
 					log.Info("✓ Improved locations saved")
 				}
@@ -1791,16 +1808,23 @@ func runCraftImprove(cmd *cobra.Command, args []string) error {
 			improved, review, iterErr := agent.IterateItems(ctx, items, maxRounds, threshold, craftPromptFlag)
 			if iterErr != nil {
 				log.Error("Item improvement failed: %v", iterErr)
+				improveErrs = append(improveErrs, fmt.Errorf("improve items: %w", iterErr))
 			} else {
 				if review != nil {
 					enrichReviewWithDSL(log, bridge, setup, outline, charModels, locModels, itemModels, orgModels, dsl.PhaseCraft, review)
 					if hasCriticalDSLIssues(bridge, setup, outline, charModels, locModels, itemModels, orgModels, dsl.PhaseCraft) {
-						improved, _, _ = agent.IterateItems(ctx, improved, 1, threshold, craftPromptFlag)
-						log.Info("Extra item improve pass for DSL-critical issues")
+						if extra, _, extraErr := agent.IterateItems(ctx, improved, 1, threshold, craftPromptFlag); extraErr != nil {
+							log.Error("Extra item improve pass failed: %v", extraErr)
+							improveErrs = append(improveErrs, fmt.Errorf("extra improve items: %w", extraErr))
+						} else {
+							improved = extra
+							log.Info("Extra item improve pass for DSL-critical issues")
+						}
 					}
 				}
 				if saveErr := saveItems(improved); saveErr != nil {
 					log.Error("Failed to save items: %v", saveErr)
+					improveErrs = append(improveErrs, fmt.Errorf("save items: %w", saveErr))
 				} else {
 					log.Info("✓ Improved items saved")
 				}
@@ -1822,12 +1846,14 @@ func runCraftImprove(cmd *cobra.Command, args []string) error {
 			improved, review, iterErr := agent.IterateOrganizations(ctx, orgs, maxRounds, threshold, craftPromptFlag)
 			if iterErr != nil {
 				log.Error("Organization improvement failed: %v", iterErr)
+				improveErrs = append(improveErrs, fmt.Errorf("improve organizations: %w", iterErr))
 			} else {
 				if review != nil {
 					enrichReviewWithDSL(log, bridge, setup, outline, charModels, locModels, itemModels, orgModels, dsl.PhaseCraft, review)
 				}
 				if saveErr := saveOrganizations(improved); saveErr != nil {
 					log.Error("Failed to save organizations: %v", saveErr)
+					improveErrs = append(improveErrs, fmt.Errorf("save organizations: %w", saveErr))
 				} else {
 					log.Info("[ok] Improved organizations saved")
 				}
@@ -1835,7 +1861,7 @@ func runCraftImprove(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	return nil
+	return errors.Join(improveErrs...)
 }
 
 func improveCraftAgentSDK(ctx context.Context, agent *agents.CraftAgent, elemType string, characters map[string]*models.Character, locations map[string]*models.Location, items map[string]*models.Item, organizations map[string]*models.Organization, batchSize int, agentApply bool) error {

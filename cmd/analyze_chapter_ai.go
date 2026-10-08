@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -81,7 +80,7 @@ func runAnalyzeChapterAI(cmd *cobra.Command, args []string) error {
 	}
 
 	// 执行分析
-	ctx := context.Background()
+	ctx := cmd.Context()
 	output, err := agent.Analyze(ctx, input)
 	if err != nil {
 		return fmt.Errorf("AI分析失败: %w", err)
@@ -106,7 +105,7 @@ func initLLMForAnalysis(bookPath string) (llm.Client, *llm.Config, *models.Proje
 	// 1. 从 novel.json 读取项目配置
 	novelJSONPath := filepath.Join(bookPath, "novel.json")
 	var projectLLM *models.ProjectLLM
-	
+
 	if data, err := os.ReadFile(novelJSONPath); err == nil {
 		var novelConfig struct {
 			LLM struct {
@@ -122,17 +121,17 @@ func initLLMForAnalysis(bookPath string) (llm.Client, *llm.Config, *models.Proje
 			fmt.Printf("📚 从 novel.json 读取配置: provider=%s, model=%s\n", projectLLM.Provider, projectLLM.Model)
 		}
 	}
-	
+
 	if projectLLM == nil {
 		return nil, nil, nil, fmt.Errorf("未在 novel.json 中找到 LLM 配置")
 	}
-	
+
 	// 2. 加载 llm_config.json 获取完整配置（包括 API key）
 	config, err := llm.LoadOrCreateConfig()
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("加载 LLM 配置失败: %w", err)
 	}
-	
+
 	// 3. 获取活跃 provider 和 model
 	provider, model := config.GetActiveModel(projectLLM)
 	if provider == nil {
@@ -141,9 +140,9 @@ func initLLMForAnalysis(bookPath string) (llm.Client, *llm.Config, *models.Proje
 	if model == nil {
 		return nil, nil, nil, fmt.Errorf("model 未找到: %s", projectLLM.Model)
 	}
-	
+
 	fmt.Printf("🔑 使用配置: provider=%s, model=%s, base_url=%s\n", provider.Name, model.Name, provider.BaseURL)
-	
+
 	// 4. 创建客户端
 	client := llm.NewOpenAIClient(&llm.OpenAIConfig{
 		APIKey:  provider.APIKey,
@@ -151,7 +150,7 @@ func initLLMForAnalysis(bookPath string) (llm.Client, *llm.Config, *models.Proje
 		Model:   model.Name,
 		Timeout: provider.Timeout,
 	})
-	
+
 	return client, config, projectLLM, nil
 }
 
@@ -171,12 +170,12 @@ func printAnalysisResult(output agents.ChapterAnalysisOutput, verbose bool) {
 		} else if char.State == "injured" {
 			status = "🩹"
 		}
-		
+
 		resurrectInfo := ""
 		if char.IsResurrected {
 			resurrectInfo = " [复活]"
 		}
-		
+
 		fmt.Printf("   %s %s%s\n", status, char.Name, resurrectInfo)
 		if char.Cultivation != "" {
 			fmt.Printf("      修为: %s\n", char.Cultivation)
@@ -216,7 +215,7 @@ func printAnalysisResult(output agents.ChapterAnalysisOutput, verbose bool) {
 			if !change.IsLegitimate {
 				legitEmoji = "⚠️"
 			}
-			fmt.Printf("   %s %s: %s → %s (%s)\n", 
+			fmt.Printf("   %s %s: %s → %s (%s)\n",
 				legitEmoji, change.Character, change.FromLevel, change.ToLevel, change.Reason)
 		}
 		fmt.Println()
