@@ -45,33 +45,33 @@ type Metrics struct {
 	SkippedTestCases int
 
 	// 问题统计
-	TotalKnownIssues   int
+	TotalKnownIssues    int
 	TotalDetectedIssues int
-	TruePositives      int
-	FalsePositives     int
-	FalseNegatives     int
+	TruePositives       int
+	FalsePositives      int
+	FalseNegatives      int
 }
 
 // CategoryMetric 按类别的指标
 type CategoryMetric struct {
-	Category    string
-	TotalKnown  int     // 该类已知问题数
-	Detected    int     // 检出数
-	FalsePos    int     // 误报数
-	Recall      float64 // 检出率
-	Precision   float64 // 精确率
+	Category   string
+	TotalKnown int     // 该类已知问题数
+	Detected   int     // 检出数
+	FalsePos   int     // 误报数
+	Recall     float64 // 检出率
+	Precision  float64 // 精确率
 }
 
 // DifficultyMetric 按难度的指标
 type DifficultyMetric struct {
-	Level           DifficultyLevel
-	TotalTestCases  int
-	PassedCases     int
-	TotalKnown      int
-	Detected        int
-	FalsePos        int
-	Recall          float64
-	Precision       float64
+	Level            DifficultyLevel
+	TotalTestCases   int
+	PassedCases      int
+	TotalKnown       int
+	Detected         int
+	FalsePos         int
+	Recall           float64
+	Precision        float64
 	AvgIssuesPerCase float64
 }
 
@@ -93,9 +93,9 @@ type MatchResult struct {
 	TestCaseName   string
 	KnownIssues    int
 	DetectedIssues int
-	TruePositives  int  // 正确检出
-	FalsePositives int  // 误报
-	FalseNegatives int  // 漏检
+	TruePositives  int             // 正确检出
+	FalsePositives int             // 误报
+	FalseNegatives int             // 漏检
 	MatchedKnown   []KnownIssue    // 被成功检出的已知问题
 	MissedKnown    []KnownIssue    // 被漏检的已知问题
 	FalseAlarms    []DetectedIssue // 误报的问题
@@ -401,11 +401,11 @@ func getCategoryAccum(m map[string]*categoryAccum, cat string) *categoryAccum {
 }
 
 type difficultyAccum struct {
-	totalCases int
+	totalCases  int
 	passedCases int
-	totalKnown int
-	detected   int
-	falsePos   int
+	totalKnown  int
+	detected    int
+	falsePos    int
 }
 
 func getDifficultyAccum(m map[DifficultyLevel]*difficultyAccum, level DifficultyLevel) *difficultyAccum {

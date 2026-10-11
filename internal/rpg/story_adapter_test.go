@@ -119,7 +119,7 @@ func TestStoryWorldConversion(t *testing.T) {
 	}
 
 	t.Logf("玩家: %s (等级 %d)", storyWorld.GameWorld.Player.Name, storyWorld.GameWorld.Player.Level)
-	t.Logf("玩家属性: HP=%d/%d, MP=%d/%d", 
+	t.Logf("玩家属性: HP=%d/%d, MP=%d/%d",
 		storyWorld.GameWorld.Player.CurrentStats.HP, storyWorld.GameWorld.Player.BaseStats.HP,
 		storyWorld.GameWorld.Player.CurrentStats.MP, storyWorld.GameWorld.Player.BaseStats.MP)
 

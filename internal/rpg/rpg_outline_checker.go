@@ -19,16 +19,16 @@ type OutlineRPGStats struct {
 	CharacterBalance   int `json:"character_balance"`   // 角色平衡性 (0-100)
 	PlotCoherence      int `json:"plot_coherence"`      // 剧情连贯性 (0-100)
 	PacingQuality      int `json:"pacing_quality"`      // 节奏质量 (0-100)
-	
+
 	// 战斗属性（对抗崩坏）
 	PowerSystemDefense int `json:"power_system_defense"` // 战力系统防御
 	TimelineStability  int `json:"timeline_stability"`   // 时间线稳定性
 	CharacterFocus     int `json:"character_focus"`      // 角色聚焦度
 	ConflictIntensity  int `json:"conflict_intensity"`   // 冲突强度
-	
+
 	// 资源属性
-	LifeSpan           int `json:"life_span"`            // 寿命/可持续性
-	PlotArmor          int `json:"plot_armor"`           // 剧情护甲
+	LifeSpan              int `json:"life_span"`               // 寿命/可持续性
+	PlotArmor             int `json:"plot_armor"`              // 剧情护甲
 	SuspensionOfDisbelief int `json:"suspension_of_disbelief"` //  suspension of disbelief
 }
 
@@ -43,26 +43,26 @@ type OutlineDebuff struct {
 
 // OutlineBoss 大纲BOSS（严重问题）
 type OutlineBoss struct {
-	Name         string   `json:"name"`
-	HP           int      `json:"hp"`
-	MaxHP        int      `json:"max_hp"`
-	Attack       int      `json:"attack"`
-	Defense      int      `json:"defense"`
-	Weaknesses   []string `json:"weaknesses"`
-	Location     string   `json:"location"`
-	Description  string   `json:"description"`
-	Drops        []string `json:"drops"` // 修复建议
+	Name        string   `json:"name"`
+	HP          int      `json:"hp"`
+	MaxHP       int      `json:"max_hp"`
+	Attack      int      `json:"attack"`
+	Defense     int      `json:"defense"`
+	Weaknesses  []string `json:"weaknesses"`
+	Location    string   `json:"location"`
+	Description string   `json:"description"`
+	Drops       []string `json:"drops"` // 修复建议
 }
 
 // RPGCheckResult RPG检测结果
 type RPGCheckResult struct {
-	Stats       OutlineRPGStats   `json:"stats"`
-	Debuffs     []OutlineDebuff   `json:"debuffs"`
-	Bosses      []OutlineBoss     `json:"bosses"`
-	TotalScore  int               `json:"total_score"`
-	Grade       string            `json:"grade"`
-	Diagnosis   string            `json:"diagnosis"`
-	Prescription []string          `json:"prescription"` // 治疗方案
+	Stats        OutlineRPGStats `json:"stats"`
+	Debuffs      []OutlineDebuff `json:"debuffs"`
+	Bosses       []OutlineBoss   `json:"bosses"`
+	TotalScore   int             `json:"total_score"`
+	Grade        string          `json:"grade"`
+	Diagnosis    string          `json:"diagnosis"`
+	Prescription []string        `json:"prescription"` // 治疗方案
 }
 
 // OutlineRPGChecker RPG风格的大纲检测器
@@ -86,62 +86,62 @@ func NewOutlineRPGChecker() *OutlineRPGChecker {
 // Check 执行RPG风格检测
 func (orc *OutlineRPGChecker) Check(outline *StoryOutline) *RPGCheckResult {
 	orc.outline = outline
-	
+
 	// 1. 计算基础属性
 	orc.calculateBaseStats()
-	
+
 	// 2. 检测负面状态
 	orc.detectDebuffs()
-	
+
 	// 3. 检测BOSS级问题
 	orc.detectBosses()
-	
+
 	// 4. 计算总评分
 	orc.calculateTotalScore()
-	
+
 	// 5. 生成诊断
 	orc.generateDiagnosis()
-	
+
 	return orc.result
 }
 
 // calculateBaseStats 计算基础属性
 func (orc *OutlineRPGChecker) calculateBaseStats() {
 	chapters := orc.collectChapters()
-	
+
 	// 结构完整性 = 章节完整性 × 地点完整性 × 角色完整性
 	orc.result.Stats.StructureIntegrity = orc.calculateStructureIntegrity(chapters)
-	
+
 	// 逻辑一致性 = 事件逻辑 × 时间线逻辑 × 因果关系
 	orc.result.Stats.LogicConsistency = orc.calculateLogicConsistency(chapters)
-	
+
 	// 角色平衡性 = 主角出场率 × 角色分布均匀度
 	orc.result.Stats.CharacterBalance = orc.calculateCharacterBalance(chapters)
-	
+
 	// 剧情连贯性 = 章节过渡 × 事件衔接
 	orc.result.Stats.PlotCoherence = orc.calculatePlotCoherence(chapters)
-	
+
 	// 节奏质量 = 快慢交替合理性
 	orc.result.Stats.PacingQuality = orc.calculatePacingQuality(chapters)
-	
+
 	// 战力系统防御（修仙小说专用）
 	orc.result.Stats.PowerSystemDefense = orc.calculatePowerSystemDefense(chapters)
-	
+
 	// 时间线稳定性
 	orc.result.Stats.TimelineStability = orc.calculateTimelineStability(chapters)
-	
+
 	// 角色聚焦度
 	orc.result.Stats.CharacterFocus = orc.calculateCharacterFocus(chapters)
-	
+
 	// 冲突强度
 	orc.result.Stats.ConflictIntensity = orc.calculateConflictIntensity(chapters)
-	
+
 	// 寿命/可持续性
 	orc.result.Stats.LifeSpan = orc.calculateLifeSpan(chapters)
-	
+
 	// 剧情护甲
 	orc.result.Stats.PlotArmor = orc.calculatePlotArmor(chapters)
-	
+
 	// Suspension of disbelief
 	orc.result.Stats.SuspensionOfDisbelief = orc.calculateSuspensionOfDisbelief(chapters)
 }
@@ -149,7 +149,7 @@ func (orc *OutlineRPGChecker) calculateBaseStats() {
 // calculateStructureIntegrity 计算结构完整性
 func (orc *OutlineRPGChecker) calculateStructureIntegrity(chapters []StoryChapter) int {
 	score := 100
-	
+
 	// 检查章节完整性
 	for _, ch := range chapters {
 		// 缺少必要字段扣分
@@ -166,21 +166,21 @@ func (orc *OutlineRPGChecker) calculateStructureIntegrity(chapters []StoryChapte
 			score -= 3
 		}
 	}
-	
+
 	return max(0, score)
 }
 
 // calculateLogicConsistency 计算逻辑一致性
 func (orc *OutlineRPGChecker) calculateLogicConsistency(chapters []StoryChapter) int {
 	score := 100
-	
+
 	// 检查角色一致性
 	for _, ch := range chapters {
 		charSet := make(map[string]bool)
 		for _, char := range ch.Characters {
 			charSet[char] = true
 		}
-		
+
 		for _, evt := range ch.Events {
 			for _, char := range evt.Characters {
 				if !charSet[char] {
@@ -189,7 +189,7 @@ func (orc *OutlineRPGChecker) calculateLogicConsistency(chapters []StoryChapter)
 			}
 		}
 	}
-	
+
 	return max(0, score)
 }
 
@@ -197,7 +197,7 @@ func (orc *OutlineRPGChecker) calculateLogicConsistency(chapters []StoryChapter)
 func (orc *OutlineRPGChecker) calculateCharacterBalance(chapters []StoryChapter) int {
 	charFreq := make(map[string]int)
 	totalEvents := 0
-	
+
 	for _, ch := range chapters {
 		for _, evt := range ch.Events {
 			totalEvents++
@@ -206,11 +206,11 @@ func (orc *OutlineRPGChecker) calculateCharacterBalance(chapters []StoryChapter)
 			}
 		}
 	}
-	
+
 	if totalEvents == 0 {
 		return 50
 	}
-	
+
 	// 计算主角出场率（假设主角是出场最多的）
 	maxFreq := 0
 	for _, freq := range charFreq {
@@ -218,28 +218,28 @@ func (orc *OutlineRPGChecker) calculateCharacterBalance(chapters []StoryChapter)
 			maxFreq = freq
 		}
 	}
-	
+
 	mcPresence := float64(maxFreq) / float64(totalEvents) * 100
-	
+
 	// 主角出场率应该在30%-70%之间
 	if mcPresence < 30 {
 		return int(mcPresence * 2) // 出场太少
 	} else if mcPresence > 70 {
 		return int((100 - mcPresence) * 2) // 出场太多，其他角色没戏份
 	}
-	
+
 	return 100 - int(math.Abs(mcPresence-50)) // 越接近50%越好
 }
 
 // calculatePlotCoherence 计算剧情连贯性
 func (orc *OutlineRPGChecker) calculatePlotCoherence(chapters []StoryChapter) int {
 	score := 100
-	
+
 	// 检查地点转换
 	for i := 1; i < len(chapters); i++ {
 		prevCh := chapters[i-1]
 		currCh := chapters[i]
-		
+
 		if prevCh.Location != currCh.Location {
 			// 检查是否有过渡描述
 			hasTransition := false
@@ -250,13 +250,13 @@ func (orc *OutlineRPGChecker) calculatePlotCoherence(chapters []StoryChapter) in
 					break
 				}
 			}
-			
+
 			if !hasTransition {
 				score -= 1
 			}
 		}
 	}
-	
+
 	return max(0, score)
 }
 
@@ -265,11 +265,11 @@ func (orc *OutlineRPGChecker) calculatePacingQuality(chapters []StoryChapter) in
 	if len(chapters) < 2 {
 		return 50
 	}
-	
+
 	// 检查快慢节奏交替
 	fastCount := 0
 	slowCount := 0
-	
+
 	for _, ch := range chapters {
 		switch ch.Pacing {
 		case "fast":
@@ -280,15 +280,15 @@ func (orc *OutlineRPGChecker) calculatePacingQuality(chapters []StoryChapter) in
 			slowCount++ // 默认算慢节奏
 		}
 	}
-	
+
 	// 理想比例是快:慢 = 3:7 到 5:5
 	total := fastCount + slowCount
 	if total == 0 {
 		return 50
 	}
-	
+
 	fastRatio := float64(fastCount) / float64(total) * 100
-	
+
 	// 理想值40%，偏离越多扣分
 	return max(0, 100-int(math.Abs(fastRatio-40)*2))
 }
@@ -296,53 +296,53 @@ func (orc *OutlineRPGChecker) calculatePacingQuality(chapters []StoryChapter) in
 // calculatePowerSystemDefense 计算战力系统防御
 func (orc *OutlineRPGChecker) calculatePowerSystemDefense(chapters []StoryChapter) int {
 	score := 100
-	
+
 	// 统计修为/境界相关事件
 	powerChanges := 0
 	for _, ch := range chapters {
 		for _, evt := range ch.Events {
 			text := evt.Change + " " + evt.Details
-			if strings.Contains(text, "修为") || 
-			   strings.Contains(text, "练气") || 
-			   strings.Contains(text, "筑基") ||
-			   strings.Contains(text, "境界") {
+			if strings.Contains(text, "修为") ||
+				strings.Contains(text, "练气") ||
+				strings.Contains(text, "筑基") ||
+				strings.Contains(text, "境界") {
 				powerChanges++
 			}
 		}
 	}
-	
+
 	// 每章平均修为变化次数
 	avgChanges := float64(powerChanges) / float64(len(chapters))
-	
+
 	// 理想值是每3章变化1次，即0.33
 	if avgChanges > 0.5 {
 		score -= int((avgChanges - 0.33) * 100)
 	}
-	
+
 	return max(0, score)
 }
 
 // calculateTimelineStability 计算时间线稳定性
 func (orc *OutlineRPGChecker) calculateTimelineStability(chapters []StoryChapter) int {
 	score := 100
-	
+
 	// 检查时间跳跃是否合理
 	timeJumps := 0
 	for _, ch := range chapters {
 		for _, beat := range ch.Beats {
-			if strings.Contains(beat, "三天后") || 
-			   strings.Contains(beat, "一个月后") ||
-			   strings.Contains(beat, "半年后") {
+			if strings.Contains(beat, "三天后") ||
+				strings.Contains(beat, "一个月后") ||
+				strings.Contains(beat, "半年后") {
 				timeJumps++
 			}
 		}
 	}
-	
+
 	// 时间跳跃太多会降低稳定性
 	if timeJumps > len(chapters)/3 {
 		score -= (timeJumps - len(chapters)/3) * 5
 	}
-	
+
 	return max(0, score)
 }
 
@@ -350,13 +350,13 @@ func (orc *OutlineRPGChecker) calculateTimelineStability(chapters []StoryChapter
 func (orc *OutlineRPGChecker) calculateCharacterFocus(chapters []StoryChapter) int {
 	// 统计主要角色数量
 	charFreq := make(map[string]int)
-	
+
 	for _, ch := range chapters {
 		for _, char := range ch.Characters {
 			charFreq[char]++
 		}
 	}
-	
+
 	// 出场超过3次的算主要角色
 	mainChars := 0
 	for _, freq := range charFreq {
@@ -364,14 +364,14 @@ func (orc *OutlineRPGChecker) calculateCharacterFocus(chapters []StoryChapter) i
 			mainChars++
 		}
 	}
-	
+
 	// 理想的主要角色数量是5-10个
 	if mainChars < 5 {
 		return 60 + mainChars*8 // 角色太少
 	} else if mainChars > 15 {
 		return 100 - (mainChars-15)*3 // 角色太多，分散
 	}
-	
+
 	return 100
 }
 
@@ -380,68 +380,68 @@ func (orc *OutlineRPGChecker) calculateConflictIntensity(chapters []StoryChapter
 	if len(chapters) == 0 {
 		return 50
 	}
-	
+
 	conflictCount := 0
 	for _, ch := range chapters {
 		if ch.Conflict != "" {
 			conflictCount++
 		}
 	}
-	
+
 	// 理想比例是70%的章节有冲突
 	ratio := float64(conflictCount) / float64(len(chapters)) * 100
-	
+
 	return 100 - int(math.Abs(ratio-70))
 }
 
 // calculateLifeSpan 计算寿命/可持续性
 func (orc *OutlineRPGChecker) calculateLifeSpan(chapters []StoryChapter) int {
 	score := 100
-	
+
 	// 检测死亡/复活次数
 	deathCount := 0
 	for _, ch := range chapters {
 		for _, evt := range ch.Events {
-			if strings.Contains(evt.Change, "死亡") || 
-			   strings.Contains(evt.Change, "复活") {
+			if strings.Contains(evt.Change, "死亡") ||
+				strings.Contains(evt.Change, "复活") {
 				deathCount++
 			}
 		}
 	}
-	
+
 	// 死亡次数过多会降低可持续性
 	if deathCount > 10 {
 		score -= (deathCount - 10) * 5
 	}
-	
+
 	return max(0, score)
 }
 
 // calculatePlotArmor 计算剧情护甲
 func (orc *OutlineRPGChecker) calculatePlotArmor(chapters []StoryChapter) int {
 	score := 100
-	
+
 	// 检测主角是否过于顺利
 	mcSuccessCount := 0
 	mcFailureCount := 0
-	
+
 	for _, ch := range chapters {
 		for _, evt := range ch.Events {
 			if strings.Contains(evt.Subject, "林砚") {
-				if strings.Contains(evt.Change, "成功") || 
-				   strings.Contains(evt.Change, "获得") ||
-				   strings.Contains(evt.Change, "提升") {
+				if strings.Contains(evt.Change, "成功") ||
+					strings.Contains(evt.Change, "获得") ||
+					strings.Contains(evt.Change, "提升") {
 					mcSuccessCount++
 				}
-				if strings.Contains(evt.Change, "失败") || 
-				   strings.Contains(evt.Change, "损失") ||
-				   strings.Contains(evt.Change, "跌落") {
+				if strings.Contains(evt.Change, "失败") ||
+					strings.Contains(evt.Change, "损失") ||
+					strings.Contains(evt.Change, "跌落") {
 					mcFailureCount++
 				}
 			}
 		}
 	}
-	
+
 	// 理想的成功:失败比例是 3:1
 	if mcFailureCount == 0 {
 		score -= 30 // 主角太顺利，缺乏挫折
@@ -451,40 +451,40 @@ func (orc *OutlineRPGChecker) calculatePlotArmor(chapters []StoryChapter) int {
 			score -= int((ratio - 3) * 10)
 		}
 	}
-	
+
 	return max(0, score)
 }
 
 // calculateSuspensionOfDisbelief 计算可信度
 func (orc *OutlineRPGChecker) calculateSuspensionOfDisbelief(chapters []StoryChapter) int {
 	score := 100
-	
+
 	// 检测过于牵强的情节
 	for _, ch := range chapters {
 		// 检查巧合次数
 		coincidenceCount := 0
 		for _, beat := range ch.Beats {
-			if strings.Contains(beat, "恰好") || 
-			   strings.Contains(beat, "正好") ||
-			   strings.Contains(beat, "刚好") ||
-			   strings.Contains(beat, "偶然") {
+			if strings.Contains(beat, "恰好") ||
+				strings.Contains(beat, "正好") ||
+				strings.Contains(beat, "刚好") ||
+				strings.Contains(beat, "偶然") {
 				coincidenceCount++
 			}
 		}
-		
+
 		// 每章最多1个巧合
 		if coincidenceCount > 1 {
 			score -= (coincidenceCount - 1) * 5
 		}
 	}
-	
+
 	return max(0, score)
 }
 
 // detectDebuffs 检测负面状态
 func (orc *OutlineRPGChecker) detectDebuffs() {
 	chapters := orc.collectChapters()
-	
+
 	// Debuff 1: 战力崩坏
 	if orc.result.Stats.PowerSystemDefense < 50 {
 		orc.result.Debuffs = append(orc.result.Debuffs, OutlineDebuff{
@@ -494,7 +494,7 @@ func (orc *OutlineRPGChecker) detectDebuffs() {
 			Effect:      "读者流失风险 +30%",
 		})
 	}
-	
+
 	// Debuff 2: 时间混乱
 	if orc.result.Stats.TimelineStability < 60 {
 		orc.result.Debuffs = append(orc.result.Debuffs, OutlineDebuff{
@@ -504,7 +504,7 @@ func (orc *OutlineRPGChecker) detectDebuffs() {
 			Effect:      "剧情理解难度 +25%",
 		})
 	}
-	
+
 	// Debuff 3: 角色分散
 	if orc.result.Stats.CharacterFocus < 50 {
 		orc.result.Debuffs = append(orc.result.Debuffs, OutlineDebuff{
@@ -514,7 +514,7 @@ func (orc *OutlineRPGChecker) detectDebuffs() {
 			Effect:      "角色记忆难度 +20%",
 		})
 	}
-	
+
 	// Debuff 4: 节奏失控
 	if orc.result.Stats.PacingQuality < 50 {
 		orc.result.Debuffs = append(orc.result.Debuffs, OutlineDebuff{
@@ -524,7 +524,7 @@ func (orc *OutlineRPGChecker) detectDebuffs() {
 			Effect:      "阅读疲劳度 +25%",
 		})
 	}
-	
+
 	// Debuff 5: 逻辑断裂
 	if orc.result.Stats.LogicConsistency < 60 {
 		orc.result.Debuffs = append(orc.result.Debuffs, OutlineDebuff{
@@ -534,7 +534,7 @@ func (orc *OutlineRPGChecker) detectDebuffs() {
 			Effect:      "吐槽概率 +40%",
 		})
 	}
-	
+
 	// Debuff 6: 寿命耗尽（针对复活机制）
 	if orc.result.Stats.LifeSpan < 50 {
 		deathCount := 0
@@ -545,7 +545,7 @@ func (orc *OutlineRPGChecker) detectDebuffs() {
 				}
 			}
 		}
-		
+
 		orc.result.Debuffs = append(orc.result.Debuffs, OutlineDebuff{
 			Name:        "寿命耗尽",
 			Description: fmt.Sprintf("主角已死亡/复活 %d 次，系统可持续性极低", deathCount),
@@ -558,7 +558,7 @@ func (orc *OutlineRPGChecker) detectDebuffs() {
 // detectBosses 检测BOSS级问题
 func (orc *OutlineRPGChecker) detectBosses() {
 	chapters := orc.collectChapters()
-	
+
 	// BOSS 1: 复活滥用
 	deathCount := 0
 	for _, ch := range chapters {
@@ -568,7 +568,7 @@ func (orc *OutlineRPGChecker) detectBosses() {
 			}
 		}
 	}
-	
+
 	if deathCount > 10 {
 		orc.result.Bosses = append(orc.result.Bosses, OutlineBoss{
 			Name:        "复活滥用者",
@@ -585,7 +585,7 @@ func (orc *OutlineRPGChecker) detectBosses() {
 			},
 		})
 	}
-	
+
 	// BOSS 2: 战力崩坏王
 	powerChanges := 0
 	for _, ch := range chapters {
@@ -596,7 +596,7 @@ func (orc *OutlineRPGChecker) detectBosses() {
 			}
 		}
 	}
-	
+
 	if powerChanges > 20 {
 		orc.result.Bosses = append(orc.result.Bosses, OutlineBoss{
 			Name:        "战力崩坏王",
@@ -613,7 +613,7 @@ func (orc *OutlineRPGChecker) detectBosses() {
 			},
 		})
 	}
-	
+
 	// BOSS 3: 工具人军团
 	toolChars := 0
 	charFreq := make(map[string]int)
@@ -627,7 +627,7 @@ func (orc *OutlineRPGChecker) detectBosses() {
 			toolChars++
 		}
 	}
-	
+
 	if toolChars > 10 {
 		orc.result.Bosses = append(orc.result.Bosses, OutlineBoss{
 			Name:        "工具人军团",
@@ -649,31 +649,31 @@ func (orc *OutlineRPGChecker) detectBosses() {
 // calculateTotalScore 计算总评分
 func (orc *OutlineRPGChecker) calculateTotalScore() {
 	stats := orc.result.Stats
-	
+
 	// 加权计算总分
 	score := int(
 		float64(stats.StructureIntegrity)*0.15 +
-		float64(stats.LogicConsistency)*0.20 +
-		float64(stats.CharacterBalance)*0.15 +
-		float64(stats.PlotCoherence)*0.15 +
-		float64(stats.PacingQuality)*0.10 +
-		float64(stats.PowerSystemDefense)*0.10 +
-		float64(stats.TimelineStability)*0.10 +
-		float64(stats.LifeSpan)*0.05,
+			float64(stats.LogicConsistency)*0.20 +
+			float64(stats.CharacterBalance)*0.15 +
+			float64(stats.PlotCoherence)*0.15 +
+			float64(stats.PacingQuality)*0.10 +
+			float64(stats.PowerSystemDefense)*0.10 +
+			float64(stats.TimelineStability)*0.10 +
+			float64(stats.LifeSpan)*0.05,
 	)
-	
+
 	// 负面状态惩罚
 	for _, debuff := range orc.result.Debuffs {
 		score -= debuff.Severity * 3
 	}
-	
+
 	// BOSS惩罚
 	for _, boss := range orc.result.Bosses {
 		score -= boss.Attack / 5
 	}
-	
+
 	orc.result.TotalScore = max(0, min(100, score))
-	
+
 	// 评级
 	switch {
 	case orc.result.TotalScore >= 90:
@@ -708,13 +708,13 @@ func (orc *OutlineRPGChecker) generateDiagnosis() {
 	case "F":
 		orc.result.Diagnosis = "大纲状态崩溃，建议重新设计大纲结构"
 	}
-	
+
 	// 生成治疗方案
 	for _, debuff := range orc.result.Debuffs {
-		orc.result.Prescription = append(orc.result.Prescription, 
+		orc.result.Prescription = append(orc.result.Prescription,
 			fmt.Sprintf("【%s】%s", debuff.Name, debuff.Description))
 	}
-	
+
 	for _, boss := range orc.result.Bosses {
 		orc.result.Prescription = append(orc.result.Prescription,
 			fmt.Sprintf("【BOSS战：%s】弱点：%v", boss.Name, boss.Weaknesses))
@@ -731,4 +731,3 @@ func (orc *OutlineRPGChecker) collectChapters() []StoryChapter {
 	}
 	return chapters
 }
-

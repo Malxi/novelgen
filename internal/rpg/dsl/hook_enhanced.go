@@ -12,8 +12,8 @@ import (
 // EnhancedHookManager provides full hook functionality
 type EnhancedHookManager struct {
 	*HookManager
-	enemyKillCounts map[string]int // enemy_id -> count
-	skillUseCounts  map[string]int // skill_id -> count
+	enemyKillCounts map[string]int  // enemy_id -> count
+	skillUseCounts  map[string]int  // skill_id -> count
 	triggeredFlags  map[string]bool // trigger_id -> triggered
 }
 

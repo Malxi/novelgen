@@ -9,12 +9,12 @@ import (
 type EventTriggerType string
 
 const (
-	EventTriggerAuto        EventTriggerType = "auto"        // 自动触发
-	EventTriggerTouch       EventTriggerType = "touch"       // 接触触发
-	EventTriggerAction      EventTriggerType = "action"      // 交互触发（按键）
-	EventTriggerParallel    EventTriggerType = "parallel"    // 并行处理（每帧执行）
-	EventTriggerAutorun     EventTriggerType = "autorun"     // 自动执行（阻塞）
-	EventTriggerCollision   EventTriggerType = "collision"   // 碰撞触发
+	EventTriggerAuto      EventTriggerType = "auto"      // 自动触发
+	EventTriggerTouch     EventTriggerType = "touch"     // 接触触发
+	EventTriggerAction    EventTriggerType = "action"    // 交互触发（按键）
+	EventTriggerParallel  EventTriggerType = "parallel"  // 并行处理（每帧执行）
+	EventTriggerAutorun   EventTriggerType = "autorun"   // 自动执行（阻塞）
+	EventTriggerCollision EventTriggerType = "collision" // 碰撞触发
 )
 
 // 事件命令类型
@@ -22,98 +22,98 @@ type EventCommandType string
 
 const (
 	// 消息相关
-	CmdShowText        EventCommandType = "show_text"        // 显示文本
-	CmdShowChoices     EventCommandType = "show_choices"     // 显示选项
-	CmdInputNumber     EventCommandType = "input_number"     // 输入数字
-	CmdShowTextBubble  EventCommandType = "show_text_bubble" // 显示气泡文本
-	
+	CmdShowText       EventCommandType = "show_text"        // 显示文本
+	CmdShowChoices    EventCommandType = "show_choices"     // 显示选项
+	CmdInputNumber    EventCommandType = "input_number"     // 输入数字
+	CmdShowTextBubble EventCommandType = "show_text_bubble" // 显示气泡文本
+
 	// 角色相关
-	CmdChangeHP        EventCommandType = "change_hp"        // 改变HP
-	CmdChangeMP        EventCommandType = "change_mp"        // 改变MP
-	CmdChangeState     EventCommandType = "change_state"     // 改变状态
-	CmdRecoverAll      EventCommandType = "recover_all"      // 完全恢复
-	CmdChangeLevel     EventCommandType = "change_level"     // 改变等级
-	CmdChangeExp       EventCommandType = "change_exp"       // 改变经验
-	CmdChangeParam     EventCommandType = "change_param"     // 改变属性
-	CmdLearnSkill      EventCommandType = "learn_skill"      // 学习技能
-	CmdForgetSkill     EventCommandType = "forget_skill"     // 遗忘技能
-	CmdChangeEquip     EventCommandType = "change_equip"     // 改变装备
-	CmdChangeName      EventCommandType = "change_name"      // 改变名称
-	CmdChangeClass     EventCommandType = "change_class"     // 改变职业
-	
+	CmdChangeHP    EventCommandType = "change_hp"    // 改变HP
+	CmdChangeMP    EventCommandType = "change_mp"    // 改变MP
+	CmdChangeState EventCommandType = "change_state" // 改变状态
+	CmdRecoverAll  EventCommandType = "recover_all"  // 完全恢复
+	CmdChangeLevel EventCommandType = "change_level" // 改变等级
+	CmdChangeExp   EventCommandType = "change_exp"   // 改变经验
+	CmdChangeParam EventCommandType = "change_param" // 改变属性
+	CmdLearnSkill  EventCommandType = "learn_skill"  // 学习技能
+	CmdForgetSkill EventCommandType = "forget_skill" // 遗忘技能
+	CmdChangeEquip EventCommandType = "change_equip" // 改变装备
+	CmdChangeName  EventCommandType = "change_name"  // 改变名称
+	CmdChangeClass EventCommandType = "change_class" // 改变职业
+
 	// 移动相关
-	CmdTransferPlayer  EventCommandType = "transfer_player"  // 传送玩家
-	CmdSetMoveRoute    EventCommandType = "set_move_route"   // 设置移动路线
-	CmdScrollMap       EventCommandType = "scroll_map"       // 滚动地图
-	
+	CmdTransferPlayer EventCommandType = "transfer_player" // 传送玩家
+	CmdSetMoveRoute   EventCommandType = "set_move_route"  // 设置移动路线
+	CmdScrollMap      EventCommandType = "scroll_map"      // 滚动地图
+
 	// 角色移动
 	CmdMoveCharacter   EventCommandType = "move_character"   // 移动角色
 	CmdJumpCharacter   EventCommandType = "jump_character"   // 跳跃
 	CmdRotateCharacter EventCommandType = "rotate_character" // 旋转
 	CmdChangeOpacity   EventCommandType = "change_opacity"   // 改变透明度
 	CmdChangeGraphic   EventCommandType = "change_graphic"   // 改变图像
-	
+
 	// 地图相关
-	CmdChangeTileset   EventCommandType = "change_tileset"   // 改变图块集
-	CmdChangeBattleBG  EventCommandType = "change_battle_bg" // 改变战斗背景
-	CmdChangeParallax  EventCommandType = "change_parallax"  // 改变远景
-	CmdChangeWeather   EventCommandType = "change_weather"   // 改变天气
-	CmdChangeFog       EventCommandType = "change_fog"       // 改变雾
-	CmdChangeTint      EventCommandType = "change_tint"      // 改变色调
-	CmdFlashScreen     EventCommandType = "flash_screen"     // 闪烁屏幕
-	CmdShakeScreen     EventCommandType = "shake_screen"     // 震动屏幕
-	CmdWait            EventCommandType = "wait"             // 等待
-	
+	CmdChangeTileset  EventCommandType = "change_tileset"   // 改变图块集
+	CmdChangeBattleBG EventCommandType = "change_battle_bg" // 改变战斗背景
+	CmdChangeParallax EventCommandType = "change_parallax"  // 改变远景
+	CmdChangeWeather  EventCommandType = "change_weather"   // 改变天气
+	CmdChangeFog      EventCommandType = "change_fog"       // 改变雾
+	CmdChangeTint     EventCommandType = "change_tint"      // 改变色调
+	CmdFlashScreen    EventCommandType = "flash_screen"     // 闪烁屏幕
+	CmdShakeScreen    EventCommandType = "shake_screen"     // 震动屏幕
+	CmdWait           EventCommandType = "wait"             // 等待
+
 	// 图片/动画
-	CmdShowPicture     EventCommandType = "show_picture"     // 显示图片
-	CmdMovePicture     EventCommandType = "move_picture"     // 移动图片
-	CmdRotatePicture   EventCommandType = "rotate_picture"   // 旋转图片
-	CmdTintPicture     EventCommandType = "tint_picture"     // 色调图片
-	CmdErasePicture    EventCommandType = "erase_picture"    // 擦除图片
-	CmdShowAnimation   EventCommandType = "show_animation"   // 显示动画
-	
+	CmdShowPicture   EventCommandType = "show_picture"   // 显示图片
+	CmdMovePicture   EventCommandType = "move_picture"   // 移动图片
+	CmdRotatePicture EventCommandType = "rotate_picture" // 旋转图片
+	CmdTintPicture   EventCommandType = "tint_picture"   // 色调图片
+	CmdErasePicture  EventCommandType = "erase_picture"  // 擦除图片
+	CmdShowAnimation EventCommandType = "show_animation" // 显示动画
+
 	// 音频
-	CmdPlayBGM         EventCommandType = "play_bgm"         // 播放BGM
-	CmdFadeOutBGM      EventCommandType = "fade_out_bgm"     // 淡出BGM
-	CmdSaveBGM         EventCommandType = "save_bgm"         // 保存BGM
-	CmdReplayBGM       EventCommandType = "replay_bgm"       // 重播BGM
-	CmdPlayBGS         EventCommandType = "play_bgs"         // 播放BGS
-	CmdFadeOutBGS      EventCommandType = "fade_out_bgs"     // 淡出BGS
-	CmdPlayME          EventCommandType = "play_me"          // 播放ME
-	CmdPlaySE          EventCommandType = "play_se"          // 播放SE
-	CmdStopSE          EventCommandType = "stop_se"          // 停止SE
-	
+	CmdPlayBGM    EventCommandType = "play_bgm"     // 播放BGM
+	CmdFadeOutBGM EventCommandType = "fade_out_bgm" // 淡出BGM
+	CmdSaveBGM    EventCommandType = "save_bgm"     // 保存BGM
+	CmdReplayBGM  EventCommandType = "replay_bgm"   // 重播BGM
+	CmdPlayBGS    EventCommandType = "play_bgs"     // 播放BGS
+	CmdFadeOutBGS EventCommandType = "fade_out_bgs" // 淡出BGS
+	CmdPlayME     EventCommandType = "play_me"      // 播放ME
+	CmdPlaySE     EventCommandType = "play_se"      // 播放SE
+	CmdStopSE     EventCommandType = "stop_se"      // 停止SE
+
 	// 场景控制
-	CmdBattle          EventCommandType = "battle"           // 战斗处理
-	CmdShop            EventCommandType = "shop"             // 商店处理
-	CmdNameInput       EventCommandType = "name_input"       // 名称输入
-	CmdMenu            EventCommandType = "menu"             // 打开菜单
-	CmdSave            EventCommandType = "save"             // 打开存档
-	CmdGameOver        EventCommandType = "game_over"        // 游戏结束
-	CmdTitle           EventCommandType = "title"            // 返回标题
-	
+	CmdBattle    EventCommandType = "battle"     // 战斗处理
+	CmdShop      EventCommandType = "shop"       // 商店处理
+	CmdNameInput EventCommandType = "name_input" // 名称输入
+	CmdMenu      EventCommandType = "menu"       // 打开菜单
+	CmdSave      EventCommandType = "save"       // 打开存档
+	CmdGameOver  EventCommandType = "game_over"  // 游戏结束
+	CmdTitle     EventCommandType = "title"      // 返回标题
+
 	// 系统设置
-	CmdChangeItem      EventCommandType = "change_item"      // 增减物品
-	CmdChangeWeapon    EventCommandType = "change_weapon"    // 增减武器
-	CmdChangeArmor     EventCommandType = "change_armor"     // 增减护甲
-	CmdChangeMoney     EventCommandType = "change_money"     // 增减金钱
-	
+	CmdChangeItem   EventCommandType = "change_item"   // 增减物品
+	CmdChangeWeapon EventCommandType = "change_weapon" // 增减武器
+	CmdChangeArmor  EventCommandType = "change_armor"  // 增减护甲
+	CmdChangeMoney  EventCommandType = "change_money"  // 增减金钱
+
 	// 变量/开关
-	CmdControlSwitch   EventCommandType = "control_switch"   // 操作开关
-	CmdControlVariable EventCommandType = "control_variable" // 操作变量
+	CmdControlSwitch     EventCommandType = "control_switch"      // 操作开关
+	CmdControlVariable   EventCommandType = "control_variable"    // 操作变量
 	CmdControlSelfSwitch EventCommandType = "control_self_switch" // 操作独立开关
-	
+
 	// 流程控制
 	CmdConditionalBranch EventCommandType = "conditional_branch" // 条件分支
-	CmdLoop            EventCommandType = "loop"             // 循环
-	CmdBreakLoop       EventCommandType = "break_loop"       // 跳出循环
-	CmdExitEvent       EventCommandType = "exit_event"       // 退出事件
-	CmdCallEvent       EventCommandType = "call_event"       // 调用事件
-	CmdLabel           EventCommandType = "label"            // 标签
-	CmdJumpToLabel     EventCommandType = "jump_to_label"    // 跳转到标签
-	
+	CmdLoop              EventCommandType = "loop"               // 循环
+	CmdBreakLoop         EventCommandType = "break_loop"         // 跳出循环
+	CmdExitEvent         EventCommandType = "exit_event"         // 退出事件
+	CmdCallEvent         EventCommandType = "call_event"         // 调用事件
+	CmdLabel             EventCommandType = "label"              // 标签
+	CmdJumpToLabel       EventCommandType = "jump_to_label"      // 跳转到标签
+
 	// 脚本
-	CmdScript          EventCommandType = "script"           // 执行脚本
+	CmdScript EventCommandType = "script" // 执行脚本
 )
 
 // 事件命令
@@ -134,10 +134,10 @@ type EventPage struct {
 	WalkAnime  bool             `json:"walk_anime"`
 	StepAnime  bool             `json:"step_anime"`
 	Direction  bool             `json:"direction"`
-	Through    bool             `json:"through"`    // 穿透
-	Priority   int              `json:"priority"`   // 优先级
+	Through    bool             `json:"through"`  // 穿透
+	Priority   int              `json:"priority"` // 优先级
 	Trigger    EventTriggerType `json:"trigger"`
-	List       []EventCommand   `json:"list"`       // 命令列表
+	List       []EventCommand   `json:"list"` // 命令列表
 }
 
 // 事件触发条件
@@ -161,21 +161,21 @@ type EventConditions struct {
 
 // 事件图像
 type EventGraphic struct {
-	CharacterName string `json:"character_name"`
-	CharacterIndex int   `json:"character_index"`
-	Direction     int    `json:"direction"`
-	Pattern       int    `json:"pattern"`
-	TileID        int    `json:"tile_id,omitempty"`
+	CharacterName  string `json:"character_name"`
+	CharacterIndex int    `json:"character_index"`
+	Direction      int    `json:"direction"`
+	Pattern        int    `json:"pattern"`
+	TileID         int    `json:"tile_id,omitempty"`
 }
 
 // 事件定义
 type Event struct {
-	ID       string      `json:"id"`
-	Name     string      `json:"name,omitempty"`
-	X        float64     `json:"x"`
-	Y        float64     `json:"y"`
-	Pages    []EventPage `json:"pages"`
-	
+	ID    string      `json:"id"`
+	Name  string      `json:"name,omitempty"`
+	X     float64     `json:"x"`
+	Y     float64     `json:"y"`
+	Pages []EventPage `json:"pages"`
+
 	// 运行时状态
 	SelfSwitches map[string]bool `json:"self_switches,omitempty"` // 独立开关状态
 	ActivePage   int             `json:"active_page,omitempty"`   // 当前活动页
@@ -183,30 +183,30 @@ type Event struct {
 
 // 公共事件
 type CommonEvent struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Trigger     int            `json:"trigger"` // 0: 无, 1: 自动执行, 2: 并行处理
-	SwitchID    string         `json:"switch_id,omitempty"`
-	List        []EventCommand `json:"list"`
+	ID       string         `json:"id"`
+	Name     string         `json:"name"`
+	Trigger  int            `json:"trigger"` // 0: 无, 1: 自动执行, 2: 并行处理
+	SwitchID string         `json:"switch_id,omitempty"`
+	List     []EventCommand `json:"list"`
 }
 
 // 事件执行上下文
 type EventContext struct {
-	EventID     string                 `json:"event_id"`
-	PageID      int                    `json:"page_id"`
-	CommandIndex int                   `json:"command_index"`
-	Variables   map[string]interface{} `json:"variables"`
-	Switches    map[string]bool        `json:"switches"`
-	Waiting     bool                   `json:"waiting"`
-	WaitTime    int                    `json:"wait_time"`
-	BranchStack []bool                 `json:"branch_stack"` // 分支结果栈
+	EventID      string                 `json:"event_id"`
+	PageID       int                    `json:"page_id"`
+	CommandIndex int                    `json:"command_index"`
+	Variables    map[string]interface{} `json:"variables"`
+	Switches     map[string]bool        `json:"switches"`
+	Waiting      bool                   `json:"waiting"`
+	WaitTime     int                    `json:"wait_time"`
+	BranchStack  []bool                 `json:"branch_stack"` // 分支结果栈
 }
 
 // 事件执行器
 type EventExecutor struct {
-	world       *World
-	contexts    map[string]*EventContext
-	globalVars  map[string]interface{}
+	world          *World
+	contexts       map[string]*EventContext
+	globalVars     map[string]interface{}
 	globalSwitches map[string]bool
 }
 
@@ -238,14 +238,14 @@ func (ee *EventExecutor) ExecuteEvent(event *Event, pageIndex int) *EventResult 
 	if pageIndex >= len(event.Pages) {
 		return nil
 	}
-	
+
 	page := event.Pages[pageIndex]
-	
+
 	// 检查条件
 	if !ee.checkConditions(page.Conditions) {
 		return nil
 	}
-	
+
 	context := &EventContext{
 		EventID:      event.ID,
 		PageID:       pageIndex,
@@ -254,27 +254,27 @@ func (ee *EventExecutor) ExecuteEvent(event *Event, pageIndex int) *EventResult 
 		Switches:     make(map[string]bool),
 		BranchStack:  make([]bool, 0),
 	}
-	
+
 	ee.contexts[event.ID] = context
-	
+
 	result := &EventResult{
 		EventID:  event.ID,
 		Commands: make([]ExecutedCommand, 0),
 	}
-	
+
 	// 执行命令列表
 	for context.CommandIndex < len(page.List) {
 		cmd := page.List[context.CommandIndex]
 		executed := ee.executeCommand(cmd, context)
 		result.Commands = append(result.Commands, executed)
-		
+
 		if executed.Break {
 			break
 		}
-		
+
 		context.CommandIndex++
 	}
-	
+
 	return result
 }
 
@@ -302,19 +302,19 @@ func (ee *EventExecutor) executeCommand(cmd EventCommand, ctx *EventContext) Exe
 		Command: cmd.Code,
 		Success: true,
 	}
-	
+
 	switch cmd.Code {
 	case CmdShowText:
 		if len(cmd.Parameters) > 0 {
 			result.Message = cmd.Parameters[0].(string)
 		}
-		
+
 	case CmdShowChoices:
 		result.Choices = make([]string, 0)
 		for _, p := range cmd.Parameters {
 			result.Choices = append(result.Choices, p.(string))
 		}
-		
+
 	case CmdChangeHP:
 		charID := cmd.Parameters[0].(string)
 		amount := cmd.Parameters[1].(int)
@@ -329,7 +329,7 @@ func (ee *EventExecutor) executeCommand(cmd EventCommand, ctx *EventContext) Exe
 				char.State = CharacterStateDead
 			}
 		}
-		
+
 	case CmdChangeItem:
 		itemID := cmd.Parameters[0].(string)
 		amount := cmd.Parameters[1].(int)
@@ -340,22 +340,22 @@ func (ee *EventExecutor) executeCommand(cmd EventCommand, ctx *EventContext) Exe
 				ee.world.Player.RemoveItem(itemID, -amount)
 			}
 		}
-		
+
 	case CmdChangeMoney:
 		amount := cmd.Parameters[0].(int)
 		// 实现金钱系统...
 		result.Value = amount
-		
+
 	case CmdControlSwitch:
 		switchID := cmd.Parameters[0].(string)
 		value := cmd.Parameters[1].(bool)
 		ee.globalSwitches[switchID] = value
-		
+
 	case CmdControlVariable:
 		varID := cmd.Parameters[0].(string)
 		operation := cmd.Parameters[1].(string) // set, add, sub, mul, div, mod
 		value := cmd.Parameters[2].(int)
-		
+
 		current, _ := ee.globalVars[varID].(int)
 		switch operation {
 		case "set":
@@ -371,7 +371,7 @@ func (ee *EventExecutor) executeCommand(cmd EventCommand, ctx *EventContext) Exe
 				ee.globalVars[varID] = current / value
 			}
 		}
-		
+
 	case CmdTransferPlayer:
 		mapID := cmd.Parameters[0].(string)
 		x := cmd.Parameters[1].(float64)
@@ -382,28 +382,28 @@ func (ee *EventExecutor) executeCommand(cmd EventCommand, ctx *EventContext) Exe
 			ee.world.Player.Position.X = x
 			ee.world.Player.Position.Y = y
 		}
-		
+
 	case CmdConditionalBranch:
 		// 简化版条件分支
 		condition := cmd.Parameters[0].(Condition)
 		passed := ee.evaluateCondition(condition)
 		ctx.BranchStack = append(ctx.BranchStack, passed)
 		result.BranchResult = passed
-		
+
 	case CmdWait:
 		frames := cmd.Parameters[0].(int)
 		ctx.Waiting = true
 		ctx.WaitTime = frames
-		
+
 	case CmdScript:
 		script := cmd.Parameters[0].(string)
 		result.Script = script
 		// 这里可以执行脚本...
-		
+
 	case CmdExitEvent:
 		result.Break = true
 	}
-	
+
 	return result
 }
 

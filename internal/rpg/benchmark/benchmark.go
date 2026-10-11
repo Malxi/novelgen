@@ -431,12 +431,12 @@ func (br *BenchmarkRunner) RunCrossChapterTest(input CrossChapterTestInput) floa
 				status = "dead"
 			}
 			state.CharacterStates[charName] = &CharacterSnapshot{
-				Name:     charName,
-				HP:       charInput.HP,
-				MaxHP:    charInput.HP,
-				MP:       charInput.MP,
-				Location: charInput.Location,
-				Status:   status,
+				Name:       charName,
+				HP:         charInput.HP,
+				MaxHP:      charInput.HP,
+				MP:         charInput.MP,
+				Location:   charInput.Location,
+				Status:     status,
 				PowerLevel: charInput.Level * 100,
 			}
 		}

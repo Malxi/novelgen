@@ -209,10 +209,10 @@ func CreateExampleWorld() *GameWorld {
 
 	// ========== 创建角色模板 ==========
 	warriorTemplate := &CharacterTemplate{
-		ID:            "template_warrior",
-		Name:          "战士模板",
-		Type:          CharacterTypePlayer,
-		ClassID:       "class_warrior",
+		ID:      "template_warrior",
+		Name:    "战士模板",
+		Type:    CharacterTypePlayer,
+		ClassID: "class_warrior",
 		BaseStats: BaseStats{
 			HP: 100, MP: 30, Attack: 12, Defense: 10,
 			Magic: 3, Resistance: 5, Speed: 8, Luck: 5,
@@ -226,9 +226,9 @@ func CreateExampleWorld() *GameWorld {
 	}
 
 	goblinTemplate := &CharacterTemplate{
-		ID:          "template_goblin",
-		Name:        "哥布林",
-		Type:        CharacterTypeEnemy,
+		ID:   "template_goblin",
+		Name: "哥布林",
+		Type: CharacterTypeEnemy,
 		BaseStats: BaseStats{
 			HP: 40, MP: 0, Attack: 8, Defense: 3,
 			Magic: 0, Resistance: 2, Speed: 10, Luck: 3,
@@ -344,12 +344,12 @@ func CreateExampleWorld() *GameWorld {
 
 	// ========== 创建任务 ==========
 	mainQuest := &Quest{
-		ID:          "quest_main_1",
-		Name:        "初出茅庐",
-		Description: "击败5只哥布林，证明你的实力",
-		Type:        QuestTypeMain,
+		ID:            "quest_main_1",
+		Name:          "初出茅庐",
+		Description:   "击败5只哥布林，证明你的实力",
+		Type:          QuestTypeMain,
 		LevelRequired: 1,
-		StartNPC:    "npc_merchant_1",
+		StartNPC:      "npc_merchant_1",
 		Objectives: []QuestObjective{
 			{
 				ID:          "obj_kill_goblins",
@@ -371,10 +371,10 @@ func CreateExampleWorld() *GameWorld {
 	}
 
 	sideQuest := &Quest{
-		ID:          "quest_side_1",
-		Name:        "收集草药",
-		Description: "收集10个草药交给药剂师",
-		Type:        QuestTypeSide,
+		ID:            "quest_side_1",
+		Name:          "收集草药",
+		Description:   "收集10个草药交给药剂师",
+		Type:          QuestTypeSide,
 		LevelRequired: 1,
 		Objectives: []QuestObjective{
 			{
@@ -438,10 +438,10 @@ func CreateExampleBattle(world *GameWorld) *BattleScene {
 	enemy.CurrentStats.HP = 50
 
 	return &BattleScene{
-		Enemies:   []*Character{enemy},
-		Allies:    []*Character{world.Player},
-		Turn:      0,
-		IsActive:  true,
+		Enemies:  []*Character{enemy},
+		Allies:   []*Character{world.Player},
+		Turn:     0,
+		IsActive: true,
 	}
 }
 

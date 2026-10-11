@@ -90,9 +90,9 @@ type LLMEvent struct {
 
 // LLMTimeline 时间线事件
 type LLMTimeline struct {
-	Day        interface{} `json:"day"`        // 可以是字符串或数字
-	Chapter    interface{} `json:"chapter"`    // 可以是字符串或数字
-	Events     interface{} `json:"events"`     // 可以是字符串或数组
+	Day        interface{} `json:"day"`     // 可以是字符串或数字
+	Chapter    interface{} `json:"chapter"` // 可以是字符串或数字
+	Events     interface{} `json:"events"`  // 可以是字符串或数组
 	Location   string      `json:"location"`
 	Characters interface{} `json:"characters"` // 可以是字符串或数组
 }
@@ -108,7 +108,7 @@ type LLMAnalysis struct {
 func NewLLMExtractor(client LLMClient) *LLMExtractor {
 	return &LLMExtractor{
 		client: client,
-		prompt: buildExtractionPrompt(),
+		prompt: BuildExtractionPrompt(),
 	}
 }
 
@@ -135,7 +135,7 @@ func (le *LLMExtractor) ExtractFromNovel(text string) (*NovelRPGData, error) {
 	merged := le.mergeResults(allResults)
 
 	// 转换为系统格式
-	return le.convertToSystemFormat(merged), nil
+	return le.ConvertToSystemFormat(merged), nil
 }
 
 // extractChunk 提取单个文本块
@@ -155,7 +155,7 @@ func (le *LLMExtractor) extractChunk(chunk string, chunkNum, totalChunks int) (*
 	var result LLMExtractionResult
 	if err := json.Unmarshal([]byte(response), &result); err != nil {
 		// 尝试从响应中提取JSON
-		jsonStr := extractJSON(response)
+		jsonStr := ExtractJSON(response)
 		if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
 			return nil, fmt.Errorf("解析LLM响应失败: %w\n响应: %s", err, response)
 		}
@@ -266,8 +266,8 @@ func (le *LLMExtractor) mergeResults(results []LLMExtractionResult) LLMExtractio
 	return merged
 }
 
-// convertToSystemFormat 转换为系统格式
-func (le *LLMExtractor) convertToSystemFormat(result LLMExtractionResult) *NovelRPGData {
+// ConvertToSystemFormat 转换为系统格式
+func (le *LLMExtractor) ConvertToSystemFormat(result LLMExtractionResult) *NovelRPGData {
 	data := &NovelRPGData{
 		Characters:       make([]*CharacterTemplate, 0),
 		Items:            make([]*Item, 0),
@@ -444,8 +444,8 @@ func (le *LLMExtractor) convertToSystemFormat(result LLMExtractionResult) *Novel
 	return data
 }
 
-// buildExtractionPrompt 构建提取提示词
-func buildExtractionPrompt() string {
+// BuildExtractionPrompt 构建提取提示词
+func BuildExtractionPrompt() string {
 	return `你是一个专业的小说分析助手，擅长从小说文本中提取RPG游戏实体。
 
 请仔细分析提供的小说文本，提取以下信息并以JSON格式返回：
@@ -551,8 +551,8 @@ func buildExtractionPrompt() string {
 `
 }
 
-// extractJSON 从文本中提取JSON
-func extractJSON(text string) string {
+// ExtractJSON 从文本中提取JSON
+func ExtractJSON(text string) string {
 	start := strings.Index(text, "{")
 	end := strings.LastIndex(text, "}")
 	if start != -1 && end != -1 && end > start {

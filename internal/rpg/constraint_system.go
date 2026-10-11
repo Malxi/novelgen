@@ -26,38 +26,38 @@ type ConstraintSystem struct {
 
 // CharacterConstraint 角色约束
 type CharacterConstraint struct {
-	Name            string
-	MaxDeaths       int
+	Name             string
+	MaxDeaths        int
 	MaxResurrections int
-	PowerChangeRate float64 // 每章最大战力变化率
+	PowerChangeRate  float64            // 每章最大战力变化率
 	RequiredPresence map[string]float64 // 在特定章节必须出现的比例
-	Relationships   []RelationshipConstraint
+	Relationships    []RelationshipConstraint
 }
 
 // RelationshipConstraint 关系约束
 type RelationshipConstraint struct {
-	WithCharacter string
-	MinInteractions int
-	MaxInteractions int
+	WithCharacter    string
+	MinInteractions  int
+	MaxInteractions  int
 	RelationshipType string // ally, enemy, neutral
 }
 
 // PlotConstraint 剧情约束
 type PlotConstraint struct {
 	MaxTimeJumpsPerChapter int
-	MinPacingRatio         float64 // 慢节奏最小比例
-	MaxPacingRatio         float64 // 快节奏最大比例
+	MinPacingRatio         float64  // 慢节奏最小比例
+	MaxPacingRatio         float64  // 快节奏最大比例
 	RequiredTransitions    []string // 必须有的转场
 	ForbiddenElements      []string // 禁止的元素
 }
 
 // PowerSystemConstraint 战力系统约束
 type PowerSystemConstraint struct {
-	MaxPowerChangesPerArc    int
-	CooldownBetweenChanges   int // 章节数
-	ResurrectionCost         string // 复活的代价描述
-	PowerLevelConsistency    bool   // 是否保持战力等级一致性
-	AllowedPowerTransitions  map[string][]string // 允许的战力跃迁路径
+	MaxPowerChangesPerArc   int
+	CooldownBetweenChanges  int                 // 章节数
+	ResurrectionCost        string              // 复活的代价描述
+	PowerLevelConsistency   bool                // 是否保持战力等级一致性
+	AllowedPowerTransitions map[string][]string // 允许的战力跃迁路径
 }
 
 // ConstraintReport 约束报告
@@ -71,12 +71,12 @@ type ConstraintReport struct {
 
 // ConstraintSuggestion 约束建议
 type ConstraintSuggestion struct {
-	Type        string // hard, soft, info
-	Category    string // character, plot, power, timeline
-	Target      string // 目标对象
-	Constraint  string // 约束描述
-	Reason      string // 原因
-	Priority    int    // 1-10
+	Type       string // hard, soft, info
+	Category   string // character, plot, power, timeline
+	Target     string // 目标对象
+	Constraint string // 约束描述
+	Reason     string // 原因
+	Priority   int    // 1-10
 }
 
 // NewConstraintSystem 创建约束系统
@@ -121,8 +121,8 @@ func (cs *ConstraintSystem) BuildFromRPGData() *ConstraintReport {
 func (cs *ConstraintSystem) buildCharacterConstraint(char *Character) *CharacterConstraint {
 	constraint := &CharacterConstraint{
 		Name:             char.Name,
-		MaxDeaths:        3,  // 默认最多死亡3次
-		MaxResurrections: 2,  // 默认最多复活2次
+		MaxDeaths:        3,   // 默认最多死亡3次
+		MaxResurrections: 2,   // 默认最多复活2次
 		PowerChangeRate:  0.2, // 每章最多20%战力变化
 		RequiredPresence: make(map[string]float64),
 		Relationships:    make([]RelationshipConstraint, 0),
@@ -277,8 +277,8 @@ func (cs *ConstraintSystem) ToPromptFormat(report *ConstraintReport) string {
 	// 剧情约束
 	sb.WriteString("【剧情约束】\n")
 	sb.WriteString(fmt.Sprintf("  - 每章最多%d次时间跳跃\n", report.PlotConstraints.MaxTimeJumpsPerChapter))
-	sb.WriteString(fmt.Sprintf("  - 快节奏比例: %.0f%%-%.0f%%\n", 
-		report.PlotConstraints.MinPacingRatio*100, 
+	sb.WriteString(fmt.Sprintf("  - 快节奏比例: %.0f%%-%.0f%%\n",
+		report.PlotConstraints.MinPacingRatio*100,
 		report.PlotConstraints.MaxPacingRatio*100))
 	if len(report.PlotConstraints.ForbiddenElements) > 0 {
 		sb.WriteString("  - 禁止元素:\n")
@@ -462,80 +462,80 @@ func (cs *ConstraintSystem) ValidateChapter(chapterID string, chapterText string
 		})
 	}
 
-		// 7. 检查跨级秒杀
-		crossLevelKills := cs.detectCrossLevelCombat(chapterText)
-		for _, clk := range crossLevelKills {
-			violations = append(violations, ConstraintViolation{
-				Type:       "power",
-				Target:     clk.Attacker,
-				Issue:      clk.Description,
-				Severity:   "critical",
-				Suggestion: fmt.Sprintf("为%s增加战斗困难或失败经历，避免跨级秒杀", clk.Attacker),
-			})
-		}
-
-		// 8. 检查突破缺乏困难
-		noStruggles := cs.detectNoStruggleBreakthroughs(chapterText, powerChanges)
-		for _, ns := range noStruggles {
-			violations = append(violations, ConstraintViolation{
-				Type:       "power",
-				Target:     ns.Character,
-				Issue:      ns.Description,
-				Severity:   "error",
-				Suggestion: "增加突破前的困难和挫折描写",
-			})
-		}
-
-		// 9. 检查暗示性战力暴涨
-		hiddenSurges := cs.detectHiddenPowerSurges(chapterText)
-		for _, hs := range hiddenSurges {
-			violations = append(violations, ConstraintViolation{
-				Type:       "power",
-				Target:     hs.Character,
-				Issue:      hs.Description,
-				Severity:   "error",
-				Suggestion: "明确战力变化的原因和过程，避免暗示性暴涨",
-			})
-		}
-
-		// 10. 检查角色关系突变
-		relShifts := cs.detectRelationshipShifts(chapterText)
-		for _, rs := range relShifts {
-			violations = append(violations, ConstraintViolation{
-				Type:       "character",
-				Target:     rs.Character,
-				Issue:      rs.Description,
-				Severity:   "error",
-				Suggestion: fmt.Sprintf("为%s的关系转变增加铺垫和过渡", rs.Character),
-			})
-		}
-
-		// 11. 检查时间线矛盾
-		paradoxes := cs.detectTimelineParadoxes(chapterText)
-		for _, p := range paradoxes {
-			violations = append(violations, ConstraintViolation{
-				Type:       "timeline",
-				Target:     "时间线",
-				Issue:      p.Description,
-				Severity:   "critical",
-				Suggestion: "修复时间线矛盾，确保前后时间描述一致",
-			})
-		}
-
-		// 12. 检查工具人角色
-		toolChars := cs.detectToolCharacters(chapterText)
-		for _, tc := range toolChars {
-			violations = append(violations, ConstraintViolation{
-				Type:       "character",
-				Target:     tc.Name,
-				Issue:      tc.Description,
-				Severity:   "warning",
-				Suggestion: fmt.Sprintf("丰富%s的角色，使其有更多出场和发展", tc.Name),
-			})
-		}
-
-		return violations
+	// 7. 检查跨级秒杀
+	crossLevelKills := cs.detectCrossLevelCombat(chapterText)
+	for _, clk := range crossLevelKills {
+		violations = append(violations, ConstraintViolation{
+			Type:       "power",
+			Target:     clk.Attacker,
+			Issue:      clk.Description,
+			Severity:   "critical",
+			Suggestion: fmt.Sprintf("为%s增加战斗困难或失败经历，避免跨级秒杀", clk.Attacker),
+		})
 	}
+
+	// 8. 检查突破缺乏困难
+	noStruggles := cs.detectNoStruggleBreakthroughs(chapterText, powerChanges)
+	for _, ns := range noStruggles {
+		violations = append(violations, ConstraintViolation{
+			Type:       "power",
+			Target:     ns.Character,
+			Issue:      ns.Description,
+			Severity:   "error",
+			Suggestion: "增加突破前的困难和挫折描写",
+		})
+	}
+
+	// 9. 检查暗示性战力暴涨
+	hiddenSurges := cs.detectHiddenPowerSurges(chapterText)
+	for _, hs := range hiddenSurges {
+		violations = append(violations, ConstraintViolation{
+			Type:       "power",
+			Target:     hs.Character,
+			Issue:      hs.Description,
+			Severity:   "error",
+			Suggestion: "明确战力变化的原因和过程，避免暗示性暴涨",
+		})
+	}
+
+	// 10. 检查角色关系突变
+	relShifts := cs.detectRelationshipShifts(chapterText)
+	for _, rs := range relShifts {
+		violations = append(violations, ConstraintViolation{
+			Type:       "character",
+			Target:     rs.Character,
+			Issue:      rs.Description,
+			Severity:   "error",
+			Suggestion: fmt.Sprintf("为%s的关系转变增加铺垫和过渡", rs.Character),
+		})
+	}
+
+	// 11. 检查时间线矛盾
+	paradoxes := cs.detectTimelineParadoxes(chapterText)
+	for _, p := range paradoxes {
+		violations = append(violations, ConstraintViolation{
+			Type:       "timeline",
+			Target:     "时间线",
+			Issue:      p.Description,
+			Severity:   "critical",
+			Suggestion: "修复时间线矛盾，确保前后时间描述一致",
+		})
+	}
+
+	// 12. 检查工具人角色
+	toolChars := cs.detectToolCharacters(chapterText)
+	for _, tc := range toolChars {
+		violations = append(violations, ConstraintViolation{
+			Type:       "character",
+			Target:     tc.Name,
+			Issue:      tc.Description,
+			Severity:   "warning",
+			Suggestion: fmt.Sprintf("丰富%s的角色，使其有更多出场和发展", tc.Name),
+		})
+	}
+
+	return violations
+}
 
 // PowerChange 战力变化记录
 type PowerChange struct {
@@ -980,8 +980,8 @@ func (cs *ConstraintSystem) matchForbiddenElement(text string, element string) (
 
 	// 同义词/近义词映射
 	synonyms := map[string][]string{
-		"无理由的复活": {"复活", "没有理由地复活", "毫无解释地复活", "仿佛什么都没发生"},
-		"战力突然暴涨": {"战力暴涨", "突然变强", "实力暴增", "战力激增", "力量突然"},
+		"无理由的复活":  {"复活", "没有理由地复活", "毫无解释地复活", "仿佛什么都没发生"},
+		"战力突然暴涨":  {"战力暴涨", "突然变强", "实力暴增", "战力激增", "力量突然"},
 		"角色无理由消失": {"消失了", "再也没出现", "不知去向"},
 	}
 

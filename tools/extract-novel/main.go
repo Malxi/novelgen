@@ -10,6 +10,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/models"
 	"novelgen/internal/rpg"
+	"novelgen/internal/rpgllm"
 )
 
 // loadProjectConfig 从项目目录加载 novel.json
@@ -133,9 +134,9 @@ func main() {
 	var data *rpg.NovelRPGData
 	if len(content) > *chunkSize {
 		fmt.Println("📄 文本较大，将分块处理...")
-		data, err = rpg.ExtractLargeText(client, options, string(content), *chunkSize)
+		data, err = rpgllm.ExtractLargeText(client, options, string(content), *chunkSize)
 	} else {
-		data, err = rpg.ExtractWithNovelgenClient(client, options, string(content))
+		data, err = rpgllm.ExtractWithNovelgenClient(client, options, string(content))
 	}
 
 	if err != nil {

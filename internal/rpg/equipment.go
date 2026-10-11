@@ -22,20 +22,20 @@ const (
 type WeaponType string
 
 const (
-	WeaponTypeSword       WeaponType = "sword"       // 剑
-	WeaponTypeGreatsword  WeaponType = "greatsword"  // 大剑
-	WeaponTypeAxe         WeaponType = "axe"         // 斧
-	WeaponTypeMace        WeaponType = "mace"        // 锤
-	WeaponTypeSpear       WeaponType = "spear"       // 枪
-	WeaponTypeDagger      WeaponType = "dagger"      // 匕首
-	WeaponTypeBow         WeaponType = "bow"         // 弓
-	WeaponTypeCrossbow    WeaponType = "crossbow"    // 弩
-	WeaponTypeStaff       WeaponType = "staff"       // 法杖
-	WeaponTypeWand        WeaponType = "wand"        // 魔杖
-	WeaponTypeFist        WeaponType = "fist"        // 拳套
-	WeaponTypeScythe      WeaponType = "scythe"      // 镰刀
-	WeaponTypeWhip        WeaponType = "whip"        // 鞭
-	WeaponTypeInstrument  WeaponType = "instrument"  // 乐器
+	WeaponTypeSword      WeaponType = "sword"      // 剑
+	WeaponTypeGreatsword WeaponType = "greatsword" // 大剑
+	WeaponTypeAxe        WeaponType = "axe"        // 斧
+	WeaponTypeMace       WeaponType = "mace"       // 锤
+	WeaponTypeSpear      WeaponType = "spear"      // 枪
+	WeaponTypeDagger     WeaponType = "dagger"     // 匕首
+	WeaponTypeBow        WeaponType = "bow"        // 弓
+	WeaponTypeCrossbow   WeaponType = "crossbow"   // 弩
+	WeaponTypeStaff      WeaponType = "staff"      // 法杖
+	WeaponTypeWand       WeaponType = "wand"       // 魔杖
+	WeaponTypeFist       WeaponType = "fist"       // 拳套
+	WeaponTypeScythe     WeaponType = "scythe"     // 镰刀
+	WeaponTypeWhip       WeaponType = "whip"       // 鞭
+	WeaponTypeInstrument WeaponType = "instrument" // 乐器
 )
 
 // 护甲类型
@@ -65,62 +65,62 @@ type EquipmentStats struct {
 
 // 武器特有属性
 type WeaponStats struct {
-	MinDamage    int    `json:"min_damage"`     // 最小伤害
-	MaxDamage    int    `json:"max_damage"`     // 最大伤害
-	AttackSpeed  float64 `json:"attack_speed"`  // 攻击速度
-	Range        int    `json:"range"`          // 攻击范围
-	IsTwoHanded  bool   `json:"is_two_handed"`  // 是否双手武器
-	AmmoType     string `json:"ammo_type,omitempty"` // 弹药类型
+	MinDamage   int     `json:"min_damage"`          // 最小伤害
+	MaxDamage   int     `json:"max_damage"`          // 最大伤害
+	AttackSpeed float64 `json:"attack_speed"`        // 攻击速度
+	Range       int     `json:"range"`               // 攻击范围
+	IsTwoHanded bool    `json:"is_two_handed"`       // 是否双手武器
+	AmmoType    string  `json:"ammo_type,omitempty"` // 弹药类型
 }
 
 // 装备定义
 type Equipment struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Description string         `json:"description,omitempty"`
-	Type        EquipmentType  `json:"type"`
-	
-	Icon        string         `json:"icon,omitempty"`
-	Model       string         `json:"model,omitempty"` // 3D模型路径
-	
-	Rarity      Rarity         `json:"rarity"`
-	LevelRequired int          `json:"level_required"`
-	
+	ID          string        `json:"id"`
+	Name        string        `json:"name"`
+	Description string        `json:"description,omitempty"`
+	Type        EquipmentType `json:"type"`
+
+	Icon  string `json:"icon,omitempty"`
+	Model string `json:"model,omitempty"` // 3D模型路径
+
+	Rarity        Rarity `json:"rarity"`
+	LevelRequired int    `json:"level_required"`
+
 	// 职业限制
-	ClassAllowed []string      `json:"class_allowed,omitempty"`
-	
+	ClassAllowed []string `json:"class_allowed,omitempty"`
+
 	// 基础属性
-	Stats       EquipmentStats `json:"stats"`
-	
+	Stats EquipmentStats `json:"stats"`
+
 	// 特殊效果
-	Effects     []EquipmentEffect `json:"effects,omitempty"`
-	
+	Effects []EquipmentEffect `json:"effects,omitempty"`
+
 	// 套装ID
-	SetID       string         `json:"set_id,omitempty"`
-	
+	SetID string `json:"set_id,omitempty"`
+
 	// 耐久度
-	Durability  int            `json:"durability"`
-	MaxDurability int          `json:"max_durability"`
-	
+	Durability    int `json:"durability"`
+	MaxDurability int `json:"max_durability"`
+
 	// 价值
-	Value       int            `json:"value"`
-	
+	Value int `json:"value"`
+
 	// 绑定类型
-	BindType    string         `json:"bind_type,omitempty"` // none, equip, pickup
-	
+	BindType string `json:"bind_type,omitempty"` // none, equip, pickup
+
 	// 唯一装备
-	IsUnique    bool           `json:"is_unique,omitempty"`
-	
-	Tags        []string       `json:"tags,omitempty"`
+	IsUnique bool `json:"is_unique,omitempty"`
+
+	Tags []string `json:"tags,omitempty"`
 }
 
 // 武器定义（继承装备）
 type Weapon struct {
 	Equipment
-	WeaponType WeaponType `json:"weapon_type"`
+	WeaponType  WeaponType  `json:"weapon_type"`
 	WeaponStats WeaponStats `json:"weapon_stats"`
-	Element    ElementType `json:"element,omitempty"` // 元素属性
-	Skills     []string   `json:"skills,omitempty"`   // 武器技能
+	Element     ElementType `json:"element,omitempty"` // 元素属性
+	Skills      []string    `json:"skills,omitempty"`  // 武器技能
 }
 
 // 装备效果
@@ -148,9 +148,9 @@ type EquipmentSet struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description,omitempty"`
 	Pieces      []string `json:"pieces"` // 装备ID列表
-	
+
 	// 套装效果
-	Bonuses     []SetBonus `json:"bonuses"`
+	Bonuses []SetBonus `json:"bonuses"`
 }
 
 // 套装效果
@@ -244,12 +244,12 @@ func (em *EquipmentManager) CanEquip(equipmentID string, character *Character) (
 	if equip == nil {
 		return false, "装备不存在"
 	}
-	
+
 	// 检查等级
 	if character.Level < equip.LevelRequired {
 		return false, "等级不足"
 	}
-	
+
 	// 检查职业
 	if len(equip.ClassAllowed) > 0 {
 		hasClass := false
@@ -263,14 +263,14 @@ func (em *EquipmentManager) CanEquip(equipmentID string, character *Character) (
 			return false, "职业不符"
 		}
 	}
-	
+
 	return true, ""
 }
 
 // 计算套装效果
 func (em *EquipmentManager) CalculateSetBonus(character *Character) ([]EquipmentStats, []Effect) {
 	setCounts := make(map[string]int)
-	
+
 	// 统计套装件数
 	equipIDs := []string{
 		character.Equipment.Weapon,
@@ -279,7 +279,7 @@ func (em *EquipmentManager) CalculateSetBonus(character *Character) ([]Equipment
 		character.Equipment.Accessory1,
 		character.Equipment.Accessory2,
 	}
-	
+
 	for _, equipID := range equipIDs {
 		if equipID == "" {
 			continue
@@ -289,17 +289,17 @@ func (em *EquipmentManager) CalculateSetBonus(character *Character) ([]Equipment
 			setCounts[equip.SetID]++
 		}
 	}
-	
+
 	stats := make([]EquipmentStats, 0)
 	effects := make([]Effect, 0)
-	
+
 	// 计算套装效果
 	for setID, count := range setCounts {
 		set := em.sets[setID]
 		if set == nil {
 			continue
 		}
-		
+
 		for _, bonus := range set.Bonuses {
 			if count >= bonus.PiecesRequired {
 				stats = append(stats, bonus.Stats)
@@ -307,7 +307,7 @@ func (em *EquipmentManager) CalculateSetBonus(character *Character) ([]Equipment
 			}
 		}
 	}
-	
+
 	return stats, effects
 }
 

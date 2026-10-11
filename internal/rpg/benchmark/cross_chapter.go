@@ -28,21 +28,21 @@ type ChapterState struct {
 
 // CharacterSnapshot 角色状态快照
 type CharacterSnapshot struct {
-	Name           string
-	HP             int
-	MP             int
-	MaxHP          int
-	MaxMP          int
-	Level          string
-	Cultivation    string // 修为境界
-	PowerLevel     int    // 战力数值
-	Location       string
-	Status         string // alive, dead, injured, unconscious
-	Inventory      []string
-	Relationships  map[string]string // 与其他角色的关系
-	FirstAppear    int               // 首次出现的章节
-	AppearCount    int               // 出现次数
-	LastAction     string
+	Name          string
+	HP            int
+	MP            int
+	MaxHP         int
+	MaxMP         int
+	Level         string
+	Cultivation   string // 修为境界
+	PowerLevel    int    // 战力数值
+	Location      string
+	Status        string // alive, dead, injured, unconscious
+	Inventory     []string
+	Relationships map[string]string // 与其他角色的关系
+	FirstAppear   int               // 首次出现的章节
+	AppearCount   int               // 出现次数
+	LastAction    string
 }
 
 // TimelineInfo 时间线信息

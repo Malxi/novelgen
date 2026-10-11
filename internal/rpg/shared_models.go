@@ -121,21 +121,21 @@ func (smc *SharedModelConverter) ConvertLocation(loc models.Location) *Map {
 // ExportCharacter 将 RPG Character 导出为 novelgen Character
 func (smc *SharedModelConverter) ExportCharacter(char *Character) models.Character {
 	return models.Character{
-		Name:        char.Name,
-		Aliases:     []string{},
-		Age:         "", // RPG 中可能没有年龄信息
-		Gender:      "",
-		Race:        char.Race,
-		Appearance:  "", // 从 Description 解析
-		Personality: []string{},
-		Background:  char.Description,
-		Motivation:  "",
-		Skills:      smc.exportSkills(char.Skills),
-		Abilities:   smc.exportAbilities(char),
+		Name:         char.Name,
+		Aliases:      []string{},
+		Age:          "", // RPG 中可能没有年龄信息
+		Gender:       "",
+		Race:         char.Race,
+		Appearance:   "", // 从 Description 解析
+		Personality:  []string{},
+		Background:   char.Description,
+		Motivation:   "",
+		Skills:       smc.exportSkills(char.Skills),
+		Abilities:    smc.exportAbilities(char),
 		Affiliations: []string{},
-		RoleInStory: smc.exportRole(char.Type),
-		Voice:       "",
-		Notes:       fmt.Sprintf("RPG Stats: HP:%d/%d MP:%d/%d ATK:%d DEF:%d", 
+		RoleInStory:  smc.exportRole(char.Type),
+		Voice:        "",
+		Notes: fmt.Sprintf("RPG Stats: HP:%d/%d MP:%d/%d ATK:%d DEF:%d",
 			char.CurrentStats.HP, char.BaseStats.HP,
 			char.CurrentStats.MP, char.BaseStats.MP,
 			char.CurrentStats.Attack, char.CurrentStats.Defense),

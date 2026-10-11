@@ -20,71 +20,71 @@ const (
 type ConsumableEffectType string
 
 const (
-	ConsumableEffectHealHP      ConsumableEffectType = "heal_hp"       // 恢复HP
-	ConsumableEffectHealMP      ConsumableEffectType = "heal_mp"       // 恢复MP
-	ConsumableEffectHealStatus  ConsumableEffectType = "heal_status"   // 治愈状态
-	ConsumableEffectBuff        ConsumableEffectType = "buff"          // 临时增益
-	ConsumableEffectTeleport    ConsumableEffectType = "teleport"      // 传送
-	ConsumableEffectRevive      ConsumableEffectType = "revive"        // 复活
+	ConsumableEffectHealHP     ConsumableEffectType = "heal_hp"     // 恢复HP
+	ConsumableEffectHealMP     ConsumableEffectType = "heal_mp"     // 恢复MP
+	ConsumableEffectHealStatus ConsumableEffectType = "heal_status" // 治愈状态
+	ConsumableEffectBuff       ConsumableEffectType = "buff"        // 临时增益
+	ConsumableEffectTeleport   ConsumableEffectType = "teleport"    // 传送
+	ConsumableEffectRevive     ConsumableEffectType = "revive"      // 复活
 )
 
 // 消耗品效果
 type ConsumableEffect struct {
-	Type       ConsumableEffectType `json:"type"`
-	Value      int                  `json:"value,omitempty"`    // 数值
-	Status     string               `json:"status,omitempty"`   // 状态类型
-	Duration   int                  `json:"duration,omitempty"` // 持续时间
-	Target     string               `json:"target,omitempty"`   // 目标: self, ally, all_allies, area
+	Type     ConsumableEffectType `json:"type"`
+	Value    int                  `json:"value,omitempty"`    // 数值
+	Status   string               `json:"status,omitempty"`   // 状态类型
+	Duration int                  `json:"duration,omitempty"` // 持续时间
+	Target   string               `json:"target,omitempty"`   // 目标: self, ally, all_allies, area
 }
 
 // 物品定义
 type Item struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Description string         `json:"description,omitempty"`
-	Type        ItemType       `json:"type"`
-	Rarity      Rarity         `json:"rarity"`
-	
-	Icon        string         `json:"icon,omitempty"`     // 图标路径
-	Weight      float64        `json:"weight"`             // 重量
-	MaxStack    int            `json:"max_stack"`          // 最大堆叠数量
-	Value       int            `json:"value"`              // 基础价值（金币）
-	
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description,omitempty"`
+	Type        ItemType `json:"type"`
+	Rarity      Rarity   `json:"rarity"`
+
+	Icon     string  `json:"icon,omitempty"` // 图标路径
+	Weight   float64 `json:"weight"`         // 重量
+	MaxStack int     `json:"max_stack"`      // 最大堆叠数量
+	Value    int     `json:"value"`          // 基础价值（金币）
+
 	// 消耗品特有
-	Effects     []ConsumableEffect `json:"effects,omitempty"`
-	
+	Effects []ConsumableEffect `json:"effects,omitempty"`
+
 	// 材料特有
-	CraftingRecipes []string   `json:"crafting_recipes,omitempty"` // 可用于的合成配方ID
-	
+	CraftingRecipes []string `json:"crafting_recipes,omitempty"` // 可用于的合成配方ID
+
 	// 任务特有
-	QuestID     string         `json:"quest_id,omitempty"`
-	
+	QuestID string `json:"quest_id,omitempty"`
+
 	// 使用限制
-	LevelRequired int          `json:"level_required,omitempty"`
-	ClassRequired []string     `json:"class_required,omitempty"` // 职业限制
-	
+	LevelRequired int      `json:"level_required,omitempty"`
+	ClassRequired []string `json:"class_required,omitempty"` // 职业限制
+
 	// 特殊标记
-	IsUsable    bool           `json:"is_usable"`          // 是否可使用
-	IsDroppable bool           `json:"is_droppable"`       // 是否可丢弃
-	IsSellable  bool           `json:"is_sellable"`        // 是否可出售
-	
-	Tags        []string       `json:"tags,omitempty"`     // 标签
+	IsUsable    bool `json:"is_usable"`    // 是否可使用
+	IsDroppable bool `json:"is_droppable"` // 是否可丢弃
+	IsSellable  bool `json:"is_sellable"`  // 是否可出售
+
+	Tags []string `json:"tags,omitempty"` // 标签
 }
 
 // 物品实例（用于存储具体状态）
 type ItemInstance struct {
-	ItemID    string                 `json:"item_id"`
-	Count     int                    `json:"count"`
-	Durability int                   `json:"durability,omitempty"` // 耐久度
-	Enchantments []Enchantment       `json:"enchantments,omitempty"` // 附魔
-	CustomData map[string]interface{} `json:"custom_data,omitempty"`
+	ItemID       string                 `json:"item_id"`
+	Count        int                    `json:"count"`
+	Durability   int                    `json:"durability,omitempty"`   // 耐久度
+	Enchantments []Enchantment          `json:"enchantments,omitempty"` // 附魔
+	CustomData   map[string]interface{} `json:"custom_data,omitempty"`
 }
 
 // 附魔
 type Enchantment struct {
-	Type      string `json:"type"`
-	Level     int    `json:"level"`
-	Effect    Effect `json:"effect"`
+	Type   string `json:"type"`
+	Level  int    `json:"level"`
+	Effect Effect `json:"effect"`
 }
 
 // 物品管理器
@@ -140,33 +140,33 @@ func (im *ItemManager) UseItem(itemID string, target *Character) []Effect {
 	if item == nil || !item.IsUsable {
 		return nil
 	}
-	
+
 	effects := make([]Effect, 0)
-	
+
 	for _, eff := range item.Effects {
 		switch eff.Type {
 		case ConsumableEffectHealHP:
 			healAmount := eff.Value
 			effects = append(effects, Effect{
-				Type:   EffectHeal,
+				Type:     EffectHeal,
 				TargetID: target.ID,
-				Value:  healAmount,
+				Value:    healAmount,
 			})
 			target.CurrentStats.HP = min(target.CurrentStats.HP+healAmount, target.BaseStats.HP)
 		case ConsumableEffectHealMP:
 			healAmount := eff.Value
 			effects = append(effects, Effect{
-				Type:   EffectHeal,
+				Type:     EffectHeal,
 				TargetID: target.ID,
-				Value:  healAmount,
+				Value:    healAmount,
 			})
 			target.CurrentStats.MP = min(target.CurrentStats.MP+healAmount, target.BaseStats.MP)
 		case ConsumableEffectHealStatus:
 			target.State = CharacterStateNormal
 			effects = append(effects, Effect{
-				Type:   EffectBuff,
+				Type:     EffectBuff,
 				TargetID: target.ID,
-				Value:  "status_healed",
+				Value:    "status_healed",
 			})
 		case ConsumableEffectBuff:
 			effects = append(effects, Effect{
@@ -181,25 +181,25 @@ func (im *ItemManager) UseItem(itemID string, target *Character) []Effect {
 				target.State = CharacterStateNormal
 				target.CurrentStats.HP = target.BaseStats.HP * revivePercent / 100
 				effects = append(effects, Effect{
-					Type:   EffectHeal,
+					Type:     EffectHeal,
 					TargetID: target.ID,
-					Value:  target.CurrentStats.HP,
+					Value:    target.CurrentStats.HP,
 				})
 			}
 		}
 	}
-	
+
 	return effects
 }
 
 // 创建物品实例
 func NewItemInstance(itemID string, count int) *ItemInstance {
 	return &ItemInstance{
-		ItemID: itemID,
-		Count:  count,
-		Durability: 100,
+		ItemID:       itemID,
+		Count:        count,
+		Durability:   100,
 		Enchantments: make([]Enchantment, 0),
-		CustomData: make(map[string]interface{}),
+		CustomData:   make(map[string]interface{}),
 	}
 }
 
@@ -219,7 +219,7 @@ func (im *ItemManager) ExportToMap() map[string]interface{} {
 // 生成随机掉落
 func GenerateDrop(dropItems []DropItem, itemMgr *ItemManager) []ItemInstance {
 	result := make([]ItemInstance, 0)
-	
+
 	for _, drop := range dropItems {
 		if rand.Float64() <= drop.Chance {
 			count := drop.MinCount
@@ -229,7 +229,7 @@ func GenerateDrop(dropItems []DropItem, itemMgr *ItemManager) []ItemInstance {
 			result = append(result, *NewItemInstance(drop.ItemID, count))
 		}
 	}
-	
+
 	return result
 }
 

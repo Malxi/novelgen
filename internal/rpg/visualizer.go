@@ -594,13 +594,13 @@ func (v *Visualizer) GenerateHTMLReport(outputPath string) error {
 `
 
 	type TemplateData struct {
-		Data              *NovelRPGData
-		Report            *SimulationReport
-		GeneratedTime     string
+		Data               *NovelRPGData
+		Report             *SimulationReport
+		GeneratedTime      string
 		ScoreCircumference float64
-		ScoreOffset       float64
-		ChartLabels       template.JS
-		ChartData         template.JS
+		ScoreOffset        float64
+		ChartLabels        template.JS
+		ChartData          template.JS
 	}
 
 	// 计算评分圆环
@@ -692,7 +692,7 @@ func (v *Visualizer) GenerateMarkdownReport(outputPath string) error {
 			status = "❌"
 		}
 		sb.WriteString(fmt.Sprintf("### %s %s (得分: %.1f)\n\n", status, result.Category, result.Score))
-		
+
 		if len(result.Issues) > 0 {
 			sb.WriteString("**问题:**\n")
 			for _, issue := range result.Issues {
@@ -700,7 +700,7 @@ func (v *Visualizer) GenerateMarkdownReport(outputPath string) error {
 			}
 			sb.WriteString("\n")
 		}
-		
+
 		if len(result.Suggestions) > 0 {
 			sb.WriteString("**建议:**\n")
 			for _, suggestion := range result.Suggestions {
@@ -797,29 +797,29 @@ func (v *Visualizer) OpenBrowser(reportPath string) error {
 // 简化函数：生成所有格式的报告
 func GenerateAllReports(data *NovelRPGData, report *SimulationReport, outputDir string) ([]string, error) {
 	viz := NewVisualizer(data, report)
-	
+
 	var files []string
-	
+
 	// HTML报告
 	htmlPath := filepath.Join(outputDir, "rpg_report.html")
 	if err := viz.GenerateHTMLReport(htmlPath); err != nil {
 		return nil, fmt.Errorf("生成HTML报告失败: %w", err)
 	}
 	files = append(files, htmlPath)
-	
+
 	// Markdown报告
 	mdPath := filepath.Join(outputDir, "rpg_report.md")
 	if err := viz.GenerateMarkdownReport(mdPath); err != nil {
 		return nil, fmt.Errorf("生成Markdown报告失败: %w", err)
 	}
 	files = append(files, mdPath)
-	
+
 	// JSON报告
 	jsonPath := filepath.Join(outputDir, "rpg_report.json")
 	if err := viz.GenerateJSONReport(jsonPath); err != nil {
 		return nil, fmt.Errorf("生成JSON报告失败: %w", err)
 	}
 	files = append(files, jsonPath)
-	
+
 	return files, nil
 }

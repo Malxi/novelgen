@@ -394,7 +394,7 @@ func (se *SimulationEngine) decidePlayerAction(enemy *Character) Action {
 				usableSkills = append(usableSkills, skillID)
 			}
 		}
-		
+
 		// 如果有可用技能，随机选择一个
 		if len(usableSkills) > 0 {
 			skillID := usableSkills[se.Random.Intn(len(usableSkills))]

@@ -24,13 +24,13 @@ func NewExpressionEvaluator() *ExpressionEvaluator {
 	ee := &ExpressionEvaluator{
 		functions: make(map[string]Function),
 	}
-	
+
 	// Register built-in functions
 	ee.registerMathFunctions()
 	ee.registerLogicFunctions()
 	ee.registerQueryFunctions()
 	ee.registerRandomFunctions()
-	
+
 	return ee
 }
 
@@ -48,7 +48,7 @@ func (ee *ExpressionEvaluator) registerMathFunctions() {
 		}
 		return rand.Intn(max-min+1) + min
 	}
-	
+
 	// random_float(min, max) - random float
 	ee.functions["random_float"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if len(args) != 2 {
@@ -58,7 +58,7 @@ func (ee *ExpressionEvaluator) registerMathFunctions() {
 		max := ee.toFloat(args[1])
 		return min + rand.Float64()*(max-min)
 	}
-	
+
 	// min(a, b) - minimum
 	ee.functions["min"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if len(args) < 2 {
@@ -73,7 +73,7 @@ func (ee *ExpressionEvaluator) registerMathFunctions() {
 		}
 		return result
 	}
-	
+
 	// max(a, b) - maximum
 	ee.functions["max"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if len(args) < 2 {
@@ -88,7 +88,7 @@ func (ee *ExpressionEvaluator) registerMathFunctions() {
 		}
 		return result
 	}
-	
+
 	// clamp(val, min, max) - clamp value
 	ee.functions["clamp"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if len(args) != 3 {
@@ -105,7 +105,7 @@ func (ee *ExpressionEvaluator) registerMathFunctions() {
 		}
 		return val
 	}
-	
+
 	// round(val) - round to nearest integer
 	ee.functions["round"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if len(args) != 1 {
@@ -113,7 +113,7 @@ func (ee *ExpressionEvaluator) registerMathFunctions() {
 		}
 		return int(math.Round(ee.toFloat(args[0])))
 	}
-	
+
 	// floor(val) - floor
 	ee.functions["floor"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if len(args) != 1 {
@@ -121,7 +121,7 @@ func (ee *ExpressionEvaluator) registerMathFunctions() {
 		}
 		return int(math.Floor(ee.toFloat(args[0])))
 	}
-	
+
 	// ceil(val) - ceiling
 	ee.functions["ceil"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if len(args) != 1 {
@@ -142,7 +142,7 @@ func (ee *ExpressionEvaluator) registerLogicFunctions() {
 		}
 		return true
 	}
-	
+
 	// or(...) - logical OR
 	ee.functions["or"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		for _, arg := range args {
@@ -152,7 +152,7 @@ func (ee *ExpressionEvaluator) registerLogicFunctions() {
 		}
 		return false
 	}
-	
+
 	// not(x) - logical NOT
 	ee.functions["not"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if len(args) != 1 {
@@ -172,7 +172,7 @@ func (ee *ExpressionEvaluator) registerQueryFunctions() {
 		// For MVP, simplified flag checking
 		return false
 	}
-	
+
 	// has_item(id) - check if character has item
 	ee.functions["has_item"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if len(args) != 1 || character == nil {
@@ -181,7 +181,7 @@ func (ee *ExpressionEvaluator) registerQueryFunctions() {
 		// Simplified for MVP
 		return false
 	}
-	
+
 	// item_quantity(id) - get item quantity
 	ee.functions["item_quantity"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if len(args) != 1 || character == nil {
@@ -190,7 +190,7 @@ func (ee *ExpressionEvaluator) registerQueryFunctions() {
 		// Simplified for MVP
 		return 0
 	}
-	
+
 	// kill_count(enemy_id) - get kill count
 	ee.functions["kill_count"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if len(args) != 1 || world == nil {
@@ -199,7 +199,7 @@ func (ee *ExpressionEvaluator) registerQueryFunctions() {
 		// Simplified for MVP
 		return 0
 	}
-	
+
 	// skill_use_count(skill_id) - get skill use count
 	ee.functions["skill_use_count"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if len(args) != 1 || character == nil {
@@ -208,7 +208,7 @@ func (ee *ExpressionEvaluator) registerQueryFunctions() {
 		// Simplified for MVP
 		return 0
 	}
-	
+
 	// current_location() - get current location
 	ee.functions["current_location"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if character == nil || world == nil {
@@ -217,7 +217,7 @@ func (ee *ExpressionEvaluator) registerQueryFunctions() {
 		// Simplified for MVP
 		return ""
 	}
-	
+
 	// get_stat(target, stat) - get character stat
 	ee.functions["get_stat"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if len(args) != 2 || character == nil {
@@ -225,11 +225,11 @@ func (ee *ExpressionEvaluator) registerQueryFunctions() {
 		}
 		target := ee.toString(args[0])
 		stat := ee.toString(args[1])
-		
+
 		if target != character.ID {
 			return 0
 		}
-		
+
 		switch stat {
 		case "hp":
 			return character.CurrentStats.HP
@@ -241,7 +241,7 @@ func (ee *ExpressionEvaluator) registerQueryFunctions() {
 			return 0
 		}
 	}
-	
+
 	// player_level() - get player level
 	ee.functions["player_level"] = func(args []interface{}, character *rpg.Character, world *rpg.GameWorld) interface{} {
 		if world != nil && world.Player != nil {
@@ -258,7 +258,7 @@ func (ee *ExpressionEvaluator) registerRandomFunctions() {
 		if len(args) < 1 {
 			return nil
 		}
-		
+
 		// Handle single array argument
 		var list []interface{}
 		if arr, ok := args[0].([]interface{}); ok {
@@ -266,7 +266,7 @@ func (ee *ExpressionEvaluator) registerRandomFunctions() {
 		} else {
 			list = args
 		}
-		
+
 		if len(list) == 0 {
 			return nil
 		}
@@ -278,23 +278,23 @@ func (ee *ExpressionEvaluator) registerRandomFunctions() {
 func (ee *ExpressionEvaluator) EvaluateCondition(condition string, character *rpg.Character, world *rpg.GameWorld) bool {
 	// Simple condition parsing for MVP
 	// Examples: "level >= 10", "hp < 50", "has_flag('awakened')"
-	
+
 	// Check for function calls
 	if strings.Contains(condition, "(") {
 		return ee.evaluateFunctionCall(condition, character, world)
 	}
-	
+
 	// Parse comparison: stat op value
 	re := regexp.MustCompile(`(\w+)\s*([<>=!]+)\s*(.+)`)
 	matches := re.FindStringSubmatch(condition)
 	if len(matches) != 4 {
 		return false
 	}
-	
+
 	left := matches[1]
 	op := matches[2]
 	right := matches[3]
-	
+
 	// Get left value
 	var leftVal float64
 	switch left {
@@ -313,10 +313,10 @@ func (ee *ExpressionEvaluator) EvaluateCondition(condition string, character *rp
 	default:
 		leftVal = 0
 	}
-	
+
 	// Parse right value
 	rightVal := ee.parseValue(right, character, world)
-	
+
 	// Compare
 	return ee.compare(leftVal, op, rightVal)
 }
@@ -326,10 +326,10 @@ func (ee *ExpressionEvaluator) EvaluateConditions(conditions []Condition, charac
 	if len(conditions) == 0 {
 		return true
 	}
-	
+
 	for _, cond := range conditions {
 		var result bool
-		
+
 		switch cond.Type {
 		case "stat":
 			val := ee.getStatValue(cond.Stat, character)
@@ -348,12 +348,12 @@ func (ee *ExpressionEvaluator) EvaluateConditions(conditions []Condition, charac
 		default:
 			result = false
 		}
-		
+
 		if !result {
 			return false // AND logic by default
 		}
 	}
-	
+
 	return true
 }
 
@@ -365,19 +365,19 @@ func (ee *ExpressionEvaluator) evaluateFunctionCall(expr string, character *rpg.
 	if len(matches) != 3 {
 		return false
 	}
-	
+
 	funcName := matches[1]
 	argsStr := matches[2]
-	
+
 	// Parse arguments
 	args := ee.parseArguments(argsStr)
-	
+
 	// Call function
 	if fn, ok := ee.functions[funcName]; ok {
 		result := fn(args, character, world)
 		return ee.toBool(result)
 	}
-	
+
 	return false
 }
 
@@ -387,7 +387,7 @@ func (ee *ExpressionEvaluator) parseArguments(argsStr string) []interface{} {
 	if strings.TrimSpace(argsStr) == "" {
 		return args
 	}
-	
+
 	// Split by comma (simplified - doesn't handle nested parens)
 	parts := strings.Split(argsStr, ",")
 	for _, part := range parts {
@@ -395,7 +395,7 @@ func (ee *ExpressionEvaluator) parseArguments(argsStr string) []interface{} {
 		if part == "" {
 			continue
 		}
-		
+
 		// Try to parse as number
 		if val, err := strconv.ParseFloat(part, 64); err == nil {
 			args = append(args, val)
@@ -414,19 +414,19 @@ func (ee *ExpressionEvaluator) parseArguments(argsStr string) []interface{} {
 			args = append(args, part)
 		}
 	}
-	
+
 	return args
 }
 
 // parseValue parses a value string
 func (ee *ExpressionEvaluator) parseValue(val string, character *rpg.Character, world *rpg.GameWorld) float64 {
 	val = strings.TrimSpace(val)
-	
+
 	// Try direct number
 	if f, err := strconv.ParseFloat(val, 64); err == nil {
 		return f
 	}
-	
+
 	// Try percentage (e.g., "max_hp * 0.5")
 	if strings.Contains(val, "*") {
 		parts := strings.Split(val, "*")
@@ -436,7 +436,7 @@ func (ee *ExpressionEvaluator) parseValue(val string, character *rpg.Character, 
 			return base * multiplier
 		}
 	}
-	
+
 	// Try stat reference
 	switch val {
 	case "level":
@@ -452,7 +452,7 @@ func (ee *ExpressionEvaluator) parseValue(val string, character *rpg.Character, 
 			return float64(character.BaseStats.HP)
 		}
 	}
-	
+
 	return 0
 }
 
@@ -461,7 +461,7 @@ func (ee *ExpressionEvaluator) getStatValue(stat string, character *rpg.Characte
 	if character == nil {
 		return 0
 	}
-	
+
 	switch stat {
 	case "level":
 		return float64(character.Level)
@@ -563,7 +563,7 @@ func (ee *ExpressionEvaluator) toString(v interface{}) string {
 // EvaluateExpression evaluates a complex expression with functions
 func (ee *ExpressionEvaluator) EvaluateExpression(expr string, character *rpg.Character, world *rpg.GameWorld) interface{} {
 	expr = strings.TrimSpace(expr)
-	
+
 	// Check if it's a function call
 	if strings.Contains(expr, "(") {
 		re := regexp.MustCompile(`(\w+)\s*\(([^)]*)\)`)
@@ -572,18 +572,18 @@ func (ee *ExpressionEvaluator) EvaluateExpression(expr string, character *rpg.Ch
 			funcName := matches[1]
 			argsStr := matches[2]
 			args := ee.parseArguments(argsStr)
-			
+
 			if fn, ok := ee.functions[funcName]; ok {
 				return fn(args, character, world)
 			}
 		}
 	}
-	
+
 	// Try to parse as number
 	if val, err := strconv.ParseFloat(expr, 64); err == nil {
 		return val
 	}
-	
+
 	// Try to parse as boolean
 	if expr == "true" {
 		return true
@@ -591,7 +591,7 @@ func (ee *ExpressionEvaluator) EvaluateExpression(expr string, character *rpg.Ch
 	if expr == "false" {
 		return false
 	}
-	
+
 	// Return as string
 	return expr
 }
