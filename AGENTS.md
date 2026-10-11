@@ -20,6 +20,7 @@ Tests exist in `cmd/`, `internal/models/`, `internal/logic/`, and `internal/rpg/
 ## Architecture overview
 
 - Two Go modules in one workspace (`go.work`): the root `novelgen` module (CLI + `internal/` + `tools/`) and the nested `webui` module (local web server + React frontend).
+- webui integration boundary (enforced by `webui/boundary_test.go`): reads are in-process via `novelgen/internal/models` (other read-only endpoints may pass raw JSON through unchanged); all mutations and long tasks go through the `novelgen` binary via `exec`. webui must not import `novelgen/cmd/**` or any `novelgen/internal/*` package other than `models`.
 - Entry point: `main.go` calls `cmd.RegisterAllCommands()` and `cmd.ExecuteContext(ctx)` to run the CLI (with SIGINT/SIGTERM cancellation).
 - CLI commands live in `cmd/` and use Cobra. Each command registers itself via `RegisterCommand` (see `cmd/registry.go`), which builds the command tree under `cmd/root.go`.
 - Command **groups can live in `cmd/<group>/` subpackages** (currently `config`, `translate`, `initcmd`, `export`, `recap`, `analyzecmd`, `simulatedsl`, `rpgcmd`, `craftcmd`, `draftcmd`): the subpackage exports `NewCommand()` (or `NewXCommand()`), and a `cmd/<group>_register.go` file wires it back via `RegisterCommand`. Prefer this when a command group only depends on `internal/*`.

@@ -18,6 +18,14 @@ NovelGen 的现代化 Web 界面，提供直观的图形界面来管理小说创
 - **后端**: Go + Gin + WebSocket
 - **前端**: React + TypeScript + Tailwind CSS + Vite
 
+## 与 novelgen 的集成边界
+
+webui 是独立 Go module（见根 `go.work`），与父 module 的集成遵循固定边界（由 `boundary_test.go` 强制）：
+
+- **读**：允许 in-process 使用 `novelgen/internal/models` 做类型化读取；其余只读的 JSON 透传端点保持返回原始文件内容，以保持前端响应形状不变。
+- **写 / 长任务**：只能通过 `exec` 调用 `novelgen` 二进制执行（生成、评审、改进、补丁等），webui 不直接写项目状态。
+- **禁止**：webui 不得 import `novelgen/cmd/**`，也不得 import `novelgen/internal/` 下除 `models` 之外的包。
+
 ## 快速开始
 
 ### Windows

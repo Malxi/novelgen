@@ -93,6 +93,10 @@ novelgen/
 │   │                          #   chapter_markdown.go: 章节标题/正文规范化 + 叙事单元计数
 │   ├── continuity/            # 章节连续性：上下文加载、离线 recap、转场/角色出场自动修复
 │   ├── reviewstore/           # 卷级评审 JSON 读写 + 改进建议块格式化
+│   ├── quality/               # setup/outline 确定性质量门（无 LLM）
+│   ├── writersdl/             # 章节→RPG-DSL 生成、批缓存、信号增强
+│   ├── rpgllm/                # LLM 驱动的 RPG 抽取适配（让 rpg 引擎不依赖 llm）
+│   └── architecture/          # 分层依赖约束测试（internal 包导入方向）
 │   ├── rpg/                   # RPG 引擎（GameWorld / 模拟 / 基准）
 │   │   ├── dsl/               # DSL：AST/解析/校验/转换/模拟/合并/hook
 │   │   └── benchmark/         # 基准与跨章检测
@@ -248,6 +252,8 @@ AI 分析章节/大纲
 - Gin HTTP 服务 + WebSocket（[`webui/main.go`](../webui/main.go)），前端为 React + Vite（`webui/frontend/`），由 `frontend/dist` 静态托管。
 - 通过 `exec` 调用 `novelgen` 二进制执行任务，**同时**直接 `import novelgen/internal/models` 读取项目数据。
 - 本机访问加固在 [`webui/security.go`](../webui/security.go)。
+
+**集成边界（由 `webui/boundary_test.go` 强制）**：读操作 in-process 用 `novelgen/internal/models`（只读透传端点保持原始 JSON）；写与长任务只走 CLI `exec`；webui 不得 import `novelgen/cmd/**` 或 `models` 之外的 `internal/*`。
 
 ---
 
