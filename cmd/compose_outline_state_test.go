@@ -8,6 +8,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
+	"novelgen/internal/toolplane"
 )
 
 func TestCanResumeOutlineGenerationWithEmptyVolumes(t *testing.T) {
@@ -238,7 +239,7 @@ func TestOutlinesSemanticallyEqual(t *testing.T) {
 			Chapters: []models.Chapter{{ID: "ch1", Title: "Old"}},
 		}},
 	}}}
-	cloned := cloneOutline(outline)
+	cloned := toolplane.CloneOutline(outline)
 
 	if !outlinesSemanticallyEqual(outline, cloned) {
 		t.Fatalf("cloned outline should be semantically equal")

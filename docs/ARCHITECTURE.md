@@ -96,6 +96,7 @@ novelgen/
 │   ├── quality/               # setup/outline 确定性质量门（无 LLM）
 │   ├── writersdl/             # 章节→RPG-DSL 生成、批缓存、信号增强
 │   ├── rpgllm/                # LLM 驱动的 RPG 抽取适配（让 rpg 引擎不依赖 llm）
+│   ├── toolplane/             # Agent 工具面：query/check/patch/brief/view/refresh + 类型
 │   └── architecture/          # 分层依赖约束测试（internal 包导入方向）
 │   ├── rpg/                   # RPG 引擎（GameWorld / 模拟 / 基准）
 │   │   ├── dsl/               # DSL：AST/解析/校验/转换/模拟/合并/hook

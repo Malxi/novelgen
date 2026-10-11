@@ -23,6 +23,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/reviewstore"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/toolplane"
 	"novelgen/internal/workerpool"
 	"novelgen/internal/writersdl"
 
@@ -1484,7 +1485,7 @@ func generateImprovedChapter(ctx context.Context, agent *agents.WriteAgent, chap
 	return agent.GenerateChapterWithSuggestions(ctx, chapter, context, continuity, targetWords, currentContent, suggestions, iteration...)
 }
 
-func repairAgentSDKGeneratedChapterPostSave(ctx context.Context, log logger.LoggerInterface, workerID int, agent *agents.WriteAgent, chapter *models.Chapter, context *agents.ChapterContext, continuity *models.ChapterContinuity, targetWords int, currentContent string, check *toolCheckResult, useAgentHistory bool) (string, *toolCheckResult, error) {
+func repairAgentSDKGeneratedChapterPostSave(ctx context.Context, log logger.LoggerInterface, workerID int, agent *agents.WriteAgent, chapter *models.Chapter, context *agents.ChapterContext, continuity *models.ChapterContinuity, targetWords int, currentContent string, check *toolplane.ToolCheckResult, useAgentHistory bool) (string, *toolplane.ToolCheckResult, error) {
 	if agent == nil {
 		return "", nil, fmt.Errorf("write agent is nil")
 	}
@@ -1577,7 +1578,7 @@ func validateRecoveredAgentSDKChapterLength(chapter *models.Chapter, content str
 	if targetWords <= 0 {
 		return nil
 	}
-	count := toolNarrativeUnitCount(content)
+	count := toolplane.ToolNarrativeUnitCount(content)
 	hardMax := int(float64(targetWords) * 1.35)
 	if targetWords+300 > hardMax {
 		hardMax = targetWords + 300
@@ -1636,17 +1637,17 @@ func buildAgentSDKChapterCheckSuggestions(chapter *models.Chapter, targetWords i
 	if err != nil {
 		return fmt.Sprintf("## Agent SDK Chapter Check\n\nCould not run focused chapter check before improvement: %v", err)
 	}
-	result, err := runToolChapterCheckWithTargetWords(root, "all", "chapter", chapter.ID, targetWords)
+	result, err := toolplane.RunToolChapterCheckWithTargetWords(root, "all", "chapter", chapter.ID, targetWords)
 	if err != nil {
 		return fmt.Sprintf("## Agent SDK Chapter Check\n\nCould not run focused chapter check before improvement: %v", err)
 	}
-	if err := applyToolCheckIssueFilters(result, "low", "", 8); err != nil {
+	if err := toolplane.ApplyToolCheckIssueFilters(result, "low", "", 8); err != nil {
 		return fmt.Sprintf("## Agent SDK Chapter Check\n\nCould not filter focused chapter check before improvement: %v", err)
 	}
 	return formatAgentSDKChapterCheckSuggestions(result)
 }
 
-func formatAgentSDKChapterCheckSuggestions(result *toolCheckResult) string {
+func formatAgentSDKChapterCheckSuggestions(result *toolplane.ToolCheckResult) string {
 	if result == nil {
 		return ""
 	}
@@ -1663,7 +1664,7 @@ func formatAgentSDKChapterCheckSuggestions(result *toolCheckResult) string {
 		"```json\n" + string(data) + "\n```"
 }
 
-func runAgentSDKChapterPostSaveCheck(ctx context.Context, chapter *models.Chapter, targetWords int) (*toolCheckResult, error) {
+func runAgentSDKChapterPostSaveCheck(ctx context.Context, chapter *models.Chapter, targetWords int) (*toolplane.ToolCheckResult, error) {
 	if chapter == nil || strings.TrimSpace(chapter.ID) == "" {
 		return nil, fmt.Errorf("chapter is nil or has no ID")
 	}
@@ -1671,23 +1672,23 @@ func runAgentSDKChapterPostSaveCheck(ctx context.Context, chapter *models.Chapte
 	if err != nil {
 		return nil, err
 	}
-	restoreLogger := suppressToolRefreshLogs()
-	_, refreshErr := refreshToolChapterDSL(ctx, root, chapter.ID, toolRefreshFlags.BatchSize)
+	restoreLogger := toolplane.SuppressToolRefreshLogs()
+	_, refreshErr := toolplane.RefreshToolChapterDSL(ctx, root, chapter.ID, toolplane.ToolRefreshFlags.BatchSize)
 	restoreLogger()
 	if refreshErr != nil {
 		return nil, fmt.Errorf("refresh chapter RPG DSL before post-save check: %w", refreshErr)
 	}
-	result, err := runToolChapterCheckWithTargetWords(root, "all", "chapter", chapter.ID, targetWords)
+	result, err := toolplane.RunToolChapterCheckWithTargetWords(root, "all", "chapter", chapter.ID, targetWords)
 	if err != nil {
 		return nil, err
 	}
-	if err := applyToolCheckIssueFilters(result, "low", "", 12); err != nil {
+	if err := toolplane.ApplyToolCheckIssueFilters(result, "low", "", 12); err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-func logAgentSDKChapterPostSaveCheck(log logger.LoggerInterface, workerID int, chapterID string, result *toolCheckResult) {
+func logAgentSDKChapterPostSaveCheck(log logger.LoggerInterface, workerID int, chapterID string, result *toolplane.ToolCheckResult) {
 	if result == nil {
 		return
 	}
@@ -1710,7 +1711,7 @@ func logAgentSDKChapterPostSaveCheck(log logger.LoggerInterface, workerID int, c
 	}
 }
 
-func appendAgentSDKPostSaveReviewSuggestions(review *agents.DraftReview, result *toolCheckResult) {
+func appendAgentSDKPostSaveReviewSuggestions(review *agents.DraftReview, result *toolplane.ToolCheckResult) {
 	if review == nil || result == nil {
 		return
 	}
@@ -1742,7 +1743,7 @@ func formatAgentSDKPostSaveIssueSuggestion(kind, target, scope string, issue mod
 	if strings.TrimSpace(issue.Suggestion) != "" {
 		parts = append(parts, "suggestion="+strings.TrimSpace(issue.Suggestion))
 	}
-	nav := toolIssueNavigation(kind, target, scope, issue.TargetID, issue, 0)
+	nav := toolplane.ToolIssueNavigation(kind, target, scope, issue.TargetID, issue, 0)
 	if route, ok := nav["repair_route_query"].(string); ok && strings.TrimSpace(route) != "" {
 		parts = append(parts, "repair_route_query="+route)
 	}

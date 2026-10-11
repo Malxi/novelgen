@@ -1,4 +1,4 @@
-package cmd
+package toolplane
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
 	"novelgen/internal/writersdl"
@@ -17,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var toolRefreshFlags struct {
+var ToolRefreshFlags struct {
 	ID        string
 	BatchSize int
 }
@@ -32,12 +33,12 @@ type toolRefreshResult struct {
 	BatchCount       int              `json:"batch_count,omitempty"`
 	ReusedBatches    int              `json:"reused_batches,omitempty"`
 	GeneratedBatches int              `json:"generated_batches,omitempty"`
-	Check            *toolCheckResult `json:"check,omitempty"`
+	Check            *ToolCheckResult `json:"check,omitempty"`
 	Meta             map[string]any   `json:"meta,omitempty"`
 }
 
-func runToolRefresh(cmd *cobra.Command, args []string) error {
-	target := normalizeKey(args[0])
+func RunToolRefresh(cmd *cobra.Command, args []string) error {
+	target := NormalizeKey(args[0])
 	switch target {
 	case "chapter-dsl", "chapters-dsl", "chapter-rpg-dsl", "rpg-chapters":
 		return runToolRefreshChapterDSL(cmd)
@@ -47,25 +48,25 @@ func runToolRefresh(cmd *cobra.Command, args []string) error {
 }
 
 func runToolRefreshChapterDSL(cmd *cobra.Command) error {
-	restoreLogger := suppressToolRefreshLogs()
+	restoreLogger := SuppressToolRefreshLogs()
 	defer restoreLogger()
 
-	root, err := findProjectRoot()
+	root, err := project.FindRoot()
 	if err != nil {
 		return err
 	}
-	id := strings.TrimSpace(toolRefreshFlags.ID)
+	id := strings.TrimSpace(ToolRefreshFlags.ID)
 	if id == "" {
 		return fmt.Errorf("--id is required for chapter-dsl refresh")
 	}
-	refresh, err := refreshToolChapterDSL(cmd.Context(), root, id, toolRefreshFlags.BatchSize)
+	refresh, err := RefreshToolChapterDSL(cmd.Context(), root, id, ToolRefreshFlags.BatchSize)
 	if err != nil {
 		return err
 	}
 	return writeJSON(cmd, refresh)
 }
 
-func suppressToolRefreshLogs() func() {
+func SuppressToolRefreshLogs() func() {
 	previous := logger.Default()
 	logger.SetDefault(logger.New(logger.ErrorLevel))
 	return func() {
@@ -73,7 +74,7 @@ func suppressToolRefreshLogs() func() {
 	}
 }
 
-func refreshToolChapterDSL(ctx context.Context, root, id string, batchSize int) (*toolRefreshResult, error) {
+func RefreshToolChapterDSL(ctx context.Context, root, id string, batchSize int) (*toolRefreshResult, error) {
 	config, setup, outline, cfg, client, err := loadToolRefreshProjectState()
 	if err != nil {
 		return nil, err
@@ -94,8 +95,8 @@ func refreshToolChapterDSL(ctx context.Context, root, id string, batchSize int) 
 	if err != nil {
 		return nil, err
 	}
-	gate := runToolChapterSimulationGate(root, id)
-	check := makeToolCheckResult("simulation", "chapter", "chapter", id, gate)
+	gate := RunToolChapterSimulationGate(root, id)
+	check := MakeToolCheckResult("simulation", "chapter", "chapter", id, gate)
 	refresh := toolRefreshResult{
 		OK:               check == nil || !check.Blocking,
 		Target:           "chapter-dsl",
@@ -119,15 +120,15 @@ func refreshToolChapterDSL(ctx context.Context, root, id string, batchSize int) 
 }
 
 func loadToolRefreshProjectState() (*models.ProjectConfig, *models.StorySetup, *models.Outline, *llm.Config, llm.Client, error) {
-	config, err := loadProjectConfig()
+	config, err := project.LoadConfig()
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("load project config: %w", err)
 	}
-	setup, err := loadStorySetup()
+	setup, err := project.LoadStorySetup()
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("load story setup: %w", err)
 	}
-	outline, err := loadOutline()
+	outline, err := project.LoadOutline()
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("load outline: %w", err)
 	}
@@ -142,13 +143,13 @@ func loadToolRefreshProjectState() (*models.ProjectConfig, *models.StorySetup, *
 	return config, setup, outline, cfg, client, nil
 }
 
-func makeToolRefreshChapterDSLCheck(chapterID string, issues []rpgdsl.SimulationIssue) *toolCheckResult {
+func MakeToolRefreshChapterDSLCheck(chapterID string, issues []rpgdsl.SimulationIssue) *ToolCheckResult {
 	chapterIssues := rpgdsl.NewSimulationBridge().IssuesForChapter(issues, chapterID)
 	gate := quality.QualityGateResult{}
 	gate.Add(rpgdsl.NewSimulationBridge().ConvertIssuesToSuggestions(chapterIssues)...)
 	gate.Dedup()
 	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
-	return makeToolCheckResult("simulation", "chapter", "chapter", chapterID, gate)
+	return MakeToolCheckResult("simulation", "chapter", "chapter", chapterID, gate)
 }
 
 func firstExistingPath(paths []string) string {

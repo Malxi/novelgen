@@ -1,4 +1,4 @@
-package cmd
+package toolplane
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func applyToolView(resp *toolResponse, view string) {
+func ApplyToolView(resp *ToolResponse, view string) {
 	if resp == nil {
 		return
 	}
@@ -22,10 +22,10 @@ func applyToolView(resp *toolResponse, view string) {
 	}
 	// Explicit scene/beats field requests project from the full object: the
 	// brief/index summaries strip scenes, so trimming first would make
-	// applyToolFields return "no requested fields found". Skipping the trim
-	// keeps the payload bounded because applyToolFields projects only the
+	// ApplyToolFields return "no requested fields found". Skipping the trim
+	// keeps the payload bounded because ApplyToolFields projects only the
 	// requested fields.
-	if fieldsRequestScenes(resp.Query["fields"]) {
+	if FieldsRequestScenes(resp.Query["fields"]) {
 		return
 	}
 	switch view {
@@ -36,7 +36,7 @@ func applyToolView(resp *toolResponse, view string) {
 	}
 }
 
-func fieldsRequestScenes(rawFields string) bool {
+func FieldsRequestScenes(rawFields string) bool {
 	for _, field := range parseToolFields(rawFields) {
 		if field == "scenes" || strings.HasPrefix(field, "scenes.") {
 			return true
@@ -45,8 +45,8 @@ func fieldsRequestScenes(rawFields string) bool {
 	return false
 }
 
-func applyToolContextBudget(resp *toolResponse, view string) {
-	if resp == nil || normalizeKey(resp.Section) != "context" {
+func applyToolContextBudget(resp *ToolResponse, view string) {
+	if resp == nil || NormalizeKey(resp.Section) != "context" {
 		return
 	}
 	if resp.Meta == nil {
@@ -146,7 +146,7 @@ func applyToolContextBudget(resp *toolResponse, view string) {
 
 func contextIndexHasPatchTask(results interface{}) bool {
 	switch typed := results.(type) {
-	case outlineGlobalRepairContext:
+	case OutlineGlobalRepairContext:
 		return typed.PatchTask != nil
 	case map[string]interface{}:
 		task, ok := typed["patch_task"]
@@ -170,14 +170,14 @@ func contextIndexHasPatchTask(results interface{}) bool {
 
 func contextIndexHasRefreshFirst(results interface{}) bool {
 	switch typed := results.(type) {
-	case chapterRepairContext:
+	case ChapterRepairContext:
 		return toolCheckResultNeedsRefreshFirst(typed.Check)
-	case outlineRepairContext:
+	case OutlineRepairContext:
 		return toolCheckResultNeedsRefreshFirst(typed.Check)
-	case recapRepairContext:
+	case RecapRepairContext:
 		return toolCheckResultNeedsRefreshFirst(typed.Check)
 	case map[string]interface{}:
-		actions, ok := typed["next_actions"].([]toolNextAction)
+		actions, ok := typed["next_actions"].([]ToolNextAction)
 		if !ok || len(actions) == 0 {
 			return false
 		}
@@ -187,7 +187,7 @@ func contextIndexHasRefreshFirst(results interface{}) bool {
 	}
 }
 
-func toolCheckResultNeedsRefreshFirst(check *toolCheckResult) bool {
+func toolCheckResultNeedsRefreshFirst(check *ToolCheckResult) bool {
 	if check == nil || len(check.Issues) == 0 {
 		return false
 	}
@@ -197,11 +197,11 @@ func toolCheckResultNeedsRefreshFirst(check *toolCheckResult) bool {
 
 func contextIndexHasCleanFocusedCheck(results interface{}) bool {
 	switch typed := results.(type) {
-	case chapterRepairContext:
+	case ChapterRepairContext:
 		return toolCheckResultIsClean(typed.Check)
-	case outlineRepairContext:
+	case OutlineRepairContext:
 		return toolCheckResultIsClean(typed.Check)
-	case recapRepairContext:
+	case RecapRepairContext:
 		return toolCheckResultIsClean(typed.Check)
 	case map[string]interface{}:
 		raw, ok := typed["check"].(map[string]interface{})
@@ -214,7 +214,7 @@ func contextIndexHasCleanFocusedCheck(results interface{}) bool {
 	}
 }
 
-func toolCheckResultIsClean(check *toolCheckResult) bool {
+func toolCheckResultIsClean(check *ToolCheckResult) bool {
 	if check == nil {
 		return false
 	}
@@ -256,7 +256,7 @@ func numericMapInt(values map[string]interface{}, key string) int {
 
 func contextIndexHasUnpatchableGlobalOnly(results interface{}) bool {
 	switch typed := results.(type) {
-	case outlineGlobalRepairContext:
+	case OutlineGlobalRepairContext:
 		if len(typed.IssueContext) == 0 {
 			return false
 		}
@@ -303,14 +303,14 @@ func outlineIssueContextHasPatchRoute(issues interface{}) bool {
 			}
 		}
 		return false
-	case []outlineRepairIssue:
+	case []OutlineRepairIssue:
 		return outlineRepairIssuesHavePatchRoute(typed)
 	default:
 		return true
 	}
 }
 
-func applyToolFields(resp *toolResponse, rawFields string) {
+func ApplyToolFields(resp *ToolResponse, rawFields string) {
 	if resp == nil || resp.Results == nil {
 		return
 	}
@@ -347,7 +347,7 @@ func normalizeToolFieldPath(value string) string {
 	parts := strings.Split(strings.TrimSpace(value), ".")
 	out := make([]string, 0, len(parts))
 	for _, part := range parts {
-		key := normalizeKey(part)
+		key := NormalizeKey(part)
 		if key == "" {
 			continue
 		}
@@ -441,7 +441,7 @@ func toolFieldOutputKey(path string) string {
 }
 
 func normalizeToolView(view string) string {
-	switch normalizeKey(view) {
+	switch NormalizeKey(view) {
 	case "", "brief", "summary":
 		return "brief"
 	case "full", "raw":

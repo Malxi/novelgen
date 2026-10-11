@@ -15,6 +15,7 @@ import (
 
 	"novelgen/internal/agentruntime"
 	"novelgen/internal/models"
+	"novelgen/internal/toolplane"
 	"novelgen/internal/usage"
 
 	"github.com/spf13/cobra"
@@ -435,7 +436,7 @@ func inspectProjectForAgentSDK(root string) projectDoctorReport {
 		}
 	}
 
-	logResp := queryLogs(root, "", "", "", false)
+	logResp := toolplane.QueryLogs(root, "", "", "", false)
 	report.Counts["logs"] = logResp.Count
 	for kind, count := range logKindCounts(logResp) {
 		report.Counts[kind] = count
@@ -452,14 +453,14 @@ func inspectProjectForAgentSDK(root string) projectDoctorReport {
 	return report
 }
 
-func logKindCounts(resp toolResponse) map[string]int {
+func logKindCounts(resp toolplane.ToolResponse) map[string]int {
 	counts := map[string]int{}
-	hits, ok := resp.Results.([]logHit)
+	hits, ok := resp.Results.([]toolplane.LogHit)
 	if !ok {
 		return counts
 	}
 	for _, hit := range hits {
-		switch normalizeLogKind(hit.Kind) {
+		switch toolplane.NormalizeLogKind(hit.Kind) {
 		case "prompts":
 			counts["logs_prompts"]++
 		case "responses":

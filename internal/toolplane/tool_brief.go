@@ -1,10 +1,11 @@
-package cmd
+package toolplane
 
 import (
 	"encoding/json"
 	"fmt"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
+	"novelgen/internal/utils"
 	"novelgen/internal/writersdl"
 	"os"
 	"path/filepath"
@@ -13,7 +14,7 @@ import (
 )
 
 func briefToolResults(section string, results interface{}) interface{} {
-	switch normalizeKey(section) {
+	switch NormalizeKey(section) {
 	case "story-setup", "setup":
 		return briefStorySetupResults(results, false)
 	case "outline":
@@ -32,7 +33,7 @@ func briefToolResults(section string, results interface{}) interface{} {
 }
 
 func indexToolResults(section string, results interface{}) interface{} {
-	switch normalizeKey(section) {
+	switch NormalizeKey(section) {
 	case "story-setup", "setup":
 		return briefStorySetupResults(results, true)
 	case "outline":
@@ -103,7 +104,7 @@ func indexCraftHit(hit map[string]interface{}) map[string]interface{} {
 	}
 	name := key
 	if raw, ok := hit["object"].(map[string]interface{}); ok {
-		if objectName := stringMapValue(raw, "name"); objectName != "" {
+		if objectName := StringMapValue(raw, "name"); objectName != "" {
 			name = objectName
 			out["name"] = objectName
 		}
@@ -145,7 +146,7 @@ func craftCollectionIndex(section string, value interface{}) interface{} {
 }
 
 func craftCollectionType(section string) string {
-	switch normalizeKey(section) {
+	switch NormalizeKey(section) {
 	case "characters":
 		return "character"
 	case "items":
@@ -155,7 +156,7 @@ func craftCollectionType(section string) string {
 	case "organizations", "orgs":
 		return "organization"
 	default:
-		return normalizeKey(section)
+		return NormalizeKey(section)
 	}
 }
 
@@ -164,33 +165,33 @@ func briefContextResults(results interface{}, indexOnly bool) interface{} {
 		return indexContextResults(results)
 	}
 	switch typed := results.(type) {
-	case chapterRepairContext:
+	case ChapterRepairContext:
 		typed.ParentVolume = stripContextVolumePayoff(typed.ParentVolume)
 		typed.Events = stripContextEventPaths(typed.Events)
 		return typed
-	case chapterWriteContext:
+	case ChapterWriteContext:
 		typed.ParentVolume = stripContextVolumePayoff(typed.ParentVolume)
 		typed.Events = stripContextEventPaths(typed.Events)
 		return typed
-	case outlineRepairContext:
+	case OutlineRepairContext:
 		typed.ParentVolume = stripContextVolumePayoff(typed.ParentVolume)
 		typed.Current = stripContextVolumePayoff(typed.Current)
 		typed.Events = stripContextEventPaths(typed.Events)
 		return typed
-	case outlineGlobalRepairContext:
+	case OutlineGlobalRepairContext:
 		typed.StorySetup = nil
 		typed.Outline = nil
 		if len(typed.MysteryThreads) > 12 {
 			typed.MysteryThreads = typed.MysteryThreads[:12]
 		}
 		return typed
-	case outlineVolumeContext:
+	case OutlineVolumeContext:
 		typed.TargetVolume = stripContextVolumePayoff(typed.TargetVolume)
 		typed.PreviousVolume = stripContextVolumePayoff(typed.PreviousVolume)
 		typed.NextVolume = stripContextVolumePayoff(typed.NextVolume)
 		typed.Events = stripContextEventPaths(typed.Events)
 		return typed
-	case craftElementContext:
+	case CraftElementContext:
 		typed.Events = stripContextEventPaths(typed.Events)
 		return typed
 	default:
@@ -200,7 +201,7 @@ func briefContextResults(results interface{}, indexOnly bool) interface{} {
 
 func indexContextResults(results interface{}) interface{} {
 	switch typed := results.(type) {
-	case chapterRepairContext:
+	case ChapterRepairContext:
 		return map[string]interface{}{
 			"chapter_id":     typed.ChapterID,
 			"path":           typed.Path,
@@ -212,7 +213,7 @@ func indexContextResults(results interface{}) interface{} {
 			"stats":          typed.Stats,
 			"entity_index":   typed.EntityIndex,
 		}
-	case chapterWriteContext:
+	case ChapterWriteContext:
 		return map[string]interface{}{
 			"chapter_id":   typed.ChapterID,
 			"path":         typed.Path,
@@ -222,7 +223,7 @@ func indexContextResults(results interface{}) interface{} {
 			"stats":        typed.Stats,
 			"entity_index": typed.EntityIndex,
 		}
-	case recapRepairContext:
+	case RecapRepairContext:
 		return map[string]interface{}{
 			"chapter_id":   typed.ChapterID,
 			"path":         typed.Path,
@@ -232,7 +233,7 @@ func indexContextResults(results interface{}) interface{} {
 			"next_actions": recapRepairIndexNextActions(typed),
 			"stats":        typed.Stats,
 		}
-	case outlineRepairContext:
+	case OutlineRepairContext:
 		return map[string]interface{}{
 			"scope":          typed.Scope,
 			"id":             typed.ID,
@@ -245,7 +246,7 @@ func indexContextResults(results interface{}) interface{} {
 			"next_actions":   outlineRepairIndexNextActions(typed),
 			"stats":          typed.Stats,
 		}
-	case outlineGlobalRepairContext:
+	case OutlineGlobalRepairContext:
 		return map[string]interface{}{
 			"issue_category": typed.IssueCategory,
 			"check":          toolCheckIndex(typed.Check),
@@ -256,7 +257,7 @@ func indexContextResults(results interface{}) interface{} {
 			"next_actions":   outlineGlobalRepairIndexNextActions(typed),
 			"stats":          typed.Stats,
 		}
-	case outlineVolumeContext:
+	case OutlineVolumeContext:
 		return map[string]interface{}{
 			"volume_id":    typed.VolumeID,
 			"path":         typed.Path,
@@ -265,7 +266,7 @@ func indexContextResults(results interface{}) interface{} {
 			"stats":        typed.Stats,
 			"entity_index": indexOutlineVolumeEntities(typed.EntityIndex),
 		}
-	case craftElementContext:
+	case CraftElementContext:
 		return map[string]interface{}{
 			"target":       typed.Target,
 			"name":         typed.Name,
@@ -278,8 +279,8 @@ func indexContextResults(results interface{}) interface{} {
 	}
 }
 
-func chapterWriteIndexNextActions(ctx chapterWriteContext) []toolNextAction {
-	out := []toolNextAction{{
+func chapterWriteIndexNextActions(ctx ChapterWriteContext) []ToolNextAction {
+	out := []ToolNextAction{{
 		Step:    1,
 		Action:  "query_brief_context",
 		Purpose: "Fetch the focused write bundle before drafting; index view is only the route map.",
@@ -295,7 +296,7 @@ func chapterWriteIndexNextActions(ctx chapterWriteContext) []toolNextAction {
 	return out
 }
 
-func chapterRepairIndexNextActions(ctx chapterRepairContext) []toolNextAction {
+func chapterRepairIndexNextActions(ctx ChapterRepairContext) []ToolNextAction {
 	if toolCheckResultIsClean(ctx.Check) {
 		return cleanFocusedCheckNextActions(
 			fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --category %s --min-priority low --max-issues 12", ctx.ChapterID, categoryOrAll(ctx.IssueCategory)),
@@ -305,7 +306,7 @@ func chapterRepairIndexNextActions(ctx chapterRepairContext) []toolNextAction {
 	if actions := refreshFirstIndexNextActions(ctx.Check); len(actions) > 0 {
 		return actions
 	}
-	out := []toolNextAction{{
+	out := []ToolNextAction{{
 		Step:    1,
 		Action:  "query_brief_repair_context",
 		Purpose: "Fetch the focused repair bundle before patching; index view is only the route map and check summary.",
@@ -321,7 +322,7 @@ func chapterRepairIndexNextActions(ctx chapterRepairContext) []toolNextAction {
 	return out
 }
 
-func outlineRepairIndexNextActions(ctx outlineRepairContext) []toolNextAction {
+func outlineRepairIndexNextActions(ctx OutlineRepairContext) []ToolNextAction {
 	if toolCheckResultIsClean(ctx.Check) {
 		return cleanFocusedCheckNextActions(
 			fmt.Sprintf("novelgen tool check all --target outline --scope %s --id %q --category %s --min-priority low --max-issues 8", ctx.Scope, ctx.ID, categoryOrAll(ctx.IssueCategory)),
@@ -331,7 +332,7 @@ func outlineRepairIndexNextActions(ctx outlineRepairContext) []toolNextAction {
 	if actions := refreshFirstIndexNextActions(ctx.Check); len(actions) > 0 {
 		return actions
 	}
-	out := []toolNextAction{{
+	out := []ToolNextAction{{
 		Step:    1,
 		Action:  "query_brief_repair_context",
 		Purpose: "Fetch the focused outline repair bundle before patching; index view is only the route map and check summary.",
@@ -347,8 +348,8 @@ func outlineRepairIndexNextActions(ctx outlineRepairContext) []toolNextAction {
 	return out
 }
 
-func cleanFocusedCheckNextActions(checkCommand, purpose string) []toolNextAction {
-	return []toolNextAction{{
+func cleanFocusedCheckNextActions(checkCommand, purpose string) []ToolNextAction {
+	return []ToolNextAction{{
 		Step:    1,
 		Action:  "focused_check_clean",
 		Purpose: purpose,
@@ -360,7 +361,7 @@ func cleanFocusedCheckNextActions(checkCommand, purpose string) []toolNextAction
 	}}
 }
 
-func refreshFirstIndexNextActions(check *toolCheckResult) []toolNextAction {
+func refreshFirstIndexNextActions(check *ToolCheckResult) []ToolNextAction {
 	if check == nil || len(check.Issues) == 0 {
 		return nil
 	}
@@ -368,7 +369,7 @@ func refreshFirstIndexNextActions(check *toolCheckResult) []toolNextAction {
 	if len(actions) == 0 || actions[0].Action != "refresh_derived_dsl_first" {
 		return nil
 	}
-	out := make([]toolNextAction, len(actions))
+	out := make([]ToolNextAction, len(actions))
 	copy(out, actions)
 	for i := range out {
 		out[i].Step = i + 1
@@ -376,15 +377,15 @@ func refreshFirstIndexNextActions(check *toolCheckResult) []toolNextAction {
 	return out
 }
 
-func outlineGlobalRepairIndexNextActions(ctx outlineGlobalRepairContext) []toolNextAction {
+func outlineGlobalRepairIndexNextActions(ctx OutlineGlobalRepairContext) []ToolNextAction {
 	if !outlineRepairIssuesHavePatchRoute(ctx.IssueContext) {
-		out := []toolNextAction{{
+		out := []ToolNextAction{{
 			Step:    1,
 			Action:  "classify_unpatchable_global_issue",
 			Purpose: "No returned global issue has both patch_query and patch_shape; do not fetch brief context or invent a broad patch.",
 		}}
 		if category := strings.TrimSpace(ctx.IssueCategory); category != "" {
-			out = append(out, toolNextAction{
+			out = append(out, ToolNextAction{
 				Step:    len(out) + 1,
 				Action:  "focused_recheck",
 				Purpose: "Confirm whether the global diagnostic still reproduces before routing to a smaller workflow.",
@@ -392,7 +393,7 @@ func outlineGlobalRepairIndexNextActions(ctx outlineGlobalRepairContext) []toolN
 				When:    "Only when you need to confirm the diagnostic; otherwise return final JSON with remaining issue notes.",
 			})
 		}
-		out = append(out, toolNextAction{
+		out = append(out, ToolNextAction{
 			Step:    len(out) + 1,
 			Action:  "return_final_json",
 			Purpose: "Report the issue as remaining/unpatchable from this route, or recommend a smaller targeted workflow.",
@@ -400,7 +401,7 @@ func outlineGlobalRepairIndexNextActions(ctx outlineGlobalRepairContext) []toolN
 		return out
 	}
 	if ctx.PatchTask == nil {
-		out := []toolNextAction{{
+		out := []ToolNextAction{{
 			Step:    1,
 			Action:  "query_brief_global_repair_context",
 			Purpose: "Fetch the focused global repair bundle before patching because this index response has no complete patch_task.",
@@ -415,7 +416,7 @@ func outlineGlobalRepairIndexNextActions(ctx outlineGlobalRepairContext) []toolN
 		}
 		return out
 	}
-	out := []toolNextAction{{
+	out := []ToolNextAction{{
 		Step:    1,
 		Action:  "use_patch_task",
 		Purpose: "Use patch_task.dry_run_command and patch_task.apply_command from this index response directly. Do not query brief context unless patch_task is absent.",
@@ -438,7 +439,7 @@ func outlineGlobalRepairIndexNextActions(ctx outlineGlobalRepairContext) []toolN
 	return out
 }
 
-func outlineRepairIssuesHavePatchRoute(issues []outlineRepairIssue) bool {
+func outlineRepairIssuesHavePatchRoute(issues []OutlineRepairIssue) bool {
 	for _, issue := range issues {
 		if strings.TrimSpace(issue.PatchQuery) == "" || issue.PatchShape == nil {
 			continue
@@ -448,14 +449,14 @@ func outlineRepairIssuesHavePatchRoute(issues []outlineRepairIssue) bool {
 	return false
 }
 
-func recapRepairIndexNextActions(ctx recapRepairContext) []toolNextAction {
+func recapRepairIndexNextActions(ctx RecapRepairContext) []ToolNextAction {
 	if toolCheckResultIsClean(ctx.Check) {
 		return cleanFocusedCheckNextActions(
 			fmt.Sprintf("novelgen tool check quality --target recap --scope chapter --id %q --min-priority low --max-issues 8", ctx.ChapterID),
 			"The scoped recap check returned zero issues; do not fetch brief repair context or patch recap.",
 		)
 	}
-	out := []toolNextAction{{
+	out := []ToolNextAction{{
 		Step:    1,
 		Action:  "query_brief_repair_context",
 		Purpose: "Fetch the focused recap repair bundle before patching; index view is only the route map and check summary.",
@@ -471,8 +472,8 @@ func recapRepairIndexNextActions(ctx recapRepairContext) []toolNextAction {
 	return out
 }
 
-func craftElementIndexNextActions(ctx craftElementContext) []toolNextAction {
-	out := []toolNextAction{{
+func craftElementIndexNextActions(ctx CraftElementContext) []ToolNextAction {
+	out := []ToolNextAction{{
 		Step:    1,
 		Action:  "query_brief_context",
 		Purpose: "Fetch the focused craft bundle before patching; index view is only the route map and counts.",
@@ -488,8 +489,8 @@ func craftElementIndexNextActions(ctx craftElementContext) []toolNextAction {
 	return out
 }
 
-func indexOutlineVolumeEntities(entities outlineVolumeEntities) outlineVolumeEntities {
-	return outlineVolumeEntities{
+func indexOutlineVolumeEntities(entities OutlineVolumeEntities) OutlineVolumeEntities {
+	return OutlineVolumeEntities{
 		Characters: firstNStrings(entities.Characters, 12),
 		Items:      firstNStrings(entities.Items, 12),
 		Locations:  firstNStrings(entities.Locations, 10),
@@ -497,7 +498,7 @@ func indexOutlineVolumeEntities(entities outlineVolumeEntities) outlineVolumeEnt
 	}
 }
 
-func outlineRepairIssueIndex(issues []outlineRepairIssue) []map[string]interface{} {
+func outlineRepairIssueIndex(issues []OutlineRepairIssue) []map[string]interface{} {
 	if len(issues) == 0 {
 		return nil
 	}
@@ -518,7 +519,7 @@ func outlineRepairIssueIndex(issues []outlineRepairIssue) []map[string]interface
 	return out
 }
 
-func outlineGlobalRepairIssueIndex(issues []outlineRepairIssue) []map[string]interface{} {
+func outlineGlobalRepairIssueIndex(issues []OutlineRepairIssue) []map[string]interface{} {
 	if len(issues) == 0 {
 		return nil
 	}
@@ -542,7 +543,7 @@ func outlineGlobalRepairIssueIndex(issues []outlineRepairIssue) []map[string]int
 	return out
 }
 
-func toolCheckIndex(check *toolCheckResult) interface{} {
+func toolCheckIndex(check *ToolCheckResult) interface{} {
 	if check == nil {
 		return nil
 	}
@@ -564,7 +565,7 @@ func toolWorkflowIndex(workflow map[string]interface{}) map[string]interface{} {
 	}
 	out := map[string]interface{}{}
 	for key, value := range workflow {
-		normalized := normalizeKey(key)
+		normalized := NormalizeKey(key)
 		if normalized == "steps" || normalized == "stop_rules" {
 			continue
 		}
@@ -590,7 +591,7 @@ func toolWorkflowIndex(workflow map[string]interface{}) map[string]interface{} {
 
 func stripContextVolumePayoff(value interface{}) interface{} {
 	switch typed := value.(type) {
-	case volumeBrief:
+	case VolumeBrief:
 		typed.PayoffContract = nil
 		return typed
 	default:
@@ -599,11 +600,11 @@ func stripContextVolumePayoff(value interface{}) interface{} {
 }
 
 func stripContextEventPaths(value interface{}) interface{} {
-	events, ok := value.([]eventHitBrief)
+	events, ok := value.([]EventHitBrief)
 	if !ok {
 		return value
 	}
-	out := make([]eventHitBrief, 0, len(events))
+	out := make([]EventHitBrief, 0, len(events))
 	for _, event := range events {
 		event.Path = nil
 		out = append(out, event)
@@ -616,7 +617,7 @@ func briefStorySetupResults(results interface{}, indexOnly bool) interface{} {
 	if !ok || setup == nil {
 		return results
 	}
-	brief := storySetupBrief{
+	brief := StorySetupBrief{
 		ProjectName:    setup.ProjectName,
 		Genres:         setup.Genres,
 		TargetAudience: clipToolString(setup.TargetAudience, 160),
@@ -730,7 +731,7 @@ func briefOutlineResults(results interface{}, indexOnly bool) interface{} {
 		if values == nil {
 			return results
 		}
-		out := outlineBrief{Navigation: map[string]interface{}{
+		out := OutlineBrief{Navigation: map[string]interface{}{
 			"detail_queries": []string{
 				"novelgen tool query outline --type volume --id <volume_id>",
 				"novelgen tool query outline --type chapter --id <chapter_id>",
@@ -741,15 +742,15 @@ func briefOutlineResults(results interface{}, indexOnly bool) interface{} {
 			out.Parts = append(out.Parts, makePartBrief(part, indexOnly))
 		}
 		return out
-	case []outlineHit:
-		out := make([]outlineHit, 0, len(values))
+	case []OutlineHit:
+		out := make([]OutlineHit, 0, len(values))
 		for _, hit := range values {
 			hit.Object = briefOutlineObject(hit.Object, indexOnly)
 			out = append(out, hit)
 		}
 		return out
-	case []eventHit:
-		out := make([]eventHitBrief, 0, len(values))
+	case []EventHit:
+		out := make([]EventHitBrief, 0, len(values))
 		for _, hit := range values {
 			out = append(out, makeEventHitBrief(hit, indexOnly))
 		}
@@ -783,16 +784,16 @@ func briefOutlineObject(value interface{}, indexOnly bool) interface{} {
 	return value
 }
 
-func makePartBrief(part models.Part, indexOnly bool) partBrief {
-	brief := partBrief{ID: part.ID, Title: part.Title, Summary: clipToolString(part.Summary, 500)}
+func makePartBrief(part models.Part, indexOnly bool) PartBrief {
+	brief := PartBrief{ID: part.ID, Title: part.Title, Summary: clipToolString(part.Summary, 500)}
 	for _, volume := range part.Volumes {
 		brief.Volumes = append(brief.Volumes, makeVolumeBrief(volume, indexOnly))
 	}
 	return brief
 }
 
-func makeVolumeBrief(volume models.Volume, indexOnly bool) volumeBrief {
-	brief := volumeBrief{
+func makeVolumeBrief(volume models.Volume, indexOnly bool) VolumeBrief {
+	brief := VolumeBrief{
 		ID:      volume.ID,
 		Title:   volume.Title,
 		Summary: clipToolString(volume.Summary, 700),
@@ -812,8 +813,8 @@ func makeVolumeBrief(volume models.Volume, indexOnly bool) volumeBrief {
 	return brief
 }
 
-func makeContextVolumeBrief(volume models.Volume, includeChapters bool) volumeBrief {
-	brief := volumeBrief{
+func makeContextVolumeBrief(volume models.Volume, includeChapters bool) VolumeBrief {
+	brief := VolumeBrief{
 		ID:      volume.ID,
 		Title:   volume.Title,
 		Summary: clipToolString(volume.Summary, 360),
@@ -867,12 +868,12 @@ func makeContextVolumeRouteMap(volume models.Volume, includeChapters bool) map[s
 	return brief
 }
 
-func makeRepairVolumeBrief(volume models.Volume, check *toolCheckResult) volumeBrief {
+func makeRepairVolumeBrief(volume models.Volume, check *ToolCheckResult) VolumeBrief {
 	brief := makeContextVolumeBrief(volume, false)
 	chapterIDs := map[string]bool{}
 	if check != nil {
 		for _, issue := range check.Issues {
-			if _, ok := toolVolumeIDFromChapterID(issue.TargetID); ok {
+			if _, ok := ToolVolumeIDFromChapterID(issue.TargetID); ok {
 				chapterIDs[issue.TargetID] = true
 			}
 		}
@@ -888,8 +889,8 @@ func makeRepairVolumeBrief(volume models.Volume, check *toolCheckResult) volumeB
 	return brief
 }
 
-func makeContextChapterBrief(chapter models.Chapter) chapterBrief {
-	return chapterBrief{
+func makeContextChapterBrief(chapter models.Chapter) ChapterBrief {
+	return ChapterBrief{
 		ID:           chapter.ID,
 		Title:        chapter.Title,
 		Summary:      clipToolString(chapter.Summary, 220),
@@ -901,8 +902,8 @@ func makeContextChapterBrief(chapter models.Chapter) chapterBrief {
 	}
 }
 
-func makeRepairChapterBrief(chapter models.Chapter) chapterBrief {
-	brief := chapterBrief{
+func makeRepairChapterBrief(chapter models.Chapter) ChapterBrief {
+	brief := ChapterBrief{
 		ID:                chapter.ID,
 		Title:             chapter.Title,
 		Summary:           clipToolString(chapter.Summary, 360),
@@ -1022,8 +1023,8 @@ func recapFreshForChapterMarkdown(root, chapterID string) (bool, string) {
 	return true, ""
 }
 
-func makeChapterBrief(chapter models.Chapter, indexOnly bool) chapterBrief {
-	brief := chapterBrief{
+func makeChapterBrief(chapter models.Chapter, indexOnly bool) ChapterBrief {
+	brief := ChapterBrief{
 		ID:           chapter.ID,
 		Title:        chapter.Title,
 		Summary:      clipToolString(chapter.Summary, 500),
@@ -1050,8 +1051,8 @@ func makeChapterBrief(chapter models.Chapter, indexOnly bool) chapterBrief {
 	return brief
 }
 
-func makeEventBrief(event models.Event) eventBrief {
-	return eventBrief{
+func makeEventBrief(event models.Event) EventBrief {
+	return EventBrief{
 		Type:       event.Type,
 		Characters: event.Characters,
 		Subject:    clipToolString(event.Subject, 120),
@@ -1066,8 +1067,8 @@ func makeEventBrief(event models.Event) eventBrief {
 	}
 }
 
-func makeEventIndexBrief(event models.Event) eventBrief {
-	return eventBrief{
+func makeEventIndexBrief(event models.Event) EventBrief {
+	return EventBrief{
 		Type:       event.Type,
 		Subject:    clipToolString(event.Subject, 80),
 		Change:     clipToolString(event.Change, 80),
@@ -1078,8 +1079,8 @@ func makeEventIndexBrief(event models.Event) eventBrief {
 	}
 }
 
-func makeEventHitBrief(hit eventHit, indexOnly bool) eventHitBrief {
-	brief := eventHitBrief{
+func makeEventHitBrief(hit EventHit, indexOnly bool) EventHitBrief {
+	brief := EventHitBrief{
 		ChapterID:    hit.ChapterID,
 		ChapterTitle: hit.ChapterTitle,
 		EventIndex:   hit.EventIndex,
@@ -1151,7 +1152,7 @@ func loadChapterExcerptForTool(root, chapterID string) (map[string]string, []str
 	}
 	candidates := []string{
 		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapterID)),
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", extractChapterNumber(chapterID))),
+		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", utils.ExtractChapterNumber(chapterID))),
 	}
 	for _, path := range candidates {
 		data, err := os.ReadFile(path)
@@ -1205,7 +1206,7 @@ func lastNonEmptyLine(value string) string {
 	return ""
 }
 
-func applyToolLimit(resp *toolResponse, limit int) {
+func applyToolLimit(resp *ToolResponse, limit int) {
 	if resp == nil || limit <= 0 || resp.Results == nil {
 		return
 	}

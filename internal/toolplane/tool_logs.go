@@ -1,4 +1,4 @@
-package cmd
+package toolplane
 
 import (
 	"encoding/json"
@@ -13,17 +13,17 @@ import (
 	"time"
 )
 
-func queryLogs(root, queryType, id, name string, includeContent bool) toolResponse {
+func QueryLogs(root, queryType, id, name string, includeContent bool) ToolResponse {
 	logsRoot := filepath.Join(root, "logs")
 	if _, err := os.Stat(logsRoot); err != nil {
-		return toolResponse{OK: true, Section: "logs", Count: 0, Results: nil, Warnings: []string{"logs directory not found"}}
+		return ToolResponse{OK: true, Section: "logs", Count: 0, Results: nil, Warnings: []string{"logs directory not found"}}
 	}
-	kindFilter := normalizeLogKind(queryType)
+	kindFilter := NormalizeLogKind(queryType)
 	id = filepath.ToSlash(strings.TrimSpace(id))
 	name = strings.ToLower(strings.TrimSpace(name))
 	historyCutoff, hasHistoryCutoff := logHistoryCutoff()
 
-	hits := []logHit{}
+	hits := []LogHit{}
 	err := filepath.WalkDir(logsRoot, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -68,7 +68,7 @@ func queryLogs(root, queryType, id, name string, includeContent bool) toolRespon
 				return nil
 			}
 		}
-		hit := logHit{
+		hit := LogHit{
 			ID:          rel,
 			Kind:        kind,
 			Agent:       agent,
@@ -89,7 +89,7 @@ func queryLogs(root, queryType, id, name string, includeContent bool) toolRespon
 		return nil
 	})
 	if err != nil {
-		return toolResponse{OK: false, Section: "logs", Count: 0, Warnings: []string{err.Error()}}
+		return ToolResponse{OK: false, Section: "logs", Count: 0, Warnings: []string{err.Error()}}
 	}
 	sort.Slice(hits, func(i, j int) bool {
 		return hits[i].ModifiedAt.After(hits[j].ModifiedAt)
@@ -103,7 +103,7 @@ func queryLogs(root, queryType, id, name string, includeContent bool) toolRespon
 			"novelgen tool query logs --id <relative_log_path> --content --view brief",
 		},
 	}
-	return toolResponse{OK: true, Section: "logs", Count: len(hits), Results: hits, Meta: meta}
+	return ToolResponse{OK: true, Section: "logs", Count: len(hits), Results: hits, Meta: meta}
 }
 
 func logHistoryCutoff() (time.Time, bool) {
@@ -136,8 +136,8 @@ func summaryInt(summary map[string]interface{}, key string) int {
 	}
 }
 
-func normalizeLogKind(value string) string {
-	switch normalizeKey(value) {
+func NormalizeLogKind(value string) string {
+	switch NormalizeKey(value) {
 	case "", "all":
 		return ""
 	case "prompt", "prompts":
@@ -147,7 +147,7 @@ func normalizeLogKind(value string) string {
 	case "agent-live", "agent_live", "live", "livelog", "live-log":
 		return "agent-live"
 	default:
-		return normalizeKey(value)
+		return NormalizeKey(value)
 	}
 }
 
@@ -156,7 +156,7 @@ func logKindFromRel(rel string) string {
 	if !ok {
 		return "other"
 	}
-	return normalizeLogKind(first)
+	return NormalizeLogKind(first)
 }
 
 func logAgentFromFilename(filename string) string {
@@ -237,7 +237,7 @@ func readLogExcerptForQuery(path string, kind string, maxRunes int) (string, boo
 		return "", false
 	}
 	text := string(utils.StripUTF8BOM(data))
-	if normalizeLogKind(kind) == "agent-live" {
+	if NormalizeLogKind(kind) == "agent-live" {
 		text = sanitizeAgentLiveLogText(text)
 	}
 	runes := []rune(text)
@@ -514,7 +514,7 @@ func novelgenToolCommandIndexForQuery(lowerCommand string) int {
 }
 
 func briefLogResults(results interface{}, indexOnly bool) interface{} {
-	hits, ok := results.([]logHit)
+	hits, ok := results.([]LogHit)
 	if !ok {
 		return results
 	}

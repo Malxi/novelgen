@@ -1,4 +1,4 @@
-package cmd
+package toolplane
 
 import (
 	"encoding/json"
@@ -17,12 +17,12 @@ import (
 	"time"
 )
 
-func runToolPatch(cmd *cobra.Command, args []string) error {
-	section := normalizeKey(args[0])
+func RunToolPatch(cmd *cobra.Command, args []string) error {
+	section := NormalizeKey(args[0])
 	if section != "outline" && section != "craft" && section != "setup" && section != "recap" && section != "chapter" {
 		return fmt.Errorf("unsupported patch section %q", section)
 	}
-	target := normalizeKey(toolPatchFlags.Target)
+	target := NormalizeKey(ToolPatchFlags.Target)
 	if section == "outline" && target == "" {
 		target = "chapter"
 	}
@@ -35,8 +35,8 @@ func runToolPatch(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("--target is required for craft patch (character/item/location/organization)")
 		}
 	}
-	id := strings.TrimSpace(toolPatchFlags.ID)
-	taskID := strings.TrimSpace(toolPatchFlags.Task)
+	id := strings.TrimSpace(ToolPatchFlags.ID)
+	taskID := strings.TrimSpace(ToolPatchFlags.Task)
 	idRepaired := false
 	if section != "setup" {
 		repairedID := utils.RepairLikelyMojibakeText(id)
@@ -48,11 +48,11 @@ func runToolPatch(cmd *cobra.Command, args []string) error {
 	}
 	warnings := []string{}
 	if idRepaired {
-		warnings = append(warnings, fmt.Sprintf("repaired possible mojibake in --id from %q to %q", toolPatchFlags.ID, id))
+		warnings = append(warnings, fmt.Sprintf("repaired possible mojibake in --id from %q to %q", ToolPatchFlags.ID, id))
 	}
-	apply := toolPatchFlags.Apply && !toolPatchFlags.DryRun
+	apply := ToolPatchFlags.Apply && !ToolPatchFlags.DryRun
 
-	root, err := findProjectRoot()
+	root, err := project.FindRoot()
 	if err != nil {
 		return err
 	}
@@ -66,13 +66,13 @@ func runToolPatch(cmd *cobra.Command, args []string) error {
 		id = resolvedID
 		patchBytes = resolvedPatchBytes
 		warnings = append(warnings, taskWarnings...)
-	} else if strings.TrimSpace(toolPatchFlags.PatchBuffer) != "" {
-		patchBytes, err = loadToolPatchBuffer(root, toolPatchFlags.PatchBuffer, section)
+	} else if strings.TrimSpace(ToolPatchFlags.PatchBuffer) != "" {
+		patchBytes, err = LoadToolPatchBuffer(root, ToolPatchFlags.PatchBuffer, section)
 		if err != nil {
 			return err
 		}
-	} else if strings.TrimSpace(toolPatchFlags.PatchJSON) != "" {
-		patchBytes = []byte(toolPatchFlags.PatchJSON)
+	} else if strings.TrimSpace(ToolPatchFlags.PatchJSON) != "" {
+		patchBytes = []byte(ToolPatchFlags.PatchJSON)
 	} else {
 		patchBytes, err = io.ReadAll(cmd.InOrStdin())
 		if err != nil {
@@ -83,7 +83,7 @@ func runToolPatch(cmd *cobra.Command, args []string) error {
 	if len(strings.TrimSpace(string(patchBytes))) == 0 {
 		return fmt.Errorf("patch JSON is required on stdin")
 	}
-	if err := validateToolPatchBytes(patchBytes); err != nil {
+	if err := ValidateToolPatchBytes(patchBytes); err != nil {
 		return fmt.Errorf("patch rejected: %w", err)
 	}
 
@@ -91,11 +91,11 @@ func runToolPatch(cmd *cobra.Command, args []string) error {
 	case "outline":
 		return runToolOutlinePatch(cmd, root, target, id, patchBytes, apply, warnings)
 	case "craft":
-		return runToolCraftPatch(cmd, root, target, id, patchBytes, apply, warnings)
+		return RunToolCraftPatch(cmd, root, target, id, patchBytes, apply, warnings)
 	case "setup":
-		return runToolSetupPatch(cmd, root, patchBytes, apply, warnings)
+		return RunToolSetupPatch(cmd, root, patchBytes, apply, warnings)
 	case "recap":
-		return runToolRecapPatch(cmd, root, id, patchBytes, apply, warnings)
+		return RunToolRecapPatch(cmd, root, id, patchBytes, apply, warnings)
 	case "chapter":
 		return runToolChapterPatch(cmd, root, id, patchBytes, apply, warnings)
 	default:
@@ -108,25 +108,25 @@ func resolveToolPatchTask(root, section, target, id, taskID string) (string, str
 		return "", "", nil, nil, fmt.Errorf("--task is currently supported only for outline patches")
 	}
 	const prefix = "outline-global-repair:"
-	if !strings.HasPrefix(normalizeKey(taskID), prefix) {
+	if !strings.HasPrefix(NormalizeKey(taskID), prefix) {
 		return "", "", nil, nil, fmt.Errorf("unsupported patch task %q", taskID)
 	}
-	name := strings.TrimPrefix(normalizeKey(taskID), prefix)
+	name := strings.TrimPrefix(NormalizeKey(taskID), prefix)
 	if name == "" {
 		return "", "", nil, nil, fmt.Errorf("patch task category is required")
 	}
-	ctx := toolProjectContext{Root: root}
+	ctx := ToolProjectContext{Root: root}
 	if err := ctx.loadSetup(); err != nil {
 		return "", "", nil, nil, err
 	}
 	if err := ctx.loadOutline(); err != nil {
 		return "", "", nil, nil, err
 	}
-	resp := queryOutlineGlobalRepairContext(ctx, name)
+	resp := QueryOutlineGlobalRepairContext(ctx, name)
 	if !resp.OK {
 		return "", "", nil, nil, fmt.Errorf("failed to resolve patch task %q", taskID)
 	}
-	bundle, ok := resp.Results.(outlineGlobalRepairContext)
+	bundle, ok := resp.Results.(OutlineGlobalRepairContext)
 	if !ok || bundle.PatchTask == nil {
 		return "", "", nil, nil, fmt.Errorf("patch task %q has no patchable target", taskID)
 	}
@@ -136,7 +136,7 @@ func resolveToolPatchTask(root, section, target, id, taskID string) (string, str
 	if resolvedTarget == "" || resolvedID == "" {
 		return "", "", nil, nil, fmt.Errorf("patch task %q has incomplete patch query %q", taskID, task.PatchQuery)
 	}
-	if target != "" && target != "chapter" && normalizeKey(target) != normalizeKey(resolvedTarget) {
+	if target != "" && target != "chapter" && NormalizeKey(target) != NormalizeKey(resolvedTarget) {
 		return "", "", nil, nil, fmt.Errorf("--target %q does not match patch task target %q", target, resolvedTarget)
 	}
 	if id != "" && id != resolvedID {
@@ -146,7 +146,7 @@ func resolveToolPatchTask(root, section, target, id, taskID string) (string, str
 	if err != nil {
 		return "", "", nil, nil, fmt.Errorf("failed to encode patch task %q: %w", taskID, err)
 	}
-	return normalizeKey(resolvedTarget), resolvedID, patchBytes, []string{fmt.Sprintf("using patch task %s", taskID)}, nil
+	return NormalizeKey(resolvedTarget), resolvedID, patchBytes, []string{fmt.Sprintf("using patch task %s", taskID)}, nil
 }
 
 func extractNovelgenCommandFlag(command, flag string) string {
@@ -163,20 +163,20 @@ func extractNovelgenCommandFlag(command, flag string) string {
 	return ""
 }
 
-func runToolPatchBuffer(cmd *cobra.Command, args []string) error {
-	op := normalizeKey(args[0])
+func RunToolPatchBuffer(cmd *cobra.Command, args []string) error {
+	op := NormalizeKey(args[0])
 	if !allowedToolPatchBufferOps[op] {
 		return fmt.Errorf("unsupported patch-buffer operation %q", op)
 	}
-	id := strings.TrimSpace(toolPatchBufferFlags.ID)
+	id := strings.TrimSpace(ToolPatchBufferFlags.ID)
 	if id == "" {
 		return fmt.Errorf("--id is required")
 	}
-	root, err := findProjectRoot()
+	root, err := project.FindRoot()
 	if err != nil {
 		return err
 	}
-	path, err := toolPatchBufferPath(root, id)
+	path, err := ToolPatchBufferPath(root, id)
 	if err != nil {
 		return err
 	}
@@ -187,11 +187,11 @@ func runToolPatchBuffer(cmd *cobra.Command, args []string) error {
 		}
 		return writeJSON(cmd, map[string]interface{}{"ok": true, "id": id, "path": path, "bytes": 0})
 	case "append":
-		text := toolPatchBufferFlags.Text
-		if toolPatchBufferFlags.Stdin && text != "" {
+		text := ToolPatchBufferFlags.Text
+		if ToolPatchBufferFlags.Stdin && text != "" {
 			return fmt.Errorf("use either --text or --stdin, not both")
 		}
-		if text == "" || toolPatchBufferFlags.Stdin {
+		if text == "" || ToolPatchBufferFlags.Stdin {
 			data, err := io.ReadAll(cmd.InOrStdin())
 			if err != nil {
 				return fmt.Errorf("failed to read patch buffer stdin: %w", err)
@@ -229,7 +229,7 @@ func runToolPatchBuffer(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to read patch buffer: %w", err)
 		}
-		maxChars := toolPatchBufferFlags.MaxChars
+		maxChars := ToolPatchBufferFlags.MaxChars
 		if maxChars <= 0 {
 			maxChars = 400
 		}
@@ -256,8 +256,8 @@ func runToolPatchBuffer(cmd *cobra.Command, args []string) error {
 	return fmt.Errorf("unsupported patch-buffer operation %q", op)
 }
 
-func loadToolPatchBuffer(root, id, section string) ([]byte, error) {
-	path, err := toolPatchBufferPath(root, id)
+func LoadToolPatchBuffer(root, id, section string) ([]byte, error) {
+	path, err := ToolPatchBufferPath(root, id)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +269,7 @@ func loadToolPatchBuffer(root, id, section string) ([]byte, error) {
 	if strings.TrimSpace(content) == "" {
 		return nil, fmt.Errorf("patch buffer %q is empty", id)
 	}
-	if normalizeKey(section) == "chapter" {
+	if NormalizeKey(section) == "chapter" {
 		payload, err := json.Marshal(map[string]string{"content": content})
 		if err != nil {
 			return nil, err
@@ -279,7 +279,7 @@ func loadToolPatchBuffer(root, id, section string) ([]byte, error) {
 	return []byte(content), nil
 }
 
-func toolPatchBufferPath(root, id string) (string, error) {
+func ToolPatchBufferPath(root, id string) (string, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return "", fmt.Errorf("patch buffer id is required")
@@ -303,7 +303,7 @@ func toolPatchBufferPath(root, id string) (string, error) {
 }
 
 func runToolOutlinePatch(cmd *cobra.Command, root, target, id string, patchBytes []byte, apply bool, warnings []string) error {
-	ctx := toolProjectContext{Root: root}
+	ctx := ToolProjectContext{Root: root}
 	if err := ctx.loadSetup(); err != nil {
 		return err
 	}
@@ -311,26 +311,26 @@ func runToolOutlinePatch(cmd *cobra.Command, root, target, id string, patchBytes
 		return err
 	}
 
-	beforeOutline := cloneOutline(ctx.Outline)
-	var changes []toolPatchChange
+	beforeOutline := CloneOutline(ctx.Outline)
+	var changes []ToolPatchChange
 	var err error
 	switch target {
 	case "chapter":
-		changes, err = applyChapterPatch(ctx.Outline, id, patchBytes)
+		changes, err = ApplyChapterPatch(ctx.Outline, id, patchBytes)
 	case "volume":
-		changes, err = applyVolumePatch(ctx.Outline, id, patchBytes)
+		changes, err = ApplyVolumePatch(ctx.Outline, id, patchBytes)
 	}
 	if err != nil {
 		return err
 	}
 
 	scope := target
-	check, err := runToolPatchValidationCheck(ctx.Setup, ctx.Outline, scope, id)
+	check, err := RunToolPatchValidationCheck(ctx.Setup, ctx.Outline, scope, id)
 	if err != nil {
 		return err
 	}
 	addToolCheckMeta(check, "project_root", root)
-	globalCheck, err := runToolPatchValidationCheck(ctx.Setup, ctx.Outline, "all", "")
+	globalCheck, err := RunToolPatchValidationCheck(ctx.Setup, ctx.Outline, "all", "")
 	if err != nil {
 		return err
 	}
@@ -351,22 +351,22 @@ func runToolOutlinePatch(cmd *cobra.Command, root, target, id string, patchBytes
 		if err != nil {
 			return err
 		}
-		outlinePath := filepath.Join(root, "story", "compose", "outline.json")
-		if err := project.SavePartialOutline(ctx.Outline, outlinePath); err != nil {
+		OutlinePath := filepath.Join(root, "story", "compose", "outline.json")
+		if err := project.SavePartialOutline(ctx.Outline, OutlinePath); err != nil {
 			return fmt.Errorf("failed to save patched outline: %w", err)
 		}
 		mdPath := filepath.Join(root, "story", "compose", "outline.md")
 		if err := project.CreateOutlineMarkdown(ctx.Outline, mdPath); err != nil {
 			return fmt.Errorf("failed to save outline markdown: %w", err)
 		}
-		files["outline"] = outlinePath
+		files["outline"] = OutlinePath
 		files["markdown"] = mdPath
 		files["checkpoint"] = checkpointPath
 	} else {
 		ctx.Outline = beforeOutline
 	}
 
-	result := toolPatchResult{
+	result := ToolPatchResult{
 		OK:          !check.Blocking,
 		Applied:     apply,
 		DryRun:      !apply,
@@ -376,7 +376,7 @@ func runToolOutlinePatch(cmd *cobra.Command, root, target, id string, patchBytes
 		Check:       check,
 		Files:       files,
 		Warnings:    warnings,
-		NextActions: buildPatchNextActions(apply, check, outlinePatchPostCheckCommand(target, id)),
+		NextActions: buildPatchNextActions(apply, check, OutlinePatchPostCheckCommand(target, id)),
 		Meta: map[string]interface{}{
 			"project_root": root,
 			"validation":   toolPatchValidationMeta(check),
@@ -385,11 +385,11 @@ func runToolOutlinePatch(cmd *cobra.Command, root, target, id string, patchBytes
 	return writeJSON(cmd, result)
 }
 
-func newBlockingPatchIssues(before *models.Outline, setup *models.StorySetup, afterCheck *toolCheckResult) []models.ReviewSuggestion {
+func newBlockingPatchIssues(before *models.Outline, setup *models.StorySetup, afterCheck *ToolCheckResult) []models.ReviewSuggestion {
 	if before == nil || setup == nil || afterCheck == nil {
 		return nil
 	}
-	beforeCheck, err := runToolPatchValidationCheck(setup, before, "all", "")
+	beforeCheck, err := RunToolPatchValidationCheck(setup, before, "all", "")
 	if err != nil {
 		return nil
 	}
@@ -419,14 +419,14 @@ func toolPatchIssueIsBlocking(issue models.ReviewSuggestion) bool {
 
 func toolPatchIssueSignature(issue models.ReviewSuggestion) string {
 	return strings.Join([]string{
-		normalizeKey(issue.Category),
+		NormalizeKey(issue.Category),
 		strings.ToLower(strings.TrimSpace(issue.TargetID)),
 		strings.ToLower(strings.TrimSpace(issue.TargetName)),
 		strings.ToLower(strings.TrimSpace(issue.Issue)),
 	}, "\x00")
 }
 
-func runToolCraftPatch(cmd *cobra.Command, root, target, id string, patchBytes []byte, apply bool, warnings []string) error {
+func RunToolCraftPatch(cmd *cobra.Command, root, target, id string, patchBytes []byte, apply bool, warnings []string) error {
 	filename, err := craftPatchFilename(target)
 	if err != nil {
 		return err
@@ -440,7 +440,7 @@ func runToolCraftPatch(cmd *cobra.Command, root, target, id string, patchBytes [
 	}
 
 	beforeValues := cloneRawCraftMap(values)
-	key, action, changes, err := applyCraftElementPatch(values, target, id, patchBytes)
+	key, action, changes, err := ApplyCraftElementPatch(values, target, id, patchBytes)
 	if err != nil {
 		return err
 	}
@@ -452,7 +452,7 @@ func runToolCraftPatch(cmd *cobra.Command, root, target, id string, patchBytes [
 	}
 	validateCraftQualityObject(&gate, target, key, values[key])
 	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
-	check := makeToolCheckResult("schema", "craft", target, key, gate)
+	check := MakeToolCheckResult("schema", "craft", target, key, gate)
 	addToolCheckMeta(check, "project_root", root)
 
 	files := map[string]string{}
@@ -462,14 +462,14 @@ func runToolCraftPatch(cmd *cobra.Command, root, target, id string, patchBytes [
 			return err
 		}
 		path := filepath.Join(root, "story", "craft", filename)
-		if err := saveRawCraftMap(path, values); err != nil {
+		if err := SaveRawCraftMap(path, values); err != nil {
 			return err
 		}
 		files["craft"] = path
 		files["checkpoint"] = checkpointPath
 	}
 
-	result := toolPatchResult{
+	result := ToolPatchResult{
 		OK:          true,
 		Applied:     apply,
 		DryRun:      !apply,
@@ -488,14 +488,14 @@ func runToolCraftPatch(cmd *cobra.Command, root, target, id string, patchBytes [
 	return writeJSON(cmd, result)
 }
 
-func runToolSetupPatch(cmd *cobra.Command, root string, patchBytes []byte, apply bool, warnings []string) error {
+func RunToolSetupPatch(cmd *cobra.Command, root string, patchBytes []byte, apply bool, warnings []string) error {
 	setupPath := filepath.Join(root, "story", "setup", "story_setup.json")
 	setup, err := models.LoadStorySetup(setupPath)
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
-	before := cloneStorySetup(setup)
-	merged, setupPatchWarnings, err := applySetupPatchObject(*setup, patchBytes)
+	before := CloneStorySetup(setup)
+	merged, setupPatchWarnings, err := ApplySetupPatchObject(*setup, patchBytes)
 	if err != nil {
 		return err
 	}
@@ -505,7 +505,7 @@ func runToolSetupPatch(cmd *cobra.Command, root string, patchBytes []byte, apply
 	}
 	models.NormalizeStorySetup(&merged)
 
-	check, err := runToolSetupCheck("all", &merged)
+	check, err := RunToolSetupCheck("all", &merged)
 	if err != nil {
 		return err
 	}
@@ -516,7 +516,7 @@ func runToolSetupPatch(cmd *cobra.Command, root string, patchBytes []byte, apply
 
 	files := map[string]string{}
 	if apply {
-		checkpointPath, err := saveToolSetupPatchCheckpoint(root, before)
+		checkpointPath, err := SaveToolSetupPatchCheckpoint(root, before)
 		if err != nil {
 			return err
 		}
@@ -532,13 +532,13 @@ func runToolSetupPatch(cmd *cobra.Command, root string, patchBytes []byte, apply
 		files["checkpoint"] = checkpointPath
 	}
 
-	result := toolPatchResult{
+	result := ToolPatchResult{
 		OK:          !check.Blocking,
 		Applied:     apply,
 		DryRun:      !apply,
 		Target:      "setup",
 		ID:          "story_setup",
-		Changed:     diffStructFields("setup", before, merged),
+		Changed:     DiffStructFields("setup", before, merged),
 		Check:       check,
 		Files:       files,
 		Warnings:    warnings,
@@ -550,7 +550,7 @@ func runToolSetupPatch(cmd *cobra.Command, root string, patchBytes []byte, apply
 	return writeJSON(cmd, result)
 }
 
-func applySetupPatchObject(setup models.StorySetup, patchBytes []byte) (models.StorySetup, []string, error) {
+func ApplySetupPatchObject(setup models.StorySetup, patchBytes []byte) (models.StorySetup, []string, error) {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(patchBytes, &raw); err != nil {
 		return setup, nil, fmt.Errorf("failed to parse setup patch JSON: %w", err)
@@ -571,7 +571,7 @@ func applySetupPatchObject(setup models.StorySetup, patchBytes []byte) (models.S
 		if err != nil {
 			return setup, nil, err
 		}
-		mergedValue, mergeErr := mergeJSONPatchObject(setup, data)
+		mergedValue, mergeErr := MergeJSONPatchObject(setup, data)
 		if mergeErr != nil {
 			return setup, nil, mergeErr
 		}
@@ -725,7 +725,7 @@ func mergeSetupLongFormPlan(existing *models.LongFormPlan, patchRaw json.RawMess
 		if err != nil {
 			return nil, err
 		}
-		mergedValue, err := mergeJSONPatchObject(base, data)
+		mergedValue, err := MergeJSONPatchObject(base, data)
 		if err != nil {
 			return nil, fmt.Errorf("setup patch long_form_plan does not match schema: %w", err)
 		}
@@ -776,7 +776,7 @@ func mergeSetupWritingStyle(existing models.WritingStyle, patchRaw json.RawMessa
 		if err != nil {
 			return existing, err
 		}
-		mergedValue, err := mergeJSONPatchObject(existing, data)
+		mergedValue, err := MergeJSONPatchObject(existing, data)
 		if err != nil {
 			return existing, fmt.Errorf("setup patch writing_style does not match schema: %w", err)
 		}
@@ -844,7 +844,7 @@ func upsertSetupPatchItems[T any](existing []T, patchRaw json.RawMessage, keyFn 
 			if normalizeSetupPatchKey(keyFn(out[i])) != key {
 				continue
 			}
-			merged, err := mergeJSONPatchObject(out[i], raw)
+			merged, err := MergeJSONPatchObject(out[i], raw)
 			if err != nil {
 				return nil, fmt.Errorf("setup patch %s item %q does not match schema: %w", path, keyFn(item), err)
 			}
@@ -880,7 +880,7 @@ func normalizeSetupPatchKey(key string) string {
 	return strings.ToLower(strings.TrimSpace(key))
 }
 
-func runToolRecapPatch(cmd *cobra.Command, root, id string, patchBytes []byte, apply bool, warnings []string) error {
+func RunToolRecapPatch(cmd *cobra.Command, root, id string, patchBytes []byte, apply bool, warnings []string) error {
 	store := recap.NewStore(root)
 	before, err := store.Load(id)
 	if err != nil {
@@ -892,7 +892,7 @@ func runToolRecapPatch(cmd *cobra.Command, root, id string, patchBytes []byte, a
 		outlineChapter = outline.GetChapterByID(id)
 	}
 
-	merged, err := mergeJSONPatchObject(*before, patchBytes)
+	merged, err := MergeJSONPatchObject(*before, patchBytes)
 	if err != nil {
 		return err
 	}
@@ -921,13 +921,13 @@ func runToolRecapPatch(cmd *cobra.Command, root, id string, patchBytes []byte, a
 		files["checkpoint"] = checkpointPath
 	}
 
-	result := toolPatchResult{
+	result := ToolPatchResult{
 		OK:          !check.Blocking,
 		Applied:     apply,
 		DryRun:      !apply,
 		Target:      "recap.chapter",
 		ID:          id,
-		Changed:     diffStructFields("recap."+id, *before, merged),
+		Changed:     DiffStructFields("recap."+id, *before, merged),
 		Check:       check,
 		Files:       files,
 		Warnings:    warnings,
@@ -955,23 +955,23 @@ func runToolChapterPatch(cmd *cobra.Command, root, id string, patchBytes []byte,
 	if strings.TrimSpace(patch.ID) != "" && strings.TrimSpace(patch.ID) != id {
 		return fmt.Errorf("patch id %q does not match target chapter %q", patch.ID, id)
 	}
-	content := normalizeChapterPatchContent(chapter, patch.Content)
+	content := NormalizeChapterPatchContent(chapter, patch.Content)
 	if strings.TrimSpace(content) == "" {
 		return fmt.Errorf("chapter patch content is required")
 	}
 	if err := utils.ValidateNoSuspiciousPatchText(content); err != nil {
 		return fmt.Errorf("chapter patch rejected: %w", err)
 	}
-	targetWords := toolPatchFlags.TargetWords
+	targetWords := ToolPatchFlags.TargetWords
 	if targetWords <= 0 {
 		targetWords = toolChapterTargetWords()
 	}
 	beforePath, beforeContent := loadFinalChapterContentWithPath(root, id)
-	if err := validateToolChapterPatchLength(chapter, content, targetWords, beforeContent); err != nil {
+	if err := ValidateToolChapterPatchLength(chapter, content, targetWords, beforeContent); err != nil {
 		return fmt.Errorf("chapter patch rejected: %w", err)
 	}
 
-	changes := []toolPatchChange{{
+	changes := []ToolPatchChange{{
 		Path:   "chapter." + id + ".content",
 		Action: "update",
 	}}
@@ -979,7 +979,7 @@ func runToolChapterPatch(cmd *cobra.Command, root, id string, patchBytes []byte,
 		changes[0].Action = "create"
 	}
 
-	qualityCheck := makeToolCheckResult("quality", "chapter", "chapter", id, runToolChapterQualityGate(chapter, content, targetWords))
+	qualityCheck := MakeToolCheckResult("quality", "chapter", "chapter", id, RunToolChapterQualityGate(chapter, content, targetWords))
 	addToolCheckMeta(qualityCheck, "project_root", root)
 	addToolCheckMeta(qualityCheck, "mode", "pre_apply")
 	addToolCheckMeta(qualityCheck, "target_words", targetWords)
@@ -1004,12 +1004,12 @@ func runToolChapterPatch(cmd *cobra.Command, root, id string, patchBytes []byte,
 		}
 		files["chapter"] = path
 		files["checkpoint"] = checkpointPath
-		if toolPatchFlags.RefreshDerived {
+		if ToolPatchFlags.RefreshDerived {
 			var refresh *toolRefreshResult
 			func() {
-				restoreLogger := suppressToolRefreshLogs()
+				restoreLogger := SuppressToolRefreshLogs()
 				defer restoreLogger()
-				refresh, err = refreshToolChapterDSL(cmd.Context(), root, id, 0)
+				refresh, err = RefreshToolChapterDSL(cmd.Context(), root, id, 0)
 			}()
 			if err != nil {
 				return fmt.Errorf("chapter patch applied but derived RPG DSL refresh failed: %w", err)
@@ -1021,7 +1021,7 @@ func runToolChapterPatch(cmd *cobra.Command, root, id string, patchBytes []byte,
 			if refresh.CacheDir != "" {
 				files["chapter_dsl_cache"] = refresh.CacheDir
 			}
-			postCheck, err := runToolChapterCheckWithTargetWords(root, "all", "chapter", id, targetWords)
+			postCheck, err := RunToolChapterCheckWithTargetWords(root, "all", "chapter", id, targetWords)
 			if err != nil {
 				return err
 			}
@@ -1030,7 +1030,7 @@ func runToolChapterPatch(cmd *cobra.Command, root, id string, patchBytes []byte,
 			addToolCheckMeta(postCheck, "derived_dsl_refreshed", true)
 			check = postCheck
 		} else {
-			postCheck, err := runToolChapterCheckWithTargetWords(root, "quality", "chapter", id, targetWords)
+			postCheck, err := RunToolChapterCheckWithTargetWords(root, "quality", "chapter", id, targetWords)
 			if err != nil {
 				return err
 			}
@@ -1041,7 +1041,7 @@ func runToolChapterPatch(cmd *cobra.Command, root, id string, patchBytes []byte,
 		}
 	}
 
-	result := toolPatchResult{
+	result := ToolPatchResult{
 		OK:          !check.Blocking,
 		Applied:     apply,
 		DryRun:      !apply,
@@ -1051,7 +1051,7 @@ func runToolChapterPatch(cmd *cobra.Command, root, id string, patchBytes []byte,
 		Check:       check,
 		Files:       files,
 		Warnings:    warnings,
-		NextActions: buildChapterPatchNextActions(id, apply, refreshedDerived, check),
+		NextActions: BuildChapterPatchNextActions(id, apply, refreshedDerived, check),
 		Meta: map[string]interface{}{
 			"project_root":           root,
 			"previous_content_path":  beforePath,
@@ -1063,20 +1063,20 @@ func runToolChapterPatch(cmd *cobra.Command, root, id string, patchBytes []byte,
 	return writeJSON(cmd, result)
 }
 
-func buildChapterPatchNextActions(chapterID string, applied bool, refreshedDerived bool, check *toolCheckResult) []toolNextAction {
+func BuildChapterPatchNextActions(chapterID string, applied bool, refreshedDerived bool, check *ToolCheckResult) []ToolNextAction {
 	chapterID = strings.TrimSpace(chapterID)
 	if chapterID == "" {
 		return nil
 	}
 	if !applied {
-		actions := []toolNextAction{{
+		actions := []ToolNextAction{{
 			Step:    1,
 			Action:  "apply_validated_patch",
 			Purpose: "If this dry-run patch is acceptable and the workflow allows writes, repeat the same patch command with --apply.",
 			When:    "Only after check.blocking is false and apply is explicitly allowed.",
 		}}
 		if check != nil && check.Blocking {
-			actions[0] = toolNextAction{
+			actions[0] = ToolNextAction{
 				Step:    1,
 				Action:  "repair_patch_content",
 				Purpose: "Use check.issues navigation to repair the proposed chapter content before trying apply.",
@@ -1087,20 +1087,20 @@ func buildChapterPatchNextActions(chapterID string, applied bool, refreshedDeriv
 	}
 	if refreshedDerived {
 		if check != nil && check.Blocking {
-			return []toolNextAction{{
+			return []ToolNextAction{{
 				Step:    1,
 				Action:  "repair_remaining_issues",
 				Purpose: "Patch applied and derived RPG DSL was refreshed, but the post-refresh all check is blocking; repair the returned check.issues one target at a time.",
 				Command: fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --min-priority low --max-issues 12", chapterID),
 			}}
 		}
-		return []toolNextAction{{
+		return []ToolNextAction{{
 			Step:    1,
 			Action:  "return_final_json",
 			Purpose: "Patch applied, derived RPG DSL refreshed, and post-refresh all check is clean for blocking issues.",
 		}}
 	}
-	return []toolNextAction{
+	return []ToolNextAction{
 		{
 			Step:    1,
 			Action:  "refresh_derived_dsl",
@@ -1116,33 +1116,33 @@ func buildChapterPatchNextActions(chapterID string, applied bool, refreshedDeriv
 	}
 }
 
-func buildPatchNextActions(applied bool, check *toolCheckResult, postApplyCheckCommand string) []toolNextAction {
+func buildPatchNextActions(applied bool, check *ToolCheckResult, postApplyCheckCommand string) []ToolNextAction {
 	postApplyCheckCommand = strings.TrimSpace(postApplyCheckCommand)
 	if !applied {
-		action := toolNextAction{
+		action := ToolNextAction{
 			Step:    1,
 			Action:  "apply_validated_patch",
 			Purpose: "If this dry-run patch is acceptable and the workflow allows writes, repeat the same patch command with --apply.",
 			When:    "Only after check.blocking is false and apply is explicitly allowed.",
 		}
 		if check != nil && check.Blocking {
-			action = toolNextAction{
+			action = ToolNextAction{
 				Step:    1,
 				Action:  "repair_patch_content",
 				Purpose: "Use check.issues navigation to repair the proposed patch before trying apply.",
 				When:    "The dry-run check is blocking.",
 			}
 		}
-		return []toolNextAction{action}
+		return []ToolNextAction{action}
 	}
 	if postApplyCheckCommand == "" {
-		return []toolNextAction{{
+		return []ToolNextAction{{
 			Step:    1,
 			Action:  "inspect_patch_check",
 			Purpose: "Use the check object returned by this patch result before deciding whether another repair is needed.",
 		}}
 	}
-	return []toolNextAction{{
+	return []ToolNextAction{{
 		Step:    1,
 		Action:  "post_apply_check",
 		Purpose: "Verify the saved project state after the validated patch write.",
@@ -1150,8 +1150,8 @@ func buildPatchNextActions(applied bool, check *toolCheckResult, postApplyCheckC
 	}}
 }
 
-func outlinePatchPostCheckCommand(target, id string) string {
-	target = normalizeKey(target)
+func OutlinePatchPostCheckCommand(target, id string) string {
+	target = NormalizeKey(target)
 	id = strings.TrimSpace(id)
 	switch target {
 	case "volume":
@@ -1166,11 +1166,11 @@ func outlinePatchPostCheckCommand(target, id string) string {
 	return ""
 }
 
-func normalizeChapterPatchContent(chapter *models.Chapter, content string) string {
+func NormalizeChapterPatchContent(chapter *models.Chapter, content string) string {
 	return project.NormalizeChapterContent(chapter, content)
 }
 
-func validateToolChapterPatchLength(chapter *models.Chapter, content string, targetWords int, previousContent ...string) error {
+func ValidateToolChapterPatchLength(chapter *models.Chapter, content string, targetWords int, previousContent ...string) error {
 	if targetWords <= 0 {
 		return nil
 	}
@@ -1181,14 +1181,14 @@ func validateToolChapterPatchLength(chapter *models.Chapter, content string, tar
 		chapterTitle = chapter.Title
 	}
 	body := strings.TrimSpace(stripToolChapterMarkdownTitle(content, chapterTitle))
-	count := toolNarrativeUnitCount(body)
+	count := ToolNarrativeUnitCount(body)
 	hardMax := toolChapterLengthHardMax(targetWords)
 	if count > hardMax {
 		return fmt.Errorf("content is too long for chapter %s: got %d narrative units, target %d, hard max %d; trim the patch and keep only the selected chapter", chapterID, count, targetWords, hardMax)
 	}
 	if len(previousContent) > 0 {
 		previousBody := strings.TrimSpace(stripToolChapterMarkdownTitle(previousContent[0], chapterTitle))
-		previousCount := toolNarrativeUnitCount(previousBody)
+		previousCount := ToolNarrativeUnitCount(previousBody)
 		minPreviousForShrinkGuard := targetWords / 2
 		if minPreviousForShrinkGuard < 500 {
 			minPreviousForShrinkGuard = 500
@@ -1231,7 +1231,7 @@ func toolChapterLengthHardMax(targetWords int) int {
 func loadFinalChapterContentWithPath(root, chapterID string) (string, string) {
 	candidates := []string{
 		toolFinalChapterPathForID(root, chapterID),
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", extractChapterNumber(chapterID))),
+		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", utils.ExtractChapterNumber(chapterID))),
 	}
 	for _, path := range candidates {
 		data, err := os.ReadFile(path)
@@ -1242,15 +1242,15 @@ func loadFinalChapterContentWithPath(root, chapterID string) (string, string) {
 	return "", ""
 }
 
-func validateToolPatchBytes(patchBytes []byte) error {
+func ValidateToolPatchBytes(patchBytes []byte) error {
 	return utils.ValidatePatchJSONText(patchBytes)
 }
 
-func runToolPatchValidationCheck(setup *models.StorySetup, outline *models.Outline, scope, id string) (*toolCheckResult, error) {
-	return runToolOutlineCheck("all", setup, outline, scope, id)
+func RunToolPatchValidationCheck(setup *models.StorySetup, outline *models.Outline, scope, id string) (*ToolCheckResult, error) {
+	return RunToolOutlineCheck("all", setup, outline, scope, id)
 }
 
-func toolPatchValidationMeta(check *toolCheckResult) map[string]interface{} {
+func toolPatchValidationMeta(check *ToolCheckResult) map[string]interface{} {
 	if check == nil {
 		return nil
 	}
@@ -1268,7 +1268,7 @@ func toolPatchValidationMeta(check *toolCheckResult) map[string]interface{} {
 	return meta
 }
 
-func applyChapterPatch(outline *models.Outline, chapterID string, patchBytes []byte) ([]toolPatchChange, error) {
+func ApplyChapterPatch(outline *models.Outline, chapterID string, patchBytes []byte) ([]ToolPatchChange, error) {
 	chapter := outline.GetChapterByID(chapterID)
 	if chapter == nil {
 		return nil, fmt.Errorf("chapter %q not found", chapterID)
@@ -1283,7 +1283,7 @@ func applyChapterPatch(outline *models.Outline, chapterID string, patchBytes []b
 		return nil, fmt.Errorf("patch id %q does not match target chapter %q", probe.ID, chapter.ID)
 	}
 	before := *chapter
-	merged, err := mergeJSONPatchObject(before, patchBytes)
+	merged, err := MergeJSONPatchObject(before, patchBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -1292,10 +1292,10 @@ func applyChapterPatch(outline *models.Outline, chapterID string, patchBytes []b
 	}
 	merged.ID = before.ID
 	*chapter = merged
-	return diffStructFields("outline.chapter."+chapterID, before, merged), nil
+	return DiffStructFields("outline.chapter."+chapterID, before, merged), nil
 }
 
-func applyVolumePatch(outline *models.Outline, volumeID string, patchBytes []byte) ([]toolPatchChange, error) {
+func ApplyVolumePatch(outline *models.Outline, volumeID string, patchBytes []byte) ([]ToolPatchChange, error) {
 	volume := outline.GetVolumeByID(volumeID)
 	if volume == nil {
 		return nil, fmt.Errorf("volume %q not found", volumeID)
@@ -1325,7 +1325,7 @@ func applyVolumePatch(outline *models.Outline, volumeID string, patchBytes []byt
 	if _, ok := raw["payoff_contract"]; ok {
 		volume.PayoffContract = models.MergeVolumePayoffContract(volume.PayoffContract, patch.PayoffContract)
 	}
-	changes := diffStructFields("outline.volume."+volumeID, before, *volume)
+	changes := DiffStructFields("outline.volume."+volumeID, before, *volume)
 
 	for _, rawChapter := range patch.ChangedChapters {
 		var probe struct {
@@ -1344,7 +1344,7 @@ func applyVolumePatch(outline *models.Outline, volumeID string, patchBytes []byt
 			}
 			found = true
 			beforeChapter := volume.Chapters[i]
-			merged, err := mergeJSONPatchObject(beforeChapter, rawChapter)
+			merged, err := MergeJSONPatchObject(beforeChapter, rawChapter)
 			if err != nil {
 				return nil, err
 			}
@@ -1353,7 +1353,7 @@ func applyVolumePatch(outline *models.Outline, volumeID string, patchBytes []byt
 			}
 			merged.ID = beforeChapter.ID
 			volume.Chapters[i] = merged
-			changes = append(changes, diffStructFields("outline.chapter."+probe.ID, beforeChapter, merged)...)
+			changes = append(changes, DiffStructFields("outline.chapter."+probe.ID, beforeChapter, merged)...)
 			break
 		}
 		if !found {
@@ -1370,7 +1370,7 @@ func applyVolumePatch(outline *models.Outline, volumeID string, patchBytes []byt
 	return changes, nil
 }
 
-func applyVolumeEventPatch(volume *models.Volume, volumeID string, rawEvent json.RawMessage) ([]toolPatchChange, error) {
+func applyVolumeEventPatch(volume *models.Volume, volumeID string, rawEvent json.RawMessage) ([]ToolPatchChange, error) {
 	var probe struct {
 		ChapterID  string `json:"chapter_id"`
 		EventIndex *int   `json:"event_index"`
@@ -1416,17 +1416,17 @@ func applyVolumeEventPatch(volume *models.Volume, volumeID string, rawEvent json
 			return nil, fmt.Errorf("changed_events index %d out of range for chapter %q", eventIndex, chapterID)
 		}
 		before := volume.Chapters[chapterIdx].Events[eventIndex]
-		merged, err := mergeJSONPatchObject(before, patchBytes)
+		merged, err := MergeJSONPatchObject(before, patchBytes)
 		if err != nil {
 			return nil, err
 		}
 		volume.Chapters[chapterIdx].Events[eventIndex] = merged
-		return diffStructFields(fmt.Sprintf("outline.event.%s.%d", chapterID, eventIndex), before, merged), nil
+		return DiffStructFields(fmt.Sprintf("outline.event.%s.%d", chapterID, eventIndex), before, merged), nil
 	}
 	return nil, fmt.Errorf("changed event chapter %q is not in target volume %q", chapterID, volumeID)
 }
 
-func applyCraftElementPatch(values map[string]map[string]interface{}, kind, id string, patchBytes []byte) (string, string, []toolPatchChange, error) {
+func ApplyCraftElementPatch(values map[string]map[string]interface{}, kind, id string, patchBytes []byte) (string, string, []ToolPatchChange, error) {
 	var patch map[string]interface{}
 	if err := json.Unmarshal(patchBytes, &patch); err != nil {
 		return "", "", nil, fmt.Errorf("failed to parse patch JSON: %w", err)
@@ -1449,7 +1449,7 @@ func applyCraftElementPatch(values map[string]map[string]interface{}, kind, id s
 	if _, ok := base["name"]; !ok {
 		base["name"] = key
 	}
-	normalized, err := normalizeCraftPatchObject(kind, key, base)
+	normalized, err := NormalizeCraftPatchObject(kind, key, base)
 	if err != nil {
 		return "", "", nil, err
 	}
@@ -1462,7 +1462,7 @@ func applyCraftElementPatch(values map[string]map[string]interface{}, kind, id s
 }
 
 func normalizeCraftPatchTarget(target string) string {
-	switch normalizeKey(target) {
+	switch NormalizeKey(target) {
 	case "character", "characters", "char", "chars":
 		return "character"
 	case "item", "items":
@@ -1472,7 +1472,7 @@ func normalizeCraftPatchTarget(target string) string {
 	case "organization", "organizations", "org", "orgs":
 		return "organization"
 	default:
-		return normalizeKey(target)
+		return NormalizeKey(target)
 	}
 }
 
@@ -1507,7 +1507,7 @@ func resolveCraftPatchKey(values map[string]map[string]interface{}, id string) (
 	return "", false
 }
 
-func normalizeCraftPatchObject(kind, key string, raw map[string]interface{}) (map[string]interface{}, error) {
+func NormalizeCraftPatchObject(kind, key string, raw map[string]interface{}) (map[string]interface{}, error) {
 	data, err := json.Marshal(raw)
 	if err != nil {
 		return nil, err
@@ -1594,7 +1594,7 @@ func normalizeCraftRPGStatsPatch(raw map[string]interface{}) error {
 }
 
 func normalizeCraftRPGStatKey(key string) (string, bool) {
-	switch normalizeKey(key) {
+	switch NormalizeKey(key) {
 	case "str", "strength", "力量":
 		return "str", true
 	case "agi", "agility", "dex", "dexterity", "敏捷":
@@ -1654,7 +1654,7 @@ func mergeNormalizedCraftObject(raw map[string]interface{}, normalized interface
 	return out, nil
 }
 
-func diffJSONMaps(prefix string, before, after map[string]interface{}) []toolPatchChange {
+func diffJSONMaps(prefix string, before, after map[string]interface{}) []ToolPatchChange {
 	keys := map[string]bool{}
 	for key := range before {
 		keys[key] = true
@@ -1662,7 +1662,7 @@ func diffJSONMaps(prefix string, before, after map[string]interface{}) []toolPat
 	for key := range after {
 		keys[key] = true
 	}
-	changes := make([]toolPatchChange, 0)
+	changes := make([]ToolPatchChange, 0)
 	for key := range keys {
 		if reflect.DeepEqual(before[key], after[key]) {
 			continue
@@ -1673,7 +1673,7 @@ func diffJSONMaps(prefix string, before, after map[string]interface{}) []toolPat
 		} else if _, ok := after[key]; !ok {
 			action = "remove"
 		}
-		changes = append(changes, toolPatchChange{Path: prefix + "." + key, Action: action})
+		changes = append(changes, ToolPatchChange{Path: prefix + "." + key, Action: action})
 	}
 	return changes
 }
@@ -1694,7 +1694,7 @@ func cloneRawCraftMap(values map[string]map[string]interface{}) map[string]map[s
 	return out
 }
 
-func mergeJSONPatchObject[T any](original T, patchBytes []byte) (T, error) {
+func MergeJSONPatchObject[T any](original T, patchBytes []byte) (T, error) {
 	var base map[string]interface{}
 	data, err := json.Marshal(original)
 	if err != nil {
@@ -1748,7 +1748,7 @@ func mergeJSONPatchValue(base map[string]interface{}, key string, value interfac
 	base[key] = baseMap
 }
 
-func diffStructFields(prefix string, before, after interface{}) []toolPatchChange {
+func DiffStructFields(prefix string, before, after interface{}) []ToolPatchChange {
 	beforeMap := structJSONMap(before)
 	afterMap := structJSONMap(after)
 	keys := map[string]bool{}
@@ -1758,7 +1758,7 @@ func diffStructFields(prefix string, before, after interface{}) []toolPatchChang
 	for key := range afterMap {
 		keys[key] = true
 	}
-	changes := make([]toolPatchChange, 0)
+	changes := make([]ToolPatchChange, 0)
 	for key := range keys {
 		if reflect.DeepEqual(beforeMap[key], afterMap[key]) {
 			continue
@@ -1769,7 +1769,7 @@ func diffStructFields(prefix string, before, after interface{}) []toolPatchChang
 		} else if _, ok := afterMap[key]; !ok {
 			action = "remove"
 		}
-		changes = append(changes, toolPatchChange{Path: prefix + "." + key, Action: action})
+		changes = append(changes, ToolPatchChange{Path: prefix + "." + key, Action: action})
 	}
 	return changes
 }
@@ -1781,7 +1781,7 @@ func structJSONMap(value interface{}) map[string]interface{} {
 	return out
 }
 
-func cloneOutline(outline *models.Outline) *models.Outline {
+func CloneOutline(outline *models.Outline) *models.Outline {
 	if outline == nil {
 		return nil
 	}
@@ -1791,7 +1791,7 @@ func cloneOutline(outline *models.Outline) *models.Outline {
 	return &cloned
 }
 
-func cloneStorySetup(setup *models.StorySetup) models.StorySetup {
+func CloneStorySetup(setup *models.StorySetup) models.StorySetup {
 	if setup == nil {
 		return models.StorySetup{}
 	}
@@ -1817,7 +1817,7 @@ func saveToolPatchCheckpoint(root string, outline *models.Outline) (string, erro
 	return path, nil
 }
 
-func saveToolSetupPatchCheckpoint(root string, setup models.StorySetup) (string, error) {
+func SaveToolSetupPatchCheckpoint(root string, setup models.StorySetup) (string, error) {
 	dir := filepath.Join(root, "story", "setup", "checkpoints")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", err
@@ -1887,7 +1887,7 @@ func saveToolChapterPatchCheckpoint(root, chapterID, beforePath, beforeContent s
 	return path, nil
 }
 
-func saveRawCraftMap(path string, values map[string]map[string]interface{}) error {
+func SaveRawCraftMap(path string, values map[string]map[string]interface{}) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}

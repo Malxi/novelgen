@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"novelgen/internal/models"
+	"novelgen/internal/toolplane"
 
 	"github.com/spf13/cobra"
 )
@@ -38,15 +39,15 @@ func TestToolQueryOutlineRefsFindsCharacterItemAndLocation(t *testing.T) {
 		}},
 	}}}
 
-	charResp := queryOutlineRefs(outline, "character", "Lin", true)
+	charResp := toolplane.QueryOutlineRefs(outline, "character", "Lin", true)
 	if charResp.Count != 1 {
 		t.Fatalf("character refs count = %d, want 1", charResp.Count)
 	}
-	itemResp := queryOutlineRefs(outline, "item", "Star Core", true)
+	itemResp := toolplane.QueryOutlineRefs(outline, "item", "Star Core", true)
 	if itemResp.Count != 1 {
 		t.Fatalf("item refs count = %d, want 1", itemResp.Count)
 	}
-	locResp := queryOutlineRefs(outline, "location", "Mine", true)
+	locResp := toolplane.QueryOutlineRefs(outline, "location", "Mine", true)
 	if locResp.Count != 1 {
 		t.Fatalf("location refs count = %d, want 1", locResp.Count)
 	}
@@ -62,8 +63,8 @@ func TestFieldsRequestScenes(t *testing.T) {
 		"scenes,summary":       true,
 	}
 	for fields, want := range cases {
-		if got := fieldsRequestScenes(fields); got != want {
-			t.Fatalf("fieldsRequestScenes(%q) = %v, want %v", fields, got, want)
+		if got := toolplane.FieldsRequestScenes(fields); got != want {
+			t.Fatalf("toolplane.FieldsRequestScenes(%q) = %v, want %v", fields, got, want)
 		}
 	}
 }
@@ -87,9 +88,9 @@ func TestToolQueryChapterFieldsScenesBypassesBriefTrim(t *testing.T) {
 	}}}
 
 	// Plain brief view must strip scenes so ordinary queries stay compact.
-	brief := queryOutlineNode(outline, "chapter", "P1-V1-C1")
+	brief := toolplane.QueryOutlineNode(outline, "chapter", "P1-V1-C1")
 	brief.Section = "outline"
-	applyToolView(&brief, "brief")
+	toolplane.ApplyToolView(&brief, "brief")
 	briefData, err := json.Marshal(brief.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -99,11 +100,11 @@ func TestToolQueryChapterFieldsScenesBypassesBriefTrim(t *testing.T) {
 	}
 
 	// --fields scenes --view brief must return the beats from the full object.
-	withFields := queryOutlineNode(outline, "chapter", "P1-V1-C1")
+	withFields := toolplane.QueryOutlineNode(outline, "chapter", "P1-V1-C1")
 	withFields.Section = "outline"
 	withFields.Query = map[string]string{"fields": "scenes"}
-	applyToolView(&withFields, "brief")
-	applyToolFields(&withFields, "scenes")
+	toolplane.ApplyToolView(&withFields, "brief")
+	toolplane.ApplyToolFields(&withFields, "scenes")
 	fieldData, err := json.Marshal(withFields.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -118,11 +119,11 @@ func TestWriteToolJSONUsesCommandOutput(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.SetOut(&out)
 
-	if err := writeToolJSON(cmd, toolResponse{OK: true, Section: "context", Count: 1}); err != nil {
+	if err := toolplane.WriteToolJSON(cmd, toolplane.ToolResponse{OK: true, Section: "context", Count: 1}); err != nil {
 		t.Fatal(err)
 	}
 	if out.Len() == 0 || !strings.Contains(out.String(), `"section": "context"`) {
-		t.Fatalf("writeToolJSON did not write to command output: %q", out.String())
+		t.Fatalf("toolplane.WriteToolJSON did not write to command output: %q", out.String())
 	}
 }
 
@@ -136,11 +137,11 @@ func TestToolQueryLogsIndexDoesNotReturnContent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp := queryLogs(root, "prompts", "", "ComposeAgent", false)
+	resp := toolplane.QueryLogs(root, "prompts", "", "ComposeAgent", false)
 	if !resp.OK || resp.Count != 1 {
-		t.Fatalf("queryLogs response = %#v", resp)
+		t.Fatalf("toolplane.QueryLogs response = %#v", resp)
 	}
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -165,8 +166,8 @@ func TestToolQueryLogsPreviewSkipsMetadataHeader(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp := queryLogs(root, "responses", "", "WriteAgent", false)
-	hits, ok := resp.Results.([]logHit)
+	resp := toolplane.QueryLogs(root, "responses", "", "WriteAgent", false)
+	hits, ok := resp.Results.([]toolplane.LogHit)
 	if !ok || len(hits) != 1 {
 		t.Fatalf("results = %#v", resp.Results)
 	}
@@ -192,8 +193,8 @@ func TestToolQueryLogsContentRequiresExactIDAndIsCapped(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	withoutID := queryLogs(root, "agent-live", "", "WriteAgent", true)
-	hits, ok := withoutID.Results.([]logHit)
+	withoutID := toolplane.QueryLogs(root, "agent-live", "", "WriteAgent", true)
+	hits, ok := withoutID.Results.([]toolplane.LogHit)
 	if !ok || len(hits) != 1 {
 		t.Fatalf("withoutID results = %#v", withoutID.Results)
 	}
@@ -204,8 +205,8 @@ func TestToolQueryLogsContentRequiresExactIDAndIsCapped(t *testing.T) {
 		t.Fatalf("--content without exact --id should return preview only: %#v", hits[0])
 	}
 
-	withID := queryLogs(root, "agent-live", "agent-live/WriteAgent_20260706_090000_000000000.jsonl", "", true)
-	hits, ok = withID.Results.([]logHit)
+	withID := toolplane.QueryLogs(root, "agent-live", "agent-live/WriteAgent_20260706_090000_000000000.jsonl", "", true)
+	hits, ok = withID.Results.([]toolplane.LogHit)
 	if !ok || len(hits) != 1 {
 		t.Fatalf("withID results = %#v", withID.Results)
 	}
@@ -254,8 +255,8 @@ func TestToolQueryLogsHonorsHistoryCutoffForIndexes(t *testing.T) {
 	}
 	t.Setenv("NOVELGEN_LOG_HISTORY_CUTOFF", cutoff.Format(time.RFC3339Nano))
 
-	indexResp := queryLogs(root, "", "", "WriteAgent", false)
-	hits, ok := indexResp.Results.([]logHit)
+	indexResp := toolplane.QueryLogs(root, "", "", "WriteAgent", false)
+	hits, ok := indexResp.Results.([]toolplane.LogHit)
 	if !ok || len(hits) != 2 {
 		t.Fatalf("index results = %#v", indexResp.Results)
 	}
@@ -265,8 +266,8 @@ func TestToolQueryLogsHonorsHistoryCutoffForIndexes(t *testing.T) {
 		t.Fatalf("index should only return logs before cutoff, got %#v", hits)
 	}
 
-	exactResp := queryLogs(root, "agent-live", "agent-live/WriteAgent_20260707_090000_000000000.jsonl", "", true)
-	exactHits, ok := exactResp.Results.([]logHit)
+	exactResp := toolplane.QueryLogs(root, "agent-live", "agent-live/WriteAgent_20260707_090000_000000000.jsonl", "", true)
+	exactHits, ok := exactResp.Results.([]toolplane.LogHit)
 	if !ok || len(exactHits) != 1 || exactHits[0].Content == "" {
 		t.Fatalf("exact id should still read post-cutoff log, got %#v", exactResp.Results)
 	}
@@ -284,16 +285,16 @@ func TestToolQueryLogsIndexSkipsCloneManifestByDefault(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	indexResp := queryLogs(root, "", "", "", false)
-	hits, ok := indexResp.Results.([]logHit)
+	indexResp := toolplane.QueryLogs(root, "", "", "", false)
+	hits, ok := indexResp.Results.([]toolplane.LogHit)
 	if !ok || len(hits) != 1 {
 		t.Fatalf("default index should only return creative logs, got %#v", indexResp.Results)
 	}
 	if hits[0].ID != "prompts/WriteAgent_20260706_090000.md" {
 		t.Fatalf("default index returned unexpected hit: %#v", hits)
 	}
-	exactResp := queryLogs(root, "", "clone_manifest.json", "", true)
-	exactHits, ok := exactResp.Results.([]logHit)
+	exactResp := toolplane.QueryLogs(root, "", "clone_manifest.json", "", true)
+	exactHits, ok := exactResp.Results.([]toolplane.LogHit)
 	if !ok || len(exactHits) != 1 || !strings.Contains(exactHits[0].Content, "book") {
 		t.Fatalf("exact clone manifest query should still work, got %#v", exactResp.Results)
 	}
@@ -322,8 +323,8 @@ func TestToolQueryAgentLiveLogsRedactsPatchBufferStdinCommands(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	previewResp := queryLogs(root, "agent-live", "", "WriteAgent", true)
-	previewHits, ok := previewResp.Results.([]logHit)
+	previewResp := toolplane.QueryLogs(root, "agent-live", "", "WriteAgent", true)
+	previewHits, ok := previewResp.Results.([]toolplane.LogHit)
 	if !ok || len(previewHits) != 1 {
 		t.Fatalf("preview results = %#v", previewResp.Results)
 	}
@@ -338,8 +339,8 @@ func TestToolQueryAgentLiveLogsRedactsPatchBufferStdinCommands(t *testing.T) {
 		t.Fatalf("preview missing redacted command: %s", preview)
 	}
 
-	contentResp := queryLogs(root, "agent-live", "agent-live/WriteAgent_20260706_090000_000000000.jsonl", "", true)
-	contentHits, ok := contentResp.Results.([]logHit)
+	contentResp := toolplane.QueryLogs(root, "agent-live", "agent-live/WriteAgent_20260706_090000_000000000.jsonl", "", true)
+	contentHits, ok := contentResp.Results.([]toolplane.LogHit)
 	if !ok || len(contentHits) != 1 {
 		t.Fatalf("content results = %#v", contentResp.Results)
 	}
@@ -405,8 +406,8 @@ func TestToolQueryAgentLiveLogsIncludesStructuredSummary(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp := queryLogs(root, "agent-live", "", "WriteAgent", false)
-	hits, ok := resp.Results.([]logHit)
+	resp := toolplane.QueryLogs(root, "agent-live", "", "WriteAgent", false)
+	hits, ok := resp.Results.([]toolplane.LogHit)
 	if !ok || len(hits) != 1 {
 		t.Fatalf("results = %#v", resp.Results)
 	}
@@ -461,13 +462,13 @@ func TestToolQueryEventsFiltersByEntity(t *testing.T) {
 		}},
 	}}}
 
-	resp := queryEvents(outline, "", "", "item", "Star Core")
+	resp := toolplane.QueryEvents(outline, "", "", "item", "Star Core")
 	if resp.Count != 1 {
 		t.Fatalf("events count = %d, want 1", resp.Count)
 	}
-	hits, ok := resp.Results.([]eventHit)
+	hits, ok := resp.Results.([]toolplane.EventHit)
 	if !ok {
-		t.Fatalf("results type = %T, want []eventHit", resp.Results)
+		t.Fatalf("results type = %T, want []toolplane.EventHit", resp.Results)
 	}
 	if hits[0].Event.GetTarget() != "Star Core" {
 		t.Fatalf("event target = %q, want Star Core", hits[0].Event.GetTarget())
@@ -504,13 +505,13 @@ func TestToolQueryEventsFiltersByVolumeAndIncludesIndex(t *testing.T) {
 		}},
 	}}}
 
-	resp := queryEvents(outline, "", "vol_1", "", "")
+	resp := toolplane.QueryEvents(outline, "", "vol_1", "", "")
 	if resp.Count != 2 {
 		t.Fatalf("events count = %d, want 2", resp.Count)
 	}
-	hits, ok := resp.Results.([]eventHit)
+	hits, ok := resp.Results.([]toolplane.EventHit)
 	if !ok {
-		t.Fatalf("results type = %T, want []eventHit", resp.Results)
+		t.Fatalf("results type = %T, want []toolplane.EventHit", resp.Results)
 	}
 	if hits[0].ChapterID != "chap_001" || hits[0].EventIndex != 0 ||
 		hits[1].ChapterID != "chap_001" || hits[1].EventIndex != 1 {
@@ -519,7 +520,7 @@ func TestToolQueryEventsFiltersByVolumeAndIncludesIndex(t *testing.T) {
 }
 
 func TestRepairToolLookupTextRepairsMojibakeName(t *testing.T) {
-	got, repaired := repairToolLookupText("\u93cb\u6945\u5679")
+	got, repaired := toolplane.RepairToolLookupText("\u93cb\u6945\u5679")
 	if !repaired {
 		t.Fatalf("expected lookup text to be repaired")
 	}
@@ -529,7 +530,7 @@ func TestRepairToolLookupTextRepairsMojibakeName(t *testing.T) {
 }
 
 func TestToolQueryContextCraftCharacterBundlesCompactFacts(t *testing.T) {
-	ctx := toolProjectContext{
+	ctx := toolplane.ToolProjectContext{
 		Setup: &models.StorySetup{
 			ProjectName: "Fire Galaxy",
 			Premise:     strings.Repeat("premise ", 40),
@@ -566,13 +567,13 @@ func TestToolQueryContextCraftCharacterBundlesCompactFacts(t *testing.T) {
 		Characters: map[string]*models.Character{},
 	}
 
-	resp := queryCraftCharacterContext(ctx, "Lin")
+	resp := toolplane.QueryCraftCharacterContext(ctx, "Lin")
 	if !resp.OK || resp.Count != 1 {
 		t.Fatalf("context response = %#v", resp)
 	}
-	bundle, ok := resp.Results.(craftElementContext)
+	bundle, ok := resp.Results.(toolplane.CraftElementContext)
 	if !ok {
-		t.Fatalf("results type = %T, want craftElementContext", resp.Results)
+		t.Fatalf("results type = %T, want toolplane.CraftElementContext", resp.Results)
 	}
 	if bundle.Stats["existing_craft"] != 1 ||
 		bundle.Stats["outline_refs"] != 1 ||
@@ -601,7 +602,7 @@ func TestToolQueryContextCraftCharacterBundlesCompactFacts(t *testing.T) {
 }
 
 func TestToolQueryContextCraftItemBundlesCompactFacts(t *testing.T) {
-	ctx := toolProjectContext{
+	ctx := toolplane.ToolProjectContext{
 		Setup: &models.StorySetup{
 			ProjectName: "Fire Galaxy",
 			WorldResources: []models.WorldResource{{
@@ -642,13 +643,13 @@ func TestToolQueryContextCraftItemBundlesCompactFacts(t *testing.T) {
 		Items: map[string]*models.Item{},
 	}
 
-	resp := queryContext(ctx, "craft-item", "", "Star Core")
+	resp := toolplane.QueryContext(ctx, "craft-item", "", "Star Core")
 	if !resp.OK || resp.Count != 1 {
 		t.Fatalf("context response = %#v", resp)
 	}
-	bundle, ok := resp.Results.(craftElementContext)
+	bundle, ok := resp.Results.(toolplane.CraftElementContext)
 	if !ok {
-		t.Fatalf("results type = %T, want craftElementContext", resp.Results)
+		t.Fatalf("results type = %T, want toolplane.CraftElementContext", resp.Results)
 	}
 	if bundle.Target != "item" || bundle.Name != "Star Core" {
 		t.Fatalf("unexpected bundle identity: %#v", bundle)
@@ -678,7 +679,7 @@ func TestToolQueryContextCraftItemBundlesCompactFacts(t *testing.T) {
 }
 
 func TestToolQueryContextOutlineVolumeBundlesCompactFacts(t *testing.T) {
-	ctx := toolProjectContext{
+	ctx := toolplane.ToolProjectContext{
 		Setup: &models.StorySetup{
 			ProjectName: "Fire Galaxy",
 			Premise:     strings.Repeat("premise ", 80),
@@ -725,13 +726,13 @@ func TestToolQueryContextOutlineVolumeBundlesCompactFacts(t *testing.T) {
 		}}},
 	}
 
-	resp := queryContext(ctx, "outline-volume", "P1-V1", "")
+	resp := toolplane.QueryContext(ctx, "outline-volume", "P1-V1", "")
 	if !resp.OK || resp.Count != 1 {
 		t.Fatalf("context response = %#v", resp)
 	}
-	bundle, ok := resp.Results.(outlineVolumeContext)
+	bundle, ok := resp.Results.(toolplane.OutlineVolumeContext)
 	if !ok {
-		t.Fatalf("results type = %T, want outlineVolumeContext", resp.Results)
+		t.Fatalf("results type = %T, want toolplane.OutlineVolumeContext", resp.Results)
 	}
 	if bundle.VolumeID != "P1-V1" || bundle.Path.VolumeID != "P1-V1" {
 		t.Fatalf("unexpected volume identity: %#v", bundle)
@@ -764,35 +765,35 @@ func TestToolQueryContextOutlineVolumeBundlesCompactFacts(t *testing.T) {
 }
 
 func TestToolContextOutlineVolumeIndexViewKeepsRouteOnly(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "context",
-		Results: outlineVolumeContext{
+		Results: toolplane.OutlineVolumeContext{
 			VolumeID: "P1-V1",
-			Path:     outlinePath{PartID: "P1", VolumeID: "P1-V1"},
-			StorySetup: storySetupBrief{
+			Path:     toolplane.OutlinePath{PartID: "P1", VolumeID: "P1-V1"},
+			StorySetup: toolplane.StorySetupBrief{
 				Premise: strings.Repeat("large setup ", 80),
 			},
-			TargetVolume:   volumeBrief{ID: "P1-V1", Summary: strings.Repeat("large target ", 80)},
-			PreviousVolume: volumeBrief{ID: "P1-V0", Summary: strings.Repeat("large previous ", 80)},
-			NextVolume:     volumeBrief{ID: "P1-V2", Summary: strings.Repeat("large next ", 80)},
-			EntityIndex: outlineVolumeEntities{
+			TargetVolume:   toolplane.VolumeBrief{ID: "P1-V1", Summary: strings.Repeat("large target ", 80)},
+			PreviousVolume: toolplane.VolumeBrief{ID: "P1-V0", Summary: strings.Repeat("large previous ", 80)},
+			NextVolume:     toolplane.VolumeBrief{ID: "P1-V2", Summary: strings.Repeat("large next ", 80)},
+			EntityIndex: toolplane.OutlineVolumeEntities{
 				Characters: append([]string{"Mira"}, numberedToolStrings("Character", 20)...),
 				Items:      append([]string{"Signal Key"}, numberedToolStrings("Item", 20)...),
 				Locations:  append([]string{"Camp"}, numberedToolStrings("Location", 20)...),
 				Storylines: numberedToolStrings("Storyline", 12),
 			},
-			Events: []eventHitBrief{{Event: eventBrief{Details: strings.Repeat("large event ", 80)}}},
+			Events: []toolplane.EventHitBrief{{Event: toolplane.EventBrief{Details: strings.Repeat("large event ", 80)}}},
 			Navigation: map[string]interface{}{
 				"patch_query":            `novelgen tool patch outline --target volume --id "P1-V1"`,
 				"patch_shape":            map[string]interface{}{"changed_chapters": []map[string]string{{"id": "<chapter_id>"}}},
 				"post_patch_check_query": `novelgen tool check all --target outline --scope volume --id "P1-V1"`,
 			},
-			NextActions: []toolNextAction{{Step: 1, Action: "query_brief_context", Command: `novelgen tool query context --type outline-volume --id "P1-V1" --view brief`}},
+			NextActions: []toolplane.ToolNextAction{{Step: 1, Action: "query_brief_context", Command: `novelgen tool query context --type outline-volume --id "P1-V1" --view brief`}},
 			Stats:       map[string]int{"chapter_count": 8, "event_count": 20, "character_count": 21, "item_count": 21, "location_count": 21, "storyline_count": 12},
 		},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -817,36 +818,36 @@ func TestToolContextOutlineVolumeIndexViewKeepsRouteOnly(t *testing.T) {
 }
 
 func TestToolContextOutlineGlobalRepairIndexViewKeepsRouteOnly(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "context",
-		Results: outlineGlobalRepairContext{
+		Results: toolplane.OutlineGlobalRepairContext{
 			IssueCategory: "structure",
-			Check: &toolCheckResult{
+			Check: &toolplane.ToolCheckResult{
 				Kind:    "all",
 				Target:  "outline",
 				Scope:   "all",
-				Summary: toolCheckSummary{Total: 2, Medium: 1, Low: 1},
+				Summary: toolplane.ToolCheckSummary{Total: 2, Medium: 1, Low: 1},
 			},
-			IssueContext: []outlineRepairIssue{{
+			IssueContext: []toolplane.OutlineRepairIssue{{
 				Category:          "structure",
 				TargetID:          "global",
 				Issue:             "global structure issue",
 				FocusedCheckQuery: `novelgen tool check all --target outline --scope all --category structure --min-priority low --max-issues 12`,
 			}},
-			StorySetup: storySetupBrief{Premise: strings.Repeat("large setup ", 80)},
-			Outline: outlineBrief{Parts: []partBrief{{
+			StorySetup: toolplane.StorySetupBrief{Premise: strings.Repeat("large setup ", 80)},
+			Outline: toolplane.OutlineBrief{Parts: []toolplane.PartBrief{{
 				ID:      "P1",
 				Title:   "Part One",
 				Summary: strings.Repeat("large outline ", 80),
 			}}},
 			Navigation:  map[string]interface{}{"focused_check_query": `novelgen tool check all --target outline --scope all --category structure --min-priority low --max-issues 12`},
 			Workflow:    map[string]interface{}{"stop_rule": "return final json"},
-			NextActions: []toolNextAction{{Step: 1, Action: "inspect_first_global_issue"}},
+			NextActions: []toolplane.ToolNextAction{{Step: 1, Action: "inspect_first_global_issue"}},
 			Stats:       map[string]int{"part_count": 1, "volume_count": 2, "chapter_count": 20, "returned_issues": 2},
 		},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -875,7 +876,7 @@ func TestToolContextOutlineGlobalRepairIndexViewKeepsRouteOnly(t *testing.T) {
 }
 
 func TestToolContextOutlineGlobalRepairMysteriesProvidesPatchableThread(t *testing.T) {
-	ctx := toolProjectContext{
+	ctx := toolplane.ToolProjectContext{
 		Outline: &models.Outline{Parts: []models.Part{{
 			ID: "P1",
 			Volumes: []models.Volume{{
@@ -898,13 +899,13 @@ func TestToolContextOutlineGlobalRepairMysteriesProvidesPatchableThread(t *testi
 		}}},
 	}
 
-	resp := queryOutlineGlobalRepairContext(ctx, "mysteries")
+	resp := toolplane.QueryOutlineGlobalRepairContext(ctx, "mysteries")
 	if !resp.OK || resp.Count != 1 {
 		t.Fatalf("global repair response = %#v", resp)
 	}
-	bundle, ok := resp.Results.(outlineGlobalRepairContext)
+	bundle, ok := resp.Results.(toolplane.OutlineGlobalRepairContext)
 	if !ok {
-		t.Fatalf("results type = %T, want outlineGlobalRepairContext", resp.Results)
+		t.Fatalf("results type = %T, want toolplane.OutlineGlobalRepairContext", resp.Results)
 	}
 	if len(bundle.MysteryThreads) != 1 || bundle.MysteryThreads[0].ID != "myst_signal" {
 		t.Fatalf("mystery threads = %#v", bundle.MysteryThreads)
@@ -929,7 +930,7 @@ func TestToolContextOutlineGlobalRepairMysteriesProvidesPatchableThread(t *testi
 	}
 
 	indexResp := resp
-	applyToolView(&indexResp, "index")
+	toolplane.ApplyToolView(&indexResp, "index")
 	indexData, err := json.Marshal(indexResp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -954,7 +955,7 @@ func TestToolContextOutlineGlobalRepairMysteriesProvidesPatchableThread(t *testi
 	}
 
 	briefResp := resp
-	applyToolView(&briefResp, "brief")
+	toolplane.ApplyToolView(&briefResp, "brief")
 	briefData, err := json.Marshal(briefResp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -971,17 +972,17 @@ func TestToolContextOutlineGlobalRepairMysteriesProvidesPatchableThread(t *testi
 }
 
 func TestContextBudgetTreatsUnnamedUnpatchableGlobalRepairAsRouteOnly(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		OK:      true,
 		Section: "context",
-		Results: outlineGlobalRepairContext{
-			IssueContext: []outlineRepairIssue{{
+		Results: toolplane.OutlineGlobalRepairContext{
+			IssueContext: []toolplane.OutlineRepairIssue{{
 				Category:          "mysteries",
 				Issue:             "many open mysteries",
 				Priority:          models.PriorityLow,
 				FocusedCheckQuery: `novelgen tool check all --target outline --category mysteries --min-priority low --max-issues 12`,
 			}},
-			NextActions: []toolNextAction{{
+			NextActions: []toolplane.ToolNextAction{{
 				Step:    1,
 				Action:  "classify_unpatchable_global_issue",
 				Purpose: "No patch route.",
@@ -989,7 +990,7 @@ func TestContextBudgetTreatsUnnamedUnpatchableGlobalRepairAsRouteOnly(t *testing
 		},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	budget, ok := resp.Meta["context_budget"].(map[string]interface{})
 	if !ok {
 		t.Fatalf("context_budget missing from meta: %#v", resp.Meta)
@@ -1002,23 +1003,23 @@ func TestContextBudgetTreatsUnnamedUnpatchableGlobalRepairAsRouteOnly(t *testing
 }
 
 func TestToolViewIndexKeepsBriefActionForPatchableOutlineGlobalRepair(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "context",
-		Results: outlineGlobalRepairContext{
+		Results: toolplane.OutlineGlobalRepairContext{
 			IssueCategory: "faction_tier",
-			Check:         &toolCheckResult{Kind: "all", Target: "outline", Scope: "all"},
-			IssueContext: []outlineRepairIssue{{
+			Check:         &toolplane.ToolCheckResult{Kind: "all", Target: "outline", Scope: "all"},
+			IssueContext: []toolplane.OutlineRepairIssue{{
 				Category:           "faction_tier",
 				TargetID:           "zerg",
 				RepairContextQuery: "novelgen tool query story-setup --type search --name \"zerg\" --view brief",
 				PatchQuery:         "novelgen tool patch setup",
 				PatchShape:         map[string]interface{}{"premises": []map[string]string{{"category": "zerg"}}},
 			}},
-			NextActions: []toolNextAction{{Step: 1, Action: "repair_first_patchable_issue"}},
+			NextActions: []toolplane.ToolNextAction{{Step: 1, Action: "repair_first_patchable_issue"}},
 		},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -1041,9 +1042,9 @@ func numberedToolStrings(prefix string, count int) []string {
 }
 
 func TestToolViewBriefCompactsOutlineVolume(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "outline",
-		Results: []outlineHit{{
+		Results: []toolplane.OutlineHit{{
 			Type:  "volume",
 			ID:    "vol_1",
 			Title: "Volume One",
@@ -1072,7 +1073,7 @@ func TestToolViewBriefCompactsOutlineVolume(t *testing.T) {
 		}},
 	}
 
-	applyToolView(&resp, "brief")
+	toolplane.ApplyToolView(&resp, "brief")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -1090,12 +1091,12 @@ func TestToolViewBriefCompactsOutlineVolume(t *testing.T) {
 }
 
 func TestToolViewCompactsOutlineEvents(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "outline",
-		Results: []eventHit{{
+		Results: []toolplane.EventHit{{
 			ChapterID:    "chap_001",
 			ChapterTitle: "Opening",
-			Path:         outlinePath{PartID: "part_1", VolumeID: "vol_1", ChapterID: "chap_001"},
+			Path:         toolplane.OutlinePath{PartID: "part_1", VolumeID: "vol_1", ChapterID: "chap_001"},
 			Event: models.Event{
 				Type:       models.EventTypeItem,
 				Subject:    "Star Core",
@@ -1112,7 +1113,7 @@ func TestToolViewCompactsOutlineEvents(t *testing.T) {
 		}},
 	}
 
-	applyToolView(&resp, "brief")
+	toolplane.ApplyToolView(&resp, "brief")
 	briefData, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -1125,10 +1126,10 @@ func TestToolViewCompactsOutlineEvents(t *testing.T) {
 		t.Fatalf("brief event view did not clip long fields: %s", briefText)
 	}
 
-	resp.Results = []eventHit{{
+	resp.Results = []toolplane.EventHit{{
 		ChapterID:    "chap_001",
 		ChapterTitle: "Opening",
-		Path:         outlinePath{PartID: "part_1", VolumeID: "vol_1", ChapterID: "chap_001"},
+		Path:         toolplane.OutlinePath{PartID: "part_1", VolumeID: "vol_1", ChapterID: "chap_001"},
 		Event: models.Event{
 			Type:       models.EventTypeItem,
 			Subject:    "Star Core",
@@ -1142,7 +1143,7 @@ func TestToolViewCompactsOutlineEvents(t *testing.T) {
 			Result:     strings.Repeat("result ", 80),
 		},
 	}}
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	indexData, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -1160,13 +1161,13 @@ func TestToolViewCompactsOutlineEvents(t *testing.T) {
 }
 
 func TestToolFieldsProjectsNestedOutlineChapterFields(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "outline",
-		Results: []outlineHit{{
+		Results: []toolplane.OutlineHit{{
 			Type:  "chapter",
 			ID:    "chap_001",
 			Title: "Opening",
-			Path:  outlinePath{PartID: "part_1", VolumeID: "vol_1", ChapterID: "chap_001"},
+			Path:  toolplane.OutlinePath{PartID: "part_1", VolumeID: "vol_1", ChapterID: "chap_001"},
 			Object: models.Chapter{
 				ID:       "chap_001",
 				Title:    "Opening",
@@ -1186,8 +1187,8 @@ func TestToolFieldsProjectsNestedOutlineChapterFields(t *testing.T) {
 		}},
 	}
 
-	applyToolView(&resp, "brief")
-	applyToolFields(&resp, "storyline_advances,chapter_payoff,conflict")
+	toolplane.ApplyToolView(&resp, "brief")
+	toolplane.ApplyToolFields(&resp, "storyline_advances,chapter_payoff,conflict")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -1205,12 +1206,12 @@ func TestToolFieldsProjectsNestedOutlineChapterFields(t *testing.T) {
 }
 
 func TestToolFieldsProjectsEventFields(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "outline",
-		Results: []eventHit{{
+		Results: []toolplane.EventHit{{
 			ChapterID:    "chap_001",
 			ChapterTitle: "Opening",
-			Path:         outlinePath{PartID: "part_1", VolumeID: "vol_1", ChapterID: "chap_001"},
+			Path:         toolplane.OutlinePath{PartID: "part_1", VolumeID: "vol_1", ChapterID: "chap_001"},
 			Event: models.Event{
 				Type:       models.EventTypeItem,
 				Subject:    "Star Core",
@@ -1223,8 +1224,8 @@ func TestToolFieldsProjectsEventFields(t *testing.T) {
 		}},
 	}
 
-	applyToolView(&resp, "brief")
-	applyToolFields(&resp, "result,target_type")
+	toolplane.ApplyToolView(&resp, "brief")
+	toolplane.ApplyToolFields(&resp, "result,target_type")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -1239,15 +1240,15 @@ func TestToolFieldsProjectsEventFields(t *testing.T) {
 }
 
 func TestToolQueryContextOutlineRepairChapterBundlesPatchNavigation(t *testing.T) {
-	ctx := toolProjectContext{Outline: validToolPatchTestOutline()}
+	ctx := toolplane.ToolProjectContext{Outline: validToolPatchTestOutline()}
 
-	resp := queryContext(ctx, "outline-repair", "P1-V1-C1", "logic")
+	resp := toolplane.QueryContext(ctx, "outline-repair", "P1-V1-C1", "logic")
 	if !resp.OK || resp.Count != 1 {
 		t.Fatalf("repair context response = ok %v count %d warnings %v", resp.OK, resp.Count, resp.Warnings)
 	}
-	result, ok := resp.Results.(outlineRepairContext)
+	result, ok := resp.Results.(toolplane.OutlineRepairContext)
 	if !ok {
-		t.Fatalf("results type = %T, want outlineRepairContext", resp.Results)
+		t.Fatalf("results type = %T, want toolplane.OutlineRepairContext", resp.Results)
 	}
 	if result.Scope != "chapter" || result.ID != "P1-V1-C1" || result.IssueCategory != "logic" {
 		t.Fatalf("unexpected repair identity: %+v", result)
@@ -1270,9 +1271,9 @@ func TestToolQueryContextOutlineRepairChapterBundlesPatchNavigation(t *testing.T
 	if got := fmt.Sprint(result.Workflow["post_patch_check_query"]); got != `novelgen tool check all --target outline --scope volume --id "P1-V1" --min-priority low --max-issues 12` {
 		t.Fatalf("post_patch_check_query = %q", got)
 	}
-	current, ok := result.Current.(chapterBrief)
+	current, ok := result.Current.(toolplane.ChapterBrief)
 	if !ok {
-		t.Fatalf("current type = %T, want chapterBrief", result.Current)
+		t.Fatalf("current type = %T, want toolplane.ChapterBrief", result.Current)
 	}
 	if len(current.Events) != 0 {
 		t.Fatalf("repair current should not duplicate event details: %+v", current.Events)
@@ -1299,15 +1300,15 @@ func TestToolQueryContextOutlineRepairChapterBundlesPatchNavigation(t *testing.T
 }
 
 func TestToolQueryContextOutlineRepairVolumeBundlesPatchNavigation(t *testing.T) {
-	ctx := toolProjectContext{Outline: validToolPatchTestOutline()}
+	ctx := toolplane.ToolProjectContext{Outline: validToolPatchTestOutline()}
 
-	resp := queryContext(ctx, "repair", "P1-V1", "")
+	resp := toolplane.QueryContext(ctx, "repair", "P1-V1", "")
 	if !resp.OK || resp.Count != 1 {
 		t.Fatalf("repair context response = ok %v count %d warnings %v", resp.OK, resp.Count, resp.Warnings)
 	}
-	result, ok := resp.Results.(outlineRepairContext)
+	result, ok := resp.Results.(toolplane.OutlineRepairContext)
 	if !ok {
-		t.Fatalf("results type = %T, want outlineRepairContext", resp.Results)
+		t.Fatalf("results type = %T, want toolplane.OutlineRepairContext", resp.Results)
 	}
 	if result.Scope != "volume" || result.ID != "P1-V1" {
 		t.Fatalf("unexpected repair identity: %+v", result)
@@ -1360,7 +1361,7 @@ func TestToolQueryContextRecapRepairBundlesFocusedExcerptAndCheck(t *testing.T) 
 	if err := os.WriteFile(filepath.Join(root, "chapters", "chapter-"+chapterID+".md"), []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
-	ctx := toolProjectContext{
+	ctx := toolplane.ToolProjectContext{
 		Root: root,
 		Outline: &models.Outline{Parts: []models.Part{{
 			ID: "P1",
@@ -1375,13 +1376,13 @@ func TestToolQueryContextRecapRepairBundlesFocusedExcerptAndCheck(t *testing.T) 
 		}}},
 	}
 
-	resp := queryContext(ctx, "recap-repair", chapterID, "")
+	resp := toolplane.QueryContext(ctx, "recap-repair", chapterID, "")
 	if !resp.OK || resp.Count != 1 {
 		t.Fatalf("recap repair context response = ok %v count %d warnings %v", resp.OK, resp.Count, resp.Warnings)
 	}
-	result, ok := resp.Results.(recapRepairContext)
+	result, ok := resp.Results.(toolplane.RecapRepairContext)
 	if !ok {
-		t.Fatalf("results type = %T, want recapRepairContext", resp.Results)
+		t.Fatalf("results type = %T, want toolplane.RecapRepairContext", resp.Results)
 	}
 	if result.Check == nil || result.Check.Target != "recap" || result.Check.Scope != "chapter" {
 		t.Fatalf("missing recap check: %+v", result.Check)
@@ -1417,7 +1418,7 @@ func TestToolQueryContextRecapRepairBundlesFocusedExcerptAndCheck(t *testing.T) 
 }
 
 func TestToolViewBriefCompactsStorySetupLongFields(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "story-setup",
 		Results: &models.StorySetup{
 			ProjectName: "Fire Galaxy",
@@ -1443,7 +1444,7 @@ func TestToolViewBriefCompactsStorySetupLongFields(t *testing.T) {
 		},
 	}
 
-	applyToolView(&resp, "brief")
+	toolplane.ApplyToolView(&resp, "brief")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -1461,7 +1462,7 @@ func TestToolViewBriefCompactsStorySetupLongFields(t *testing.T) {
 }
 
 func TestQueryStorySetupSearchReturnsCompactCrossSetupContext(t *testing.T) {
-	ctx := toolProjectContext{Setup: &models.StorySetup{
+	ctx := toolplane.ToolProjectContext{Setup: &models.StorySetup{
 		ProjectName: "Fire Galaxy",
 		CoreCast: []models.CoreCastSeed{{
 			ID:            "cast_worker",
@@ -1501,13 +1502,13 @@ func TestQueryStorySetupSearchReturnsCompactCrossSetupContext(t *testing.T) {
 		}},
 	}}
 
-	resp := queryStorySetup(ctx, "search", "虫族")
+	resp := toolplane.QueryStorySetup(ctx, "search", "虫族")
 	if !resp.OK || resp.Count != 5 {
 		t.Fatalf("search response = ok %v count %d warnings %v", resp.OK, resp.Count, resp.Warnings)
 	}
-	result, ok := resp.Results.(storySetupSearchResult)
+	result, ok := resp.Results.(toolplane.StorySetupSearchResult)
 	if !ok {
-		t.Fatalf("results type = %T, want storySetupSearchResult", resp.Results)
+		t.Fatalf("results type = %T, want toolplane.StorySetupSearchResult", resp.Results)
 	}
 	if len(result.CoreCast) != 1 || len(result.Storylines) != 1 || len(result.Premises) != 1 || len(result.WorldResources) != 1 || len(result.WorldTimeline) != 1 {
 		t.Fatalf("unexpected section hits: %+v", result)
@@ -1556,7 +1557,7 @@ func TestToolQueryContextChapterWriteBundlesFocusedContinuityAndNavigation(t *te
 	if err := os.WriteFile(filepath.Join(root, "chapters", "chapter-"+targetID+".md"), []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
-	ctx := toolProjectContext{
+	ctx := toolplane.ToolProjectContext{
 		Root: root,
 		Outline: &models.Outline{Parts: []models.Part{{
 			ID: "P1",
@@ -1608,13 +1609,13 @@ func TestToolQueryContextChapterWriteBundlesFocusedContinuityAndNavigation(t *te
 		}}},
 	}
 
-	resp := queryContext(ctx, "write-chapter", targetID, "")
+	resp := toolplane.QueryContext(ctx, "write-chapter", targetID, "")
 	if !resp.OK || resp.Count != 1 {
 		t.Fatalf("chapter write context response = ok %v count %d warnings %v", resp.OK, resp.Count, resp.Warnings)
 	}
-	result, ok := resp.Results.(chapterWriteContext)
+	result, ok := resp.Results.(toolplane.ChapterWriteContext)
 	if !ok {
-		t.Fatalf("results type = %T, want chapterWriteContext", resp.Results)
+		t.Fatalf("results type = %T, want toolplane.ChapterWriteContext", resp.Results)
 	}
 	if result.ChapterID != targetID || result.TargetChapter == nil || result.ParentVolume == nil {
 		t.Fatalf("missing target context: %+v", result)
@@ -1701,7 +1702,7 @@ func TestToolQueryContextChapterWriteSkipsStalePreviousRecap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx := toolProjectContext{
+	ctx := toolplane.ToolProjectContext{
 		Root: root,
 		Outline: &models.Outline{Parts: []models.Part{{
 			ID: "P1",
@@ -1718,13 +1719,13 @@ func TestToolQueryContextChapterWriteSkipsStalePreviousRecap(t *testing.T) {
 		}}},
 	}
 
-	resp := queryContext(ctx, "chapter-write", targetID, "")
+	resp := toolplane.QueryContext(ctx, "chapter-write", targetID, "")
 	if !resp.OK || resp.Count != 1 {
 		t.Fatalf("chapter write context response = ok %v count %d warnings %v", resp.OK, resp.Count, resp.Warnings)
 	}
-	result, ok := resp.Results.(chapterWriteContext)
+	result, ok := resp.Results.(toolplane.ChapterWriteContext)
 	if !ok {
-		t.Fatalf("results type = %T, want chapterWriteContext", resp.Results)
+		t.Fatalf("results type = %T, want toolplane.ChapterWriteContext", resp.Results)
 	}
 	if result.PreviousRecap != nil || result.Stats["has_previous_recap"] != 0 {
 		t.Fatalf("stale previous recap should be omitted, recap=%#v stats=%#v", result.PreviousRecap, result.Stats)
@@ -1738,11 +1739,11 @@ func TestToolQueryContextChapterWriteSkipsStalePreviousRecap(t *testing.T) {
 func TestToolQueryContextChapterWriteIncludesCreativeHistorySnapshot(t *testing.T) {
 	root := t.TempDir()
 	targetID := "P1-V1-C1"
-	writeToolHistoryLog(t, root, "responses", "CraftAgent_20260706_090000.md", "李侑用客服感系统提示拆解危机。\n第二行保留语气。\n第三行保留节奏。", toolProcessStartedAt.Add(-2*time.Hour))
-	writeToolHistoryLog(t, root, "responses", "WriteAgent_20260706_091000.md", "主角把日志线索变成行动优势。", toolProcessStartedAt.Add(-90*time.Minute))
-	writeToolHistoryLog(t, root, "prompts", "CraftAgent_20260706_085900.md", "Generate craft with system-log contrast.", toolProcessStartedAt.Add(-3*time.Hour))
+	writeToolHistoryLog(t, root, "responses", "CraftAgent_20260706_090000.md", "李侑用客服感系统提示拆解危机。\n第二行保留语气。\n第三行保留节奏。", toolplane.ToolProcessStartedAt.Add(-2*time.Hour))
+	writeToolHistoryLog(t, root, "responses", "WriteAgent_20260706_091000.md", "主角把日志线索变成行动优势。", toolplane.ToolProcessStartedAt.Add(-90*time.Minute))
+	writeToolHistoryLog(t, root, "prompts", "CraftAgent_20260706_085900.md", "Generate craft with system-log contrast.", toolplane.ToolProcessStartedAt.Add(-3*time.Hour))
 
-	ctx := toolProjectContext{
+	ctx := toolplane.ToolProjectContext{
 		Root:  root,
 		Setup: &models.StorySetup{ProjectName: "System Log", Premise: "A protagonist reads system logs."},
 		Outline: &models.Outline{Parts: []models.Part{{
@@ -1758,13 +1759,13 @@ func TestToolQueryContextChapterWriteIncludesCreativeHistorySnapshot(t *testing.
 		}}},
 	}
 
-	resp := queryContext(ctx, "chapter-write", targetID, "")
+	resp := toolplane.QueryContext(ctx, "chapter-write", targetID, "")
 	if !resp.OK || resp.Count != 1 {
 		t.Fatalf("chapter write context response = ok %v count %d warnings %v", resp.OK, resp.Count, resp.Warnings)
 	}
-	result, ok := resp.Results.(chapterWriteContext)
+	result, ok := resp.Results.(toolplane.ChapterWriteContext)
 	if !ok {
-		t.Fatalf("results type = %T, want chapterWriteContext", resp.Results)
+		t.Fatalf("results type = %T, want toolplane.ChapterWriteContext", resp.Results)
 	}
 	if result.CreativeHistory == nil {
 		t.Fatalf("creative history missing")
@@ -1794,9 +1795,9 @@ func TestToolQueryContextChapterWriteIncludesCreativeHistorySnapshot(t *testing.
 func TestToolQueryContextChapterWriteSkipsCurrentProcessPromptLog(t *testing.T) {
 	root := t.TempDir()
 	targetID := "P1-V1-C1"
-	writeToolHistoryLog(t, root, "prompts", "WriteAgent_20990101_000000.md", "current prompt should not be reflected", toolProcessStartedAt.Add(5*time.Second))
+	writeToolHistoryLog(t, root, "prompts", "WriteAgent_20990101_000000.md", "current prompt should not be reflected", toolplane.ToolProcessStartedAt.Add(5*time.Second))
 
-	ctx := toolProjectContext{
+	ctx := toolplane.ToolProjectContext{
 		Root: root,
 		Outline: &models.Outline{Parts: []models.Part{{
 			ID: "P1",
@@ -1811,13 +1812,13 @@ func TestToolQueryContextChapterWriteSkipsCurrentProcessPromptLog(t *testing.T) 
 		}}},
 	}
 
-	resp := queryContext(ctx, "chapter-write", targetID, "")
+	resp := toolplane.QueryContext(ctx, "chapter-write", targetID, "")
 	if !resp.OK || resp.Count != 1 {
 		t.Fatalf("chapter write context response = ok %v count %d warnings %v", resp.OK, resp.Count, resp.Warnings)
 	}
-	result, ok := resp.Results.(chapterWriteContext)
+	result, ok := resp.Results.(toolplane.ChapterWriteContext)
 	if !ok {
-		t.Fatalf("results type = %T, want chapterWriteContext", resp.Results)
+		t.Fatalf("results type = %T, want toolplane.ChapterWriteContext", resp.Results)
 	}
 	if result.CreativeHistory != nil {
 		t.Fatalf("current process prompt should be skipped, history=%#v", result.CreativeHistory)
@@ -1853,18 +1854,18 @@ func TestToolQueryContextChapterRepairBundlesChecksAndNavigation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx := toolProjectContext{
+	ctx := toolplane.ToolProjectContext{
 		Root:    root,
 		Outline: outline,
 		Setup:   &models.StorySetup{ProjectName: "Test", Premise: "Signal in the mine."},
 	}
-	resp := queryContext(ctx, "chapter-repair", "P1-V1-C1", "")
+	resp := toolplane.QueryContext(ctx, "chapter-repair", "P1-V1-C1", "")
 	if !resp.OK || resp.Count != 1 {
 		t.Fatalf("chapter repair context response = ok %v count %d warnings %v", resp.OK, resp.Count, resp.Warnings)
 	}
-	result, ok := resp.Results.(chapterRepairContext)
+	result, ok := resp.Results.(toolplane.ChapterRepairContext)
 	if !ok {
-		t.Fatalf("results type = %T, want chapterRepairContext", resp.Results)
+		t.Fatalf("results type = %T, want toolplane.ChapterRepairContext", resp.Results)
 	}
 	if result.Check == nil || result.Check.Target != "chapter" || result.Check.Kind != "all" {
 		t.Fatalf("missing chapter check: %#v", result.Check)
@@ -1895,7 +1896,7 @@ func TestToolQueryContextChapterRepairBundlesChecksAndNavigation(t *testing.T) {
 }
 
 func TestToolContextBriefViewCompactsRepeatedEventPathsAndPayoff(t *testing.T) {
-	volume := volumeBrief{
+	volume := toolplane.VolumeBrief{
 		ID:      "P1-V1",
 		Title:   "Volume",
 		Summary: "Summary",
@@ -1903,63 +1904,63 @@ func TestToolContextBriefViewCompactsRepeatedEventPathsAndPayoff(t *testing.T) {
 			VolumeQuestion: "large payoff",
 		},
 	}
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "context",
-		Results: chapterRepairContext{
+		Results: toolplane.ChapterRepairContext{
 			ChapterID:    "P1-V1-C1",
 			ParentVolume: volume,
-			Events: []eventHitBrief{{
+			Events: []toolplane.EventHitBrief{{
 				ChapterID: "P1-V1-C1",
-				Path:      &outlinePath{PartID: "P1", VolumeID: "P1-V1", ChapterID: "P1-V1-C1"},
-				Event:     eventBrief{Action: "fight", Result: "wins"},
+				Path:      &toolplane.OutlinePath{PartID: "P1", VolumeID: "P1-V1", ChapterID: "P1-V1-C1"},
+				Event:     toolplane.EventBrief{Action: "fight", Result: "wins"},
 			}},
-			NextActions: []toolNextAction{{Step: 1, Action: "use_current_repair_bundle"}},
+			NextActions: []toolplane.ToolNextAction{{Step: 1, Action: "use_current_repair_bundle"}},
 		},
 	}
 
-	applyToolView(&resp, "brief")
-	result, ok := resp.Results.(chapterRepairContext)
+	toolplane.ApplyToolView(&resp, "brief")
+	result, ok := resp.Results.(toolplane.ChapterRepairContext)
 	if !ok {
 		t.Fatalf("brief context type = %T", resp.Results)
 	}
-	parent, ok := result.ParentVolume.(volumeBrief)
+	parent, ok := result.ParentVolume.(toolplane.VolumeBrief)
 	if !ok || parent.PayoffContract != nil {
 		t.Fatalf("brief context should strip heavy volume payoff: %#v", result.ParentVolume)
 	}
-	events, ok := result.Events.([]eventHitBrief)
+	events, ok := result.Events.([]toolplane.EventHitBrief)
 	if !ok || len(events) != 1 || events[0].Path != nil || events[0].Event.Result != "wins" {
 		t.Fatalf("brief context should strip repeated event path but keep event facts: %#v", result.Events)
 	}
 }
 
 func TestToolContextIndexViewKeepsExecutionRouteOnly(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "context",
-		Results: chapterRepairContext{
+		Results: toolplane.ChapterRepairContext{
 			ChapterID: "P1-V1-C1",
-			Path:      outlinePath{PartID: "P1", VolumeID: "P1-V1", ChapterID: "P1-V1-C1"},
-			Check: &toolCheckResult{
+			Path:      toolplane.OutlinePath{PartID: "P1", VolumeID: "P1-V1", ChapterID: "P1-V1-C1"},
+			Check: &toolplane.ToolCheckResult{
 				Kind:     "all",
 				Target:   "chapter",
 				Scope:    "chapter",
 				ID:       "P1-V1-C1",
 				Blocking: true,
-				Summary:  toolCheckSummary{Total: 2, Critical: 1},
+				Summary:  toolplane.ToolCheckSummary{Total: 2, Critical: 1},
 				Issues: []models.ReviewSuggestion{{
 					Issue: strings.Repeat("large issue ", 80),
 				}},
 			},
 			ExistingChapterExcerpt: map[string]string{"opening": strings.Repeat("large prose ", 80)},
-			EntityIndex:            outlineVolumeEntities{Characters: []string{"Mira"}, Items: []string{"Signal Key"}, Locations: []string{"Camp"}},
-			Events:                 []eventHitBrief{{Event: eventBrief{Details: strings.Repeat("large event ", 80)}}},
+			EntityIndex:            toolplane.OutlineVolumeEntities{Characters: []string{"Mira"}, Items: []string{"Signal Key"}, Locations: []string{"Camp"}},
+			Events:                 []toolplane.EventHitBrief{{Event: toolplane.EventBrief{Details: strings.Repeat("large event ", 80)}}},
 			Navigation:             map[string]interface{}{"patch_query": `novelgen tool patch chapter --id "P1-V1-C1"`},
 			Workflow:               map[string]interface{}{"post_repair_check_query": `novelgen tool check all --target chapter --scope chapter --id "P1-V1-C1"`},
-			NextActions:            []toolNextAction{{Step: 1, Action: "use_current_repair_bundle"}},
+			NextActions:            []toolplane.ToolNextAction{{Step: 1, Action: "use_current_repair_bundle"}},
 			Stats:                  map[string]int{"check_issues": 2},
 		},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -1989,27 +1990,27 @@ func TestToolContextIndexViewKeepsExecutionRouteOnly(t *testing.T) {
 }
 
 func TestToolContextIndexCleanChapterRepairStopsWithoutBrief(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "context",
-		Results: chapterRepairContext{
+		Results: toolplane.ChapterRepairContext{
 			ChapterID:     "P1-V1-C1",
 			IssueCategory: "logic",
-			Check: &toolCheckResult{
+			Check: &toolplane.ToolCheckResult{
 				Kind:    "all",
 				Target:  "chapter",
 				Scope:   "chapter",
 				ID:      "P1-V1-C1",
-				Summary: toolCheckSummary{Total: 0},
+				Summary: toolplane.ToolCheckSummary{Total: 0},
 			},
 			Navigation: map[string]interface{}{"patch_query": `novelgen tool patch chapter --id "P1-V1-C1"`},
-			NextActions: []toolNextAction{{
+			NextActions: []toolplane.ToolNextAction{{
 				Step:   1,
 				Action: "use_current_repair_bundle",
 			}},
 		},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -2034,17 +2035,17 @@ func TestToolContextIndexCleanChapterRepairStopsWithoutBrief(t *testing.T) {
 }
 
 func TestToolContextIndexStaleChapterRepairRefreshesBeforeBrief(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "context",
-		Results: chapterRepairContext{
+		Results: toolplane.ChapterRepairContext{
 			ChapterID:     "P1-V1-C1",
 			IssueCategory: "simulation",
-			Check: &toolCheckResult{
+			Check: &toolplane.ToolCheckResult{
 				Kind:    "simulation",
 				Target:  "chapter",
 				Scope:   "chapter",
 				ID:      "P1-V1-C1",
-				Summary: toolCheckSummary{Total: 1, High: 1},
+				Summary: toolplane.ToolCheckSummary{Total: 1, High: 1},
 				Issues: []models.ReviewSuggestion{{
 					Category: models.CategoryLogic,
 					TargetID: "P1-V1-C1",
@@ -2053,14 +2054,14 @@ func TestToolContextIndexStaleChapterRepairRefreshesBeforeBrief(t *testing.T) {
 				}},
 			},
 			Navigation: map[string]interface{}{"patch_query": `novelgen tool patch chapter --id "P1-V1-C1"`},
-			NextActions: []toolNextAction{{
+			NextActions: []toolplane.ToolNextAction{{
 				Step:   1,
 				Action: "use_current_repair_bundle",
 			}},
 		},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -2085,28 +2086,28 @@ func TestToolContextIndexStaleChapterRepairRefreshesBeforeBrief(t *testing.T) {
 }
 
 func TestToolContextIndexCleanOutlineRepairStopsWithoutBrief(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "context",
-		Results: outlineRepairContext{
+		Results: toolplane.OutlineRepairContext{
 			Scope:         "chapter",
 			ID:            "P1-V1-C1",
 			IssueCategory: "logic",
-			Check: &toolCheckResult{
+			Check: &toolplane.ToolCheckResult{
 				Kind:    "all",
 				Target:  "outline",
 				Scope:   "chapter",
 				ID:      "P1-V1-C1",
-				Summary: toolCheckSummary{Total: 0},
+				Summary: toolplane.ToolCheckSummary{Total: 0},
 			},
 			Navigation: map[string]interface{}{"patch_query": `novelgen tool patch outline --target volume --id "P1-V1"`},
-			NextActions: []toolNextAction{{
+			NextActions: []toolplane.ToolNextAction{{
 				Step:   1,
 				Action: "use_current_repair_bundle",
 			}},
 		},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -2131,26 +2132,26 @@ func TestToolContextIndexCleanOutlineRepairStopsWithoutBrief(t *testing.T) {
 }
 
 func TestToolContextIndexCleanRecapRepairStopsWithoutBrief(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "context",
-		Results: recapRepairContext{
+		Results: toolplane.RecapRepairContext{
 			ChapterID: "P1-V1-C1",
-			Check: &toolCheckResult{
+			Check: &toolplane.ToolCheckResult{
 				Kind:    "quality",
 				Target:  "recap",
 				Scope:   "chapter",
 				ID:      "P1-V1-C1",
-				Summary: toolCheckSummary{Total: 0},
+				Summary: toolplane.ToolCheckSummary{Total: 0},
 			},
 			Navigation: map[string]interface{}{"patch_query": `novelgen tool patch recap --id "P1-V1-C1"`},
-			NextActions: []toolNextAction{{
+			NextActions: []toolplane.ToolNextAction{{
 				Step:   1,
 				Action: "use_current_context",
 			}},
 		},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -2188,27 +2189,27 @@ func containsAllToolTestStrings(values []string, wants ...string) bool {
 }
 
 func TestToolContextChapterWriteIndexViewKeepsEntityRouteOnly(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "context",
-		Results: chapterWriteContext{
+		Results: toolplane.ChapterWriteContext{
 			ChapterID: "P1-V1-C2",
-			Path:      outlinePath{PartID: "P1", VolumeID: "P1-V1", ChapterID: "P1-V1-C2"},
-			StorySetup: storySetupBrief{
+			Path:      toolplane.OutlinePath{PartID: "P1", VolumeID: "P1-V1", ChapterID: "P1-V1-C2"},
+			StorySetup: toolplane.StorySetupBrief{
 				Premise: strings.Repeat("large setup ", 80),
 			},
-			TargetChapter:          chapterBrief{ID: "P1-V1-C2", Title: "Signal Road", Summary: strings.Repeat("large chapter ", 80)},
-			PreviousChapter:        chapterBrief{ID: "P1-V1-C1", Title: "Opening", Summary: strings.Repeat("large previous ", 80)},
+			TargetChapter:          toolplane.ChapterBrief{ID: "P1-V1-C2", Title: "Signal Road", Summary: strings.Repeat("large chapter ", 80)},
+			PreviousChapter:        toolplane.ChapterBrief{ID: "P1-V1-C1", Title: "Opening", Summary: strings.Repeat("large previous ", 80)},
 			ExistingChapterExcerpt: map[string]string{"opening": strings.Repeat("large prose ", 80)},
-			EntityIndex:            outlineVolumeEntities{Characters: []string{"Mira"}, Items: []string{"Signal Key"}, Locations: []string{"Camp"}},
-			Events:                 []eventHitBrief{{Event: eventBrief{Details: strings.Repeat("large event ", 80)}}},
+			EntityIndex:            toolplane.OutlineVolumeEntities{Characters: []string{"Mira"}, Items: []string{"Signal Key"}, Locations: []string{"Camp"}},
+			Events:                 []toolplane.EventHitBrief{{Event: toolplane.EventBrief{Details: strings.Repeat("large event ", 80)}}},
 			Navigation:             map[string]interface{}{"entity_names": map[string][]string{"characters": []string{"Mira"}}},
 			Workflow:               map[string]interface{}{"goal": "Write one chapter"},
-			NextActions:            []toolNextAction{{Step: 1, Action: "use_current_context"}, {Step: 2, Action: "return_final_json"}},
+			NextActions:            []toolplane.ToolNextAction{{Step: 1, Action: "use_current_context"}, {Step: 2, Action: "return_final_json"}},
 			Stats:                  map[string]int{"character_count": 1, "item_count": 1, "location_count": 1},
 		},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -2227,25 +2228,25 @@ func TestToolContextChapterWriteIndexViewKeepsEntityRouteOnly(t *testing.T) {
 }
 
 func TestToolContextOutlineRepairIndexViewKeepsPatchRouteOnly(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "context",
-		Results: outlineRepairContext{
+		Results: toolplane.OutlineRepairContext{
 			Scope:         "chapter",
 			ID:            "P1-V1-C2",
-			Path:          outlinePath{PartID: "P1", VolumeID: "P1-V1", ChapterID: "P1-V1-C2"},
+			Path:          toolplane.OutlinePath{PartID: "P1", VolumeID: "P1-V1", ChapterID: "P1-V1-C2"},
 			IssueCategory: "logic",
-			Check: &toolCheckResult{
+			Check: &toolplane.ToolCheckResult{
 				Kind:     "all",
 				Target:   "outline",
 				Scope:    "chapter",
 				ID:       "P1-V1-C2",
 				Blocking: true,
-				Summary:  toolCheckSummary{Total: 1, High: 1},
+				Summary:  toolplane.ToolCheckSummary{Total: 1, High: 1},
 				Issues: []models.ReviewSuggestion{{
 					Issue: strings.Repeat("large outline issue ", 80),
 				}},
 			},
-			IssueContext: []outlineRepairIssue{{
+			IssueContext: []toolplane.OutlineRepairIssue{{
 				Category:            "logic",
 				TargetID:            "P1-V1-C2",
 				TargetName:          "Signal Road",
@@ -2259,8 +2260,8 @@ func TestToolContextOutlineRepairIndexViewKeepsPatchRouteOnly(t *testing.T) {
 				PostPatchCheckQuery: `novelgen tool check all --target outline --scope volume --id "P1-V1"`,
 				Evidence:            map[string]interface{}{"summary": strings.Repeat("large evidence ", 80)},
 			}},
-			Current: chapterBrief{ID: "P1-V1-C2", Summary: strings.Repeat("large current ", 80)},
-			Events:  []eventHitBrief{{Event: eventBrief{Details: strings.Repeat("large event ", 80)}}},
+			Current: toolplane.ChapterBrief{ID: "P1-V1-C2", Summary: strings.Repeat("large current ", 80)},
+			Events:  []toolplane.EventHitBrief{{Event: toolplane.EventBrief{Details: strings.Repeat("large event ", 80)}}},
 			Navigation: map[string]interface{}{
 				"patch_query": `novelgen tool patch outline --target volume --id "P1-V1"`,
 				"patch_shape": map[string]interface{}{"changed_chapters": []map[string]string{{"id": "P1-V1-C2"}}},
@@ -2270,12 +2271,12 @@ func TestToolContextOutlineRepairIndexViewKeepsPatchRouteOnly(t *testing.T) {
 				"patch_shape":            map[string]interface{}{"changed_chapters": []map[string]string{{"id": "P1-V1-C2"}}},
 				"post_patch_check_query": `novelgen tool check all --target outline --scope volume --id "P1-V1"`,
 			},
-			NextActions: []toolNextAction{{Step: 1, Action: "use_current_repair_bundle"}},
+			NextActions: []toolplane.ToolNextAction{{Step: 1, Action: "use_current_repair_bundle"}},
 			Stats:       map[string]int{"returned_issues": 1},
 		},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -2294,24 +2295,24 @@ func TestToolContextOutlineRepairIndexViewKeepsPatchRouteOnly(t *testing.T) {
 }
 
 func TestToolContextRecapRepairIndexViewKeepsPatchRouteOnly(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "context",
-		Results: recapRepairContext{
+		Results: toolplane.RecapRepairContext{
 			ChapterID: "P1-V1-C2",
-			Path:      outlinePath{PartID: "P1", VolumeID: "P1-V1", ChapterID: "P1-V1-C2"},
-			Check: &toolCheckResult{
+			Path:      toolplane.OutlinePath{PartID: "P1", VolumeID: "P1-V1", ChapterID: "P1-V1-C2"},
+			Check: &toolplane.ToolCheckResult{
 				Kind:     "quality",
 				Target:   "recap",
 				Scope:    "chapter",
 				ID:       "P1-V1-C2",
 				Blocking: true,
-				Summary:  toolCheckSummary{Total: 1, High: 1},
+				Summary:  toolplane.ToolCheckSummary{Total: 1, High: 1},
 				Issues: []models.ReviewSuggestion{{
 					Issue: strings.Repeat("large recap issue ", 80),
 				}},
 			},
 			Current:        map[string]string{"last_line": strings.Repeat("large recap ", 80)},
-			Outline:        chapterBrief{ID: "P1-V1-C2", Summary: strings.Repeat("large outline ", 80)},
+			Outline:        toolplane.ChapterBrief{ID: "P1-V1-C2", Summary: strings.Repeat("large outline ", 80)},
 			ChapterExcerpt: map[string]string{"opening": strings.Repeat("large prose ", 80)},
 			Navigation: map[string]interface{}{
 				"patch_query":               `novelgen tool patch recap --id "P1-V1-C2"`,
@@ -2324,12 +2325,12 @@ func TestToolContextRecapRepairIndexViewKeepsPatchRouteOnly(t *testing.T) {
 				"patch_shape":           map[string]interface{}{"location": "<scene anchor>", "last_line": "<final visible line>"},
 				"post_save_check_query": `novelgen tool check quality --target recap --scope chapter --id "P1-V1-C2"`,
 			},
-			NextActions: []toolNextAction{{Step: 1, Action: "use_current_context"}},
+			NextActions: []toolplane.ToolNextAction{{Step: 1, Action: "use_current_context"}},
 			Stats:       map[string]int{"returned_issues": 1},
 		},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -2348,31 +2349,31 @@ func TestToolContextRecapRepairIndexViewKeepsPatchRouteOnly(t *testing.T) {
 }
 
 func TestToolContextCraftElementIndexViewKeepsPatchRouteOnly(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "context",
-		Results: craftElementContext{
+		Results: toolplane.CraftElementContext{
 			Target:        "character",
 			Name:          "Mira",
 			CharacterName: "Mira",
-			StorySetup: storySetupBrief{
+			StorySetup: toolplane.StorySetupBrief{
 				Premise: strings.Repeat("large setup ", 80),
 			},
 			ExistingCraft:    []map[string]string{{"notes": strings.Repeat("large craft ", 80)}},
-			OutlineRefs:      []outlineHit{{ID: "P1-V1-C2", Object: chapterBrief{Summary: strings.Repeat("large outline ", 80)}}},
+			OutlineRefs:      []toolplane.OutlineHit{{ID: "P1-V1-C2", Object: toolplane.ChapterBrief{Summary: strings.Repeat("large outline ", 80)}}},
 			RelevantChapters: []map[string]string{{"id": "P1-V1-C2", "summary": strings.Repeat("large chapter ", 80)}},
-			Events:           []eventHitBrief{{Event: eventBrief{Details: strings.Repeat("large event ", 80)}}},
+			Events:           []toolplane.EventHitBrief{{Event: toolplane.EventBrief{Details: strings.Repeat("large event ", 80)}}},
 			Navigation: map[string]interface{}{
 				"schema_check_query":     `novelgen tool check schema --target craft --scope character --id "Mira"`,
 				"patch_query":            `novelgen tool patch craft --target character --id "Mira"`,
 				"patch_shape":            map[string]interface{}{"<field_to_change>": "<new value>"},
 				"post_patch_check_query": `novelgen tool check schema --target craft --scope character --id "Mira"`,
 			},
-			NextActions: []toolNextAction{{Step: 1, Action: "use_current_context"}},
+			NextActions: []toolplane.ToolNextAction{{Step: 1, Action: "use_current_context"}},
 			Stats:       map[string]int{"existing_craft": 1, "outline_refs": 8, "events": 4},
 		},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -2391,7 +2392,7 @@ func TestToolContextCraftElementIndexViewKeepsPatchRouteOnly(t *testing.T) {
 }
 
 func TestToolCraftIndexViewOmitsFullObjects(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "craft",
 		Results: []map[string]interface{}{{
 			"type": "character",
@@ -2405,7 +2406,7 @@ func TestToolCraftIndexViewOmitsFullObjects(t *testing.T) {
 		}},
 	}
 
-	applyToolView(&resp, "index")
+	toolplane.ApplyToolView(&resp, "index")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -2427,7 +2428,7 @@ func TestToolCraftIndexViewOmitsFullObjects(t *testing.T) {
 }
 
 func TestBuildChapterSimulationRepairHintsForCombatBalance(t *testing.T) {
-	check := &toolCheckResult{
+	check := &toolplane.ToolCheckResult{
 		Kind:   "simulation",
 		Target: "chapter",
 		Scope:  "chapter",
@@ -2442,7 +2443,7 @@ func TestBuildChapterSimulationRepairHintsForCombatBalance(t *testing.T) {
 		}},
 	}
 
-	hints := buildChapterSimulationRepairHints("P1-V1-C1", check)
+	hints := toolplane.BuildChapterSimulationRepairHints("P1-V1-C1", check)
 	if len(hints) != 1 {
 		t.Fatalf("hints len = %d, want 1: %#v", len(hints), hints)
 	}
@@ -2468,7 +2469,7 @@ func TestBuildChapterSimulationRepairHintsForCombatBalance(t *testing.T) {
 }
 
 func TestBuildChapterSimulationRepairHintsForMachineDiagnostics(t *testing.T) {
-	check := &toolCheckResult{
+	check := &toolplane.ToolCheckResult{
 		Kind:   "simulation",
 		Target: "chapter",
 		Scope:  "chapter",
@@ -2483,7 +2484,7 @@ func TestBuildChapterSimulationRepairHintsForMachineDiagnostics(t *testing.T) {
 		}},
 	}
 
-	hints := buildChapterSimulationRepairHints("P1-V1-C1", check)
+	hints := toolplane.BuildChapterSimulationRepairHints("P1-V1-C1", check)
 	if len(hints) != 2 {
 		t.Fatalf("hints len = %d, want 2: %#v", len(hints), hints)
 	}
@@ -2520,7 +2521,7 @@ func TestToolIssueNavigationForSimulationDiagnosticsIncludesRefresh(t *testing.T
 		Issue:    "simulation signal diagnostics: combat_steps=1; combat_result=false; missing_repair_signals=combat_result_on_complete, power_change",
 	}
 
-	nav := toolIssueNavigation("simulation", "chapter", "chapter", "P1-V1-C1", issue, 0)
+	nav := toolplane.ToolIssueNavigation("simulation", "chapter", "chapter", "P1-V1-C1", issue, 0)
 	if nav["refresh_query"] == "" || nav["post_refresh_check_query"] == "" {
 		t.Fatalf("simulation diagnostics navigation should include refresh queries: %#v", nav)
 	}
@@ -2530,11 +2531,11 @@ func TestToolIssueNavigationForSimulationDiagnosticsIncludesRefresh(t *testing.T
 }
 
 func TestChapterRepairSimulationCategoryUsesRealIssueCategories(t *testing.T) {
-	filter := chapterRepairIssueCategoryFilter("simulation")
+	filter := toolplane.ChapterRepairIssueCategoryFilter("simulation")
 	if !strings.Contains(filter, "simulation") || !strings.Contains(filter, "logic") || !strings.Contains(filter, "structure") {
 		t.Fatalf("simulation repair filter should include real issue categories and simulation stale diagnostics, got %q", filter)
 	}
-	nav := buildChapterRepairNavigation("P1-V1-C1", "simulation", outlineVolumeEntities{})
+	nav := toolplane.BuildChapterRepairNavigation("P1-V1-C1", "simulation", toolplane.OutlineVolumeEntities{})
 	data, err := json.Marshal(nav)
 	if err != nil {
 		t.Fatal(err)
@@ -2547,15 +2548,15 @@ func TestChapterRepairSimulationCategoryUsesRealIssueCategories(t *testing.T) {
 
 func TestToolViewFullPreservesOutlineObject(t *testing.T) {
 	volume := models.Volume{ID: "vol_1", Title: "Volume One"}
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "outline",
-		Results: []outlineHit{{Type: "volume", ID: "vol_1", Object: volume}},
+		Results: []toolplane.OutlineHit{{Type: "volume", ID: "vol_1", Object: volume}},
 	}
 
-	applyToolView(&resp, "full")
-	hits, ok := resp.Results.([]outlineHit)
+	toolplane.ApplyToolView(&resp, "full")
+	hits, ok := resp.Results.([]toolplane.OutlineHit)
 	if !ok {
-		t.Fatalf("results type = %T, want []outlineHit", resp.Results)
+		t.Fatalf("results type = %T, want []toolplane.OutlineHit", resp.Results)
 	}
 	if _, ok := hits[0].Object.(models.Volume); !ok {
 		t.Fatalf("full view object type = %T, want models.Volume", hits[0].Object)
@@ -2563,7 +2564,7 @@ func TestToolViewFullPreservesOutlineObject(t *testing.T) {
 }
 
 func TestToolQueryCraftPreservesRawCharacterFields(t *testing.T) {
-	ctx := toolProjectContext{
+	ctx := toolplane.ToolProjectContext{
 		Characters: map[string]*models.Character{
 			"Lin":  {Name: "Lin", RoleInStory: "protagonist"},
 			"Mira": {Name: "Mira", RoleInStory: "supporting"},
@@ -2585,7 +2586,7 @@ func TestToolQueryCraftPreservesRawCharacterFields(t *testing.T) {
 		},
 	}
 
-	resp := queryCraft(ctx, "character", "Lin")
+	resp := toolplane.QueryCraft(ctx, "character", "Lin")
 	if resp.Count != 1 {
 		t.Fatalf("craft count = %d, want 1", resp.Count)
 	}
@@ -2599,7 +2600,7 @@ func TestToolQueryCraftPreservesRawCharacterFields(t *testing.T) {
 		}
 	}
 
-	resp = queryCraft(ctx, "character", "student")
+	resp = toolplane.QueryCraft(ctx, "character", "student")
 	if resp.Count != 0 {
 		t.Fatalf("relationship-only name match count = %d, want 0", resp.Count)
 	}
@@ -2631,7 +2632,7 @@ func TestBriefCraftContextKeepsCompactElementFields(t *testing.T) {
 		},
 	}}
 
-	data, err := json.Marshal(briefCraftContextResults(results))
+	data, err := json.Marshal(toolplane.BriefCraftContextResults(results))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2647,7 +2648,7 @@ func TestBriefCraftContextKeepsCompactElementFields(t *testing.T) {
 }
 
 func TestToolFieldsProjectsCharacterCraftFieldsFromBrief(t *testing.T) {
-	resp := toolResponse{
+	resp := toolplane.ToolResponse{
 		Section: "craft",
 		Results: []map[string]interface{}{{
 			"type": "character",
@@ -2668,8 +2669,8 @@ func TestToolFieldsProjectsCharacterCraftFieldsFromBrief(t *testing.T) {
 		}},
 	}
 
-	applyToolView(&resp, "brief")
-	applyToolFields(&resp, "name,personality,motivation,skills,abilities,voice,notes")
+	toolplane.ApplyToolView(&resp, "brief")
+	toolplane.ApplyToolFields(&resp, "name,personality,motivation,skills,abilities,voice,notes")
 	data, err := json.Marshal(resp.Results)
 	if err != nil {
 		t.Fatal(err)
@@ -2701,9 +2702,9 @@ func TestNormalizeCraftPatchObjectMapsRPGStatAliases(t *testing.T) {
 		},
 	}
 
-	got, err := normalizeCraftPatchObject("character", "Lin", raw)
+	got, err := toolplane.NormalizeCraftPatchObject("character", "Lin", raw)
 	if err != nil {
-		t.Fatalf("normalizeCraftPatchObject: %v", err)
+		t.Fatalf("toolplane.NormalizeCraftPatchObject: %v", err)
 	}
 	stats, ok := got["rpg_stats"].(map[string]interface{})
 	if !ok {
@@ -2729,7 +2730,7 @@ func TestNormalizeCraftPatchObjectRejectsUnsupportedRPGStats(t *testing.T) {
 		},
 	}
 
-	_, err := normalizeCraftPatchObject("character", "Lin", raw)
+	_, err := toolplane.NormalizeCraftPatchObject("character", "Lin", raw)
 	if err == nil {
 		t.Fatalf("expected unsupported rpg_stats key to fail")
 	}
@@ -2749,7 +2750,7 @@ func TestLoadToolChapterContentUsesFinalChapterPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gotPath, content := loadToolChapterContent(root, "chap_001")
+	gotPath, content := toolplane.LoadToolChapterContent(root, "chap_001")
 	if gotPath != path {
 		t.Fatalf("path = %q, want %q", gotPath, path)
 	}
@@ -2763,18 +2764,18 @@ func containsJSONString(data []byte, needle string) bool {
 }
 
 func TestQueryStorySetupRulesType(t *testing.T) {
-	ctx := toolProjectContext{Setup: &models.StorySetup{
+	ctx := toolplane.ToolProjectContext{Setup: &models.StorySetup{
 		Rules: []string{
 			"李侑的日志只能看到系统宿主使用系统时的行为记录",
 			"日志由系统自动生成，宿主不能写入或修改",
 			"顾恒的模拟器一天只能走一次，多用吃不消",
 		},
 	}}
-	resp := queryStorySetup(ctx, "rules", "")
+	resp := toolplane.QueryStorySetup(ctx, "rules", "")
 	if !resp.OK || resp.Count != 3 {
 		t.Fatalf("rules all = ok %v count %d warnings %v", resp.OK, resp.Count, resp.Warnings)
 	}
-	resp = queryStorySetup(ctx, "rule", "模拟器")
+	resp = toolplane.QueryStorySetup(ctx, "rule", "模拟器")
 	hits, ok := resp.Results.([]string)
 	if !ok || resp.Count != 1 || len(hits) != 1 {
 		t.Fatalf("rules filtered = ok %v count %d results %T %#v", resp.OK, resp.Count, resp.Results, resp.Results)

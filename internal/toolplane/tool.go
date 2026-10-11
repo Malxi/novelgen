@@ -1,4 +1,4 @@
-package cmd
+package toolplane
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
+	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	"novelgen/internal/utils"
 	"os"
@@ -15,7 +16,7 @@ import (
 	"time"
 )
 
-var toolQueryFlags struct {
+var ToolQueryFlags struct {
 	Type           string
 	ID             string
 	Name           string
@@ -28,9 +29,9 @@ var toolQueryFlags struct {
 	Limit          int
 }
 
-var toolProcessStartedAt = time.Now()
+var ToolProcessStartedAt = time.Now()
 
-type toolResponse struct {
+type ToolResponse struct {
 	OK       bool                   `json:"ok"`
 	Section  string                 `json:"section"`
 	Query    map[string]string      `json:"query,omitempty"`
@@ -40,17 +41,17 @@ type toolResponse struct {
 	Meta     map[string]interface{} `json:"meta,omitempty"`
 }
 
-type outlineHit struct {
+type OutlineHit struct {
 	Type    string      `json:"type"`
 	ID      string      `json:"id"`
 	Title   string      `json:"title,omitempty"`
 	Summary string      `json:"summary,omitempty"`
-	Path    outlinePath `json:"path"`
+	Path    OutlinePath `json:"path"`
 	Object  interface{} `json:"object,omitempty"`
 	Reasons []string    `json:"reasons,omitempty"`
 }
 
-type outlinePath struct {
+type OutlinePath struct {
 	PartID       string `json:"part_id,omitempty"`
 	PartTitle    string `json:"part_title,omitempty"`
 	VolumeID     string `json:"volume_id,omitempty"`
@@ -63,32 +64,32 @@ type chapterHit struct {
 	ID          string          `json:"id"`
 	Title       string          `json:"title,omitempty"`
 	Summary     string          `json:"summary,omitempty"`
-	Path        outlinePath     `json:"path"`
+	Path        OutlinePath     `json:"path"`
 	Outline     *models.Chapter `json:"outline,omitempty"`
 	ContentPath string          `json:"content_path,omitempty"`
 	Content     string          `json:"content,omitempty"`
 	Reasons     []string        `json:"reasons,omitempty"`
 }
 
-type eventHit struct {
+type EventHit struct {
 	ChapterID    string       `json:"chapter_id,omitempty"`
 	ChapterTitle string       `json:"chapter_title,omitempty"`
 	EventIndex   int          `json:"event_index"`
-	Path         outlinePath  `json:"path"`
+	Path         OutlinePath  `json:"path"`
 	Event        models.Event `json:"event"`
 	Reasons      []string     `json:"reasons,omitempty"`
 }
 
-type eventHitBrief struct {
+type EventHitBrief struct {
 	ChapterID    string       `json:"chapter_id,omitempty"`
 	ChapterTitle string       `json:"chapter_title,omitempty"`
 	EventIndex   int          `json:"event_index"`
-	Path         *outlinePath `json:"path,omitempty"`
-	Event        eventBrief   `json:"event"`
+	Path         *OutlinePath `json:"path,omitempty"`
+	Event        EventBrief   `json:"event"`
 	Reasons      []string     `json:"reasons,omitempty"`
 }
 
-type logHit struct {
+type LogHit struct {
 	ID          string                 `json:"id"`
 	Kind        string                 `json:"kind"`
 	Agent       string                 `json:"agent,omitempty"`
@@ -102,7 +103,7 @@ type logHit struct {
 	DetailQuery string                 `json:"detail_query,omitempty"`
 }
 
-type craftElementContext struct {
+type CraftElementContext struct {
 	Target           string                 `json:"target"`
 	Name             string                 `json:"name"`
 	CharacterName    string                 `json:"character_name,omitempty"`
@@ -112,31 +113,31 @@ type craftElementContext struct {
 	RelevantChapters interface{}            `json:"relevant_chapters,omitempty"`
 	Events           interface{}            `json:"events,omitempty"`
 	Navigation       map[string]interface{} `json:"navigation,omitempty"`
-	NextActions      []toolNextAction       `json:"next_actions,omitempty"`
+	NextActions      []ToolNextAction       `json:"next_actions,omitempty"`
 	Stats            map[string]int         `json:"stats,omitempty"`
 }
 
-type outlineVolumeContext struct {
+type OutlineVolumeContext struct {
 	VolumeID       string                 `json:"volume_id"`
-	Path           outlinePath            `json:"path"`
+	Path           OutlinePath            `json:"path"`
 	StorySetup     interface{}            `json:"story_setup,omitempty"`
 	TargetVolume   interface{}            `json:"target_volume,omitempty"`
 	PreviousVolume interface{}            `json:"previous_volume,omitempty"`
 	NextVolume     interface{}            `json:"next_volume,omitempty"`
-	EntityIndex    outlineVolumeEntities  `json:"entity_index,omitempty"`
+	EntityIndex    OutlineVolumeEntities  `json:"entity_index,omitempty"`
 	Events         interface{}            `json:"events,omitempty"`
 	Navigation     map[string]interface{} `json:"navigation,omitempty"`
-	NextActions    []toolNextAction       `json:"next_actions,omitempty"`
+	NextActions    []ToolNextAction       `json:"next_actions,omitempty"`
 	Stats          map[string]int         `json:"stats,omitempty"`
 }
 
-type outlineRepairContext struct {
+type OutlineRepairContext struct {
 	Scope           string                 `json:"scope"`
 	ID              string                 `json:"id"`
-	Path            outlinePath            `json:"path"`
+	Path            OutlinePath            `json:"path"`
 	IssueCategory   string                 `json:"issue_category,omitempty"`
-	Check           *toolCheckResult       `json:"check,omitempty"`
-	IssueContext    []outlineRepairIssue   `json:"issue_context,omitempty"`
+	Check           *ToolCheckResult       `json:"check,omitempty"`
+	IssueContext    []OutlineRepairIssue   `json:"issue_context,omitempty"`
 	Current         interface{}            `json:"current,omitempty"`
 	ParentVolume    interface{}            `json:"parent_volume,omitempty"`
 	PreviousChapter interface{}            `json:"previous_chapter,omitempty"`
@@ -144,40 +145,40 @@ type outlineRepairContext struct {
 	Events          interface{}            `json:"events,omitempty"`
 	Navigation      map[string]interface{} `json:"navigation,omitempty"`
 	Workflow        map[string]interface{} `json:"workflow,omitempty"`
-	NextActions     []toolNextAction       `json:"next_actions,omitempty"`
+	NextActions     []ToolNextAction       `json:"next_actions,omitempty"`
 	Stats           map[string]int         `json:"stats,omitempty"`
 }
 
-type outlineGlobalRepairContext struct {
+type OutlineGlobalRepairContext struct {
 	IssueCategory  string                 `json:"issue_category,omitempty"`
-	Check          *toolCheckResult       `json:"check,omitempty"`
-	IssueContext   []outlineRepairIssue   `json:"issue_context,omitempty"`
+	Check          *ToolCheckResult       `json:"check,omitempty"`
+	IssueContext   []OutlineRepairIssue   `json:"issue_context,omitempty"`
 	PatchTask      *outlinePatchTask      `json:"patch_task,omitempty"`
 	MysteryThreads []outlineMysteryThread `json:"mystery_threads,omitempty"`
 	StorySetup     interface{}            `json:"story_setup,omitempty"`
 	Outline        interface{}            `json:"outline,omitempty"`
 	Navigation     map[string]interface{} `json:"navigation,omitempty"`
 	Workflow       map[string]interface{} `json:"workflow,omitempty"`
-	NextActions    []toolNextAction       `json:"next_actions,omitempty"`
+	NextActions    []ToolNextAction       `json:"next_actions,omitempty"`
 	Stats          map[string]int         `json:"stats,omitempty"`
 }
 
-type recapRepairContext struct {
+type RecapRepairContext struct {
 	ChapterID      string                 `json:"chapter_id"`
-	Path           outlinePath            `json:"path"`
-	Check          *toolCheckResult       `json:"check,omitempty"`
+	Path           OutlinePath            `json:"path"`
+	Check          *ToolCheckResult       `json:"check,omitempty"`
 	Current        interface{}            `json:"current,omitempty"`
 	Outline        interface{}            `json:"outline,omitempty"`
 	ChapterExcerpt map[string]string      `json:"chapter_excerpt,omitempty"`
 	Navigation     map[string]interface{} `json:"navigation,omitempty"`
 	Workflow       map[string]interface{} `json:"workflow,omitempty"`
-	NextActions    []toolNextAction       `json:"next_actions,omitempty"`
+	NextActions    []ToolNextAction       `json:"next_actions,omitempty"`
 	Stats          map[string]int         `json:"stats,omitempty"`
 }
 
-type chapterWriteContext struct {
+type ChapterWriteContext struct {
 	ChapterID              string                 `json:"chapter_id"`
-	Path                   outlinePath            `json:"path"`
+	Path                   OutlinePath            `json:"path"`
 	StorySetup             interface{}            `json:"story_setup,omitempty"`
 	ParentVolume           interface{}            `json:"parent_volume,omitempty"`
 	TargetChapter          interface{}            `json:"target_chapter,omitempty"`
@@ -187,11 +188,11 @@ type chapterWriteContext struct {
 	CurrentRecap           interface{}            `json:"current_recap,omitempty"`
 	ExistingChapterExcerpt map[string]string      `json:"existing_chapter_excerpt,omitempty"`
 	CreativeHistory        *chapterWriteHistory   `json:"creative_history,omitempty"`
-	EntityIndex            outlineVolumeEntities  `json:"entity_index,omitempty"`
+	EntityIndex            OutlineVolumeEntities  `json:"entity_index,omitempty"`
 	Events                 interface{}            `json:"events,omitempty"`
 	Navigation             map[string]interface{} `json:"navigation,omitempty"`
 	Workflow               map[string]interface{} `json:"workflow,omitempty"`
-	NextActions            []toolNextAction       `json:"next_actions,omitempty"`
+	NextActions            []ToolNextAction       `json:"next_actions,omitempty"`
 	Stats                  map[string]int         `json:"stats,omitempty"`
 }
 
@@ -211,26 +212,26 @@ type chapterWriteHistoryEntry struct {
 	Truncated  bool      `json:"truncated,omitempty"`
 }
 
-type chapterRepairContext struct {
+type ChapterRepairContext struct {
 	ChapterID              string                 `json:"chapter_id"`
-	Path                   outlinePath            `json:"path"`
+	Path                   OutlinePath            `json:"path"`
 	IssueCategory          string                 `json:"issue_category,omitempty"`
-	Check                  *toolCheckResult       `json:"check,omitempty"`
+	Check                  *ToolCheckResult       `json:"check,omitempty"`
 	SimulationRepairHints  []simulationRepairHint `json:"simulation_repair_hints,omitempty"`
 	TargetChapter          interface{}            `json:"target_chapter,omitempty"`
 	ParentVolume           interface{}            `json:"parent_volume,omitempty"`
 	PreviousChapter        interface{}            `json:"previous_chapter,omitempty"`
 	NextChapter            interface{}            `json:"next_chapter,omitempty"`
 	ExistingChapterExcerpt map[string]string      `json:"existing_chapter_excerpt,omitempty"`
-	EntityIndex            outlineVolumeEntities  `json:"entity_index,omitempty"`
+	EntityIndex            OutlineVolumeEntities  `json:"entity_index,omitempty"`
 	Events                 interface{}            `json:"events,omitempty"`
 	Navigation             map[string]interface{} `json:"navigation,omitempty"`
 	Workflow               map[string]interface{} `json:"workflow,omitempty"`
-	NextActions            []toolNextAction       `json:"next_actions,omitempty"`
+	NextActions            []ToolNextAction       `json:"next_actions,omitempty"`
 	Stats                  map[string]int         `json:"stats,omitempty"`
 }
 
-type toolNextAction struct {
+type ToolNextAction struct {
 	Step    int    `json:"step"`
 	Action  string `json:"action"`
 	Purpose string `json:"purpose,omitempty"`
@@ -251,7 +252,7 @@ type simulationRepairHint struct {
 	RelatedSuggestion string   `json:"related_suggestion,omitempty"`
 }
 
-type outlineRepairIssue struct {
+type OutlineRepairIssue struct {
 	Category            string                 `json:"category,omitempty"`
 	TargetID            string                 `json:"target_id,omitempty"`
 	TargetName          string                 `json:"target_name,omitempty"`
@@ -315,14 +316,14 @@ type outlineMysteryThread struct {
 	PostPatchCheckQuery               string                 `json:"post_patch_check_query,omitempty"`
 }
 
-type outlineVolumeEntities struct {
+type OutlineVolumeEntities struct {
 	Characters []string `json:"characters,omitempty"`
 	Items      []string `json:"items,omitempty"`
 	Locations  []string `json:"locations,omitempty"`
 	Storylines []string `json:"storylines,omitempty"`
 }
 
-type storySetupBrief struct {
+type StorySetupBrief struct {
 	ProjectName    string                 `json:"project_name,omitempty"`
 	Genres         []string               `json:"genres,omitempty"`
 	Premise        string                 `json:"premise,omitempty"`
@@ -340,7 +341,7 @@ type storySetupBrief struct {
 	Navigation     map[string]interface{} `json:"navigation,omitempty"`
 }
 
-type storySetupSearchResult struct {
+type StorySetupSearchResult struct {
 	Query          string                 `json:"query"`
 	CoreCast       []coreCastBrief        `json:"core_cast,omitempty"`
 	Storylines     []storylineBrief       `json:"storylines,omitempty"`
@@ -416,28 +417,28 @@ type worldResourceBrief struct {
 	Description string `json:"description,omitempty"`
 }
 
-type outlineBrief struct {
-	Parts      []partBrief            `json:"parts,omitempty"`
+type OutlineBrief struct {
+	Parts      []PartBrief            `json:"parts,omitempty"`
 	Navigation map[string]interface{} `json:"navigation,omitempty"`
 }
 
-type partBrief struct {
+type PartBrief struct {
 	ID      string        `json:"id,omitempty"`
 	Title   string        `json:"title,omitempty"`
 	Summary string        `json:"summary,omitempty"`
-	Volumes []volumeBrief `json:"volumes,omitempty"`
+	Volumes []VolumeBrief `json:"volumes,omitempty"`
 }
 
-type volumeBrief struct {
+type VolumeBrief struct {
 	ID             string                       `json:"id,omitempty"`
 	Title          string                       `json:"title,omitempty"`
 	Summary        string                       `json:"summary,omitempty"`
 	PayoffContract *models.VolumePayoffContract `json:"payoff_contract,omitempty"`
-	Chapters       []chapterBrief               `json:"chapters,omitempty"`
+	Chapters       []ChapterBrief               `json:"chapters,omitempty"`
 	Navigation     map[string]interface{}       `json:"navigation,omitempty"`
 }
 
-type chapterBrief struct {
+type ChapterBrief struct {
 	ID                string                    `json:"id,omitempty"`
 	Title             string                    `json:"title,omitempty"`
 	Summary           string                    `json:"summary,omitempty"`
@@ -450,14 +451,14 @@ type chapterBrief struct {
 	Pacing            string                    `json:"pacing,omitempty"`
 	Timeline          models.ChapterTimeline    `json:"timeline,omitempty"`
 	StateAnchor       models.StateAnchor        `json:"state_anchor,omitempty"`
-	Events            []eventBrief              `json:"events,omitempty"`
+	Events            []EventBrief              `json:"events,omitempty"`
 	StorylineAdvances []models.StorylineAdvance `json:"storyline_advances,omitempty"`
 	ChapterPayoff     *models.ChapterPayoff     `json:"chapter_payoff,omitempty"`
 	EventCount        int                       `json:"event_count,omitempty"`
 	AdvanceCount      int                       `json:"advance_count,omitempty"`
 }
 
-type eventBrief struct {
+type EventBrief struct {
 	Type       string   `json:"type,omitempty"`
 	Characters []string `json:"characters,omitempty"`
 	Subject    string   `json:"subject,omitempty"`
@@ -471,7 +472,7 @@ type eventBrief struct {
 	Result     string   `json:"result,omitempty"`
 }
 
-var toolCmd = &cobra.Command{
+var ToolCmd = &cobra.Command{
 	Use:   "tool",
 	Short: "Project tools for agents",
 	Long: `Project tools for agents.
@@ -480,7 +481,7 @@ var toolCmd = &cobra.Command{
 commands can mutate project state only when explicitly called with --apply.`,
 }
 
-var toolQueryCmd = &cobra.Command{
+var ToolQueryCmd = &cobra.Command{
 	Use:   "query [story-setup|outline|craft|chapter|context|logs]",
 	Short: "Query novel project data as JSON",
 	Long: `Query novel project data as JSON.
@@ -506,7 +507,7 @@ Sections:
 	RunE: runToolQuery,
 }
 
-var toolPatchBufferCmd = &cobra.Command{
+var ToolPatchBufferCmd = &cobra.Command{
 	Use:   "patch-buffer [append|show|clear]",
 	Short: "Manage a novelgen-owned temporary patch buffer",
 	Long: `Manage a novelgen-owned temporary patch buffer.
@@ -515,10 +516,10 @@ This command exists for agent workflows that need to pass long chapter text to
 tool patch without shell temp files or very long --patch-json arguments. It
 stores text under .novelgen/agent-patches and does not mutate story state.`,
 	Args: cobra.ExactArgs(1),
-	RunE: runToolPatchBuffer,
+	RunE: RunToolPatchBuffer,
 }
 
-var toolRefreshCmd = &cobra.Command{
+var ToolRefreshCmd = &cobra.Command{
 	Use:   "refresh [chapter-dsl]",
 	Short: "Refresh derived project artifacts for agent workflows",
 	Long: `Refresh derived project artifacts for agent workflows.
@@ -527,7 +528,7 @@ Refresh commands are explicit mutating tools. They do not edit story source
 state such as setup, outline, craft, recaps, or chapter markdown; they rebuild
 derived files that downstream checks consume.`,
 	Args: cobra.ExactArgs(1),
-	RunE: runToolRefresh,
+	RunE: RunToolRefresh,
 }
 
 var allowedToolPatchBufferOps = map[string]bool{
@@ -539,54 +540,54 @@ var allowedToolPatchBufferOps = map[string]bool{
 func runToolQuery(cmd *cobra.Command, args []string) error {
 	section := ""
 	if len(args) > 0 {
-		section = normalizeKey(args[0])
+		section = NormalizeKey(args[0])
 	}
 	if section == "" {
 		return fmt.Errorf("query section is required: story-setup, outline, craft, chapter, or context")
 	}
-	queryType := normalizeKey(toolQueryFlags.Type)
-	queryID, idRepaired := repairToolLookupText(toolQueryFlags.ID)
-	queryName, nameRepaired := repairToolLookupText(toolQueryFlags.Name)
-	queryChapterID, chapterIDRepaired := repairToolLookupText(toolQueryFlags.ChapterID)
-	queryVolumeID, volumeIDRepaired := repairToolLookupText(toolQueryFlags.VolumeID)
-	root, err := findProjectRoot()
+	queryType := NormalizeKey(ToolQueryFlags.Type)
+	queryID, idRepaired := RepairToolLookupText(ToolQueryFlags.ID)
+	queryName, nameRepaired := RepairToolLookupText(ToolQueryFlags.Name)
+	queryChapterID, chapterIDRepaired := RepairToolLookupText(ToolQueryFlags.ChapterID)
+	queryVolumeID, volumeIDRepaired := RepairToolLookupText(ToolQueryFlags.VolumeID)
+	root, err := project.FindRoot()
 	if err != nil {
 		return err
 	}
 
-	ctx := toolProjectContext{Root: root}
+	ctx := ToolProjectContext{Root: root}
 	if err := ctx.load(section); err != nil {
 		return err
 	}
 
-	var resp toolResponse
+	var resp ToolResponse
 	switch section {
 	case "story-setup", "setup":
-		resp = queryStorySetup(ctx, queryType, queryName)
+		resp = QueryStorySetup(ctx, queryType, queryName)
 	case "outline":
-		resp = queryOutline(ctx, queryType, queryID, toolQueryFlags.EntityType, queryName, queryChapterID, queryVolumeID)
+		resp = queryOutline(ctx, queryType, queryID, ToolQueryFlags.EntityType, queryName, queryChapterID, queryVolumeID)
 	case "craft":
-		resp = queryCraft(ctx, queryType, queryName)
+		resp = QueryCraft(ctx, queryType, queryName)
 	case "chapter", "chapters":
-		resp = queryChapterSection(ctx, queryType, queryID, toolQueryFlags.EntityType, queryName, queryChapterID, queryVolumeID, toolQueryFlags.IncludeContent)
+		resp = queryChapterSection(ctx, queryType, queryID, ToolQueryFlags.EntityType, queryName, queryChapterID, queryVolumeID, ToolQueryFlags.IncludeContent)
 	case "context":
-		resp = queryContext(ctx, queryType, queryID, queryName)
+		resp = QueryContext(ctx, queryType, queryID, queryName)
 	case "logs", "log":
-		resp = queryLogs(ctx.Root, queryType, queryID, queryName, toolQueryFlags.IncludeContent)
+		resp = QueryLogs(ctx.Root, queryType, queryID, queryName, ToolQueryFlags.IncludeContent)
 	default:
 		return fmt.Errorf("unsupported query section %q", section)
 	}
 	if idRepaired {
-		resp.Warnings = append(resp.Warnings, fmt.Sprintf("repaired possible mojibake in --id from %q to %q", toolQueryFlags.ID, queryID))
+		resp.Warnings = append(resp.Warnings, fmt.Sprintf("repaired possible mojibake in --id from %q to %q", ToolQueryFlags.ID, queryID))
 	}
 	if nameRepaired {
-		resp.Warnings = append(resp.Warnings, fmt.Sprintf("repaired possible mojibake in --name from %q to %q", toolQueryFlags.Name, queryName))
+		resp.Warnings = append(resp.Warnings, fmt.Sprintf("repaired possible mojibake in --name from %q to %q", ToolQueryFlags.Name, queryName))
 	}
 	if chapterIDRepaired {
-		resp.Warnings = append(resp.Warnings, fmt.Sprintf("repaired possible mojibake in --chapter-id from %q to %q", toolQueryFlags.ChapterID, queryChapterID))
+		resp.Warnings = append(resp.Warnings, fmt.Sprintf("repaired possible mojibake in --chapter-id from %q to %q", ToolQueryFlags.ChapterID, queryChapterID))
 	}
 	if volumeIDRepaired {
-		resp.Warnings = append(resp.Warnings, fmt.Sprintf("repaired possible mojibake in --volume-id from %q to %q", toolQueryFlags.VolumeID, queryVolumeID))
+		resp.Warnings = append(resp.Warnings, fmt.Sprintf("repaired possible mojibake in --volume-id from %q to %q", ToolQueryFlags.VolumeID, queryVolumeID))
 	}
 
 	resp.Section = section
@@ -595,22 +596,22 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 		"type":        queryType,
 		"id":          queryID,
 		"name":        queryName,
-		"entity_type": toolQueryFlags.EntityType,
+		"entity_type": ToolQueryFlags.EntityType,
 		"chapter_id":  queryChapterID,
 		"volume_id":   queryVolumeID,
-		"fields":      toolQueryFlags.Fields,
+		"fields":      ToolQueryFlags.Fields,
 	}
 	if resp.Meta == nil {
 		resp.Meta = map[string]interface{}{}
 	}
 	resp.Meta["project_root"] = root
-	applyToolView(&resp, toolQueryFlags.View)
-	applyToolFields(&resp, toolQueryFlags.Fields)
-	applyToolLimit(&resp, toolQueryFlags.Limit)
-	return writeToolJSON(cmd, resp)
+	ApplyToolView(&resp, ToolQueryFlags.View)
+	ApplyToolFields(&resp, ToolQueryFlags.Fields)
+	applyToolLimit(&resp, ToolQueryFlags.Limit)
+	return WriteToolJSON(cmd, resp)
 }
 
-type toolProjectContext struct {
+type ToolProjectContext struct {
 	Root          string
 	Setup         *models.StorySetup
 	Outline       *models.Outline
@@ -624,7 +625,7 @@ type toolProjectContext struct {
 	RawOrgs       map[string]map[string]interface{}
 }
 
-func (c *toolProjectContext) load(kind string) error {
+func (c *ToolProjectContext) load(kind string) error {
 	switch kind {
 	case "craft":
 		return c.loadElements()
@@ -660,15 +661,15 @@ func (c *toolProjectContext) load(kind string) error {
 	}
 }
 
-func queryStorySetup(ctx toolProjectContext, queryType, name string) toolResponse {
+func QueryStorySetup(ctx ToolProjectContext, queryType, name string) ToolResponse {
 	if ctx.Setup == nil {
-		return toolResponse{OK: true, Count: 0, Results: nil}
+		return ToolResponse{OK: true, Count: 0, Results: nil}
 	}
 	switch normalizeSetupType(queryType) {
 	case "index":
 		return setupIndexResponse(ctx.Setup)
 	case "", "all":
-		return toolResponse{OK: true, Count: 1, Results: ctx.Setup}
+		return ToolResponse{OK: true, Count: 1, Results: ctx.Setup}
 	case "search", "find", "refs":
 		return queryStorySetupSearch(ctx.Setup, name)
 	case "storyline":
@@ -690,17 +691,17 @@ func queryStorySetup(ctx toolProjectContext, queryType, name string) toolRespons
 		if ctx.Setup.LongFormPlan != nil {
 			count = 1
 		}
-		return toolResponse{OK: true, Count: count, Results: ctx.Setup.LongFormPlan}
+		return ToolResponse{OK: true, Count: count, Results: ctx.Setup.LongFormPlan}
 	default:
-		return toolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported story-setup type %q", queryType)}}
+		return ToolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported story-setup type %q", queryType)}}
 	}
 }
 
 // setupIndexResponse 返回 setup 的轻量索引: 各主要字段的数量与名称列表,
 // 供 agent 快速了解设定书全貌而不拉取完整数据(省 token)。
-func setupIndexResponse(setup *models.StorySetup) toolResponse {
+func setupIndexResponse(setup *models.StorySetup) ToolResponse {
 	if setup == nil {
-		return toolResponse{OK: true, Count: 0, Results: nil}
+		return ToolResponse{OK: true, Count: 0, Results: nil}
 	}
 	index := map[string]interface{}{
 		"project_name":    setup.ProjectName,
@@ -724,17 +725,17 @@ func setupIndexResponse(setup *models.StorySetup) toolResponse {
 		"resource_count":  len(setup.WorldResources),
 		"has_long_form":   setup.LongFormPlan != nil,
 	}
-	return toolResponse{OK: true, Count: 1, Results: index}
+	return ToolResponse{OK: true, Count: 1, Results: index}
 }
 
-func queryStorySetupSearch(setup *models.StorySetup, name string) toolResponse {
+func queryStorySetupSearch(setup *models.StorySetup, name string) ToolResponse {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return toolResponse{OK: false, Section: "story-setup", Count: 0, Warnings: []string{"--name is required for story-setup --type search"}}
+		return ToolResponse{OK: false, Section: "story-setup", Count: 0, Warnings: []string{"--name is required for story-setup --type search"}}
 	}
 
 	const perSectionLimit = 3
-	result := storySetupSearchResult{
+	result := StorySetupSearchResult{
 		Query: name,
 		Navigation: map[string]interface{}{
 			"detail_queries": []string{
@@ -874,43 +875,43 @@ func queryStorySetupSearch(setup *models.StorySetup, name string) toolResponse {
 	if resourceTotal > len(result.WorldResources) {
 		warnings = append(warnings, fmt.Sprintf("world_resources truncated from %d to %d", resourceTotal, len(result.WorldResources)))
 	}
-	return toolResponse{OK: true, Section: "story-setup", Count: total, Results: result, Warnings: warnings}
+	return ToolResponse{OK: true, Section: "story-setup", Count: total, Results: result, Warnings: warnings}
 }
 
-func querySetupSlice[T any](kind, name string, values []T, nameOf func(T) string) toolResponse {
+func querySetupSlice[T any](kind, name string, values []T, nameOf func(T) string) ToolResponse {
 	hits := make([]T, 0)
 	for _, value := range values {
 		if name == "" || textMatches(nameOf(value), name) || objectJSONContains(value, name) {
 			hits = append(hits, value)
 		}
 	}
-	return toolResponse{OK: true, Section: "craft", Count: len(hits), Results: hits}
+	return ToolResponse{OK: true, Section: "craft", Count: len(hits), Results: hits}
 }
 
-func queryOutline(ctx toolProjectContext, queryType, id, entityType, name, chapterID, volumeID string) toolResponse {
+func queryOutline(ctx ToolProjectContext, queryType, id, entityType, name, chapterID, volumeID string) ToolResponse {
 	switch normalizeOutlineType(queryType) {
 	case "", "all":
 		count := 0
 		if ctx.Outline != nil {
 			count = len(ctx.Outline.Parts)
 		}
-		return toolResponse{OK: true, Count: count, Results: ctx.Outline}
+		return ToolResponse{OK: true, Count: count, Results: ctx.Outline}
 	case "part":
-		return queryOutlineNode(ctx.Outline, "part", id)
+		return QueryOutlineNode(ctx.Outline, "part", id)
 	case "volume":
-		return queryOutlineNode(ctx.Outline, "volume", id)
+		return QueryOutlineNode(ctx.Outline, "volume", id)
 	case "chapter":
-		return queryOutlineNode(ctx.Outline, "chapter", id)
+		return QueryOutlineNode(ctx.Outline, "chapter", id)
 	case "refs":
-		return queryOutlineRefs(ctx.Outline, entityType, name, false)
+		return QueryOutlineRefs(ctx.Outline, entityType, name, false)
 	case "events":
-		return queryEvents(ctx.Outline, chapterID, volumeID, entityType, name)
+		return QueryEvents(ctx.Outline, chapterID, volumeID, entityType, name)
 	default:
-		return toolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported outline type %q", queryType)}}
+		return ToolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported outline type %q", queryType)}}
 	}
 }
 
-func queryCraft(ctx toolProjectContext, queryType, name string) toolResponse {
+func QueryCraft(ctx ToolProjectContext, queryType, name string) ToolResponse {
 	switch normalizeCraftType(queryType) {
 	case "", "all":
 		results := map[string]interface{}{
@@ -919,7 +920,7 @@ func queryCraft(ctx toolProjectContext, queryType, name string) toolResponse {
 			"locations":     rawOrTyped(ctx.RawLocations, ctx.Locations),
 			"organizations": rawOrTyped(ctx.RawOrgs, ctx.Organizations),
 		}
-		return toolResponse{OK: true, Count: len(ctx.Characters) + len(ctx.Items) + len(ctx.Locations) + len(ctx.Organizations), Results: results}
+		return ToolResponse{OK: true, Count: len(ctx.Characters) + len(ctx.Items) + len(ctx.Locations) + len(ctx.Organizations), Results: results}
 	case "character":
 		if ctx.RawCharacters != nil {
 			return queryNamedRawElement("character", name, ctx.RawCharacters)
@@ -941,11 +942,11 @@ func queryCraft(ctx toolProjectContext, queryType, name string) toolResponse {
 		}
 		return queryNamedElement("organization", name, ctx.Organizations)
 	default:
-		return toolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported craft type %q", queryType)}}
+		return ToolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported craft type %q", queryType)}}
 	}
 }
 
-func queryChapterSection(ctx toolProjectContext, queryType, id, entityType, name, chapterID, volumeID string, includeContent bool) toolResponse {
+func queryChapterSection(ctx ToolProjectContext, queryType, id, entityType, name, chapterID, volumeID string, includeContent bool) ToolResponse {
 	if strings.TrimSpace(id) != "" {
 		return queryChapter(ctx, id, includeContent)
 	}
@@ -958,15 +959,15 @@ func queryChapterSection(ctx toolProjectContext, queryType, id, entityType, name
 	case "refs":
 		return queryChaptersByEntity(ctx, entityType, name, includeContent)
 	case "events":
-		return queryEvents(ctx.Outline, chapterID, volumeID, entityType, name)
+		return QueryEvents(ctx.Outline, chapterID, volumeID, entityType, name)
 	case "outline":
-		return queryOutlineNode(ctx.Outline, "chapter", id)
+		return QueryOutlineNode(ctx.Outline, "chapter", id)
 	default:
-		return toolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported chapter type %q", queryType)}}
+		return ToolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported chapter type %q", queryType)}}
 	}
 }
 
-func queryContext(ctx toolProjectContext, queryType, id, name string) toolResponse {
+func QueryContext(ctx ToolProjectContext, queryType, id, name string) ToolResponse {
 	contextType := normalizeContextType(queryType)
 	switch contextType {
 	case "craft-character", "craft-item", "craft-location", "craft-organization":
@@ -976,7 +977,7 @@ func queryContext(ctx toolProjectContext, queryType, id, name string) toolRespon
 	case "outline-repair":
 		return queryOutlineRepairContext(ctx, id, name)
 	case "outline-global-repair":
-		return queryOutlineGlobalRepairContext(ctx, name)
+		return QueryOutlineGlobalRepairContext(ctx, name)
 	case "recap-repair":
 		return queryRecapRepairContext(ctx, id)
 	case "chapter-write":
@@ -984,14 +985,14 @@ func queryContext(ctx toolProjectContext, queryType, id, name string) toolRespon
 	case "chapter-repair":
 		return queryChapterRepairContext(ctx, id, name)
 	default:
-		return toolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported context type %q", queryType)}}
+		return ToolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported context type %q", queryType)}}
 	}
 }
 
-func queryChapterWriteContext(ctx toolProjectContext, chapterID string) toolResponse {
+func queryChapterWriteContext(ctx ToolProjectContext, chapterID string) ToolResponse {
 	chapterID = strings.TrimSpace(chapterID)
 	if chapterID == "" {
-		return toolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{"--id is required for context --type chapter-write"}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{"--id is required for context --type chapter-write"}}
 	}
 
 	chapters := flattenChapters(ctx.Outline)
@@ -1003,11 +1004,11 @@ func queryChapterWriteContext(ctx toolProjectContext, chapterID string) toolResp
 		}
 	}
 	if targetIndex < 0 {
-		return toolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
+		return ToolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
 	}
 
 	target := chapters[targetIndex]
-	eventsResp := queryEvents(ctx.Outline, target.Chapter.ID, "", "", "")
+	eventsResp := QueryEvents(ctx.Outline, target.Chapter.ID, "", "", "")
 	events := limitEventHitResults(eventsResp.Results, 8)
 	entities := collectChapterEntities(*target.Chapter)
 
@@ -1041,7 +1042,7 @@ func queryChapterWriteContext(ctx toolProjectContext, chapterID string) toolResp
 
 	excerpt, _ := loadChapterExcerptForTool(ctx.Root, target.Chapter.ID)
 	creativeHistory := buildChapterWriteHistory(ctx.Root)
-	result := chapterWriteContext{
+	result := ChapterWriteContext{
 		ChapterID:              target.Chapter.ID,
 		Path:                   target.Path,
 		StorySetup:             briefStorySetupResults(ctx.Setup, true),
@@ -1096,7 +1097,7 @@ func queryChapterWriteContext(ctx toolProjectContext, chapterID string) toolResp
 	if eventsResp.Count > len(events) {
 		warnings = append(warnings, fmt.Sprintf("events truncated from %d to %d", eventsResp.Count, len(events)))
 	}
-	return toolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: warnings}
+	return ToolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: warnings}
 }
 
 func buildChapterWriteHistory(root string) *chapterWriteHistory {
@@ -1128,7 +1129,7 @@ func buildChapterWriteHistory(root string) *chapterWriteHistory {
 		if kind != "prompts" && kind != "responses" {
 			return nil
 		}
-		if !info.ModTime().Before(toolProcessStartedAt.Add(-1 * time.Second)) {
+		if !info.ModTime().Before(ToolProcessStartedAt.Add(-1 * time.Second)) {
 			return nil
 		}
 		counts[kind]++
@@ -1183,7 +1184,7 @@ func firstNHistoryEntries(entries []chapterWriteHistoryEntry, n int) []chapterWr
 	return entries[:n]
 }
 
-func buildChapterWriteNavigation(chapterID string, previousChapter, nextChapter *flatChapter, entities outlineVolumeEntities) map[string]interface{} {
+func buildChapterWriteNavigation(chapterID string, previousChapter, nextChapter *flatChapter, entities OutlineVolumeEntities) map[string]interface{} {
 	adjacent := map[string]string{}
 	if previousChapter != nil && previousChapter.Chapter != nil {
 		adjacent["previous_chapter_id"] = previousChapter.Chapter.ID
@@ -1225,8 +1226,8 @@ func buildChapterWriteWorkflow(chapterID string, previousChapter *flatChapter) m
 	return workflow
 }
 
-func buildChapterWriteNextActions(chapterID string, previousChapter *flatChapter) []toolNextAction {
-	actions := []toolNextAction{
+func buildChapterWriteNextActions(chapterID string, previousChapter *flatChapter) []ToolNextAction {
+	actions := []ToolNextAction{
 		{
 			Step:    1,
 			Action:  "use_current_context",
@@ -1240,7 +1241,7 @@ func buildChapterWriteNextActions(chapterID string, previousChapter *flatChapter
 		},
 	}
 	if previousChapter != nil && previousChapter.Chapter != nil {
-		actions = append(actions, toolNextAction{
+		actions = append(actions, ToolNextAction{
 			Step:    len(actions) + 1,
 			Action:  "preserve_previous_continuity",
 			Purpose: "Use previous_chapter and previous_recap facts already included in this context; do not run recap checks.",
@@ -1250,10 +1251,10 @@ func buildChapterWriteNextActions(chapterID string, previousChapter *flatChapter
 	return actions
 }
 
-func queryChapterRepairContext(ctx toolProjectContext, chapterID, issueCategory string) toolResponse {
+func queryChapterRepairContext(ctx ToolProjectContext, chapterID, issueCategory string) ToolResponse {
 	chapterID = strings.TrimSpace(chapterID)
 	if chapterID == "" {
-		return toolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{"--id is required for context --type chapter-repair"}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{"--id is required for context --type chapter-repair"}}
 	}
 
 	chapters := flattenChapters(ctx.Outline)
@@ -1265,11 +1266,11 @@ func queryChapterRepairContext(ctx toolProjectContext, chapterID, issueCategory 
 		}
 	}
 	if targetIndex < 0 {
-		return toolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
+		return ToolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
 	}
 
 	target := chapters[targetIndex]
-	eventsResp := queryEvents(ctx.Outline, target.Chapter.ID, "", "", "")
+	eventsResp := QueryEvents(ctx.Outline, target.Chapter.ID, "", "", "")
 	events := limitEventHitResults(eventsResp.Results, 8)
 	entities := collectChapterEntities(*target.Chapter)
 
@@ -1283,7 +1284,7 @@ func queryChapterRepairContext(ctx toolProjectContext, chapterID, issueCategory 
 	}
 
 	warnings := []string{}
-	var check *toolCheckResult
+	var check *ToolCheckResult
 	if strings.TrimSpace(ctx.Root) == "" {
 		warnings = append(warnings, "project root missing; chapter quality/simulation check unavailable")
 	} else {
@@ -1291,7 +1292,7 @@ func queryChapterRepairContext(ctx toolProjectContext, chapterID, issueCategory 
 		check, err = runToolChapterCheck(ctx.Root, "all", "chapter", target.Chapter.ID)
 		if err != nil {
 			warnings = append(warnings, "chapter check unavailable: "+err.Error())
-		} else if err := applyToolCheckIssueFilters(check, "low", chapterRepairIssueCategoryFilter(issueCategory), 12); err != nil {
+		} else if err := ApplyToolCheckIssueFilters(check, "low", ChapterRepairIssueCategoryFilter(issueCategory), 12); err != nil {
 			warnings = append(warnings, "chapter check filter ignored: "+err.Error())
 		}
 	}
@@ -1299,17 +1300,17 @@ func queryChapterRepairContext(ctx toolProjectContext, chapterID, issueCategory 
 	excerpt, excerptWarnings := loadChapterExcerptForTool(ctx.Root, target.Chapter.ID)
 	warnings = append(warnings, excerptWarnings...)
 
-	result := chapterRepairContext{
+	result := ChapterRepairContext{
 		ChapterID:              target.Chapter.ID,
 		Path:                   target.Path,
 		IssueCategory:          categoryOrAll(issueCategory),
 		Check:                  check,
-		SimulationRepairHints:  buildChapterSimulationRepairHints(target.Chapter.ID, check),
+		SimulationRepairHints:  BuildChapterSimulationRepairHints(target.Chapter.ID, check),
 		TargetChapter:          makeRepairChapterBrief(*target.Chapter),
 		ExistingChapterExcerpt: excerpt,
 		EntityIndex:            entities,
 		Events:                 briefOutlineResults(events, false),
-		Navigation:             buildChapterRepairNavigation(target.Chapter.ID, issueCategory, entities),
+		Navigation:             BuildChapterRepairNavigation(target.Chapter.ID, issueCategory, entities),
 		Workflow:               buildChapterRepairWorkflow(target.Chapter.ID, issueCategory),
 		NextActions:            buildChapterRepairNextActions(target.Chapter.ID, issueCategory),
 		Stats: map[string]int{
@@ -1344,11 +1345,11 @@ func queryChapterRepairContext(ctx toolProjectContext, chapterID, issueCategory 
 	if eventsResp.Count > len(events) {
 		warnings = append(warnings, fmt.Sprintf("events truncated from %d to %d", eventsResp.Count, len(events)))
 	}
-	return toolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: warnings}
+	return ToolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: warnings}
 }
 
-func buildChapterRepairNavigation(chapterID, issueCategory string, entities outlineVolumeEntities) map[string]interface{} {
-	category := chapterRepairIssueCategoryFilter(issueCategory)
+func BuildChapterRepairNavigation(chapterID, issueCategory string, entities OutlineVolumeEntities) map[string]interface{} {
+	category := ChapterRepairIssueCategoryFilter(issueCategory)
 	craftQueries := []string{}
 	for _, name := range firstNStrings(entities.Characters, 5) {
 		craftQueries = append(craftQueries, fmt.Sprintf("novelgen tool query context --type craft-character --name %q --view brief", name))
@@ -1376,9 +1377,9 @@ func buildChapterRepairNavigation(chapterID, issueCategory string, entities outl
 	}
 }
 
-func chapterRepairIssueCategoryFilter(issueCategory string) string {
+func ChapterRepairIssueCategoryFilter(issueCategory string) string {
 	category := strings.TrimSpace(issueCategory)
-	switch normalizeKey(category) {
+	switch NormalizeKey(category) {
 	case "", "all", "simulation":
 		return categoryOrAll("") + ",simulation"
 	default:
@@ -1386,7 +1387,7 @@ func chapterRepairIssueCategoryFilter(issueCategory string) string {
 	}
 }
 
-func buildChapterSimulationRepairHints(chapterID string, check *toolCheckResult) []simulationRepairHint {
+func BuildChapterSimulationRepairHints(chapterID string, check *ToolCheckResult) []simulationRepairHint {
 	if check == nil || len(check.Issues) == 0 {
 		return nil
 	}
@@ -1559,9 +1560,9 @@ func buildChapterRepairWorkflow(chapterID, issueCategory string) map[string]inte
 	}
 }
 
-func buildChapterRepairNextActions(chapterID, issueCategory string) []toolNextAction {
-	category := chapterRepairIssueCategoryFilter(issueCategory)
-	return []toolNextAction{
+func buildChapterRepairNextActions(chapterID, issueCategory string) []ToolNextAction {
+	category := ChapterRepairIssueCategoryFilter(issueCategory)
+	return []ToolNextAction{
 		{
 			Step:    1,
 			Action:  "use_current_repair_bundle",
@@ -1595,10 +1596,10 @@ func buildChapterRepairNextActions(chapterID, issueCategory string) []toolNextAc
 	}
 }
 
-func queryRecapRepairContext(ctx toolProjectContext, chapterID string) toolResponse {
+func queryRecapRepairContext(ctx ToolProjectContext, chapterID string) ToolResponse {
 	chapterID = strings.TrimSpace(chapterID)
 	if chapterID == "" {
-		return toolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{"--id is required for context --type recap-repair"}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{"--id is required for context --type recap-repair"}}
 	}
 
 	chapters := flattenChapters(ctx.Outline)
@@ -1612,14 +1613,14 @@ func queryRecapRepairContext(ctx toolProjectContext, chapterID string) toolRespo
 		}
 	}
 	if !found {
-		return toolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
+		return ToolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
 	}
 
-	check, err := runToolRecapCheck(ctx.Root, "quality", "chapter", target.Chapter.ID)
+	check, err := RunToolRecapCheck(ctx.Root, "quality", "chapter", target.Chapter.ID)
 	if err != nil {
-		return toolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{err.Error()}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{err.Error()}}
 	}
-	_ = applyToolCheckIssueFilters(check, "low", "recap", 8)
+	_ = ApplyToolCheckIssueFilters(check, "low", "recap", 8)
 
 	var current *models.ChapterRecap
 	if ctx.Root != "" {
@@ -1628,7 +1629,7 @@ func queryRecapRepairContext(ctx toolProjectContext, chapterID string) toolRespo
 		}
 	}
 	excerpt, contentWarnings := loadChapterExcerptForTool(ctx.Root, target.Chapter.ID)
-	result := recapRepairContext{
+	result := RecapRepairContext{
 		ChapterID:      target.Chapter.ID,
 		Path:           target.Path,
 		Check:          check,
@@ -1658,7 +1659,7 @@ func queryRecapRepairContext(ctx toolProjectContext, chapterID string) toolRespo
 	if excerpt != nil {
 		result.Stats["excerpt_fields"] = len(excerpt)
 	}
-	return toolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: contentWarnings}
+	return ToolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: contentWarnings}
 }
 
 func buildRecapRepairWorkflow(chapterID string) map[string]interface{} {
@@ -1678,8 +1679,8 @@ func buildRecapRepairWorkflow(chapterID string) map[string]interface{} {
 	}
 }
 
-func buildRecapRepairNextActions(chapterID string) []toolNextAction {
-	return []toolNextAction{
+func buildRecapRepairNextActions(chapterID string) []ToolNextAction {
+	return []ToolNextAction{
 		{
 			Step:    1,
 			Action:  "use_current_context",
@@ -1701,32 +1702,32 @@ func buildRecapRepairNextActions(chapterID string) []toolNextAction {
 	}
 }
 
-func queryOutlineRepairContext(ctx toolProjectContext, id, category string) toolResponse {
+func queryOutlineRepairContext(ctx ToolProjectContext, id, category string) ToolResponse {
 	id = strings.TrimSpace(id)
-	category = normalizeKey(category)
+	category = NormalizeKey(category)
 	if id == "" {
-		return toolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{"--id is required for context --type outline-repair"}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{"--id is required for context --type outline-repair"}}
 	}
-	if toolLooksLikeVolumeID(id) {
+	if ToolLooksLikeVolumeID(id) {
 		return queryOutlineVolumeRepairContext(ctx, id, category)
 	}
-	if _, ok := toolVolumeIDFromChapterID(id); ok {
+	if _, ok := ToolVolumeIDFromChapterID(id); ok {
 		return queryOutlineChapterRepairContext(ctx, id, category)
 	}
-	return toolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{fmt.Sprintf("cannot infer outline repair scope from id %q", id)}}
+	return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{fmt.Sprintf("cannot infer outline repair scope from id %q", id)}}
 }
 
-func queryOutlineGlobalRepairContext(ctx toolProjectContext, category string) toolResponse {
-	category = normalizeKey(category)
-	check, err := runToolOutlineCheck("all", ctx.Setup, ctx.Outline, "all", "")
+func QueryOutlineGlobalRepairContext(ctx ToolProjectContext, category string) ToolResponse {
+	category = NormalizeKey(category)
+	check, err := RunToolOutlineCheck("all", ctx.Setup, ctx.Outline, "all", "")
 	if err != nil {
-		return toolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{err.Error()}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{err.Error()}}
 	}
-	_ = applyToolCheckIssueFilters(check, "low", category, 12)
-	mysteryThreads := collectOutlineMysteryThreads(ctx.Outline)
+	_ = ApplyToolCheckIssueFilters(check, "low", category, 12)
+	mysteryThreads := CollectOutlineMysteryThreads(ctx.Outline)
 	issueContext := buildOutlineGlobalRepairIssues(check, category, ctx.Outline)
 	patchTask := buildOutlineGlobalPatchTask(issueContext)
-	result := outlineGlobalRepairContext{
+	result := OutlineGlobalRepairContext{
 		IssueCategory:  category,
 		Check:          check,
 		IssueContext:   issueContext,
@@ -1754,10 +1755,10 @@ func queryOutlineGlobalRepairContext(ctx toolProjectContext, category string) to
 		result.Stats["mystery_thread_count"] = len(result.MysteryThreads)
 		result.Stats["unresolved_mystery_count"] = countUnresolvedOutlineMysteryThreads(result.MysteryThreads)
 	}
-	return toolResponse{OK: true, Section: "context", Count: 1, Results: result}
+	return ToolResponse{OK: true, Section: "context", Count: 1, Results: result}
 }
 
-func queryOutlineVolumeRepairContext(ctx toolProjectContext, volumeID, category string) toolResponse {
+func queryOutlineVolumeRepairContext(ctx ToolProjectContext, volumeID, category string) ToolResponse {
 	volumes := flattenVolumes(ctx.Outline)
 	targetIndex := -1
 	for i, volume := range volumes {
@@ -1767,20 +1768,20 @@ func queryOutlineVolumeRepairContext(ctx toolProjectContext, volumeID, category 
 		}
 	}
 	if targetIndex < 0 {
-		return toolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline volume not found: %q", volumeID)}}
+		return ToolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline volume not found: %q", volumeID)}}
 	}
 	target := volumes[targetIndex]
-	check, err := runToolOutlineCheck("all", ctx.Setup, ctx.Outline, "volume", target.Volume.ID)
+	check, err := RunToolOutlineCheck("all", ctx.Setup, ctx.Outline, "volume", target.Volume.ID)
 	if err != nil {
-		return toolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{err.Error()}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{err.Error()}}
 	}
-	_ = applyToolCheckIssueFilters(check, "low", category, 8)
+	_ = ApplyToolCheckIssueFilters(check, "low", category, 8)
 	events := collectRepairVolumeEvents(target, check)
 	returnedEvents := events
 	if len(returnedEvents) > 8 {
 		returnedEvents = returnedEvents[:8]
 	}
-	result := outlineRepairContext{
+	result := OutlineRepairContext{
 		Scope:         "volume",
 		ID:            target.Volume.ID,
 		Path:          target.Path,
@@ -1818,10 +1819,10 @@ func queryOutlineVolumeRepairContext(ctx toolProjectContext, volumeID, category 
 	if len(events) > len(returnedEvents) {
 		warnings = append(warnings, fmt.Sprintf("events truncated from %d to %d", len(events), len(returnedEvents)))
 	}
-	return toolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: warnings}
+	return ToolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: warnings}
 }
 
-func queryOutlineChapterRepairContext(ctx toolProjectContext, chapterID, category string) toolResponse {
+func queryOutlineChapterRepairContext(ctx ToolProjectContext, chapterID, category string) ToolResponse {
 	chapters := flattenChapters(ctx.Outline)
 	targetIndex := -1
 	for i, chapter := range chapters {
@@ -1831,18 +1832,18 @@ func queryOutlineChapterRepairContext(ctx toolProjectContext, chapterID, categor
 		}
 	}
 	if targetIndex < 0 {
-		return toolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
+		return ToolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
 	}
 	target := chapters[targetIndex]
 	volumeID := target.Path.VolumeID
-	check, err := runToolOutlineCheck("all", ctx.Setup, ctx.Outline, "chapter", target.Chapter.ID)
+	check, err := RunToolOutlineCheck("all", ctx.Setup, ctx.Outline, "chapter", target.Chapter.ID)
 	if err != nil {
-		return toolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{err.Error()}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{err.Error()}}
 	}
-	_ = applyToolCheckIssueFilters(check, "low", category, 8)
-	eventResp := queryEvents(ctx.Outline, target.Chapter.ID, "", "", "")
+	_ = ApplyToolCheckIssueFilters(check, "low", category, 8)
+	eventResp := QueryEvents(ctx.Outline, target.Chapter.ID, "", "", "")
 	events := limitEventHitResults(eventResp.Results, 8)
-	result := outlineRepairContext{
+	result := OutlineRepairContext{
 		Scope:         "chapter",
 		ID:            target.Chapter.ID,
 		Path:          target.Path,
@@ -1888,26 +1889,26 @@ func queryOutlineChapterRepairContext(ctx toolProjectContext, chapterID, categor
 	if eventResp.Count > len(events) {
 		warnings = append(warnings, fmt.Sprintf("events truncated from %d to %d", eventResp.Count, len(events)))
 	}
-	return toolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: warnings}
+	return ToolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: warnings}
 }
 
-func buildOutlineRepairIssues(check *toolCheckResult, scope, targetID, volumeID, category string, chapter *models.Chapter, volume *models.Volume) []outlineRepairIssue {
+func buildOutlineRepairIssues(check *ToolCheckResult, scope, targetID, volumeID, category string, chapter *models.Chapter, volume *models.Volume) []OutlineRepairIssue {
 	if check == nil || len(check.Issues) == 0 {
 		return nil
 	}
-	issues := make([]outlineRepairIssue, 0, len(check.Issues))
+	issues := make([]OutlineRepairIssue, 0, len(check.Issues))
 	for _, issue := range check.Issues {
 		issueTargetID := strings.TrimSpace(issue.TargetID)
 		if issueTargetID == "" {
 			issueTargetID = targetID
 		}
-		issueCategory := normalizeKey(issue.Category)
+		issueCategory := NormalizeKey(issue.Category)
 		if issueCategory == "" {
 			issueCategory = category
 		}
 		issueScope := scope
 		patchShape := map[string]interface{}{"summary": "<optional new summary>"}
-		if _, ok := toolVolumeIDFromChapterID(issueTargetID); ok {
+		if _, ok := ToolVolumeIDFromChapterID(issueTargetID); ok {
 			issueScope = "chapter"
 			patchShape = map[string]interface{}{"changed_chapters": []map[string]string{{"id": issueTargetID}}}
 		}
@@ -1915,7 +1916,7 @@ func buildOutlineRepairIssues(check *toolCheckResult, scope, targetID, volumeID,
 		if evidenceChapter == nil && volume != nil {
 			evidenceChapter = findVolumeChapterByID(volume, issueTargetID)
 		}
-		item := outlineRepairIssue{
+		item := OutlineRepairIssue{
 			Category:            issue.Category,
 			TargetID:            issueTargetID,
 			TargetName:          issue.TargetName,
@@ -1935,36 +1936,36 @@ func buildOutlineRepairIssues(check *toolCheckResult, scope, targetID, volumeID,
 	return issues
 }
 
-func buildOutlineGlobalRepairIssues(check *toolCheckResult, category string, outline *models.Outline) []outlineRepairIssue {
+func buildOutlineGlobalRepairIssues(check *ToolCheckResult, category string, outline *models.Outline) []OutlineRepairIssue {
 	if check == nil || len(check.Issues) == 0 {
 		return nil
 	}
-	mysteryThreads := collectOutlineMysteryThreads(outline)
-	issues := make([]outlineRepairIssue, 0, len(check.Issues))
+	mysteryThreads := CollectOutlineMysteryThreads(outline)
+	issues := make([]OutlineRepairIssue, 0, len(check.Issues))
 	for _, issue := range check.Issues {
-		issueCategory := normalizeKey(issue.Category)
+		issueCategory := NormalizeKey(issue.Category)
 		if issueCategory == "" {
 			issueCategory = category
 		}
-		nav := toolIssueNavigation(check.Kind, check.Target, check.Scope, check.ID, issue, toolCheckResultTargetWords(*check))
-		item := outlineRepairIssue{
+		nav := ToolIssueNavigation(check.Kind, check.Target, check.Scope, check.ID, issue, ToolCheckResultTargetWords(*check))
+		item := OutlineRepairIssue{
 			Category:            issue.Category,
 			TargetID:            issue.TargetID,
 			TargetName:          issue.TargetName,
 			Issue:               issue.Issue,
 			Suggestion:          issue.Suggestion,
 			Priority:            issue.Priority,
-			FocusedCheckQuery:   stringMapValue(nav, "focused_check_query"),
-			RepairRouteQuery:    stringMapValue(nav, "repair_route_query"),
-			RepairContextQuery:  stringMapValue(nav, "repair_context_query"),
-			PatchQuery:          stringMapValue(nav, "patch_query"),
-			PostPatchCheckQuery: stringMapValue(nav, "post_patch_check_query"),
+			FocusedCheckQuery:   StringMapValue(nav, "focused_check_query"),
+			RepairRouteQuery:    StringMapValue(nav, "repair_route_query"),
+			RepairContextQuery:  StringMapValue(nav, "repair_context_query"),
+			PatchQuery:          StringMapValue(nav, "patch_query"),
+			PostPatchCheckQuery: StringMapValue(nav, "post_patch_check_query"),
 		}
 		if shape, ok := nav["patch_shape"]; ok {
 			item.PatchShape = shape
 		}
 		if issueCategory == "mysteries" && item.PatchShape == nil {
-			if thread := firstPatchableOutlineMysteryThread(mysteryThreads); thread != nil {
+			if thread := FirstPatchableOutlineMysteryThread(mysteryThreads); thread != nil {
 				item.TargetID = thread.ID
 				item.TargetName = thread.ID
 				item.RepairContextQuery = fmt.Sprintf("novelgen tool query context --type outline-global-repair --name %q --view brief", categoryOrAll(issueCategory))
@@ -1986,7 +1987,7 @@ func buildOutlineGlobalRepairIssues(check *toolCheckResult, category string, out
 	return issues
 }
 
-func buildOutlineGlobalPatchTask(issues []outlineRepairIssue) *outlinePatchTask {
+func buildOutlineGlobalPatchTask(issues []OutlineRepairIssue) *outlinePatchTask {
 	issue := firstPatchableOutlineRepairIssue(issues)
 	if issue == nil {
 		return nil
@@ -2040,7 +2041,7 @@ func buildOutlineGlobalPatchTask(issues []outlineRepairIssue) *outlinePatchTask 
 }
 
 func outlineGlobalPatchTaskID(category string) string {
-	category = normalizeKey(category)
+	category = NormalizeKey(category)
 	if category == "" {
 		return ""
 	}
@@ -2066,7 +2067,7 @@ func shellSingleQuote(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
 }
 
-func collectOutlineMysteryThreads(outline *models.Outline) []outlineMysteryThread {
+func CollectOutlineMysteryThreads(outline *models.Outline) []outlineMysteryThread {
 	chapters := flattenChapters(outline)
 	if len(chapters) == 0 {
 		return nil
@@ -2193,7 +2194,7 @@ func mysteryResolutionPatchShape(mysteryID, hint string, candidate *flatChapter)
 }
 
 func filterOutlineMysteryThreadsForCategory(threads []outlineMysteryThread, category string) []outlineMysteryThread {
-	if normalizeKey(category) != "mysteries" {
+	if NormalizeKey(category) != "mysteries" {
 		return nil
 	}
 	if len(threads) > 12 {
@@ -2202,7 +2203,7 @@ func filterOutlineMysteryThreadsForCategory(threads []outlineMysteryThread, cate
 	return threads
 }
 
-func firstPatchableOutlineMysteryThread(threads []outlineMysteryThread) *outlineMysteryThread {
+func FirstPatchableOutlineMysteryThread(threads []outlineMysteryThread) *outlineMysteryThread {
 	for i := range threads {
 		if len(threads[i].ResolvedChapterIDs) > 0 {
 			continue
@@ -2226,10 +2227,10 @@ func countUnresolvedOutlineMysteryThreads(threads []outlineMysteryThread) int {
 	return count
 }
 
-func buildOutlineGlobalRepairNextActions(check *toolCheckResult, issues []outlineRepairIssue) []toolNextAction {
+func buildOutlineGlobalRepairNextActions(check *ToolCheckResult, issues []OutlineRepairIssue) []ToolNextAction {
 	if patchable := firstPatchableOutlineRepairIssue(issues); patchable != nil {
 		_, dryRunCommand, applyCommand := outlinePatchTaskCommands(patchable.PatchQuery, patchable.PatchShape, outlineGlobalPatchTaskID(patchable.Category))
-		return []toolNextAction{{
+		return []ToolNextAction{{
 			Step:    1,
 			Action:  "use_patch_task",
 			Purpose: "Use patch_task.dry_run_command and patch_task.apply_command from this response directly; do not query outline-volume, outline-repair, chapters, tool-results, full setup, full outline, or all chapters.",
@@ -2251,7 +2252,7 @@ func buildOutlineGlobalRepairNextActions(check *toolCheckResult, issues []outlin
 		}}
 	}
 	if check == nil || len(check.Issues) == 0 {
-		return []toolNextAction{{
+		return []ToolNextAction{{
 			Step:    1,
 			Action:  "return_final_json",
 			Purpose: "No global outline issues match the current filters.",
@@ -2271,7 +2272,7 @@ func buildOutlineGlobalRepairNextActions(check *toolCheckResult, issues []outlin
 	return actions
 }
 
-func firstPatchableOutlineRepairIssue(issues []outlineRepairIssue) *outlineRepairIssue {
+func firstPatchableOutlineRepairIssue(issues []OutlineRepairIssue) *OutlineRepairIssue {
 	for i := range issues {
 		if strings.TrimSpace(issues[i].PatchQuery) == "" || issues[i].PatchShape == nil {
 			continue
@@ -2285,18 +2286,18 @@ func makeOutlineGlobalRepairBrief(outline *models.Outline) interface{} {
 	if outline == nil {
 		return nil
 	}
-	brief := outlineBrief{Navigation: map[string]interface{}{
+	brief := OutlineBrief{Navigation: map[string]interface{}{
 		"volume_context_query":  "novelgen tool query context --type outline-volume --id <volume_id> --view brief",
 		"chapter_context_query": "novelgen tool query context --type outline-repair --id <chapter_id> --name <category> --view brief",
 	}}
 	for _, part := range outline.Parts {
-		partItem := partBrief{
+		partItem := PartBrief{
 			ID:      part.ID,
 			Title:   part.Title,
 			Summary: clipToolString(part.Summary, 360),
 		}
 		for _, volume := range part.Volumes {
-			partItem.Volumes = append(partItem.Volumes, volumeBrief{
+			partItem.Volumes = append(partItem.Volumes, VolumeBrief{
 				ID:      volume.ID,
 				Title:   volume.Title,
 				Summary: clipToolString(volume.Summary, 260),
@@ -2307,7 +2308,7 @@ func makeOutlineGlobalRepairBrief(outline *models.Outline) interface{} {
 	return brief
 }
 
-func outlineGlobalRepairStats(outline *models.Outline, check *toolCheckResult) map[string]int {
+func outlineGlobalRepairStats(outline *models.Outline, check *ToolCheckResult) map[string]int {
 	stats := map[string]int{}
 	if outline != nil {
 		stats["part_count"] = len(outline.Parts)
@@ -2323,29 +2324,29 @@ func outlineGlobalRepairStats(outline *models.Outline, check *toolCheckResult) m
 	return stats
 }
 
-func collectRepairVolumeEvents(target flatVolume, check *toolCheckResult) []eventHit {
+func collectRepairVolumeEvents(target flatVolume, check *ToolCheckResult) []EventHit {
 	if check == nil || len(check.Issues) == 0 {
 		return collectVolumeEvents(target)
 	}
 	chapterIDs := map[string]bool{}
 	for _, issue := range check.Issues {
-		if _, ok := toolVolumeIDFromChapterID(issue.TargetID); ok {
+		if _, ok := ToolVolumeIDFromChapterID(issue.TargetID); ok {
 			chapterIDs[issue.TargetID] = true
 		}
 	}
 	if len(chapterIDs) == 0 {
 		return collectVolumeEvents(target)
 	}
-	events := []eventHit{}
+	events := []EventHit{}
 	for _, chapter := range target.Volume.Chapters {
 		if !chapterIDs[chapter.ID] {
 			continue
 		}
 		for _, event := range chapter.Events {
-			events = append(events, eventHit{
+			events = append(events, EventHit{
 				ChapterID:    chapter.ID,
 				ChapterTitle: chapter.Title,
-				Path: outlinePath{
+				Path: OutlinePath{
 					PartID:       target.Path.PartID,
 					PartTitle:    target.Path.PartTitle,
 					VolumeID:     target.Path.VolumeID,
@@ -2416,12 +2417,12 @@ func buildOutlineRepairWorkflow(scope, targetID, volumeID, category string, patc
 	return workflow
 }
 
-func buildOutlineRepairNextActions(scope, targetID, volumeID, category string) []toolNextAction {
+func buildOutlineRepairNextActions(scope, targetID, volumeID, category string) []ToolNextAction {
 	scope = normalizeToolScope(scope)
 	if scope == "" {
 		scope = "volume"
 	}
-	return []toolNextAction{
+	return []ToolNextAction{
 		{
 			Step:    1,
 			Action:  "use_current_repair_bundle",
@@ -2467,11 +2468,11 @@ func buildOutlineFocusedCheckQuery(scope, id, category string, maxIssues int) st
 	return strings.Join(args, " ")
 }
 
-func queryOutlineVolumeContext(ctx toolProjectContext, id, name string) toolResponse {
+func queryOutlineVolumeContext(ctx ToolProjectContext, id, name string) ToolResponse {
 	id = strings.TrimSpace(id)
 	name = strings.TrimSpace(name)
 	if id == "" && name == "" {
-		return toolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{"--id or --name is required for context --type outline-volume"}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{"--id or --name is required for context --type outline-volume"}}
 	}
 
 	volumes := flattenVolumes(ctx.Outline)
@@ -2487,14 +2488,14 @@ func queryOutlineVolumeContext(ctx toolProjectContext, id, name string) toolResp
 		}
 	}
 	if targetIndex < 0 {
-		return toolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline volume not found: id=%q name=%q", id, name)}}
+		return ToolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline volume not found: id=%q name=%q", id, name)}}
 	}
 
 	target := volumes[targetIndex]
 	events := collectVolumeEvents(target)
 	entities := collectVolumeEntities(target)
 
-	result := outlineVolumeContext{
+	result := OutlineVolumeContext{
 		VolumeID:     target.Volume.ID,
 		Path:         target.Path,
 		TargetVolume: makeContextVolumeRouteMap(*target.Volume, true),
@@ -2534,11 +2535,11 @@ func queryOutlineVolumeContext(ctx toolProjectContext, id, name string) toolResp
 	if targetIndex+1 < len(volumes) {
 		result.NextVolume = makeContextVolumeRouteMap(*volumes[targetIndex+1].Volume, false)
 	}
-	return toolResponse{OK: true, Section: "context", Count: 1, Results: result}
+	return ToolResponse{OK: true, Section: "context", Count: 1, Results: result}
 }
 
-func buildOutlineVolumeNextActions(volumeID string) []toolNextAction {
-	return []toolNextAction{
+func buildOutlineVolumeNextActions(volumeID string) []ToolNextAction {
+	return []ToolNextAction{
 		{
 			Step:    1,
 			Action:  "query_brief_context",
@@ -2567,39 +2568,39 @@ func buildOutlineVolumeNextActions(volumeID string) []toolNextAction {
 	}
 }
 
-func queryCraftCharacterContext(ctx toolProjectContext, name string) toolResponse {
+func QueryCraftCharacterContext(ctx ToolProjectContext, name string) ToolResponse {
 	return queryCraftElementContext(ctx, "character", name)
 }
 
-func queryCraftElementContext(ctx toolProjectContext, target, name string) toolResponse {
+func queryCraftElementContext(ctx ToolProjectContext, target, name string) ToolResponse {
 	target = normalizeCraftType(target)
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return toolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("--name is required for context --type craft-%s", target)}}
+		return ToolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("--name is required for context --type craft-%s", target)}}
 	}
 
-	craftResp := queryCraft(ctx, target, name)
-	refResp := toolResponse{OK: true, Section: "outline", Results: []outlineHit{}}
-	chapterResp := toolResponse{OK: true, Section: "chapter", Results: []chapterHit{}}
+	craftResp := QueryCraft(ctx, target, name)
+	refResp := ToolResponse{OK: true, Section: "outline", Results: []OutlineHit{}}
+	chapterResp := ToolResponse{OK: true, Section: "chapter", Results: []chapterHit{}}
 	if target == "character" || target == "item" || target == "location" {
-		refResp = queryOutlineRefs(ctx.Outline, target, name, false)
+		refResp = QueryOutlineRefs(ctx.Outline, target, name, false)
 		chapterResp = queryChaptersByEntity(ctx, target, name, false)
 	}
 	eventEntityType := target
 	if target == "organization" {
 		eventEntityType = ""
 	}
-	eventResp := queryEvents(ctx.Outline, "", "", eventEntityType, name)
+	eventResp := QueryEvents(ctx.Outline, "", "", eventEntityType, name)
 
 	refs := limitOutlineHitResults(refResp.Results, 3)
 	chapters := limitChapterHitResults(chapterResp.Results, 3)
 	events := limitEventHitResults(eventResp.Results, 4)
 
-	result := craftElementContext{
+	result := CraftElementContext{
 		Target:           target,
 		Name:             name,
 		StorySetup:       briefStorySetupForElementContext(ctx.Setup, target, name),
-		ExistingCraft:    briefCraftContextResults(craftResp.Results),
+		ExistingCraft:    BriefCraftContextResults(craftResp.Results),
 		OutlineRefs:      briefOutlineResults(refs, true),
 		RelevantChapters: briefChapterNavigationResults(chapters),
 		Events:           briefOutlineResults(events, true),
@@ -2628,7 +2629,7 @@ func queryCraftElementContext(ctx toolProjectContext, target, name string) toolR
 	if eventResp.Count > len(events) {
 		warnings = append(warnings, fmt.Sprintf("events truncated from %d to %d", eventResp.Count, len(events)))
 	}
-	return toolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: warnings}
+	return ToolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: warnings}
 }
 
 func craftElementContextNavigation(target, name string) map[string]interface{} {
@@ -2658,8 +2659,8 @@ func craftElementContextNavigation(target, name string) map[string]interface{} {
 	}
 }
 
-func buildCraftContextNextActions(target, name string) []toolNextAction {
-	return []toolNextAction{
+func buildCraftContextNextActions(target, name string) []ToolNextAction {
+	return []ToolNextAction{
 		{
 			Step:    1,
 			Action:  "use_current_context",
@@ -2687,7 +2688,7 @@ func buildCraftContextNextActions(target, name string) []toolNextAction {
 	}
 }
 
-func queryAllChapters(ctx toolProjectContext, includeContent bool) toolResponse {
+func queryAllChapters(ctx ToolProjectContext, includeContent bool) ToolResponse {
 	chapters := make([]chapterHit, 0)
 	for _, item := range flattenChapters(ctx.Outline) {
 		hit := chapterHit{
@@ -2698,14 +2699,14 @@ func queryAllChapters(ctx toolProjectContext, includeContent bool) toolResponse 
 			Outline: item.Chapter,
 		}
 		if includeContent {
-			hit.ContentPath, hit.Content = loadToolChapterContent(ctx.Root, item.Chapter.ID)
+			hit.ContentPath, hit.Content = LoadToolChapterContent(ctx.Root, item.Chapter.ID)
 		}
 		chapters = append(chapters, hit)
 	}
-	return toolResponse{OK: true, Section: "chapter", Count: len(chapters), Results: chapters}
+	return ToolResponse{OK: true, Section: "chapter", Count: len(chapters), Results: chapters}
 }
 
-func (c *toolProjectContext) loadSetup() error {
+func (c *ToolProjectContext) loadSetup() error {
 	path := filepath.Join(c.Root, "story", "setup", "story_setup.json")
 	setup, err := models.LoadStorySetup(path)
 	if err != nil {
@@ -2715,7 +2716,7 @@ func (c *toolProjectContext) loadSetup() error {
 	return nil
 }
 
-func (c *toolProjectContext) loadOutline() error {
+func (c *ToolProjectContext) loadOutline() error {
 	path := filepath.Join(c.Root, "story", "compose", "outline.json")
 	outline, err := models.LoadOutline(path)
 	if err != nil {
@@ -2725,8 +2726,8 @@ func (c *toolProjectContext) loadOutline() error {
 	return nil
 }
 
-func (c *toolProjectContext) loadElements() error {
-	characters, locations, items, organizations, err := loadAllElements()
+func (c *ToolProjectContext) loadElements() error {
+	characters, locations, items, organizations, err := project.LoadAllElements()
 	if err != nil {
 		return err
 	}
@@ -2770,7 +2771,7 @@ func loadRawCraftMap(root, filename string) (map[string]map[string]interface{}, 
 	return values, nil
 }
 
-func queryNamedElement[T any](kind, name string, values map[string]*T) toolResponse {
+func queryNamedElement[T any](kind, name string, values map[string]*T) ToolResponse {
 	hits := make([]map[string]interface{}, 0)
 	for key, value := range values {
 		if value == nil {
@@ -2786,7 +2787,7 @@ func queryNamedElement[T any](kind, name string, values map[string]*T) toolRespo
 	sort.Slice(hits, func(i, j int) bool {
 		return fmt.Sprint(hits[i]["key"]) < fmt.Sprint(hits[j]["key"])
 	})
-	return toolResponse{OK: true, Section: "story-setup", Count: len(hits), Results: hits}
+	return ToolResponse{OK: true, Section: "story-setup", Count: len(hits), Results: hits}
 }
 
 func rawObjectMatches(key string, value map[string]interface{}, name string) bool {
@@ -2796,7 +2797,7 @@ func rawObjectMatches(key string, value map[string]interface{}, name string) boo
 	return textMatches(key, name) || objectNameMatches(value, name)
 }
 
-func queryNamedRawElement(kind, name string, values map[string]map[string]interface{}) toolResponse {
+func queryNamedRawElement(kind, name string, values map[string]map[string]interface{}) ToolResponse {
 	hits := make([]map[string]interface{}, 0)
 	for key, value := range values {
 		if value == nil {
@@ -2813,10 +2814,10 @@ func queryNamedRawElement(kind, name string, values map[string]map[string]interf
 	sort.Slice(hits, func(i, j int) bool {
 		return fmt.Sprint(hits[i]["key"]) < fmt.Sprint(hits[j]["key"])
 	})
-	return toolResponse{OK: true, Section: "craft", Count: len(hits), Results: hits}
+	return ToolResponse{OK: true, Section: "craft", Count: len(hits), Results: hits}
 }
 
-func briefCraftContextResults(results interface{}) interface{} {
+func BriefCraftContextResults(results interface{}) interface{} {
 	values, ok := results.([]map[string]interface{})
 	if !ok {
 		return results
@@ -2845,7 +2846,7 @@ func briefStorySetupForElementContext(setup *models.StorySetup, target, name str
 	if setup == nil {
 		return nil
 	}
-	brief := storySetupBrief{
+	brief := StorySetupBrief{
 		ProjectName:    setup.ProjectName,
 		Genres:         setup.Genres,
 		Tone:           clipToolString(setup.Tone, 120),
@@ -3071,36 +3072,36 @@ func rawOrTyped[T any](raw map[string]map[string]interface{}, typed map[string]*
 	return typed
 }
 
-func queryOutlineNode(outline *models.Outline, nodeType, id string) toolResponse {
-	hits := make([]outlineHit, 0)
+func QueryOutlineNode(outline *models.Outline, nodeType, id string) ToolResponse {
+	hits := make([]OutlineHit, 0)
 	for _, part := range outline.Parts {
-		partPath := outlinePath{PartID: part.ID, PartTitle: part.Title}
+		partPath := OutlinePath{PartID: part.ID, PartTitle: part.Title}
 		if nodeType == "part" && idMatches(part.ID, id) {
-			hits = append(hits, outlineHit{Type: "part", ID: part.ID, Title: part.Title, Summary: part.Summary, Path: partPath, Object: part})
+			hits = append(hits, OutlineHit{Type: "part", ID: part.ID, Title: part.Title, Summary: part.Summary, Path: partPath, Object: part})
 		}
 		for _, volume := range part.Volumes {
 			volumePath := partPath
 			volumePath.VolumeID = volume.ID
 			volumePath.VolumeTitle = volume.Title
 			if nodeType == "volume" && idMatches(volume.ID, id) {
-				hits = append(hits, outlineHit{Type: "volume", ID: volume.ID, Title: volume.Title, Summary: volume.Summary, Path: volumePath, Object: volume})
+				hits = append(hits, OutlineHit{Type: "volume", ID: volume.ID, Title: volume.Title, Summary: volume.Summary, Path: volumePath, Object: volume})
 			}
 			for _, chapter := range volume.Chapters {
 				chapterPath := volumePath
 				chapterPath.ChapterID = chapter.ID
 				chapterPath.ChapterTitle = chapter.Title
 				if nodeType == "chapter" && idMatches(chapter.ID, id) {
-					hits = append(hits, outlineHit{Type: "chapter", ID: chapter.ID, Title: chapter.Title, Summary: chapter.Summary, Path: chapterPath, Object: chapter})
+					hits = append(hits, OutlineHit{Type: "chapter", ID: chapter.ID, Title: chapter.Title, Summary: chapter.Summary, Path: chapterPath, Object: chapter})
 				}
 			}
 		}
 	}
-	return toolResponse{OK: true, Section: "outline", Count: len(hits), Results: hits}
+	return ToolResponse{OK: true, Section: "outline", Count: len(hits), Results: hits}
 }
 
-func queryChapter(ctx toolProjectContext, id string, includeContent bool) toolResponse {
+func queryChapter(ctx ToolProjectContext, id string, includeContent bool) ToolResponse {
 	if strings.TrimSpace(id) == "" {
-		return toolResponse{OK: false, Count: 0, Warnings: []string{"--id is required for chapter queries"}}
+		return ToolResponse{OK: false, Count: 0, Warnings: []string{"--id is required for chapter queries"}}
 	}
 	for _, chapter := range flattenChapters(ctx.Outline) {
 		if !idMatches(chapter.Chapter.ID, id) {
@@ -3114,21 +3115,21 @@ func queryChapter(ctx toolProjectContext, id string, includeContent bool) toolRe
 			Outline: chapter.Chapter,
 		}
 		if includeContent {
-			hit.ContentPath, hit.Content = loadToolChapterContent(ctx.Root, chapter.Chapter.ID)
+			hit.ContentPath, hit.Content = LoadToolChapterContent(ctx.Root, chapter.Chapter.ID)
 		}
-		return toolResponse{OK: true, Count: 1, Results: []chapterHit{hit}}
+		return ToolResponse{OK: true, Count: 1, Results: []chapterHit{hit}}
 	}
-	return toolResponse{OK: true, Count: 0, Results: []chapterHit{}}
+	return ToolResponse{OK: true, Count: 0, Results: []chapterHit{}}
 }
 
-func queryOutlineRefs(outline *models.Outline, entityType, name string, chaptersOnly bool) toolResponse {
-	hits := make([]outlineHit, 0)
+func QueryOutlineRefs(outline *models.Outline, entityType, name string, chaptersOnly bool) ToolResponse {
+	hits := make([]OutlineHit, 0)
 	for _, chapter := range flattenChapters(outline) {
 		reasons := chapterEntityReasons(chapter.Chapter, entityType, name)
 		if len(reasons) == 0 {
 			continue
 		}
-		hits = append(hits, outlineHit{
+		hits = append(hits, OutlineHit{
 			Type:    "chapter",
 			ID:      chapter.Chapter.ID,
 			Title:   chapter.Chapter.Title,
@@ -3139,14 +3140,14 @@ func queryOutlineRefs(outline *models.Outline, entityType, name string, chapters
 		})
 	}
 	if chaptersOnly {
-		return toolResponse{OK: true, Count: len(hits), Results: hits}
+		return ToolResponse{OK: true, Count: len(hits), Results: hits}
 	}
-	return toolResponse{OK: true, Count: len(hits), Results: hits}
+	return ToolResponse{OK: true, Count: len(hits), Results: hits}
 }
 
-func queryChaptersByEntity(ctx toolProjectContext, entityType, name string, includeContent bool) toolResponse {
-	outlineResp := queryOutlineRefs(ctx.Outline, entityType, name, true)
-	outlineHits, _ := outlineResp.Results.([]outlineHit)
+func queryChaptersByEntity(ctx ToolProjectContext, entityType, name string, includeContent bool) ToolResponse {
+	outlineResp := QueryOutlineRefs(ctx.Outline, entityType, name, true)
+	outlineHits, _ := outlineResp.Results.([]OutlineHit)
 	chapters := make([]chapterHit, 0, len(outlineHits))
 	for _, hit := range outlineHits {
 		chapter := ctx.Outline.GetChapterByID(hit.ID)
@@ -3159,21 +3160,21 @@ func queryChaptersByEntity(ctx toolProjectContext, entityType, name string, incl
 			Reasons: hit.Reasons,
 		}
 		if includeContent {
-			chapterHit.ContentPath, chapterHit.Content = loadToolChapterContent(ctx.Root, hit.ID)
+			chapterHit.ContentPath, chapterHit.Content = LoadToolChapterContent(ctx.Root, hit.ID)
 		}
 		chapters = append(chapters, chapterHit)
 	}
-	return toolResponse{OK: true, Count: len(chapters), Results: chapters}
+	return ToolResponse{OK: true, Count: len(chapters), Results: chapters}
 }
 
-func queryStorylines(ctx toolProjectContext, name string) toolResponse {
+func queryStorylines(ctx ToolProjectContext, name string) ToolResponse {
 	type storylineHit struct {
 		Source  string      `json:"source"`
 		Name    string      `json:"name"`
 		Object  interface{} `json:"object"`
 		Chapter string      `json:"chapter_id,omitempty"`
 		Title   string      `json:"chapter_title,omitempty"`
-		Path    outlinePath `json:"path,omitempty"`
+		Path    OutlinePath `json:"path,omitempty"`
 	}
 	hits := make([]storylineHit, 0)
 	if ctx.Setup != nil {
@@ -3215,11 +3216,11 @@ func queryStorylines(ctx toolProjectContext, name string) toolResponse {
 			}
 		}
 	}
-	return toolResponse{OK: true, Count: len(hits), Results: hits}
+	return ToolResponse{OK: true, Count: len(hits), Results: hits}
 }
 
-func queryEvents(outline *models.Outline, chapterID, volumeID, entityType, name string) toolResponse {
-	hits := make([]eventHit, 0)
+func QueryEvents(outline *models.Outline, chapterID, volumeID, entityType, name string) ToolResponse {
+	hits := make([]EventHit, 0)
 	for _, chapter := range flattenChapters(outline) {
 		if strings.TrimSpace(volumeID) != "" && !idMatches(chapter.Path.VolumeID, volumeID) {
 			continue
@@ -3234,7 +3235,7 @@ func queryEvents(outline *models.Outline, chapterID, volumeID, entityType, name 
 					continue
 				}
 			}
-			hits = append(hits, eventHit{
+			hits = append(hits, EventHit{
 				ChapterID:    chapter.Chapter.ID,
 				ChapterTitle: chapter.Chapter.Title,
 				EventIndex:   eventIndex,
@@ -3244,17 +3245,17 @@ func queryEvents(outline *models.Outline, chapterID, volumeID, entityType, name 
 			})
 		}
 	}
-	return toolResponse{OK: true, Count: len(hits), Results: hits}
+	return ToolResponse{OK: true, Count: len(hits), Results: hits}
 }
 
 type flatChapter struct {
 	Chapter *models.Chapter
-	Path    outlinePath
+	Path    OutlinePath
 }
 
 type flatVolume struct {
 	Volume *models.Volume
-	Path   outlinePath
+	Path   OutlinePath
 }
 
 func flattenVolumes(outline *models.Outline) []flatVolume {
@@ -3263,7 +3264,7 @@ func flattenVolumes(outline *models.Outline) []flatVolume {
 	}
 	result := make([]flatVolume, 0)
 	for _, part := range outline.Parts {
-		base := outlinePath{PartID: part.ID, PartTitle: part.Title}
+		base := OutlinePath{PartID: part.ID, PartTitle: part.Title}
 		for i := range part.Volumes {
 			volume := &part.Volumes[i]
 			path := base
@@ -3281,7 +3282,7 @@ func flattenChapters(outline *models.Outline) []flatChapter {
 	}
 	result := make([]flatChapter, 0)
 	for _, part := range outline.Parts {
-		base := outlinePath{PartID: part.ID, PartTitle: part.Title}
+		base := OutlinePath{PartID: part.ID, PartTitle: part.Title}
 		for _, volume := range part.Volumes {
 			volumePath := base
 			volumePath.VolumeID = volume.ID
@@ -3298,17 +3299,17 @@ func flattenChapters(outline *models.Outline) []flatChapter {
 	return result
 }
 
-func collectVolumeEvents(volume flatVolume) []eventHit {
+func collectVolumeEvents(volume flatVolume) []EventHit {
 	if volume.Volume == nil {
 		return nil
 	}
-	hits := make([]eventHit, 0)
+	hits := make([]EventHit, 0)
 	for _, chapter := range volume.Volume.Chapters {
 		chapterPath := volume.Path
 		chapterPath.ChapterID = chapter.ID
 		chapterPath.ChapterTitle = chapter.Title
 		for eventIndex, event := range chapter.Events {
-			hits = append(hits, eventHit{
+			hits = append(hits, EventHit{
 				ChapterID:    chapter.ID,
 				ChapterTitle: chapter.Title,
 				EventIndex:   eventIndex,
@@ -3320,9 +3321,9 @@ func collectVolumeEvents(volume flatVolume) []eventHit {
 	return hits
 }
 
-func collectVolumeEntities(volume flatVolume) outlineVolumeEntities {
+func collectVolumeEntities(volume flatVolume) OutlineVolumeEntities {
 	if volume.Volume == nil {
-		return outlineVolumeEntities{}
+		return OutlineVolumeEntities{}
 	}
 	characters := make([]string, 0)
 	items := make([]string, 0)
@@ -3360,7 +3361,7 @@ func collectVolumeEntities(volume flatVolume) outlineVolumeEntities {
 			}
 		}
 	}
-	return outlineVolumeEntities{
+	return OutlineVolumeEntities{
 		Characters: clipToolStrings(compactStrings(characters), 25, 70),
 		Items:      clipToolStrings(compactStrings(items), 25, 70),
 		Locations:  clipToolStrings(compactStrings(locations), 25, 70),
@@ -3368,7 +3369,7 @@ func collectVolumeEntities(volume flatVolume) outlineVolumeEntities {
 	}
 }
 
-func collectChapterEntities(chapter models.Chapter) outlineVolumeEntities {
+func collectChapterEntities(chapter models.Chapter) OutlineVolumeEntities {
 	characters := append([]string{}, chapter.Characters...)
 	items := append([]string{}, chapter.StateAnchor.KeyItems...)
 	locations := []string{}
@@ -3401,7 +3402,7 @@ func collectChapterEntities(chapter models.Chapter) outlineVolumeEntities {
 			storylines = append(storylines, target)
 		}
 	}
-	return outlineVolumeEntities{
+	return OutlineVolumeEntities{
 		Characters: clipToolStrings(compactStrings(characters), 18, 70),
 		Items:      clipToolStrings(compactStrings(items), 18, 70),
 		Locations:  clipToolStrings(compactStrings(locations), 12, 70),
@@ -3562,7 +3563,7 @@ func legacyEventTypeMatches(eventType, entityType string) bool {
 	}
 }
 
-func loadToolChapterContent(root, chapterID string) (string, string) {
+func LoadToolChapterContent(root, chapterID string) (string, string) {
 	candidates := []string{
 		filepath.Join(root, "chapters", "chapter-"+chapterID+".md"),
 		filepath.Join(root, "chapters", chapterID+".md"),
@@ -3649,18 +3650,18 @@ func normalizeSearch(value string) string {
 	return strings.ToLower(strings.TrimSpace(value))
 }
 
-func repairToolLookupText(value string) (string, bool) {
+func RepairToolLookupText(value string) (string, bool) {
 	trimmed := strings.TrimSpace(value)
 	repaired := utils.RepairLikelyMojibakeText(trimmed)
 	return repaired, repaired != trimmed
 }
 
-func normalizeKey(value string) string {
+func NormalizeKey(value string) string {
 	return strings.ToLower(strings.TrimSpace(value))
 }
 
 func normalizeContextType(value string) string {
-	switch normalizeKey(value) {
+	switch NormalizeKey(value) {
 	case "", "craft-character", "character-craft", "character", "char":
 		return "craft-character"
 	case "craft-item", "item-craft", "item":
@@ -3682,12 +3683,12 @@ func normalizeContextType(value string) string {
 	case "chapter-write", "write-chapter", "chapter-draft", "draft-chapter", "write", "chapter-context":
 		return "chapter-write"
 	default:
-		return normalizeKey(value)
+		return NormalizeKey(value)
 	}
 }
 
 func normalizeEntityType(value string) string {
-	switch normalizeKey(value) {
+	switch NormalizeKey(value) {
 	case "characters", "char":
 		return "character"
 	case "items":
@@ -3697,12 +3698,12 @@ func normalizeEntityType(value string) string {
 	case "storylines":
 		return "storyline"
 	default:
-		return normalizeKey(value)
+		return NormalizeKey(value)
 	}
 }
 
-func limitOutlineHitResults(results interface{}, max int) []outlineHit {
-	values, _ := results.([]outlineHit)
+func limitOutlineHitResults(results interface{}, max int) []OutlineHit {
+	values, _ := results.([]OutlineHit)
 	if max > 0 && len(values) > max {
 		return values[:max]
 	}
@@ -3717,8 +3718,8 @@ func limitChapterHitResults(results interface{}, max int) []chapterHit {
 	return values
 }
 
-func limitEventHitResults(results interface{}, max int) []eventHit {
-	values, _ := results.([]eventHit)
+func limitEventHitResults(results interface{}, max int) []EventHit {
+	values, _ := results.([]EventHit)
 	if max > 0 && len(values) > max {
 		return values[:max]
 	}
@@ -3726,7 +3727,7 @@ func limitEventHitResults(results interface{}, max int) []eventHit {
 }
 
 func normalizeSetupType(value string) string {
-	switch normalizeKey(value) {
+	switch NormalizeKey(value) {
 	case "storylines", "arc", "arcs":
 		return "storyline"
 	case "premises":
@@ -3742,12 +3743,12 @@ func normalizeSetupType(value string) string {
 	case "longform", "long_form_plan", "long-form":
 		return "long-form-plan"
 	default:
-		return normalizeKey(value)
+		return NormalizeKey(value)
 	}
 }
 
 func normalizeOutlineType(value string) string {
-	switch normalizeKey(value) {
+	switch NormalizeKey(value) {
 	case "parts":
 		return "part"
 	case "volumes":
@@ -3757,12 +3758,12 @@ func normalizeOutlineType(value string) string {
 	case "reference", "references":
 		return "refs"
 	default:
-		return normalizeKey(value)
+		return NormalizeKey(value)
 	}
 }
 
 func normalizeCraftType(value string) string {
-	switch normalizeKey(value) {
+	switch NormalizeKey(value) {
 	case "characters", "char":
 		return "character"
 	case "items":
@@ -3772,12 +3773,12 @@ func normalizeCraftType(value string) string {
 	case "organizations", "org":
 		return "organization"
 	default:
-		return normalizeKey(value)
+		return NormalizeKey(value)
 	}
 }
 
 func normalizeChapterType(value string) string {
-	switch normalizeKey(value) {
+	switch NormalizeKey(value) {
 	case "reference", "references":
 		return "refs"
 	case "event":
@@ -3785,7 +3786,7 @@ func normalizeChapterType(value string) string {
 	case "outline-chapter":
 		return "outline"
 	default:
-		return normalizeKey(value)
+		return NormalizeKey(value)
 	}
 }
 
@@ -3814,7 +3815,7 @@ func compactStrings(values []string) []string {
 	return out
 }
 
-func writeToolJSON(cmd *cobra.Command, resp toolResponse) error {
+func WriteToolJSON(cmd *cobra.Command, resp ToolResponse) error {
 	data, err := json.MarshalIndent(resp, "", "  ")
 	if err != nil {
 		return err
@@ -3824,44 +3825,46 @@ func writeToolJSON(cmd *cobra.Command, resp toolResponse) error {
 }
 
 func init() {
-	toolQueryCmd.Flags().StringVar(&toolQueryFlags.Type, "type", "", "Section-specific query type")
-	toolQueryCmd.Flags().StringVar(&toolQueryFlags.ID, "id", "", "ID for part, volume, or chapter queries")
-	toolQueryCmd.Flags().StringVar(&toolQueryFlags.Name, "name", "", "Name or substring to search")
-	toolQueryCmd.Flags().StringVar(&toolQueryFlags.EntityType, "entity-type", "", "Entity type for ref queries: character, item, location, storyline")
-	toolQueryCmd.Flags().StringVar(&toolQueryFlags.ChapterID, "chapter-id", "", "Limit event queries to a chapter ID")
-	toolQueryCmd.Flags().StringVar(&toolQueryFlags.VolumeID, "volume-id", "", "Limit event queries to a volume ID")
-	toolQueryCmd.Flags().StringVar(&toolQueryFlags.View, "view", "brief", "Output detail level: brief, index, or full")
-	toolQueryCmd.Flags().StringVar(&toolQueryFlags.Fields, "fields", "", "Comma-separated JSON fields to return from each result, e.g. storyline_advances,chapter_payoff,conflict")
-	toolQueryCmd.Flags().BoolVar(&toolQueryFlags.IncludeContent, "content", false, "Include chapter text content when available")
-	toolQueryCmd.Flags().IntVar(&toolQueryFlags.Limit, "limit", 0, "Maximum number of results to return")
-	toolCheckCmd.Flags().StringVar(&toolCheckFlags.Target, "target", "outline", "Check target: outline, setup, craft, chapter, or recap")
-	toolCheckCmd.Flags().StringVar(&toolCheckFlags.Scope, "scope", "all", "Check scope: outline all/volume/chapter, craft character/item/location/organization, chapter chapter, or recap chapter")
-	toolCheckCmd.Flags().StringVar(&toolCheckFlags.ID, "id", "", "Volume/chapter ID, craft element name, final chapter ID, or recap chapter ID for scoped checks")
-	toolCheckCmd.Flags().StringVar(&toolCheckFlags.MinPriority, "min-priority", "", "Only return issues at or above priority: low, medium, high, critical")
-	toolCheckCmd.Flags().StringVar(&toolCheckFlags.Category, "category", "", "Only return issues in comma-separated categories, e.g. logic,plot,structure")
-	toolCheckCmd.Flags().IntVar(&toolCheckFlags.MaxIssues, "max-issues", 0, "Maximum number of issues to return without changing the summary")
-	toolCheckCmd.Flags().IntVar(&toolCheckFlags.TargetWords, "target-words", 0, "Override target narrative units for final chapter length checks")
-	toolPatchCmd.Flags().StringVar(&toolPatchFlags.Target, "target", "chapter", "Patch target: outline chapter/volume or craft character/item/location/organization")
-	toolPatchCmd.Flags().StringVar(&toolPatchFlags.ID, "id", "", "Target outline ID, final chapter ID, recap chapter ID, or craft element name/key")
-	toolPatchCmd.Flags().StringVar(&toolPatchFlags.PatchJSON, "patch-json", "", "Patch JSON string; stdin is used when omitted")
-	toolPatchCmd.Flags().StringVar(&toolPatchFlags.PatchBuffer, "patch-buffer", "", "Read patch content from a novelgen-managed agent patch buffer")
-	toolPatchCmd.Flags().StringVar(&toolPatchFlags.Task, "task", "", "Use a validated project patch task instead of stdin or --patch-json")
-	toolPatchCmd.Flags().BoolVar(&toolPatchFlags.Apply, "apply", false, "Apply the patch and save project files")
-	toolPatchCmd.Flags().BoolVar(&toolPatchFlags.DryRun, "dry-run", false, "Force dry-run mode even when --apply is present")
-	toolPatchCmd.Flags().BoolVar(&toolPatchFlags.RefreshDerived, "refresh-derived", false, "For chapter --apply, regenerate derived RPG DSL and return a post-refresh all check")
-	toolPatchCmd.Flags().IntVar(&toolPatchFlags.TargetWords, "target-words", 0, "Override target narrative units for chapter patch length checks")
-	toolPatchBufferCmd.Flags().StringVar(&toolPatchBufferFlags.ID, "id", "", "Patch buffer id")
-	toolPatchBufferCmd.Flags().StringVar(&toolPatchBufferFlags.Text, "text", "", "Text chunk to append; stdin is used when omitted")
-	toolPatchBufferCmd.Flags().BoolVar(&toolPatchBufferFlags.Stdin, "stdin", false, "Read text chunk from stdin explicitly")
-	toolPatchBufferCmd.Flags().IntVar(&toolPatchBufferFlags.MaxChars, "max-chars", 400, "Preview character limit for show")
-	toolRefreshCmd.Flags().StringVar(&toolRefreshFlags.ID, "id", "", "Target chapter ID for scoped refresh")
-	toolRefreshCmd.Flags().IntVar(&toolRefreshFlags.BatchSize, "batch-size", 10, "Chapter markdown batch size for AI -> RPG DSL conversion")
-	toolCmd.AddCommand(toolQueryCmd)
-	toolCmd.AddCommand(toolCheckCmd)
-	toolCmd.AddCommand(toolPatchCmd)
-	toolCmd.AddCommand(toolPatchBufferCmd)
-	toolCmd.AddCommand(toolRefreshCmd)
-	RegisterCommand(func() *cobra.Command {
-		return toolCmd
-	})
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Type, "type", "", "Section-specific query type")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.ID, "id", "", "ID for part, volume, or chapter queries")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Name, "name", "", "Name or substring to search")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.EntityType, "entity-type", "", "Entity type for ref queries: character, item, location, storyline")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.ChapterID, "chapter-id", "", "Limit event queries to a chapter ID")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.VolumeID, "volume-id", "", "Limit event queries to a volume ID")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.View, "view", "brief", "Output detail level: brief, index, or full")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Fields, "fields", "", "Comma-separated JSON fields to return from each result, e.g. storyline_advances,chapter_payoff,conflict")
+	ToolQueryCmd.Flags().BoolVar(&ToolQueryFlags.IncludeContent, "content", false, "Include chapter text content when available")
+	ToolQueryCmd.Flags().IntVar(&ToolQueryFlags.Limit, "limit", 0, "Maximum number of results to return")
+	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Target, "target", "outline", "Check target: outline, setup, craft, chapter, or recap")
+	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Scope, "scope", "all", "Check scope: outline all/volume/chapter, craft character/item/location/organization, chapter chapter, or recap chapter")
+	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.ID, "id", "", "Volume/chapter ID, craft element name, final chapter ID, or recap chapter ID for scoped checks")
+	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.MinPriority, "min-priority", "", "Only return issues at or above priority: low, medium, high, critical")
+	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Category, "category", "", "Only return issues in comma-separated categories, e.g. logic,plot,structure")
+	ToolCheckCmd.Flags().IntVar(&ToolCheckFlags.MaxIssues, "max-issues", 0, "Maximum number of issues to return without changing the summary")
+	ToolCheckCmd.Flags().IntVar(&ToolCheckFlags.TargetWords, "target-words", 0, "Override target narrative units for final chapter length checks")
+	ToolPatchCmd.Flags().StringVar(&ToolPatchFlags.Target, "target", "chapter", "Patch target: outline chapter/volume or craft character/item/location/organization")
+	ToolPatchCmd.Flags().StringVar(&ToolPatchFlags.ID, "id", "", "Target outline ID, final chapter ID, recap chapter ID, or craft element name/key")
+	ToolPatchCmd.Flags().StringVar(&ToolPatchFlags.PatchJSON, "patch-json", "", "Patch JSON string; stdin is used when omitted")
+	ToolPatchCmd.Flags().StringVar(&ToolPatchFlags.PatchBuffer, "patch-buffer", "", "Read patch content from a novelgen-managed agent patch buffer")
+	ToolPatchCmd.Flags().StringVar(&ToolPatchFlags.Task, "task", "", "Use a validated project patch task instead of stdin or --patch-json")
+	ToolPatchCmd.Flags().BoolVar(&ToolPatchFlags.Apply, "apply", false, "Apply the patch and save project files")
+	ToolPatchCmd.Flags().BoolVar(&ToolPatchFlags.DryRun, "dry-run", false, "Force dry-run mode even when --apply is present")
+	ToolPatchCmd.Flags().BoolVar(&ToolPatchFlags.RefreshDerived, "refresh-derived", false, "For chapter --apply, regenerate derived RPG DSL and return a post-refresh all check")
+	ToolPatchCmd.Flags().IntVar(&ToolPatchFlags.TargetWords, "target-words", 0, "Override target narrative units for chapter patch length checks")
+	ToolPatchBufferCmd.Flags().StringVar(&ToolPatchBufferFlags.ID, "id", "", "Patch buffer id")
+	ToolPatchBufferCmd.Flags().StringVar(&ToolPatchBufferFlags.Text, "text", "", "Text chunk to append; stdin is used when omitted")
+	ToolPatchBufferCmd.Flags().BoolVar(&ToolPatchBufferFlags.Stdin, "stdin", false, "Read text chunk from stdin explicitly")
+	ToolPatchBufferCmd.Flags().IntVar(&ToolPatchBufferFlags.MaxChars, "max-chars", 400, "Preview character limit for show")
+	ToolRefreshCmd.Flags().StringVar(&ToolRefreshFlags.ID, "id", "", "Target chapter ID for scoped refresh")
+	ToolRefreshCmd.Flags().IntVar(&ToolRefreshFlags.BatchSize, "batch-size", 10, "Chapter markdown batch size for AI -> RPG DSL conversion")
+	ToolCmd.AddCommand(ToolQueryCmd)
+	ToolCmd.AddCommand(ToolCheckCmd)
+	ToolCmd.AddCommand(ToolPatchCmd)
+	ToolCmd.AddCommand(ToolPatchBufferCmd)
+	ToolCmd.AddCommand(ToolRefreshCmd)
+}
+
+// NewCommand returns the novelgen tool command tree.
+func NewCommand() *cobra.Command {
+	return ToolCmd
 }

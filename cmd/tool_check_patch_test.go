@@ -15,20 +15,21 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/toolplane"
 
 	"github.com/spf13/cobra"
 )
 
-func decodeToolPatchResult(t *testing.T, raw string) toolPatchResult {
+func decodeToolPatchResult(t *testing.T, raw string) toolplane.ToolPatchResult {
 	t.Helper()
-	var result toolPatchResult
+	var result toolplane.ToolPatchResult
 	if err := json.Unmarshal([]byte(raw), &result); err != nil {
 		t.Fatalf("decode patch result: %v\n%s", err, raw)
 	}
 	return result
 }
 
-func toolCheckHasIssue(result *toolCheckResult, text string) bool {
+func toolCheckHasIssue(result *toolplane.ToolCheckResult, text string) bool {
 	if result == nil {
 		return false
 	}
@@ -53,13 +54,13 @@ func writeTestJSON(t *testing.T, path string, value interface{}) {
 	}
 }
 
-func assertToolCheckIssue(t *testing.T, result *toolCheckResult, category, targetID, issueContains string) {
+func assertToolCheckIssue(t *testing.T, result *toolplane.ToolCheckResult, category, targetID, issueContains string) {
 	t.Helper()
 	if result == nil {
 		t.Fatal("check result is nil")
 	}
 	for _, issue := range result.Issues {
-		if normalizeKey(issue.Category) == normalizeKey(category) &&
+		if toolplane.NormalizeKey(issue.Category) == toolplane.NormalizeKey(category) &&
 			strings.TrimSpace(issue.TargetID) == targetID &&
 			strings.Contains(issue.Issue, issueContains) {
 			return
@@ -84,7 +85,7 @@ func TestToolOutlineCheckQualityUsesScopedTarget(t *testing.T) {
 		}},
 	}}}
 
-	result, err := runToolOutlineCheck("quality", nil, outline, "chapter", "P1-V1-C1")
+	result, err := toolplane.RunToolOutlineCheck("quality", nil, outline, "chapter", "P1-V1-C1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +102,7 @@ func TestToolOutlineCheckQualityUsesScopedTarget(t *testing.T) {
 
 func TestRunToolOutlineCheckAllMergesQualityAndSimulation(t *testing.T) {
 	outline := validToolPatchTestOutline()
-	result, err := runToolOutlineCheck("all", nil, outline, "volume", "P1-V1")
+	result, err := toolplane.RunToolOutlineCheck("all", nil, outline, "volume", "P1-V1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +136,7 @@ func TestRunToolOutlineCheckChapterScopeKeepsVolumeContext(t *testing.T) {
 		}},
 	}}}
 
-	result, err := runToolOutlineCheck("all", nil, outline, "chapter", "P1-V1-C2")
+	result, err := toolplane.RunToolOutlineCheck("all", nil, outline, "chapter", "P1-V1-C2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +168,7 @@ func TestToolCraftSchemaCheckFlagsUnknownItemOwner(t *testing.T) {
 		},
 	})
 
-	result, err := runToolCraftSchemaCheck(root, "item", "survival_kit")
+	result, err := toolplane.RunToolCraftSchemaCheck(root, "item", "survival_kit")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +192,7 @@ func TestToolScopedSuggestionsExcludeGlobalIssues(t *testing.T) {
 		{Category: "appeal", TargetID: "P1-V2-C1", Issue: "other chapter issue", Priority: models.PriorityMedium},
 	}
 
-	filtered := filterToolScopedSuggestions(suggestions, outline, "volume", "P1-V1")
+	filtered := toolplane.FilterToolScopedSuggestions(suggestions, outline, "volume", "P1-V1")
 	if len(filtered) != 1 {
 		t.Fatalf("filtered len = %d, want 1: %#v", len(filtered), filtered)
 	}
@@ -208,7 +209,7 @@ func TestToolScopedChapterSuggestionsExcludeSiblingIssues(t *testing.T) {
 		{Category: "plot", TargetID: "global", Issue: "global issue", Priority: models.PriorityMedium},
 	}
 
-	filtered := filterToolScopedSuggestions(suggestions, outline, "chapter", "P1-V1-C1")
+	filtered := toolplane.FilterToolScopedSuggestions(suggestions, outline, "chapter", "P1-V1-C1")
 	if len(filtered) != 1 {
 		t.Fatalf("filtered len = %d, want 1: %#v", len(filtered), filtered)
 	}
@@ -218,8 +219,8 @@ func TestToolScopedChapterSuggestionsExcludeSiblingIssues(t *testing.T) {
 }
 
 func TestApplyToolCheckIssueFiltersKeepsSummaryAndLimitsReturnedIssues(t *testing.T) {
-	result := &toolCheckResult{
-		Summary: toolCheckSummary{Total: 4, Critical: 1, High: 1, Medium: 1, Low: 1},
+	result := &toolplane.ToolCheckResult{
+		Summary: toolplane.ToolCheckSummary{Total: 4, Critical: 1, High: 1, Medium: 1, Low: 1},
 		Issues: []models.ReviewSuggestion{
 			{TargetID: "low", Priority: models.PriorityLow},
 			{TargetID: "medium", Priority: models.PriorityMedium},
@@ -229,7 +230,7 @@ func TestApplyToolCheckIssueFiltersKeepsSummaryAndLimitsReturnedIssues(t *testin
 		Meta: map[string]interface{}{"project_root": "root"},
 	}
 
-	if err := applyToolCheckIssueFilters(result, "medium", "", 2); err != nil {
+	if err := toolplane.ApplyToolCheckIssueFilters(result, "medium", "", 2); err != nil {
 		t.Fatal(err)
 	}
 	if result.Summary.Total != 4 || len(result.Issues) != 2 {
@@ -245,8 +246,8 @@ func TestApplyToolCheckIssueFiltersKeepsSummaryAndLimitsReturnedIssues(t *testin
 }
 
 func TestApplyToolCheckIssueFiltersFiltersByCategory(t *testing.T) {
-	result := &toolCheckResult{
-		Summary: toolCheckSummary{Total: 4, Critical: 1, High: 1, Medium: 1, Low: 1},
+	result := &toolplane.ToolCheckResult{
+		Summary: toolplane.ToolCheckSummary{Total: 4, Critical: 1, High: 1, Medium: 1, Low: 1},
 		Issues: []models.ReviewSuggestion{
 			{TargetID: "logic-low", Category: "logic", Priority: models.PriorityLow},
 			{TargetID: "plot-medium", Category: "plot", Priority: models.PriorityMedium},
@@ -256,7 +257,7 @@ func TestApplyToolCheckIssueFiltersFiltersByCategory(t *testing.T) {
 		Meta: map[string]interface{}{},
 	}
 
-	if err := applyToolCheckIssueFilters(result, "medium", " logic,structure ", 0); err != nil {
+	if err := toolplane.ApplyToolCheckIssueFilters(result, "medium", " logic,structure ", 0); err != nil {
 		t.Fatal(err)
 	}
 	if result.Summary.Total != 4 || len(result.Issues) != 2 {
@@ -276,7 +277,7 @@ func TestApplyToolCheckIssueFiltersFiltersByCategory(t *testing.T) {
 }
 
 func TestToolCheckResultJSONAddsIssueNavigation(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "outline",
 		Scope:  "volume",
@@ -298,8 +299,8 @@ func TestToolCheckResultJSONAddsIssueNavigation(t *testing.T) {
 			TargetID   string                 `json:"target_id"`
 			Navigation map[string]interface{} `json:"navigation"`
 		} `json:"issues"`
-		NextActions []toolNextAction       `json:"next_actions"`
-		Meta        map[string]interface{} `json:"meta"`
+		NextActions []toolplane.ToolNextAction `json:"next_actions"`
+		Meta        map[string]interface{}     `json:"meta"`
 	}
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
@@ -359,7 +360,7 @@ func TestToolCheckResultJSONAddsIssueNavigation(t *testing.T) {
 }
 
 func TestToolCheckResultJSONCleanCheckTellsAgentToStop(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "outline",
 		Scope:  "volume",
@@ -372,8 +373,8 @@ func TestToolCheckResultJSONCleanCheckTellsAgentToStop(t *testing.T) {
 		t.Fatal(err)
 	}
 	var decoded struct {
-		NextActions []toolNextAction       `json:"next_actions"`
-		Meta        map[string]interface{} `json:"meta"`
+		NextActions []toolplane.ToolNextAction `json:"next_actions"`
+		Meta        map[string]interface{}     `json:"meta"`
 	}
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
@@ -388,7 +389,7 @@ func TestToolCheckResultJSONCleanCheckTellsAgentToStop(t *testing.T) {
 }
 
 func TestToolCheckResultJSONRoutesGlobalOutlineIssueConservatively(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "outline",
 		Scope:  "all",
@@ -407,7 +408,7 @@ func TestToolCheckResultJSONRoutesGlobalOutlineIssueConservatively(t *testing.T)
 		Issues []struct {
 			Navigation map[string]interface{} `json:"navigation"`
 		} `json:"issues"`
-		NextActions []toolNextAction `json:"next_actions"`
+		NextActions []toolplane.ToolNextAction `json:"next_actions"`
 	}
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
@@ -443,7 +444,7 @@ func TestToolCheckResultJSONRoutesGlobalOutlineIssueConservatively(t *testing.T)
 }
 
 func TestToolCheckResultJSONPrefersPatchableIssueForNextActions(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "outline",
 		Scope:  "all",
@@ -464,7 +465,7 @@ func TestToolCheckResultJSONPrefersPatchableIssueForNextActions(t *testing.T) {
 		t.Fatal(err)
 	}
 	var decoded struct {
-		NextActions []toolNextAction `json:"next_actions"`
+		NextActions []toolplane.ToolNextAction `json:"next_actions"`
 	}
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
@@ -485,7 +486,7 @@ func TestToolCheckResultJSONPrefersPatchableIssueForNextActions(t *testing.T) {
 }
 
 func TestToolIssueNavigationRoutesVolumeRedundancyToChangedEvents(t *testing.T) {
-	nav := toolIssueNavigation("all", "outline", "volume", "P1-V1", models.ReviewSuggestion{
+	nav := toolplane.ToolIssueNavigation("all", "outline", "volume", "P1-V1", models.ReviewSuggestion{
 		Category: "redundancy",
 		TargetID: "P1-V1",
 		Issue:    "event type repeated",
@@ -511,7 +512,7 @@ func TestToolIssueNavigationRoutesVolumeRedundancyToChangedEvents(t *testing.T) 
 }
 
 func TestToolCheckResultJSONDoesNotCallUnpatchableGlobalIssuePatchable(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "outline",
 		Scope:  "all",
@@ -532,7 +533,7 @@ func TestToolCheckResultJSONDoesNotCallUnpatchableGlobalIssuePatchable(t *testin
 		t.Fatal(err)
 	}
 	var decoded struct {
-		NextActions []toolNextAction `json:"next_actions"`
+		NextActions []toolplane.ToolNextAction `json:"next_actions"`
 	}
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
@@ -553,7 +554,7 @@ func TestToolCheckResultJSONDoesNotCallUnpatchableGlobalIssuePatchable(t *testin
 }
 
 func TestToolCheckResultJSONPrefersHigherPriorityPatchableIssue(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "outline",
 		Scope:  "all",
@@ -575,7 +576,7 @@ func TestToolCheckResultJSONPrefersHigherPriorityPatchableIssue(t *testing.T) {
 		t.Fatal(err)
 	}
 	var decoded struct {
-		NextActions []toolNextAction `json:"next_actions"`
+		NextActions []toolplane.ToolNextAction `json:"next_actions"`
 	}
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
@@ -604,7 +605,7 @@ func toolTestInterfaceSliceContains(values []interface{}, want string) bool {
 }
 
 func TestToolCheckResultJSONRoutesVolumeIssueThroughContextNavigation(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "outline",
 		Scope:  "volume",
@@ -631,7 +632,7 @@ func TestToolCheckResultJSONRoutesVolumeIssueThroughContextNavigation(t *testing
 }
 
 func TestToolCheckResultJSONRoutesFactionTierIssueThroughSetupNavigation(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "outline",
 		Scope:  "all",
@@ -652,7 +653,7 @@ func TestToolCheckResultJSONRoutesFactionTierIssueThroughSetupNavigation(t *test
 		Issues []struct {
 			Navigation map[string]interface{} `json:"navigation"`
 		} `json:"issues"`
-		NextActions []toolNextAction `json:"next_actions"`
+		NextActions []toolplane.ToolNextAction `json:"next_actions"`
 	}
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
@@ -694,7 +695,7 @@ func TestToolCheckResultJSONRoutesFactionTierIssueThroughSetupNavigation(t *test
 }
 
 func TestToolCheckCraftSchemaJSONAddsNavigation(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "schema",
 		Target: "craft",
 		Scope:  "character",
@@ -725,7 +726,7 @@ func TestToolCheckCraftSchemaJSONAddsNavigation(t *testing.T) {
 }
 
 func TestToolCheckRecapJSONAddsNavigation(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "quality",
 		Target: "recap",
 		Scope:  "chapter",
@@ -755,7 +756,7 @@ func TestToolCheckRecapJSONAddsNavigation(t *testing.T) {
 }
 
 func TestToolCheckSetupJSONAddsRouteNavigation(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "setup",
 		Scope:  "all",
@@ -791,7 +792,7 @@ func TestToolCheckSetupJSONAddsRouteNavigation(t *testing.T) {
 }
 
 func TestToolCheckSetupJSONRoutesIndexedStorylineByTargetName(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "setup",
 		Scope:  "all",
@@ -812,7 +813,7 @@ func TestToolCheckSetupJSONRoutesIndexedStorylineByTargetName(t *testing.T) {
 		Issues []struct {
 			Navigation map[string]interface{} `json:"navigation"`
 		} `json:"issues"`
-		NextActions []toolNextAction `json:"next_actions"`
+		NextActions []toolplane.ToolNextAction `json:"next_actions"`
 	}
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
@@ -845,7 +846,7 @@ func TestToolCheckSetupJSONRoutesIndexedStorylineByTargetName(t *testing.T) {
 }
 
 func TestToolCheckOutlineGlobalIssueRoutesThroughGlobalRepairContext(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "outline",
 		Scope:  "all",
@@ -885,7 +886,7 @@ func TestToolCheckOutlineGlobalIssueRoutesThroughGlobalRepairContext(t *testing.
 }
 
 func TestToolCheckSetupJSONRoutesIndexedPremiseByTargetName(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "setup",
 		Scope:  "all",
@@ -906,7 +907,7 @@ func TestToolCheckSetupJSONRoutesIndexedPremiseByTargetName(t *testing.T) {
 		Issues []struct {
 			Navigation map[string]interface{} `json:"navigation"`
 		} `json:"issues"`
-		NextActions []toolNextAction `json:"next_actions"`
+		NextActions []toolplane.ToolNextAction `json:"next_actions"`
 	}
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
@@ -928,7 +929,7 @@ func TestToolCheckSetupJSONRoutesIndexedPremiseByTargetName(t *testing.T) {
 }
 
 func TestToolCheckSetupJSONRoutesIndexedRuleToPatchField(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "setup",
 		Scope:  "all",
@@ -949,7 +950,7 @@ func TestToolCheckSetupJSONRoutesIndexedRuleToPatchField(t *testing.T) {
 		Issues []struct {
 			Navigation map[string]interface{} `json:"navigation"`
 		} `json:"issues"`
-		NextActions []toolNextAction `json:"next_actions"`
+		NextActions []toolplane.ToolNextAction `json:"next_actions"`
 	}
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
@@ -973,7 +974,7 @@ func TestToolChapterQualityCheckRejectsRawAgentJSON(t *testing.T) {
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening"}
 	content := "# Opening\n\n{\"content\":\"still wrapped\"}"
 
-	result := runToolChapterQualityGate(chapter, content, 200)
+	result := toolplane.RunToolChapterQualityGate(chapter, content, 200)
 	if !result.Blocking {
 		t.Fatalf("chapter quality gate should block raw JSON body: %#v", result)
 	}
@@ -999,7 +1000,7 @@ func TestToolChapterQualityCheckFlagsRepeatedTitleAfterHeading(t *testing.T) {
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "第1章：倒计时"}
 	content := "# 第1章：倒计时\n\n第1章：倒计时李侑恢复意识时，鼻子里先钻进一股霉味。" + strings.Repeat("他开始整理眼前的处境。", 60)
 
-	result := runToolChapterQualityGate(chapter, content, 100)
+	result := toolplane.RunToolChapterQualityGate(chapter, content, 100)
 	found := false
 	for _, issue := range result.Suggestions {
 		if strings.Contains(issue.Issue, "body repeats the outline title") && issue.Priority == models.PriorityMedium {
@@ -1017,7 +1018,7 @@ func TestToolChapterQualityCheckFlagsInlineFormattingArtifacts(t *testing.T) {
 		"搜索结果弹出两组数据。<br><br>\n**第一条：后山朱果。**\n" +
 		strings.Repeat("李侑继续观察现场并压下心中的吐槽。", 80)
 
-	result := runToolChapterQualityGate(chapter, content, 1200)
+	result := toolplane.RunToolChapterQualityGate(chapter, content, 1200)
 
 	foundBR := false
 	foundBold := false
@@ -1040,7 +1041,7 @@ func TestToolChapterQualityCheckFlagsSuspiciousTypoArtifacts(t *testing.T) {
 		"苏瑶兴奋地说，太上长老今天给她安排了十好几个考验。" +
 		strings.Repeat("李侑继续翻看报错代码并整理其中的坐标偏移。", 60)
 
-	result := runToolChapterQualityGate(chapter, content, 1200)
+	result := toolplane.RunToolChapterQualityGate(chapter, content, 1200)
 
 	found := false
 	for _, issue := range result.Suggestions {
@@ -1056,20 +1057,20 @@ func TestToolChapterQualityCheckFlagsSuspiciousTypoArtifacts(t *testing.T) {
 func TestNormalizeChapterPatchContentStripsRepeatedTitle(t *testing.T) {
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "第1章：倒计时"}
 
-	got := normalizeChapterPatchContent(chapter, "# 第1章：倒计时\n\n第1章：倒计时李侑恢复意识时，鼻子里先钻进一股霉味。")
+	got := toolplane.NormalizeChapterPatchContent(chapter, "# 第1章：倒计时\n\n第1章：倒计时李侑恢复意识时，鼻子里先钻进一股霉味。")
 	want := "# 第1章：倒计时\n\n李侑恢复意识时，鼻子里先钻进一股霉味。"
 	if got != want {
 		t.Fatalf("normalized content = %q, want %q", got, want)
 	}
 
-	got = normalizeChapterPatchContent(chapter, "第1章：倒计时：李侑推开木窗。")
+	got = toolplane.NormalizeChapterPatchContent(chapter, "第1章：倒计时：李侑推开木窗。")
 	want = "# 第1章：倒计时\n\n李侑推开木窗。"
 	if got != want {
 		t.Fatalf("normalized bare content = %q, want %q", got, want)
 	}
 
 	chapter = &models.Chapter{ID: "P1-V2-C1", Title: "第11章：完美的“分赃”与死忠粉的诞生"}
-	got = normalizeChapterPatchContent(chapter, "# 第11章：完美的“分赃”与死忠粉的诞生\n\n# 第11章：完美的\"分赃\"与死忠粉的诞生\n\n清晨卯时，李侑翻开日志。")
+	got = toolplane.NormalizeChapterPatchContent(chapter, "# 第11章：完美的“分赃”与死忠粉的诞生\n\n# 第11章：完美的\"分赃\"与死忠粉的诞生\n\n清晨卯时，李侑翻开日志。")
 	want = "# 第11章：完美的“分赃”与死忠粉的诞生\n\n清晨卯时，李侑翻开日志。"
 	if got != want {
 		t.Fatalf("normalized quoted title = %q, want %q", got, want)
@@ -1080,7 +1081,7 @@ func TestToolChapterQualityCheckRequiresOutlineCharacters(t *testing.T) {
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening", Characters: []string{"Lin"}}
 	content := "# Opening\n\n" + strings.Repeat("A stranger follows the signal through the mine. ", 40)
 
-	result := runToolChapterQualityGate(chapter, content, 100)
+	result := toolplane.RunToolChapterQualityGate(chapter, content, 100)
 	if !result.Blocking {
 		t.Fatalf("chapter quality gate should block missing outline character: %#v", result)
 	}
@@ -1100,7 +1101,7 @@ func TestToolChapterQualityCheckAcceptsChineseShortCharacterMention(t *testing.T
 	body := strings.Repeat("吴伯站在据点指挥中心里，要求众人放下弩箭，并给外来者三天观察期。", 30)
 	content := "# 外来者\n\n" + body
 
-	result := runToolChapterQualityGate(chapter, content, 100)
+	result := toolplane.RunToolChapterQualityGate(chapter, content, 100)
 	if qualityGateHasIssue(result, "character", models.PriorityHigh) {
 		t.Fatalf("short Chinese name should satisfy outline character mention: %#v", result.Suggestions)
 	}
@@ -1111,25 +1112,25 @@ func TestToolChapterQualityCheckUsesTargetWordsOverride(t *testing.T) {
 	body := strings.Repeat("Lin reads the system log, checks Gu Heng's next intervention, and turns the warning into a practical route through the outer sect. ", 55)
 	content := "# Opening\n\n" + body
 
-	defaultTarget := runToolChapterQualityGate(chapter, content, 3000)
+	defaultTarget := toolplane.RunToolChapterQualityGate(chapter, content, 3000)
 	if !defaultTarget.Blocking || !qualityGateHasIssue(defaultTarget, "length", models.PriorityHigh) {
 		t.Fatalf("large target should flag short generated debug chapter: %#v", defaultTarget)
 	}
 
-	overrideTarget := runToolChapterQualityGate(chapter, content, 800)
+	overrideTarget := toolplane.RunToolChapterQualityGate(chapter, content, 800)
 	if overrideTarget.Blocking || qualityGateHasIssue(overrideTarget, "length", models.PriorityHigh) {
 		t.Fatalf("explicit short target should not reuse project default length: %#v", overrideTarget)
 	}
 }
 
 func TestToolChapterCheckNavigationPreservesTargetWordsOverride(t *testing.T) {
-	result := toolCheckResult{
+	result := toolplane.ToolCheckResult{
 		Kind:     "all",
 		Target:   "chapter",
 		Scope:    "chapter",
 		ID:       "P1-V1-C1",
 		Blocking: true,
-		Summary:  toolCheckSummary{Total: 1, High: 1},
+		Summary:  toolplane.ToolCheckSummary{Total: 1, High: 1},
 		Issues: []models.ReviewSuggestion{{
 			Category: "length",
 			TargetID: "P1-V1-C1",
@@ -1165,7 +1166,7 @@ func qualityGateHasIssue(gate quality.QualityGateResult, category, priority stri
 }
 
 func TestToolCheckChapterJSONAddsNavigation(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "quality",
 		Target: "chapter",
 		Scope:  "chapter",
@@ -1194,7 +1195,7 @@ func TestToolCheckChapterJSONAddsNavigation(t *testing.T) {
 }
 
 func TestToolCheckChapterSimulationNavigationFocusesSimulation(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "simulation",
 		Target: "chapter",
 		Scope:  "chapter",
@@ -1215,7 +1216,7 @@ func TestToolCheckChapterSimulationNavigationFocusesSimulation(t *testing.T) {
 		Issues []struct {
 			Navigation map[string]interface{} `json:"navigation"`
 		} `json:"issues"`
-		NextActions []toolNextAction `json:"next_actions"`
+		NextActions []toolplane.ToolNextAction `json:"next_actions"`
 	}
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
@@ -1250,7 +1251,7 @@ func TestToolCheckChapterSimulationNavigationFocusesSimulation(t *testing.T) {
 }
 
 func TestToolCheckChapterSimulationNavigationDoesNotRefreshForOrdinaryIssues(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "simulation",
 		Target: "chapter",
 		Scope:  "chapter",
@@ -1284,7 +1285,7 @@ func TestToolCheckChapterSimulationNavigationDoesNotRefreshForOrdinaryIssues(t *
 }
 
 func TestAgentSDKChapterCheckSuggestionsPreferRepairContext(t *testing.T) {
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:   "all",
 		Target: "chapter",
 		Scope:  "chapter",
@@ -1309,7 +1310,7 @@ func TestAgentSDKChapterCheckSuggestionsPreferRepairContext(t *testing.T) {
 
 func TestAgentSDKPostSaveCheckAppendsReviewSuggestions(t *testing.T) {
 	review := &agents.DraftReview{ChapterID: "P1-V1-C1", OverallScore: 80}
-	result := &toolCheckResult{
+	result := &toolplane.ToolCheckResult{
 		Kind:     "all",
 		Target:   "chapter",
 		Scope:    "chapter",
@@ -1361,7 +1362,7 @@ func TestAgentSDKLengthRetrySuggestions(t *testing.T) {
 }
 
 func TestToolChapterSimulationCheckReportsMissingDSL(t *testing.T) {
-	result := runToolChapterSimulationGate(t.TempDir(), "P1-V1-C1")
+	result := toolplane.RunToolChapterSimulationGate(t.TempDir(), "P1-V1-C1")
 	if !result.Blocking {
 		t.Fatalf("simulation gate should block when RPG DSL is missing: %#v", result)
 	}
@@ -1402,7 +1403,7 @@ func TestToolChapterSimulationCheckReportsStaleDSL(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result := runToolChapterSimulationGate(root, chapterID)
+	result := toolplane.RunToolChapterSimulationGate(root, chapterID)
 	if !result.Blocking || len(result.Suggestions) != 1 {
 		t.Fatalf("stale DSL should produce one blocking issue: %#v", result)
 	}
@@ -1432,7 +1433,7 @@ func TestChapterSimulationSignalDiagnosticReportsMissingSignals(t *testing.T) {
 		}}}},
 	}}}}
 
-	issue := buildChapterSimulationSignalDiagnostic("P1-V1-C1", dslData, []rpgdsl.SimulationIssue{{
+	issue := toolplane.BuildChapterSimulationSignalDiagnostic("P1-V1-C1", dslData, []rpgdsl.SimulationIssue{{
 		Chapter:     "P1-V1-C1",
 		Type:        rpgdsl.IssueBalance,
 		Severity:    rpgdsl.SeverityCritical,
@@ -1480,7 +1481,7 @@ func TestChapterSimulationSignalDiagnosticSeesStructuredRepairSignals(t *testing
 		}}}},
 	}}}}
 
-	issue := buildChapterSimulationSignalDiagnostic("P1-V1-C1", dslData, []rpgdsl.SimulationIssue{{
+	issue := toolplane.BuildChapterSimulationSignalDiagnostic("P1-V1-C1", dslData, []rpgdsl.SimulationIssue{{
 		Chapter:     "P1-V1-C1",
 		Type:        rpgdsl.IssueBalance,
 		Severity:    rpgdsl.SeverityCritical,
@@ -1526,7 +1527,7 @@ func TestToolRefreshChapterDSLCheckMapsScopedSimulationIssues(t *testing.T) {
 		},
 	}
 
-	check := makeToolRefreshChapterDSLCheck("P1-V1-C1", issues)
+	check := toolplane.MakeToolRefreshChapterDSLCheck("P1-V1-C1", issues)
 	if check == nil || check.OK || !check.Blocking || check.Summary.Critical != 1 || check.Summary.Total != 1 {
 		t.Fatalf("unexpected refresh check: %#v", check)
 	}
@@ -1553,14 +1554,14 @@ func TestRunToolRefreshChapterDSLRequiresIDBeforeLLM(t *testing.T) {
 		}
 	}()
 
-	originalFlags := toolRefreshFlags
-	defer func() { toolRefreshFlags = originalFlags }()
-	toolRefreshFlags = struct {
+	originalFlags := toolplane.ToolRefreshFlags
+	defer func() { toolplane.ToolRefreshFlags = originalFlags }()
+	toolplane.ToolRefreshFlags = struct {
 		ID        string
 		BatchSize int
 	}{}
 
-	err = runToolRefresh(&cobra.Command{}, []string{"chapter-dsl"})
+	err = toolplane.RunToolRefresh(&cobra.Command{}, []string{"chapter-dsl"})
 	if err == nil || !strings.Contains(err.Error(), "--id is required") {
 		t.Fatalf("expected --id error before LLM setup, got %v", err)
 	}
@@ -1600,9 +1601,9 @@ func TestToolPatchChapterDryRunAndApply(t *testing.T) {
 	content := "# Opening\n\n" + strings.Repeat("Lin repairs the star core inside the mine and keeps the signal stable. ", 140)
 	patch := fmt.Sprintf(`{"content":%q}`, content)
 
-	originalFlags := toolPatchFlags
-	defer func() { toolPatchFlags = originalFlags }()
-	toolPatchFlags = struct {
+	originalFlags := toolplane.ToolPatchFlags
+	defer func() { toolplane.ToolPatchFlags = originalFlags }()
+	toolplane.ToolPatchFlags = struct {
 		Target         string
 		ID             string
 		PatchJSON      string
@@ -1616,10 +1617,10 @@ func TestToolPatchChapterDryRunAndApply(t *testing.T) {
 	var dryOut bytes.Buffer
 	dryCmd := &cobra.Command{}
 	dryCmd.SetOut(&dryOut)
-	if err := runToolPatch(dryCmd, []string{"chapter"}); err != nil {
+	if err := toolplane.RunToolPatch(dryCmd, []string{"chapter"}); err != nil {
 		t.Fatalf("dry-run chapter patch: %v", err)
 	}
-	var dryResult toolPatchResult
+	var dryResult toolplane.ToolPatchResult
 	if err := json.Unmarshal(dryOut.Bytes(), &dryResult); err != nil {
 		t.Fatalf("decode dry-run result: %v\n%s", err, dryOut.String())
 	}
@@ -1633,14 +1634,14 @@ func TestToolPatchChapterDryRunAndApply(t *testing.T) {
 		t.Fatalf("dry-run should not modify chapter, err=%v content=%s", err, string(data))
 	}
 
-	toolPatchFlags.Apply = true
+	toolplane.ToolPatchFlags.Apply = true
 	var applyOut bytes.Buffer
 	applyCmd := &cobra.Command{}
 	applyCmd.SetOut(&applyOut)
-	if err := runToolPatch(applyCmd, []string{"chapter"}); err != nil {
+	if err := toolplane.RunToolPatch(applyCmd, []string{"chapter"}); err != nil {
 		t.Fatalf("apply chapter patch: %v", err)
 	}
-	var applyResult toolPatchResult
+	var applyResult toolplane.ToolPatchResult
 	if err := json.Unmarshal(applyOut.Bytes(), &applyResult); err != nil {
 		t.Fatalf("decode apply result: %v\n%s", err, applyOut.String())
 	}
@@ -1693,42 +1694,42 @@ func TestToolPatchBufferAppendShowClear(t *testing.T) {
 		}
 	}()
 
-	originalFlags := toolPatchBufferFlags
-	defer func() { toolPatchBufferFlags = originalFlags }()
+	originalFlags := toolplane.ToolPatchBufferFlags
+	defer func() { toolplane.ToolPatchBufferFlags = originalFlags }()
 
-	toolPatchBufferFlags.ID = "P1-V1-C1-draft"
-	toolPatchBufferFlags.Text = "# Opening\n\nLin repairs "
+	toolplane.ToolPatchBufferFlags.ID = "P1-V1-C1-draft"
+	toolplane.ToolPatchBufferFlags.Text = "# Opening\n\nLin repairs "
 	appendCmd := &cobra.Command{}
 	var appendOut bytes.Buffer
 	appendCmd.SetOut(&appendOut)
-	if err := runToolPatchBuffer(appendCmd, []string{"append"}); err != nil {
+	if err := toolplane.RunToolPatchBuffer(appendCmd, []string{"append"}); err != nil {
 		t.Fatalf("append buffer: %v", err)
 	}
 
-	toolPatchBufferFlags.Text = "the star core."
+	toolplane.ToolPatchBufferFlags.Text = "the star core."
 	var appendOut2 bytes.Buffer
 	appendCmd2 := &cobra.Command{}
 	appendCmd2.SetOut(&appendOut2)
-	if err := runToolPatchBuffer(appendCmd2, []string{"append"}); err != nil {
+	if err := toolplane.RunToolPatchBuffer(appendCmd2, []string{"append"}); err != nil {
 		t.Fatalf("append buffer second chunk: %v", err)
 	}
 
-	toolPatchBufferFlags.Text = ""
-	toolPatchBufferFlags.Stdin = true
+	toolplane.ToolPatchBufferFlags.Text = ""
+	toolplane.ToolPatchBufferFlags.Stdin = true
 	var appendOut3 bytes.Buffer
 	appendCmd3 := &cobra.Command{}
 	appendCmd3.SetIn(strings.NewReader("\n林野用 stdin 继续追加。"))
 	appendCmd3.SetOut(&appendOut3)
-	if err := runToolPatchBuffer(appendCmd3, []string{"append"}); err != nil {
+	if err := toolplane.RunToolPatchBuffer(appendCmd3, []string{"append"}); err != nil {
 		t.Fatalf("append buffer stdin chunk: %v", err)
 	}
 
-	toolPatchBufferFlags.Stdin = false
-	toolPatchBufferFlags.MaxChars = 18
+	toolplane.ToolPatchBufferFlags.Stdin = false
+	toolplane.ToolPatchBufferFlags.MaxChars = 18
 	var showOut bytes.Buffer
 	showCmd := &cobra.Command{}
 	showCmd.SetOut(&showOut)
-	if err := runToolPatchBuffer(showCmd, []string{"show"}); err != nil {
+	if err := toolplane.RunToolPatchBuffer(showCmd, []string{"show"}); err != nil {
 		t.Fatalf("show buffer: %v", err)
 	}
 	var shown map[string]interface{}
@@ -1739,7 +1740,7 @@ func TestToolPatchBufferAppendShowClear(t *testing.T) {
 		t.Fatalf("unexpected show output: %#v", shown)
 	}
 
-	path, err := toolPatchBufferPath(root, "P1-V1-C1-draft")
+	path, err := toolplane.ToolPatchBufferPath(root, "P1-V1-C1-draft")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1754,7 +1755,7 @@ func TestToolPatchBufferAppendShowClear(t *testing.T) {
 	var clearOut bytes.Buffer
 	clearCmd := &cobra.Command{}
 	clearCmd.SetOut(&clearOut)
-	if err := runToolPatchBuffer(clearCmd, []string{"clear"}); err != nil {
+	if err := toolplane.RunToolPatchBuffer(clearCmd, []string{"clear"}); err != nil {
 		t.Fatalf("clear buffer: %v", err)
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -1763,15 +1764,15 @@ func TestToolPatchBufferAppendShowClear(t *testing.T) {
 }
 
 func TestBuildChapterPatchNextActionsAfterRefreshDerived(t *testing.T) {
-	clean := &toolCheckResult{Blocking: false}
-	actions := buildChapterPatchNextActions("P1-V1-C1", true, true, clean)
+	clean := &toolplane.ToolCheckResult{Blocking: false}
+	actions := toolplane.BuildChapterPatchNextActions("P1-V1-C1", true, true, clean)
 	if len(actions) != 1 || actions[0].Action != "return_final_json" ||
 		strings.Contains(actions[0].Command, "refresh chapter-dsl") {
 		t.Fatalf("refreshed clean patch should stop without another refresh: %#v", actions)
 	}
 
-	blocking := &toolCheckResult{Blocking: true}
-	actions = buildChapterPatchNextActions("P1-V1-C1", true, true, blocking)
+	blocking := &toolplane.ToolCheckResult{Blocking: true}
+	actions = toolplane.BuildChapterPatchNextActions("P1-V1-C1", true, true, blocking)
 	if len(actions) != 1 || actions[0].Action != "repair_remaining_issues" ||
 		!strings.Contains(actions[0].Command, `tool check all --target chapter --scope chapter --id "P1-V1-C1"`) {
 		t.Fatalf("refreshed blocking patch should route to repair check: %#v", actions)
@@ -1780,7 +1781,7 @@ func TestBuildChapterPatchNextActionsAfterRefreshDerived(t *testing.T) {
 
 func TestLoadToolPatchBufferWrapsChapterContent(t *testing.T) {
 	root := t.TempDir()
-	path, err := toolPatchBufferPath(root, "chapter-draft")
+	path, err := toolplane.ToolPatchBufferPath(root, "chapter-draft")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1792,7 +1793,7 @@ func TestLoadToolPatchBufferWrapsChapterContent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	payload, err := loadToolPatchBuffer(root, "chapter-draft", "chapter")
+	payload, err := toolplane.LoadToolPatchBuffer(root, "chapter-draft", "chapter")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1803,7 +1804,7 @@ func TestLoadToolPatchBufferWrapsChapterContent(t *testing.T) {
 	if decoded["content"] != content {
 		t.Fatalf("content = %q, want %q", decoded["content"], content)
 	}
-	if _, err := toolPatchBufferPath(root, "../bad"); err == nil {
+	if _, err := toolplane.ToolPatchBufferPath(root, "../bad"); err == nil {
 		t.Fatalf("expected invalid patch buffer id to be rejected")
 	}
 }
@@ -1813,7 +1814,7 @@ func TestToolPatchBufferShowCapsPreview(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"project_name":"Patch Buffer Test"}`), 0644); err != nil {
 		t.Fatal(err)
 	}
-	path, err := toolPatchBufferPath(root, "long-draft")
+	path, err := toolplane.ToolPatchBufferPath(root, "long-draft")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1837,14 +1838,14 @@ func TestToolPatchBufferShowCapsPreview(t *testing.T) {
 		}
 	}()
 
-	originalFlags := toolPatchBufferFlags
-	defer func() { toolPatchBufferFlags = originalFlags }()
-	toolPatchBufferFlags.ID = "long-draft"
-	toolPatchBufferFlags.MaxChars = 999999
+	originalFlags := toolplane.ToolPatchBufferFlags
+	defer func() { toolplane.ToolPatchBufferFlags = originalFlags }()
+	toolplane.ToolPatchBufferFlags.ID = "long-draft"
+	toolplane.ToolPatchBufferFlags.MaxChars = 999999
 	var out bytes.Buffer
 	cmd := &cobra.Command{}
 	cmd.SetOut(&out)
-	if err := runToolPatchBuffer(cmd, []string{"show"}); err != nil {
+	if err := toolplane.RunToolPatchBuffer(cmd, []string{"show"}); err != nil {
 		t.Fatal(err)
 	}
 	var shown map[string]interface{}
@@ -1858,7 +1859,7 @@ func TestToolPatchBufferShowCapsPreview(t *testing.T) {
 
 func TestToolPatchValidationUsesQualityAndSimulation(t *testing.T) {
 	outline := validToolPatchTestOutline()
-	result, err := runToolPatchValidationCheck(nil, outline, "volume", "P1-V1")
+	result, err := toolplane.RunToolPatchValidationCheck(nil, outline, "volume", "P1-V1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1910,9 +1911,9 @@ func TestToolOutlinePatchResultExposesValidationCoverage(t *testing.T) {
 		}
 	}()
 
-	originalFlags := toolPatchFlags
-	defer func() { toolPatchFlags = originalFlags }()
-	toolPatchFlags = struct {
+	originalFlags := toolplane.ToolPatchFlags
+	defer func() { toolplane.ToolPatchFlags = originalFlags }()
+	toolplane.ToolPatchFlags = struct {
 		Target         string
 		ID             string
 		PatchJSON      string
@@ -1931,7 +1932,7 @@ func TestToolOutlinePatchResultExposesValidationCoverage(t *testing.T) {
 	var out bytes.Buffer
 	cmd := &cobra.Command{}
 	cmd.SetOut(&out)
-	if err := runToolPatch(cmd, []string{"outline"}); err != nil {
+	if err := toolplane.RunToolPatch(cmd, []string{"outline"}); err != nil {
 		t.Fatalf("outline patch dry-run: %v", err)
 	}
 	result := decodeToolPatchResult(t, out.String())
@@ -1997,9 +1998,9 @@ func TestToolOutlinePatchRejectsNewGlobalBlockingIssueOnDryRun(t *testing.T) {
 		}
 	}()
 
-	originalFlags := toolPatchFlags
-	defer func() { toolPatchFlags = originalFlags }()
-	toolPatchFlags = struct {
+	originalFlags := toolplane.ToolPatchFlags
+	defer func() { toolplane.ToolPatchFlags = originalFlags }()
+	toolplane.ToolPatchFlags = struct {
 		Target         string
 		ID             string
 		PatchJSON      string
@@ -2018,7 +2019,7 @@ func TestToolOutlinePatchRejectsNewGlobalBlockingIssueOnDryRun(t *testing.T) {
 	var out bytes.Buffer
 	cmd := &cobra.Command{}
 	cmd.SetOut(&out)
-	err = runToolPatch(cmd, []string{"outline"})
+	err = toolplane.RunToolPatch(cmd, []string{"outline"})
 	if err == nil || !strings.Contains(err.Error(), "global outline check introduced") || !strings.Contains(err.Error(), "myst_old_barrier") {
 		t.Fatalf("expected global blocking rejection, got %v output=%s", err, out.String())
 	}
@@ -2053,25 +2054,25 @@ func TestRunToolOutlineCheckUsesGlobalSimulationContextForScopedMysteries(t *tes
 		}},
 	}}}
 
-	check, err := runToolOutlineCheck("all", setup, outline, "volume", "P1-V2")
+	check, err := toolplane.RunToolOutlineCheck("all", setup, outline, "volume", "P1-V2")
 	if err != nil {
 		t.Fatalf("run scoped check: %v", err)
 	}
 	for _, issue := range check.Issues {
-		if normalizeKey(issue.Category) == "mysteries" && strings.Contains(issue.Issue, "从未被planted") {
+		if toolplane.NormalizeKey(issue.Category) == "mysteries" && strings.Contains(issue.Issue, "从未被planted") {
 			t.Fatalf("scoped check should use global mystery context, got issue: %#v", issue)
 		}
 	}
 }
 
 func TestOutlinePatchPostCheckCommandScopesTarget(t *testing.T) {
-	if got := outlinePatchPostCheckCommand("volume", "P1-V1"); got != `novelgen tool check all --target outline --scope volume --id "P1-V1" --min-priority medium --max-issues 12` {
+	if got := toolplane.OutlinePatchPostCheckCommand("volume", "P1-V1"); got != `novelgen tool check all --target outline --scope volume --id "P1-V1" --min-priority medium --max-issues 12` {
 		t.Fatalf("volume post check = %q", got)
 	}
-	if got := outlinePatchPostCheckCommand("chapter", "P1-V1-C1"); got != `novelgen tool check all --target outline --scope chapter --id "P1-V1-C1" --min-priority low --max-issues 8` {
+	if got := toolplane.OutlinePatchPostCheckCommand("chapter", "P1-V1-C1"); got != `novelgen tool check all --target outline --scope chapter --id "P1-V1-C1" --min-priority low --max-issues 8` {
 		t.Fatalf("chapter post check = %q", got)
 	}
-	if got := outlinePatchPostCheckCommand("all", ""); got != "" {
+	if got := toolplane.OutlinePatchPostCheckCommand("all", ""); got != "" {
 		t.Fatalf("unexpected post check = %q", got)
 	}
 }
@@ -2080,7 +2081,7 @@ func TestApplyChapterPatchPreservesIDAndOverlaysFields(t *testing.T) {
 	outline := validToolPatchTestOutline()
 	patch := []byte(`{"id":"P1-V1-C1","summary":"new summary","characters":["Lin","Mira"]}`)
 
-	changes, err := applyChapterPatch(outline, "P1-V1-C1", patch)
+	changes, err := toolplane.ApplyChapterPatch(outline, "P1-V1-C1", patch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2098,14 +2099,14 @@ func TestApplyChapterPatchPreservesIDAndOverlaysFields(t *testing.T) {
 
 func TestApplyChapterPatchRejectsIDMismatch(t *testing.T) {
 	outline := validToolPatchTestOutline()
-	_, err := applyChapterPatch(outline, "P1-V1-C1", []byte(`{"id":"P1-V1-C2","summary":"bad"}`))
+	_, err := toolplane.ApplyChapterPatch(outline, "P1-V1-C1", []byte(`{"id":"P1-V1-C2","summary":"bad"}`))
 	if err == nil || !strings.Contains(err.Error(), "does not match") {
 		t.Fatalf("expected id mismatch error, got %v", err)
 	}
 }
 
 func TestApplyChapterPatchRejectsGarbledPatchText(t *testing.T) {
-	err := validateToolPatchBytes([]byte("{\"summary\":\"\ufffd\ufffd\ufffd????\"}"))
+	err := toolplane.ValidateToolPatchBytes([]byte("{\"summary\":\"\ufffd\ufffd\ufffd????\"}"))
 	if err == nil || !strings.Contains(err.Error(), "suspicious") {
 		t.Fatalf("expected garbled text rejection, got %v", err)
 	}
@@ -2114,11 +2115,11 @@ func TestApplyChapterPatchRejectsGarbledPatchText(t *testing.T) {
 func TestValidateToolChapterPatchLengthRejectsHardOvershoot(t *testing.T) {
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening"}
 	okContent := "# Opening\n\n" + strings.Repeat("字", 3600)
-	if err := validateToolChapterPatchLength(chapter, okContent, 3000); err != nil {
+	if err := toolplane.ValidateToolChapterPatchLength(chapter, okContent, 3000); err != nil {
 		t.Fatalf("expected hard max boundary to pass, got %v", err)
 	}
 	tooLong := "# Opening\n\n" + strings.Repeat("字", 3601)
-	err := validateToolChapterPatchLength(chapter, tooLong, 3000)
+	err := toolplane.ValidateToolChapterPatchLength(chapter, tooLong, 3000)
 	if err == nil || !strings.Contains(err.Error(), "too long") || !strings.Contains(err.Error(), "hard max 3600") {
 		t.Fatalf("expected hard overshoot error, got %v", err)
 	}
@@ -2128,7 +2129,7 @@ func TestRunToolChapterQualityGateFlagsTargetOvershoot(t *testing.T) {
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening"}
 	content := "# Opening\n\n" + strings.Repeat("字", 1501)
 
-	gate := runToolChapterQualityGate(chapter, content, 1200)
+	gate := toolplane.RunToolChapterQualityGate(chapter, content, 1200)
 	if len(gate.Suggestions) == 0 {
 		t.Fatal("expected target overshoot suggestion")
 	}
@@ -2149,13 +2150,13 @@ func TestValidateToolChapterPatchLengthRejectsOverShrink(t *testing.T) {
 	previous := "# 出招\n\n" + strings.Repeat("旧", 1300)
 	tooShort := "# 出招\n\n" + strings.Repeat("新", 700)
 
-	err := validateToolChapterPatchLength(chapter, tooShort, 1200, previous)
+	err := toolplane.ValidateToolChapterPatchLength(chapter, tooShort, 1200, previous)
 	if err == nil || !strings.Contains(err.Error(), "removes too much existing prose") || !strings.Contains(err.Error(), "minimum retained 1105") {
 		t.Fatalf("expected over-shrink error, got %v", err)
 	}
 
 	ok := "# 出招\n\n" + strings.Repeat("新", 1110)
-	if err := validateToolChapterPatchLength(chapter, ok, 1200, previous); err != nil {
+	if err := toolplane.ValidateToolChapterPatchLength(chapter, ok, 1200, previous); err != nil {
 		t.Fatalf("expected minimal shrink to pass, got %v", err)
 	}
 }
@@ -2165,7 +2166,7 @@ func TestValidateToolChapterPatchLengthAllowsTrimmingOversizedPrevious(t *testin
 	previous := "# 出招\n\n" + strings.Repeat("旧", 1900)
 	trimmed := "# 出招\n\n" + strings.Repeat("新", 1200)
 
-	if err := validateToolChapterPatchLength(chapter, trimmed, 1200, previous); err != nil {
+	if err := toolplane.ValidateToolChapterPatchLength(chapter, trimmed, 1200, previous); err != nil {
 		t.Fatalf("expected oversized previous content to allow trimming, got %v", err)
 	}
 }
@@ -2184,7 +2185,7 @@ func TestValidateToolChapterPatchLengthRejectsParagraphCollapse(t *testing.T) {
 	}, "\n\n")
 	collapsed := "# 反杀\n\n" + strings.Repeat("新", 1000)
 
-	err := validateToolChapterPatchLength(chapter, collapsed, 1200, previous)
+	err := toolplane.ValidateToolChapterPatchLength(chapter, collapsed, 1200, previous)
 	if err == nil || !strings.Contains(err.Error(), "collapses chapter") {
 		t.Fatalf("expected paragraph collapse error, got %v", err)
 	}
@@ -2195,7 +2196,7 @@ func TestValidateToolChapterPatchLengthRejectsParagraphCollapse(t *testing.T) {
 		strings.Repeat("新", 230),
 		strings.Repeat("新", 230),
 	}, "\n\n")
-	if err := validateToolChapterPatchLength(chapter, readable, 1200, previous); err != nil {
+	if err := toolplane.ValidateToolChapterPatchLength(chapter, readable, 1200, previous); err != nil {
 		t.Fatalf("expected readable paragraph patch to pass, got %v", err)
 	}
 }
@@ -2204,7 +2205,7 @@ func TestRunToolChapterQualityGateFlagsCollapsedParagraphs(t *testing.T) {
 	chapter := &models.Chapter{ID: "P1-V1-C4", Title: "反杀"}
 	content := "# 反杀\n\n" + strings.Repeat("这一段连续推进剧情没有空行也没有段落拆分。", 80)
 
-	gate := runToolChapterQualityGate(chapter, content, 1200)
+	gate := toolplane.RunToolChapterQualityGate(chapter, content, 1200)
 
 	if !qualityGateHasIssue(gate, "structure", models.PriorityMedium) {
 		t.Fatalf("expected collapsed paragraph issue, got %+v", gate.Suggestions)
@@ -2213,7 +2214,7 @@ func TestRunToolChapterQualityGateFlagsCollapsedParagraphs(t *testing.T) {
 
 func TestApplyVolumePatchRejectsWholeChapterReplacement(t *testing.T) {
 	outline := validToolPatchTestOutline()
-	_, err := applyVolumePatch(outline, "P1-V1", []byte(`{"chapters":[]}`))
+	_, err := toolplane.ApplyVolumePatch(outline, "P1-V1", []byte(`{"chapters":[]}`))
 	if err == nil || !strings.Contains(err.Error(), "changed_chapters") {
 		t.Fatalf("expected changed_chapters error, got %v", err)
 	}
@@ -2233,7 +2234,7 @@ func TestApplyVolumePatchChangedChapters(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	changes, err := applyVolumePatch(outline, "P1-V1", data)
+	changes, err := toolplane.ApplyVolumePatch(outline, "P1-V1", data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2261,7 +2262,7 @@ func TestApplyVolumePatchMergesPayoffContractFields(t *testing.T) {
 		NextBiggerGame:      "The war expands.",
 	}
 
-	changes, err := applyVolumePatch(outline, "P1-V1", []byte(`{"payoff_contract":{"big_win":"Lin wins the first public duel."}}`))
+	changes, err := toolplane.ApplyVolumePatch(outline, "P1-V1", []byte(`{"payoff_contract":{"big_win":"Lin wins the first public duel."}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2286,7 +2287,7 @@ func TestApplyVolumePatchMergesPayoffContractFields(t *testing.T) {
 func TestApplyVolumePatchChangedEvents(t *testing.T) {
 	outline := validToolPatchTestOutline()
 	patch := []byte(`{"changed_events":[{"chapter_id":"P1-V1-C1","event_index":1,"type":"plan","action":"plan","details":"Lin chooses the safer route."}]}`)
-	changes, err := applyVolumePatch(outline, "P1-V1", patch)
+	changes, err := toolplane.ApplyVolumePatch(outline, "P1-V1", patch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2320,7 +2321,7 @@ func TestApplyVolumePatchDeepMergesNestedChapterObjects(t *testing.T) {
 	}
 
 	patch := []byte(`{"changed_chapters":[{"id":"P1-V1-C1","chapter_payoff":{"desire":"new desire","hook":"new hook"}}]}`)
-	changes, err := applyVolumePatch(outline, "P1-V1", patch)
+	changes, err := toolplane.ApplyVolumePatch(outline, "P1-V1", patch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2347,7 +2348,7 @@ func TestApplyChapterPatchStillReplacesArrays(t *testing.T) {
 	outline := validToolPatchTestOutline()
 	patch := []byte(`{"events":[{"actor":"Lin","action":"discover","target":"Door","target_type":"knowledge"}]}`)
 
-	if _, err := applyChapterPatch(outline, "P1-V1-C1", patch); err != nil {
+	if _, err := toolplane.ApplyChapterPatch(outline, "P1-V1-C1", patch); err != nil {
 		t.Fatal(err)
 	}
 	chapter := outline.GetChapterByID("P1-V1-C1")
@@ -2367,7 +2368,7 @@ func TestApplyCraftElementPatchPreservesRawFieldsAndNormalizes(t *testing.T) {
 	}
 	patch := []byte(`{"notes":"updated","power_level":-5,"dsl_tags":["lead","lead"]}`)
 
-	key, action, changes, err := applyCraftElementPatch(values, "character", "Lin", patch)
+	key, action, changes, err := toolplane.ApplyCraftElementPatch(values, "character", "Lin", patch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2393,7 +2394,7 @@ func TestApplyCraftElementPatchPreservesRawFieldsAndNormalizes(t *testing.T) {
 
 func TestApplyCraftElementPatchCreatesElementWithName(t *testing.T) {
 	values := map[string]map[string]interface{}{}
-	key, action, _, err := applyCraftElementPatch(values, "item", "Star Core", []byte(`{"type":"artifact","description":"Ancient core","function":"stores power","significance":"main reward"}`))
+	key, action, _, err := toolplane.ApplyCraftElementPatch(values, "item", "Star Core", []byte(`{"type":"artifact","description":"Ancient core","function":"stores power","significance":"main reward"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2413,14 +2414,14 @@ func TestRunToolCraftPatchApplyWritesFileAndCheckpoint(t *testing.T) {
 			"role_in_story": "protagonist",
 		},
 	}
-	if err := saveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
+	if err := toolplane.SaveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
 		t.Fatal(err)
 	}
 
 	cmd := &cobra.Command{}
 	var out strings.Builder
 	cmd.SetOut(&out)
-	err := runToolCraftPatch(cmd, root, "character", "Lin", []byte(`{"notes":"updated by tool"}`), true, nil)
+	err := toolplane.RunToolCraftPatch(cmd, root, "character", "Lin", []byte(`{"notes":"updated by tool"}`), true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2460,11 +2461,11 @@ func TestRunToolCraftSchemaCheckFlagsProtagonistFieldDistribution(t *testing.T) 
 			"notes":         strings.Repeat("tactical note ", 120),
 		},
 	}
-	if err := saveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
+	if err := toolplane.SaveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
 		t.Fatal(err)
 	}
 
-	result, err := runToolCraftSchemaCheck(root, "character", "Lin")
+	result, err := toolplane.RunToolCraftSchemaCheck(root, "character", "Lin")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2490,14 +2491,14 @@ func TestRunToolCraftPatchDryRunReturnsCraftQualityCheck(t *testing.T) {
 			"role_in_story": "protagonist",
 		},
 	}
-	if err := saveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
+	if err := toolplane.SaveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
 		t.Fatal(err)
 	}
 
 	cmd := &cobra.Command{}
 	var out strings.Builder
 	cmd.SetOut(&out)
-	err := runToolCraftPatch(cmd, root, "character", "Lin", []byte(`{"notes":"updated only"}`), false, nil)
+	err := toolplane.RunToolCraftPatch(cmd, root, "character", "Lin", []byte(`{"notes":"updated only"}`), false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2528,7 +2529,7 @@ func TestRunToolRecapCheckValidatesSavedRecap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := runToolRecapCheck(root, "quality", "chapter", "P1-V1-C1")
+	result, err := toolplane.RunToolRecapCheck(root, "quality", "chapter", "P1-V1-C1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2538,7 +2539,7 @@ func TestRunToolRecapCheckValidatesSavedRecap(t *testing.T) {
 }
 
 func TestRunToolRecapCheckReportsMissingRecap(t *testing.T) {
-	result, err := runToolRecapCheck(t.TempDir(), "quality", "chapter", "P1-V1-C1")
+	result, err := toolplane.RunToolRecapCheck(t.TempDir(), "quality", "chapter", "P1-V1-C1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2563,7 +2564,7 @@ func TestRunToolRecapCheckReportsMinimalAndConsistencyIssues(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := runToolRecapCheck(root, "all", "chapter", "P1-V1-C1")
+	result, err := toolplane.RunToolRecapCheck(root, "all", "chapter", "P1-V1-C1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2602,7 +2603,7 @@ func TestRunToolRecapCheckReportsOutlineTitleMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := runToolRecapCheck(root, "quality", "chapter", "P1-V1-C1")
+	result, err := toolplane.RunToolRecapCheck(root, "quality", "chapter", "P1-V1-C1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2648,7 +2649,7 @@ func TestRunToolRecapPatchApplyWritesValidatedFileAndCheckpoint(t *testing.T) {
 	cmd := &cobra.Command{}
 	var out strings.Builder
 	cmd.SetOut(&out)
-	err := runToolRecapPatch(cmd, root, chapterID, []byte(`{
+	err := toolplane.RunToolRecapPatch(cmd, root, chapterID, []byte(`{
 		"chapter_id":"WRONG",
 		"title":"Wrong title",
 		"location":"New place",
@@ -2708,7 +2709,7 @@ func TestRunToolRecapPatchRejectsBlockingApply(t *testing.T) {
 	}
 
 	cmd := &cobra.Command{}
-	err := runToolRecapPatch(cmd, root, chapterID, []byte(`{"location":"","present":[]}`), true, nil)
+	err := toolplane.RunToolRecapPatch(cmd, root, chapterID, []byte(`{"location":"","present":[]}`), true, nil)
 	if err == nil || !strings.Contains(err.Error(), "patch rejected") {
 		t.Fatalf("expected blocking recap patch rejection, got %v", err)
 	}
@@ -2725,7 +2726,7 @@ func TestRunToolSetupCheckAllMergesQualityAndSimulation(t *testing.T) {
 	setup := &models.StorySetup{
 		ProjectName: "Thin",
 	}
-	result, err := runToolSetupCheck("all", setup)
+	result, err := toolplane.RunToolSetupCheck("all", setup)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2753,7 +2754,7 @@ func TestRunToolSetupPatchApplyWritesFilesAndCheckpoint(t *testing.T) {
 	cmd := &cobra.Command{}
 	var out strings.Builder
 	cmd.SetOut(&out)
-	err := runToolSetupPatch(cmd, root, []byte(`{"theme":"updated by setup patch"}`), true, nil)
+	err := toolplane.RunToolSetupPatch(cmd, root, []byte(`{"theme":"updated by setup patch"}`), true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2799,7 +2800,7 @@ func TestApplySetupPatchObjectUpsertsPremises(t *testing.T) {
 		}},
 	}}
 
-	merged, warnings, err := applySetupPatchObject(setup, []byte(`{
+	merged, warnings, err := toolplane.ApplySetupPatchObject(setup, []byte(`{
 		"premises": [{
 			"name": "Zerg Tier Ladder",
 			"category": "faction",
@@ -2822,7 +2823,7 @@ func TestApplySetupPatchObjectUpsertsPremises(t *testing.T) {
 		t.Fatalf("new premise was not appended: %#v", merged.Premises[1])
 	}
 
-	merged, _, err = applySetupPatchObject(merged, []byte(`{
+	merged, _, err = toolplane.ApplySetupPatchObject(merged, []byte(`{
 		"premises": [{
 			"name": "Ranking System",
 			"description": "updated public ladder"
@@ -2855,7 +2856,7 @@ func TestApplySetupPatchObjectMergesNestedPlanAndStringLists(t *testing.T) {
 		EndgamePromise:   "old endgame",
 	}
 
-	merged, warnings, err := applySetupPatchObject(setup, []byte(`{
+	merged, warnings, err := toolplane.ApplySetupPatchObject(setup, []byte(`{
 		"rules": ["Existing rule", "New faction rule"],
 		"long_form_plan": {
 			"main_loop": "new loop",
@@ -2898,7 +2899,7 @@ func TestApplySetupPatchObjectPatchesStringListByIndex(t *testing.T) {
 	setup.Genres = []string{"sci-fi", "progression"}
 	setup.Rules = []string{"short rule", "this rule is far too verbose and needs to be compacted"}
 
-	merged, warnings, err := applySetupPatchObject(setup, []byte(`{
+	merged, warnings, err := toolplane.ApplySetupPatchObject(setup, []byte(`{
 		"genres_patch": [{"index": 1, "value": "mecha progression"}],
 		"rules_patch": [{"index": 1, "value": "Compact rule."}]
 	}`))
@@ -2920,7 +2921,7 @@ func TestApplySetupPatchObjectRejectsStringListPatchOutOfRange(t *testing.T) {
 	setup := *validLongFormSetup()
 	setup.Rules = []string{"short rule"}
 
-	_, _, err := applySetupPatchObject(setup, []byte(`{"rules_patch":[{"index":2,"value":"nope"}]}`))
+	_, _, err := toolplane.ApplySetupPatchObject(setup, []byte(`{"rules_patch":[{"index":2,"value":"nope"}]}`))
 	if err == nil || !strings.Contains(err.Error(), "out of range") {
 		t.Fatalf("expected out-of-range error, got %v", err)
 	}
@@ -2947,7 +2948,7 @@ func TestRunToolPatchSetupDoesNotRequireID(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		_ = os.Chdir(oldWD)
-		toolPatchFlags = struct {
+		toolplane.ToolPatchFlags = struct {
 			Target         string
 			ID             string
 			PatchJSON      string
@@ -2960,11 +2961,11 @@ func TestRunToolPatchSetupDoesNotRequireID(t *testing.T) {
 		}{}
 	})
 
-	toolPatchFlags.PatchJSON = `{"tone":"dry-run setup tone"}`
+	toolplane.ToolPatchFlags.PatchJSON = `{"tone":"dry-run setup tone"}`
 	cmd := &cobra.Command{}
 	var out strings.Builder
 	cmd.SetOut(&out)
-	if err := runToolPatch(cmd, []string{"setup"}); err != nil {
+	if err := toolplane.RunToolPatch(cmd, []string{"setup"}); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), `"dry_run": true`) || !strings.Contains(out.String(), "setup.tone") {
@@ -2994,7 +2995,7 @@ func TestRunToolPatchStripsBOMFromStdinPatch(t *testing.T) {
 			"role_in_story": "protagonist",
 		},
 	}
-	if err := saveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
+	if err := toolplane.SaveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
 		t.Fatal(err)
 	}
 	oldWD, err := os.Getwd()
@@ -3006,7 +3007,7 @@ func TestRunToolPatchStripsBOMFromStdinPatch(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		_ = os.Chdir(oldWD)
-		toolPatchFlags = struct {
+		toolplane.ToolPatchFlags = struct {
 			Target         string
 			ID             string
 			PatchJSON      string
@@ -3019,14 +3020,14 @@ func TestRunToolPatchStripsBOMFromStdinPatch(t *testing.T) {
 		}{}
 	})
 
-	toolPatchFlags.Target = "character"
-	toolPatchFlags.ID = "Lin"
+	toolplane.ToolPatchFlags.Target = "character"
+	toolplane.ToolPatchFlags.ID = "Lin"
 	cmd := &cobra.Command{}
 	var out strings.Builder
 	cmd.SetOut(&out)
 	cmd.SetIn(strings.NewReader(string([]byte{0xEF, 0xBB, 0xBF}) + `{"notes":"stdin patch"}`))
 
-	if err := runToolPatch(cmd, []string{"craft"}); err != nil {
+	if err := toolplane.RunToolPatch(cmd, []string{"craft"}); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), `"dry_run": true`) || !strings.Contains(out.String(), "craft.character.Lin.notes") {
@@ -3053,11 +3054,11 @@ func TestRunToolCraftSchemaCheckValidatesSavedCharacter(t *testing.T) {
 			},
 		},
 	}
-	if err := saveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
+	if err := toolplane.SaveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
 		t.Fatal(err)
 	}
 
-	result, err := runToolCraftSchemaCheck(root, "character", "Lin")
+	result, err := toolplane.RunToolCraftSchemaCheck(root, "character", "Lin")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3081,11 +3082,11 @@ func TestRunToolCraftSchemaCheckReportsInvalidSavedCharacter(t *testing.T) {
 			},
 		},
 	}
-	if err := saveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
+	if err := toolplane.SaveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
 		t.Fatal(err)
 	}
 
-	result, err := runToolCraftSchemaCheck(root, "character", "Lin")
+	result, err := toolplane.RunToolCraftSchemaCheck(root, "character", "Lin")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3101,7 +3102,7 @@ func TestApplyCraftElementPatchRejectsSchemaMismatch(t *testing.T) {
 	values := map[string]map[string]interface{}{
 		"Lin": {"name": "Lin", "role_in_story": "protagonist"},
 	}
-	_, _, _, err := applyCraftElementPatch(values, "character", "Lin", []byte(`{"personality":"should be array"}`))
+	_, _, _, err := toolplane.ApplyCraftElementPatch(values, "character", "Lin", []byte(`{"personality":"should be array"}`))
 	if err == nil || !strings.Contains(err.Error(), "schema") {
 		t.Fatalf("expected schema mismatch, got %v", err)
 	}
@@ -3153,7 +3154,7 @@ func validToolPatchTestOutline() *models.Outline {
 	}}}
 }
 
-func hasPatchChange(changes []toolPatchChange, path string) bool {
+func hasPatchChange(changes []toolplane.ToolPatchChange, path string) bool {
 	for _, change := range changes {
 		if change.Path == path {
 			return true

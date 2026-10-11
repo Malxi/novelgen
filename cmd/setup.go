@@ -17,6 +17,7 @@ import (
 	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/toolplane"
 	"novelgen/internal/utils"
 
 	"github.com/spf13/cobra"
@@ -263,7 +264,7 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to regenerate story setup with Agent SDK: %w", err)
 		}
 		if !setupAgentApply && changed {
-			if _, err := saveToolSetupPatchCheckpoint(".", *existingSetup); err != nil {
+			if _, err := toolplane.SaveToolSetupPatchCheckpoint(".", *existingSetup); err != nil {
 				return fmt.Errorf("failed to checkpoint original story setup: %w", err)
 			}
 			if err := saveStorySetup(improved); err != nil {
@@ -361,7 +362,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 	}
 
 	if setupAgentSDK {
-		originalSetup := cloneStorySetup(setup)
+		originalSetup := toolplane.CloneStorySetup(setup)
 		improved, review, changed, err := runSetupImproveAgentSDK(cmd.Context(), agent, setup, setupPath, setupMaxRounds, setupImprovePrompt, setupForceImprove, setupAgentApply)
 		if err != nil {
 			logger.Error("Failed to improve story setup with Agent SDK: %v", err)
@@ -369,7 +370,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 		}
 		setup = improved
 		if !setupAgentApply && changed {
-			if _, err := saveToolSetupPatchCheckpoint(".", originalSetup); err != nil {
+			if _, err := toolplane.SaveToolSetupPatchCheckpoint(".", originalSetup); err != nil {
 				return fmt.Errorf("failed to checkpoint original story setup: %w", err)
 			}
 			if err := saveStorySetup(setup); err != nil {
@@ -582,13 +583,13 @@ func runSetupImproveAgentSDK(ctx context.Context, agent *agents.SetupAgent, setu
 		logger.Info("Agent apply enabled: SDK may write setup patches through validated tool apply")
 	}
 
-	current := cloneStorySetup(setup)
-	original := cloneStorySetup(setup)
+	current := toolplane.CloneStorySetup(setup)
+	original := toolplane.CloneStorySetup(setup)
 	changed := false
 	var finalReview *models.ReviewResult
 
 	for round := 1; round <= maxRounds; round++ {
-		check, err := runToolSetupCheck("all", &current)
+		check, err := toolplane.RunToolSetupCheck("all", &current)
 		if err != nil {
 			return &current, finalReview, changed, err
 		}
@@ -654,7 +655,7 @@ func runSetupImproveAgentSDK(ctx context.Context, agent *agents.SetupAgent, setu
 	return &current, finalReview, changed, nil
 }
 
-func setupToolCheckReview(summary string, check *toolCheckResult) models.ReviewResult {
+func setupToolCheckReview(summary string, check *toolplane.ToolCheckResult) models.ReviewResult {
 	if check == nil {
 		return models.ReviewResult{Summary: summary}
 	}
@@ -677,7 +678,7 @@ func hasSetupPatch(patch map[string]interface{}) bool {
 	return false
 }
 
-func applySetupAgentSDKPatch(setup *models.StorySetup, patch map[string]interface{}) (*models.StorySetup, *toolCheckResult, []toolPatchChange, error) {
+func applySetupAgentSDKPatch(setup *models.StorySetup, patch map[string]interface{}) (*models.StorySetup, *toolplane.ToolCheckResult, []toolplane.ToolPatchChange, error) {
 	if setup == nil {
 		return nil, nil, nil, fmt.Errorf("setup is nil")
 	}
@@ -688,11 +689,11 @@ func applySetupAgentSDKPatch(setup *models.StorySetup, patch map[string]interfac
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if err := validateToolPatchBytes(patchBytes); err != nil {
+	if err := toolplane.ValidateToolPatchBytes(patchBytes); err != nil {
 		return nil, nil, nil, fmt.Errorf("patch rejected: %w", err)
 	}
-	before := cloneStorySetup(setup)
-	merged, err := mergeJSONPatchObject(*setup, patchBytes)
+	before := toolplane.CloneStorySetup(setup)
+	merged, err := toolplane.MergeJSONPatchObject(*setup, patchBytes)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -700,11 +701,11 @@ func applySetupAgentSDKPatch(setup *models.StorySetup, patch map[string]interfac
 		return nil, nil, nil, fmt.Errorf("setup patch rejected: %w", err)
 	}
 	models.NormalizeStorySetup(&merged)
-	check, err := runToolSetupCheck("all", &merged)
+	check, err := toolplane.RunToolSetupCheck("all", &merged)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	changes := diffStructFields("setup", before, merged)
+	changes := toolplane.DiffStructFields("setup", before, merged)
 	return &merged, check, changes, nil
 }
 

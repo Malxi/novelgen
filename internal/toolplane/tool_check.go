@@ -1,4 +1,4 @@
-package cmd
+package toolplane
 
 import (
 	"encoding/json"
@@ -10,6 +10,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/utils"
 	"novelgen/internal/writersdl"
 	"os"
 	"path/filepath"
@@ -20,7 +21,7 @@ import (
 	"unicode"
 )
 
-var toolCheckFlags struct {
+var ToolCheckFlags struct {
 	Target      string
 	Scope       string
 	ID          string
@@ -30,7 +31,7 @@ var toolCheckFlags struct {
 	TargetWords int
 }
 
-var toolPatchFlags struct {
+var ToolPatchFlags struct {
 	Target         string
 	ID             string
 	PatchJSON      string
@@ -42,14 +43,14 @@ var toolPatchFlags struct {
 	TargetWords    int
 }
 
-var toolPatchBufferFlags struct {
+var ToolPatchBufferFlags struct {
 	ID       string
 	Text     string
 	Stdin    bool
 	MaxChars int
 }
 
-type toolCheckResult struct {
+type ToolCheckResult struct {
 	Kind     string                    `json:"kind"`
 	Target   string                    `json:"target"`
 	Scope    string                    `json:"scope"`
@@ -57,7 +58,7 @@ type toolCheckResult struct {
 	OK       bool                      `json:"ok"`
 	Blocking bool                      `json:"blocking"`
 	Score    float64                   `json:"score"`
-	Summary  toolCheckSummary          `json:"summary"`
+	Summary  ToolCheckSummary          `json:"summary"`
 	Issues   []models.ReviewSuggestion `json:"issues,omitempty"`
 	Meta     map[string]interface{}    `json:"meta,omitempty"`
 }
@@ -75,13 +76,13 @@ type toolCheckResultJSON struct {
 	OK          bool                   `json:"ok"`
 	Blocking    bool                   `json:"blocking"`
 	Score       float64                `json:"score"`
-	Summary     toolCheckSummary       `json:"summary"`
+	Summary     ToolCheckSummary       `json:"summary"`
 	Issues      []toolCheckIssue       `json:"issues,omitempty"`
-	NextActions []toolNextAction       `json:"next_actions,omitempty"`
+	NextActions []ToolNextAction       `json:"next_actions,omitempty"`
 	Meta        map[string]interface{} `json:"meta,omitempty"`
 }
 
-type toolCheckSummary struct {
+type ToolCheckSummary struct {
 	Total    int `json:"total"`
 	Critical int `json:"critical"`
 	High     int `json:"high"`
@@ -89,26 +90,26 @@ type toolCheckSummary struct {
 	Low      int `json:"low"`
 }
 
-type toolPatchResult struct {
+type ToolPatchResult struct {
 	OK          bool                   `json:"ok"`
 	Applied     bool                   `json:"applied"`
 	DryRun      bool                   `json:"dry_run"`
 	Target      string                 `json:"target"`
 	ID          string                 `json:"id"`
-	Changed     []toolPatchChange      `json:"changed,omitempty"`
-	Check       *toolCheckResult       `json:"check,omitempty"`
+	Changed     []ToolPatchChange      `json:"changed,omitempty"`
+	Check       *ToolCheckResult       `json:"check,omitempty"`
 	Files       map[string]string      `json:"files,omitempty"`
 	Warnings    []string               `json:"warnings,omitempty"`
-	NextActions []toolNextAction       `json:"next_actions,omitempty"`
+	NextActions []ToolNextAction       `json:"next_actions,omitempty"`
 	Meta        map[string]interface{} `json:"meta,omitempty"`
 }
 
-type toolPatchChange struct {
+type ToolPatchChange struct {
 	Path   string `json:"path"`
 	Action string `json:"action"`
 }
 
-func (r toolCheckResult) MarshalJSON() ([]byte, error) {
+func (r ToolCheckResult) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toolCheckResultJSON{
 		Kind:        r.Kind,
 		Target:      r.Target,
@@ -124,7 +125,7 @@ func (r toolCheckResult) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func toolCheckMetaForJSON(result toolCheckResult) map[string]interface{} {
+func toolCheckMetaForJSON(result ToolCheckResult) map[string]interface{} {
 	meta := map[string]interface{}{}
 	for key, value := range result.Meta {
 		meta[key] = value
@@ -140,16 +141,16 @@ func toolCheckMetaForJSON(result toolCheckResult) map[string]interface{} {
 	return meta
 }
 
-func toolCheckNextActions(result toolCheckResult) []toolNextAction {
+func toolCheckNextActions(result ToolCheckResult) []ToolNextAction {
 	if len(result.Issues) == 0 {
-		return []toolNextAction{{
+		return []ToolNextAction{{
 			Step:    1,
 			Action:  "return_final_json",
 			Purpose: "No returned issues match the current check filters; stop tool exploration and return the workflow JSON.",
 		}}
 	}
 	selectedIssue, nav, selectedIndex, selectedPatchable := toolCheckPreferredIssueNavigation(result)
-	firstAction := toolNextAction{
+	firstAction := ToolNextAction{
 		Step:    1,
 		Action:  "inspect_first_returned_issue_route",
 		Purpose: "Use the first returned issue navigation before querying broader context; patch only when navigation includes a validated patch_shape.",
@@ -162,52 +163,52 @@ func toolCheckNextActions(result toolCheckResult) []toolNextAction {
 		firstAction.Purpose = fmt.Sprintf("Use issue #%d because it is the highest-priority routed issue; inspect it without assuming a patch is available.", selectedIndex+1)
 	}
 	if strings.TrimSpace(selectedIssue.Category) != "" {
-		firstAction.When = "Selected category: " + normalizeKey(selectedIssue.Category)
+		firstAction.When = "Selected category: " + NormalizeKey(selectedIssue.Category)
 	}
-	actions := []toolNextAction{{
+	actions := []ToolNextAction{{
 		Step:    firstAction.Step,
 		Action:  firstAction.Action,
 		Purpose: firstAction.Purpose,
 		When:    firstAction.When,
 	}}
-	if refreshCommand := stringMapValue(nav, "refresh_query"); refreshCommand != "" {
+	if refreshCommand := StringMapValue(nav, "refresh_query"); refreshCommand != "" {
 		actions[0].Action = "refresh_derived_dsl_first"
 		actions[0].Purpose = "Refresh derived chapter RPG DSL before querying repair context or patching prose; stale/missing DSL can be a cache problem."
-		actions = append(actions, toolNextAction{
+		actions = append(actions, ToolNextAction{
 			Step:    len(actions) + 1,
 			Action:  "refresh_derived_dsl",
 			Command: refreshCommand,
 			Purpose: "Regenerate the selected chapter's derived RPG DSL from saved prose.",
 		})
-		postRefreshCommand := stringMapValue(nav, "post_refresh_check_query")
+		postRefreshCommand := StringMapValue(nav, "post_refresh_check_query")
 		if postRefreshCommand == "" {
-			postRefreshCommand = stringMapValue(nav, "focused_check_query")
+			postRefreshCommand = StringMapValue(nav, "focused_check_query")
 		}
 		if postRefreshCommand != "" {
-			actions = append(actions, toolNextAction{
+			actions = append(actions, ToolNextAction{
 				Step:    len(actions) + 1,
 				Action:  "post_refresh_check",
 				Command: postRefreshCommand,
 				Purpose: "Rerun the focused simulation check after refresh; repair prose only if this check still returns issues.",
 			})
 		}
-		actions = append(actions, toolNextAction{
+		actions = append(actions, ToolNextAction{
 			Step:    len(actions) + 1,
 			Action:  "return_final_json",
 			Purpose: "If the post-refresh check is clean, report that refresh resolved the issue; otherwise continue from the returned check.issues navigation.",
 		})
 		return actions
 	}
-	if command := stringMapValue(nav, "repair_route_query"); command != "" {
-		actions = append(actions, toolNextAction{
+	if command := StringMapValue(nav, "repair_route_query"); command != "" {
+		actions = append(actions, ToolNextAction{
 			Step:    len(actions) + 1,
 			Action:  "query_repair_route",
 			Command: command,
 			Purpose: "Fetch the smallest route map for the failing target.",
 		})
 	}
-	if command := stringMapValue(nav, "repair_context_query"); command != "" {
-		actions = append(actions, toolNextAction{
+	if command := StringMapValue(nav, "repair_context_query"); command != "" {
+		actions = append(actions, ToolNextAction{
 			Step:    len(actions) + 1,
 			Action:  "query_repair_context_if_needed",
 			Command: command,
@@ -215,8 +216,8 @@ func toolCheckNextActions(result toolCheckResult) []toolNextAction {
 			When:    "The route/check summary says target facts, event facts, or excerpts are needed.",
 		})
 	}
-	if command := stringMapValue(nav, "patch_query"); command != "" && selectedPatchable {
-		actions = append(actions, toolNextAction{
+	if command := StringMapValue(nav, "patch_query"); command != "" && selectedPatchable {
+		actions = append(actions, ToolNextAction{
 			Step:    len(actions) + 1,
 			Action:  "patch_dry_run",
 			Command: command,
@@ -224,8 +225,8 @@ func toolCheckNextActions(result toolCheckResult) []toolNextAction {
 			When:    "A concrete patch is ready.",
 		})
 	}
-	if command := stringMapValue(nav, "focused_check_query"); command != "" {
-		actions = append(actions, toolNextAction{
+	if command := StringMapValue(nav, "focused_check_query"); command != "" {
+		actions = append(actions, ToolNextAction{
 			Step:    len(actions) + 1,
 			Action:  "focused_recheck",
 			Command: command,
@@ -233,8 +234,8 @@ func toolCheckNextActions(result toolCheckResult) []toolNextAction {
 			When:    "After a patch dry-run/apply or when confirming whether the issue still exists.",
 		})
 	}
-	if !selectedPatchable && stringMapValue(nav, "classification_rule") != "" {
-		actions = append(actions, toolNextAction{
+	if !selectedPatchable && StringMapValue(nav, "classification_rule") != "" {
+		actions = append(actions, ToolNextAction{
 			Step:    len(actions) + 1,
 			Action:  "return_final_json",
 			Purpose: "This global route has no validated patch shape. Report it as remaining/unpatchable or recommend a smaller targeted workflow instead of fetching broader context.",
@@ -243,10 +244,10 @@ func toolCheckNextActions(result toolCheckResult) []toolNextAction {
 	return actions
 }
 
-func toolCheckPreferredIssueNavigation(result toolCheckResult) (models.ReviewSuggestion, map[string]interface{}, int, bool) {
-	targetWords := toolCheckResultTargetWords(result)
+func toolCheckPreferredIssueNavigation(result ToolCheckResult) (models.ReviewSuggestion, map[string]interface{}, int, bool) {
+	targetWords := ToolCheckResultTargetWords(result)
 	bestIssue := result.Issues[0]
-	bestNav := toolIssueNavigation(result.Kind, result.Target, result.Scope, result.ID, bestIssue, targetWords)
+	bestNav := ToolIssueNavigation(result.Kind, result.Target, result.Scope, result.ID, bestIssue, targetWords)
 	bestIndex := 0
 	bestPatchPriority := -1
 	foundPatch := false
@@ -265,7 +266,7 @@ func toolCheckPreferredIssueNavigation(result toolCheckResult) (models.ReviewSug
 	routableIndex := 0
 	for i := 1; i < len(result.Issues); i++ {
 		issue := result.Issues[i]
-		nav := toolIssueNavigation(result.Kind, result.Target, result.Scope, result.ID, issue, targetWords)
+		nav := ToolIssueNavigation(result.Kind, result.Target, result.Scope, result.ID, issue, targetWords)
 		priority := toolCheckIssuePriorityScore(issue.Priority)
 		if toolCheckNavigationIsPatchable(nav) {
 			if !foundPatch || priority > bestPatchPriority {
@@ -295,15 +296,15 @@ func toolCheckPreferredIssueNavigation(result toolCheckResult) (models.ReviewSug
 }
 
 func toolCheckNavigationIsPatchable(nav map[string]interface{}) bool {
-	return stringMapValue(nav, "patch_query") != "" && nav["patch_shape"] != nil
+	return StringMapValue(nav, "patch_query") != "" && nav["patch_shape"] != nil
 }
 
 func toolCheckNavigationIsRoutable(nav map[string]interface{}) bool {
-	return stringMapValue(nav, "repair_route_query") != "" || stringMapValue(nav, "focused_check_query") != ""
+	return StringMapValue(nav, "repair_route_query") != "" || StringMapValue(nav, "focused_check_query") != ""
 }
 
 func toolCheckIssuePriorityScore(priority string) int {
-	switch normalizeKey(priority) {
+	switch NormalizeKey(priority) {
 	case models.PriorityCritical, "fatal", "blocker", "serious":
 		return 4
 	case models.PriorityHigh:
@@ -317,7 +318,7 @@ func toolCheckIssuePriorityScore(priority string) int {
 	}
 }
 
-func toolCheckResultTargetWords(result toolCheckResult) int {
+func ToolCheckResultTargetWords(result ToolCheckResult) int {
 	if result.Meta == nil {
 		return 0
 	}
@@ -340,29 +341,29 @@ func toolCheckResultTargetWords(result toolCheckResult) int {
 	}
 }
 
-func toolCheckIssuesForJSON(result toolCheckResult) []toolCheckIssue {
+func toolCheckIssuesForJSON(result ToolCheckResult) []toolCheckIssue {
 	if len(result.Issues) == 0 {
 		return nil
 	}
 	issues := make([]toolCheckIssue, 0, len(result.Issues))
-	targetWords := toolCheckResultTargetWords(result)
+	targetWords := ToolCheckResultTargetWords(result)
 	for _, issue := range result.Issues {
 		issues = append(issues, toolCheckIssue{
 			ReviewSuggestion: issue,
-			Navigation:       toolIssueNavigation(result.Kind, result.Target, result.Scope, result.ID, issue, targetWords),
+			Navigation:       ToolIssueNavigation(result.Kind, result.Target, result.Scope, result.ID, issue, targetWords),
 		})
 	}
 	return issues
 }
 
-func toolIssueNavigation(kind, target, scope, checkID string, issue models.ReviewSuggestion, targetWords int) map[string]interface{} {
-	kind = normalizeKey(kind)
-	target = normalizeKey(target)
+func ToolIssueNavigation(kind, target, scope, checkID string, issue models.ReviewSuggestion, targetWords int) map[string]interface{} {
+	kind = NormalizeKey(kind)
+	target = NormalizeKey(target)
 	scope = normalizeToolScope(scope)
 	checkID = strings.TrimSpace(checkID)
 	targetID := strings.TrimSpace(issue.TargetID)
 	targetName := strings.TrimSpace(issue.TargetName)
-	category := normalizeKey(issue.Category)
+	category := NormalizeKey(issue.Category)
 	navigation := map[string]interface{}{}
 	if targetID == "" || strings.EqualFold(targetID, "global") {
 		return toolGlobalIssueNavigation(kind, target, scope, checkID, category)
@@ -370,7 +371,7 @@ func toolIssueNavigation(kind, target, scope, checkID string, issue models.Revie
 
 	switch target {
 	case "outline":
-		if volumeID, ok := toolVolumeIDFromChapterID(targetID); ok {
+		if volumeID, ok := ToolVolumeIDFromChapterID(targetID); ok {
 			navigation["target_kind"] = "chapter"
 			navigation["volume_id"] = volumeID
 			navigation["detail_queries"] = []string{
@@ -384,7 +385,7 @@ func toolIssueNavigation(kind, target, scope, checkID string, issue models.Revie
 			navigation["patch_shape"] = toolOutlineChapterPatchShape(targetID, issue)
 			return navigation
 		}
-		if toolLooksLikeVolumeID(targetID) {
+		if ToolLooksLikeVolumeID(targetID) {
 			navigation["target_kind"] = "volume"
 			navigation["detail_queries"] = []string{
 				fmt.Sprintf("novelgen tool query context --type outline-volume --id %q --view brief", targetID),
@@ -471,7 +472,7 @@ func toolIssueNavigation(kind, target, scope, checkID string, issue models.Revie
 			fmt.Sprintf("novelgen tool query context --type chapter-write --id %q --view brief", targetID),
 			fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", targetID),
 		}
-		chapterCategory := chapterRepairIssueCategoryFilter(category)
+		chapterCategory := ChapterRepairIssueCategoryFilter(category)
 		simulationQuery := fmt.Sprintf("novelgen tool check simulation --target chapter --scope chapter --id %q --category %s --min-priority low --max-issues 8", targetID, chapterCategory)
 		checkTargetWords := toolTargetWordsFlagSuffix(targetWords)
 		switch kind {
@@ -526,7 +527,7 @@ func toolOutlineChapterPatchShape(targetID string, issue models.ReviewSuggestion
 }
 
 func toolOutlineChapterIssueNeedsOpeningBeat(issue models.ReviewSuggestion) bool {
-	category := normalizeKey(issue.Category)
+	category := NormalizeKey(issue.Category)
 	text := strings.Join([]string{issue.Issue, issue.Suggestion}, " ")
 	return category == "transition" ||
 		strings.Contains(text, "章节开场") ||
@@ -616,7 +617,7 @@ func toolSetupIssueRouteParts(targetID, targetName, category string) (string, st
 				"impact": "<current-world impact>",
 			}},
 		}
-	case normalizeKey(targetID) == "core_cast":
+	case NormalizeKey(targetID) == "core_cast":
 		return "setup.core_cast", "search", "core_cast", map[string]interface{}{
 			"core_cast": []map[string]interface{}{{
 				"name":           "<protagonist or major character>",
@@ -627,7 +628,7 @@ func toolSetupIssueRouteParts(targetID, targetName, category string) (string, st
 				"payoff":         "<promised payoff>",
 			}},
 		}
-	case normalizeKey(targetID) == "long_form_plan":
+	case NormalizeKey(targetID) == "long_form_plan":
 		return "setup.long_form_plan", "long-form-plan", "long_form_plan", map[string]interface{}{
 			"long_form_plan": map[string]interface{}{
 				"target_chapters":   300,
@@ -650,7 +651,7 @@ func toolSetupIndexedTargetBase(targetID string) (string, bool) {
 	if open <= 0 || !strings.HasSuffix(targetID, "]") {
 		return "", false
 	}
-	return normalizeKey(targetID[:open]), true
+	return NormalizeKey(targetID[:open]), true
 }
 
 func toolSetupIndexedTargetIndex(targetID string) (int, bool) {
@@ -724,7 +725,7 @@ func toolSetupAppealEnginePatchShape() map[string]string {
 
 func toolOutlineNamedGlobalIssueNavigation(kind, scope, checkID, targetID, category string) map[string]interface{} {
 	targetID = strings.TrimSpace(targetID)
-	category = normalizeKey(category)
+	category = NormalizeKey(category)
 	if targetID == "" {
 		return nil
 	}
@@ -772,7 +773,7 @@ func toolGlobalIssueNavigation(kind, target, scope, checkID, category string) ma
 			navigation["patch_query"] = fmt.Sprintf("novelgen tool patch outline --target volume --id %q", checkID)
 			navigation["patch_shape"] = map[string]interface{}{"changed_chapters": []map[string]string{{"id": "<chapter_id>"}}}
 		} else if scope == "chapter" && checkID != "" {
-			volumeID, _ := toolVolumeIDFromChapterID(checkID)
+			volumeID, _ := ToolVolumeIDFromChapterID(checkID)
 			queries = append(queries,
 				fmt.Sprintf("novelgen tool query context --type outline-repair --id %q --name %q --view index", checkID, category),
 				fmt.Sprintf("novelgen tool query context --type outline-repair --id %q --name %q --view brief", checkID, category),
@@ -870,7 +871,7 @@ func categoryOrAll(category string) string {
 	return category
 }
 
-func toolVolumeIDFromChapterID(id string) (string, bool) {
+func ToolVolumeIDFromChapterID(id string) (string, bool) {
 	id = strings.TrimSpace(id)
 	idx := strings.LastIndex(strings.ToUpper(id), "-C")
 	if idx <= 0 {
@@ -879,12 +880,12 @@ func toolVolumeIDFromChapterID(id string) (string, bool) {
 	return id[:idx], true
 }
 
-func toolLooksLikeVolumeID(id string) bool {
+func ToolLooksLikeVolumeID(id string) bool {
 	id = strings.ToUpper(strings.TrimSpace(id))
 	return strings.Contains(id, "-V") && !strings.Contains(id, "-C")
 }
 
-var toolCheckCmd = &cobra.Command{
+var ToolCheckCmd = &cobra.Command{
 	Use:   "check [quality|simulation|all|schema]",
 	Short: "Run scoped checks as JSON for agents",
 	Long: `Run scoped checks as JSON for agents.
@@ -901,7 +902,7 @@ schema validates typed craft objects and saved recap JSON already in project sta
 	RunE: runToolCheck,
 }
 
-var toolPatchCmd = &cobra.Command{
+var ToolPatchCmd = &cobra.Command{
 	Use:   "patch [outline|craft|setup|recap|chapter]",
 	Short: "Apply a validated JSON patch to project state",
 	Long: `Apply a validated JSON patch to project state.
@@ -913,13 +914,13 @@ Setup patches do not require --id; outline, craft, and recap patches patch a
 specific target object. Chapter patches update saved final chapter markdown with
 {"content":"..."} and run deterministic chapter checks.`,
 	Args: cobra.ExactArgs(1),
-	RunE: runToolPatch,
+	RunE: RunToolPatch,
 }
 
 func runToolCheck(cmd *cobra.Command, args []string) error {
 	kind := "all"
 	if len(args) > 0 {
-		kind = normalizeKey(args[0])
+		kind = NormalizeKey(args[0])
 	}
 	if kind == "" {
 		kind = "all"
@@ -927,7 +928,7 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 	if kind != "quality" && kind != "simulation" && kind != "all" && kind != "schema" {
 		return fmt.Errorf("unsupported check kind %q", kind)
 	}
-	target := normalizeKey(toolCheckFlags.Target)
+	target := NormalizeKey(ToolCheckFlags.Target)
 	if target == "" {
 		target = "outline"
 	}
@@ -947,60 +948,60 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("chapter checks currently support only kind quality, simulation, or all")
 	}
 
-	root, err := findProjectRoot()
+	root, err := project.FindRoot()
 	if err != nil {
 		return err
 	}
 	if target == "craft" {
-		result, err := runToolCraftSchemaCheck(root, toolCheckFlags.Scope, toolCheckFlags.ID)
+		result, err := RunToolCraftSchemaCheck(root, ToolCheckFlags.Scope, ToolCheckFlags.ID)
 		if err != nil {
 			return err
 		}
 		addToolCheckMeta(result, "project_root", root)
-		if err := applyToolCheckIssueFilters(result, toolCheckFlags.MinPriority, toolCheckFlags.Category, toolCheckFlags.MaxIssues); err != nil {
+		if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 			return err
 		}
 		return writeJSON(cmd, result)
 	}
 	if target == "recap" {
-		result, err := runToolRecapCheck(root, kind, toolCheckFlags.Scope, toolCheckFlags.ID)
+		result, err := RunToolRecapCheck(root, kind, ToolCheckFlags.Scope, ToolCheckFlags.ID)
 		if err != nil {
 			return err
 		}
 		addToolCheckMeta(result, "project_root", root)
-		if err := applyToolCheckIssueFilters(result, toolCheckFlags.MinPriority, toolCheckFlags.Category, toolCheckFlags.MaxIssues); err != nil {
+		if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 			return err
 		}
 		return writeJSON(cmd, result)
 	}
 	if target == "chapter" {
-		result, err := runToolChapterCheckWithTargetWords(root, kind, toolCheckFlags.Scope, toolCheckFlags.ID, toolCheckFlags.TargetWords)
+		result, err := RunToolChapterCheckWithTargetWords(root, kind, ToolCheckFlags.Scope, ToolCheckFlags.ID, ToolCheckFlags.TargetWords)
 		if err != nil {
 			return err
 		}
 		addToolCheckMeta(result, "project_root", root)
-		if err := applyToolCheckIssueFilters(result, toolCheckFlags.MinPriority, toolCheckFlags.Category, toolCheckFlags.MaxIssues); err != nil {
+		if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 			return err
 		}
 		return writeJSON(cmd, result)
 	}
 	if target == "setup" {
-		ctx := toolProjectContext{Root: root}
+		ctx := ToolProjectContext{Root: root}
 		if err := ctx.loadSetup(); err != nil {
 			return err
 		}
-		result, err := runToolSetupCheck(kind, ctx.Setup)
+		result, err := RunToolSetupCheck(kind, ctx.Setup)
 		if err != nil {
 			return err
 		}
 		addToolCheckMeta(result, "project_root", root)
-		if err := applyToolCheckIssueFilters(result, toolCheckFlags.MinPriority, toolCheckFlags.Category, toolCheckFlags.MaxIssues); err != nil {
+		if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 			return err
 		}
 		return writeJSON(cmd, result)
 	}
 
-	ctx := toolProjectContext{Root: root}
+	ctx := ToolProjectContext{Root: root}
 	if err := ctx.loadSetup(); err != nil {
 		return err
 	}
@@ -1008,22 +1009,22 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := runToolOutlineCheck(kind, ctx.Setup, ctx.Outline, toolCheckFlags.Scope, toolCheckFlags.ID)
+	result, err := RunToolOutlineCheck(kind, ctx.Setup, ctx.Outline, ToolCheckFlags.Scope, ToolCheckFlags.ID)
 	if err != nil {
 		return err
 	}
 	addToolCheckMeta(result, "project_root", root)
-	if err := applyToolCheckIssueFilters(result, toolCheckFlags.MinPriority, toolCheckFlags.Category, toolCheckFlags.MaxIssues); err != nil {
+	if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 		return err
 	}
 	return writeJSON(cmd, result)
 }
 
-func applyToolCheckIssueFilters(result *toolCheckResult, minPriority string, category string, maxIssues int) error {
+func ApplyToolCheckIssueFilters(result *ToolCheckResult, minPriority string, category string, maxIssues int) error {
 	if result == nil {
 		return nil
 	}
-	minPriority = normalizeKey(minPriority)
+	minPriority = NormalizeKey(minPriority)
 	categories := parseToolCheckCategories(category)
 	if minPriority == "" && len(categories) == 0 && maxIssues <= 0 {
 		return nil
@@ -1039,7 +1040,7 @@ func applyToolCheckIssueFilters(result *toolCheckResult, minPriority string, cat
 	original := len(result.Issues)
 	filtered := make([]models.ReviewSuggestion, 0, len(result.Issues))
 	for _, issue := range result.Issues {
-		if len(categories) > 0 && !categories[normalizeKey(issue.Category)] {
+		if len(categories) > 0 && !categories[NormalizeKey(issue.Category)] {
 			continue
 		}
 		if minRank > 0 {
@@ -1070,7 +1071,7 @@ func applyToolCheckIssueFilters(result *toolCheckResult, minPriority string, cat
 func parseToolCheckCategories(raw string) map[string]bool {
 	categories := map[string]bool{}
 	for _, item := range strings.Split(raw, ",") {
-		category := normalizeKey(item)
+		category := NormalizeKey(item)
 		if category == "" {
 			continue
 		}
@@ -1092,7 +1093,7 @@ func sortedToolCheckCategories(categories map[string]bool) []string {
 }
 
 func reviewPriorityRank(priority string) (int, bool) {
-	switch normalizeKey(priority) {
+	switch NormalizeKey(priority) {
 	case "low":
 		return 1, true
 	case "medium":
@@ -1116,7 +1117,7 @@ type toolChapterPatch struct {
 	Content string `json:"content"`
 }
 
-func runToolSetupCheck(kind string, setup *models.StorySetup) (*toolCheckResult, error) {
+func RunToolSetupCheck(kind string, setup *models.StorySetup) (*ToolCheckResult, error) {
 	var gate quality.QualityGateResult
 	switch kind {
 	case "quality":
@@ -1132,10 +1133,10 @@ func runToolSetupCheck(kind string, setup *models.StorySetup) (*toolCheckResult,
 	default:
 		return nil, fmt.Errorf("unsupported setup check kind %q", kind)
 	}
-	return makeToolCheckResult(kind, "setup", "all", "", gate), nil
+	return MakeToolCheckResult(kind, "setup", "all", "", gate), nil
 }
 
-func runToolOutlineCheck(kind string, setup *models.StorySetup, outline *models.Outline, scope, id string) (*toolCheckResult, error) {
+func RunToolOutlineCheck(kind string, setup *models.StorySetup, outline *models.Outline, scope, id string) (*ToolCheckResult, error) {
 	scope = normalizeToolScope(scope)
 	id = strings.TrimSpace(id)
 	if scope != "all" && id == "" {
@@ -1167,13 +1168,13 @@ func runToolOutlineCheck(kind string, setup *models.StorySetup, outline *models.
 		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	}
 	if scope != "all" {
-		gate.Suggestions = filterToolScopedSuggestions(gate.Suggestions, scoped, scope, id)
+		gate.Suggestions = FilterToolScopedSuggestions(gate.Suggestions, scoped, scope, id)
 		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	}
-	return makeToolCheckResult(kind, "outline", scope, id, gate), nil
+	return MakeToolCheckResult(kind, "outline", scope, id, gate), nil
 }
 
-func runToolCraftSchemaCheck(root, scope, id string) (*toolCheckResult, error) {
+func RunToolCraftSchemaCheck(root, scope, id string) (*ToolCheckResult, error) {
 	scope = normalizeCraftPatchTarget(scope)
 	if scope == "" {
 		return nil, fmt.Errorf("--scope is required for craft schema check (character/item/location/organization)")
@@ -1206,13 +1207,13 @@ func runToolCraftSchemaCheck(root, scope, id string) (*toolCheckResult, error) {
 				Priority:   models.PriorityHigh,
 			})
 			gate.Blocking = true
-			return makeToolCheckResult("schema", "craft", scope, id, gate), nil
+			return MakeToolCheckResult("schema", "craft", scope, id, gate), nil
 		}
 		validateCraftSchemaObject(&gate, scope, key, values[key])
 		validateCraftConsistencyObject(&gate, scope, key, values[key], knownCharacters)
 		validateCraftQualityObject(&gate, scope, key, values[key])
 		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
-		return makeToolCheckResult("schema", "craft", scope, key, gate), nil
+		return MakeToolCheckResult("schema", "craft", scope, key, gate), nil
 	}
 	for key, value := range values {
 		validateCraftSchemaObject(&gate, scope, key, value)
@@ -1220,11 +1221,11 @@ func runToolCraftSchemaCheck(root, scope, id string) (*toolCheckResult, error) {
 		validateCraftQualityObject(&gate, scope, key, value)
 	}
 	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
-	return makeToolCheckResult("schema", "craft", scope, "", gate), nil
+	return MakeToolCheckResult("schema", "craft", scope, "", gate), nil
 }
 
-func runToolRecapCheck(root, kind, scope, id string) (*toolCheckResult, error) {
-	kind = normalizeKey(kind)
+func RunToolRecapCheck(root, kind, scope, id string) (*ToolCheckResult, error) {
+	kind = NormalizeKey(kind)
 	if kind == "" {
 		kind = "all"
 	}
@@ -1255,7 +1256,7 @@ func runToolRecapCheck(root, kind, scope, id string) (*toolCheckResult, error) {
 			Priority:   models.PriorityHigh,
 		})
 		gate.Blocking = true
-		return makeToolCheckResult(kind, "recap", scope, id, gate), nil
+		return MakeToolCheckResult(kind, "recap", scope, id, gate), nil
 	}
 	var outlineChapter *models.Chapter
 	if outline, err := models.LoadOutline(filepath.Join(root, "story", "compose", "outline.json")); err == nil && outline != nil {
@@ -1264,20 +1265,20 @@ func runToolRecapCheck(root, kind, scope, id string) (*toolCheckResult, error) {
 	return runToolRecapCheckForValue(kind, scope, id, recapData, outlineChapter), nil
 }
 
-func runToolRecapCheckForValue(kind, scope, id string, recapData *models.ChapterRecap, outlineChapter *models.Chapter) *toolCheckResult {
+func runToolRecapCheckForValue(kind, scope, id string, recapData *models.ChapterRecap, outlineChapter *models.Chapter) *ToolCheckResult {
 	gate := quality.QualityGateResult{}
 	validateRecapForToolCheck(&gate, recapData, id, outlineChapter)
 	gate.Dedup()
 	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
-	return makeToolCheckResult(kind, "recap", scope, id, gate)
+	return MakeToolCheckResult(kind, "recap", scope, id, gate)
 }
 
-func runToolChapterCheck(root, kind, scope, id string) (*toolCheckResult, error) {
-	return runToolChapterCheckWithTargetWords(root, kind, scope, id, 0)
+func runToolChapterCheck(root, kind, scope, id string) (*ToolCheckResult, error) {
+	return RunToolChapterCheckWithTargetWords(root, kind, scope, id, 0)
 }
 
-func runToolChapterCheckWithTargetWords(root, kind, scope, id string, targetWordsOverride int) (*toolCheckResult, error) {
-	kind = normalizeKey(kind)
+func RunToolChapterCheckWithTargetWords(root, kind, scope, id string, targetWordsOverride int) (*ToolCheckResult, error) {
+	kind = NormalizeKey(kind)
 	if kind == "" {
 		kind = "quality"
 	}
@@ -1307,7 +1308,7 @@ func runToolChapterCheckWithTargetWords(root, kind, scope, id string, targetWord
 		return nil, fmt.Errorf("chapter %q not found in outline", id)
 	}
 
-	content := loadFinalChapterContent(chapter)
+	content := project.LoadFinalChapterContent(chapter)
 	targetWords := targetWordsOverride
 	if targetWords <= 0 {
 		targetWords = toolChapterTargetWords()
@@ -1315,24 +1316,24 @@ func runToolChapterCheckWithTargetWords(root, kind, scope, id string, targetWord
 	var gate quality.QualityGateResult
 	switch kind {
 	case "quality":
-		gate = runToolChapterQualityGate(chapter, content, targetWords)
+		gate = RunToolChapterQualityGate(chapter, content, targetWords)
 	case "simulation":
-		gate = runToolChapterSimulationGate(root, id)
+		gate = RunToolChapterSimulationGate(root, id)
 	case "all":
-		gate = runToolChapterQualityGate(chapter, content, targetWords)
-		sim := runToolChapterSimulationGate(root, id)
+		gate = RunToolChapterQualityGate(chapter, content, targetWords)
+		sim := RunToolChapterSimulationGate(root, id)
 		gate.Add(sim.Suggestions...)
 		gate.Dedup()
 		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	}
-	result := makeToolCheckResult(kind, "chapter", scope, id, gate)
+	result := MakeToolCheckResult(kind, "chapter", scope, id, gate)
 	if targetWords > 0 {
 		addToolCheckMeta(result, "target_words", targetWords)
 	}
 	return result, nil
 }
 
-func runToolChapterQualityGate(chapter *models.Chapter, content string, targetWords int) (gate quality.QualityGateResult) {
+func RunToolChapterQualityGate(chapter *models.Chapter, content string, targetWords int) (gate quality.QualityGateResult) {
 	defer func() {
 		gate.Dedup()
 		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
@@ -1378,7 +1379,7 @@ func runToolChapterQualityGate(chapter *models.Chapter, content string, targetWo
 		gate.Add(quality.QualitySuggestion("prose", chapterID, targetName, fmt.Sprintf("final chapter body contains suspicious typo artifact: %s", artifact), "Fix the suspicious typo while preserving the surrounding prose and chapter events.", models.PriorityMedium))
 	}
 
-	count := toolNarrativeUnitCount(body)
+	count := ToolNarrativeUnitCount(body)
 	paragraphs := toolChapterParagraphCount(body)
 	if count >= 600 && paragraphs < 3 {
 		gate.Add(quality.QualitySuggestion("structure", chapterID, targetName, fmt.Sprintf("final chapter has too few prose paragraphs: got %d paragraphs for %d narrative units", paragraphs, count), "Split the chapter into mobile-readable prose and dialogue paragraphs while preserving the same events.", models.PriorityMedium))
@@ -1510,14 +1511,14 @@ func normalizedChapterTitleText(value string) string {
 }
 
 func toolChapterTargetWords() int {
-	cfg, err := loadProjectConfig()
+	cfg, err := project.LoadConfig()
 	if err == nil && cfg.ChapterConfig.TargetWordsPerChapter > 0 {
 		return cfg.ChapterConfig.TargetWordsPerChapter
 	}
 	return 2000
 }
 
-func toolNarrativeUnitCount(content string) int {
+func ToolNarrativeUnitCount(content string) int {
 	return project.NarrativeUnitCount(content)
 }
 
@@ -1533,7 +1534,7 @@ func toolChapterParagraphCount(content string) int {
 	return count
 }
 
-func runToolChapterSimulationGate(root, chapterID string) quality.QualityGateResult {
+func RunToolChapterSimulationGate(root, chapterID string) quality.QualityGateResult {
 	var gate quality.QualityGateResult
 	if stale, info := toolChapterRPGDSLStale(root, chapterID); stale {
 		gate.Add(quality.QualitySuggestion(
@@ -1563,7 +1564,7 @@ func runToolChapterSimulationGate(root, chapterID string) quality.QualityGateRes
 	simulator := rpgdsl.NewSimulator(dslData)
 	issues := simulator.SimulateChapter(chapterID)
 	gate.Add(rpgdsl.NewSimulationBridge().ConvertIssuesToSuggestions(issues)...)
-	if diagnostic := buildChapterSimulationSignalDiagnostic(chapterID, dslData, issues); diagnostic != nil {
+	if diagnostic := BuildChapterSimulationSignalDiagnostic(chapterID, dslData, issues); diagnostic != nil {
 		gate.Add(*diagnostic)
 	}
 	gate.Dedup()
@@ -1585,7 +1586,7 @@ type chapterSimulationSignalDiagnostics struct {
 	MissingRepairSignals []string
 }
 
-func buildChapterSimulationSignalDiagnostic(chapterID string, dslData *rpgdsl.DSL, issues []rpgdsl.SimulationIssue) *models.ReviewSuggestion {
+func BuildChapterSimulationSignalDiagnostic(chapterID string, dslData *rpgdsl.DSL, issues []rpgdsl.SimulationIssue) *models.ReviewSuggestion {
 	if !chapterSimulationNeedsSignalDiagnostic(chapterID, issues) {
 		return nil
 	}
@@ -1778,7 +1779,7 @@ func toolChapterRPGDSLStale(root, chapterID string) (bool, toolChapterRPGDSLStal
 	}
 	chapterStat, err := os.Stat(info.ChapterPath)
 	if err != nil {
-		fallback := filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", extractChapterNumber(chapterID)))
+		fallback := filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", utils.ExtractChapterNumber(chapterID)))
 		chapterStat, err = os.Stat(fallback)
 		if err != nil {
 			return false, info
@@ -1865,11 +1866,11 @@ func loadToolRPGDSLFragments(root string) ([]*rpgdsl.DSLFragment, error) {
 }
 
 func normalizeRecapCheckScope(scope string) string {
-	switch normalizeKey(scope) {
+	switch NormalizeKey(scope) {
 	case "", "chapter", "chap":
 		return "chapter"
 	default:
-		return normalizeKey(scope)
+		return NormalizeKey(scope)
 	}
 }
 
@@ -1958,7 +1959,7 @@ func validateCraftSchemaObject(gate *quality.QualityGateResult, scope, key strin
 	if gate == nil {
 		return
 	}
-	if _, err := normalizeCraftPatchObject(scope, key, copyStringInterfaceMap(value)); err != nil {
+	if _, err := NormalizeCraftPatchObject(scope, key, copyStringInterfaceMap(value)); err != nil {
 		gate.Suggestions = append(gate.Suggestions, models.ReviewSuggestion{
 			Category:   "schema",
 			TargetID:   key,
@@ -1978,7 +1979,7 @@ func loadCraftCharacterNames(root string) map[string]bool {
 	}
 	for key, value := range values {
 		addCraftKnownName(names, key)
-		addCraftKnownName(names, stringMapValue(value, "name"))
+		addCraftKnownName(names, StringMapValue(value, "name"))
 	}
 	return names
 }
@@ -1987,7 +1988,7 @@ func validateCraftConsistencyObject(gate *quality.QualityGateResult, scope, key 
 	if gate == nil || normalizeCraftPatchTarget(scope) != "item" || len(knownCharacters) == 0 {
 		return
 	}
-	owner := strings.TrimSpace(stringMapValue(value, "owner"))
+	owner := strings.TrimSpace(StringMapValue(value, "owner"))
 	if owner == "" || isGenericCraftOwner(owner) || knownCharacters[normalizeCraftLookupName(owner)] {
 		return
 	}
@@ -2009,9 +2010,9 @@ func validateCraftQualityObject(gate *quality.QualityGateResult, scope, key stri
 	personalityCount := craftStringListCount(value["personality"])
 	skillsCount := craftStringListCount(value["skills"])
 	abilitiesCount := craftStringListCount(value["abilities"])
-	motivation := stringMapValue(value, "motivation")
-	voice := stringMapValue(value, "voice")
-	notes := stringMapValue(value, "notes")
+	motivation := StringMapValue(value, "motivation")
+	voice := StringMapValue(value, "voice")
+	notes := StringMapValue(value, "notes")
 	notesLen := len([]rune(notes))
 
 	if isLead {
@@ -2078,8 +2079,8 @@ func validateCraftQualityObject(gate *quality.QualityGateResult, scope, key stri
 }
 
 func isLeadCraftCharacter(value map[string]interface{}) bool {
-	role := strings.ToLower(stringMapValue(value, "role_in_story"))
-	rpgRole := strings.ToLower(stringMapValue(value, "rpg_role"))
+	role := strings.ToLower(StringMapValue(value, "role_in_story"))
+	rpgRole := strings.ToLower(StringMapValue(value, "rpg_role"))
 	if strings.Contains(role, "protagonist") || strings.Contains(role, "lead") || strings.Contains(role, "主角") || rpgRole == "player" {
 		return true
 	}
@@ -2127,7 +2128,7 @@ func addCraftKnownName(names map[string]bool, name string) {
 	}
 }
 
-func stringMapValue(value map[string]interface{}, key string) string {
+func StringMapValue(value map[string]interface{}, key string) string {
 	if value == nil {
 		return ""
 	}
@@ -2151,7 +2152,7 @@ func isGenericCraftOwner(owner string) bool {
 	}
 }
 
-func filterToolScopedSuggestions(suggestions []models.ReviewSuggestion, outline *models.Outline, scope, id string) []models.ReviewSuggestion {
+func FilterToolScopedSuggestions(suggestions []models.ReviewSuggestion, outline *models.Outline, scope, id string) []models.ReviewSuggestion {
 	if len(suggestions) == 0 {
 		return nil
 	}
@@ -2202,9 +2203,9 @@ func toolScopedTargetIDs(outline *models.Outline, scope, id string) map[string]b
 	return allowed
 }
 
-func makeToolCheckResult(kind, target, scope, id string, gate quality.QualityGateResult) *toolCheckResult {
+func MakeToolCheckResult(kind, target, scope, id string, gate quality.QualityGateResult) *ToolCheckResult {
 	critical, high, medium, low := quality.CountSuggestionPriorities(gate.Suggestions)
-	return &toolCheckResult{
+	return &ToolCheckResult{
 		Kind:     kind,
 		Target:   target,
 		Scope:    scope,
@@ -2212,7 +2213,7 @@ func makeToolCheckResult(kind, target, scope, id string, gate quality.QualityGat
 		OK:       !gate.Blocking,
 		Blocking: gate.Blocking,
 		Score:    quality.ScoreFromGate(gate),
-		Summary: toolCheckSummary{
+		Summary: ToolCheckSummary{
 			Total:    len(gate.Suggestions),
 			Critical: critical,
 			High:     high,
@@ -2225,8 +2226,8 @@ func makeToolCheckResult(kind, target, scope, id string, gate quality.QualityGat
 }
 
 func toolCheckCoverageMeta(kind, target, scope string) map[string]interface{} {
-	kind = normalizeKey(kind)
-	target = normalizeKey(target)
+	kind = NormalizeKey(kind)
+	target = NormalizeKey(target)
 	scope = normalizeToolScope(scope)
 	meta := map[string]interface{}{
 		"coverage": map[string]interface{}{
@@ -2270,7 +2271,7 @@ func toolCheckCoverageMeta(kind, target, scope string) map[string]interface{} {
 	return meta
 }
 
-func addToolCheckMeta(result *toolCheckResult, key string, value interface{}) {
+func addToolCheckMeta(result *ToolCheckResult, key string, value interface{}) {
 	if result == nil || strings.TrimSpace(key) == "" {
 		return
 	}
@@ -2281,7 +2282,7 @@ func addToolCheckMeta(result *toolCheckResult, key string, value interface{}) {
 }
 
 func normalizeToolScope(scope string) string {
-	switch normalizeKey(scope) {
+	switch NormalizeKey(scope) {
 	case "", "all", "outline":
 		return "all"
 	case "vol", "volume":
@@ -2289,7 +2290,7 @@ func normalizeToolScope(scope string) string {
 	case "chap", "chapter":
 		return "chapter"
 	default:
-		return normalizeKey(scope)
+		return NormalizeKey(scope)
 	}
 }
 
@@ -2298,7 +2299,7 @@ func scopedOutline(outline *models.Outline, scope, id string) (*models.Outline, 
 		return nil, fmt.Errorf("outline is nil")
 	}
 	if scope == "all" {
-		return cloneOutline(outline), nil
+		return CloneOutline(outline), nil
 	}
 	for _, part := range outline.Parts {
 		for _, volume := range part.Volumes {

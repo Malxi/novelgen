@@ -20,6 +20,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
+	"novelgen/internal/toolplane"
 	"novelgen/internal/workerpool"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -556,7 +557,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load existing outline: %w", err)
 	}
 	logger.Info("Loaded existing outline for improvement")
-	originalOutline := cloneOutline(outline)
+	originalOutline := toolplane.CloneOutline(outline)
 	if countGeneratedVolumes(outline) == 0 {
 		return fmt.Errorf("outline has no generated volumes to improve; run 'novelgen compose gen' first")
 	}
@@ -2172,17 +2173,17 @@ func runOutlineQualityGateForScope(setup *models.StorySetup, outline *models.Out
 }
 
 func outlineGateHasPatchableGlobalIssues(gate quality.QualityGateResult, outline *models.Outline) bool {
-	mysteryThreads := collectOutlineMysteryThreads(outline)
+	mysteryThreads := toolplane.CollectOutlineMysteryThreads(outline)
 	for _, suggestion := range gate.Suggestions {
 		targetID := strings.TrimSpace(suggestion.TargetID)
-		if targetID != "" && !strings.EqualFold(targetID, "global") && normalizeKey(suggestion.Category) != "faction_tier" {
+		if targetID != "" && !strings.EqualFold(targetID, "global") && toolplane.NormalizeKey(suggestion.Category) != "faction_tier" {
 			continue
 		}
-		nav := toolIssueNavigation("all", "outline", "all", "", suggestion, 0)
-		if stringMapValue(nav, "patch_query") != "" && nav["patch_shape"] != nil {
+		nav := toolplane.ToolIssueNavigation("all", "outline", "all", "", suggestion, 0)
+		if toolplane.StringMapValue(nav, "patch_query") != "" && nav["patch_shape"] != nil {
 			return true
 		}
-		if normalizeKey(suggestion.Category) == "mysteries" && firstPatchableOutlineMysteryThread(mysteryThreads) != nil {
+		if toolplane.NormalizeKey(suggestion.Category) == "mysteries" && toolplane.FirstPatchableOutlineMysteryThread(mysteryThreads) != nil {
 			return true
 		}
 	}
@@ -3113,7 +3114,7 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 	}
 
 	ctx := commandContext()
-	beforeOutline := cloneOutline(outline)
+	beforeOutline := toolplane.CloneOutline(outline)
 	applyOutlineNormalization(outline, "pre_agent_sdk_improve")
 
 	preGate := quality.RunOutlineCombinedGateForScope(setup, outline, scoped)
