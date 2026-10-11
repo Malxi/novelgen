@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"novelgen/internal/models"
+	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
 )
@@ -19,7 +20,7 @@ func TestCanResumeOutlineGenerationWithEmptyVolumes(t *testing.T) {
 			{ID: "volume_2", Title: "Pending", Chapters: []models.Chapter{}},
 		},
 	}}}
-	if err := savePartialOutline(outline, path); err != nil {
+	if err := project.SavePartialOutline(outline, path); err != nil {
 		t.Fatalf("save outline: %v", err)
 	}
 

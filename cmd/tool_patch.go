@@ -352,11 +352,11 @@ func runToolOutlinePatch(cmd *cobra.Command, root, target, id string, patchBytes
 			return err
 		}
 		outlinePath := filepath.Join(root, "story", "compose", "outline.json")
-		if err := savePartialOutline(ctx.Outline, outlinePath); err != nil {
+		if err := project.SavePartialOutline(ctx.Outline, outlinePath); err != nil {
 			return fmt.Errorf("failed to save patched outline: %w", err)
 		}
 		mdPath := filepath.Join(root, "story", "compose", "outline.md")
-		if err := createOutlineMarkdown(ctx.Outline, mdPath); err != nil {
+		if err := project.CreateOutlineMarkdown(ctx.Outline, mdPath); err != nil {
 			return fmt.Errorf("failed to save outline markdown: %w", err)
 		}
 		files["outline"] = outlinePath
@@ -524,7 +524,7 @@ func runToolSetupPatch(cmd *cobra.Command, root string, patchBytes []byte, apply
 			return fmt.Errorf("failed to save patched story setup: %w", err)
 		}
 		mdPath := filepath.Join(root, "story", "setup", "story_setup.md")
-		if err := createStorySetupMarkdown(&merged, mdPath); err != nil {
+		if err := project.CreateStorySetupMarkdown(&merged, mdPath); err != nil {
 			return fmt.Errorf("failed to save story setup markdown: %w", err)
 		}
 		files["setup"] = setupPath

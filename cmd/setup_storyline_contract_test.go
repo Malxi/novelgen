@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"novelgen/internal/models"
+	"novelgen/internal/project"
 )
 
 func TestParseStorySetupMarkdownPreservesStorylineContractHints(t *testing.T) {
@@ -52,7 +53,7 @@ func TestParseStorySetupMarkdownPreservesStorylineContractHints(t *testing.T) {
 }
 
 func TestFormatStorylinesIncludesContractHints(t *testing.T) {
-	text := formatStorylines([]models.Storyline{modelsStorylineForTest()})
+	text := project.FormatStorylines([]models.Storyline{modelsStorylineForTest()})
 	for _, want := range []string{
 		"- **Scope**: series",
 		"- **Payoff Style**: staged_reveal",
@@ -96,7 +97,7 @@ func TestParseStorySetupMarkdownPreservesCoreCast(t *testing.T) {
 }
 
 func TestFormatCoreCastIncludesRoleAndPayoff(t *testing.T) {
-	text := formatCoreCast([]models.CoreCastSeed{{
+	text := project.FormatCoreCast([]models.CoreCastSeed{{
 		Name:            "Hero",
 		Role:            "protagonist",
 		Importance:      10,
@@ -147,7 +148,7 @@ func TestParseStorySetupMarkdownPreservesLongFormPlan(t *testing.T) {
 }
 
 func TestFormatLongFormPlanIncludesCadenceAndVolumePattern(t *testing.T) {
-	text := formatLongFormPlan(&models.LongFormPlan{
+	text := project.FormatLongFormPlan(&models.LongFormPlan{
 		TargetChapters:   1000,
 		TargetVolumes:    10,
 		MainLoop:         "pressure -> exploit -> win",
@@ -214,7 +215,7 @@ func TestParseStorySetupMarkdownPreservesWritingStyle(t *testing.T) {
 }
 
 func TestFormatWritingStyleIncludesReferenceExcerpt(t *testing.T) {
-	text := formatWritingStyle(models.WritingStyle{
+	text := project.FormatWritingStyle(models.WritingStyle{
 		Name:             "轻喜剧",
 		Principles:       []string{"短句快节奏"},
 		Avoid:            []string{"不要堆热梗"},

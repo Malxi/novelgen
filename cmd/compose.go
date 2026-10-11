@@ -17,6 +17,7 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
+	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
 	"novelgen/internal/workerpool"
@@ -431,7 +432,7 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 
 	// Create markdown version
 	mdPath := filepath.Join("story", "compose", "outline.md")
-	if err := createOutlineMarkdown(outline, mdPath); err != nil {
+	if err := project.CreateOutlineMarkdown(outline, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
@@ -502,7 +503,7 @@ func runComposeRegen(cmd *cobra.Command, args []string) error {
 
 	// Create markdown version
 	mdPath := filepath.Join("story", "compose", "outline.md")
-	if err := createOutlineMarkdown(outline, mdPath); err != nil {
+	if err := project.CreateOutlineMarkdown(outline, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
@@ -672,7 +673,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	if composeAgentSDKFlag && selectedImprove {
-		err = savePartialOutline(outline, outlinePath)
+		err = project.SavePartialOutline(outline, outlinePath)
 	} else {
 		err = outline.Save(outlinePath)
 	}
@@ -682,7 +683,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 
 	// Update markdown version
 	mdPath := filepath.Join("story", "compose", "outline.md")
-	if err := createOutlineMarkdown(outline, mdPath); err != nil {
+	if err := project.CreateOutlineMarkdown(outline, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
@@ -1395,7 +1396,7 @@ func runComposeSkeletonImprove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save improved skeleton outline: %w", err)
 	}
 	mdPath := filepath.Join("story", "compose", "outline.md")
-	if err := createOutlineMarkdown(improved, mdPath); err != nil {
+	if err := project.CreateOutlineMarkdown(improved, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
@@ -1597,7 +1598,7 @@ func runComposeNormalize(cmd *cobra.Command, args []string) error {
 	}
 
 	mdPath := filepath.Join("story", "compose", "outline.md")
-	if err := createOutlineMarkdown(outline, mdPath); err != nil {
+	if err := project.CreateOutlineMarkdown(outline, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
@@ -1871,11 +1872,11 @@ func generateComposePipelineVolumeAgentSDK(ctx context.Context, agent *agents.Co
 }
 
 func saveComposePipelineOutline(outline *models.Outline, outlinePath string) error {
-	if err := savePartialOutline(outline, outlinePath); err != nil {
+	if err := project.SavePartialOutline(outline, outlinePath); err != nil {
 		return err
 	}
 	mdPath := filepath.Join("story", "compose", "outline.md")
-	if err := createOutlineMarkdown(outline, mdPath); err != nil {
+	if err := project.CreateOutlineMarkdown(outline, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 	return nil
@@ -2267,7 +2268,7 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 			fmt.Println("   Starting fresh generation...")
 		} else {
 			resumeMode = true
-			if err := savePartialOutline(outline, outlinePath); err != nil {
+			if err := project.SavePartialOutline(outline, outlinePath); err != nil {
 				return nil, fmt.Errorf("failed to migrate legacy progress to outline.json: %w", err)
 			}
 			fmt.Println("[ok] Migrated legacy progress to outline.json")
@@ -2287,7 +2288,7 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 
 	// Save callback for incremental saves (used in both fresh and resume modes)
 	onVolumeComplete := func(o *models.Outline, partIdx, volIdx, volumeCount int) {
-		if err := savePartialOutline(o, outlinePath); err != nil {
+		if err := project.SavePartialOutline(o, outlinePath); err != nil {
 			logger.GetLogger().Warn("Failed to save outline progress: %v", err)
 		} else {
 			fmt.Printf("💾 outline.json saved (%d volumes completed)\n", volumeCount)
@@ -2319,7 +2320,7 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 		applyOutlineNormalization(outline, "fresh_skeleton")
 
 		// Save skeleton as initial outline with empty chapter arrays.
-		if err := savePartialOutline(outline, outlinePath); err != nil {
+		if err := project.SavePartialOutline(outline, outlinePath); err != nil {
 			logger.GetLogger().Warn("Failed to save initial outline: %v", err)
 		}
 		fmt.Println("💾 Skeleton saved to outline.json")
@@ -2328,7 +2329,7 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 		outline, err = agent.GenerateChaptersHierarchical(ctx, *setup, projectConfig.Structure, outline, onVolumeComplete)
 		if err != nil {
 			// Save outline even on error
-			if saveErr := savePartialOutline(outline, outlinePath); saveErr != nil {
+			if saveErr := project.SavePartialOutline(outline, outlinePath); saveErr != nil {
 				logger.GetLogger().Warn("Failed to save outline on error: %v", saveErr)
 			}
 			return nil, err
@@ -2344,7 +2345,7 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 		outline, err = agent.GenerateChaptersHierarchical(ctx, *setup, projectConfig.Structure, outline, onVolumeComplete)
 		if err != nil {
 			// Save outline even on error
-			if saveErr := savePartialOutline(outline, outlinePath); saveErr != nil {
+			if saveErr := project.SavePartialOutline(outline, outlinePath); saveErr != nil {
 				logger.GetLogger().Warn("Failed to save outline on error: %v", saveErr)
 			}
 			return nil, err
@@ -2400,7 +2401,7 @@ func generateOutlineHierarchicalAgentSDK(setup *models.StorySetup, projectConfig
 			fmt.Println("   Starting fresh generation...")
 		} else {
 			resumeMode = true
-			if err := savePartialOutline(outline, outlinePath); err != nil {
+			if err := project.SavePartialOutline(outline, outlinePath); err != nil {
 				return nil, fmt.Errorf("failed to migrate legacy progress to outline.json: %w", err)
 			}
 			fmt.Println("[ok] Migrated legacy progress to outline.json")
@@ -2417,12 +2418,12 @@ func generateOutlineHierarchicalAgentSDK(setup *models.StorySetup, projectConfig
 	ctx := commandContext()
 
 	onVolumeComplete := func(o *models.Outline, partIdx, volIdx, volumeCount int) {
-		if err := savePartialOutline(o, outlinePath); err != nil {
+		if err := project.SavePartialOutline(o, outlinePath); err != nil {
 			logger.GetLogger().Warn("Failed to save outline progress: %v", err)
 		} else {
 			fmt.Printf("[save] outline.json saved (%d volumes completed)\n", volumeCount)
 		}
-		if err := createOutlineMarkdown(o, filepath.Join("story", "compose", "outline.md")); err != nil {
+		if err := project.CreateOutlineMarkdown(o, filepath.Join("story", "compose", "outline.md")); err != nil {
 			logger.GetLogger().Warn("Failed to save outline markdown progress: %v", err)
 		}
 	}
@@ -2444,7 +2445,7 @@ func generateOutlineHierarchicalAgentSDK(setup *models.StorySetup, projectConfig
 		outline = &models.Outline{Parts: skeletonOutput.Parts}
 		logic.NewIDManager(outline).AssignIDsToOutline()
 		applyOutlineNormalization(outline, "agent_sdk_fresh_skeleton")
-		if err := savePartialOutline(outline, outlinePath); err != nil {
+		if err := project.SavePartialOutline(outline, outlinePath); err != nil {
 			logger.GetLogger().Warn("Failed to save initial outline: %v", err)
 		}
 		fmt.Println("[save] Skeleton saved to outline.json")
@@ -2455,7 +2456,7 @@ func generateOutlineHierarchicalAgentSDK(setup *models.StorySetup, projectConfig
 
 	outline, err = agent.GenerateChaptersHierarchicalAgentSDK(ctx, *setup, projectConfig.Structure, outline, onVolumeComplete)
 	if err != nil {
-		if saveErr := savePartialOutline(outline, outlinePath); saveErr != nil {
+		if saveErr := project.SavePartialOutline(outline, outlinePath); saveErr != nil {
 			logger.GetLogger().Warn("Failed to save outline on error: %v", saveErr)
 		}
 		return nil, err
@@ -2479,30 +2480,6 @@ func loadPartialOutline(path string) (*models.Outline, error) {
 	}
 
 	return &outline, nil
-}
-
-// savePartialOutline saves the current progress to a file
-func savePartialOutline(outline *models.Outline, path string) error {
-	if outline == nil {
-		return fmt.Errorf("cannot save nil outline")
-	}
-
-	// Ensure directory exists
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	data, err := json.MarshalIndent(outline, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal outline: %w", err)
-	}
-
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("failed to write progress file: %w", err)
-	}
-
-	return nil
 }
 
 func canResumeOutlineGeneration(path string, structure models.StoryStructure) bool {
@@ -2921,11 +2898,6 @@ func getRegenPrompt() (string, error) {
 	return strings.TrimSpace(prompt), nil
 }
 
-func createOutlineMarkdown(outline *models.Outline, path string) error {
-	// Use the ToMarkdown method to ensure all fields are included
-	return os.WriteFile(path, []byte(outline.ToMarkdown()), 0644)
-}
-
 func loadComposeProjectState() (*models.ProjectConfig, *models.StorySetup, *models.Outline, error) {
 	if _, err := os.Stat("novel.json"); err != nil {
 		return nil, nil, nil, fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first")
@@ -3209,7 +3181,7 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 		logger.Info("Agent SDK iteration made no effective outline changes; skipping intermediate outline_iter_%d.json", maxIterations)
 	} else {
 		outlinePath := filepath.Join("story", "compose", fmt.Sprintf("outline_iter_%d.json", maxIterations))
-		if err := savePartialOutline(outline, outlinePath); err != nil {
+		if err := project.SavePartialOutline(outline, outlinePath); err != nil {
 			logger.Error("Failed to save intermediate outline: %v", err)
 		} else {
 			logger.Info("Saved intermediate outline to %s", outlinePath)
