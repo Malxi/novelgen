@@ -1,4 +1,4 @@
-package cmd
+package composecmd
 
 import (
 	"path/filepath"
@@ -197,7 +197,7 @@ func TestValidateSetupOutlineCrossInfersFactionFromPremiseName(t *testing.T) {
 		}},
 	}}}
 
-	issues, warnings := validateSetupOutlineCross(setup, outline)
+	issues, warnings := quality.ValidateSetupOutlineCross(setup, outline)
 	if len(issues) != 0 || len(warnings) != 0 {
 		t.Fatalf("expected inferred zerg faction tiers to satisfy cross-check, issues=%v warnings=%v", issues, warnings)
 	}

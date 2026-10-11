@@ -1,9 +1,10 @@
-package cmd
+package composecmd
 
 import (
 	"testing"
 
 	"novelgen/internal/models"
+	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
 )
 
@@ -45,7 +46,7 @@ func TestValidateSetupOutlineCrossAcceptsFactionAliases(t *testing.T) {
 		}},
 	}
 
-	issues, warnings := validateSetupOutlineCross(setup, outline)
+	issues, warnings := quality.ValidateSetupOutlineCross(setup, outline)
 	if len(issues) != 0 || len(warnings) != 0 {
 		t.Fatalf("expected no cross warnings/issues, got issues=%v warnings=%v", issues, warnings)
 	}

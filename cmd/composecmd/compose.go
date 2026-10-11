@@ -1,4 +1,4 @@
-package cmd
+package composecmd
 
 import (
 	"context"
@@ -12,7 +12,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/spf13/cobra"
+
 	"novelgen/internal/agents"
+	"novelgen/internal/cli"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
@@ -22,9 +26,6 @@ import (
 	"novelgen/internal/rpg"
 	"novelgen/internal/toolplane"
 	"novelgen/internal/workerpool"
-
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -288,9 +289,6 @@ func init() {
 	composePipelineCmd.Flags().BoolVar(&composeAgentApplyFlag, "agent-apply", false, "With --agent-sdk, let the agent write outline patches through validated patch tools during improve")
 
 	// Register compose command using the new plugin mechanism
-	RegisterCommand(func() *cobra.Command {
-		return composeCmd
-	})
 }
 
 func validateComposeAgentSDKOption(agentSDK, oneShot bool) error {
@@ -1523,7 +1521,7 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 	if setupData, err := os.ReadFile(setupPath); err == nil {
 		var setup models.StorySetup
 		if json.Unmarshal(setupData, &setup) == nil {
-			crossIssues, crossWarnings := validateSetupOutlineCross(&setup, &storyOutline)
+			crossIssues, crossWarnings := quality.ValidateSetupOutlineCross(&setup, &storyOutline)
 			if len(crossIssues)+len(crossWarnings) > 0 {
 				// Collect missing resources and auto-patch setup
 				missingResources := make(map[string]bool)
@@ -1670,7 +1668,7 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
 
-	ctx := commandContext()
+	ctx := cli.CommandContext()
 	outlinePath := filepath.Join("story", "compose", "outline.json")
 	outline, err := ensureComposePipelineSkeleton(ctx, agent, setup, projectConfig, outlinePath, composeAgentSDKFlag)
 	if err != nil {
@@ -1919,7 +1917,7 @@ func applySetupOutlineCrossPatch(setupPath string, setup *models.StorySetup, out
 		return 0, nil, nil, fmt.Errorf("failed to parse outline for cross check: %w", err)
 	}
 
-	issues, warnings := validateSetupOutlineCross(setup, &storyOutline)
+	issues, warnings := quality.ValidateSetupOutlineCross(setup, &storyOutline)
 	missingResources := missingSetupResources(setup, &storyOutline)
 	if len(missingResources) == 0 {
 		return 0, issues, warnings, nil
@@ -1970,84 +1968,6 @@ func missingSetupResources(setup *models.StorySetup, outline *rpg.StoryOutline) 
 	return names
 }
 
-func validateSetupOutlineCross(setup *models.StorySetup, outline *rpg.StoryOutline) (issues, warnings []string) {
-	// Collect defined faction tiers from setup premises
-	setupFactions := make(map[string]map[string]bool) // faction -> tier -> true
-	for _, p := range setup.Premises {
-		for _, faction := range setupPremiseFactionAliases(p) {
-			if setupFactions[faction] == nil {
-				setupFactions[faction] = make(map[string]bool)
-			}
-			for tier := range setupPremiseTierAliases(p, faction) {
-				setupFactions[faction][tier] = true
-			}
-		}
-	}
-
-	// Collect defined resources from setup
-	setupResources := make(map[string]bool)
-	for _, r := range setup.WorldResources {
-		setupResources[r.Name] = true
-	}
-
-	// Check outline enemies against setup faction definitions
-	for _, part := range outline.Parts {
-		for _, vol := range part.Volumes {
-			for _, ch := range vol.Chapters {
-				for _, enemy := range ch.Enemies {
-					if enemy.Faction != "" && len(setupFactions) > 0 {
-						if tiers, ok := setupFactions[enemy.Faction]; ok {
-							if enemy.Tier != "" && !tiers[enemy.Tier] {
-								issues = append(issues, fmt.Sprintf(
-									"%s: enemy '%s' tier '%s' not defined in setup faction '%s'",
-									ch.ID, enemy.Name, enemy.Tier, enemy.Faction))
-							}
-						} else {
-							warnings = append(warnings, fmt.Sprintf(
-								"%s: enemy faction '%s' not defined in setup premises",
-								ch.ID, enemy.Faction))
-						}
-					}
-				}
-				for _, entry := range ch.ResourceLedger {
-					if entry.Item != "" && len(setupResources) > 0 {
-						if !setupResources[entry.Item] {
-							// Find closest match in setup to suggest
-							closest := findClosestResource(entry.Item, setupResources)
-							hint := fmt.Sprintf("%s: resource '%s' not declared in setup.world_resources",
-								ch.ID, entry.Item)
-							if closest != "" {
-								hint += fmt.Sprintf(" (setup has: '%s' — consider using that name)", closest)
-							}
-							warnings = append(warnings, hint)
-						}
-					}
-				}
-			}
-		}
-	}
-	return
-}
-
-func findClosestResource(target string, candidates map[string]bool) string {
-	// Check if any candidate is a substring of target or vice versa
-	targetLower := strings.ToLower(target)
-	for name := range candidates {
-		nameLower := strings.ToLower(name)
-		// Simple shared-character heuristic: if they share >50% of characters
-		shared := 0
-		for _, r := range targetLower {
-			if strings.ContainsRune(nameLower, r) {
-				shared++
-			}
-		}
-		if float64(shared)/float64(len([]rune(targetLower))) > 0.4 {
-			return name
-		}
-	}
-	return ""
-}
-
 func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.ProjectConfig) (*models.Outline, error) {
 	// Load LLM config
 	cfg, err := llm.LoadOrCreateConfig()
@@ -2077,7 +1997,7 @@ func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.Proje
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
 
-	ctx := commandContext()
+	ctx := cli.CommandContext()
 	input := agents.ComposeGenInput{
 		Setup:     *setup,
 		Structure: projectConfig.Structure,
@@ -2285,7 +2205,7 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
 
-	ctx := commandContext()
+	ctx := cli.CommandContext()
 
 	// Save callback for incremental saves (used in both fresh and resume modes)
 	onVolumeComplete := func(o *models.Outline, partIdx, volIdx, volumeCount int) {
@@ -2416,7 +2336,7 @@ func generateOutlineHierarchicalAgentSDK(setup *models.StorySetup, projectConfig
 	}
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
-	ctx := commandContext()
+	ctx := cli.CommandContext()
 
 	onVolumeComplete := func(o *models.Outline, partIdx, volIdx, volumeCount int) {
 		if err := project.SavePartialOutline(o, outlinePath); err != nil {
@@ -2638,101 +2558,6 @@ func preserveImprovedVolumeIdentityCmd(original *models.Volume, improved *models
 	}
 }
 
-func setupFactionAliases(category string) []string {
-	category = strings.TrimSpace(category)
-	if category == "" {
-		return nil
-	}
-	seen := map[string]bool{}
-	var aliases []string
-	add := func(value string) {
-		value = strings.TrimSpace(value)
-		if value == "" || seen[value] {
-			return
-		}
-		seen[value] = true
-		aliases = append(aliases, value)
-	}
-	add(category)
-	for _, part := range strings.FieldsFunc(category, func(r rune) bool {
-		return r == '/' || r == '\\' || r == '|' || r == ',' || r == '，' || r == ';' || r == '；' || r == ' '
-	}) {
-		add(part)
-	}
-	return aliases
-}
-
-func setupPremiseFactionAliases(p models.Premise) []string {
-	seen := map[string]bool{}
-	var aliases []string
-	add := func(value string) {
-		value = strings.TrimSpace(value)
-		if value == "" || seen[value] {
-			return
-		}
-		seen[value] = true
-		aliases = append(aliases, value)
-	}
-	for _, alias := range setupFactionAliases(p.Category) {
-		add(alias)
-	}
-	text := strings.ToLower(p.Name + " " + p.Description + " " + p.Category)
-	for _, known := range []string{"zerg", "shen"} {
-		if strings.Contains(text, known) {
-			add(known)
-		}
-	}
-	return aliases
-}
-
-func setupPremiseTierAliases(p models.Premise, faction string) map[string]bool {
-	tiers := map[string]bool{}
-	add := func(value string) {
-		value = strings.TrimSpace(value)
-		if value != "" {
-			tiers[value] = true
-		}
-	}
-
-	for _, stage := range p.Progression {
-		add(stage.Name)
-		text := stage.Name + " " + stage.Description + " " + stage.Requirements
-		switch {
-		case strings.Contains(text, "工虫"):
-			add("drone")
-		case strings.Contains(text, "兵虫"):
-			add("soldier")
-		case strings.Contains(text, "初级虫将"):
-			add("captain")
-		case strings.Contains(text, "高级虫统领"):
-			add("commander")
-		case strings.Contains(text, "母巢"):
-			add("queen")
-			add("hive")
-		}
-		if strings.Contains(text, "机甲") {
-			add("mech")
-		}
-	}
-
-	switch strings.ToLower(strings.TrimSpace(faction)) {
-	case "zerg":
-		add("drone")
-		add("soldier")
-		add("captain")
-		add("commander")
-		add("queen")
-		add("hive")
-	case "shen":
-		add("agent")
-		add("informant")
-		add("soldier")
-		add("mech")
-	}
-
-	return tiers
-}
-
 // printProgressStatus prints the current generation progress
 func printProgressStatus(outline *models.Outline, structure models.StoryStructure) {
 	totalVolumes := structure.TargetParts * structure.TargetVolumes
@@ -2782,7 +2607,7 @@ func regenerateElement(outline *models.Outline, id string, setup *models.StorySe
 	// Create IDManager for ID resolution
 	idManager := logic.NewIDManager(outline)
 
-	ctx := commandContext()
+	ctx := cli.CommandContext()
 
 	switch len(parts) {
 	case 1:
@@ -3021,7 +2846,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
 
-	ctx := commandContext()
+	ctx := cli.CommandContext()
 
 	applyOutlineNormalization(outline, "pre_improve")
 
@@ -3113,7 +2938,7 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 		agent.SetModelOverride(modelOverride)
 	}
 
-	ctx := commandContext()
+	ctx := cli.CommandContext()
 	beforeOutline := toolplane.CloneOutline(outline)
 	applyOutlineNormalization(outline, "pre_agent_sdk_improve")
 
@@ -3156,7 +2981,7 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 		repairReview := quality.QualityGateMediumReviewResult("Post-check medium-or-higher issues for Agent SDK targeted repair.", gate)
 		repairReview = filterAgentSDKReviewForPromptBoundary(repairReview, improvedOutline, userPrompt, "post-check repair pass")
 		if len(repairReview.Suggestions) > 0 && maxIterations > 0 {
-			repairBatch := limitReviewSuggestionsForAgentSDKRepair(repairReview, composeRepairBudgetFlag)
+			repairBatch := LimitReviewSuggestionsForAgentSDKRepair(repairReview, composeRepairBudgetFlag)
 			logger.Info("Quality/simulation gate found %d targetable medium-or-higher issue(s), running Agent SDK repair pass on %d issue(s)", len(repairReview.Suggestions), len(repairBatch.Suggestions))
 			repairOutput, repairErr := repairAgentSDKWithTransientRetry(func() (*models.Outline, error) {
 				return agent.RepairByReviewAgentSDK(ctx, improvedOutline, repairBatch, setup, agentApply, crossOutline, composeCrossVolumeAllFlag)
@@ -3248,7 +3073,7 @@ func collectAgentSDKRepairBoundaryChapterIDs(outline *models.Outline, userPrompt
 	return ids
 }
 
-func limitReviewSuggestionsForAgentSDKRepair(review *models.ReviewResult, limit int) *models.ReviewResult {
+func LimitReviewSuggestionsForAgentSDKRepair(review *models.ReviewResult, limit int) *models.ReviewResult {
 	if review == nil {
 		return nil
 	}
@@ -3313,4 +3138,8 @@ func applyOutlineNormalization(outline *models.Outline, stage string) {
 	if err := os.WriteFile(reportPath, data, 0644); err != nil {
 		logger.Warn("Failed to save outline normalization report: %v", err)
 	}
+}
+
+func NewCommand() *cobra.Command {
+	return composeCmd
 }

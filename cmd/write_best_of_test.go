@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 
+	"novelgen/cmd/writecmd"
 	"novelgen/internal/agents"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
@@ -114,9 +115,9 @@ func TestGenerateChapterBestOfSelectsHighestScoringCopy(t *testing.T) {
 		}},
 	}
 
-	content, err := generateChapterBestOf(context.Background(), agent, scorer, chapter, chapterCtx, nil, 0, 3, false, false)
+	content, err := writecmd.GenerateChapterBestOf(context.Background(), agent, scorer, chapter, chapterCtx, nil, 0, 3, false, false)
 	if err != nil {
-		t.Fatalf("generateChapterBestOf() error = %v", err)
+		t.Fatalf("writecmd.GenerateChapterBestOf() error = %v", err)
 	}
 	if !strings.Contains(content, "COPY_2") {
 		t.Fatalf("selected content = %.60q, want COPY_2 (highest score)", content)
@@ -134,9 +135,9 @@ func TestGenerateChapterBestOfSkipsFailedCopy(t *testing.T) {
 	client.failMarker = "COPY_2"
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening", Summary: "Lin opens the sealed door."}
 
-	content, err := generateChapterBestOf(context.Background(), agent, scorer, chapter, nil, nil, 0, 3, false, false)
+	content, err := writecmd.GenerateChapterBestOf(context.Background(), agent, scorer, chapter, nil, nil, 0, 3, false, false)
 	if err != nil {
-		t.Fatalf("generateChapterBestOf() error = %v", err)
+		t.Fatalf("writecmd.GenerateChapterBestOf() error = %v", err)
 	}
 	if !strings.Contains(content, "COPY_3") {
 		t.Fatalf("selected content = %.60q, want COPY_3 (highest among surviving copies)", content)
@@ -154,9 +155,9 @@ func TestGenerateChapterBestOfFallsBackToFirstCopyWhenScoringFails(t *testing.T)
 	client.failScoring = true
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening", Summary: "Lin opens the sealed door."}
 
-	content, err := generateChapterBestOf(context.Background(), agent, scorer, chapter, nil, nil, 0, 3, false, false)
+	content, err := writecmd.GenerateChapterBestOf(context.Background(), agent, scorer, chapter, nil, nil, 0, 3, false, false)
 	if err != nil {
-		t.Fatalf("generateChapterBestOf() error = %v", err)
+		t.Fatalf("writecmd.GenerateChapterBestOf() error = %v", err)
 	}
 	if !strings.Contains(content, "COPY_1") && !strings.Contains(content, "COPY_2") && !strings.Contains(content, "COPY_3") {
 		t.Fatalf("fallback content = %.60q, want one of the successfully generated copies", content)
@@ -172,7 +173,7 @@ func TestGenerateChapterBestOfErrorsWhenAllCopiesFail(t *testing.T) {
 	client.contents = []string{"COPY_1"}
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening"}
 
-	if _, err := generateChapterBestOf(context.Background(), agent, scorer, chapter, nil, nil, 0, 1, false, false); err == nil {
+	if _, err := writecmd.GenerateChapterBestOf(context.Background(), agent, scorer, chapter, nil, nil, 0, 1, false, false); err == nil {
 		t.Fatalf("expected error when the only copy fails")
 	}
 }
@@ -182,9 +183,9 @@ func TestGenerateChapterContentForRunSinglePathSkipsScoring(t *testing.T) {
 	client.contents = []string{"COPY_1"}
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening"}
 
-	content, err := generateChapterContentForRun(context.Background(), agent, scorer, chapter, nil, nil, 0, 1, false, false)
+	content, err := writecmd.GenerateChapterContentForRun(context.Background(), agent, scorer, chapter, nil, nil, 0, 1, false, false)
 	if err != nil {
-		t.Fatalf("generateChapterContentForRun() error = %v", err)
+		t.Fatalf("writecmd.GenerateChapterContentForRun() error = %v", err)
 	}
 	if !strings.Contains(content, "COPY_1") {
 		t.Fatalf("content = %.60q", content)
@@ -196,15 +197,15 @@ func TestGenerateChapterContentForRunSinglePathSkipsScoring(t *testing.T) {
 
 func TestValidateWriteBestOfFlag(t *testing.T) {
 	for _, n := range []int{0, 1, 3, 5} {
-		writeBestOfFlag = n
-		if err := validateWriteBestOfFlag(); err != nil {
-			t.Fatalf("validateWriteBestOfFlag(%d) error = %v", n, err)
+		writecmd.WriteBestOfFlag = n
+		if err := writecmd.ValidateWriteBestOfFlag(); err != nil {
+			t.Fatalf("writecmd.ValidateWriteBestOfFlag(%d) error = %v", n, err)
 		}
 	}
 	for _, n := range []int{-1, 6, 10} {
-		writeBestOfFlag = n
-		if err := validateWriteBestOfFlag(); err == nil {
-			t.Fatalf("validateWriteBestOfFlag(%d) expected error", n)
+		writecmd.WriteBestOfFlag = n
+		if err := writecmd.ValidateWriteBestOfFlag(); err == nil {
+			t.Fatalf("writecmd.ValidateWriteBestOfFlag(%d) expected error", n)
 		}
 	}
 }
@@ -221,7 +222,7 @@ func TestBuildChapterScoreInput(t *testing.T) {
 			Chapter: &models.Chapter{ID: "P1-V1-C2", Title: "Signal", Summary: "Lin follows the signal."},
 		}},
 	}
-	input := buildChapterScoreInput(chapter, "chapter body", chapterCtx)
+	input := writecmd.BuildChapterScoreInput(chapter, "chapter body", chapterCtx)
 	if input.ChapterID != "P1-V1-C1" || input.ChapterTitle != "Opening" {
 		t.Fatalf("identity fields = %#v", input)
 	}

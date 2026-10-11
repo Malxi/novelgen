@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"novelgen/cmd/composecmd"
 	"novelgen/internal/models"
 	"novelgen/internal/quality"
 )
@@ -353,7 +354,7 @@ func TestLimitReviewSuggestionsForAgentSDKRepairBatchesHighestPriority(t *testin
 		},
 	}
 
-	got := limitReviewSuggestionsForAgentSDKRepair(review, 4)
+	got := composecmd.LimitReviewSuggestionsForAgentSDKRepair(review, 4)
 	if got == review {
 		t.Fatalf("expected a capped copy, got original pointer")
 	}

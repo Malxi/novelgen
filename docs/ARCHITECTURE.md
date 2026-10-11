@@ -62,6 +62,9 @@ novelgen/
 │   ├── rpgcmd/                # package rpgcmd，     rpgcmd.NewCommand()
 │   ├── craftcmd/              # package craftcmd，   craftcmd.NewCommand()
 │   ├── draftcmd/              # package draftcmd，   draftcmd.NewCommand()
+│   ├── composecmd/ setupcmd/  # 大纲 / 设定命令（NewCommand()）
+│   ├── writecmd/ polishcmd/   # 写作 / 打磨命令（NewCommand()）
+│   ├── projectcmd/            # 项目管理命令（NewCommand()）
 │   └── *_register.go          # 子包命令的唯一接线点（RegisterCommand(... NewCommand())）
 ├── tools/                     # 独立开发/分析二进制（非主 CLI，见 tools/README.md）
 │   ├── check_novel/ rpg-check/ rpg-write/ simulate/ visualize/

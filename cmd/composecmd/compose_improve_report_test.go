@@ -1,4 +1,4 @@
-package cmd
+package composecmd
 
 import (
 	"encoding/json"

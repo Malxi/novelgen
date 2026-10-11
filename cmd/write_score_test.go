@@ -3,6 +3,7 @@ package cmd
 import (
 	"testing"
 
+	"novelgen/cmd/writecmd"
 	"novelgen/internal/agents"
 	"novelgen/internal/models"
 )
@@ -19,9 +20,9 @@ func TestDraftReviewScorePercentSupportsLegacyAndPercentScores(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := draftReviewScorePercent(agents.DraftReview{OverallScore: tt.in})
+			got := writecmd.DraftReviewScorePercent(agents.DraftReview{OverallScore: tt.in})
 			if got != tt.want {
-				t.Fatalf("draftReviewScorePercent(%d) = %d, want %d", tt.in, got, tt.want)
+				t.Fatalf("writecmd.DraftReviewScorePercent(%d) = %d, want %d", tt.in, got, tt.want)
 			}
 		})
 	}
@@ -39,9 +40,9 @@ func TestReviewScorePercentIntClampsAndRounds(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := reviewScorePercentInt(tt.in)
+			got := writecmd.ReviewScorePercentInt(tt.in)
 			if got != tt.want {
-				t.Fatalf("reviewScorePercentInt(%v) = %d, want %d", tt.in, got, tt.want)
+				t.Fatalf("writecmd.ReviewScorePercentInt(%v) = %d, want %d", tt.in, got, tt.want)
 			}
 		})
 	}
@@ -69,7 +70,7 @@ func TestGetWriteChaptersNeedingImprovementUsesPercentThreshold(t *testing.T) {
 		},
 	}
 
-	chapters := getWriteChaptersNeedingImprovement(review, outline, 75)
+	chapters := writecmd.GetWriteChaptersNeedingImprovement(review, outline, 75)
 	if len(chapters) != 2 {
 		t.Fatalf("chapters needing improvement = %d, want 2", len(chapters))
 	}

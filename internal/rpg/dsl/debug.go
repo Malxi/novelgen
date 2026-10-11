@@ -1,11 +1,9 @@
-package cmd
+package dsl
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"novelgen/internal/rpg/dsl"
 )
 
 // DebugLoadDSL 调试用函数
@@ -44,7 +42,7 @@ func DebugLoadDSL(bookName string) {
 			continue
 		}
 
-		parser := dsl.NewParser(string(content))
+		parser := NewParser(string(content))
 		dslData, err := parser.Parse()
 		if err != nil {
 			fmt.Printf("  Parse error: %v\n", err)

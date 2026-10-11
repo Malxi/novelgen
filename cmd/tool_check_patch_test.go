@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"novelgen/cmd/writecmd"
 	"novelgen/internal/agents"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
@@ -1298,7 +1299,7 @@ func TestAgentSDKChapterCheckSuggestionsPreferRepairContext(t *testing.T) {
 		}},
 	}
 
-	text := formatAgentSDKChapterCheckSuggestions(result)
+	text := writecmd.FormatAgentSDKChapterCheckSuggestions(result)
 	if !strings.Contains(text, "primary repair task list") ||
 		!strings.Contains(text, "navigation.repair_route_query") ||
 		!strings.Contains(text, "navigation.repair_context_query") ||
@@ -1324,7 +1325,7 @@ func TestAgentSDKPostSaveCheckAppendsReviewSuggestions(t *testing.T) {
 		}},
 	}
 
-	appendAgentSDKPostSaveReviewSuggestions(review, result)
+	writecmd.AppendAgentSDKPostSaveReviewSuggestions(review, result)
 	if !review.NeedsRevision {
 		t.Fatalf("blocking post-save check should mark review as needing revision")
 	}
@@ -1338,14 +1339,14 @@ func TestAgentSDKPostSaveCheckAppendsReviewSuggestions(t *testing.T) {
 		!strings.Contains(got, "focused_check_query=novelgen tool check all --target chapter") {
 		t.Fatalf("post-save suggestion missing repair navigation: %s", got)
 	}
-	appendAgentSDKPostSaveReviewSuggestions(review, result)
+	writecmd.AppendAgentSDKPostSaveReviewSuggestions(review, result)
 	if len(review.Suggestions) != 1 {
 		t.Fatalf("duplicate post-save suggestion appended: %#v", review.Suggestions)
 	}
 }
 
 func TestAgentSDKLengthRetrySuggestions(t *testing.T) {
-	text := appendAgentSDKLengthRetrySuggestions("base suggestions", 3000)
+	text := writecmd.AppendAgentSDKLengthRetrySuggestions("base suggestions", 3000)
 	if !strings.Contains(text, "base suggestions") ||
 		!strings.Contains(text, "Agent SDK Length Retry") ||
 		!strings.Contains(text, "minimal repair only") ||
@@ -1353,10 +1354,10 @@ func TestAgentSDKLengthRetrySuggestions(t *testing.T) {
 		!strings.Contains(text, "must not exceed 4050") {
 		t.Fatalf("length retry suggestions missing strict guidance: %s", text)
 	}
-	if !isAgentSDKLengthOvershootError(fmt.Errorf("agent-sdk returned too much content for chapter P1-V1-C1")) {
+	if !writecmd.IsAgentSDKLengthOvershootError(fmt.Errorf("agent-sdk returned too much content for chapter P1-V1-C1")) {
 		t.Fatalf("expected overshoot error detection")
 	}
-	if isAgentSDKLengthOvershootError(fmt.Errorf("some other error")) {
+	if writecmd.IsAgentSDKLengthOvershootError(fmt.Errorf("some other error")) {
 		t.Fatalf("unexpected overshoot detection")
 	}
 }

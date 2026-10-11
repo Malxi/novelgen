@@ -62,7 +62,7 @@ Tests exist in `cmd/`, `internal/models/`, `internal/logic/`, and `internal/rpg/
 - For a self-contained command group, add it under `cmd/<group>/` exposing `NewCommand()`, and register it from `cmd/<group>_register.go`.
 - Register it with `RegisterCommand` in `init()`.
 - Provide useful `Use`, `Short`, `Long`, flags, and examples for user-facing commands.
-- Load project state through `internal/project` when the command operates on a novel project (the `cmd` wrappers `findProjectRoot`/`loadProjectConfig`/… still exist for code that has not been moved yet).
+- Load project state through `internal/project` when the command operates on a novel project (the historical `cmd` wrappers such as `findProjectRoot`/`loadProjectConfig` have been removed).
 - Keep the CLI surface stable: `cmd/command_surface_test.go` pins top-level commands, subcommands, and key flags.
 - If the command is agent-facing (a new `tool query|check|patch` surface), update the tool allowlists/evidence rules in the SDK workflows and `docs/AGENT_TOOLS.md`, not just the command.
 - Update README/docs when the command changes the public workflow.

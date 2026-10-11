@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"novelgen/cmd/writecmd"
 	"novelgen/internal/models"
 )
 
@@ -32,7 +33,7 @@ func TestOrganizationWriteContextOnlyIncludesRelevantOrganizations(t *testing.T)
 		},
 	}
 
-	got := buildOrganizationWriteContext(chapter, organizations)
+	got := writecmd.BuildOrganizationWriteContext(chapter, organizations)
 	if !strings.Contains(got, "Iron Hive") {
 		t.Fatalf("expected relevant organization in context, got %q", got)
 	}
@@ -47,7 +48,7 @@ func TestOrganizationWriteContextReturnsEmptyWithoutMatches(t *testing.T) {
 		"moon_court": {Name: "Moon Court", Type: "faction"},
 	}
 
-	if got := buildOrganizationWriteContext(chapter, organizations); got != "" {
+	if got := writecmd.BuildOrganizationWriteContext(chapter, organizations); got != "" {
 		t.Fatalf("expected no organization context for unrelated chapter, got %q", got)
 	}
 }

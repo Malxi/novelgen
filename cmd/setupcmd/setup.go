@@ -1,4 +1,4 @@
-package cmd
+package setupcmd
 
 import (
 	"context"
@@ -136,15 +136,11 @@ Examples:
 }
 
 func init() {
-	// Register setup command using the new plugin mechanism
-	RegisterCommand(func() *cobra.Command {
-		setupCmd.AddCommand(setupGenCmd)
-		setupCmd.AddCommand(setupRegenCmd)
-		setupCmd.AddCommand(setupImproveCmd)
-		setupCmd.AddCommand(setupImportCmd)
-		setupCmd.AddCommand(setupCheckCmd)
-		return setupCmd
-	})
+	setupCmd.AddCommand(setupGenCmd)
+	setupCmd.AddCommand(setupRegenCmd)
+	setupCmd.AddCommand(setupImproveCmd)
+	setupCmd.AddCommand(setupImportCmd)
+	setupCmd.AddCommand(setupCheckCmd)
 
 	// Regen flags
 	setupRegenCmd.Flags().StringVar(&setupRegenPrompt, "prompt", "", "Guidance for regeneration")
@@ -157,6 +153,11 @@ func init() {
 	setupImproveCmd.Flags().BoolVar(&setupForceImprove, "force", false, "Force improvement based on suggestions even if score meets threshold")
 	setupImproveCmd.Flags().BoolVar(&setupAgentSDK, "agent-sdk", false, "Use Claude Agent SDK workflow with setup query/check/patch tools")
 	setupImproveCmd.Flags().BoolVar(&setupAgentApply, "agent-apply", false, "With --agent-sdk, let the agent write setup through validated patch tools")
+}
+
+// NewCommand returns the `novelgen setup` command tree.
+func NewCommand() *cobra.Command {
+	return setupCmd
 }
 
 func validateSetupAgentApplyOption(agentSDK, agentApply bool) error {
@@ -567,7 +568,7 @@ func loadAndCrossCheckSetup(setup *models.StorySetup) (issues, warnings []string
 	if json.Unmarshal(data, &storyOutline) != nil {
 		return nil, nil
 	}
-	return validateSetupOutlineCross(setup, &storyOutline)
+	return quality.ValidateSetupOutlineCross(setup, &storyOutline)
 }
 
 func runSetupImproveAgentSDK(ctx context.Context, agent *agents.SetupAgent, setup *models.StorySetup, setupPath string, maxRounds int, userPrompt string, forceImprove bool, agentApply bool) (*models.StorySetup, *models.ReviewResult, bool, error) {
