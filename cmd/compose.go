@@ -17,6 +17,7 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
+	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
 	"novelgen/internal/workerpool"
 
@@ -412,7 +413,7 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate outline with AI: %w", err)
 	}
 
-	var gate qualityGateResult
+	var gate quality.QualityGateResult
 	if composeAgentSDKFlag {
 		outline, gate, err = repairOutlineWithQualityGateAgentSDK(cmd.Context(), outline, setup, projectConfig, "generation", false, false, "", nil)
 	} else {
@@ -421,7 +422,7 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	logQualityGateResult("outline", gate)
+	quality.LogQualityGateResult("outline", gate)
 
 	// Save outline
 	if err := outline.Save(outlinePath); err != nil {
@@ -631,7 +632,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		logger.Error("Improvement failed: %v", err)
 		return fmt.Errorf("improvement failed: %w", err)
 	}
-	var gate qualityGateResult
+	var gate quality.QualityGateResult
 	if improveOutline != outline {
 		if composeAgentSDKFlag {
 			var repairCrossOutline *models.Outline
@@ -645,7 +646,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		logQualityGateResult("outline", gate)
+		quality.LogQualityGateResult("outline", gate)
 		mergeGeneratedVolumes(outline, improveOutline)
 	} else {
 		if composeAgentSDKFlag {
@@ -656,7 +657,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		logQualityGateResult("outline", gate)
+		quality.LogQualityGateResult("outline", gate)
 	}
 
 	// Save improved outline. In Agent SDK selected-volume mode the agent returns
@@ -686,7 +687,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	}
 
 	if composeAgentSDKFlag {
-		remainingGateIssues := len(filterMediumOrHigherOutlineTargetSuggestions(gate.Suggestions))
+		remainingGateIssues := len(quality.FilterMediumOrHigherOutlineTargetSuggestions(gate.Suggestions))
 		if reportErr := writeComposeImproveReport(remainingGateIssues); reportErr != nil {
 			logger.Warn("Failed to write compose improve report: %v", reportErr)
 		}
@@ -1451,10 +1452,10 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 		if loadedSetup, loadErr := models.LoadStorySetup(setupPath); loadErr == nil {
 			setupForGate = loadedSetup
 		}
-		logQualityGateResult("outline", runOutlineQualityGate(setupForGate, checkOutline))
+		quality.LogQualityGateResult("outline", quality.RunOutlineQualityGate(setupForGate, checkOutline))
 		if strings.TrimSpace(composeCheckSuggestionsOut) != "" {
-			gate := runOutlineCombinedGateForScope(setupForGate, checkOutline, false)
-			report := qualityGateReviewResult("Deterministic outline check suggestions.", gate)
+			gate := quality.RunOutlineCombinedGateForScope(setupForGate, checkOutline, false)
+			report := quality.QualityGateReviewResult("Deterministic outline check suggestions.", gate)
 			if err := saveReviewResult(composeCheckSuggestionsOut, *report); err != nil {
 				return err
 			}
@@ -1742,7 +1743,7 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	logQualityGateResult("outline", runOutlineQualityGate(setup, outline))
+	quality.LogQualityGateResult("outline", quality.RunOutlineQualityGate(setup, outline))
 	fmt.Printf("\nPipeline complete. Current outline: %s\n", outlinePath)
 	fmt.Printf("Generated volumes: %d, empty future volumes: %d\n", countGeneratedVolumes(outline), countEmptyVolumes(outline))
 	return nil
@@ -2086,7 +2087,7 @@ func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.Proje
 	return &output.Outline, nil
 }
 
-func repairOutlineWithQualityGate(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string, scoped bool) (*models.Outline, qualityGateResult, error) {
+func repairOutlineWithQualityGate(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string, scoped bool) (*models.Outline, quality.QualityGateResult, error) {
 	applyOutlineNormalization(outline, "pre_gate_"+stage)
 	gate := runOutlineQualityGateForScope(setup, outline, scoped)
 	if !gate.Blocking {
@@ -2108,7 +2109,7 @@ func repairOutlineWithQualityGate(ctx context.Context, outline *models.Outline, 
 
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
-	review := qualityGateReviewResult("Repair outline quality gate findings before saving project state.", gate)
+	review := quality.QualityGateReviewResult("Repair outline quality gate findings before saving project state.", gate)
 	repaired, err := agent.RepairByReview(ctx, outline, review, setup)
 	if err != nil {
 		return outline, gate, fmt.Errorf("outline quality gate repair failed: %w", err)
@@ -2118,7 +2119,7 @@ func repairOutlineWithQualityGate(ctx context.Context, outline *models.Outline, 
 	return repaired, finalGate, nil
 }
 
-func repairOutlineWithQualityGateAgentSDK(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string, agentApply bool, scoped bool, userPrompt string, crossOutline *models.Outline) (*models.Outline, qualityGateResult, error) {
+func repairOutlineWithQualityGateAgentSDK(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string, agentApply bool, scoped bool, userPrompt string, crossOutline *models.Outline) (*models.Outline, quality.QualityGateResult, error) {
 	applyOutlineNormalization(outline, "pre_gate_"+stage)
 	gate := runOutlineQualityGateForScope(setup, outline, scoped)
 	repairGate := filterQualityGateForAgentSDKPromptBoundary(gate, outline, userPrompt, "quality-gate repair")
@@ -2152,7 +2153,7 @@ func repairOutlineWithQualityGateAgentSDK(ctx context.Context, outline *models.O
 
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
-	review := qualityGateReviewResult("Repair outline quality gate findings before saving project state.", repairGate)
+	review := quality.QualityGateReviewResult("Repair outline quality gate findings before saving project state.", repairGate)
 	repaired, err := agent.RepairByReviewAgentSDK(ctx, outline, review, setup, agentApply, crossOutline, composeCrossVolumeAllFlag)
 	if err != nil {
 		return outline, gate, fmt.Errorf("outline quality gate Agent SDK repair failed: %w", err)
@@ -2162,14 +2163,14 @@ func repairOutlineWithQualityGateAgentSDK(ctx context.Context, outline *models.O
 	return repaired, finalGate, nil
 }
 
-func runOutlineQualityGateForScope(setup *models.StorySetup, outline *models.Outline, scoped bool) qualityGateResult {
+func runOutlineQualityGateForScope(setup *models.StorySetup, outline *models.Outline, scoped bool) quality.QualityGateResult {
 	if scoped {
-		return runScopedOutlineQualityGate(setup, outline)
+		return quality.RunScopedOutlineQualityGate(setup, outline)
 	}
-	return runOutlineQualityGate(setup, outline)
+	return quality.RunOutlineQualityGate(setup, outline)
 }
 
-func outlineGateHasPatchableGlobalIssues(gate qualityGateResult, outline *models.Outline) bool {
+func outlineGateHasPatchableGlobalIssues(gate quality.QualityGateResult, outline *models.Outline) bool {
 	mysteryThreads := collectOutlineMysteryThreads(outline)
 	for _, suggestion := range gate.Suggestions {
 		targetID := strings.TrimSpace(suggestion.TargetID)
@@ -2187,7 +2188,7 @@ func outlineGateHasPatchableGlobalIssues(gate qualityGateResult, outline *models
 	return false
 }
 
-func repairOutlineGlobalIssuesAgentSDK(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, gate qualityGateResult, stage string) (*models.Outline, qualityGateResult, error) {
+func repairOutlineGlobalIssuesAgentSDK(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, gate quality.QualityGateResult, stage string) (*models.Outline, quality.QualityGateResult, error) {
 	logger.Info("Outline quality gate found patchable global issues after %s; running one Agent SDK global repair pass", stage)
 	cfg, err := llm.LoadOrCreateConfig()
 	if err != nil {
@@ -2199,7 +2200,7 @@ func repairOutlineGlobalIssuesAgentSDK(ctx context.Context, outline *models.Outl
 	}
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
-	review := qualityGateReviewResult("Repair patchable global outline quality findings before saving project state.", gate)
+	review := quality.QualityGateReviewResult("Repair patchable global outline quality findings before saving project state.", gate)
 	if _, err := agent.RepairGlobalIssuesWithAgentSDK(ctx, *review, true); err != nil {
 		return outline, gate, fmt.Errorf("global outline quality gate Agent SDK repair failed: %w", err)
 	}
@@ -2215,7 +2216,7 @@ func repairOutlineGlobalIssuesAgentSDK(ctx context.Context, outline *models.Outl
 	} else {
 		logger.Warn("Failed to reload outline after global repair; using in-memory outline: %v", loadErr)
 	}
-	return reloadedOutline, runOutlineQualityGate(reloadedSetup, reloadedOutline), nil
+	return reloadedOutline, quality.RunOutlineQualityGate(reloadedSetup, reloadedOutline), nil
 }
 
 // generateOutlineHierarchical generates outline using hierarchical approach
@@ -3020,127 +3021,6 @@ func backupOutlineFiles() error {
 	return nil
 }
 
-// runOutlineValidatorOnModel converts models.Outline to rpg.StoryOutline,
-// runs the outline validator, and returns issues as ReviewSuggestions.
-func runOutlineValidatorOnModel(outline *models.Outline) []models.ReviewSuggestion {
-	if outline == nil {
-		return nil
-	}
-	// Convert via JSON roundtrip (models.Outline -> rpg.StoryOutline)
-	data, err := json.Marshal(outline)
-	if err != nil {
-		return nil
-	}
-	var storyOutline rpg.StoryOutline
-	if err := json.Unmarshal(data, &storyOutline); err != nil {
-		return nil
-	}
-
-	validator := rpg.NewOutlineValidator(&storyOutline)
-	result := validator.Validate()
-
-	var suggestions []models.ReviewSuggestion
-
-	for _, issue := range result.Issues {
-		suggestions = append(suggestions, models.ReviewSuggestion{
-			Category:   issue.Type,
-			TargetID:   issue.Location,
-			TargetName: issue.Location,
-			Issue:      issue.Description,
-			Suggestion: issue.Fix,
-			Priority:   severityToPriorityStr(issue.Severity),
-		})
-	}
-	for _, w := range result.Warnings {
-		suggestions = append(suggestions, models.ReviewSuggestion{
-			Category:   w.Type,
-			TargetID:   w.Location,
-			TargetName: w.Location,
-			Issue:      w.Description,
-			Suggestion: w.Suggestion,
-			Priority:   models.PriorityMedium,
-		})
-	}
-	for _, s := range result.Suggestions {
-		if s.Type == "faction_tier" {
-			// The outline-only validator cannot see story_setup.json, so its
-			// "define faction tiers in setup" hint is not self-verifying. The
-			// setup+outline cross-check owns that contract.
-			continue
-		}
-		suggestions = append(suggestions, outlineSuggestionToReviewSuggestion(s))
-	}
-	return suggestions
-}
-
-func outlineSuggestionToReviewSuggestion(s rpg.OutlineSuggestion) models.ReviewSuggestion {
-	issue := strings.TrimSpace(s.Reason)
-	if issue == "" {
-		issue = outlineSuggestionIssueFromType(s.Type)
-	}
-	if current := shortEvidence(s.Current, 120); current != "" {
-		issue = fmt.Sprintf("%s；当前表现：%s", issue, current)
-	}
-
-	suggestion := strings.TrimSpace(s.Suggested)
-	if suggestion == "" {
-		suggestion = "按问题原因补充一个具体、可执行的章节调整。"
-	}
-
-	return models.ReviewSuggestion{
-		Category:   s.Type,
-		TargetID:   s.Location,
-		TargetName: s.Location,
-		Issue:      issue,
-		Suggestion: suggestion,
-		Priority:   models.PriorityLow,
-	}
-}
-
-func outlineSuggestionIssueFromType(issueType string) string {
-	switch strings.TrimSpace(issueType) {
-	case "logic":
-		return "章节逻辑需要更明确的因果或阶段性结果"
-	case "conflict":
-		return "章节冲突强度或落点不足"
-	case "pacing":
-		return "章节节奏需要调整"
-	case "timeline":
-		return "时间线锚点或过渡不够清晰"
-	case "state_anchor":
-		return "章节状态锚点缺少可追踪的变化依据"
-	case "storyline_texture":
-		return "故事线推进记录缺少戏剧压力、后果或具体变化"
-	default:
-		return "大纲存在可优化项"
-	}
-}
-
-func shortEvidence(value string, maxRunes int) string {
-	value = strings.TrimSpace(value)
-	if value == "" || strings.HasPrefix(value, "缺少") || strings.HasPrefix(value, "chapter has") || strings.Contains(value, "entry has no") {
-		return value
-	}
-	runes := []rune(value)
-	if maxRunes > 0 && len(runes) > maxRunes {
-		return string(runes[:maxRunes]) + "..."
-	}
-	return value
-}
-
-func severityToPriorityStr(severity string) string {
-	switch severity {
-	case "critical":
-		return models.PriorityHigh
-	case "major":
-		return models.PriorityHigh
-	case "minor":
-		return models.PriorityMedium
-	default:
-		return models.PriorityLow
-	}
-}
-
 // iterateOutlineImprovement runs the review-improvement loop
 func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, concurrency int, hierarchical bool, forceImprove bool, userPrompt string) error {
 	logger.Section("Outline Iteration Improvement")
@@ -3197,7 +3077,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 
 	// Enrich with direct model checks + DSL simulation + outline validator feedback.
 	if review != nil {
-		gate := runOutlineQualityGate(setup, improvedOutline)
+		gate := quality.RunOutlineQualityGate(setup, improvedOutline)
 		if len(gate.Suggestions) > 0 {
 			review.Suggestions = append(review.Suggestions, gate.Suggestions...)
 			logger.Info("Quality gate added %d suggestion(s) to review", len(gate.Suggestions))
@@ -3264,21 +3144,21 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 	beforeOutline := cloneOutline(outline)
 	applyOutlineNormalization(outline, "pre_agent_sdk_improve")
 
-	preGate := runOutlineCombinedGateForScope(setup, outline, scoped)
+	preGate := quality.RunOutlineCombinedGateForScope(setup, outline, scoped)
 	var seedReview *models.ReviewResult
 	if len(preGate.Suggestions) > 0 {
-		seedReview = qualityGateReviewResult("Pre-check issues for targeted Agent SDK outline improvement.", preGate)
+		seedReview = quality.QualityGateReviewResult("Pre-check issues for targeted Agent SDK outline improvement.", preGate)
 		seedReview = filterAgentSDKReviewForPromptBoundary(seedReview, outline, userPrompt, "pre-check seed review")
 		logger.Info("Pre-check supplied %d quality/simulation issue(s) to Agent SDK", len(seedReview.Suggestions))
 	}
 	if len(suggestions) > 0 {
-		merged := qualityGateResult{Suggestions: append([]models.ReviewSuggestion(nil), suggestions...)}
+		merged := quality.QualityGateResult{Suggestions: append([]models.ReviewSuggestion(nil), suggestions...)}
 		if seedReview != nil {
 			merged.Suggestions = append(merged.Suggestions, seedReview.Suggestions...)
 		}
-		merged.dedup()
+		merged.Dedup()
 		seedReview = &models.ReviewResult{
-			OverallScore: scoreFromGate(merged),
+			OverallScore: quality.ScoreFromGate(merged),
 			Summary:      fmt.Sprintf("Agent SDK outline improvement seeded by %d suggestion report item(s).", len(merged.Suggestions)),
 			Suggestions:  merged.Suggestions,
 		}
@@ -3295,12 +3175,12 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 	*outline = *improvedOutline
 
 	if review != nil {
-		gate := runOutlineCombinedGateForScope(setup, improvedOutline, scoped)
+		gate := quality.RunOutlineCombinedGateForScope(setup, improvedOutline, scoped)
 		if len(gate.Suggestions) > 0 {
 			review.Suggestions = append(review.Suggestions, gate.Suggestions...)
 			logger.Info("Quality/simulation gate added %d suggestion(s) to Agent SDK review", len(gate.Suggestions))
 		}
-		repairReview := qualityGateMediumReviewResult("Post-check medium-or-higher issues for Agent SDK targeted repair.", gate)
+		repairReview := quality.QualityGateMediumReviewResult("Post-check medium-or-higher issues for Agent SDK targeted repair.", gate)
 		repairReview = filterAgentSDKReviewForPromptBoundary(repairReview, improvedOutline, userPrompt, "post-check repair pass")
 		if len(repairReview.Suggestions) > 0 && maxIterations > 0 {
 			repairBatch := limitReviewSuggestionsForAgentSDKRepair(repairReview, composeRepairBudgetFlag)
@@ -3312,8 +3192,8 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 				improvedOutline = repairOutput
 				applyOutlineNormalization(improvedOutline, "post_agent_sdk_repair")
 				*outline = *improvedOutline
-				repairGate := runOutlineCombinedGateForScope(setup, improvedOutline, scoped)
-				remaining := filterMediumOrHigherOutlineTargetSuggestions(repairGate.Suggestions)
+				repairGate := quality.RunOutlineCombinedGateForScope(setup, improvedOutline, scoped)
+				remaining := quality.FilterMediumOrHigherOutlineTargetSuggestions(repairGate.Suggestions)
 				if len(remaining) > 0 {
 					logger.Warn("Agent SDK repair completed, but %d targetable medium-or-higher quality/simulation issue(s) remain", len(remaining))
 				} else {
@@ -3369,15 +3249,15 @@ func filterAgentSDKReviewForPromptBoundary(review *models.ReviewResult, outline 
 	return &limited
 }
 
-func filterQualityGateForAgentSDKPromptBoundary(gate qualityGateResult, outline *models.Outline, userPrompt, purpose string) qualityGateResult {
-	review := qualityGateReviewResult("Filter quality gate by Agent SDK prompt boundary.", gate)
+func filterQualityGateForAgentSDKPromptBoundary(gate quality.QualityGateResult, outline *models.Outline, userPrompt, purpose string) quality.QualityGateResult {
+	review := quality.QualityGateReviewResult("Filter quality gate by Agent SDK prompt boundary.", gate)
 	filtered := filterAgentSDKReviewForPromptBoundary(review, outline, userPrompt, purpose)
 	if filtered == nil {
 		return gate
 	}
 	limited := gate
 	limited.Suggestions = append([]models.ReviewSuggestion(nil), filtered.Suggestions...)
-	limited.Blocking = hasBlockingSuggestions(limited.Suggestions)
+	limited.Blocking = quality.HasBlockingSuggestions(limited.Suggestions)
 	return limited
 }
 

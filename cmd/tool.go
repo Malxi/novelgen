@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
+	"novelgen/internal/quality"
 	"novelgen/internal/utils"
 	"os"
 	"path/filepath"
@@ -2310,8 +2311,8 @@ func outlineGlobalRepairStats(outline *models.Outline, check *toolCheckResult) m
 	stats := map[string]int{}
 	if outline != nil {
 		stats["part_count"] = len(outline.Parts)
-		stats["volume_count"] = countOutlineVolumes(outline)
-		stats["chapter_count"] = countOutlineChapters(outline)
+		stats["volume_count"] = quality.CountOutlineVolumes(outline)
+		stats["chapter_count"] = quality.CountOutlineChapters(outline)
 	}
 	if check != nil {
 		stats["returned_issues"] = len(check.Issues)

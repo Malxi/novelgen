@@ -10,6 +10,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
 
 	"github.com/spf13/cobra"
@@ -142,10 +143,10 @@ func loadToolRefreshProjectState() (*models.ProjectConfig, *models.StorySetup, *
 
 func makeToolRefreshChapterDSLCheck(chapterID string, issues []rpgdsl.SimulationIssue) *toolCheckResult {
 	chapterIssues := rpgdsl.NewSimulationBridge().IssuesForChapter(issues, chapterID)
-	gate := qualityGateResult{}
-	gate.add(rpgdsl.NewSimulationBridge().ConvertIssuesToSuggestions(chapterIssues)...)
-	gate.dedup()
-	gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+	gate := quality.QualityGateResult{}
+	gate.Add(rpgdsl.NewSimulationBridge().ConvertIssuesToSuggestions(chapterIssues)...)
+	gate.Dedup()
+	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	return makeToolCheckResult("simulation", "chapter", "chapter", chapterID, gate)
 }
 

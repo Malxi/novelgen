@@ -4,12 +4,13 @@ import (
 	"strings"
 	"testing"
 
+	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
 )
 
 func TestOutlineSuggestionToReviewSuggestionUsesReasonAsIssue(t *testing.T) {
 	longBeat := strings.Repeat("主角完成一连串战斗与发现，", 20)
-	suggestion := outlineSuggestionToReviewSuggestion(rpg.OutlineSuggestion{
+	suggestion := quality.OutlineSuggestionToReviewSuggestion(rpg.OutlineSuggestion{
 		Type:      "logic",
 		Location:  "P1-V1-C7",
 		Current:   longBeat,

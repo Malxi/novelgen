@@ -8,6 +8,7 @@ import (
 	"novelgen/internal/logic/style"
 	"novelgen/internal/models"
 	"novelgen/internal/project"
+	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
 	"os"
 	"path/filepath"
@@ -1115,18 +1116,18 @@ type toolChapterPatch struct {
 }
 
 func runToolSetupCheck(kind string, setup *models.StorySetup) (*toolCheckResult, error) {
-	var gate qualityGateResult
+	var gate quality.QualityGateResult
 	switch kind {
 	case "quality":
-		gate = runSetupQualityGate(setup)
+		gate = quality.RunSetupQualityGate(setup)
 	case "simulation":
-		gate = runSetupSimulationGate(setup)
+		gate = quality.RunSetupSimulationGate(setup)
 	case "all":
-		gate = runSetupQualityGate(setup)
-		sim := runSetupSimulationGate(setup)
-		gate.add(sim.Suggestions...)
-		gate.dedup()
-		gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+		gate = quality.RunSetupQualityGate(setup)
+		sim := quality.RunSetupSimulationGate(setup)
+		gate.Add(sim.Suggestions...)
+		gate.Dedup()
+		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	default:
 		return nil, fmt.Errorf("unsupported setup check kind %q", kind)
 	}
@@ -1143,30 +1144,30 @@ func runToolOutlineCheck(kind string, setup *models.StorySetup, outline *models.
 	if err != nil {
 		return nil, err
 	}
-	var gate qualityGateResult
+	var gate quality.QualityGateResult
 	switch kind {
 	case "quality":
 		if scope == "all" {
-			gate = runOutlineQualityGate(setup, scoped)
+			gate = quality.RunOutlineQualityGate(setup, scoped)
 		} else {
-			gate = runScopedOutlineQualityGate(setup, outline)
+			gate = quality.RunScopedOutlineQualityGate(setup, outline)
 		}
 	case "simulation":
-		gate = runOutlineSimulationGate(setup, outline)
+		gate = quality.RunOutlineSimulationGate(setup, outline)
 	case "all":
 		if scope == "all" {
-			gate = runOutlineQualityGate(setup, scoped)
+			gate = quality.RunOutlineQualityGate(setup, scoped)
 		} else {
-			gate = runScopedOutlineQualityGate(setup, outline)
+			gate = quality.RunScopedOutlineQualityGate(setup, outline)
 		}
-		sim := runOutlineSimulationGate(setup, outline)
-		gate.add(sim.Suggestions...)
-		gate.dedup()
-		gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+		sim := quality.RunOutlineSimulationGate(setup, outline)
+		gate.Add(sim.Suggestions...)
+		gate.Dedup()
+		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	}
 	if scope != "all" {
 		gate.Suggestions = filterToolScopedSuggestions(gate.Suggestions, scoped, scope, id)
-		gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	}
 	return makeToolCheckResult(kind, "outline", scope, id, gate), nil
 }
@@ -1184,7 +1185,7 @@ func runToolCraftSchemaCheck(root, scope, id string) (*toolCheckResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	gate := qualityGateResult{}
+	gate := quality.QualityGateResult{}
 	if values == nil {
 		values = map[string]map[string]interface{}{}
 	}
@@ -1209,7 +1210,7 @@ func runToolCraftSchemaCheck(root, scope, id string) (*toolCheckResult, error) {
 		validateCraftSchemaObject(&gate, scope, key, values[key])
 		validateCraftConsistencyObject(&gate, scope, key, values[key], knownCharacters)
 		validateCraftQualityObject(&gate, scope, key, values[key])
-		gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 		return makeToolCheckResult("schema", "craft", scope, key, gate), nil
 	}
 	for key, value := range values {
@@ -1217,7 +1218,7 @@ func runToolCraftSchemaCheck(root, scope, id string) (*toolCheckResult, error) {
 		validateCraftConsistencyObject(&gate, scope, key, value, knownCharacters)
 		validateCraftQualityObject(&gate, scope, key, value)
 	}
-	gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	return makeToolCheckResult("schema", "craft", scope, "", gate), nil
 }
 
@@ -1242,7 +1243,7 @@ func runToolRecapCheck(root, kind, scope, id string) (*toolCheckResult, error) {
 
 	store := recap.NewStore(root)
 	recapData, err := store.Load(id)
-	gate := qualityGateResult{}
+	gate := quality.QualityGateResult{}
 	if err != nil {
 		gate.Suggestions = append(gate.Suggestions, models.ReviewSuggestion{
 			Category:   "recap",
@@ -1263,10 +1264,10 @@ func runToolRecapCheck(root, kind, scope, id string) (*toolCheckResult, error) {
 }
 
 func runToolRecapCheckForValue(kind, scope, id string, recapData *models.ChapterRecap, outlineChapter *models.Chapter) *toolCheckResult {
-	gate := qualityGateResult{}
+	gate := quality.QualityGateResult{}
 	validateRecapForToolCheck(&gate, recapData, id, outlineChapter)
-	gate.dedup()
-	gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+	gate.Dedup()
+	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	return makeToolCheckResult(kind, "recap", scope, id, gate)
 }
 
@@ -1310,7 +1311,7 @@ func runToolChapterCheckWithTargetWords(root, kind, scope, id string, targetWord
 	if targetWords <= 0 {
 		targetWords = toolChapterTargetWords()
 	}
-	var gate qualityGateResult
+	var gate quality.QualityGateResult
 	switch kind {
 	case "quality":
 		gate = runToolChapterQualityGate(chapter, content, targetWords)
@@ -1319,9 +1320,9 @@ func runToolChapterCheckWithTargetWords(root, kind, scope, id string, targetWord
 	case "all":
 		gate = runToolChapterQualityGate(chapter, content, targetWords)
 		sim := runToolChapterSimulationGate(root, id)
-		gate.add(sim.Suggestions...)
-		gate.dedup()
-		gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+		gate.Add(sim.Suggestions...)
+		gate.Dedup()
+		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	}
 	result := makeToolCheckResult(kind, "chapter", scope, id, gate)
 	if targetWords > 0 {
@@ -1330,10 +1331,10 @@ func runToolChapterCheckWithTargetWords(root, kind, scope, id string, targetWord
 	return result, nil
 }
 
-func runToolChapterQualityGate(chapter *models.Chapter, content string, targetWords int) (gate qualityGateResult) {
+func runToolChapterQualityGate(chapter *models.Chapter, content string, targetWords int) (gate quality.QualityGateResult) {
 	defer func() {
-		gate.dedup()
-		gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+		gate.Dedup()
+		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	}()
 	chapterID := ""
 	chapterTitle := ""
@@ -1341,45 +1342,45 @@ func runToolChapterQualityGate(chapter *models.Chapter, content string, targetWo
 		chapterID = strings.TrimSpace(chapter.ID)
 		chapterTitle = strings.TrimSpace(chapter.Title)
 	}
-	targetName := coalesceString(chapterTitle, chapterID)
+	targetName := quality.CoalesceString(chapterTitle, chapterID)
 	clean := strings.TrimSpace(content)
 	if clean == "" {
-		gate.add(qualitySuggestion("chapter", chapterID, targetName, "final chapter markdown is missing or empty", "Run write gen or write improve for this chapter, then rerun tool check quality --target chapter.", models.PriorityHigh))
+		gate.Add(quality.QualitySuggestion("chapter", chapterID, targetName, "final chapter markdown is missing or empty", "Run write gen or write improve for this chapter, then rerun tool check quality --target chapter.", models.PriorityHigh))
 		return gate
 	}
 
 	if chapterTitle != "" && !strings.HasPrefix(clean, "# "+chapterTitle) {
-		gate.add(qualitySuggestion("structure", chapterID, targetName, "final chapter markdown does not start with the outline title", "Keep the saved chapter headed by the outline title so downstream export and recap tools read the correct chapter.", models.PriorityMedium))
+		gate.Add(quality.QualitySuggestion("structure", chapterID, targetName, "final chapter markdown does not start with the outline title", "Keep the saved chapter headed by the outline title so downstream export and recap tools read the correct chapter.", models.PriorityMedium))
 	}
 
 	body := strings.TrimSpace(stripToolChapterMarkdownTitle(clean, chapterTitle))
 	if body == "" {
-		gate.add(qualitySuggestion("chapter", chapterID, targetName, "final chapter body is empty after the title", "Regenerate the chapter body before running recap or RPG DSL extraction.", models.PriorityHigh))
+		gate.Add(quality.QualitySuggestion("chapter", chapterID, targetName, "final chapter body is empty after the title", "Regenerate the chapter body before running recap or RPG DSL extraction.", models.PriorityHigh))
 		return gate
 	}
 	if chapterTitle != "" && repeatedChapterTitlePrefix(body, chapterTitle) {
-		gate.add(qualitySuggestion("structure", chapterID, targetName, "final chapter body repeats the outline title immediately after the heading", "Remove the duplicate title from the first body paragraph; keep one markdown heading and start the body with scene prose.", models.PriorityMedium))
+		gate.Add(quality.QualitySuggestion("structure", chapterID, targetName, "final chapter body repeats the outline title immediately after the heading", "Remove the duplicate title from the first body paragraph; keep one markdown heading and start the body with scene prose.", models.PriorityMedium))
 	}
 	if strings.HasPrefix(body, "{") && strings.Contains(body, `"content"`) {
-		gate.add(qualitySuggestion("chapter", chapterID, targetName, "final chapter body looks like raw JSON output", "Regenerate or improve the chapter so the saved markdown contains prose, not the agent JSON envelope.", models.PriorityHigh))
+		gate.Add(quality.QualitySuggestion("chapter", chapterID, targetName, "final chapter body looks like raw JSON output", "Regenerate or improve the chapter so the saved markdown contains prose, not the agent JSON envelope.", models.PriorityHigh))
 	}
 	if strings.Contains(body, "```") {
-		gate.add(qualitySuggestion("chapter", chapterID, targetName, "final chapter body contains markdown code fences", "Remove code fences and save only narrative prose in the final chapter markdown.", models.PriorityHigh))
+		gate.Add(quality.QualitySuggestion("chapter", chapterID, targetName, "final chapter body contains markdown code fences", "Remove code fences and save only narrative prose in the final chapter markdown.", models.PriorityHigh))
 	}
 	if strings.Contains(strings.ToLower(body), "<br") {
-		gate.add(qualitySuggestion("structure", chapterID, targetName, "final chapter body contains HTML line break tags", "Replace HTML <br> tags with normal Markdown paragraph breaks or prose punctuation.", models.PriorityMedium))
+		gate.Add(quality.QualitySuggestion("structure", chapterID, targetName, "final chapter body contains HTML line break tags", "Replace HTML <br> tags with normal Markdown paragraph breaks or prose punctuation.", models.PriorityMedium))
 	}
 	if regexp.MustCompile(`\*\*[^*\n][^*\n]*\*\*`).MatchString(body) {
-		gate.add(qualitySuggestion("structure", chapterID, targetName, "final chapter body contains inline bold markdown", "Remove inline bold formatting from final prose; keep only the chapter heading as Markdown structure.", models.PriorityMedium))
+		gate.Add(quality.QualitySuggestion("structure", chapterID, targetName, "final chapter body contains inline bold markdown", "Remove inline bold formatting from final prose; keep only the chapter heading as Markdown structure.", models.PriorityMedium))
 	}
 	for _, artifact := range chapterTypoArtifacts(body) {
-		gate.add(qualitySuggestion("prose", chapterID, targetName, fmt.Sprintf("final chapter body contains suspicious typo artifact: %s", artifact), "Fix the suspicious typo while preserving the surrounding prose and chapter events.", models.PriorityMedium))
+		gate.Add(quality.QualitySuggestion("prose", chapterID, targetName, fmt.Sprintf("final chapter body contains suspicious typo artifact: %s", artifact), "Fix the suspicious typo while preserving the surrounding prose and chapter events.", models.PriorityMedium))
 	}
 
 	count := toolNarrativeUnitCount(body)
 	paragraphs := toolChapterParagraphCount(body)
 	if count >= 600 && paragraphs < 3 {
-		gate.add(qualitySuggestion("structure", chapterID, targetName, fmt.Sprintf("final chapter has too few prose paragraphs: got %d paragraphs for %d narrative units", paragraphs, count), "Split the chapter into mobile-readable prose and dialogue paragraphs while preserving the same events.", models.PriorityMedium))
+		gate.Add(quality.QualitySuggestion("structure", chapterID, targetName, fmt.Sprintf("final chapter has too few prose paragraphs: got %d paragraphs for %d narrative units", paragraphs, count), "Split the chapter into mobile-readable prose and dialogue paragraphs while preserving the same events.", models.PriorityMedium))
 	}
 	if targetWords > 0 {
 		min := targetWords / 2
@@ -1387,11 +1388,11 @@ func runToolChapterQualityGate(chapter *models.Chapter, content string, targetWo
 			min = 120
 		}
 		if count < min {
-			gate.add(qualitySuggestion("length", chapterID, targetName, fmt.Sprintf("final chapter is too short: got %d narrative units, target %d", count, targetWords), "Regenerate or improve the chapter with enough scene-level prose to satisfy the target length.", models.PriorityHigh))
+			gate.Add(quality.QualitySuggestion("length", chapterID, targetName, fmt.Sprintf("final chapter is too short: got %d narrative units, target %d", count, targetWords), "Regenerate or improve the chapter with enough scene-level prose to satisfy the target length.", models.PriorityHigh))
 		}
 		hardMax := toolChapterLengthHardMax(targetWords)
 		if count > hardMax {
-			gate.add(qualitySuggestion("length", chapterID, targetName, fmt.Sprintf("final chapter is much longer than target: got %d narrative units, target %d", count, targetWords), "Trim the chapter or split non-target material so this saved file contains only the selected chapter.", models.PriorityMedium))
+			gate.Add(quality.QualitySuggestion("length", chapterID, targetName, fmt.Sprintf("final chapter is much longer than target: got %d narrative units, target %d", count, targetWords), "Trim the chapter or split non-target material so this saved file contains only the selected chapter.", models.PriorityMedium))
 		}
 	}
 
@@ -1404,13 +1405,13 @@ func runToolChapterQualityGate(chapter *models.Chapter, content string, targetWo
 			}
 		}
 		if len(missing) > 0 {
-			gate.add(qualitySuggestion("character", chapterID, targetName, fmt.Sprintf("final chapter text does not mention outline character(s): %s", strings.Join(missing, ", ")), "Revise the saved chapter so the named outline characters are present under their canonical names, or update the outline only through the validated outline patch workflow if the cast changed.", models.PriorityHigh))
+			gate.Add(quality.QualitySuggestion("character", chapterID, targetName, fmt.Sprintf("final chapter text does not mention outline character(s): %s", strings.Join(missing, ", ")), "Revise the saved chapter so the named outline characters are present under their canonical names, or update the outline only through the validated outline patch workflow if the cast changed.", models.PriorityHigh))
 		}
 	}
 
 	flavor := style.CheckAIFlavor(body, 75)
 	if flavor.HasIssue {
-		gate.add(qualitySuggestion("style", chapterID, targetName, fmt.Sprintf("deterministic AI-flavor check score is %d", flavor.Score), strings.Join(flavor.Suggestions, " "), models.PriorityMedium))
+		gate.Add(quality.QualitySuggestion("style", chapterID, targetName, fmt.Sprintf("deterministic AI-flavor check score is %d", flavor.Score), strings.Join(flavor.Suggestions, " "), models.PriorityMedium))
 	}
 	return gate
 }
@@ -1531,10 +1532,10 @@ func toolChapterParagraphCount(content string) int {
 	return count
 }
 
-func runToolChapterSimulationGate(root, chapterID string) qualityGateResult {
-	var gate qualityGateResult
+func runToolChapterSimulationGate(root, chapterID string) quality.QualityGateResult {
+	var gate quality.QualityGateResult
 	if stale, info := toolChapterRPGDSLStale(root, chapterID); stale {
-		gate.add(qualitySuggestion(
+		gate.Add(quality.QualitySuggestion(
 			"simulation",
 			chapterID,
 			chapterID,
@@ -1547,7 +1548,7 @@ func runToolChapterSimulationGate(root, chapterID string) qualityGateResult {
 	}
 	dslData, err := loadToolMergedRPGDSL(root)
 	if err != nil {
-		gate.add(qualitySuggestion(
+		gate.Add(quality.QualitySuggestion(
 			"simulation",
 			chapterID,
 			chapterID,
@@ -1560,12 +1561,12 @@ func runToolChapterSimulationGate(root, chapterID string) qualityGateResult {
 	}
 	simulator := rpgdsl.NewSimulator(dslData)
 	issues := simulator.SimulateChapter(chapterID)
-	gate.add(rpgdsl.NewSimulationBridge().ConvertIssuesToSuggestions(issues)...)
+	gate.Add(rpgdsl.NewSimulationBridge().ConvertIssuesToSuggestions(issues)...)
 	if diagnostic := buildChapterSimulationSignalDiagnostic(chapterID, dslData, issues); diagnostic != nil {
-		gate.add(*diagnostic)
+		gate.Add(*diagnostic)
 	}
-	gate.dedup()
-	gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+	gate.Dedup()
+	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	return gate
 }
 
@@ -1871,7 +1872,7 @@ func normalizeRecapCheckScope(scope string) string {
 	}
 }
 
-func validateRecapForToolCheck(gate *qualityGateResult, recapData *models.ChapterRecap, expectedID string, outlineChapter *models.Chapter) {
+func validateRecapForToolCheck(gate *quality.QualityGateResult, recapData *models.ChapterRecap, expectedID string, outlineChapter *models.Chapter) {
 	if gate == nil {
 		return
 	}
@@ -1952,7 +1953,7 @@ func normalizeRecapPatchIdentity(value *models.ChapterRecap, id string, outlineC
 	return warnings
 }
 
-func validateCraftSchemaObject(gate *qualityGateResult, scope, key string, value map[string]interface{}) {
+func validateCraftSchemaObject(gate *quality.QualityGateResult, scope, key string, value map[string]interface{}) {
 	if gate == nil {
 		return
 	}
@@ -1981,7 +1982,7 @@ func loadCraftCharacterNames(root string) map[string]bool {
 	return names
 }
 
-func validateCraftConsistencyObject(gate *qualityGateResult, scope, key string, value map[string]interface{}, knownCharacters map[string]bool) {
+func validateCraftConsistencyObject(gate *quality.QualityGateResult, scope, key string, value map[string]interface{}, knownCharacters map[string]bool) {
 	if gate == nil || normalizeCraftPatchTarget(scope) != "item" || len(knownCharacters) == 0 {
 		return
 	}
@@ -1999,7 +2000,7 @@ func validateCraftConsistencyObject(gate *qualityGateResult, scope, key string, 
 	})
 }
 
-func validateCraftQualityObject(gate *qualityGateResult, scope, key string, value map[string]interface{}) {
+func validateCraftQualityObject(gate *quality.QualityGateResult, scope, key string, value map[string]interface{}) {
 	if gate == nil || normalizeCraftPatchTarget(scope) != "character" || value == nil {
 		return
 	}
@@ -2200,8 +2201,8 @@ func toolScopedTargetIDs(outline *models.Outline, scope, id string) map[string]b
 	return allowed
 }
 
-func makeToolCheckResult(kind, target, scope, id string, gate qualityGateResult) *toolCheckResult {
-	critical, high, medium, low := countSuggestionPriorities(gate.Suggestions)
+func makeToolCheckResult(kind, target, scope, id string, gate quality.QualityGateResult) *toolCheckResult {
+	critical, high, medium, low := quality.CountSuggestionPriorities(gate.Suggestions)
 	return &toolCheckResult{
 		Kind:     kind,
 		Target:   target,
@@ -2209,7 +2210,7 @@ func makeToolCheckResult(kind, target, scope, id string, gate qualityGateResult)
 		ID:       id,
 		OK:       !gate.Blocking,
 		Blocking: gate.Blocking,
-		Score:    scoreFromGate(gate),
+		Score:    quality.ScoreFromGate(gate),
 		Summary: toolCheckSummary{
 			Total:    len(gate.Suggestions),
 			Critical: critical,

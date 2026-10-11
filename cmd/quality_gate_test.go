@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"novelgen/internal/models"
+	"novelgen/internal/quality"
 )
 
 func TestValidateStorySetupDirectFindsMissingContractFields(t *testing.T) {
@@ -37,7 +38,7 @@ func TestValidateStorySetupDirectFindsMissingContractFields(t *testing.T) {
 		},
 	}
 
-	suggestions := validateStorySetupDirect(setup)
+	suggestions := quality.ValidateStorySetupDirect(setup)
 
 	assertHasIssue(t, suggestions, "required setup field is empty")
 	assertHasIssue(t, suggestions, "important storyline is under-specified")
@@ -77,7 +78,7 @@ func TestValidateStorySetupDirectFlagsThinLongFormSystems(t *testing.T) {
 		}},
 	}
 
-	suggestions := validateStorySetupDirect(setup)
+	suggestions := quality.ValidateStorySetupDirect(setup)
 
 	assertHasIssue(t, suggestions, "setup has too few progression systems")
 }
@@ -90,7 +91,7 @@ func TestValidateStorySetupDirectFlagsThinLongFormPlan(t *testing.T) {
 		MainLoop:       "pressure -> win",
 	}
 
-	suggestions := validateStorySetupDirect(setup)
+	suggestions := quality.ValidateStorySetupDirect(setup)
 
 	assertHasIssue(t, suggestions, "long-form plan has too few escalation ladder stages")
 	assertHasIssue(t, suggestions, "long-form plan has too few reader promises")
@@ -107,7 +108,7 @@ func TestValidateStorySetupDirectFlagsThinLongFormStorylineEngine(t *testing.T) 
 	setup.Storylines[0].PayoffStyle = "staged_reveal"
 	setup.Storylines[0].PressurePoints = []string{"public ranking", "faction challenge"}
 
-	suggestions := validateStorySetupDirect(setup)
+	suggestions := quality.ValidateStorySetupDirect(setup)
 
 	assertHasIssue(t, suggestions, "important long-form storyline lacks repeatable pressure")
 	assertHasIssue(t, suggestions, "important long-form storyline lacks payoff cadence")
@@ -143,7 +144,7 @@ func TestValidateStorySetupDirectFlagsOversizedSetupForPromptStability(t *testin
 		})
 	}
 
-	suggestions := validateStorySetupDirect(setup)
+	suggestions := quality.ValidateStorySetupDirect(setup)
 
 	assertHasIssue(t, suggestions, "setup has too many core cast seeds")
 	assertHasIssue(t, suggestions, "setup has too many storylines")
@@ -181,7 +182,7 @@ func TestValidateStorySetupDirectFlagsThinLongFormCoreCastCapacity(t *testing.T)
 		},
 	}
 
-	suggestions := validateStorySetupDirect(setup)
+	suggestions := quality.ValidateStorySetupDirect(setup)
 
 	assertHasIssue(t, suggestions, "core cast has no protagonist")
 	assertHasIssue(t, suggestions, "long-form setup has too few important core cast seeds")
@@ -194,7 +195,7 @@ func TestValidateStorySetupDirectFlagsUnknownCoreCastStorylineRef(t *testing.T) 
 	setup := validLongFormSetup()
 	setup.CoreCast[0].StorylineRefs = []string{"Missing Arc"}
 
-	suggestions := validateStorySetupDirect(setup)
+	suggestions := quality.ValidateStorySetupDirect(setup)
 
 	assertHasIssue(t, suggestions, "core cast seed references unknown storyline")
 }
@@ -202,7 +203,7 @@ func TestValidateStorySetupDirectFlagsUnknownCoreCastStorylineRef(t *testing.T) 
 func TestValidateStorySetupDirectAcceptsRichLongFormCoreCastCapacity(t *testing.T) {
 	setup := validLongFormSetup()
 
-	suggestions := validateStorySetupDirect(setup)
+	suggestions := quality.ValidateStorySetupDirect(setup)
 
 	assertNoIssue(t, suggestions, "core cast has no protagonist")
 	assertNoIssue(t, suggestions, "long-form setup has too few important core cast seeds")
@@ -223,7 +224,7 @@ func TestValidateOutlineDirectFlagsLongFormPlanMismatch(t *testing.T) {
 		}},
 	}}}
 
-	suggestions := validateOutlineDirect(setup, outline)
+	suggestions := quality.ValidateOutlineDirect(setup, outline)
 
 	assertHasIssue(t, suggestions, "outline chapter count is far below long_form_plan target")
 	assertHasIssue(t, suggestions, "outline volume count is far below long_form_plan target")
@@ -240,7 +241,7 @@ func TestRunScopedOutlineQualityGateSkipsLongFormScaleMismatch(t *testing.T) {
 		}},
 	}}}
 
-	gate := runScopedOutlineQualityGate(setup, outline)
+	gate := quality.RunScopedOutlineQualityGate(setup, outline)
 
 	assertNoIssue(t, gate.Suggestions, "outline chapter count is far below long_form_plan target")
 	assertNoIssue(t, gate.Suggestions, "outline volume count is far below long_form_plan target")
@@ -287,7 +288,7 @@ func TestValidateOutlineDirectFindsChapterContractIssues(t *testing.T) {
 		}},
 	}
 
-	suggestions := validateOutlineDirect(setup, outline)
+	suggestions := quality.ValidateOutlineDirect(setup, outline)
 
 	assertHasIssue(t, suggestions, "chapter event count should be 3-5")
 	assertHasIssue(t, suggestions, "combat chapter has no enemies")
@@ -301,11 +302,11 @@ func TestValidateOutlineDirectFindsChapterContractIssues(t *testing.T) {
 }
 
 func TestQualityGateDeduplicatesSuggestionsAndMarksBlocking(t *testing.T) {
-	gate := qualityGateResult{}
-	duplicate := qualitySuggestion("plot", "P1-V1-C1", "Chapter", "same issue", "same fix", models.PriorityHigh)
-	gate.add(duplicate, duplicate)
-	gate.dedup()
-	gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+	gate := quality.QualityGateResult{}
+	duplicate := quality.QualitySuggestion("plot", "P1-V1-C1", "Chapter", "same issue", "same fix", models.PriorityHigh)
+	gate.Add(duplicate, duplicate)
+	gate.Dedup()
+	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 
 	if len(gate.Suggestions) != 1 {
 		t.Fatalf("deduped suggestions = %d, want 1", len(gate.Suggestions))
@@ -316,22 +317,22 @@ func TestQualityGateDeduplicatesSuggestionsAndMarksBlocking(t *testing.T) {
 }
 
 func TestQualityGateMediumReviewFiltersLowNoise(t *testing.T) {
-	gate := qualityGateResult{
+	gate := quality.QualityGateResult{
 		Suggestions: []models.ReviewSuggestion{
-			qualitySuggestion("logic", "P1-V1-C1", "C1", "low issue", "low fix", models.PriorityLow),
-			qualitySuggestion("logic", "P1-V1-C2", "C2", "medium issue", "medium fix", models.PriorityMedium),
-			qualitySuggestion("structure", "global", "global", "global medium issue", "global fix", models.PriorityMedium),
+			quality.QualitySuggestion("logic", "P1-V1-C1", "C1", "low issue", "low fix", models.PriorityLow),
+			quality.QualitySuggestion("logic", "P1-V1-C2", "C2", "medium issue", "medium fix", models.PriorityMedium),
+			quality.QualitySuggestion("structure", "global", "global", "global medium issue", "global fix", models.PriorityMedium),
 		},
 	}
-	gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	if gate.Blocking {
 		t.Fatalf("medium-only gate should not use global blocking semantics")
 	}
-	if !hasMediumOrHigherSuggestions(gate.Suggestions) {
+	if !quality.HasMediumOrHigherSuggestions(gate.Suggestions) {
 		t.Fatalf("medium issue should be actionable for Agent SDK repair")
 	}
 
-	review := qualityGateMediumReviewResult("medium repair", gate)
+	review := quality.QualityGateMediumReviewResult("medium repair", gate)
 	if len(review.Suggestions) != 1 {
 		t.Fatalf("review suggestions = %#v", review.Suggestions)
 	}
@@ -344,11 +345,11 @@ func TestLimitReviewSuggestionsForAgentSDKRepairBatchesHighestPriority(t *testin
 	review := &models.ReviewResult{
 		Summary: "repair",
 		Suggestions: []models.ReviewSuggestion{
-			qualitySuggestion("logic", "P1-V1-C5", "C5", "medium late", "fix", models.PriorityMedium),
-			qualitySuggestion("logic", "P1-V1-C2", "C2", "high early", "fix", models.PriorityHigh),
-			qualitySuggestion("logic", "P1-V1-C4", "C4", "medium middle", "fix", models.PriorityMedium),
-			qualitySuggestion("logic", "P1-V1-C1", "C1", "critical first", "fix", models.PriorityCritical),
-			qualitySuggestion("logic", "P1-V1-C3", "C3", "medium third", "fix", models.PriorityMedium),
+			quality.QualitySuggestion("logic", "P1-V1-C5", "C5", "medium late", "fix", models.PriorityMedium),
+			quality.QualitySuggestion("logic", "P1-V1-C2", "C2", "high early", "fix", models.PriorityHigh),
+			quality.QualitySuggestion("logic", "P1-V1-C4", "C4", "medium middle", "fix", models.PriorityMedium),
+			quality.QualitySuggestion("logic", "P1-V1-C1", "C1", "critical first", "fix", models.PriorityCritical),
+			quality.QualitySuggestion("logic", "P1-V1-C3", "C3", "medium third", "fix", models.PriorityMedium),
 		},
 	}
 
@@ -407,7 +408,7 @@ func TestRunOutlineSimulationGateUsesCraftProtagonistDetails(t *testing.T) {
 		_ = os.Chdir(oldWD)
 	})
 
-	gate := runOutlineSimulationGate(&models.StorySetup{ProjectName: "Fire"}, &models.Outline{})
+	gate := quality.RunOutlineSimulationGate(&models.StorySetup{ProjectName: "Fire"}, &models.Outline{})
 
 	assertNoIssue(t, gate.Suggestions, "主角缺少背景故事")
 	assertNoIssue(t, gate.Suggestions, "主角缺少性格或动机描述")

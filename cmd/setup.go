@@ -13,6 +13,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
 	"novelgen/internal/rpg/dsl"
 	"novelgen/internal/utils"
@@ -197,7 +198,7 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	logQualityGateResult("setup", gate)
+	quality.LogQualityGateResult("setup", gate)
 
 	// Save story setup
 	if err := saveStorySetup(setup); err != nil {
@@ -306,7 +307,7 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	logQualityGateResult("setup", gate)
+	quality.LogQualityGateResult("setup", gate)
 
 	// Save story setup
 	if err := saveStorySetup(setup); err != nil {
@@ -428,7 +429,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		logQualityGateResult("setup", gate)
+		quality.LogQualityGateResult("setup", gate)
 
 		// Save improved setup
 		if err := saveStorySetup(setup); err != nil {
@@ -513,7 +514,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		logQualityGateResult("setup", gate)
+		quality.LogQualityGateResult("setup", gate)
 
 		// Save improved setup
 		if err := saveStorySetup(setup); err != nil {
@@ -1177,8 +1178,8 @@ func generateStorySetupWithAI(ctx context.Context, prompt, language string, proj
 	return &result.Setup, nil
 }
 
-func repairSetupWithQualityGate(ctx context.Context, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string) (*models.StorySetup, qualityGateResult, error) {
-	gate := runSetupQualityGate(setup)
+func repairSetupWithQualityGate(ctx context.Context, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string) (*models.StorySetup, quality.QualityGateResult, error) {
+	gate := quality.RunSetupQualityGate(setup)
 	if !gate.Blocking {
 		return setup, gate, nil
 	}
@@ -1198,7 +1199,7 @@ func repairSetupWithQualityGate(ctx context.Context, setup *models.StorySetup, p
 
 	agent := agents.NewSetupAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
-	review := qualityGateReviewResult("Repair setup quality gate findings before saving project state.", gate)
+	review := quality.QualityGateReviewResult("Repair setup quality gate findings before saving project state.", gate)
 	session := agents.NewRevisionSession("setup", fmt.Sprintf("Repair %s quality-gate issues before saving project state.", stage))
 	session.AddReview(1, *review)
 	output, err := agent.Improve(ctx, agents.SetupImproveInput{
@@ -1211,7 +1212,7 @@ func repairSetupWithQualityGate(ctx context.Context, setup *models.StorySetup, p
 	}
 
 	repaired := &output.Setup
-	finalGate := runSetupQualityGate(repaired)
+	finalGate := quality.RunSetupQualityGate(repaired)
 	return repaired, finalGate, nil
 }
 
@@ -1672,7 +1673,7 @@ func runSetupCheck(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to parse setup: %w", err)
 	}
 
-	logQualityGateResult("setup", runSetupQualityGate(&setup))
+	quality.LogQualityGateResult("setup", quality.RunSetupQualityGate(&setup))
 
 	issues, warnings, suggestions := 0, 0, 0
 

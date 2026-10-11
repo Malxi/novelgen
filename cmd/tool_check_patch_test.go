@@ -13,6 +13,7 @@ import (
 	"novelgen/internal/agents"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
+	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
 
 	"github.com/spf13/cobra"
@@ -1154,7 +1155,7 @@ func TestToolChapterCheckNavigationPreservesTargetWordsOverride(t *testing.T) {
 	}
 }
 
-func qualityGateHasIssue(gate qualityGateResult, category, priority string) bool {
+func qualityGateHasIssue(gate quality.QualityGateResult, category, priority string) bool {
 	for _, issue := range gate.Suggestions {
 		if issue.Category == category && issue.Priority == priority {
 			return true

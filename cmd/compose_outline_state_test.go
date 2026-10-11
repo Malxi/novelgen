@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"novelgen/internal/models"
+	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
 )
 
@@ -136,7 +137,7 @@ func TestFilterAgentSDKReviewForPromptBoundaryLeavesUnboundedPromptAlone(t *test
 }
 
 func TestOutlineGateHasPatchableGlobalIssuesDetectsSetupBackedFactionTier(t *testing.T) {
-	gate := qualityGateResult{Suggestions: []models.ReviewSuggestion{{
+	gate := quality.QualityGateResult{Suggestions: []models.ReviewSuggestion{{
 		Category: "faction_tier",
 		TargetID: "zerg",
 		Issue:    "missing faction tier ladder",
@@ -148,7 +149,7 @@ func TestOutlineGateHasPatchableGlobalIssuesDetectsSetupBackedFactionTier(t *tes
 }
 
 func TestOutlineGateHasPatchableGlobalIssuesIgnoresUnpatchableGlobalIssue(t *testing.T) {
-	gate := qualityGateResult{Suggestions: []models.ReviewSuggestion{{
+	gate := quality.QualityGateResult{Suggestions: []models.ReviewSuggestion{{
 		Category: "mysteries",
 		TargetID: "global",
 		Issue:    "unresolved mystery needs story decision",
@@ -220,7 +221,7 @@ func TestRunOutlineValidatorOnModelSkipsSetupBackedFactionTierHint(t *testing.T)
 		}},
 	}}}
 
-	for _, suggestion := range runOutlineValidatorOnModel(outline) {
+	for _, suggestion := range quality.RunOutlineValidatorOnModel(outline) {
 		if suggestion.Category == "faction_tier" && suggestion.TargetID == "zerg" {
 			t.Fatalf("outline-only validator should not emit setup-backed faction_tier hint: %#v", suggestion)
 		}
@@ -298,7 +299,7 @@ func TestFilterQualityGateForAgentSDKPromptBoundaryKeepsOnlyPromptChapter(t *tes
 			},
 		}},
 	}}}
-	gate := qualityGateResult{
+	gate := quality.QualityGateResult{
 		Blocking: true,
 		Suggestions: []models.ReviewSuggestion{
 			{TargetID: "P1-V2-C4", Issue: "outside prompt", Priority: models.PriorityHigh},
@@ -328,7 +329,7 @@ func TestFilterQualityGateForAgentSDKPromptBoundarySkipsGlobalWhenPromptNamesCha
 			Chapters: []models.Chapter{{ID: "P1-V2-C5", Title: "第五章"}},
 		}},
 	}}}
-	gate := qualityGateResult{
+	gate := quality.QualityGateResult{
 		Suggestions: []models.ReviewSuggestion{
 			{TargetID: "global", Issue: "global issue", Priority: models.PriorityLow},
 		},

@@ -8,6 +8,7 @@ import (
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
 	"novelgen/internal/project"
+	"novelgen/internal/quality"
 	"novelgen/internal/utils"
 	"os"
 	"path/filepath"
@@ -444,13 +445,13 @@ func runToolCraftPatch(cmd *cobra.Command, root, target, id string, patchBytes [
 		return err
 	}
 
-	gate := qualityGateResult{}
+	gate := quality.QualityGateResult{}
 	validateCraftSchemaObject(&gate, target, key, values[key])
 	if normalizeCraftPatchTarget(target) == "item" {
 		validateCraftConsistencyObject(&gate, target, key, values[key], loadCraftCharacterNames(root))
 	}
 	validateCraftQualityObject(&gate, target, key, values[key])
-	gate.Blocking = hasBlockingSuggestions(gate.Suggestions)
+	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	check := makeToolCheckResult("schema", "craft", target, key, gate)
 	addToolCheckMeta(check, "project_root", root)
 
