@@ -6,24 +6,39 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 - Build CLI binary: `./build.ps1` (PowerShell) or `./build.bat` (CMD)
 - Manual build: `go build -o bin/novelgen.exe`
-- Run tests: `go test ./...`
+- Run tests (root module): `go test ./...`
+- Run tests (webui module, separate module): `cd webui && go test ./...`
+- Run all module tests at once: `make test-all`
 - Run CLI: `bin/novelgen.exe --help` or `bin/novelgen.exe <command> --help`
 
 ## Binary output
 
 All build scripts output the executable to `bin/novelgen.exe`. The `bin/` directory is created automatically if it doesn't exist.
 
-Tests exist in `cmd/`, `internal/models/`, `internal/logic/`, and `internal/rpg/`. Run the focused package tests for narrow changes, and `go test ./...` before broad or contract-level changes.
+Tests exist in `cmd/`, `internal/models/`, `internal/logic/`, and `internal/rpg/`. Run the focused package tests for narrow changes, and `go test ./...` before broad or contract-level changes. The `webui/` directory is a **separate Go module** (see `go.work`); the root `go test ./...` does not cover it.
 
 ## Architecture overview
 
-- Entry point: `main.go` calls `cmd.RegisterAllCommands()` and `cmd.Execute()` to run the CLI.
+- Two Go modules in one workspace (`go.work`): the root `novelgen` module (CLI + `internal/` + `tools/`) and the nested `webui` module (local web server + React frontend).
+- Entry point: `main.go` calls `cmd.RegisterAllCommands()` and `cmd.ExecuteContext(ctx)` to run the CLI (with SIGINT/SIGTERM cancellation).
 - CLI commands live in `cmd/` and use Cobra. Each command registers itself via `RegisterCommand` (see `cmd/registry.go`), which builds the command tree under `cmd/root.go`.
+- Command **groups can live in `cmd/<group>/` subpackages** (currently `config`, `translate`, `initcmd`, `export`, `recap`, `analyzecmd`, `simulatedsl`, `rpgcmd`, `craftcmd`, `draftcmd`): the subpackage exports `NewCommand()` (or `NewXCommand()`), and a `cmd/<group>_register.go` file wires it back via `RegisterCommand`. Prefer this when a command group only depends on `internal/*`.
+- Shared project/content access lives in `internal/project`: location/loading (`FindRoot`, `LoadConfig`, `LoadStorySetup`, `LoadOutline`, `LoadAllElements`, `AllChapters`, `KnownCharacterNames`, `VolumesForSelection`), chapter/draft IO (`LoadFinalChapterContent`, `SaveFinalChapter`, `LoadDraftContent`, `SaveDraft`, `LoadAllDrafts`, `SelectChapters`) and chapter markdown normalization (`NormalizeChapterContent`, `HasChapterTitle`, `StripChapterTitle`, `NarrativeUnitCount`, `ChapterContentChanged`, `ChapterNarrativeUnits`).
+- Per-volume review JSON and the improvement-suggestion block live in `internal/reviewstore` (`SaveVolumeReview`, `LoadVolumeReview`, `BuildImprovementSuggestions`).
+- Chapter continuity (context loading, offline recaps, transition/character-presence auto-fixes) lives in `internal/continuity`. New subpackages must use these packages instead of re-implementing project discovery, file layout, or normalization.
+- Standalone developer/analysis binaries live in `tools/` (previously under `cmd/`); they are built by `go build ./...` but are not part of the shipped CLI.
 - LLM integration is in `internal/llm/`:
   - `config.go` loads or creates `llm_config.json` (local) or `~/.novelgen/llm_config.json` (global) and selects provider/model.
-  - `client.go` implements an OpenAI-compatible chat client.
-- AI workflow logic is organized under `internal/agents/`, each agent handling a pipeline stage (setup/compose/craft/draft/write/recap/translate) and registered via `internal/agents/registry.go`.
-- Agent prompts are skill files under `internal/agents/skills/<skill-name>/SKILL.md`. `BaseAgent.Execute` loads those skills, converts typed inputs to markdown, asks for typed JSON output, and parses back into Go structs.
+  - `client.go` implements an OpenAI-compatible chat client plus a `RuntimeClient` wrapper and retry logic.
+- AI workflow logic is organized under `internal/agents/`, each agent handling a pipeline stage (setup/compose/craft/draft/write/recap/translate). Agents are constructed directly (no registry).
+- `internal/agents/BaseAgent` (split across `agent_base.go`, `agent_json.go`, `agent_evidence.go`, `agent_logging.go`) has **two execution backends**:
+  1. the OpenAI-compatible chat client (`internal/llm`), and
+  2. the Claude **Agent SDK process runtime** (`internal/agentruntime` → `runners/claude_runner.py`). Major stages (setup/compose/craft/write/recap/translate) require the SDK backend (`RequireSDK: true`).
+- There are **two disjoint skill trees**, both embedded with `go:embed`:
+  - `internal/agents/skills/<skill>/SKILL.md` — stage prompts for the chat/typed-JSON path (`BaseAgent.Execute` loads these).
+  - `internal/agentruntime/skills/<skill>/SKILL.md` — SDK workflow prompts, materialized to `~/.novelgen/agents/skills`.
+  - (`.agents/skills/` and `.trae/skills/` are external dev-editor skills, unrelated to the runtime.)
+- SDK agents may not read or write project files directly. Project facts are read/patched only through the CLI's `tool` subcommand (`cmd/tool.go`, `cmd/tool_logs.go`, `cmd/tool_view.go`, `cmd/tool_brief.go`, `cmd/tool_check.go`, `cmd/tool_patch.go`, `cmd/tool_refresh.go`): `tool query|check|patch|patch-buffer|refresh`. Patches are dry-run by default; Go merges, normalizes and validates before `--apply` writes.
 - Data structures for story setup, outlines, elements, recaps, and project config live in `internal/models/`.
 - Continuity logic (character presence, transitions, recaps) lives in `internal/logic/continuity/`, with shared state helpers in `internal/logic/`.
 - RPG and RPG-DSL logic lives in `internal/rpg/`, especially `internal/rpg/dsl/` for parser, validator, converter, simulator, hooks, and merger behavior.
@@ -43,17 +58,20 @@ Tests exist in `cmd/`, `internal/models/`, `internal/logic/`, and `internal/rpg/
 ### New CLI command
 
 - Add the command in `cmd/<name>.go`.
+- For a self-contained command group, add it under `cmd/<group>/` exposing `NewCommand()`, and register it from `cmd/<group>_register.go`.
 - Register it with `RegisterCommand` in `init()`.
 - Provide useful `Use`, `Short`, `Long`, flags, and examples for user-facing commands.
-- Load project state through the existing helpers (`findProjectRoot`, `loadProjectConfig`, `loadStorySetup`, `loadOutline`) when the command operates on a novel project.
+- Load project state through `internal/project` when the command operates on a novel project (the `cmd` wrappers `findProjectRoot`/`loadProjectConfig`/… still exist for code that has not been moved yet).
+- Keep the CLI surface stable: `cmd/command_surface_test.go` pins top-level commands, subcommands, and key flags.
+- If the command is agent-facing (a new `tool query|check|patch` surface), update the tool allowlists/evidence rules in the SDK workflows and `docs/AGENT_TOOLS.md`, not just the command.
 - Update README/docs when the command changes the public workflow.
 
 ### New or changed agent stage
 
 - Add or update the agent in `internal/agents/`.
-- Add or update its skill under `internal/agents/skills/`.
+- Add or update its skill under `internal/agents/skills/` (chat path) **and/or** `internal/agentruntime/skills/` (SDK path). These are separate trees; updating one does not update the other.
 - Define input/output structs close to the agent or in `internal/models` when shared.
-- Route all LLM calls through `BaseAgent.Execute` unless there is a clear reason not to.
+- Route all LLM calls through `BaseAgent.Execute` unless there is a clear reason not to. Note the two backends (chat client vs Agent SDK runtime) and whether the stage sets `RequireSDK`.
 - Validate outputs before writing files.
 - Update `docs/STAGE_CONTRACTS.md` if the stage input, output, or invariants changed.
 
@@ -75,4 +93,5 @@ Tests exist in `cmd/`, `internal/models/`, `internal/logic/`, and `internal/rpg/
 
 - For ordinary Go changes, run `gofmt` on touched Go files and at least the focused package tests.
 - For model, contract, RPG, or cross-stage changes, run `go test ./...` and `go build -o bin/novelgen.exe`.
+- For changes touching `webui/`, also run `cd webui && go test ./...` (or `make test-all`).
 - For CLI changes, also run `bin/novelgen.exe --help` or the changed command's `--help`.

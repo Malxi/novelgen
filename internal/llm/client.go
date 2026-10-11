@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"novelgen/internal/agentruntime"
+	"novelgen/internal/envutil"
 	"novelgen/internal/logger"
 )
 
@@ -517,21 +518,11 @@ const maxRetryDelay = 60 * time.Second
 // defaultMaxAttempts and defaultRetryBaseDelay can be tuned per deployment
 // without a rebuild.
 func defaultMaxAttempts() int {
-	if value := strings.TrimSpace(os.Getenv("NOVELGEN_LLM_MAX_ATTEMPTS")); value != "" {
-		if parsed, err := strconv.Atoi(value); err == nil && parsed > 0 {
-			return parsed
-		}
-	}
-	return 4
+	return envutil.PositiveInt("NOVELGEN_LLM_MAX_ATTEMPTS", 4)
 }
 
 func defaultRetryBaseDelay() time.Duration {
-	if value := strings.TrimSpace(os.Getenv("NOVELGEN_LLM_RETRY_BASE_MS")); value != "" {
-		if parsed, err := strconv.Atoi(value); err == nil && parsed > 0 {
-			return time.Duration(parsed) * time.Millisecond
-		}
-	}
-	return time.Second
+	return envutil.PositiveIntMilliseconds("NOVELGEN_LLM_RETRY_BASE_MS", time.Second)
 }
 
 // truncateString truncates a string to max length

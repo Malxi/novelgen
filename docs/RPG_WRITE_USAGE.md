@@ -6,7 +6,7 @@
 
 ```bash
 cd /d/Code/nolvegen
-go run cmd/rpg-write/main.go -b mine -report
+go run tools/rpg-write/main.go -b mine -report
 ```
 
 输出示例：

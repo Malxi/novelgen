@@ -109,7 +109,7 @@ jsonData := storyWorld.ExportToJSON()
 
 ```bash
 # 编译工具
-go build -o story2rpg.exe ./cmd/story2rpg
+go build -o story2rpg.exe ./tools/story2rpg
 
 # 查看帮助
 ./story2rpg.exe -h
@@ -153,7 +153,7 @@ jsonData := engine.ExportSimulation()
 
 ```bash
 # 编译工具
-go build -o simulate.exe ./cmd/simulate
+go build -o simulate.exe ./tools/simulate
 
 # 查看帮助
 ./simulate.exe -h
@@ -281,10 +281,10 @@ internal/rpg/
 ├── story_adapter_test.go # 适配器测试
 └── simulation_test.go    # 推演测试
 
-cmd/story2rpg/
+tools/story2rpg/
 └── main.go               # 大纲转RPG工具
 
-cmd/simulate/
+tools/simulate/
 └── main.go               # 剧情推演工具
 ```
 

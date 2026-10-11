@@ -11,8 +11,10 @@ import (
 	"novelgen/internal/agents"
 	"novelgen/internal/llm"
 	"novelgen/internal/models"
+	"novelgen/internal/project"
 	"novelgen/internal/rpg"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/utils"
 )
 
 // rpgDSLCmd represents the rpg-dsl command
@@ -515,15 +517,15 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 
 	// 1. 加载项目数据
 	fmt.Println("📂 加载项目数据...")
-	outline, err := loadOutline()
+	outline, err := project.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("加载 outline 失败: %w", err)
 	}
-	setup, err := loadStorySetup()
+	setup, err := project.LoadStorySetup()
 	if err != nil {
 		return fmt.Errorf("加载 story setup 失败: %w", err)
 	}
-	charModels, locModels, _, _, err := loadAllElements()
+	charModels, locModels, _, _, err := project.LoadAllElements()
 	if err != nil {
 		return fmt.Errorf("加载 craft 元素失败: %w", err)
 	}
@@ -531,7 +533,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 	locations := derefLocationMap(locModels)
 
 	// 2. 查找章节 .md 文件（优先章节内容，附带 recap 辅助）
-	root, err := findProjectRoot()
+	root, err := project.FindRoot()
 	if err != nil {
 		return fmt.Errorf("查找项目根目录失败: %w", err)
 	}
@@ -664,7 +666,7 @@ func filterChapterInputs(inputs []writeRPGDSLChapterInput, volume int, chapters 
 		}
 		var filtered []writeRPGDSLChapterInput
 		for _, input := range inputs {
-			if chapterSet[input.ChapterID] || chapterSet[extractChapterNumber(input.ChapterID)] {
+			if chapterSet[input.ChapterID] || chapterSet[utils.ExtractChapterNumber(input.ChapterID)] {
 				filtered = append(filtered, input)
 			}
 		}

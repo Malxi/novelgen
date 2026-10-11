@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"novelgen/internal/agents"
 	"novelgen/internal/llm"
@@ -14,6 +13,7 @@ import (
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/workerpool"
 
 	"github.com/spf13/cobra"
 )
@@ -347,163 +347,146 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent
 		reviewMap[volumeReview.ChapterReviews[i].ChapterID] = &volumeReview.ChapterReviews[i]
 	}
 
-	// Create work channel
-	chapterChan := make(chan *models.Chapter, len(chapters))
-	var wg sync.WaitGroup
-	improvedCount := 0
-	var mu sync.Mutex
-
 	concurrency := effectivePolishConcurrency(polishConcurrencyFlag, len(chapters), useAgentSDK)
 
-	// Start workers
-	for i := 0; i < concurrency; i++ {
-		wg.Add(1)
-		go func(workerID int) {
-			defer wg.Done()
-			for chapter := range chapterChan {
-				review := reviewMap[chapter.ID]
-				if review == nil {
-					continue
-				}
+	improved, _ := workerpool.Map(ctx, concurrency, chapters, func(ctx context.Context, workerID int, chapter *models.Chapter) (bool, error) {
+		review := reviewMap[chapter.ID]
+		if review == nil {
+			return false, nil
+		}
 
-				// Check if improvement is needed
-				chapterRPGIssues := GetChapterSpecificSuggestions(rpgDSLIssues, chapter.ID)
-				hasRPGIssues := chapterRPGIssues != ""
-				hasSuggestions := len(review.Issues) > 0 || len(review.Suggestions) > 0 || len(volumeReview.VolumeLevelIssues) > 0 || len(volumeReview.VolumeLevelSuggestions) > 0 || hasRPGIssues
-				hasUserPrompt := polishPromptFlag != ""
+		// Check if improvement is needed
+		chapterRPGIssues := GetChapterSpecificSuggestions(rpgDSLIssues, chapter.ID)
+		hasRPGIssues := chapterRPGIssues != ""
+		hasSuggestions := len(review.Issues) > 0 || len(review.Suggestions) > 0 || len(volumeReview.VolumeLevelIssues) > 0 || len(volumeReview.VolumeLevelSuggestions) > 0 || hasRPGIssues
+		hasUserPrompt := polishPromptFlag != ""
 
-				// Skip if no suggestions and no user prompt
-				if !hasSuggestions && !hasUserPrompt {
-					log.Info("[Worker %d] Chapter %s: no suggestions, skipping", workerID, chapter.ID)
-					continue
-				}
+		// Skip if no suggestions and no user prompt
+		if !hasSuggestions && !hasUserPrompt {
+			log.Info("[Worker %d] Chapter %s: no suggestions, skipping", workerID, chapter.ID)
+			return false, nil
+		}
 
-				// Skip if score is good enough and no suggestions and no user prompt
-				if review.ChapterScore >= float64(polishMinScoreFlag) && !hasSuggestions && !hasUserPrompt {
-					log.Info("[Worker %d] Chapter %s score %.1f >= %d, skipping", workerID, chapter.ID, review.ChapterScore, polishMinScoreFlag)
-					continue
-				}
+		// Skip if score is good enough and no suggestions and no user prompt
+		if review.ChapterScore >= float64(polishMinScoreFlag) && !hasSuggestions && !hasUserPrompt {
+			log.Info("[Worker %d] Chapter %s score %.1f >= %d, skipping", workerID, chapter.ID, review.ChapterScore, polishMinScoreFlag)
+			return false, nil
+		}
 
-				log.Info("[Worker %d] Improving chapter: %s - %s (role: %s, score: %.1f)", workerID, chapter.ID, chapter.Title, review.ChapterRole, review.ChapterScore)
+		log.Info("[Worker %d] Improving chapter: %s - %s (role: %s, score: %.1f)", workerID, chapter.ID, chapter.Title, review.ChapterRole, review.ChapterScore)
 
-				// Load current content
-				currentContent := loadFinalChapterContent(chapter)
-				if currentContent == "" {
-					log.Error("[Worker %d] No content for chapter %s, skipping", workerID, chapter.ID)
-					errc.Addf("%s: no final chapter content for polish", chapter.ID)
-					continue
-				}
+		// Load current content
+		currentContent := loadFinalChapterContent(chapter)
+		if currentContent == "" {
+			log.Error("[Worker %d] No content for chapter %s, skipping", workerID, chapter.ID)
+			errc.Addf("%s: no final chapter content for polish", chapter.ID)
+			return false, nil
+		}
 
-				// Build suggestions from volume review
-				var suggestions strings.Builder
-				suggestions.WriteString("## 卷级评审建议\n\n")
-				suggestions.WriteString(fmt.Sprintf("本章在卷中的定位: %s\n", review.ChapterRole))
-				suggestions.WriteString(fmt.Sprintf("与前章衔接: %s\n", review.ContinuityWithPrev))
-				suggestions.WriteString(fmt.Sprintf("与后章衔接: %s\n", review.ContinuityWithNext))
+		// Build suggestions from volume review
+		var suggestions strings.Builder
+		suggestions.WriteString("## 卷级评审建议\n\n")
+		suggestions.WriteString(fmt.Sprintf("本章在卷中的定位: %s\n", review.ChapterRole))
+		suggestions.WriteString(fmt.Sprintf("与前章衔接: %s\n", review.ContinuityWithPrev))
+		suggestions.WriteString(fmt.Sprintf("与后章衔接: %s\n", review.ContinuityWithNext))
 
-				// Add chapter-specific issues and suggestions
-				if len(review.Issues) > 0 {
-					suggestions.WriteString("\n### 本章问题\n")
-					for _, issue := range review.Issues {
-						suggestions.WriteString(fmt.Sprintf("- %s\n", issue))
-					}
-				}
-
-				if len(review.Suggestions) > 0 {
-					suggestions.WriteString("\n### 改进建议\n")
-					for _, s := range review.Suggestions {
-						suggestions.WriteString(fmt.Sprintf("- %s\n", s))
-					}
-				}
-
-				// Add volume-level issues and suggestions
-				if len(volumeReview.VolumeLevelIssues) > 0 {
-					suggestions.WriteString("\n### 卷级整体问题（请检查本章是否涉及以下问题，如涉及则必须修正）\n")
-					for _, issue := range volumeReview.VolumeLevelIssues {
-						suggestions.WriteString(fmt.Sprintf("- %s\n", issue))
-					}
-				}
-
-				if len(volumeReview.VolumeLevelSuggestions) > 0 {
-					suggestions.WriteString("\n### 卷级整体建议（请检查本章是否涉及以下内容，如涉及则按建议修正）\n")
-					for _, s := range volumeReview.VolumeLevelSuggestions {
-						suggestions.WriteString(fmt.Sprintf("- %s\n", s))
-					}
-				}
-
-				// Add RPG DSL issues if any
-				if hasRPGIssues {
-					suggestions.WriteString("\n" + chapterRPGIssues)
-				}
-
-				// Add user prompt if provided
-				if polishPromptFlag != "" {
-					suggestions.WriteString("\n\n## 用户要求\n\n")
-					suggestions.WriteString(polishPromptFlag)
-				}
-				if useAgentSDK {
-					if checkSuggestions := buildAgentSDKChapterCheckSuggestions(chapter, targetWords); checkSuggestions != "" {
-						suggestions.WriteString("\n\n")
-						suggestions.WriteString(checkSuggestions)
-					}
-				}
-
-				// Load context
-				chapterContext := loadChapterContext(outline, chapter, 2)
-
-				// Calculate continuity
-				continuity := continuityBuilder.BuildBefore(outline, chapter)
-
-				// Generate improved content
-				content, err := generateImprovedChapter(ctx, writeAgent, chapter, chapterContext, continuity, targetWords, currentContent, suggestions.String(), useAgentSDK, agentApply, false)
-				if err != nil {
-					log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
-					errc.Addf("%s: polish improve failed: %w", chapter.ID, err)
-					continue
-				}
-				content, agentApplied := resolveAgentAppliedChapterContent(log, workerID, chapter, currentContent, content, useAgentSDK, agentApply)
-
-				// Save improved content
-				if agentApplied && strings.TrimSpace(loadFinalChapterContent(chapter)) == strings.TrimSpace(content) {
-					log.Info("[Worker %d] Agent patch already saved chapter %s through tool patch chapter --apply", workerID, chapter.ID)
-				} else if err := saveFinalChapter(chapter, content); err != nil {
-					log.Error("[Worker %d] Failed to save chapter %s: %v", workerID, chapter.ID, err)
-					errc.Addf("%s: save polished chapter failed: %w", chapter.ID, err)
-					continue
-				}
-				if useAgentSDK {
-					postCheck, err := runAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords)
-					if err != nil {
-						log.Warn("[Worker %d] Agent SDK post-save check failed for %s: %v", workerID, chapter.ID, err)
-					} else {
-						logAgentSDKChapterPostSaveCheck(log, workerID, chapter.ID, postCheck)
-					}
-				}
-
-				// Update recap
-				if err := extractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, content, workerID, recapAgentSDK); err != nil {
-					log.Error("[Worker %d] Failed to generate/save recap for chapter %s: %v", workerID, chapter.ID, err)
-					errc.Addf("%s: polish recap failed: %w", chapter.ID, err)
-				} else {
-					log.Info("[Worker %d] Updated recap for chapter %s", workerID, chapter.ID)
-				}
-
-				mu.Lock()
-				improvedCount++
-				mu.Unlock()
-
-				log.Info("[Worker %d] Improved chapter saved: %s", workerID, chapter.ID)
+		// Add chapter-specific issues and suggestions
+		if len(review.Issues) > 0 {
+			suggestions.WriteString("\n### 本章问题\n")
+			for _, issue := range review.Issues {
+				suggestions.WriteString(fmt.Sprintf("- %s\n", issue))
 			}
-		}(i)
-	}
+		}
 
-	// Send chapters to workers
-	for _, chapter := range chapters {
-		chapterChan <- chapter
-	}
-	close(chapterChan)
+		if len(review.Suggestions) > 0 {
+			suggestions.WriteString("\n### 改进建议\n")
+			for _, s := range review.Suggestions {
+				suggestions.WriteString(fmt.Sprintf("- %s\n", s))
+			}
+		}
 
-	wg.Wait()
+		// Add volume-level issues and suggestions
+		if len(volumeReview.VolumeLevelIssues) > 0 {
+			suggestions.WriteString("\n### 卷级整体问题（请检查本章是否涉及以下问题，如涉及则必须修正）\n")
+			for _, issue := range volumeReview.VolumeLevelIssues {
+				suggestions.WriteString(fmt.Sprintf("- %s\n", issue))
+			}
+		}
+
+		if len(volumeReview.VolumeLevelSuggestions) > 0 {
+			suggestions.WriteString("\n### 卷级整体建议（请检查本章是否涉及以下内容，如涉及则按建议修正）\n")
+			for _, s := range volumeReview.VolumeLevelSuggestions {
+				suggestions.WriteString(fmt.Sprintf("- %s\n", s))
+			}
+		}
+
+		// Add RPG DSL issues if any
+		if hasRPGIssues {
+			suggestions.WriteString("\n" + chapterRPGIssues)
+		}
+
+		// Add user prompt if provided
+		if polishPromptFlag != "" {
+			suggestions.WriteString("\n\n## 用户要求\n\n")
+			suggestions.WriteString(polishPromptFlag)
+		}
+		if useAgentSDK {
+			if checkSuggestions := buildAgentSDKChapterCheckSuggestions(chapter, targetWords); checkSuggestions != "" {
+				suggestions.WriteString("\n\n")
+				suggestions.WriteString(checkSuggestions)
+			}
+		}
+
+		// Load context
+		chapterContext := loadChapterContext(outline, chapter, 2)
+
+		// Calculate continuity
+		continuity := continuityBuilder.BuildBefore(outline, chapter)
+
+		// Generate improved content
+		content, err := generateImprovedChapter(ctx, writeAgent, chapter, chapterContext, continuity, targetWords, currentContent, suggestions.String(), useAgentSDK, agentApply, false)
+		if err != nil {
+			log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
+			errc.Addf("%s: polish improve failed: %w", chapter.ID, err)
+			return false, nil
+		}
+		content, agentApplied := resolveAgentAppliedChapterContent(log, workerID, chapter, currentContent, content, useAgentSDK, agentApply)
+
+		// Save improved content
+		if agentApplied && strings.TrimSpace(loadFinalChapterContent(chapter)) == strings.TrimSpace(content) {
+			log.Info("[Worker %d] Agent patch already saved chapter %s through tool patch chapter --apply", workerID, chapter.ID)
+		} else if err := saveFinalChapter(chapter, content); err != nil {
+			log.Error("[Worker %d] Failed to save chapter %s: %v", workerID, chapter.ID, err)
+			errc.Addf("%s: save polished chapter failed: %w", chapter.ID, err)
+			return false, nil
+		}
+		if useAgentSDK {
+			postCheck, err := runAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords)
+			if err != nil {
+				log.Warn("[Worker %d] Agent SDK post-save check failed for %s: %v", workerID, chapter.ID, err)
+			} else {
+				logAgentSDKChapterPostSaveCheck(log, workerID, chapter.ID, postCheck)
+			}
+		}
+
+		// Update recap
+		if err := extractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, content, workerID, recapAgentSDK); err != nil {
+			log.Error("[Worker %d] Failed to generate/save recap for chapter %s: %v", workerID, chapter.ID, err)
+			errc.Addf("%s: polish recap failed: %w", chapter.ID, err)
+		} else {
+			log.Info("[Worker %d] Updated recap for chapter %s", workerID, chapter.ID)
+		}
+
+		log.Info("[Worker %d] Improved chapter saved: %s", workerID, chapter.ID)
+		return true, nil
+	})
+
+	improvedCount := 0
+	for _, ok := range improved {
+		if ok {
+			improvedCount++
+		}
+	}
 
 	return improvedCount, errc.Err()
 }

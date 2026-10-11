@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"novelgen/internal/envutil"
 	"novelgen/internal/logger"
 )
 
@@ -142,12 +143,7 @@ func (r *ProcessRuntime) Invoke(ctx context.Context, invocation Invocation) (*Re
 // runner mid-session and the orphaned CLI dies later with a confusing
 // "Error in hook callback" message.
 func agentTimeoutOverride(defaultSeconds int) int {
-	if raw := os.Getenv("NOVELGEN_AGENT_TIMEOUT"); raw != "" {
-		if seconds, err := strconv.Atoi(raw); err == nil && seconds > 0 {
-			return seconds
-		}
-	}
-	return defaultSeconds
+	return envutil.PositiveInt("NOVELGEN_AGENT_TIMEOUT", defaultSeconds)
 }
 
 func trimRunnerDetail(value string) string {

@@ -10,16 +10,7 @@ import (
 )
 
 func TestLoadDSLFragments(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Getwd failed: %v", err)
-	}
-	if filepath.Base(wd) == "cmd" {
-		if err := os.Chdir(".."); err != nil {
-			t.Fatalf("failed to chdir to repo root: %v", err)
-		}
-		defer os.Chdir(wd)
-	}
+	chdirRepoRoot(t)
 
 	bookName := "fire-galaxy"
 	rpgDir := filepath.Join("books", bookName, "story", "rpg")
@@ -57,6 +48,33 @@ func TestLoadDSLFragments(t *testing.T) {
 	fmt.Printf("\nLoaded %d fragments\n", len(fragments))
 	for _, f := range fragments {
 		fmt.Printf("  - %s (%s)\n", f.FilePath, f.Phase)
+	}
+}
+
+// chdirRepoRoot switches to the module root so the test can read books/...,
+// independent of the package directory depth.
+func chdirRepoRoot(t *testing.T) {
+	t.Helper()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd failed: %v", err)
+	}
+	dir := wd
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			break
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			t.Fatalf("go.mod not found above %s", wd)
+		}
+		dir = parent
+	}
+	if dir != wd {
+		if err := os.Chdir(dir); err != nil {
+			t.Fatalf("chdir to module root failed: %v", err)
+		}
+		t.Cleanup(func() { _ = os.Chdir(wd) })
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"novelgen/internal/agentruntime"
+	"novelgen/internal/envutil"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
@@ -1357,12 +1358,7 @@ func composeOutlineReviewAgentSDKParams(command string, outline models.Outline, 
 // 卷数更多时建议拆成逐个 focus 串行跑，而不是无上限加回合（回合越多越容易空转）。
 func composeCrossVolumeReviewAgentSDKMaxTurns() int {
 	const defaultTurns = 60
-	raw := strings.TrimSpace(os.Getenv("NOVELGEN_CROSS_REVIEW_MAX_TURNS"))
-	var n int
-	if _, err := fmt.Sscanf(raw, "%d", &n); err == nil && n > 0 {
-		return n
-	}
-	return defaultTurns
+	return envutil.PositiveInt("NOVELGEN_CROSS_REVIEW_MAX_TURNS", defaultTurns)
 }
 
 // composeOutlineReviewAgentSDKTimeout 返回单次 outline review 的 agent 超时（秒）。
@@ -1371,12 +1367,7 @@ func composeCrossVolumeReviewAgentSDKMaxTurns() int {
 // 可用 NOVELGEN_REVIEW_TIMEOUT 覆盖。
 func composeOutlineReviewAgentSDKTimeout() int {
 	const defaultSeconds = 1800
-	raw := strings.TrimSpace(os.Getenv("NOVELGEN_REVIEW_TIMEOUT"))
-	var n int
-	if _, err := fmt.Sscanf(raw, "%d", &n); err == nil && n > 0 {
-		return n
-	}
-	return defaultSeconds
+	return envutil.PositiveInt("NOVELGEN_REVIEW_TIMEOUT", defaultSeconds)
 }
 
 // composeOutlineReviewAgentSDKMaxTurns 返回单次 outline review 的 agent 回合上限。
@@ -1385,12 +1376,7 @@ func composeOutlineReviewAgentSDKTimeout() int {
 // 可用 NOVELGEN_REVIEW_MAX_TURNS 覆盖。
 func composeOutlineReviewAgentSDKMaxTurns() int {
 	const defaultTurns = 30
-	raw := strings.TrimSpace(os.Getenv("NOVELGEN_REVIEW_MAX_TURNS"))
-	var n int
-	if _, err := fmt.Sscanf(raw, "%d", &n); err == nil && n > 0 {
-		return n
-	}
-	return defaultTurns
+	return envutil.PositiveInt("NOVELGEN_REVIEW_MAX_TURNS", defaultTurns)
 }
 
 // composeOutlineReviewToolAllowlist 列出单卷/全书 review 允许的只读查询。

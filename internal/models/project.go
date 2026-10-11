@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -102,14 +103,23 @@ func LoadProjectConfig(path string) (*ProjectConfig, error) {
 	return &config, nil
 }
 
-// FindProjectRoot searches for novel.json in the current directory and parent directories
+// FindProjectRoot searches for novel.json in startDir and its parent
+// directories, returning the first directory that contains it.
 func FindProjectRoot(startDir string) (string, error) {
-	// For now, just check if novel.json exists in the current directory
-	// This can be enhanced to search parent directories
-	if _, err := os.Stat(startDir + "/novel.json"); err == nil {
-		return startDir, nil
+	dir, err := filepath.Abs(startDir)
+	if err != nil {
+		return "", err
 	}
-	return "", os.ErrNotExist
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "novel.json")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", os.ErrNotExist
+		}
+		dir = parent
+	}
 }
 
 // Validation errors

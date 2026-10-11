@@ -39,7 +39,7 @@ novelgen/
 
 ```bash
 # 编译工具
-go build -o novelgen-rpg.exe ./cmd/novelgen-rpg
+go build -o novelgen-rpg.exe ./tools/novelgen-rpg
 
 # 转换你的小说项目
 ./novelgen-rpg.exe -b mine

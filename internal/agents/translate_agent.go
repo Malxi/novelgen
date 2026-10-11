@@ -9,14 +9,6 @@ import (
 	"novelgen/internal/models"
 )
 
-// init registers the translate agent factory
-// This is called automatically when the package is imported
-func init() {
-	RegisterAgent("translate", func(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM) Agent {
-		return NewTranslateAgent(client, config, projectLLM)
-	})
-}
-
 // TranslateAgent handles AI translation
 type TranslateAgent struct {
 	client     llm.Client

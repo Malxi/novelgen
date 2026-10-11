@@ -17,6 +17,8 @@ books/
 chapters/
 drafts/
 simulation_reports/
+output/
+test_compose/
 
 # Frontend dependencies and build output.
 node_modules/

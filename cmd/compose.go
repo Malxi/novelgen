@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"novelgen/internal/agents"
@@ -19,6 +18,7 @@ import (
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
 	"novelgen/internal/rpg"
+	"novelgen/internal/workerpool"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -1120,7 +1120,10 @@ func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
 	if parallel > totalRuns {
 		parallel = totalRuns
 	}
-	sem := make(chan struct{}, parallel)
+	type runSpec struct {
+		model string
+		focus string
+	}
 	type runResult struct {
 		model  string
 		focus  string
@@ -1128,61 +1131,47 @@ func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
 		review models.ReviewResult
 		err    error
 	}
-	results := make([]runResult, 0, totalRuns)
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-
+	specs := make([]runSpec, 0, totalRuns)
 	for _, model := range modelList {
 		for _, focus := range focusNames {
-			wg.Add(1)
-			go func(model, focus string) {
-				defer wg.Done()
-				sem <- struct{}{}
-				defer func() { <-sem }()
-
-				agent, aerr := newComposeAgentForProject(projectConfig)
-				if aerr != nil {
-					mu.Lock()
-					results = append(results, runResult{model: model, focus: focus, err: aerr})
-					mu.Unlock()
-					return
-				}
-				agent.SetLanguage(projectConfig.Language)
-				if model != "" {
-					agent.SetModelOverride(model)
-				}
-				focusPrompt := agents.ResolveReviewFocusPrompt(focus)
-				userPrompt := focusPrompt
-				if strings.TrimSpace(composePromptFlag) != "" {
-					if userPrompt != "" {
-						userPrompt = userPrompt + "\n\n" + composePromptFlag
-					} else {
-						userPrompt = composePromptFlag
-					}
-				}
-				input := agents.ComposeOutlineReviewInput{
-					Outline:    *outline,
-					Setup:      *setup,
-					UserPrompt: userPrompt,
-				}
-				if composeImproveVolume > 0 {
-					volumeID, resolveErr := resolveGlobalVolumeID(outline, composeImproveVolume)
-					if resolveErr != nil {
-						mu.Lock()
-						results = append(results, runResult{model: model, focus: focus, err: resolveErr})
-						mu.Unlock()
-						return
-					}
-					input.VolumeID = volumeID
-				}
-				review, rerr := agent.ReviewOutlineWithAgentSDK(cmd.Context(), input)
-				mu.Lock()
-				results = append(results, runResult{model: model, focus: focus, score: review.OverallScore, review: review, err: rerr})
-				mu.Unlock()
-			}(model, focus)
+			specs = append(specs, runSpec{model: model, focus: focus})
 		}
 	}
-	wg.Wait()
+
+	results, _ := workerpool.Map(cmd.Context(), parallel, specs, func(ctx context.Context, _ int, spec runSpec) (runResult, error) {
+		model, focus := spec.model, spec.focus
+		agent, aerr := newComposeAgentForProject(projectConfig)
+		if aerr != nil {
+			return runResult{model: model, focus: focus, err: aerr}, nil
+		}
+		agent.SetLanguage(projectConfig.Language)
+		if model != "" {
+			agent.SetModelOverride(model)
+		}
+		focusPrompt := agents.ResolveReviewFocusPrompt(focus)
+		userPrompt := focusPrompt
+		if strings.TrimSpace(composePromptFlag) != "" {
+			if userPrompt != "" {
+				userPrompt = userPrompt + "\n\n" + composePromptFlag
+			} else {
+				userPrompt = composePromptFlag
+			}
+		}
+		input := agents.ComposeOutlineReviewInput{
+			Outline:    *outline,
+			Setup:      *setup,
+			UserPrompt: userPrompt,
+		}
+		if composeImproveVolume > 0 {
+			volumeID, resolveErr := resolveGlobalVolumeID(outline, composeImproveVolume)
+			if resolveErr != nil {
+				return runResult{model: model, focus: focus, err: resolveErr}, nil
+			}
+			input.VolumeID = volumeID
+		}
+		review, rerr := agent.ReviewOutlineWithAgentSDK(ctx, input)
+		return runResult{model: model, focus: focus, score: review.OverallScore, review: review, err: rerr}, nil
+	})
 
 	// 汇总: 收集所有建议
 	var allSugs []agents.ReviewMatrixSuggestion

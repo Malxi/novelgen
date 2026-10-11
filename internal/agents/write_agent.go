@@ -11,6 +11,7 @@ import (
 	"unicode"
 
 	"novelgen/internal/agentruntime"
+	"novelgen/internal/envutil"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
@@ -705,12 +706,7 @@ func writeImproveAgentSDKParams(command string, chapterID string, applyPatches b
 // 检查—打补丁—复检循环）。可用 NOVELGEN_WRITE_IMPROVE_TIMEOUT 覆盖。
 func writeImproveAgentSDKTimeout() int {
 	const defaultSeconds = 1800
-	raw := strings.TrimSpace(os.Getenv("NOVELGEN_WRITE_IMPROVE_TIMEOUT"))
-	var n int
-	if _, err := fmt.Sscanf(raw, "%d", &n); err == nil && n > 0 {
-		return n
-	}
-	return defaultSeconds
+	return envutil.PositiveInt("NOVELGEN_WRITE_IMPROVE_TIMEOUT", defaultSeconds)
 }
 
 func writeImproveAgentSDKMaxTurns(applyPatches bool) int {
@@ -1033,24 +1029,14 @@ func writeReviewAgentSDKParams(command string, chapterID string, targetWords ...
 // 只发到 2 个工具调用就撞 TimeoutError、无产出。可用 NOVELGEN_WRITE_REVIEW_TIMEOUT 覆盖。
 func writeReviewAgentSDKTimeout() int {
 	const defaultSeconds = 1800
-	raw := strings.TrimSpace(os.Getenv("NOVELGEN_WRITE_REVIEW_TIMEOUT"))
-	var n int
-	if _, err := fmt.Sscanf(raw, "%d", &n); err == nil && n > 0 {
-		return n
-	}
-	return defaultSeconds
+	return envutil.PositiveInt("NOVELGEN_WRITE_REVIEW_TIMEOUT", defaultSeconds)
 }
 
 // writeReviewAgentSDKMaxTurns 返回单章正文 review 的 agent 回合上限。
 // 默认 18（原值），可用 NOVELGEN_WRITE_REVIEW_MAX_TURNS 覆盖。
 func writeReviewAgentSDKMaxTurns() int {
 	const defaultTurns = 18
-	raw := strings.TrimSpace(os.Getenv("NOVELGEN_WRITE_REVIEW_MAX_TURNS"))
-	var n int
-	if _, err := fmt.Sscanf(raw, "%d", &n); err == nil && n > 0 {
-		return n
-	}
-	return defaultTurns
+	return envutil.PositiveInt("NOVELGEN_WRITE_REVIEW_MAX_TURNS", defaultTurns)
 }
 
 // ReviewVolume performs a holistic review of all chapters in a volume
