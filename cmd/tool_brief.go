@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
+	"novelgen/internal/writersdl"
 	"os"
 	"path/filepath"
 	"sort"
@@ -1006,7 +1007,7 @@ func recapFreshForChapterMarkdown(root, chapterID string) (bool, string) {
 		return true, ""
 	}
 	recapPath := filepath.Join(root, "story", "recaps", chapterID+".json")
-	chapterPath := firstExistingPath(candidateChapterMarkdownPaths(root, chapterID))
+	chapterPath := firstExistingPath(writersdl.CandidateChapterMarkdownPaths(root, chapterID))
 	if chapterPath == "" {
 		return true, ""
 	}

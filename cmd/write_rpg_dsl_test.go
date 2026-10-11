@@ -9,6 +9,7 @@ import (
 
 	"novelgen/internal/models"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/writersdl"
 )
 
 func TestFindProjectChapterInputsSkipsStaleRecap(t *testing.T) {
@@ -39,7 +40,7 @@ func TestFindProjectChapterInputsSkipsStaleRecap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	inputs, err := findProjectChapterInputs(root, oneChapterOutline("P1-V1-C1"))
+	inputs, err := writersdl.FindProjectChapterInputs(root, oneChapterOutline("P1-V1-C1"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +80,7 @@ func TestFindProjectChapterInputsKeepsFreshRecap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	inputs, err := findProjectChapterInputs(root, oneChapterOutline("P1-V1-C1"))
+	inputs, err := writersdl.FindProjectChapterInputs(root, oneChapterOutline("P1-V1-C1"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +107,7 @@ func TestEnrichWriteRPGDSLCombatSignalsAddsStructuredMechAndGene(t *testing.T) {
 		}},
 	}}}}
 
-	enrichWriteRPGDSLCombatSignals(parsed)
+	writersdl.EnrichWriteRPGDSLCombatSignals(parsed)
 
 	deltas := parsed.Storyline.Chapters[0].Objectives[0].Steps[0].Event.StateDeltas
 	assertDelta := func(kind, field, to string) {
@@ -149,7 +150,7 @@ func TestEnrichWriteRPGDSLCombatSignalsReadsChineseStepText(t *testing.T) {
 		}}},
 	}
 
-	enrichWriteRPGDSLCombatSignals(parsed)
+	writersdl.EnrichWriteRPGDSLCombatSignals(parsed)
 
 	step1 := parsed.Storyline.Chapters[0].Objectives[0].Steps[0]
 	if !hasTestDelta(step1.Event.StateDeltas, "char_linye", "mech", "form") ||
@@ -176,7 +177,7 @@ func TestEnrichWriteRPGDSLCombatSignalsPreservesExplicitStructuredDeltas(t *test
 		}},
 	}}}}
 
-	enrichWriteRPGDSLCombatSignals(parsed)
+	writersdl.EnrichWriteRPGDSLCombatSignals(parsed)
 
 	deltas := parsed.Storyline.Chapters[0].Objectives[0].Steps[0].Event.StateDeltas
 	formCount := 0
@@ -201,12 +202,12 @@ func TestEnrichWriteRPGDSLCombatSignalsPreservesExplicitStructuredDeltas(t *test
 }
 
 func TestFilterWriteRPGDSLChapterInputsTargetsOnlyRequestedChapters(t *testing.T) {
-	inputs := []writeRPGDSLChapterInput{
+	inputs := []writersdl.WriteRPGDSLChapterInput{
 		{ChapterID: "P1-V1-C1"},
 		{ChapterID: "P1-V1-C2"},
 		{ChapterID: "P1-V1-C3"},
 	}
-	filtered := filterWriteRPGDSLChapterInputs(inputs, writeRPGDSLTargetChapterSet([]string{"P1-V1-C2"}))
+	filtered := writersdl.FilterWriteRPGDSLChapterInputs(inputs, writersdl.WriteRPGDSLTargetChapterSet([]string{"P1-V1-C2"}))
 	if len(filtered) != 1 || filtered[0].ChapterID != "P1-V1-C2" {
 		t.Fatalf("filtered = %#v, want only P1-V1-C2", filtered)
 	}
@@ -219,8 +220,8 @@ func TestRemoveWriteRPGDSLChaptersKeepsUntargetedChapters(t *testing.T) {
 		{ID: "P1-V1-C3", Title: "three"},
 	}}}
 
-	removeWriteRPGDSLChapters(dsl, writeRPGDSLTargetChapterSet([]string{"P1-V1-C2"}))
-	mergeWriteRPGDSL(dsl, &rpgdsl.DSL{Storyline: &rpgdsl.Storyline{Chapters: []rpgdsl.Chapter{
+	writersdl.RemoveWriteRPGDSLChapters(dsl, writersdl.WriteRPGDSLTargetChapterSet([]string{"P1-V1-C2"}))
+	writersdl.MergeWriteRPGDSL(dsl, &rpgdsl.DSL{Storyline: &rpgdsl.Storyline{Chapters: []rpgdsl.Chapter{
 		{ID: "P1-V1-C2", Title: "two-new"},
 	}}})
 
@@ -255,9 +256,9 @@ storyline {
 	if err != nil {
 		t.Fatal(err)
 	}
-	manifest := &writeRPGDSLBatchManifest{Chapters: []writeRPGDSLChapterState{{ChapterID: "P1-V2-C3"}}}
+	manifest := &writersdl.WriteRPGDSLBatchManifest{Chapters: []writersdl.WriteRPGDSLChapterState{{ChapterID: "P1-V2-C3"}}}
 
-	wrapped, reparsed, err := ensureWriteRPGDSLManifestChapters(content, parsed, manifest)
+	wrapped, reparsed, err := writersdl.EnsureWriteRPGDSLManifestChapters(content, parsed, manifest)
 	if err != nil {
 		t.Fatal(err)
 	}

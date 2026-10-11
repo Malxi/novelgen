@@ -10,6 +10,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/writersdl"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -1852,7 +1853,7 @@ func loadToolRPGDSLFragments(root string) ([]*rpgdsl.DSLFragment, error) {
 			}
 			fragments = append(fragments, &rpgdsl.DSLFragment{
 				DSL:      parsed,
-				Phase:    inferPhaseFromFilename(filepath.Base(file)),
+				Phase:    writersdl.InferPhaseFromFilename(filepath.Base(file)),
 				FilePath: file,
 			})
 		}

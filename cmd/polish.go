@@ -14,6 +14,7 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/rpg/dsl"
 	"novelgen/internal/workerpool"
+	"novelgen/internal/writersdl"
 
 	"github.com/spf13/cobra"
 )
@@ -171,12 +172,12 @@ func runPolish(cmd *cobra.Command, args []string) error {
 		// Generate RPG DSL and detect issues for this volume
 		var rpgDSLIssues []dsl.SimulationIssue
 		log.Info("Generating RPG DSL and detecting issues for volume %s...", volume.ID)
-		result, err := emitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, 10)
+		result, err := writersdl.EmitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, 10)
 		if err != nil {
 			log.Error("Failed to generate RPG DSL: %v", err)
 		} else {
 			rpgDSLIssues = result.Issues
-			log.Info("RPG DSL generated, issues detected: %d total, %d important", len(result.Issues), len(FilterImportantIssues(result.Issues)))
+			log.Info("RPG DSL generated, issues detected: %d total, %d important", len(result.Issues), len(writersdl.FilterImportantIssues(result.Issues)))
 		}
 
 		// Run improvement rounds
@@ -204,7 +205,7 @@ func runPolish(cmd *cobra.Command, args []string) error {
 				hasAnySuggestions = true
 			}
 			// Also check if there are RPG DSL issues
-			if len(FilterImportantIssues(rpgDSLIssues)) > 0 {
+			if len(writersdl.FilterImportantIssues(rpgDSLIssues)) > 0 {
 				hasAnySuggestions = true
 			}
 
@@ -356,7 +357,7 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent
 		}
 
 		// Check if improvement is needed
-		chapterRPGIssues := GetChapterSpecificSuggestions(rpgDSLIssues, chapter.ID)
+		chapterRPGIssues := writersdl.GetChapterSpecificSuggestions(rpgDSLIssues, chapter.ID)
 		hasRPGIssues := chapterRPGIssues != ""
 		hasSuggestions := len(review.Issues) > 0 || len(review.Suggestions) > 0 || len(volumeReview.VolumeLevelIssues) > 0 || len(volumeReview.VolumeLevelSuggestions) > 0 || hasRPGIssues
 		hasUserPrompt := polishPromptFlag != ""

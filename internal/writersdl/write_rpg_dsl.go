@@ -1,4 +1,4 @@
-package cmd
+package writersdl
 
 import (
 	"context"
@@ -18,12 +18,14 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/project"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/utils"
 )
 
 const writeRPGDSLCacheVersion = 4
 
-type writeRPGDSLResult struct {
+type WriteRPGDSLResult struct {
 	DSLPath          string
 	CacheDir         string
 	ChapterCount     int
@@ -33,7 +35,7 @@ type writeRPGDSLResult struct {
 	Issues           []rpgdsl.SimulationIssue // DSL-RPG simulate 检测出的 issues
 }
 
-type writeRPGDSLBatchManifest struct {
+type WriteRPGDSLBatchManifest struct {
 	Version    int                       `json:"version"`
 	BookName   string                    `json:"book_name"`
 	BatchIndex int                       `json:"batch_index"`
@@ -41,10 +43,10 @@ type writeRPGDSLBatchManifest struct {
 	BatchHash  string                    `json:"batch_hash"`
 	DSLFile    string                    `json:"dsl_file"`
 	UpdatedAt  string                    `json:"updated_at"`
-	Chapters   []writeRPGDSLChapterState `json:"chapters"`
+	Chapters   []WriteRPGDSLChapterState `json:"chapters"`
 }
 
-type writeRPGDSLChapterState struct {
+type WriteRPGDSLChapterState struct {
 	ChapterID     string `json:"chapter_id"`
 	ChapterPath   string `json:"chapter_path"`
 	ChapterSHA256 string `json:"chapter_sha256"`
@@ -52,13 +54,13 @@ type writeRPGDSLChapterState struct {
 	RecapSHA256   string `json:"recap_sha256,omitempty"`
 }
 
-type writeRPGDSLChapterInput struct {
+type WriteRPGDSLChapterInput struct {
 	ChapterID   string
 	ChapterPath string
 	RecapPath   string
 }
 
-func emitChapterRPGDSLForProject(
+func EmitChapterRPGDSLForProject(
 	ctx context.Context,
 	projectRoot string,
 	bookName string,
@@ -68,35 +70,35 @@ func emitChapterRPGDSLForProject(
 	client llm.Client,
 	batchSize int,
 	targetChapterIDs ...string,
-) (writeRPGDSLResult, error) {
-	result := writeRPGDSLResult{}
+) (WriteRPGDSLResult, error) {
+	result := WriteRPGDSLResult{}
 	if batchSize <= 0 {
 		batchSize = 10
 	}
 
-	outline, err := loadOutline()
+	outline, err := project.LoadOutline()
 	if err != nil {
 		return result, err
 	}
-	chapterInputs, err := findProjectChapterInputs(projectRoot, outline)
+	chapterInputs, err := FindProjectChapterInputs(projectRoot, outline)
 	if err != nil {
 		return result, err
 	}
-	targetSet := writeRPGDSLTargetChapterSet(targetChapterIDs)
+	targetSet := WriteRPGDSLTargetChapterSet(targetChapterIDs)
 	if len(targetSet) > 0 {
-		chapterInputs = filterWriteRPGDSLChapterInputs(chapterInputs, targetSet)
+		chapterInputs = FilterWriteRPGDSLChapterInputs(chapterInputs, targetSet)
 	}
 	if len(chapterInputs) == 0 {
 		return result, fmt.Errorf("no chapter markdown files found under %s", filepath.Join(projectRoot, "chapters"))
 	}
-	sortRPGDSLChapterInputs(chapterInputs)
+	SortRPGDSLChapterInputs(chapterInputs)
 
-	characters, locations, _, _, err := loadAllElements()
+	characters, locations, _, _, err := project.LoadAllElements()
 	if err != nil {
 		return result, err
 	}
-	characterValues := derefCharacterMap(characters)
-	locationValues := derefLocationMap(locations)
+	characterValues := DerefCharacterMap(characters)
+	locationValues := DerefLocationMap(locations)
 
 	agent := agents.NewChapterToDSLAgent(client, llmConfig, &projectConfig.LLM, setup)
 	agent.SetLanguage(projectConfig.Language)
@@ -117,22 +119,22 @@ func emitChapterRPGDSLForProject(
 		Systems:    &rpgdsl.Systems{},
 	}
 	if len(targetSet) > 0 {
-		if existing, err := loadWriteRPGDSLExisting(outputPath); err == nil {
+		if existing, err := LoadWriteRPGDSLExisting(outputPath); err == nil {
 			combined = existing
-			removeWriteRPGDSLChapters(combined, targetSet)
+			RemoveWriteRPGDSLChapters(combined, targetSet)
 		} else if !os.IsNotExist(err) {
 			logger.Warn("Ignoring existing chapter RPG DSL during targeted refresh: %v", err)
 		}
 	}
 
-	for batchIndex, batch := range splitRPGDSLBatchInputs(chapterInputs, batchSize) {
-		manifest, err := buildWriteRPGDSLBatchManifest(bookName, batchIndex*batchSize, batchSize, batch, cacheDir)
+	for batchIndex, batch := range SplitRPGDSLBatchInputs(chapterInputs, batchSize) {
+		manifest, err := BuildWriteRPGDSLBatchManifest(bookName, batchIndex*batchSize, batchSize, batch, cacheDir)
 		if err != nil {
 			return result, err
 		}
 		result.BatchCount++
 
-		dslContent, reused, err := loadWriteRPGDSLBatchFromCache(manifest)
+		dslContent, reused, err := LoadWriteRPGDSLBatchFromCache(manifest)
 		if err != nil {
 			return result, err
 		}
@@ -142,7 +144,7 @@ func emitChapterRPGDSLForProject(
 		} else {
 			result.GeneratedBatches++
 			logger.Info("RPG DSL AI conversion batch: %s -> %s (%d chapters)", manifest.Chapters[0].ChapterID, manifest.Chapters[len(manifest.Chapters)-1].ChapterID, len(manifest.Chapters))
-			chapterData, err := loadWriteRPGDSLChapterData(batch)
+			chapterData, err := LoadWriteRPGDSLChapterData(batch)
 			if err != nil {
 				return result, err
 			}
@@ -150,7 +152,7 @@ func emitChapterRPGDSLForProject(
 			if err != nil {
 				return result, fmt.Errorf("AI chapter -> RPG DSL failed for batch %d: %w", batchIndex+1, err)
 			}
-			dslContent, err = ensureWriteRPGDSLParseable(ctx, agent, bookName, dslContent)
+			dslContent, err = EnsureWriteRPGDSLParseable(ctx, agent, bookName, dslContent)
 			if err != nil {
 				return result, fmt.Errorf("RPG DSL parse/repair failed for batch %d: %w", batchIndex+1, err)
 			}
@@ -160,21 +162,21 @@ func emitChapterRPGDSLForProject(
 		if err != nil {
 			return result, fmt.Errorf("failed to parse RPG DSL batch cache %d: %w", batchIndex+1, err)
 		}
-		dslContent, parsed, err = ensureWriteRPGDSLManifestChapters(dslContent, parsed, manifest)
+		dslContent, parsed, err = EnsureWriteRPGDSLManifestChapters(dslContent, parsed, manifest)
 		if err != nil {
 			return result, fmt.Errorf("RPG DSL batch %d missing manifest chapters: %w", batchIndex+1, err)
 		}
-		normalizeWriteRPGDSLChapterIDs(parsed, manifest)
-		enrichWriteRPGDSLCombatSignals(parsed)
+		NormalizeWriteRPGDSLChapterIDs(parsed, manifest)
+		EnrichWriteRPGDSLCombatSignals(parsed)
 		normalizedContent := parsed.String()
 		if !reused || normalizedContent != dslContent {
 			dslContent = normalizedContent
-			if err := saveWriteRPGDSLBatchToCache(manifest, dslContent); err != nil {
+			if err := SaveWriteRPGDSLBatchToCache(manifest, dslContent); err != nil {
 				return result, err
 			}
 			logger.Info("RPG DSL batch output: %s", manifest.DSLFile)
 		}
-		mergeWriteRPGDSL(combined, parsed)
+		MergeWriteRPGDSL(combined, parsed)
 	}
 
 	if err := os.WriteFile(outputPath, []byte(combined.String()), 0644); err != nil {
@@ -191,10 +193,10 @@ func emitChapterRPGDSLForProject(
 	return result, nil
 }
 
-func findProjectChapterInputs(projectRoot string, outline *models.Outline) ([]writeRPGDSLChapterInput, error) {
+func FindProjectChapterInputs(projectRoot string, outline *models.Outline) ([]WriteRPGDSLChapterInput, error) {
 	chapterFiles := map[string]string{}
-	for _, chapter := range allOutlineChapters(outline) {
-		for _, path := range candidateChapterMarkdownPaths(projectRoot, chapter.ID) {
+	for _, chapter := range AllOutlineChapters(outline) {
+		for _, path := range CandidateChapterMarkdownPaths(projectRoot, chapter.ID) {
 			if _, err := os.Stat(path); err == nil {
 				chapterFiles[chapter.ID] = path
 				break
@@ -214,15 +216,15 @@ func findProjectChapterInputs(projectRoot string, outline *models.Outline) ([]wr
 		}
 	}
 
-	inputs := make([]writeRPGDSLChapterInput, 0, len(chapterFiles))
+	inputs := make([]WriteRPGDSLChapterInput, 0, len(chapterFiles))
 	for chapterID, chapterPath := range chapterFiles {
-		input := writeRPGDSLChapterInput{
+		input := WriteRPGDSLChapterInput{
 			ChapterID:   chapterID,
 			ChapterPath: chapterPath,
 		}
 		recapPath := filepath.Join(projectRoot, "story", "recaps", chapterID+".json")
 		if _, err := os.Stat(recapPath); err == nil {
-			if writeRPGDSLRecapIsStale(chapterPath, recapPath) {
+			if WriteRPGDSLRecapIsStale(chapterPath, recapPath) {
 				logger.Warn("Skipping stale recap for RPG DSL conversion: %s is older than %s", recapPath, chapterPath)
 			} else {
 				input.RecapPath = recapPath
@@ -233,7 +235,7 @@ func findProjectChapterInputs(projectRoot string, outline *models.Outline) ([]wr
 	return inputs, nil
 }
 
-func writeRPGDSLRecapIsStale(chapterPath, recapPath string) bool {
+func WriteRPGDSLRecapIsStale(chapterPath, recapPath string) bool {
 	chapterInfo, chapterErr := os.Stat(chapterPath)
 	recapInfo, recapErr := os.Stat(recapPath)
 	if chapterErr != nil || recapErr != nil {
@@ -242,7 +244,7 @@ func writeRPGDSLRecapIsStale(chapterPath, recapPath string) bool {
 	return recapInfo.ModTime().Before(chapterInfo.ModTime())
 }
 
-func writeRPGDSLTargetChapterSet(chapterIDs []string) map[string]bool {
+func WriteRPGDSLTargetChapterSet(chapterIDs []string) map[string]bool {
 	out := map[string]bool{}
 	for _, chapterID := range chapterIDs {
 		chapterID = strings.TrimSpace(chapterID)
@@ -253,11 +255,11 @@ func writeRPGDSLTargetChapterSet(chapterIDs []string) map[string]bool {
 	return out
 }
 
-func filterWriteRPGDSLChapterInputs(inputs []writeRPGDSLChapterInput, targetSet map[string]bool) []writeRPGDSLChapterInput {
+func FilterWriteRPGDSLChapterInputs(inputs []WriteRPGDSLChapterInput, targetSet map[string]bool) []WriteRPGDSLChapterInput {
 	if len(targetSet) == 0 {
 		return inputs
 	}
-	out := make([]writeRPGDSLChapterInput, 0, len(targetSet))
+	out := make([]WriteRPGDSLChapterInput, 0, len(targetSet))
 	for _, input := range inputs {
 		if targetSet[input.ChapterID] {
 			out = append(out, input)
@@ -266,7 +268,7 @@ func filterWriteRPGDSLChapterInputs(inputs []writeRPGDSLChapterInput, targetSet 
 	return out
 }
 
-func loadWriteRPGDSLExisting(path string) (*rpgdsl.DSL, error) {
+func LoadWriteRPGDSLExisting(path string) (*rpgdsl.DSL, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -293,7 +295,7 @@ func loadWriteRPGDSLExisting(path string) (*rpgdsl.DSL, error) {
 	return parsed, nil
 }
 
-func removeWriteRPGDSLChapters(dsl *rpgdsl.DSL, targetSet map[string]bool) {
+func RemoveWriteRPGDSLChapters(dsl *rpgdsl.DSL, targetSet map[string]bool) {
 	if dsl == nil || dsl.Storyline == nil || len(targetSet) == 0 {
 		return
 	}
@@ -306,7 +308,7 @@ func removeWriteRPGDSLChapters(dsl *rpgdsl.DSL, targetSet map[string]bool) {
 	dsl.Storyline.Chapters = chapters
 }
 
-func allOutlineChapters(outline *models.Outline) []*models.Chapter {
+func AllOutlineChapters(outline *models.Outline) []*models.Chapter {
 	if outline == nil {
 		return nil
 	}
@@ -321,14 +323,14 @@ func allOutlineChapters(outline *models.Outline) []*models.Chapter {
 	return chapters
 }
 
-func candidateChapterMarkdownPaths(projectRoot, chapterID string) []string {
+func CandidateChapterMarkdownPaths(projectRoot, chapterID string) []string {
 	return []string{
 		filepath.Join(projectRoot, "chapters", "chapter-"+chapterID+".md"),
-		filepath.Join(projectRoot, "chapters", "chapter-"+extractChapterNumber(chapterID)+".md"),
+		filepath.Join(projectRoot, "chapters", "chapter-"+utils.ExtractChapterNumber(chapterID)+".md"),
 	}
 }
 
-func ensureWriteRPGDSLParseable(ctx context.Context, agent *agents.ChapterToDSLAgent, bookName, content string) (string, error) {
+func EnsureWriteRPGDSLParseable(ctx context.Context, agent *agents.ChapterToDSLAgent, bookName, content string) (string, error) {
 	if _, err := rpgdsl.NewParser(content).Parse(); err == nil {
 		return content, nil
 	} else {
@@ -346,12 +348,12 @@ func ensureWriteRPGDSLParseable(ctx context.Context, agent *agents.ChapterToDSLA
 				content = repaired
 			}
 		}
-		dumpWriteRPGDSLFailure(bookName, content, lastErr)
+		DumpWriteRPGDSLFailure(bookName, content, lastErr)
 		return "", lastErr
 	}
 }
 
-func loadWriteRPGDSLChapterData(inputs []writeRPGDSLChapterInput) ([]agents.ChapterData, error) {
+func LoadWriteRPGDSLChapterData(inputs []WriteRPGDSLChapterInput) ([]agents.ChapterData, error) {
 	chapters := make([]agents.ChapterData, 0, len(inputs))
 	for _, input := range inputs {
 		content, err := os.ReadFile(input.ChapterPath)
@@ -360,7 +362,7 @@ func loadWriteRPGDSLChapterData(inputs []writeRPGDSLChapterInput) ([]agents.Chap
 		}
 		chapter := agents.ChapterData{
 			ChapterID: input.ChapterID,
-			Title:     firstMarkdownHeadingForWriteRPGDSL(string(content), input.ChapterID),
+			Title:     FirstMarkdownHeadingForWriteRPGDSL(string(content), input.ChapterID),
 			Content:   string(content),
 		}
 		if input.RecapPath != "" {
@@ -386,7 +388,7 @@ func loadWriteRPGDSLChapterData(inputs []writeRPGDSLChapterInput) ([]agents.Chap
 	return chapters, nil
 }
 
-func firstMarkdownHeadingForWriteRPGDSL(content, fallback string) string {
+func FirstMarkdownHeadingForWriteRPGDSL(content, fallback string) string {
 	for _, line := range strings.Split(content, "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "#") {
@@ -396,7 +398,7 @@ func firstMarkdownHeadingForWriteRPGDSL(content, fallback string) string {
 	return fallback
 }
 
-func dumpWriteRPGDSLFailure(bookName, content string, parseErr error) {
+func DumpWriteRPGDSLFailure(bookName, content string, parseErr error) {
 	dir := filepath.Join("books", bookName, "story", "rpg", "cache", "failed_dsl")
 	if projectDir := strings.TrimSpace(logger.Default().ProjectDir()); projectDir != "" {
 		dir = filepath.Join(projectDir, "story", "rpg", "cache", "failed_dsl")
@@ -410,23 +412,23 @@ func dumpWriteRPGDSLFailure(bookName, content string, parseErr error) {
 	logger.Error("Failed RPG DSL dump: %s.rpg", stem)
 }
 
-func buildWriteRPGDSLBatchManifest(bookName string, batchIndex, batchSize int, chapterInputs []writeRPGDSLChapterInput, cacheDir string) (*writeRPGDSLBatchManifest, error) {
-	chapters := make([]writeRPGDSLChapterState, 0, len(chapterInputs))
+func BuildWriteRPGDSLBatchManifest(bookName string, batchIndex, batchSize int, chapterInputs []WriteRPGDSLChapterInput, cacheDir string) (*WriteRPGDSLBatchManifest, error) {
+	chapters := make([]WriteRPGDSLChapterState, 0, len(chapterInputs))
 	var hashInput strings.Builder
 	hashInput.WriteString(fmt.Sprintf("version=%d\nbook=%s\nbatch_index=%d\nbatch_size=%d\n", writeRPGDSLCacheVersion, bookName, batchIndex, batchSize))
 	for _, input := range chapterInputs {
-		chapterSum, err := fileSHA256ForWriteRPGDSL(input.ChapterPath)
+		chapterSum, err := FileSHA256ForWriteRPGDSL(input.ChapterPath)
 		if err != nil {
 			return nil, err
 		}
 		recapSum := ""
 		if input.RecapPath != "" {
-			recapSum, err = fileSHA256ForWriteRPGDSL(input.RecapPath)
+			recapSum, err = FileSHA256ForWriteRPGDSL(input.RecapPath)
 			if err != nil {
 				return nil, err
 			}
 		}
-		chapters = append(chapters, writeRPGDSLChapterState{
+		chapters = append(chapters, WriteRPGDSLChapterState{
 			ChapterID:     input.ChapterID,
 			ChapterPath:   filepath.ToSlash(input.ChapterPath),
 			ChapterSHA256: chapterSum,
@@ -443,7 +445,7 @@ func buildWriteRPGDSLBatchManifest(bookName string, batchIndex, batchSize int, c
 	batchHashBytes := sha256.Sum256([]byte(hashInput.String()))
 	batchHash := hex.EncodeToString(batchHashBytes[:])
 	stem := fmt.Sprintf("batch_%03d_%s_%s_%s", batchIndex+1, chapters[0].ChapterID, chapters[len(chapters)-1].ChapterID, batchHash[:12])
-	return &writeRPGDSLBatchManifest{
+	return &WriteRPGDSLBatchManifest{
 		Version:    writeRPGDSLCacheVersion,
 		BookName:   bookName,
 		BatchIndex: batchIndex,
@@ -454,7 +456,7 @@ func buildWriteRPGDSLBatchManifest(bookName string, batchIndex, batchSize int, c
 	}, nil
 }
 
-func loadWriteRPGDSLBatchFromCache(expected *writeRPGDSLBatchManifest) (string, bool, error) {
+func LoadWriteRPGDSLBatchFromCache(expected *WriteRPGDSLBatchManifest) (string, bool, error) {
 	manifestPath := strings.TrimSuffix(expected.DSLFile, filepath.Ext(expected.DSLFile)) + ".json"
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
@@ -463,7 +465,7 @@ func loadWriteRPGDSLBatchFromCache(expected *writeRPGDSLBatchManifest) (string, 
 		}
 		return "", false, err
 	}
-	var cached writeRPGDSLBatchManifest
+	var cached WriteRPGDSLBatchManifest
 	if err := json.Unmarshal(data, &cached); err != nil {
 		return "", false, nil
 	}
@@ -483,7 +485,7 @@ func loadWriteRPGDSLBatchFromCache(expected *writeRPGDSLBatchManifest) (string, 
 	return string(content), true, nil
 }
 
-func saveWriteRPGDSLBatchToCache(manifest *writeRPGDSLBatchManifest, content string) error {
+func SaveWriteRPGDSLBatchToCache(manifest *WriteRPGDSLBatchManifest, content string) error {
 	if err := os.WriteFile(manifest.DSLFile, []byte(content), 0644); err != nil {
 		return err
 	}
@@ -496,7 +498,7 @@ func saveWriteRPGDSLBatchToCache(manifest *writeRPGDSLBatchManifest, content str
 	return os.WriteFile(manifestPath, data, 0644)
 }
 
-func normalizeWriteRPGDSLChapterIDs(parsed *rpgdsl.DSL, manifest *writeRPGDSLBatchManifest) {
+func NormalizeWriteRPGDSLChapterIDs(parsed *rpgdsl.DSL, manifest *WriteRPGDSLBatchManifest) {
 	if parsed == nil || parsed.Storyline == nil || manifest == nil {
 		return
 	}
@@ -508,7 +510,7 @@ func normalizeWriteRPGDSLChapterIDs(parsed *rpgdsl.DSL, manifest *writeRPGDSLBat
 	}
 }
 
-func ensureWriteRPGDSLManifestChapters(content string, parsed *rpgdsl.DSL, manifest *writeRPGDSLBatchManifest) (string, *rpgdsl.DSL, error) {
+func EnsureWriteRPGDSLManifestChapters(content string, parsed *rpgdsl.DSL, manifest *WriteRPGDSLBatchManifest) (string, *rpgdsl.DSL, error) {
 	if manifest == nil || len(manifest.Chapters) == 0 {
 		return content, parsed, nil
 	}
@@ -521,7 +523,7 @@ func ensureWriteRPGDSLManifestChapters(content string, parsed *rpgdsl.DSL, manif
 	if len(manifest.Chapters) != 1 || len(parsed.Storyline.Chapters) != 0 {
 		return content, parsed, fmt.Errorf("got %d chapter blocks, want %d", len(parsed.Storyline.Chapters), len(manifest.Chapters))
 	}
-	wrapped, ok := wrapBareWriteRPGDSLStorylineObjectives(content, manifest.Chapters[0].ChapterID, writeRPGDSLManifestChapterTitle(parsed, manifest))
+	wrapped, ok := WrapBareWriteRPGDSLStorylineObjectives(content, manifest.Chapters[0].ChapterID, WriteRPGDSLManifestChapterTitle(parsed, manifest))
 	if !ok {
 		return content, parsed, fmt.Errorf("got 0 chapter blocks for %s and could not wrap bare storyline objectives", manifest.Chapters[0].ChapterID)
 	}
@@ -535,7 +537,7 @@ func ensureWriteRPGDSLManifestChapters(content string, parsed *rpgdsl.DSL, manif
 	return wrapped, reparsed, nil
 }
 
-func writeRPGDSLManifestChapterTitle(parsed *rpgdsl.DSL, manifest *writeRPGDSLBatchManifest) string {
+func WriteRPGDSLManifestChapterTitle(parsed *rpgdsl.DSL, manifest *WriteRPGDSLBatchManifest) string {
 	if parsed != nil && parsed.Metadata != nil && strings.TrimSpace(parsed.Metadata.Title) != "" {
 		return strings.TrimSpace(parsed.Metadata.Title)
 	}
@@ -545,8 +547,8 @@ func writeRPGDSLManifestChapterTitle(parsed *rpgdsl.DSL, manifest *writeRPGDSLBa
 	return "chapter"
 }
 
-func wrapBareWriteRPGDSLStorylineObjectives(content, chapterID, title string) (string, bool) {
-	start, openBrace, closeBrace, ok := findWriteRPGDSLStorylineBlock(content)
+func WrapBareWriteRPGDSLStorylineObjectives(content, chapterID, title string) (string, bool) {
+	start, openBrace, closeBrace, ok := FindWriteRPGDSLStorylineBlock(content)
 	if !ok {
 		return content, false
 	}
@@ -564,13 +566,13 @@ func wrapBareWriteRPGDSLStorylineObjectives(content, chapterID, title string) (s
 	replacement.WriteString(" {\n    id = ")
 	replacement.WriteString(strconv.Quote(chapterID))
 	replacement.WriteString("\n")
-	replacement.WriteString(indentWriteRPGDSLLines(inner, "    "))
+	replacement.WriteString(IndentWriteRPGDSLLines(inner, "    "))
 	replacement.WriteString("\n  }\n")
 	replacement.WriteString(content[closeBrace : closeBrace+1])
 	return content[:start] + replacement.String() + content[closeBrace+1:], true
 }
 
-func findWriteRPGDSLStorylineBlock(content string) (start int, openBrace int, closeBrace int, ok bool) {
+func FindWriteRPGDSLStorylineBlock(content string) (start int, openBrace int, closeBrace int, ok bool) {
 	lower := strings.ToLower(content)
 	start = strings.Index(lower, "storyline")
 	if start < 0 {
@@ -615,7 +617,7 @@ func findWriteRPGDSLStorylineBlock(content string) (start int, openBrace int, cl
 	return 0, 0, 0, false
 }
 
-func indentWriteRPGDSLLines(text, prefix string) string {
+func IndentWriteRPGDSLLines(text, prefix string) string {
 	lines := strings.Split(text, "\n")
 	for i, line := range lines {
 		if strings.TrimSpace(line) == "" {
@@ -626,7 +628,7 @@ func indentWriteRPGDSLLines(text, prefix string) string {
 	return strings.Join(lines, "\n")
 }
 
-func enrichWriteRPGDSLCombatSignals(parsed *rpgdsl.DSL) {
+func EnrichWriteRPGDSLCombatSignals(parsed *rpgdsl.DSL) {
 	if parsed == nil || parsed.Storyline == nil {
 		return
 	}
@@ -640,22 +642,22 @@ func enrichWriteRPGDSLCombatSignals(parsed *rpgdsl.DSL) {
 			objective := &chapter.Objectives[oi]
 			for si := range objective.Steps {
 				step := &objective.Steps[si]
-				enrichWriteRPGDSLStepCombatSignals(step, protagonistTarget)
+				EnrichWriteRPGDSLStepCombatSignals(step, protagonistTarget)
 			}
 		}
 	}
 }
 
-func enrichWriteRPGDSLStepCombatSignals(step *rpgdsl.Step, protagonistTarget string) {
+func EnrichWriteRPGDSLStepCombatSignals(step *rpgdsl.Step, protagonistTarget string) {
 	if step == nil {
 		return
 	}
 	original := append([]rpgdsl.StateDelta(nil), step.Event.StateDeltas...)
 	for _, delta := range original {
-		if writeRPGDSLIsMechEquipmentSignal(delta, step.Description) {
-			target := writeRPGDSLProtagonistSignalTarget(delta, protagonistTarget)
-			form := writeRPGDSLSignalValue(delta, step.Description)
-			if !writeRPGDSLHasDelta(step.Event.StateDeltas, target, "mech", "form") {
+		if WriteRPGDSLIsMechEquipmentSignal(delta, step.Description) {
+			target := WriteRPGDSLProtagonistSignalTarget(delta, protagonistTarget)
+			form := WriteRPGDSLSignalValue(delta, step.Description)
+			if !WriteRPGDSLHasDelta(step.Event.StateDeltas, target, "mech", "form") {
 				step.Event.StateDeltas = append(step.Event.StateDeltas, rpgdsl.StateDelta{
 					Target: target,
 					Kind:   "mech",
@@ -664,7 +666,7 @@ func enrichWriteRPGDSLStepCombatSignals(step *rpgdsl.Step, protagonistTarget str
 					Note:   "normalized from equipment signal",
 				})
 			}
-			if !writeRPGDSLHasDelta(step.Event.StateDeltas, target, "mech", "energy") {
+			if !WriteRPGDSLHasDelta(step.Event.StateDeltas, target, "mech", "energy") {
 				step.Event.StateDeltas = append(step.Event.StateDeltas, rpgdsl.StateDelta{
 					Target: target,
 					Kind:   "mech",
@@ -674,51 +676,51 @@ func enrichWriteRPGDSLStepCombatSignals(step *rpgdsl.Step, protagonistTarget str
 				})
 			}
 		}
-		if writeRPGDSLIsGeneLevelSignal(delta, step.Description) {
-			target := writeRPGDSLProtagonistSignalTarget(delta, protagonistTarget)
-			if !writeRPGDSLHasDelta(step.Event.StateDeltas, target, "gene", "level") {
+		if WriteRPGDSLIsGeneLevelSignal(delta, step.Description) {
+			target := WriteRPGDSLProtagonistSignalTarget(delta, protagonistTarget)
+			if !WriteRPGDSLHasDelta(step.Event.StateDeltas, target, "gene", "level") {
 				step.Event.StateDeltas = append(step.Event.StateDeltas, rpgdsl.StateDelta{
 					Target: target,
 					Kind:   "gene",
 					Field:  "level",
 					From:   delta.From,
-					To:     writeRPGDSLFirstNonEmpty(delta.To, writeRPGDSLLastInt(step.Description), strconv.Itoa(delta.Delta), "1"),
+					To:     WriteRPGDSLFirstNonEmpty(delta.To, WriteRPGDSLLastInt(step.Description), strconv.Itoa(delta.Delta), "1"),
 					Note:   "normalized from progression signal",
 				})
 			}
 		}
-		if writeRPGDSLIsGeneStabilitySignal(delta, step.Description) {
-			target := writeRPGDSLProtagonistSignalTarget(delta, protagonistTarget)
-			if !writeRPGDSLHasDelta(step.Event.StateDeltas, target, "gene", "stability") {
+		if WriteRPGDSLIsGeneStabilitySignal(delta, step.Description) {
+			target := WriteRPGDSLProtagonistSignalTarget(delta, protagonistTarget)
+			if !WriteRPGDSLHasDelta(step.Event.StateDeltas, target, "gene", "stability") {
 				step.Event.StateDeltas = append(step.Event.StateDeltas, rpgdsl.StateDelta{
 					Target: target,
 					Kind:   "gene",
 					Field:  "stability",
-					To:     writeRPGDSLStabilityValue(delta, step.Description),
+					To:     WriteRPGDSLStabilityValue(delta, step.Description),
 					Note:   "normalized from stability signal",
 				})
 			}
 		}
 	}
-	if writeRPGDSLTextHasGeneLevelSignal(step.Description) && !writeRPGDSLHasAnyDelta(step.Event.StateDeltas, "gene", "level") {
+	if WriteRPGDSLTextHasGeneLevelSignal(step.Description) && !WriteRPGDSLHasAnyDelta(step.Event.StateDeltas, "gene", "level") {
 		step.Event.StateDeltas = append(step.Event.StateDeltas, rpgdsl.StateDelta{
 			Target: protagonistTarget,
 			Kind:   "gene",
 			Field:  "level",
-			To:     writeRPGDSLFirstNonEmpty(writeRPGDSLLastInt(step.Description), "1"),
+			To:     WriteRPGDSLFirstNonEmpty(WriteRPGDSLLastInt(step.Description), "1"),
 			Note:   "normalized from step description",
 		})
 	}
-	if writeRPGDSLTextHasGeneStabilitySignal(step.Description) && !writeRPGDSLHasAnyDelta(step.Event.StateDeltas, "gene", "stability") {
+	if WriteRPGDSLTextHasGeneStabilitySignal(step.Description) && !WriteRPGDSLHasAnyDelta(step.Event.StateDeltas, "gene", "stability") {
 		step.Event.StateDeltas = append(step.Event.StateDeltas, rpgdsl.StateDelta{
 			Target: protagonistTarget,
 			Kind:   "gene",
 			Field:  "stability",
-			To:     writeRPGDSLFirstNonEmpty(writeRPGDSLLastInt(step.Description), "60"),
+			To:     WriteRPGDSLFirstNonEmpty(WriteRPGDSLLastInt(step.Description), "60"),
 			Note:   "normalized from step description",
 		})
 	}
-	if writeRPGDSLTextHasMechSignal(step.Description) && !writeRPGDSLHasAnyDelta(step.Event.StateDeltas, "mech", "form") {
+	if WriteRPGDSLTextHasMechSignal(step.Description) && !WriteRPGDSLHasAnyDelta(step.Event.StateDeltas, "mech", "form") {
 		step.Event.StateDeltas = append(step.Event.StateDeltas, rpgdsl.StateDelta{
 			Target: protagonistTarget,
 			Kind:   "mech",
@@ -729,7 +731,7 @@ func enrichWriteRPGDSLStepCombatSignals(step *rpgdsl.Step, protagonistTarget str
 	}
 }
 
-func writeRPGDSLIsMechEquipmentSignal(delta rpgdsl.StateDelta, stepDescription string) bool {
+func WriteRPGDSLIsMechEquipmentSignal(delta rpgdsl.StateDelta, stepDescription string) bool {
 	kind := strings.ToLower(strings.TrimSpace(delta.Kind))
 	field := strings.ToLower(strings.TrimSpace(delta.Field))
 	if kind != "item" && kind != "equipment" && kind != "resource" {
@@ -738,10 +740,10 @@ func writeRPGDSLIsMechEquipmentSignal(delta rpgdsl.StateDelta, stepDescription s
 	if field == "equipment" {
 		return true
 	}
-	return writeRPGDSLTextHasMechSignal(strings.Join([]string{delta.Field, delta.To, delta.Note, stepDescription}, " "))
+	return WriteRPGDSLTextHasMechSignal(strings.Join([]string{delta.Field, delta.To, delta.Note, stepDescription}, " "))
 }
 
-func writeRPGDSLIsGeneLevelSignal(delta rpgdsl.StateDelta, stepDescription string) bool {
+func WriteRPGDSLIsGeneLevelSignal(delta rpgdsl.StateDelta, stepDescription string) bool {
 	kind := strings.ToLower(strings.TrimSpace(delta.Kind))
 	field := strings.ToLower(strings.TrimSpace(delta.Field))
 	if kind != "breakthrough" && kind != "evolution" && kind != "cultivation" && kind != "power_change" {
@@ -750,17 +752,17 @@ func writeRPGDSLIsGeneLevelSignal(delta rpgdsl.StateDelta, stepDescription strin
 	return field == "gene_level" ||
 		field == "gene" ||
 		strings.Contains(field, "gene") ||
-		writeRPGDSLTextHasGeneLevelSignal(strings.Join([]string{delta.Field, delta.To, delta.Note, stepDescription}, " "))
+		WriteRPGDSLTextHasGeneLevelSignal(strings.Join([]string{delta.Field, delta.To, delta.Note, stepDescription}, " "))
 }
 
-func writeRPGDSLIsGeneStabilitySignal(delta rpgdsl.StateDelta, stepDescription string) bool {
+func WriteRPGDSLIsGeneStabilitySignal(delta rpgdsl.StateDelta, stepDescription string) bool {
 	field := strings.ToLower(strings.TrimSpace(delta.Field))
 	return field == "stability" ||
 		field == "gene_stability" ||
-		writeRPGDSLTextHasGeneStabilitySignal(strings.Join([]string{delta.Field, delta.To, delta.Note, stepDescription}, " "))
+		WriteRPGDSLTextHasGeneStabilitySignal(strings.Join([]string{delta.Field, delta.To, delta.Note, stepDescription}, " "))
 }
 
-func writeRPGDSLTextHasMechSignal(text string) bool {
+func WriteRPGDSLTextHasMechSignal(text string) bool {
 	text = strings.ToLower(text)
 	for _, term := range []string{
 		"mech", "armor", "exoskeleton",
@@ -776,7 +778,7 @@ func writeRPGDSLTextHasMechSignal(text string) bool {
 	return false
 }
 
-func writeRPGDSLTextHasGeneLevelSignal(text string) bool {
+func WriteRPGDSLTextHasGeneLevelSignal(text string) bool {
 	text = strings.ToLower(text)
 	for _, term := range []string{
 		"gene",
@@ -791,7 +793,7 @@ func writeRPGDSLTextHasGeneLevelSignal(text string) bool {
 	return false
 }
 
-func writeRPGDSLTextHasGeneStabilitySignal(text string) bool {
+func WriteRPGDSLTextHasGeneStabilitySignal(text string) bool {
 	text = strings.ToLower(text)
 	for _, term := range []string{
 		"gene stability", "stability",
@@ -806,7 +808,7 @@ func writeRPGDSLTextHasGeneStabilitySignal(text string) bool {
 	return false
 }
 
-func writeRPGDSLProtagonistSignalTarget(delta rpgdsl.StateDelta, protagonistTarget string) string {
+func WriteRPGDSLProtagonistSignalTarget(delta rpgdsl.StateDelta, protagonistTarget string) string {
 	target := strings.TrimSpace(delta.Target)
 	if target == "" || strings.HasPrefix(strings.ToLower(target), "resource_") {
 		return protagonistTarget
@@ -814,7 +816,7 @@ func writeRPGDSLProtagonistSignalTarget(delta rpgdsl.StateDelta, protagonistTarg
 	return target
 }
 
-func writeRPGDSLHasAnyDelta(deltas []rpgdsl.StateDelta, kind, field string) bool {
+func WriteRPGDSLHasAnyDelta(deltas []rpgdsl.StateDelta, kind, field string) bool {
 	for _, delta := range deltas {
 		if strings.EqualFold(strings.TrimSpace(delta.Kind), kind) &&
 			strings.EqualFold(strings.TrimSpace(delta.Field), field) {
@@ -824,7 +826,7 @@ func writeRPGDSLHasAnyDelta(deltas []rpgdsl.StateDelta, kind, field string) bool
 	return false
 }
 
-func writeRPGDSLHasDelta(deltas []rpgdsl.StateDelta, target, kind, field string) bool {
+func WriteRPGDSLHasDelta(deltas []rpgdsl.StateDelta, target, kind, field string) bool {
 	for _, delta := range deltas {
 		if strings.EqualFold(strings.TrimSpace(delta.Target), strings.TrimSpace(target)) &&
 			strings.EqualFold(strings.TrimSpace(delta.Kind), kind) &&
@@ -835,7 +837,7 @@ func writeRPGDSLHasDelta(deltas []rpgdsl.StateDelta, target, kind, field string)
 	return false
 }
 
-func writeRPGDSLSignalValue(delta rpgdsl.StateDelta, fallback string) string {
+func WriteRPGDSLSignalValue(delta rpgdsl.StateDelta, fallback string) string {
 	value := strings.TrimSpace(delta.To)
 	if value == "" || strings.EqualFold(value, "true") || strings.EqualFold(value, "acquired") {
 		value = strings.TrimSpace(delta.Note)
@@ -852,20 +854,20 @@ func writeRPGDSLSignalValue(delta rpgdsl.StateDelta, fallback string) string {
 	return value
 }
 
-func writeRPGDSLStabilityValue(delta rpgdsl.StateDelta, fallback string) string {
-	if value := writeRPGDSLLastInt(delta.To + " " + delta.Note); value != "" {
+func WriteRPGDSLStabilityValue(delta rpgdsl.StateDelta, fallback string) string {
+	if value := WriteRPGDSLLastInt(delta.To + " " + delta.Note); value != "" {
 		return value
 	}
-	if value := writeRPGDSLLastInt(fallback); value != "" {
+	if value := WriteRPGDSLLastInt(fallback); value != "" {
 		return value
 	}
 	if delta.Delta != 0 {
 		return strconv.Itoa(delta.Delta)
 	}
-	return writeRPGDSLSignalValue(delta, fallback)
+	return WriteRPGDSLSignalValue(delta, fallback)
 }
 
-func writeRPGDSLLastInt(text string) string {
+func WriteRPGDSLLastInt(text string) string {
 	matches := regexp.MustCompile(`\d+`).FindAllString(text, -1)
 	if len(matches) == 0 {
 		return ""
@@ -873,7 +875,7 @@ func writeRPGDSLLastInt(text string) string {
 	return matches[len(matches)-1]
 }
 
-func writeRPGDSLFirstNonEmpty(values ...string) string {
+func WriteRPGDSLFirstNonEmpty(values ...string) string {
 	for _, value := range values {
 		value = strings.TrimSpace(value)
 		if value != "" && value != "0" {
@@ -883,8 +885,8 @@ func writeRPGDSLFirstNonEmpty(values ...string) string {
 	return ""
 }
 
-func splitRPGDSLBatchInputs(inputs []writeRPGDSLChapterInput, batchSize int) [][]writeRPGDSLChapterInput {
-	var batches [][]writeRPGDSLChapterInput
+func SplitRPGDSLBatchInputs(inputs []WriteRPGDSLChapterInput, batchSize int) [][]WriteRPGDSLChapterInput {
+	var batches [][]WriteRPGDSLChapterInput
 	for start := 0; start < len(inputs); start += batchSize {
 		end := start + batchSize
 		if end > len(inputs) {
@@ -895,10 +897,10 @@ func splitRPGDSLBatchInputs(inputs []writeRPGDSLChapterInput, batchSize int) [][
 	return batches
 }
 
-func sortRPGDSLChapterInputs(inputs []writeRPGDSLChapterInput) {
+func SortRPGDSLChapterInputs(inputs []WriteRPGDSLChapterInput) {
 	sort.Slice(inputs, func(i, j int) bool {
-		a1, b1, c1 := parseRPGDSLChapterID(inputs[i].ChapterID)
-		a2, b2, c2 := parseRPGDSLChapterID(inputs[j].ChapterID)
+		a1, b1, c1 := ParseRPGDSLChapterID(inputs[i].ChapterID)
+		a2, b2, c2 := ParseRPGDSLChapterID(inputs[j].ChapterID)
 		if a1 != a2 {
 			return a1 < a2
 		}
@@ -912,7 +914,7 @@ func sortRPGDSLChapterInputs(inputs []writeRPGDSLChapterInput) {
 	})
 }
 
-func parseRPGDSLChapterID(chapterID string) (int, int, int) {
+func ParseRPGDSLChapterID(chapterID string) (int, int, int) {
 	match := regexp.MustCompile(`P(\d+)-V(\d+)-C(\d+)`).FindStringSubmatch(chapterID)
 	if len(match) != 4 {
 		return 9999, 9999, 9999
@@ -923,7 +925,7 @@ func parseRPGDSLChapterID(chapterID string) (int, int, int) {
 	return p, v, c
 }
 
-func fileSHA256ForWriteRPGDSL(path string) (string, error) {
+func FileSHA256ForWriteRPGDSL(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
@@ -932,7 +934,7 @@ func fileSHA256ForWriteRPGDSL(path string) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func derefCharacterMap(values map[string]*models.Character) map[string]models.Character {
+func DerefCharacterMap(values map[string]*models.Character) map[string]models.Character {
 	out := make(map[string]models.Character, len(values))
 	for key, value := range values {
 		if value != nil {
@@ -942,7 +944,7 @@ func derefCharacterMap(values map[string]*models.Character) map[string]models.Ch
 	return out
 }
 
-func derefLocationMap(values map[string]*models.Location) map[string]models.Location {
+func DerefLocationMap(values map[string]*models.Location) map[string]models.Location {
 	out := make(map[string]models.Location, len(values))
 	for key, value := range values {
 		if value != nil {
@@ -952,7 +954,7 @@ func derefLocationMap(values map[string]*models.Location) map[string]models.Loca
 	return out
 }
 
-func mergeWriteRPGDSL(dst, src *rpgdsl.DSL) {
+func MergeWriteRPGDSL(dst, src *rpgdsl.DSL) {
 	if src == nil {
 		return
 	}
@@ -972,22 +974,22 @@ func mergeWriteRPGDSL(dst, src *rpgdsl.DSL) {
 		if dst.Metadata.DSLVersion == "" {
 			dst.Metadata.DSLVersion = src.Metadata.DSLVersion
 		}
-		dst.Metadata.Genre = appendMissingWriteRPGDSLStrings(dst.Metadata.Genre, src.Metadata.Genre)
+		dst.Metadata.Genre = AppendMissingWriteRPGDSLStrings(dst.Metadata.Genre, src.Metadata.Genre)
 	}
 	if src.World != nil {
-		dst.World.Locations = appendMissingWriteRPGDSLLocations(dst.World.Locations, src.World.Locations)
-		dst.World.Items = appendMissingWriteRPGDSLItems(dst.World.Items, src.World.Items)
+		dst.World.Locations = AppendMissingWriteRPGDSLLocations(dst.World.Locations, src.World.Locations)
+		dst.World.Items = AppendMissingWriteRPGDSLItems(dst.World.Items, src.World.Items)
 		dst.World.Rules = append(dst.World.Rules, src.World.Rules...)
 	}
 	if src.Characters != nil {
 		if dst.Characters.Player == nil {
 			dst.Characters.Player = src.Characters.Player
 		}
-		dst.Characters.Enemies = appendMissingWriteRPGDSLEnemies(dst.Characters.Enemies, src.Characters.Enemies)
-		dst.Characters.NPCs = appendMissingWriteRPGDSLNPCs(dst.Characters.NPCs, src.Characters.NPCs)
+		dst.Characters.Enemies = AppendMissingWriteRPGDSLEnemies(dst.Characters.Enemies, src.Characters.Enemies)
+		dst.Characters.NPCs = AppendMissingWriteRPGDSLNPCs(dst.Characters.NPCs, src.Characters.NPCs)
 	}
 	if src.Storyline != nil {
-		dst.Storyline.Arcs = appendMissingWriteRPGDSLArcs(dst.Storyline.Arcs, src.Storyline.Arcs)
+		dst.Storyline.Arcs = AppendMissingWriteRPGDSLArcs(dst.Storyline.Arcs, src.Storyline.Arcs)
 		dst.Storyline.Chapters = append(dst.Storyline.Chapters, src.Storyline.Chapters...)
 	}
 	if src.Systems != nil && dst.Systems == nil {
@@ -995,7 +997,7 @@ func mergeWriteRPGDSL(dst, src *rpgdsl.DSL) {
 	}
 }
 
-func appendMissingWriteRPGDSLStrings(dst, src []string) []string {
+func AppendMissingWriteRPGDSLStrings(dst, src []string) []string {
 	seen := make(map[string]bool, len(dst))
 	for _, item := range dst {
 		seen[item] = true
@@ -1009,7 +1011,7 @@ func appendMissingWriteRPGDSLStrings(dst, src []string) []string {
 	return dst
 }
 
-func appendMissingWriteRPGDSLLocations(dst, src []rpgdsl.Location) []rpgdsl.Location {
+func AppendMissingWriteRPGDSLLocations(dst, src []rpgdsl.Location) []rpgdsl.Location {
 	seen := map[string]bool{}
 	for _, item := range dst {
 		seen[item.ID] = true
@@ -1023,7 +1025,7 @@ func appendMissingWriteRPGDSLLocations(dst, src []rpgdsl.Location) []rpgdsl.Loca
 	return dst
 }
 
-func appendMissingWriteRPGDSLItems(dst, src []rpgdsl.Item) []rpgdsl.Item {
+func AppendMissingWriteRPGDSLItems(dst, src []rpgdsl.Item) []rpgdsl.Item {
 	seen := map[string]bool{}
 	for _, item := range dst {
 		seen[item.ID] = true
@@ -1037,7 +1039,7 @@ func appendMissingWriteRPGDSLItems(dst, src []rpgdsl.Item) []rpgdsl.Item {
 	return dst
 }
 
-func appendMissingWriteRPGDSLEnemies(dst, src []rpgdsl.Enemy) []rpgdsl.Enemy {
+func AppendMissingWriteRPGDSLEnemies(dst, src []rpgdsl.Enemy) []rpgdsl.Enemy {
 	seen := map[string]bool{}
 	for _, item := range dst {
 		seen[item.ID] = true
@@ -1051,7 +1053,7 @@ func appendMissingWriteRPGDSLEnemies(dst, src []rpgdsl.Enemy) []rpgdsl.Enemy {
 	return dst
 }
 
-func appendMissingWriteRPGDSLNPCs(dst, src []rpgdsl.NPC) []rpgdsl.NPC {
+func AppendMissingWriteRPGDSLNPCs(dst, src []rpgdsl.NPC) []rpgdsl.NPC {
 	seen := map[string]bool{}
 	for _, item := range dst {
 		seen[item.ID] = true
@@ -1065,7 +1067,7 @@ func appendMissingWriteRPGDSLNPCs(dst, src []rpgdsl.NPC) []rpgdsl.NPC {
 	return dst
 }
 
-func appendMissingWriteRPGDSLArcs(dst, src []rpgdsl.Arc) []rpgdsl.Arc {
+func AppendMissingWriteRPGDSLArcs(dst, src []rpgdsl.Arc) []rpgdsl.Arc {
 	seen := map[string]bool{}
 	for _, item := range dst {
 		seen[item.ID] = true

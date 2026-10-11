@@ -24,6 +24,7 @@ import (
 	"novelgen/internal/reviewstore"
 	"novelgen/internal/rpg/dsl"
 	"novelgen/internal/workerpool"
+	"novelgen/internal/writersdl"
 
 	"github.com/spf13/cobra"
 )
@@ -2411,7 +2412,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		}
 		for round := 1; round <= writeMaxRoundsFlag; round++ {
 			// Check for RPG DSL issues for this chapter
-			chapterRPGIssues := GetChapterSpecificSuggestions(rpgDSLIssues, chapter.ID)
+			chapterRPGIssues := writersdl.GetChapterSpecificSuggestions(rpgDSLIssues, chapter.ID)
 			hasRPGIssues := chapterRPGIssues != ""
 
 			if len(chapterReview.Suggestions) == 0 && !chapterReview.NeedsRevision && !hasRPGIssues {
@@ -2574,15 +2575,15 @@ func refreshWriteRPGDSL(
 	client llm.Client,
 	batchSize int,
 	reason string,
-) (writeRPGDSLResult, error) {
+) (writersdl.WriteRPGDSLResult, error) {
 	log := logger.GetLogger()
 	log.Info("\n[RPG DSL] Refreshing chapter DSL (%s)...", reason)
-	result, err := emitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, batchSize)
+	result, err := writersdl.EmitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, batchSize)
 	if err != nil {
 		return result, err
 	}
 	log.Info("[RPG DSL] Output: %s", result.DSLPath)
 	log.Info("[RPG DSL] Batches: %d reused, %d generated", result.ReusedBatches, result.GeneratedBatches)
-	log.Info("[RPG DSL] Issues detected: %d total, %d important", len(result.Issues), len(FilterImportantIssues(result.Issues)))
+	log.Info("[RPG DSL] Issues detected: %d total, %d important", len(result.Issues), len(writersdl.FilterImportantIssues(result.Issues)))
 	return result, nil
 }

@@ -12,6 +12,7 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/writersdl"
 
 	"github.com/spf13/cobra"
 )
@@ -81,7 +82,7 @@ func refreshToolChapterDSL(ctx context.Context, root, id string, batchSize int) 
 	if chapter == nil {
 		return nil, fmt.Errorf("chapter %q not found in outline", id)
 	}
-	chapterPath := firstExistingPath(candidateChapterMarkdownPaths(root, id))
+	chapterPath := firstExistingPath(writersdl.CandidateChapterMarkdownPaths(root, id))
 	if chapterPath == "" {
 		return nil, fmt.Errorf("chapter markdown for %q not found under %s", id, filepath.Join(root, "chapters"))
 	}
@@ -89,7 +90,7 @@ func refreshToolChapterDSL(ctx context.Context, root, id string, batchSize int) 
 		batchSize = 10
 	}
 
-	result, err := emitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, batchSize, id)
+	result, err := writersdl.EmitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, batchSize, id)
 	if err != nil {
 		return nil, err
 	}

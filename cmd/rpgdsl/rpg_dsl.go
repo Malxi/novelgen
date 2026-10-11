@@ -1,4 +1,4 @@
-package cmd
+package rpgdsl
 
 import (
 	"encoding/json"
@@ -15,6 +15,7 @@ import (
 	"novelgen/internal/rpg"
 	"novelgen/internal/rpg/dsl"
 	"novelgen/internal/utils"
+	"novelgen/internal/writersdl"
 )
 
 // rpgDSLCmd represents the rpg-dsl command
@@ -125,7 +126,6 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(rpgDSLCmd)
 	rpgDSLCmd.AddCommand(validateCmd)
 	rpgDSLCmd.AddCommand(mergeCmd)
 	rpgDSLCmd.AddCommand(convertCmd)
@@ -529,15 +529,15 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("加载 craft 元素失败: %w", err)
 	}
-	characters := derefCharacterMap(charModels)
-	locations := derefLocationMap(locModels)
+	characters := writersdl.DerefCharacterMap(charModels)
+	locations := writersdl.DerefLocationMap(locModels)
 
 	// 2. 查找章节 .md 文件（优先章节内容，附带 recap 辅助）
 	root, err := project.FindRoot()
 	if err != nil {
 		return fmt.Errorf("查找项目根目录失败: %w", err)
 	}
-	chapterInputs, err := findProjectChapterInputs(root, outline)
+	chapterInputs, err := writersdl.FindProjectChapterInputs(root, outline)
 	if err != nil {
 		return fmt.Errorf("查找章节文件失败: %w", err)
 	}
@@ -550,7 +550,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 	if len(chapterInputs) == 0 {
 		return fmt.Errorf("未找到符合条件的章节 markdown 文件")
 	}
-	sortRPGDSLChapterInputs(chapterInputs)
+	writersdl.SortRPGDSLChapterInputs(chapterInputs)
 
 	fmt.Printf("📚 找到 %d 个章节 markdown 文件\n", len(chapterInputs))
 
@@ -601,7 +601,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 
 	// 分批转换 (5章/batch), 合并到最终 DSL
 	batchSize := 5
-	batches := splitRPGDSLBatchInputs(chapterInputs, batchSize)
+	batches := writersdl.SplitRPGDSLBatchInputs(chapterInputs, batchSize)
 	fmt.Printf("📄 %d 个章节，分 %d 批转换 (每批 %d 章)\n", len(chapterInputs), len(batches), batchSize)
 
 	combined := &dsl.DSL{
@@ -615,7 +615,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 	for i, batch := range batches {
 		fmt.Printf("\n📦 Batch %d/%d: %s → %s (%d 章)\n",
 			i+1, len(batches), batch[0].ChapterID, batch[len(batch)-1].ChapterID, len(batch))
-		chapterData, err := loadWriteRPGDSLChapterData(batch)
+		chapterData, err := writersdl.LoadWriteRPGDSLChapterData(batch)
 		if err != nil {
 			return fmt.Errorf("加载批次 %d 章节内容失败: %w", i+1, err)
 		}
@@ -625,7 +625,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("AI 转换批次 %d 失败: %w", i+1, err)
 		}
 
-		dslContent, err = ensureWriteRPGDSLParseable(cmd.Context(), agent, bookName, dslContent)
+		dslContent, err = writersdl.EnsureWriteRPGDSLParseable(cmd.Context(), agent, bookName, dslContent)
 		if err != nil {
 			return fmt.Errorf("DSL 解析/修复失败 batch %d: %w", i+1, err)
 		}
@@ -634,7 +634,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("解析批 %d DSL 失败: %w", i+1, err)
 		}
-		mergeWriteRPGDSL(combined, parsed)
+		writersdl.MergeWriteRPGDSL(combined, parsed)
 		fmt.Printf("  ✓ %d 字符\n", len(dslContent))
 	}
 
@@ -658,13 +658,13 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 }
 
 // filterChapterInputs filters chapter inputs by volume/chapter flags.
-func filterChapterInputs(inputs []writeRPGDSLChapterInput, volume int, chapters string, allVolumes bool) []writeRPGDSLChapterInput {
+func filterChapterInputs(inputs []writersdl.WriteRPGDSLChapterInput, volume int, chapters string, allVolumes bool) []writersdl.WriteRPGDSLChapterInput {
 	if chapters != "" {
 		chapterSet := make(map[string]bool)
 		for _, ch := range strings.Split(chapters, ",") {
 			chapterSet[strings.TrimSpace(ch)] = true
 		}
-		var filtered []writeRPGDSLChapterInput
+		var filtered []writersdl.WriteRPGDSLChapterInput
 		for _, input := range inputs {
 			if chapterSet[input.ChapterID] || chapterSet[utils.ExtractChapterNumber(input.ChapterID)] {
 				filtered = append(filtered, input)
@@ -674,7 +674,7 @@ func filterChapterInputs(inputs []writeRPGDSLChapterInput, volume int, chapters 
 	}
 	if volume > 0 && !allVolumes {
 		prefix := fmt.Sprintf("P1-V%d-", volume)
-		var filtered []writeRPGDSLChapterInput
+		var filtered []writersdl.WriteRPGDSLChapterInput
 		for _, input := range inputs {
 			if strings.HasPrefix(input.ChapterID, prefix) || strings.Contains(input.ChapterID, fmt.Sprintf("-V%d-", volume)) {
 				filtered = append(filtered, input)
@@ -778,7 +778,7 @@ func loadDSLFragments(bookName string) ([]*dsl.DSLFragment, error) {
 			seen[file] = true
 
 			// Determine phase from filename
-			phase := inferPhaseFromFilename(filepath.Base(file))
+			phase := writersdl.InferPhaseFromFilename(filepath.Base(file))
 
 			// Parse DSL
 			content, err := os.ReadFile(file)
@@ -838,23 +838,6 @@ func loadAndMergeDSL(bookName string) (*dsl.DSL, error) {
 	return result.DSL, nil
 }
 
-func inferPhaseFromFilename(filename string) dsl.MergePhase {
-	lower := strings.ToLower(filename)
-	if strings.Contains(lower, "setup") {
-		return dsl.PhaseSetup
-	}
-	if strings.Contains(lower, "outline") {
-		return dsl.PhaseOutline
-	}
-	if strings.Contains(lower, "craft") {
-		return dsl.PhaseCraft
-	}
-	if strings.Contains(lower, "system") {
-		return dsl.PhaseSystems
-	}
-	return dsl.PhaseFinal
-}
-
 func exportToJSON(dslData *dsl.DSL, path string) error {
 	// TODO: Implement JSON export
 	return fmt.Errorf("JSON export not yet implemented")
@@ -909,4 +892,9 @@ func runSimulationForOutline(bookName string) error {
 	}
 
 	return nil
+}
+
+// NewCommand returns the `novelgen rpg-dsl` command tree.
+func NewCommand() *cobra.Command {
+	return rpgDSLCmd
 }
