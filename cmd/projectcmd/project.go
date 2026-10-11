@@ -1,4 +1,4 @@
-package cmd
+package projectcmd
 
 import (
 	"context"
@@ -15,8 +15,10 @@ import (
 
 	"novelgen/internal/agentruntime"
 	"novelgen/internal/models"
+	"novelgen/internal/project"
 	"novelgen/internal/toolplane"
 	"novelgen/internal/usage"
+	"novelgen/internal/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -100,13 +102,10 @@ func init() {
 	projectCmd.AddCommand(projectRenameCmd)
 	projectCmd.AddCommand(projectDoctorCmd)
 	projectCmd.AddCommand(projectUsageCmd)
-	RegisterCommand(func() *cobra.Command {
-		return projectCmd
-	})
 }
 
 func runProjectUsage(cmd *cobra.Command, args []string) error {
-	root, err := findProjectRoot()
+	root, err := project.FindRoot()
 	if err != nil {
 		return err
 	}
@@ -231,7 +230,7 @@ func runProjectClone(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if source == "" {
-		root, err := findProjectRoot()
+		root, err := project.FindRoot()
 		if err != nil {
 			return err
 		}
@@ -308,7 +307,7 @@ func resolveBookProjectRoot(book string) (string, error) {
 }
 
 func runProjectRename(cmd *cobra.Command, args []string) error {
-	root, err := findProjectRoot()
+	root, err := project.FindRoot()
 	if err != nil {
 		return err
 	}
@@ -321,7 +320,7 @@ func runProjectRename(cmd *cobra.Command, args []string) error {
 }
 
 func runProjectDoctor(cmd *cobra.Command, args []string) error {
-	root, err := findProjectRoot()
+	root, err := project.FindRoot()
 	if err != nil {
 		return err
 	}
@@ -741,7 +740,7 @@ func projectChapterMarkdownExists(root, chapterID string) bool {
 	for _, path := range []string{
 		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapterID)),
 		filepath.Join(root, "chapters", chapterID+".md"),
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", extractChapterNumber(chapterID))),
+		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", utils.ExtractChapterNumber(chapterID))),
 	} {
 		data, err := os.ReadFile(path)
 		if err == nil && strings.TrimSpace(string(data)) != "" {
@@ -834,4 +833,8 @@ func sameOrChildPath(path, parent string) bool {
 		return false
 	}
 	return rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
+}
+
+func NewCommand() *cobra.Command {
+	return projectCmd
 }
