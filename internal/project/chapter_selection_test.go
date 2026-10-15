@@ -1,4 +1,4 @@
-package cmd
+package project_test
 
 import (
 	"strings"

@@ -442,7 +442,7 @@ func (ese *EnhancedSimulationEngine) simulateCombatObjectiveEnhanced(step Simula
 		ese.addLog("reward", fmt.Sprintf("战斗胜利！获得经验 %d", expGained), nil)
 	} else {
 		step.Description = fmt.Sprintf("战斗失败，被 %s 击败", enemy.Name)
-		ese.addLog("combat", fmt.Sprintf("战斗失败！"), nil)
+		ese.addLog("combat", "战斗失败！", nil)
 	}
 
 	return step

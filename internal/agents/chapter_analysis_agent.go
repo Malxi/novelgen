@@ -19,26 +19,26 @@ type ChapterAnalysisInput struct {
 
 // ChapterAnalysisOutput 章节分析输出
 type ChapterAnalysisOutput struct {
-	Characters      []CharacterInfo   `json:"characters" md:"characters" desc:"本章节出现的角色"`
-	Events          []EventInfo       `json:"events" md:"events" desc:"重要事件"`
-	PowerChanges    []PowerChangeInfo `json:"power_changes" md:"power_changes" desc:"战力/修为变化"`
-	TimelineInfo    TimelineInfo      `json:"timeline_info" md:"timeline_info" desc:"时间线信息"`
-	Issues          []ChapterIssue    `json:"issues" md:"issues" desc:"发现的问题"`
-	Summary         string            `json:"summary" md:"summary" desc:"章节摘要"`
+	Characters   []CharacterInfo   `json:"characters" md:"characters" desc:"本章节出现的角色"`
+	Events       []EventInfo       `json:"events" md:"events" desc:"重要事件"`
+	PowerChanges []PowerChangeInfo `json:"power_changes" md:"power_changes" desc:"战力/修为变化"`
+	TimelineInfo TimelineInfo      `json:"timeline_info" md:"timeline_info" desc:"时间线信息"`
+	Issues       []ChapterIssue    `json:"issues" md:"issues" desc:"发现的问题"`
+	Summary      string            `json:"summary" md:"summary" desc:"章节摘要"`
 }
 
 // CharacterInfo 角色信息
 type CharacterInfo struct {
-	Name           string   `json:"name" md:"name" desc:"角色名"`
-	State          string   `json:"state" md:"state" desc:"状态: alive, dead, injured, unconscious"`
-	Cultivation    string   `json:"cultivation,omitempty" md:"cultivation,omitempty" desc:"修为境界"`
-	PowerLevel     int      `json:"power_level,omitempty" md:"power_level,omitempty" desc:"战力等级"`
-	HP             int      `json:"hp,omitempty" md:"hp,omitempty" desc:"生命值"`
-	MaxHP          int      `json:"max_hp,omitempty" md:"max_hp,omitempty" desc:"最大生命值"`
-	Location       string   `json:"location,omitempty" md:"location,omitempty" desc:"所在位置"`
-	IsResurrected  bool     `json:"is_resurrected,omitempty" md:"is_resurrected,omitempty" desc:"是否在本章复活"`
+	Name             string `json:"name" md:"name" desc:"角色名"`
+	State            string `json:"state" md:"state" desc:"状态: alive, dead, injured, unconscious"`
+	Cultivation      string `json:"cultivation,omitempty" md:"cultivation,omitempty" desc:"修为境界"`
+	PowerLevel       int    `json:"power_level,omitempty" md:"power_level,omitempty" desc:"战力等级"`
+	HP               int    `json:"hp,omitempty" md:"hp,omitempty" desc:"生命值"`
+	MaxHP            int    `json:"max_hp,omitempty" md:"max_hp,omitempty" desc:"最大生命值"`
+	Location         string `json:"location,omitempty" md:"location,omitempty" desc:"所在位置"`
+	IsResurrected    bool   `json:"is_resurrected,omitempty" md:"is_resurrected,omitempty" desc:"是否在本章复活"`
 	ResurrectionCost string `json:"resurrection_cost,omitempty" md:"resurrection_cost,omitempty" desc:"复活代价"`
-	Appearances    int      `json:"appearances" md:"appearances" desc:"出场次数"`
+	Appearances      int    `json:"appearances" md:"appearances" desc:"出场次数"`
 }
 
 // EventInfo 事件信息
@@ -52,21 +52,21 @@ type EventInfo struct {
 
 // PowerChangeInfo 战力变化信息
 type PowerChangeInfo struct {
-	Character   string `json:"character" md:"character" desc:"角色名"`
-	FromLevel   string `json:"from_level" md:"from_level" desc:"变化前境界"`
-	ToLevel     string `json:"to_level" md:"to_level" desc:"变化后境界"`
-	ChangeType  string `json:"change_type" md:"change_type" desc:"变化类型: breakthrough, regression, injury_recovery, item_boost"`
-	Reason      string `json:"reason" md:"reason" desc:"变化原因"`
-	IsLegitimate bool  `json:"is_legitimate" md:"is_legitimate" desc:"是否合理"`
+	Character    string `json:"character" md:"character" desc:"角色名"`
+	FromLevel    string `json:"from_level" md:"from_level" desc:"变化前境界"`
+	ToLevel      string `json:"to_level" md:"to_level" desc:"变化后境界"`
+	ChangeType   string `json:"change_type" md:"change_type" desc:"变化类型: breakthrough, regression, injury_recovery, item_boost"`
+	Reason       string `json:"reason" md:"reason" desc:"变化原因"`
+	IsLegitimate bool   `json:"is_legitimate" md:"is_legitimate" desc:"是否合理"`
 }
 
 // TimelineInfo 时间线信息
 type TimelineInfo struct {
-	StartTime      string `json:"start_time" md:"start_time" desc:"章节开始时间"`
-	EndTime        string `json:"end_time" md:"end_time" desc:"章节结束时间"`
-	Duration       string `json:"duration" md:"duration" desc:"持续时间"`
-	TimeJumps      int    `json:"time_jumps" md:"time_jumps" desc:"时间跳跃次数"`
-	IsContinuous   bool   `json:"is_continuous" md:"is_continuous" desc:"时间是否连续"`
+	StartTime    string `json:"start_time" md:"start_time" desc:"章节开始时间"`
+	EndTime      string `json:"end_time" md:"end_time" desc:"章节结束时间"`
+	Duration     string `json:"duration" md:"duration" desc:"持续时间"`
+	TimeJumps    int    `json:"time_jumps" md:"time_jumps" desc:"时间跳跃次数"`
+	IsContinuous bool   `json:"is_continuous" md:"is_continuous" desc:"时间是否连续"`
 }
 
 // ChapterIssue 章节问题
@@ -95,11 +95,6 @@ func NewChapterAnalysisAgent(client llm.Client, config *llm.Config, projectLLM *
 	})
 
 	return &ChapterAnalysisAgent{base: base}
-}
-
-// SetLanguage 设置输出语言
-func (a *ChapterAnalysisAgent) SetLanguage(language string) {
-	a.base.SetLanguage(language)
 }
 
 // Analyze 分析单个章节
@@ -144,71 +139,6 @@ func (a *ChapterAnalysisAgent) Analyze(ctx context.Context, input ChapterAnalysi
 	}
 
 	return output, nil
-}
-
-// AnalyzeBatch 批量分析多个章节
-func (a *ChapterAnalysisAgent) AnalyzeBatch(ctx context.Context, inputs []ChapterAnalysisInput) ([]ChapterAnalysisOutput, error) {
-	logger.Section("CHAPTER ANALYSIS AGENT - Batch Analysis")
-	logger.Info("Total chapters to analyze: %d", len(inputs))
-
-	outputs := make([]ChapterAnalysisOutput, 0, len(inputs))
-
-	for i, input := range inputs {
-		logger.Info("[%d/%d] Analyzing %s...", i+1, len(inputs), input.ChapterID)
-
-		output, err := a.Analyze(ctx, input)
-		if err != nil {
-			logger.Error("Failed to analyze chapter %s: %v", input.ChapterID, err)
-			// 继续分析其他章节，不中断
-			continue
-		}
-
-		outputs = append(outputs, output)
-	}
-
-	logger.Info("Batch analysis completed: %d/%d chapters successful", len(outputs), len(inputs))
-	return outputs, nil
-}
-
-// CrossChapterAnalysis 跨章分析（检测一致性问题）
-func (a *ChapterAnalysisAgent) CrossChapterAnalysis(ctx context.Context, outputs []ChapterAnalysisOutput) ([]ChapterIssue, error) {
-	logger.Section("CHAPTER ANALYSIS AGENT - Cross-Chapter Analysis")
-
-	// 构建跨章分析输入
-	input := struct {
-		Chapters []ChapterSummary `json:"chapters"`
-	}{
-		Chapters: make([]ChapterSummary, 0, len(outputs)),
-	}
-
-	for _, out := range outputs {
-		summary := ChapterSummary{
-			Characters:   make([]string, 0, len(out.Characters)),
-			PowerChanges: out.PowerChanges,
-			Timeline:     out.TimelineInfo,
-		}
-		for _, char := range out.Characters {
-			summary.Characters = append(summary.Characters, char.Name)
-		}
-		input.Chapters = append(input.Chapters, summary)
-	}
-
-	type CrossChapterOutput struct {
-		Issues []ChapterIssue `json:"issues"`
-	}
-
-	var output CrossChapterOutput
-	params := InvokeParams{
-		Skills:  []string{"cross-chapter-analysis"},
-		Command: "analyze cross-chapter consistency",
-	}
-
-	if err := a.base.Execute(ctx, params, input, &output); err != nil {
-		return nil, err
-	}
-
-	logger.Info("Cross-chapter analysis completed: %d issues found", len(output.Issues))
-	return output.Issues, nil
 }
 
 // ChapterSummary 章节摘要（用于跨章分析）

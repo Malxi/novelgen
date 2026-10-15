@@ -173,39 +173,6 @@ func (a *DraftAgent) SetLanguage(language string) {
 	a.base.SetLanguage(language)
 }
 
-// GenerateDraft generates a draft chapter
-func (a *DraftAgent) GenerateDraft(ctx context.Context, chapter *models.Chapter, state *models.StateMatrix, targetWords int) (string, error) {
-	logger.Section("DRAFT AGENT - Draft Generation")
-	logger.Info("Chapter: %s", chapter.ID)
-	logger.Info("Target words: %d", targetWords)
-	logger.Info("Language: %s", a.base.language)
-
-	input := DraftGenInput{
-		StorySetup:  *a.setup,
-		Chapter:     *chapter,
-		StateMatrix: formatStateMatrix(state, chapter),
-		TargetWords: targetWords,
-	}
-
-	var output DraftGenOutput
-	params := InvokeParams{
-		Skills:  []string{"draft-generate"},
-		Command: "generate draft chapter",
-	}
-
-	if err := a.base.Execute(ctx, params, input, &output); err != nil {
-		return "", err
-	}
-
-	// Log context for debugging
-	if err := a.logDraftContext(chapter.ID, "generate", input, output.Content); err != nil {
-		logger.Warn("Failed to log draft context: %v", err)
-	}
-
-	logger.Info("✓ Generated draft: %d characters", len(output.Content))
-	return output.Content, nil
-}
-
 // GenerateDraftWithContext generates a draft chapter with continuity context
 func (a *DraftAgent) GenerateDraftWithContext(ctx context.Context, chapter *models.Chapter, state *models.StateMatrix, targetWords int, contextText string, recap string, nextChapters []*models.Chapter) (string, error) {
 	logger.Section("DRAFT AGENT - Draft Generation with Context")
@@ -331,63 +298,6 @@ func (a *DraftAgent) ReviewDraft(ctx context.Context, chapter *models.Chapter, d
 	return output.Result, nil
 }
 
-// IterateDraft runs the review-improvement loop for a draft
-func (a *DraftAgent) IterateDraft(ctx context.Context, chapter *models.Chapter, state *models.StateMatrix, targetWords int, initialDraft string, maxIterations int, qualityThreshold float64, contextText string, recap string, nextChapters []*models.Chapter) (string, *models.ReviewResult, error) {
-	logger.Section("DRAFT AGENT - Draft Iteration Loop")
-	logger.Info("Chapter: %s", chapter.ID)
-	logger.Info("Max iterations: %d", maxIterations)
-	logger.Info("Quality threshold: %.1f", qualityThreshold)
-
-	currentDraft := initialDraft
-	var finalReview *models.ReviewResult
-
-	for i := 1; i <= maxIterations; i++ {
-		logger.Info("=== Iteration %d/%d ===", i, maxIterations)
-
-		// Review
-		review, err := a.ReviewDraft(ctx, chapter, currentDraft, targetWords, i)
-		if err != nil {
-			return "", nil, fmt.Errorf("review failed at iteration %d: %w", i, err)
-		}
-		finalReview = &review
-
-		// Check if quality meets threshold
-		if review.OverallScore >= qualityThreshold {
-			logger.Info("✓ Quality threshold met (%.1f >= %.1f)", review.OverallScore, qualityThreshold)
-			break
-		}
-
-		// Check if this is the last iteration
-		if i == maxIterations {
-			logger.Warn("Max iterations reached, stopping iteration loop")
-			break
-		}
-
-		// Check if there are high priority suggestions
-		hasHighPriority := false
-		for _, s := range review.Suggestions {
-			if s.Priority == "high" {
-				hasHighPriority = true
-				break
-			}
-		}
-		if !hasHighPriority {
-			logger.Info("No high priority issues, stopping iteration")
-			break
-		}
-
-		// Improve
-		suggestions := formatSuggestions(review.Suggestions)
-		improved, err := a.GenerateDraftWithSuggestions(ctx, chapter, state, targetWords, suggestions, contextText, recap, nextChapters)
-		if err != nil {
-			return "", nil, fmt.Errorf("improvement failed at iteration %d: %w", i, err)
-		}
-		currentDraft = improved
-	}
-
-	return currentDraft, finalReview, nil
-}
-
 // logDraftContext logs the draft context to a markdown file for debugging
 func (a *DraftAgent) logDraftContext(chapterID, variant string, input interface{}, output string) error {
 	debugDir := filepath.Join("logs", "draft_contexts")
@@ -433,7 +343,7 @@ func formatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) strin
 			if char.Motivation != "" {
 				sb.WriteString(fmt.Sprintf("    - Motivation: %s\n", char.Motivation))
 			}
-			if char.Personality != nil && len(char.Personality) > 0 {
+			if len(char.Personality) > 0 {
 				sb.WriteString(fmt.Sprintf("    - Personality: %s\n", strings.Join(char.Personality, ", ")))
 			}
 			if char.Background != "" {
@@ -460,16 +370,6 @@ func formatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) strin
 		}
 	}
 
-	return sb.String()
-}
-
-// formatSuggestions formats review suggestions for the improvement prompt
-func formatSuggestions(suggestions []models.ReviewSuggestion) string {
-	var sb strings.Builder
-	for i, s := range suggestions {
-		sb.WriteString(fmt.Sprintf("%d. [%s] %s\n", i+1, s.Priority, s.Issue))
-		sb.WriteString(fmt.Sprintf("   Suggestion: %s\n\n", s.Suggestion))
-	}
 	return sb.String()
 }
 

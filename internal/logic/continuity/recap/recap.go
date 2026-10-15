@@ -129,27 +129,6 @@ func CheckQuality(projectRoot string, chapterID string) (ok bool, issues []strin
 	return true, nil, nil
 }
 
-func firstMeaningfulToken(s string) string {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return ""
-	}
-	r := []rune(s)
-	buf := make([]rune, 0, 6)
-	for _, c := range r {
-		if len(buf) >= 6 {
-			break
-		}
-		switch c {
-		case '，', '。', '！', '？', '“', '”', '（', '）', '：', ':', '—', '-', ' ', '\n', '\t':
-			continue
-		default:
-			buf = append(buf, c)
-		}
-	}
-	return string(buf)
-}
-
 func hasVisibleContinuation(lastLine, hint string) bool {
 	ll := normalizeContinuityText(lastLine)
 	nh := normalizeContinuityText(hint)

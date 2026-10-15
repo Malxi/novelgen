@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
+	"novelgen/internal/toolcmd"
 	"novelgen/internal/utils"
 	"novelgen/internal/writersdl"
 	"os"
@@ -299,7 +300,7 @@ func chapterWriteIndexNextActions(ctx ChapterWriteContext) []ToolNextAction {
 func chapterRepairIndexNextActions(ctx ChapterRepairContext) []ToolNextAction {
 	if toolCheckResultIsClean(ctx.Check) {
 		return cleanFocusedCheckNextActions(
-			fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --category %s --min-priority low --max-issues 12", ctx.ChapterID, categoryOrAll(ctx.IssueCategory)),
+			toolcmd.ChapterCheck(ctx.ChapterID, toolcmd.ChapterCheckOptions{Category: categoryOrAll(ctx.IssueCategory), MinPriority: "low", MaxIssues: 12}),
 			"The scoped final-chapter check returned zero issues; do not fetch brief repair context or patch prose.",
 		)
 	}

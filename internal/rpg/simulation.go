@@ -530,15 +530,6 @@ func (se *SimulationEngine) executeSkill(action Action, battle *BattleScene) Act
 		}
 	}
 
-	// 使用技能系统执行
-	targets := []*Character{}
-	if action.Target != "" {
-		target := se.World.Characters.GetCharacter(action.Target)
-		if target != nil {
-			targets = append(targets, target)
-		}
-	}
-
 	skillResult := se.World.UseSkill(action.SkillID, []string{action.Target})
 
 	if skillResult == nil {
@@ -551,6 +542,13 @@ func (se *SimulationEngine) executeSkill(action Action, battle *BattleScene) Act
 
 	actor := se.World.Characters.GetCharacter(action.Actor)
 	target := se.World.Characters.GetCharacter(action.Target)
+	if actor == nil || target == nil {
+		return ActionResult{
+			Success: false,
+			Action:  action,
+			Message: "角色不存在",
+		}
+	}
 
 	damage := 0
 	if dmg, ok := skillResult.Damage[action.Target]; ok {
@@ -624,11 +622,11 @@ func (se *SimulationEngine) SimulateStory(questIDs []string) *StorySimulationRes
 
 // GetSimulationReport 获取推演报告
 func (se *SimulationEngine) GetSimulationReport() string {
-	report := fmt.Sprintf("=== 剧情推演报告 ===\n\n")
+	report := "=== 剧情推演报告 ===\n\n"
 	report += fmt.Sprintf("总步骤数: %d\n", len(se.History))
 	report += fmt.Sprintf("当前玩家等级: %d\n", se.World.Player.Level)
 	report += fmt.Sprintf("当前玩家HP: %d/%d\n", se.World.Player.CurrentStats.HP, se.World.Player.BaseStats.HP)
-	report += fmt.Sprintf("\n详细步骤:\n")
+	report += "\n详细步骤:\n"
 
 	for _, step := range se.History {
 		report += fmt.Sprintf("\n[%d] %s: %s\n", step.StepNumber, step.Type, step.Description)

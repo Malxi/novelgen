@@ -101,10 +101,6 @@ if len(violations) > 0 {
         fmt.Printf("[%s] %s: %s\n", v.Severity, v.Target, v.Issue)
         fmt.Printf("  建议: %s\n", v.Suggestion)
     }
-    
-    // 生成修正提示词
-    correctionPrompt := constraintSystem.GenerateCorrectionPrompt(violations)
-    fmt.Println(correctionPrompt)
 }
 ```
 

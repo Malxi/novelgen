@@ -10,13 +10,13 @@ import (
 
 // 深度分析结构
 type DeepAnalysisResult struct {
-	CriticalIssues   []CriticalIssue   `json:"critical_issues"`
-	LogicHoles       []LogicHole       `json:"logic_holes"`
-	TimelineIssues   []TimelineIssue   `json:"timeline_issues"`
-	CharacterArcs    []CharacterArc    `json:"character_arcs"`
+	CriticalIssues     []CriticalIssue     `json:"critical_issues"`
+	LogicHoles         []LogicHole         `json:"logic_holes"`
+	TimelineIssues     []TimelineIssue     `json:"timeline_issues"`
+	CharacterArcs      []CharacterArc      `json:"character_arcs"`
 	PlotContradictions []PlotContradiction `json:"plot_contradictions"`
 	MissingConnections []MissingConnection `json:"missing_connections"`
-	Summary          AnalysisSummary   `json:"summary"`
+	Summary            AnalysisSummary     `json:"summary"`
 }
 
 type CriticalIssue struct {
@@ -34,10 +34,10 @@ type LogicHole struct {
 }
 
 type TimelineIssue struct {
-	Location    string `json:"location"`
-	Issue       string `json:"issue"`
-	TimeBefore  string `json:"time_before"`
-	TimeAfter   string `json:"time_after"`
+	Location   string `json:"location"`
+	Issue      string `json:"issue"`
+	TimeBefore string `json:"time_before"`
+	TimeAfter  string `json:"time_after"`
 }
 
 type CharacterArc struct {
@@ -48,10 +48,10 @@ type CharacterArc struct {
 }
 
 type PlotContradiction struct {
-	Location1   string `json:"location1"`
-	Location2   string `json:"location2"`
+	Location1     string `json:"location1"`
+	Location2     string `json:"location2"`
 	Contradiction string `json:"contradiction"`
-	Details     string `json:"details"`
+	Details       string `json:"details"`
 }
 
 type MissingConnection struct {
@@ -62,13 +62,13 @@ type MissingConnection struct {
 }
 
 type AnalysisSummary struct {
-	TotalChapters        int `json:"total_chapters"`
-	TotalCharacters      int `json:"total_characters"`
-	CriticalIssuesCount  int `json:"critical_issues_count"`
-	LogicHolesCount      int `json:"logic_holes_count"`
-	TimelineIssuesCount  int `json:"timeline_issues_count"`
-	ContradictionsCount  int `json:"contradictions_count"`
-	RiskLevel            string `json:"risk_level"`
+	TotalChapters       int    `json:"total_chapters"`
+	TotalCharacters     int    `json:"total_characters"`
+	CriticalIssuesCount int    `json:"critical_issues_count"`
+	LogicHolesCount     int    `json:"logic_holes_count"`
+	TimelineIssuesCount int    `json:"timeline_issues_count"`
+	ContradictionsCount int    `json:"contradictions_count"`
+	RiskLevel           string `json:"risk_level"`
 }
 
 // 大纲结构
@@ -91,18 +91,18 @@ type Volume struct {
 }
 
 type Chapter struct {
-	ID           string   `json:"id"`
-	Title        string   `json:"title"`
-	Summary      string   `json:"summary"`
-	Characters   []string `json:"characters"`
-	Location     string   `json:"location"`
-	Events       []Event  `json:"events"`
-	Beats        []string `json:"beats"`
-	OpeningBeat  string   `json:"opening_beat"`
-	ClosingBeat  string   `json:"closing_beat"`
-	StateChange  string   `json:"state_change"`
-	Conflict     string   `json:"conflict"`
-	Pacing       string   `json:"pacing"`
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Summary     string   `json:"summary"`
+	Characters  []string `json:"characters"`
+	Location    string   `json:"location"`
+	Events      []Event  `json:"events"`
+	Beats       []string `json:"beats"`
+	OpeningBeat string   `json:"opening_beat"`
+	ClosingBeat string   `json:"closing_beat"`
+	StateChange string   `json:"state_change"`
+	Conflict    string   `json:"conflict"`
+	Pacing      string   `json:"pacing"`
 }
 
 type Event struct {
@@ -205,9 +205,7 @@ func collectAllChapters(outline *StoryOutline) []Chapter {
 	var chapters []Chapter
 	for _, part := range outline.Parts {
 		for _, volume := range part.Volumes {
-			for _, chapter := range volume.Chapters {
-				chapters = append(chapters, chapter)
-			}
+			chapters = append(chapters, volume.Chapters...)
 		}
 	}
 	return chapters
@@ -251,8 +249,8 @@ func checkCriticalIssues(chapters []Chapter, result *DeepAnalysisResult) {
 	cultivationChanges := []string{}
 	for _, ch := range chapters {
 		for _, event := range ch.Events {
-			if strings.Contains(event.Subject, "林砚") && 
-			   (strings.Contains(event.Change, "修为") || strings.Contains(event.Change, "练气")) {
+			if strings.Contains(event.Subject, "林砚") &&
+				(strings.Contains(event.Change, "修为") || strings.Contains(event.Change, "练气")) {
 				cultivationChanges = append(cultivationChanges, fmt.Sprintf("%s: %s", ch.ID, event.Change))
 			}
 		}
@@ -302,7 +300,7 @@ func checkCriticalIssues(chapters []Chapter, result *DeepAnalysisResult) {
 func checkTimelineIssues(chapters []Chapter, result *DeepAnalysisResult) {
 	// 检查时间跳跃
 	timeReferences := []string{"三天后", "一个月后", "三个月后", "半个月后", "次日", "当天"}
-	
+
 	for i, ch := range chapters {
 		for _, beat := range ch.Beats {
 			for _, timeRef := range timeReferences {
@@ -336,7 +334,7 @@ func hasTimeTransition(prevCh, currCh Chapter) bool {
 func checkCharacterArcs(chapters []Chapter, result *DeepAnalysisResult) {
 	// 收集所有角色及其出场
 	characterAppearances := make(map[string][]string)
-	
+
 	for _, ch := range chapters {
 		for _, char := range ch.Characters {
 			characterAppearances[char] = append(characterAppearances[char], ch.ID)
@@ -394,7 +392,7 @@ func isLargeGap(ch1, ch2 string) bool {
 
 func checkPlotContradictions(chapters []Chapter, result *DeepAnalysisResult) {
 	// 检查剧情矛盾
-	
+
 	// 1. 检查地点矛盾
 	locationEvents := make(map[string][]string)
 	for _, ch := range chapters {
@@ -495,7 +493,7 @@ func hasStateContinuity(prevCh, currCh Chapter) bool {
 
 func checkLogicHoles(chapters []Chapter, result *DeepAnalysisResult) {
 	// 检查逻辑漏洞
-	
+
 	// 1. 检查"三哥"的线索是否连贯
 	sanGeMentions := []string{}
 	for _, ch := range chapters {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"novelgen/internal/logger"
@@ -19,6 +20,11 @@ var (
 	exportFormatFlag string
 	exportOutputFlag string
 )
+
+// reBlankRun collapses the blank-line runs left behind when markdown rules are
+// dropped, so a rule between two paragraphs still yields a single paragraph
+// break instead of a double one.
+var reBlankRun = regexp.MustCompile(`\n{3,}`)
 
 var exportCmd = &cobra.Command{
 	Use:   "export",
@@ -209,22 +215,44 @@ func cleanMarkdownForTXT(content string) string {
 			continue
 		}
 
+		// Drop horizontal rules. This must happen before the emphasis markers
+		// are stripped, otherwise "***" would turn into a blank paragraph.
+		if isMarkdownHorizontalRule(trimmed) {
+			continue
+		}
+
+		// Keep blank lines: they are the paragraph breaks of the source file.
+		if trimmed == "" {
+			result.WriteString("\n")
+			continue
+		}
+
 		// Remove bold/italic markers
 		line = strings.ReplaceAll(line, "**", "")
 		line = strings.ReplaceAll(line, "*", "")
 		line = strings.ReplaceAll(line, "__", "")
 		line = strings.ReplaceAll(line, "_", "")
 
-		// Remove horizontal rules
-		if strings.Trim(line, "-") == "" {
-			continue
-		}
-
 		result.WriteString(line)
 		result.WriteString("\n")
 	}
 
-	return strings.TrimSpace(result.String())
+	return reBlankRun.ReplaceAllString(strings.TrimSpace(result.String()), "\n\n")
+}
+
+// isMarkdownHorizontalRule reports whether a trimmed line is a markdown rule
+// such as "---", "* * *" or "___".
+func isMarkdownHorizontalRule(trimmed string) bool {
+	compact := strings.ReplaceAll(strings.ReplaceAll(trimmed, " ", ""), "\t", "")
+	if len(compact) < 3 {
+		return false
+	}
+	for _, marker := range []string{"-", "*", "_"} {
+		if strings.Trim(compact, marker) == "" {
+			return true
+		}
+	}
+	return false
 }
 
 // loadChapterFile loads a chapter file from the chapters directory

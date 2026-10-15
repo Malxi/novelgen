@@ -36,15 +36,6 @@ type StoryStructure struct {
 	TargetChapters int `json:"target_chapters"` // Number of chapters per volume (章)
 }
 
-// DefaultStoryStructure returns a default story structure
-func DefaultStoryStructure() StoryStructure {
-	return StoryStructure{
-		TargetParts:    1,
-		TargetVolumes:  1,
-		TargetChapters: 20,
-	}
-}
-
 // TotalChapters returns the total number of chapters
 func (s *StoryStructure) TotalChapters() int {
 	return s.TargetParts * s.TargetVolumes * s.TargetChapters
@@ -70,14 +61,6 @@ func DefaultChapterConfig() ChapterConfig {
 type ProjectLLM struct {
 	Provider string `json:"provider"` // e.g., "ollama", "openai"
 	Model    string `json:"model"`    // e.g., "qwen3.5:4b", "gpt-4"
-}
-
-// DefaultProjectLLM returns default project LLM selection
-func DefaultProjectLLM() ProjectLLM {
-	return ProjectLLM{
-		Provider: "claude",
-		Model:    "sonnet",
-	}
 }
 
 // Save writes the project config to novel.json

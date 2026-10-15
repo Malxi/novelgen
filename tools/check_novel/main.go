@@ -14,6 +14,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/models"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/writersdl"
 )
 
 func main() {
@@ -134,26 +135,26 @@ func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutp
 		return fmt.Errorf("鍒涘缓 rpg 鐩綍澶辫触: %w", err)
 	}
 
-	dslContent, dslData, err := convertChaptersWithBatchCache(
-		ctx,
-		agent,
-		bookName,
-		bookPath,
-		adapter.GetCharacters(),
-		adapter.GetLocations(),
-		chapterFiles,
-		batchSize,
-	)
+	_, dslData, err := writersdl.EmitWriteRPGDSL(ctx, writersdl.WriteRPGDSLEmitInput{
+		BookName:   bookName,
+		CacheDir:   filepath.Join(rpgDir, "cache", "chapter_batches"),
+		Chapters:   chapterFiles,
+		BatchSize:  batchSize,
+		Agent:      agent,
+		Characters: adapter.GetCharacters(),
+		Locations:  adapter.GetLocations(),
+	})
 	if err != nil {
 		return err
 	}
 
-	applySimulationDefaults(bookName, dslData)
-
+	dslContent := dslData.String()
 	dslFile := filepath.Join(rpgDir, "04_chapters.rpg")
 	if err := os.WriteFile(dslFile, []byte(dslContent), 0644); err != nil {
 		return fmt.Errorf("淇濆瓨 DSL 鏂囦欢澶辫触: %w", err)
 	}
+
+	dsl.ApplySimulationDefaults(bookName, dslData)
 
 	simulator := dsl.NewSimulator(dslData)
 	issues := simulator.SimulateAll()
@@ -427,32 +428,4 @@ func formatTextReport(report checkNovelAIReport) string {
 	}
 
 	return b.String()
-}
-
-func applySimulationDefaults(bookName string, dslData *dsl.DSL) {
-	if dslData == nil {
-		return
-	}
-	if dslData.Metadata == nil {
-		dslData.Metadata = &dsl.Metadata{}
-	}
-	if strings.TrimSpace(dslData.Metadata.Title) == "" {
-		dslData.Metadata.Title = bookName
-	}
-	if strings.TrimSpace(dslData.Metadata.DSLVersion) == "" {
-		dslData.Metadata.DSLVersion = "0.1.0"
-	}
-	if dslData.Characters == nil {
-		dslData.Characters = &dsl.Characters{}
-	}
-	if dslData.Characters.Player == nil {
-		playerName := "涓昏"
-		if len(dslData.Characters.NPCs) > 0 && strings.TrimSpace(dslData.Characters.NPCs[0].Name) != "" {
-			playerName = dslData.Characters.NPCs[0].Name
-		}
-		dslData.Characters.Player = &dsl.Player{
-			ID:   "char_player",
-			Name: playerName,
-		}
-	}
 }

@@ -890,15 +890,13 @@ func (cs *ConstraintSystem) detectLocationConflicts(text string) []LocationConfl
 
 		// 记录角色-地点映射
 		for char := range lineChars {
-			for _, loc := range lineLocs {
-				charLocations[char] = append(charLocations[char], loc)
-			}
+			charLocations[char] = append(charLocations[char], lineLocs...)
 		}
 	}
 
 	// 检测矛盾：同一角色在同一时间段出现在明确不同的地点
 	// "与此同时" 是关键矛盾信号
-	if strings.Contains(text, "与此同时") || strings.Contains(text, "与此同时") {
+	if strings.Contains(text, "与此同时") {
 		for char, locs := range charLocations {
 			uniqueLocs := make(map[string]bool)
 			for _, loc := range locs {
@@ -1559,37 +1557,4 @@ func isCommonNonNameWord(word string) bool {
 // 支持 CJK 统一表意文字范围 (0x4E00-0x9FFF)
 func isChineseRune(r rune) bool {
 	return r >= 0x4E00 && r <= 0x9FFF
-}
-
-// runeSliceEqual 判断两个 rune 切片是否相等
-func runeSliceEqual(a, b []rune) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
-// GenerateCorrectionPrompt 生成修正提示词
-func (cs *ConstraintSystem) GenerateCorrectionPrompt(violations []ConstraintViolation) string {
-	var sb strings.Builder
-
-	sb.WriteString("=== RPG约束违反，需要修正 ===\n\n")
-
-	for i, v := range violations {
-		sb.WriteString(fmt.Sprintf("问题 %d:\n", i+1))
-		sb.WriteString(fmt.Sprintf("  类型: %s\n", v.Type))
-		sb.WriteString(fmt.Sprintf("  对象: %s\n", v.Target))
-		sb.WriteString(fmt.Sprintf("  问题: %s\n", v.Issue))
-		sb.WriteString(fmt.Sprintf("  严重程度: %s\n", v.Severity))
-		sb.WriteString(fmt.Sprintf("  建议: %s\n\n", v.Suggestion))
-	}
-
-	sb.WriteString("请根据以上约束违反情况修改内容，确保符合RPG系统规则。\n")
-
-	return sb.String()
 }

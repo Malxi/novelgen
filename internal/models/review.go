@@ -197,3 +197,22 @@ func normalizeReviewSeverity(value string) string {
 		return strings.ToLower(strings.TrimSpace(value))
 	}
 }
+
+// ReviewSuggestionPriorityRank returns the sort rank of a suggestion priority,
+// lowest first (0 = critical, 3 = low, 4 = unrecognized). It is the single
+// ordering used by the review-repair budget logic so every caller orders
+// suggestions the same way, including Chinese aliases like "严重".
+func ReviewSuggestionPriorityRank(priority string) int {
+	switch normalizeReviewSeverity(priority) {
+	case PriorityCritical:
+		return 0
+	case PriorityHigh:
+		return 1
+	case PriorityMedium:
+		return 2
+	case PriorityLow:
+		return 3
+	default:
+		return 4
+	}
+}

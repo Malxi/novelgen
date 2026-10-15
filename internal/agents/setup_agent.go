@@ -226,18 +226,14 @@ func setupAgentSDKParams(applyPatches bool) InvokeParams {
 		patchTool,
 	}
 	toolAllowlist = append(toolAllowlist, agentSDKLogToolAllowlist()...)
-	return InvokeParams{
-		SDKSkills:      []string{"novel-tools", "setup-improve-workflow"},
-		Tools:          []string{"Bash"},
-		AllowedTools:   []string{"Bash"},
-		PermissionMode: "dontAsk",
-		RequireSDK:     true,
-		ToolAllowlist:  toolAllowlist,
-		ToolEvidence:   evidence,
-		MaxTurns:       22,
-		Timeout:        900,
-		Command:        "review and improve story setup using project query/check/patch tools",
-	}
+	return agentSDKToolParams(
+		[]string{"novel-tools", "setup-improve-workflow"},
+		"review and improve story setup using project query/check/patch tools",
+		toolAllowlist,
+		evidence,
+		22,
+		900,
+	)
 }
 
 func BuildSetupAgentSDKImprovePromptInput(review models.ReviewResult, userPrompt string, applyPatches bool, forceIssueRepair bool) SetupAgentSDKImproveInput {
@@ -245,12 +241,12 @@ func BuildSetupAgentSDKImprovePromptInput(review models.ReviewResult, userPrompt
 		"Use the required story-setup query and setup check before reviewing.",
 		"Only use story-setup queries and setup checks; do not request full project files, outline, craft, chapters, RPG files, or inspect source code.",
 		"Treat review_result.suggestions as the primary task list. If force_issue_repair=true, directly fixable low-priority issues should still be patched or explicitly justified as false positives with queried facts.",
-		"If you build a non-empty setup_patch, first dry-run it with `printf '%s' '<compact-json>' | novelgen tool patch setup`. For Chinese/non-ASCII patch JSON, do not use --patch-json and do not run Python/Node/PowerShell/help commands to encode it. Use --patch-json only for small ASCII-only patches.",
+		"If you build a non-empty setup_patch, first dry-run it with `printf '%s' '<compact-json>' | novelgen tool patch setup`. " + agentSDKNonASCIIPatchRule("novelgen tool patch setup", false),
 	}
 	if applyPatches {
 		instructions = append(instructions,
 			"If dry-run passes, repeat the same stdin-piped setup patch command with `--apply`, then run `novelgen tool check all --target setup --min-priority medium --max-issues 12`.",
-			"Do not write files by any other method; the only allowed write is `novelgen tool patch setup ... --apply` after dry-run validation.",
+			"Do not write files by any other method; "+agentSDKOnlyAllowedWriteClause("novelgen tool patch setup ..."),
 		)
 	} else {
 		instructions = append(instructions,

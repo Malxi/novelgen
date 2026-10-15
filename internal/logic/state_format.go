@@ -8,24 +8,6 @@ import (
 	"novelgen/internal/models"
 )
 
-// FormatStateMatrix formats the state matrix into a human-readable string for prompts.
-// This is a shared utility used by legacy DraftAgent paths.
-func FormatStateMatrix(state *models.StateMatrix, chapter *models.Chapter) string {
-	if state == nil {
-		return FormatChapterContinuity(nil, chapter)
-	}
-	return FormatChapterContinuity(&models.ChapterContinuity{
-		RPG:        state.RPG,
-		Characters: state.Characters,
-		Locations:  state.Locations,
-		Items:      state.Items,
-		Premises:   state.Premises,
-		Gates:      state.Gates,
-		Status:     state.Status,
-		Memories:   state.Memories,
-	}, chapter)
-}
-
 // FormatChapterContinuity formats the writer-facing continuity snapshot before
 // a chapter begins.
 func FormatChapterContinuity(state *models.ChapterContinuity, chapter *models.Chapter) string {
@@ -440,39 +422,6 @@ func FormatRPGState(state *models.RPGState, chapter *models.Chapter) string {
 	}
 
 	sb.WriteString("=== END RPG STATE ===\n")
-	return sb.String()
-}
-
-func FormatRPGStateComparison(comparison RPGStateComparison) string {
-	var sb strings.Builder
-	sb.WriteString("RPG STATE COMPARISON (outline expected vs DSL observed):\n")
-	if comparison.ChapterID != "" {
-		sb.WriteString(fmt.Sprintf("- Chapter: %s\n", comparison.ChapterID))
-	}
-	if len(comparison.Drifts) == 0 {
-		sb.WriteString("- No state drift detected.\n")
-		sb.WriteString("=== END RPG STATE COMPARISON ===\n")
-		return sb.String()
-	}
-	summary := map[string]int{}
-	for _, drift := range comparison.Drifts {
-		summary[drift.Severity]++
-	}
-	sb.WriteString(fmt.Sprintf("- Summary: critical=%d warning=%d info=%d\n", summary["critical"], summary["warning"], summary["info"]))
-	for _, drift := range comparison.Drifts {
-		sb.WriteString(fmt.Sprintf("  - [%s/%s] %s", drift.Severity, drift.Kind, drift.Target))
-		if drift.Field != "" {
-			sb.WriteString("." + drift.Field)
-		}
-		if drift.Expected != "" || drift.Observed != "" {
-			sb.WriteString(fmt.Sprintf(" expected=%q observed=%q", drift.Expected, drift.Observed))
-		}
-		if drift.Note != "" {
-			sb.WriteString(" note=" + drift.Note)
-		}
-		sb.WriteString("\n")
-	}
-	sb.WriteString("=== END RPG STATE COMPARISON ===\n")
 	return sb.String()
 }
 

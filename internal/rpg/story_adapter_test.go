@@ -2,7 +2,6 @@ package rpg
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"testing"
 )
@@ -83,7 +82,7 @@ func TestStoryWorldConversion(t *testing.T) {
 	}
 
 	// 保存测试大纲到临时文件
-	tmpFile, err := ioutil.TempFile("", "test_outline_*.json")
+	tmpFile, err := os.CreateTemp("", "test_outline_*.json")
 	if err != nil {
 		t.Fatalf("创建临时文件失败: %v", err)
 	}

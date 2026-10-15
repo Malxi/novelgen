@@ -9,10 +9,10 @@ import (
 	"testing"
 )
 
-// TestModuleBoundary pins the webui integration contract: reads are in-process
-// and may only use novelgen/internal/models from the parent module; the webui
-// must never import the CLI command packages (novelgen/cmd/...); all mutations
-// and long tasks go through the CLI binary via exec.
+// TestModuleBoundary pins the webui integration contract: the parent module is
+// reached only through the novelgen binary (exec). The webui must not import
+// novelgen/cmd/** or any novelgen/internal/** package — reads pass project
+// files through as raw JSON and every derived artifact is written by the CLI.
 func TestModuleBoundary(t *testing.T) {
 	entries, err := os.ReadDir(".")
 	if err != nil {
@@ -33,8 +33,8 @@ func TestModuleBoundary(t *testing.T) {
 			if strings.HasPrefix(path, "novelgen/cmd") {
 				t.Errorf("%s imports %q: webui must not depend on the CLI command packages", name, path)
 			}
-			if strings.HasPrefix(path, "novelgen/internal/") && path != "novelgen/internal/models" {
-				t.Errorf("%s imports %q: webui may only use novelgen/internal/models from the parent module", name, path)
+			if strings.HasPrefix(path, "novelgen/internal/") {
+				t.Errorf("%s imports %q: webui must reach the parent module only through the novelgen binary", name, path)
 			}
 		}
 	}

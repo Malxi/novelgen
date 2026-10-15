@@ -81,7 +81,7 @@ func runAnalyzeAIRPG(cmd *cobra.Command, args []string) error {
 
 	result, err := pipeline.ProcessChapter(ctx, chapterID, chapterTitle, string(content))
 	if err != nil {
-		return fmt.Errorf("Pipeline执行失败: %w", err)
+		return fmt.Errorf("pipeline 执行失败: %w", err)
 	}
 
 	// 打印报告

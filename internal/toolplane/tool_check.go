@@ -2,6 +2,7 @@ package toolplane
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
 	"novelgen/internal/logic/continuity/recap"
@@ -10,6 +11,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/toolcmd"
 	"novelgen/internal/utils"
 	"novelgen/internal/writersdl"
 	"os"
@@ -473,19 +475,19 @@ func ToolIssueNavigation(kind, target, scope, checkID string, issue models.Revie
 			fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", targetID),
 		}
 		chapterCategory := ChapterRepairIssueCategoryFilter(category)
-		simulationQuery := fmt.Sprintf("novelgen tool check simulation --target chapter --scope chapter --id %q --category %s --min-priority low --max-issues 8", targetID, chapterCategory)
+		simulationQuery := toolcmd.ChapterCheck(targetID, toolcmd.ChapterCheckOptions{Kind: "simulation", Category: chapterCategory, MinPriority: "low", MaxIssues: 8})
 		checkTargetWords := toolTargetWordsFlagSuffix(targetWords)
 		switch kind {
 		case "simulation":
 			navigation["focused_check_query"] = simulationQuery
 		case "all":
-			navigation["focused_check_query"] = fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --category %s --min-priority low --max-issues 8%s", targetID, chapterCategory, checkTargetWords)
+			navigation["focused_check_query"] = toolcmd.ChapterCheck(targetID, toolcmd.ChapterCheckOptions{Category: chapterCategory, MinPriority: "low", MaxIssues: 8, TargetWords: targetWords})
 		default:
-			navigation["focused_check_query"] = fmt.Sprintf("novelgen tool check quality --target chapter --scope chapter --id %q --category %s --min-priority low --max-issues 8%s", targetID, chapterCategory, checkTargetWords)
+			navigation["focused_check_query"] = toolcmd.ChapterCheck(targetID, toolcmd.ChapterCheckOptions{Kind: "quality", Category: chapterCategory, MinPriority: "low", MaxIssues: 8, TargetWords: targetWords})
 		}
 		navigation["simulation_check_query"] = simulationQuery
 		if (kind == "simulation" || kind == "all") && issueNeedsChapterDSLRefresh(issue) {
-			navigation["refresh_query"] = fmt.Sprintf("novelgen tool refresh chapter-dsl --id %q", targetID)
+			navigation["refresh_query"] = toolcmd.ChapterDSLRefresh(targetID)
 			navigation["post_refresh_check_query"] = simulationQuery
 		}
 		navigation["repair_route_query"] = fmt.Sprintf("novelgen tool query context --type chapter-repair --id %q --name %q --view index", targetID, categoryOrAll(category))
@@ -1490,24 +1492,8 @@ func stripToolChapterMarkdownTitle(content, title string) string {
 	return project.StripChapterTitle(content, title)
 }
 
-func hasToolChapterMarkdownTitle(content, title string) bool {
-	return project.HasChapterTitle(content, title)
-}
-
 func repeatedChapterTitlePrefix(content, title string) bool {
 	return project.HasRepeatedChapterTitlePrefix(content, title)
-}
-
-func stripRepeatedChapterTitlePrefix(content, title string) string {
-	return project.StripRepeatedChapterTitlePrefix(content, title)
-}
-
-func matchingChapterTitlePrefixLen(content, title string) int {
-	return project.MatchingChapterTitlePrefixLen(content, title)
-}
-
-func normalizedChapterTitleText(value string) string {
-	return project.NormalizeChapterTitle(value)
 }
 
 func toolChapterTargetWords() int {
@@ -1542,7 +1528,7 @@ func RunToolChapterSimulationGate(root, chapterID string) quality.QualityGateRes
 			chapterID,
 			chapterID,
 			"chapter RPG DSL is stale relative to the saved final chapter markdown",
-			fmt.Sprintf("Refresh chapter RPG DSL before trusting simulation results: novelgen tool refresh chapter-dsl --id %q. Chapter markdown %s is newer than %s. Simulation checks do not invoke LLM conversion by themselves.", chapterID, info.ChapterPath, info.DSLPath),
+			fmt.Sprintf("Refresh chapter RPG DSL before trusting simulation results: %s. Chapter markdown %s is newer than %s. Simulation checks do not invoke LLM conversion by themselves.", toolcmd.ChapterDSLRefresh(chapterID), info.ChapterPath, info.DSLPath),
 			models.PriorityHigh,
 		))
 		gate.Blocking = true
@@ -1555,7 +1541,7 @@ func RunToolChapterSimulationGate(root, chapterID string) quality.QualityGateRes
 			chapterID,
 			chapterID,
 			fmt.Sprintf("chapter RPG DSL simulation is unavailable: %v", err),
-			"Refresh chapter RPG DSL first with `novelgen tool refresh chapter-dsl --id "+chapterID+"`, then rerun this simulation check. Simulation checks do not invoke LLM conversion by themselves.",
+			"Refresh chapter RPG DSL first with `"+toolcmd.ChapterDSLRefresh(chapterID)+"`, then rerun this simulation check. Simulation checks do not invoke LLM conversion by themselves.",
 			models.PriorityHigh,
 		))
 		gate.Blocking = true
@@ -1860,7 +1846,7 @@ func loadToolRPGDSLFragments(root string) ([]*rpgdsl.DSLFragment, error) {
 		}
 	}
 	if len(fragments) == 0 && len(parseErrors) > 0 {
-		return nil, fmt.Errorf(strings.Join(parseErrors, "; "))
+		return nil, errors.New(strings.Join(parseErrors, "; "))
 	}
 	return fragments, nil
 }

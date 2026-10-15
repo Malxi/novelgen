@@ -22,9 +22,11 @@ NovelGen 的现代化 Web 界面，提供直观的图形界面来管理小说创
 
 webui 是独立 Go module（见根 `go.work`），与父 module 的集成遵循固定边界（由 `boundary_test.go` 强制）：
 
-- **读**：允许 in-process 使用 `novelgen/internal/models` 做类型化读取；其余只读的 JSON 透传端点保持返回原始文件内容，以保持前端响应形状不变。
-- **写 / 长任务**：只能通过 `exec` 调用 `novelgen` 二进制执行（生成、评审、改进、补丁等），webui 不直接写项目状态。
-- **禁止**：webui 不得 import `novelgen/cmd/**`，也不得 import `novelgen/internal/` 下除 `models` 之外的包。
+- **读**：只读端点直接读取项目文件并透传原始 JSON，不 import 父 module 的任何包（前端响应形状因此保持文件原样）。
+- **写 / 派生文件 / 长任务**：全部通过 `exec` 调用 `novelgen` 二进制执行。用户在编辑器里保存 `story/compose/outline.json` 后，webui 会调用 `novelgen compose normalize --force` 重新规范化大纲并重写 `outline.md`，而不是自己渲染派生文件。
+- **禁止**：webui 不得 import `novelgen/cmd/**`，也不得 import `novelgen/internal/**`（`boundary_test.go` 会拒绝任何父 module 的 import）。
+
+定位二进制时可用 `NOVELGEN_BIN` 指定绝对路径；未设置时按 `./novelgen(.exe)`、`../bin/novelgen(.exe)` 等位置探测，最后回退到 `PATH`。
 
 ## 快速开始
 
@@ -97,6 +99,8 @@ go run .
 ```
 webui/
 ├── main.go              # 后端入口
+├── ai_logs.go           # 只读的 AI 调用日志读取（结构化 + legacy）
+├── security.go          # 本机访问加固（回环校验 + token）
 ├── go.mod               # Go 依赖
 ├── start.bat            # Windows 启动脚本
 ├── start.sh             # Linux/Mac 启动脚本

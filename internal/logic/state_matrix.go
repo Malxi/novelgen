@@ -10,6 +10,7 @@ import (
 
 	"novelgen/internal/models"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/utils"
 )
 
 // StateMatrixManager handles StateMatrix calculations and operations
@@ -26,11 +27,6 @@ type StateMatrixManager struct {
 // NewStateMatrixManager creates a new StateMatrixManager
 func NewStateMatrixManager(projectRoot string) *StateMatrixManager {
 	return &StateMatrixManager{projectRoot: projectRoot, useRPGDSL: true}
-}
-
-// SetUseRPGDSL controls whether generated RPG DSL state_delta facts are folded into RPGState.
-func (m *StateMatrixManager) SetUseRPGDSL(enabled bool) {
-	m.useRPGDSL = enabled
 }
 
 // loadSetup loads the story setup from file
@@ -131,15 +127,6 @@ func (m *StateMatrixManager) newStateMatrix() *models.StateMatrix {
 	m.loadElementsIntoState(state)
 
 	return state
-}
-
-// CalculateRPGState calculates only the structured RPG state up to the target chapter.
-func (m *StateMatrixManager) CalculateRPGState(outline *models.Outline, targetChapter *models.Chapter) *models.RPGState {
-	state := m.CalculateStateMatrix(outline, targetChapter)
-	if state == nil {
-		return nil
-	}
-	return state.RPG
 }
 
 // applyEvent applies a single event to the state matrix
@@ -256,7 +243,7 @@ func (m *StateMatrixManager) applyRPGEvent(state *models.StateMatrix, event mode
 	action := event.GetAction()
 	target := event.GetTarget()
 	targetType := event.GetTargetType()
-	result := firstNonEmpty(event.Result, event.Details, event.Change)
+	result := utils.FirstNonEmpty(event.Result, event.Details, event.Change)
 	if actor == "" && len(event.Characters) > 0 {
 		actor = event.Characters[0]
 	}
@@ -391,7 +378,7 @@ func (m *StateMatrixManager) applyRPGStatusEvent(state *models.StateMatrix, chap
 		char.Status = make(map[string]string)
 	}
 	from := char.Status[target]
-	to := firstNonEmpty(change, result)
+	to := utils.FirstNonEmpty(change, result)
 	if to == "" {
 		to = "changed"
 	}
@@ -429,7 +416,7 @@ func (m *StateMatrixManager) applyRPGRelationshipEvent(state *models.StateMatrix
 	if existing := rpgState.Relationships[key]; existing != nil {
 		old = existing.Status
 	}
-	status := firstNonEmpty(event.Change, result, "changed")
+	status := utils.FirstNonEmpty(event.Change, result, "changed")
 	rpgState.Relationships[key] = &models.RPGRelationState{
 		From:          from,
 		To:            to,
@@ -453,7 +440,7 @@ func (m *StateMatrixManager) applyRPGKnowledgeEvent(state *models.StateMatrix, c
 		char.Knowledge = append(char.Knowledge, entry)
 	}
 	char.LastChangedAt = chapterID
-	m.addRPGDelta(state, chapterID, actor, "knowledge", firstNonEmpty(change, "known"), "", target, 1, "", "", result)
+	m.addRPGDelta(state, chapterID, actor, "knowledge", utils.FirstNonEmpty(change, "known"), "", target, 1, "", "", result)
 }
 
 func (m *StateMatrixManager) applyRPGGoalEvent(state *models.StateMatrix, chapterID, actor, target, result, change string) {
@@ -461,7 +448,7 @@ func (m *StateMatrixManager) applyRPGGoalEvent(state *models.StateMatrix, chapte
 		return
 	}
 	char := m.ensureRPGCharacter(state, actor)
-	goal := firstNonEmpty(result, change, target)
+	goal := utils.FirstNonEmpty(result, change, target)
 	if goal != "" && !containsString(char.Goals, goal) {
 		char.Goals = append(char.Goals, goal)
 	}
@@ -521,7 +508,7 @@ func (m *StateMatrixManager) applyRPGSystemEvent(state *models.StateMatrix, chap
 	if actor != "" && looksLikeCultivationStateChange(event.Subject+" "+event.Change+" "+event.Details) {
 		char := m.ensureRPGCharacter(state, actor)
 		from := char.Realm
-		char.Realm = firstNonEmpty(event.Change, event.Details)
+		char.Realm = utils.FirstNonEmpty(event.Change, event.Details)
 		if level := extractArabicInt(char.Realm); level > 0 {
 			char.Level = level
 		}
@@ -689,8 +676,8 @@ func (m *StateMatrixManager) applyRPGStateDelta(state *models.StateMatrix, delta
 	rpgState.Deltas = append(rpgState.Deltas, delta)
 
 	kind := strings.ToLower(strings.TrimSpace(delta.Kind))
-	field := firstNonEmpty(delta.Field, kind, "state")
-	to := firstNonEmpty(delta.To, delta.Note)
+	field := utils.FirstNonEmpty(delta.Field, kind, "state")
+	to := utils.FirstNonEmpty(delta.To, delta.Note)
 	context := strings.Join([]string{delta.Target, delta.Field, delta.From, delta.To, delta.Note}, " ")
 
 	switch kind {
@@ -713,14 +700,14 @@ func (m *StateMatrixManager) applyRPGStateDelta(state *models.StateMatrix, delta
 		if to != "" {
 			char.Realm = to
 		}
-		if level := extractArabicInt(firstNonEmpty(delta.To, delta.From, delta.Note)); level > 0 {
+		if level := extractArabicInt(utils.FirstNonEmpty(delta.To, delta.From, delta.Note)); level > 0 {
 			char.Level = level
 		}
 		char.LastChangedAt = delta.ChapterID
 		if char.Status == nil {
 			char.Status = make(map[string]string)
 		}
-		char.Status[field] = firstNonEmpty(to, from)
+		char.Status[field] = utils.FirstNonEmpty(to, from)
 	case "lifespan":
 		target := m.resolveRPGDeltaCharacterTarget(state, delta.Target, context)
 		char := m.ensureRPGCharacter(state, target)
@@ -747,7 +734,7 @@ func (m *StateMatrixManager) applyRPGStateDelta(state *models.StateMatrix, delta
 		char.LastChangedAt = delta.ChapterID
 	case "resource":
 		owner := m.resolveRPGDeltaCharacterTarget(state, delta.Target, context)
-		resourceName := firstNonEmpty(delta.Field, delta.Target)
+		resourceName := utils.FirstNonEmpty(delta.Field, delta.Target)
 		if resourceName == "" {
 			return
 		}
@@ -784,7 +771,7 @@ func (m *StateMatrixManager) applyRPGStateDelta(state *models.StateMatrix, delta
 			char.LastChangedAt = delta.ChapterID
 		}
 	case "relationship":
-		target := firstNonEmpty(delta.Target, delta.Field)
+		target := utils.FirstNonEmpty(delta.Target, delta.Field)
 		if target == "" {
 			return
 		}
@@ -804,7 +791,7 @@ func (m *StateMatrixManager) applyRPGStateDelta(state *models.StateMatrix, delta
 		if delta.Field != "" {
 			key += "." + delta.Field
 		}
-		rpgState.Flags[key] = firstNonEmpty(to, strconv.Itoa(delta.Delta), delta.Note)
+		rpgState.Flags[key] = utils.FirstNonEmpty(to, strconv.Itoa(delta.Delta), delta.Note)
 	default:
 		if delta.Target == "" {
 			return
@@ -860,12 +847,6 @@ func findProtagonistName(state *models.StateMatrix) string {
 		}
 	}
 	return ""
-}
-
-// applyStorylineEventWithDescription is deprecated — storyline state is now tracked
-// via RPGQuestState in state.RPG.Storylines (populated by applyRPGQuestEvent).
-// Kept as a no-op for compatibility; will be removed in a future cleanup.
-func (m *StateMatrixManager) applyStorylineEventWithDescription(state *models.StateMatrix, event models.Event, chapterID string) {
 }
 
 // loadElementsIntoState loads generated elements into state matrix
@@ -925,15 +906,6 @@ func (m *StateMatrixManager) loadElementsIntoState(state *models.StateMatrix) {
 			}
 		}
 	}
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return strings.TrimSpace(value)
-		}
-	}
-	return ""
 }
 
 func containsString(values []string, needle string) bool {

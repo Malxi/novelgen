@@ -8,21 +8,19 @@ RPG 系统和 Compose 系统现在已经深度集成，可以在大纲生成的�
 
 ### 1. 独立的验证命令
 
-使用 `validate-outline` 命令可以独立验证已有的大纲文件：
+大纲校验有两个入口：
 
 ```bash
-# 验证当前项目的大纲
-novelgen validate-outline
+# 主 CLI：确定性校验当前项目的大纲（不调用 LLM）
+novelgen compose check
+novelgen compose check --json
 
-# 验证指定文件
-novelgen validate-outline books/mine/story/compose/outline.json
-
-# 保存验证报告
-novelgen validate-outline -o validation_report.json
-
-# 严格模式：遇到警告也视为失败
-novelgen validate-outline --strict
+# 独立工具（不在主 CLI 内，需要单独构建）
+go build -o validate-outline.exe ./tools/validate-outline
+./validate-outline.exe -i story/compose/outline.json -o validation_report.json
 ```
+
+Agent 侧还可以通过 `novelgen tool check quality|simulation|all` 复用同一套确定性检查。
 
 ### 2. 验证报告内容
 
@@ -41,27 +39,21 @@ novelgen validate-outline --strict
 
 ### 3. 编程接口
 
-在 Go 代码中使用验证功能：
+在 Go 代码中使用验证功能（`internal/rpg` 的确定性校验器）：
 
 ```go
 import "novelgen/internal/rpg"
 
-// 验证大纲文件
-report, err := rpg.ValidateOutlineFile("path/to/outline.json")
-if err != nil {
-    log.Fatal(err)
-}
+// outline 为已加载的 *rpg.StoryOutline
+result := rpg.NewOutlineValidator(outline).Validate()
 
 // 访问验证结果
-fmt.Printf("总评分: %d/100 (等级: %s)\n", 
-    report.Result.TotalScore, 
-    report.Result.Grade)
+fmt.Printf("valid=%t issues=%d warnings=%d\n",
+    result.IsValid, result.IssueCount, result.WarningCount)
 
-// 打印验证摘要
-rpg.PrintValidationSummary(report)
-
-// 保存报告
-err = rpg.SaveValidationReport(report, "validation.json")
+for _, issue := range result.Issues {
+    fmt.Printf("[%s] %s: %s\n", issue.Severity, issue.Location, issue.Description)
+}
 ```
 
 ## 工作流程示例
@@ -80,13 +72,13 @@ novelgen setup gen
 novelgen compose gen --hierarchical
 
 # 4. 验证大纲质量
-novelgen validate-outline -o validation_report.json
+novelgen compose check
 
 # 5. 根据验证结果改进大纲（如果需要）
 novelgen compose improve --max-rounds 3
 
 # 6. 再次验证
-novelgen validate-outline
+novelgen compose check
 ```
 
 ## 评分标准

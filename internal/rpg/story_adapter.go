@@ -3,7 +3,7 @@ package rpg
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 )
 
 // StoryOutline 小说大纲结构
@@ -269,7 +269,7 @@ type StoryWorld struct {
 // NewStoryWorld 从大纲创建故事世界
 func NewStoryWorld(outlinePath string) (*StoryWorld, error) {
 	// 读取大纲文件
-	data, err := ioutil.ReadFile(outlinePath)
+	data, err := os.ReadFile(outlinePath)
 	if err != nil {
 		return nil, fmt.Errorf("读取大纲文件失败: %v", err)
 	}

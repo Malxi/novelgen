@@ -9,6 +9,7 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
+	"novelgen/internal/toolcmd"
 	"novelgen/internal/utils"
 	"os"
 	"path/filepath"
@@ -1091,7 +1092,7 @@ func BuildChapterPatchNextActions(chapterID string, applied bool, refreshedDeriv
 				Step:    1,
 				Action:  "repair_remaining_issues",
 				Purpose: "Patch applied and derived RPG DSL was refreshed, but the post-refresh all check is blocking; repair the returned check.issues one target at a time.",
-				Command: fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --min-priority low --max-issues 12", chapterID),
+				Command: toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MinPriority: "low", MaxIssues: 12}),
 			}}
 		}
 		return []ToolNextAction{{
@@ -1105,13 +1106,13 @@ func BuildChapterPatchNextActions(chapterID string, applied bool, refreshedDeriv
 			Step:    1,
 			Action:  "refresh_derived_dsl",
 			Purpose: "Chapter prose changed; regenerate derived RPG DSL before trusting simulation results.",
-			Command: fmt.Sprintf("novelgen tool refresh chapter-dsl --id %q", chapterID),
+			Command: toolcmd.ChapterDSLRefresh(chapterID),
 		},
 		{
 			Step:    2,
 			Action:  "post_refresh_check",
 			Purpose: "Run deterministic quality and simulation checks after derived DSL refresh.",
-			Command: fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --min-priority low --max-issues 12", chapterID),
+			Command: toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MinPriority: "low", MaxIssues: 12}),
 		},
 	}
 }

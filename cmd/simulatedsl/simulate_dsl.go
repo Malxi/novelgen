@@ -61,7 +61,7 @@ func runSimulateDSL(cmd *cobra.Command, args []string) error {
 	}
 
 	// 应用默认值
-	applySimulationDefaults(filepath.Base(filepath.Dir(filepath.Dir(dslFile))), dslData)
+	dsl.ApplySimulationDefaults(filepath.Base(filepath.Dir(filepath.Dir(dslFile))), dslData)
 
 	fmt.Printf("   ✓ 章节数: %d\n", len(dslData.Storyline.Chapters))
 	fmt.Printf("   ✓ 角色数: %d\n", len(dslData.Characters.NPCs)+1) // +1 for player
@@ -176,7 +176,7 @@ func formatSimulateReport(dslFile string, issues []dsl.SimulationIssue) string {
 	for i, issue := range issues {
 		b.WriteString(fmt.Sprintf("%d. [%s/%s] ", i+1, issue.Severity, issue.Type))
 		if issue.Chapter != "" {
-			b.WriteString(fmt.Sprintf("%s", issue.Chapter))
+			b.WriteString(issue.Chapter)
 			if issue.Step > 0 {
 				b.WriteString(fmt.Sprintf(" step %d", issue.Step))
 			}
@@ -191,32 +191,4 @@ func formatSimulateReport(dslFile string, issues []dsl.SimulationIssue) string {
 	}
 
 	return b.String()
-}
-
-func applySimulationDefaults(bookName string, dslData *dsl.DSL) {
-	if dslData == nil {
-		return
-	}
-	if dslData.Metadata == nil {
-		dslData.Metadata = &dsl.Metadata{}
-	}
-	if strings.TrimSpace(dslData.Metadata.Title) == "" {
-		dslData.Metadata.Title = bookName
-	}
-	if strings.TrimSpace(dslData.Metadata.DSLVersion) == "" {
-		dslData.Metadata.DSLVersion = "0.1.0"
-	}
-	if dslData.Characters == nil {
-		dslData.Characters = &dsl.Characters{}
-	}
-	if dslData.Characters.Player == nil {
-		playerName := "主角"
-		if len(dslData.Characters.NPCs) > 0 && strings.TrimSpace(dslData.Characters.NPCs[0].Name) != "" {
-			playerName = dslData.Characters.NPCs[0].Name
-		}
-		dslData.Characters.Player = &dsl.Player{
-			ID:   "char_player",
-			Name: playerName,
-		}
-	}
 }

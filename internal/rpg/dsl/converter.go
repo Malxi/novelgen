@@ -310,9 +310,7 @@ func (c *Converter) setupPlayer() error {
 	player.CurrentStats = player.BaseStats
 
 	// Add skills
-	for _, skillID := range dslPlayer.Skills {
-		player.Skills = append(player.Skills, skillID)
-	}
+	player.Skills = append(player.Skills, dslPlayer.Skills...)
 
 	// Set as world player
 	c.world.SetPlayer(player)

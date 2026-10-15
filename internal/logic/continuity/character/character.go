@@ -22,7 +22,6 @@ type CharacterPresenceDetails struct {
 }
 
 var (
-	reCJKName   = regexp.MustCompile(`([\p{Han}]{2,4})`)
 	reCharPatch = regexp.MustCompile(`(?s)<CHARACTER_PRESENCE_PATCH>\s*(.*?)\s*</CHARACTER_PRESENCE_PATCH>`)
 )
 

@@ -42,9 +42,9 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Providers: map[string]*ProviderConfig{
-			"claude": defaultClaudeProvider(),
-			"ollama": {
-				Name:    "ollama",
+			models.ProviderClaude: defaultClaudeProvider(),
+			models.ProviderOllama: {
+				Name:    models.ProviderOllama,
 				APIKey:  "local-llama",
 				BaseURL: "http://127.0.0.1:11434/v1",
 				Timeout: 120,
@@ -58,14 +58,14 @@ func DefaultConfig() *Config {
 				},
 			},
 		},
-		DefaultProvider: "claude",
+		DefaultProvider: models.ProviderClaude,
 		DefaultModel:    "sonnet",
 	}
 }
 
 func defaultClaudeProvider() *ProviderConfig {
 	return &ProviderConfig{
-		Name:    "claude",
+		Name:    models.ProviderClaude,
 		APIKey:  "",
 		BaseURL: "",
 		Timeout: 120,
@@ -135,10 +135,7 @@ func providerCredentials(provider *ProviderConfig) agentruntime.ProviderCredenti
 
 func anthropicBaseURL(baseURL string) string {
 	base := strings.TrimRight(strings.TrimSpace(baseURL), "/")
-	if strings.HasSuffix(base, "/v1") {
-		base = strings.TrimSuffix(base, "/v1")
-	}
-	return base
+	return strings.TrimSuffix(base, "/v1")
 }
 
 func firstProviderModel(models map[string]*ModelConfig) string {
@@ -259,7 +256,7 @@ func (c *Config) GetActiveProvider(projectLLM *models.ProjectLLM) *ProviderConfi
 		log.Debug("Found provider: %s", providerName)
 		return provider
 	}
-	if strings.EqualFold(providerName, "claude") {
+	if strings.EqualFold(providerName, models.ProviderClaude) {
 		log.Debug("Using built-in claude provider")
 		return defaultClaudeProvider()
 	}
@@ -291,7 +288,7 @@ func (c *Config) GetActiveModel(projectLLM *models.ProjectLLM) (*ProviderConfig,
 		log.Info("Using model: %s (provider: %s)", modelName, provider.Name)
 		return provider, model
 	}
-	if strings.EqualFold(provider.Name, "claude") && modelName != "" {
+	if strings.EqualFold(provider.Name, models.ProviderClaude) && modelName != "" {
 		log.Info("Using claude runtime model: %s", modelName)
 		return provider, &ModelConfig{
 			Name:      modelName,
@@ -317,7 +314,7 @@ func (c *Config) CreateClient(projectLLM *models.ProjectLLM) Client {
 	if provider == nil || model == nil {
 		return nil
 	}
-	if strings.EqualFold(provider.Name, "claude") {
+	if strings.EqualFold(provider.Name, models.ProviderClaude) {
 		runtime, err := newAgentRuntime(provider.Name)
 		return NewRuntimeBackedClient(provider.Name, runtime, err)
 	}
@@ -358,23 +355,4 @@ func (c *Config) GetChatOptions(projectLLM *models.ProjectLLM) *ChatOptions {
 		MaxTokens:   model.MaxTokens,
 		Model:       model.Name,
 	}
-}
-
-// GetActiveConfig loads llm_config.json and returns the active configuration
-// based on the project's provider and model selection
-func GetActiveConfig(projectLLM *models.ProjectLLM) (*ProviderConfig, *ModelConfig, error) {
-	cfg, err := LoadOrCreateConfig()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	provider, model := cfg.GetActiveModel(projectLLM)
-	if provider == nil {
-		return nil, nil, fmt.Errorf("provider not found: %s", projectLLM.Provider)
-	}
-	if model == nil {
-		return nil, nil, fmt.Errorf("model not found: %s", projectLLM.Model)
-	}
-
-	return provider, model, nil
 }

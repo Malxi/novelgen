@@ -100,6 +100,9 @@ novelgen/
 │   ├── writersdl/             # 章节→RPG-DSL 生成、批缓存、信号增强
 │   ├── rpgllm/                # LLM 驱动的 RPG 抽取适配（让 rpg 引擎不依赖 llm）
 │   ├── toolplane/             # Agent 工具面：query/check/patch/brief/view/refresh + 类型
+│   ├── writepipe/             # write/polish 共享的章节生成·改进·post-save·recap 门禁逻辑
+│   ├── testfixtures/          # 仅测试使用的共享夹具（quality/toolplane 等复用）
+│   ├── toolcmd/              # `novelgen tool ...` 命令串的规范构造（toolplane 与 agents 共用）
 │   └── architecture/          # 分层依赖约束测试（internal 包导入方向）
 │   ├── rpg/                   # RPG 引擎（GameWorld / 模拟 / 基准）
 │   │   ├── dsl/               # DSL：AST/解析/校验/转换/模拟/合并/hook
@@ -206,7 +209,8 @@ SDK Agent **不能直接读写项目文件**。它们只能通过 CLI 的 `tool`
 
 方向约定：**models 是真相，RPG GameWorld 与 DSL AST 都是派生视图**。转换入口：
 
-- `models → GameWorld`：`internal/rpg/shared_models.go`、`novelgen_adapter.go`
+- `models → GameWorld`：`internal/rpg/novelgen_adapter.go`（`NovelgenProject.ConvertToRPG`）、`internal/rpg/story_adapter.go`（`ConvertOutlineToRPG`）
+- `GameWorld → models`（导出回写）：`internal/rpg/shared_models.go`（`SharedModelConverter.Export*`）
 - `models → DSL AST`：`internal/rpg/dsl/model_adapter.go`
 - `DSL AST → GameWorld`：`internal/rpg/dsl/converter.go`
 
@@ -254,10 +258,10 @@ AI 分析章节/大纲
 ## 8. Web UI（`webui` module）
 
 - Gin HTTP 服务 + WebSocket（[`webui/main.go`](../webui/main.go)），前端为 React + Vite（`webui/frontend/`），由 `frontend/dist` 静态托管。
-- 通过 `exec` 调用 `novelgen` 二进制执行任务，**同时**直接 `import novelgen/internal/models` 读取项目数据。
+- 只读端点直接读取项目文件并透传原始 JSON；**所有写、派生文件与长任务都通过 `exec` 调用 `novelgen` 二进制**（例如保存大纲后调用 `novelgen compose normalize --force` 重写 `outline.md`），webui 不再 import 父 module 的任何包。
 - 本机访问加固在 [`webui/security.go`](../webui/security.go)。
 
-**集成边界（由 `webui/boundary_test.go` 强制）**：读操作 in-process 用 `novelgen/internal/models`（只读透传端点保持原始 JSON）；写与长任务只走 CLI `exec`；webui 不得 import `novelgen/cmd/**` 或 `models` 之外的 `internal/*`。
+**集成边界（由 `webui/boundary_test.go` 强制）**：webui 不得 import `novelgen/cmd/**` 或 `novelgen/internal/**`；写与派生文件只走 CLI `exec`。二进制位置可用 `NOVELGEN_BIN` 覆盖。
 
 ---
 
@@ -277,12 +281,19 @@ AI 分析章节/大纲
 ## 10. 已知架构债（待收敛）
 
 1. **文档需持续同步**：本文已重写以匹配现状，请随代码同步维护。
-2. **`cmd` 仍是单包**（约 2.7 万行）。已把 `tool.go` 拆成 `tool.logs/view/brief`，`tool_check_patch.go` 拆成 `tool_check.go`/`tool_patch.go`，`BaseAgent` 拆成 `agent_base/json/evidence/logging`；但都还在同一个 Go package 内，尚未拆成子包（存在共享全局状态，需要更大的重构）。
-3. **依赖方向未强制**：`agents → rpg/logic`、`logic → rpg/dsl`、`rpg → llm`、`llm → agentruntime`。缺少不可穿透的分层约束。
-4. **两套执行路径**：chat 与 Agent SDK 并存，provider 判定分散在多处。
+2. **依赖方向已强制**：[`internal/architecture`](../internal/architecture/layers_test.go) 的测试现在同时约束三件事——① internal 包只能向下依赖（层表 `layer`）；② internal 包不得依赖 `novelgen/cmd/**`；③ `cmd/<group>/` 之间不得互相 import，且命令子包只能由根 `cmd` 包的 `*_register.go` 接线。新增 internal 包必须在层表登记，否则测试直接失败。
+3. **`cmd` 已按组拆完**：`config`/`translate`/`initcmd`/`export`/`recap`/`analyzecmd`/`simulatedsl`/`rpgcmd`/`craftcmd`/`draftcmd`/`setupcmd`/`composecmd`/`writecmd`/`polishcmd`/`projectcmd`/`rpgdsl`/`tool` 都是独立子包；根 `cmd` 包只保留 `root.go`、`registry.go` 与接线文件。
+4. **双执行路径的脚手架已部分收敛**：Agent SDK 调用的公共形状（Bash-only 工具面、`dontAsk` 权限、`RequireSDK`）与 allowlist 去重规则由 [`internal/agents/agent_sdk_params.go`](../internal/agents/agent_sdk_params.go) 统一；章节 check/refresh 命令串（原先手拼二十余处）由 [`internal/toolcmd`](../internal/toolcmd/commands.go) 统一，toolplane 的导航输出与 agents 的指令共用同一构造器；非 ASCII patch 规则与"唯一允许写入"子句抽到 [`agent_sdk_instructions.go`](../internal/agents/agent_sdk_instructions.go)；provider 名称与"是否走 Agent SDK"的判定收敛到 [`internal/models/providers.go`](../internal/models/providers.go) 的 `ProviderXxx` 常量与 `IsAgentSDKProvider`（agents / llm / init / setup 均复用它）。仍各自实现的是各阶段的 tool 命令清单与 patch/check 文案主体、review 结果转换（`toModelReviewResult`），是下一步的收敛目标。
 5. **并发已统一（基本完成）**：craft / recap / draft / polish / write / compose 的章节与批次循环已全部改用 [`internal/workerpool`](../internal/workerpool/workerpool.go) 的 `Map`（结果按输入顺序返回，去掉了各处手写的 `WaitGroup+Mutex+channel`）。仅 write 的 best-of 生成/评分子流程仍是自定义 `WaitGroup`，因为它不是“按项独立”的扇出。
-6. **webui 有两条集成路径**：既 `exec` 调用 CLI，又直接 `import novelgen/internal/models` 读数据，边界不清晰。
-7. **`cmd` 正在按组拆子包（进行中）**：共享的项目定位/加载、章节/草稿 IO、章节正文规范化抽到 [`internal/project`](../internal/project/project.go)；连续性/自动修复抽到 [`internal/continuity`](../internal/continuity/continuity.go)；卷级评审 IO 抽到 [`internal/reviewstore`](../internal/reviewstore/reviewstore.go)。已拆出的子包有 `config`/`translate`/`initcmd`/`export`/`recap`/`analyzecmd`/`simulatedsl`/`rpgcmd`/`craftcmd`/`draftcmd`（`NewCommand()` + `*_register.go` 接线）。剩余命令（setup/compose/write/project/rpg-dsl/tool/polish 等）仍留在 `cmd` 包内，下一步要下沉的簇：① quality-gate 簇（`quality_gate.go` + `runOutlineValidatorOnModel`）→ `internal/quality`；② 工具面 `queryLogs`/`toolResponse`/`toolCheckResult` → `internal/toolplane`；③ `write_rpg_dsl.go` 批处理 helper；④ write/polish 的生成与修复 helper（`generateImprovedChapter`/`resolveAgentAppliedChapterContent`/`extractAndSaveRecapWithGate`/`emitChapterRPGDSLForProject` 等）。
+6. **webui 已收敛为单一集成路径**：`exec` 调用 CLI 是唯一的写入/派生路径，只读端点透传原始 JSON；webui 不再 import 父 module 的任何包（`boundary_test.go` 强制）。为支持这条路径，`compose normalize` 新增 `--force`（无规范化改动时也重写派生文件），二进制可用 `NOVELGEN_BIN` 指定。
+7. **write/polish 共享逻辑已下沉**：章节上下文加载、生成/改进、post-save 检查与 recap 门禁从 `cmd/writecmd` 抽到 [`internal/writepipe`](../internal/writepipe/)，`polishcmd` 不再依赖 `writecmd`。包内按 `context.go` / `improve.go` / `postsave.go` / `recap.go` 分文件。
+8. **`internal/rpg/dsl` 有尚未接线的 Phase 2 组件**：`hook*.go`、`evaluator.go`、`functions_enhanced.go`、`converter.go`、`errors_enhanced.go`、`logger.go`、`parser_enhanced.go` 目前没有被生产代码调用（仅有 placeholder 测试覆盖），但它们是 [RPG_DSL_SPEC.md](RPG_DSL_SPEC.md) 里 Phase 2 的既定交付物。**接入前不要把它们当作可用能力**；若决定不做，应连同文档一起删除。
+9. **`internal/rpg` 引擎仍有一批 CLI 未使用的方法**（如 `GameWorld.RemoveItemFromPlayer`、`MapManager.MoveEntity`、`QuestManager.FailQuest`）：引擎本身是文档化的分层组件，这些方法属于游戏运行时 API 面。这里选择保留而非删除，接入新玩法时再评估。（真正无人使用的重复实现已清理：`SharedModelConverter` 的 models→GameWorld 导入半边和孤立的 `SkillInstance` 类型。）
+10. **测试已归位到被测包**：原先堆在 `cmd/` 的 7k+ 行测试已迁到 `internal/toolplane`（151 个用例）、`internal/quality`、`internal/writepipe`、`internal/writersdl`、`internal/project`、`cmd/writecmd`，`cmd/` 只保留命令面（`command_surface_test.go`）与文档一致性（`agent_tools_docs_test.go`）两类测试。跨包共享的测试夹具抽到 `internal/testfixtures`；`internal/continuity` 及其 `logic/continuity/{character,transition}` 子包补上离线 recap、转场/角色启发式与 fix helper 的用例；`internal/writersdl` 补上批 manifest/缓存失效、章节 ID 归一、合并去重、issue 过滤与分阶段文件名推断（`batch_test.go`）；`cmd/export`、`cmd/initcmd`、`internal/rpgllm` 也补了包内用例。
+11. **`internal/models` 无法复用 `internal/utils`**（层规则里 models 是第 0 层），因此 `outline_normalizer.go` 保留了自己的 `compactStrings`。这是刻意的分层结果，不是遗漏。
+12. **工具与内部流水线已统一**：`tools/check_novel` 原先自带一份章节→DSL 批处理/缓存的旧副本，现在改为调用 [`writersdl.EmitWriteRPGDSL`](../internal/writersdl/emit.go)（新增的共享入口，`EmitChapterRPGDSLForProject` 也复用它），该工具从 1113 行降到 597 行，并自动获得 manifest 章节校验与战斗信号增强。同一轮还把 `dsl.ApplySimulationDefaults`（simulatedsl 与 check_novel 各一份）和 `models.ReviewSuggestionPriorityRank`（quality 与 agents 各一份）收敛为单一实现。
+13. **仍存的少量平行实现**（有意保留）：各 `tools/*` 自带的 `printHelp`/`printSummary` 等打印函数；`models.Event` 与 `rpg.StoryEvent` 各自的旧格式事件适配（服务于两套不同的模型，需同步维护）；`toolplane.reviewPriorityRank` 与 models 版本签名不同（前者区分未知优先级）。
+14. **静态检查基线**：根模块与 webui 的 `go vet ./...` 与 `staticcheck ./...` 均为干净，唯一剩余的是第 8 条里 DSL Phase-2 脚手架的 4 个 `U1000`。新增告警请当场处理，别让基线退化——这一轮就是靠它翻出 `draft improve` 丢弃生成稿、`fmt.Errorf` 动态格式串、JSON 提取被字符串内 `}` 截断等问题。
 
 ---
 

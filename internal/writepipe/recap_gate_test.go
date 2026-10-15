@@ -1,13 +1,13 @@
-package cmd
+package writepipe_test
 
 import (
 	"context"
 	"path/filepath"
 	"testing"
 
-	"novelgen/cmd/writecmd"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
+	"novelgen/internal/writepipe"
 )
 
 type fakeWriteRecapExtractor struct {
@@ -65,7 +65,7 @@ func TestExtractAndSaveRecapWithGateUsesAgentSDKWhenEnabled(t *testing.T) {
 	store := recap.NewStore(root)
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "醒来"}
 
-	if err := writecmd.ExtractAndSaveRecapWithGate(context.Background(), extractor, store, chapter, "正文", 0, true); err != nil {
+	if err := writepipe.ExtractAndSaveRecapWithGate(context.Background(), extractor, store, chapter, "正文", 0, true); err != nil {
 		t.Fatal(err)
 	}
 	if extractor.extractSDKCalls != 1 || extractor.extractCalls != 0 || extractor.feedbackSDKCalls != 0 {
@@ -89,7 +89,7 @@ func TestExtractAndSaveRecapWithGateRetriesWithAgentSDKFeedback(t *testing.T) {
 	store := recap.NewStore(root)
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "醒来"}
 
-	if err := writecmd.ExtractAndSaveRecapWithGate(context.Background(), extractor, store, chapter, "正文", 0, true); err != nil {
+	if err := writepipe.ExtractAndSaveRecapWithGate(context.Background(), extractor, store, chapter, "正文", 0, true); err != nil {
 		t.Fatal(err)
 	}
 	if extractor.extractSDKCalls != 1 || extractor.feedbackSDKCalls != 1 || extractor.feedbackCalls != 0 {
@@ -109,7 +109,7 @@ func TestExtractAndSaveRecapWithGateUsesOrdinaryExtractorByDefault(t *testing.T)
 	store := recap.NewStore(root)
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "醒来"}
 
-	if err := writecmd.ExtractAndSaveRecapWithGate(context.Background(), extractor, store, chapter, "正文", 0, false); err != nil {
+	if err := writepipe.ExtractAndSaveRecapWithGate(context.Background(), extractor, store, chapter, "正文", 0, false); err != nil {
 		t.Fatal(err)
 	}
 	if extractor.extractCalls != 1 || extractor.extractSDKCalls != 0 {

@@ -16,6 +16,8 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
+	"novelgen/internal/toolcmd"
+	"novelgen/internal/utils"
 )
 
 const compactStyleReferenceRuneLimit = 2000
@@ -497,18 +499,14 @@ func writeAgentSDKParams(command string, chapterID string, useHistory bool, targ
 		evidence.MinQueryCalls = 2
 		evidence.RequiredToolCommands = append(evidence.RequiredToolCommands, "novelgen tool query logs --view index")
 	}
-	return InvokeParams{
-		SDKSkills:      []string{"write-chapter-workflow"},
-		Tools:          []string{"Bash"},
-		AllowedTools:   []string{"Bash"},
-		PermissionMode: "dontAsk",
-		RequireSDK:     true,
-		ToolAllowlist:  writeGenToolAllowlist(chapterID, useHistory),
-		ToolEvidence:   evidence,
-		MaxTurns:       18,
-		Timeout:        600,
-		Command:        command,
-	}
+	return agentSDKToolParams(
+		[]string{"write-chapter-workflow"},
+		command,
+		writeGenToolAllowlist(chapterID, useHistory),
+		evidence,
+		18,
+		600,
+	)
 }
 
 func appendWriteAgentSDKToolRules(command string) string {
@@ -663,10 +661,7 @@ func writeImproveAgentSDKParams(command string, chapterID string, applyPatches b
 	}
 	chapterID = strings.TrimSpace(chapterID)
 	if chapterID != "" {
-		checkCommand := fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --min-priority low --max-issues 12", chapterID)
-		if targetWordCount > 0 {
-			checkCommand += fmt.Sprintf(" --target-words %d", targetWordCount)
-		}
+		checkCommand := toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MinPriority: "low", MaxIssues: 12, TargetWords: targetWordCount})
 		command = fmt.Sprintf("%s. First inspect the focused chapter with `novelgen tool query context --type chapter-repair --id %q --view brief`. Before any patch-buffer or patch command, run `%s`.", command, chapterID, checkCommand)
 	}
 	evidence := ToolEvidenceRequirement{
@@ -684,21 +679,17 @@ func writeImproveAgentSDKParams(command string, chapterID string, applyPatches b
 	}
 	if useHistory {
 		command += " History continuation is requested: inspect copied logs with `novelgen tool query logs --view index --limit 5` before deciding the improvement strategy; by default use the index summaries only, and read at most one exact log brief if the index clearly shows a relevant completed prior run. Prefer prompt/response history when agent-live logs are absent. Do not read log content. History is reference only and must not increase target_words."
-		evidence.MinQueryCalls = maxInt(evidence.MinQueryCalls, 2)
+		evidence.MinQueryCalls = utils.MaxInt(evidence.MinQueryCalls, 2)
 		evidence.RequiredToolCommands = append(evidence.RequiredToolCommands, "novelgen tool query logs --view index")
 	}
-	return InvokeParams{
-		SDKSkills:      []string{"novel-tools-core", "write-improve-workflow"},
-		Tools:          []string{"Bash"},
-		AllowedTools:   []string{"Bash"},
-		PermissionMode: "dontAsk",
-		RequireSDK:     true,
-		ToolAllowlist:  writeImproveToolAllowlist(chapterID, applyPatches, targetWordCount),
-		ToolEvidence:   evidence,
-		MaxTurns:       writeImproveAgentSDKMaxTurns(applyPatches),
-		Timeout:        writeImproveAgentSDKTimeout(),
-		Command:        command,
-	}
+	return agentSDKToolParams(
+		[]string{"novel-tools-core", "write-improve-workflow"},
+		command,
+		writeImproveToolAllowlist(chapterID, applyPatches, targetWordCount),
+		evidence,
+		writeImproveAgentSDKMaxTurns(applyPatches),
+		writeImproveAgentSDKTimeout(),
+	)
 }
 
 // writeImproveAgentSDKTimeout 返回正文 improve 的 agent 超时（秒）。
@@ -727,7 +718,7 @@ func writeGenToolAllowlist(chapterID string, useHistory bool) []string {
 	if useHistory {
 		allowlist = append(allowlist, agentSDKLogToolAllowlist()...)
 	}
-	return dedupeWriteToolAllowlist(allowlist)
+	return dedupeToolAllowlist(allowlist)
 }
 
 func writeGenRequiredContextQuery(chapterID string) string {
@@ -754,23 +745,23 @@ func writeImproveToolAllowlist(chapterID string, applyPatches bool, targetWords 
 			fmt.Sprintf("novelgen tool query chapter --id %q --content --view brief", chapterID),
 			fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", chapterID),
 			fmt.Sprintf("novelgen tool check all --target outline --scope chapter --id %q --max-issues 8", chapterID),
-			fmt.Sprintf("novelgen tool check simulation --target chapter --scope chapter --id %q --max-issues 8", chapterID),
-			fmt.Sprintf("novelgen tool refresh chapter-dsl --id %q", chapterID),
+			toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "simulation", MaxIssues: 8}),
+			toolcmd.ChapterDSLRefresh(chapterID),
 			fmt.Sprintf("novelgen tool patch-buffer --id %q", bufferID),
 		)
 		if targetWordCount > 0 {
 			allowlist = append(allowlist,
-				fmt.Sprintf("novelgen tool check quality --target chapter --scope chapter --id %q --max-issues 8%s", chapterID, targetWordsFlag),
-				fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --max-issues 8%s", chapterID, targetWordsFlag),
-				fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --min-priority low --max-issues 12%s", chapterID, targetWordsFlag),
+				toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "quality", MaxIssues: 8, TargetWords: targetWordCount}),
+				toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MaxIssues: 8, TargetWords: targetWordCount}),
+				toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MinPriority: "low", MaxIssues: 12, TargetWords: targetWordCount}),
 				fmt.Sprintf("novelgen tool patch chapter --id %q%s", chapterID, targetWordsFlag),
 				fmt.Sprintf("novelgen tool patch chapter --id %q --patch-buffer %q%s", chapterID, bufferID, targetWordsFlag),
 			)
 		} else {
 			allowlist = append(allowlist,
-				fmt.Sprintf("novelgen tool check quality --target chapter --scope chapter --id %q --max-issues 8", chapterID),
-				fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --max-issues 8", chapterID),
-				fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --min-priority low --max-issues 12", chapterID),
+				toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "quality", MaxIssues: 8}),
+				toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MaxIssues: 8}),
+				toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MinPriority: "low", MaxIssues: 12}),
 				fmt.Sprintf("novelgen tool patch chapter --id %q", chapterID),
 				fmt.Sprintf("novelgen tool patch chapter --id %q --patch-buffer %q", chapterID, bufferID),
 			)
@@ -789,7 +780,7 @@ func writeImproveToolAllowlist(chapterID string, applyPatches bool, targetWords 
 			}
 		}
 	}
-	return dedupeWriteToolAllowlist(allowlist)
+	return dedupeToolAllowlist(allowlist)
 }
 
 func writeFocusedQueryAllowlist(chapterID string) []string {
@@ -808,21 +799,7 @@ func writeFocusedQueryAllowlist(chapterID string) []string {
 			fmt.Sprintf("novelgen tool query context --type chapter-repair --id %q", chapterID),
 		}, allowlist...)
 	}
-	return dedupeWriteToolAllowlist(allowlist)
-}
-
-func dedupeWriteToolAllowlist(values []string) []string {
-	seen := map[string]bool{}
-	out := []string{}
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value == "" || seen[value] {
-			continue
-		}
-		seen[value] = true
-		out = append(out, value)
-	}
-	return out
+	return dedupeToolAllowlist(allowlist)
 }
 
 // ReviewChapter reviews a chapter and provides improvement suggestions
@@ -936,8 +913,8 @@ func (r writeAgentSDKReviewResult) toModelReviewResult() models.ReviewResult {
 		if strings.TrimSpace(strength) == "" {
 			continue
 		}
-		result.Strengths = append(result.Strengths, clipForPrompt(strength, 180))
-		if len(result.Strengths) >= 4 {
+		result.Strengths = append(result.Strengths, clipForPrompt(strength, maxReviewStrengthRunes))
+		if len(result.Strengths) >= maxReviewStrengths {
 			break
 		}
 	}
@@ -945,21 +922,14 @@ func (r writeAgentSDKReviewResult) toModelReviewResult() models.ReviewResult {
 		if strings.TrimSpace(weakness) == "" {
 			continue
 		}
-		result.Weaknesses = append(result.Weaknesses, clipForPrompt(weakness, 220))
-		if len(result.Weaknesses) >= 4 {
+		result.Weaknesses = append(result.Weaknesses, clipForPrompt(weakness, maxReviewWeaknessRunes))
+		if len(result.Weaknesses) >= maxReviewWeaknesses {
 			break
 		}
 	}
 	for _, suggestion := range r.Suggestions {
-		result.Suggestions = append(result.Suggestions, models.ReviewSuggestion{
-			Category:   strings.TrimSpace(suggestion.Category),
-			TargetID:   strings.TrimSpace(suggestion.TargetID),
-			TargetName: clipForPrompt(suggestion.TargetName, 120),
-			Issue:      clipForPrompt(suggestion.Issue, 360),
-			Suggestion: clipForPrompt(suggestion.Suggestion, 420),
-			Priority:   strings.TrimSpace(suggestion.Priority),
-		})
-		if len(result.Suggestions) >= 8 {
+		result.Suggestions = append(result.Suggestions, clipReviewSuggestion(suggestion))
+		if len(result.Suggestions) >= maxReviewSuggestions {
 			break
 		}
 	}
@@ -993,35 +963,29 @@ func writeReviewAgentSDKParams(command string, chapterID string, targetWords ...
 	chapterID = strings.TrimSpace(chapterID)
 	if chapterID != "" {
 		targetWordCount := optionalFirstInt(targetWords)
-		targetWordsFlag := ""
 		if targetWordCount > 0 {
-			targetWordsFlag = fmt.Sprintf(" --target-words %d", targetWordCount)
 			command = fmt.Sprintf("%s Treat target_words=%d as the chapter length budget for this review.", command, targetWordCount)
 		}
-		checkCommand := fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --max-issues 8%s", chapterID, targetWordsFlag)
+		checkCommand := toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MaxIssues: 8, TargetWords: targetWordCount})
 		command = fmt.Sprintf("%s. Before reviewing, run exactly these tools first: `novelgen tool query context --type chapter-repair --id %q --view brief`, then `%s`. Do not run alternate check command shapes.", command, chapterID, checkCommand)
 		allowlist = append(allowlist,
 			fmt.Sprintf("novelgen tool query outline --type chapter --id %q", chapterID),
 			fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q", chapterID),
-			fmt.Sprintf("novelgen tool check quality --target chapter --scope chapter --id %q --max-issues 8%s", chapterID, targetWordsFlag),
-			fmt.Sprintf("novelgen tool check simulation --target chapter --scope chapter --id %q --max-issues 8", chapterID),
+			toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "quality", MaxIssues: 8, TargetWords: targetWordCount}),
+			toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "simulation", MaxIssues: 8}),
 			checkCommand,
 			fmt.Sprintf("novelgen tool check all --target outline --scope chapter --id %q --max-issues 8", chapterID),
-			fmt.Sprintf("novelgen tool refresh chapter-dsl --id %q", chapterID),
+			toolcmd.ChapterDSLRefresh(chapterID),
 		)
 	}
-	return InvokeParams{
-		SDKSkills:      []string{"novel-tools-core", "write-review-workflow"},
-		Tools:          []string{"Bash"},
-		AllowedTools:   []string{"Bash"},
-		PermissionMode: "dontAsk",
-		RequireSDK:     true,
-		ToolAllowlist:  dedupeWriteToolAllowlist(allowlist),
-		ToolEvidence:   ToolEvidenceRequirement{MinContextQueryCalls: 1, MinCheckCalls: 1, RequireNoDeniedTools: true},
-		MaxTurns:       writeReviewAgentSDKMaxTurns(),
-		Timeout:        writeReviewAgentSDKTimeout(),
-		Command:        command,
-	}
+	return agentSDKToolParams(
+		[]string{"novel-tools-core", "write-review-workflow"},
+		command,
+		dedupeToolAllowlist(allowlist),
+		ToolEvidenceRequirement{MinContextQueryCalls: 1, MinCheckCalls: 1, RequireNoDeniedTools: true},
+		writeReviewAgentSDKMaxTurns(),
+		writeReviewAgentSDKTimeout(),
+	)
 }
 
 // writeReviewAgentSDKTimeout 返回单章正文 review 的 agent 超时（秒）。

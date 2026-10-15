@@ -9,6 +9,7 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/project"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/utils"
 )
 
 type QualityGateResult struct {
@@ -1058,14 +1059,11 @@ func QualitySuggestion(category, targetID, targetName, issue, suggestion, priori
 	}
 }
 
+// CoalesceString returns the first non-blank value after trimming, or "" when
+// every value is blank. It delegates to the shared helper so the trimming rules
+// stay identical to the rest of the codebase.
 func CoalesceString(values ...string) string {
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value != "" {
-			return value
-		}
-	}
-	return ""
+	return utils.FirstNonEmpty(values...)
 }
 
 func AppealEngineCompleteness(engine *models.AppealEngine) int {

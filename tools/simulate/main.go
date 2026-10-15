@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -66,9 +65,9 @@ func main() {
 		}
 
 		storyResult := engine.SimulateStory(questIDs)
-		fmt.Printf("推演完成! 共推演 %d 个章节，总步骤数: %d\n", 
+		fmt.Printf("推演完成! 共推演 %d 个章节，总步骤数: %d\n",
 			len(storyResult.Chapters), storyResult.TotalSteps)
-		
+
 		if len(storyResult.Errors) > 0 {
 			fmt.Printf("错误: %d 个\n", len(storyResult.Errors))
 			for _, err := range storyResult.Errors {
@@ -96,7 +95,7 @@ func main() {
 	}
 
 	// 写入输出文件
-	if err := ioutil.WriteFile(*outputPath, []byte(exportJSON), 0644); err != nil {
+	if err := os.WriteFile(*outputPath, []byte(exportJSON), 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "错误: 写入输出文件失败: %v\n", err)
 		os.Exit(1)
 	}

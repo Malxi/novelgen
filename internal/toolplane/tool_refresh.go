@@ -13,6 +13,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/toolcmd"
 	"novelgen/internal/writersdl"
 
 	"github.com/spf13/cobra"
@@ -111,7 +112,7 @@ func RefreshToolChapterDSL(ctx context.Context, root, id string, batchSize int) 
 		Meta: map[string]any{
 			"project_root":      root,
 			"chapter_path":      chapterPath,
-			"post_check_query":  fmt.Sprintf("novelgen tool check simulation --target chapter --scope chapter --id %q --min-priority low --max-issues 12", id),
+			"post_check_query":  toolcmd.ChapterCheck(id, toolcmd.ChapterCheckOptions{Kind: "simulation", MinPriority: "low", MaxIssues: 12}),
 			"refresh_scope":     "target chapter cache plus combined 04_chapters.rpg chapter replacement",
 			"derived_artifacts": []string{"story/rpg/04_chapters.rpg", "story/rpg/cache/chapter_batches"},
 		},

@@ -198,7 +198,7 @@ var configAgentCmd = &cobra.Command{
 
 		modelPrompt := &survey.Input{
 			Message: "Model:",
-			Default: firstNonEmpty(runtime.Model, "sonnet"),
+			Default: utils.FirstNonEmpty(runtime.Model, "sonnet"),
 		}
 		if err := survey.AskOne(modelPrompt, &runtime.Model, survey.WithValidator(survey.Required)); err != nil {
 			return err
@@ -476,15 +476,6 @@ func maskAPIKey(key string) string {
 		return "****"
 	}
 	return key[:4] + "****" + key[len(key)-4:]
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return value
-		}
-	}
-	return ""
 }
 
 func jsonMarshalIndent(v interface{}) ([]byte, error) {

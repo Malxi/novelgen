@@ -28,10 +28,6 @@ workflow writes final chapters directly with "novelgen write pipeline".
 Use "novelgen <command> --help" for more information about a command.`,
 }
 
-func Execute() {
-	ExecuteContext(context.Background())
-}
-
 // ExecuteContext runs the command tree with the given context so callers can
 // cancel long-running workflows (for example on SIGINT).
 func ExecuteContext(ctx context.Context) {

@@ -1,4 +1,4 @@
-package cmd
+package toolplane_test
 
 import (
 	"bytes"

@@ -1,7 +1,6 @@
-package cmd
+package toolplane_test
 
-// containsString reports whether values contains want. It is a test helper
-// shared by the cmd package tests.
+// containsString reports whether values contains want.
 func containsString(values []string, want string) bool {
 	for _, value := range values {
 		if value == want {

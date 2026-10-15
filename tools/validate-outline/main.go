@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,7 +36,7 @@ func main() {
 	fmt.Printf("正在读取大纲文件: %s\n", *outlinePath)
 
 	// 读取大纲
-	data, err := ioutil.ReadFile(*outlinePath)
+	data, err := os.ReadFile(*outlinePath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "错误: 读取文件失败: %v\n", err)
 		os.Exit(1)
@@ -103,13 +102,13 @@ func main() {
 	if *fixMode && !result.IsValid {
 		fmt.Println("\n【修复模式】")
 		fixedOutline := tryFixOutline(&outline, result)
-		
+
 		// 保存修复后的大纲
-		fixedPath := filepath.Join(filepath.Dir(*outlinePath), 
+		fixedPath := filepath.Join(filepath.Dir(*outlinePath),
 			filepath.Base(*outlinePath)+".fixed.json")
-		
+
 		fixedData, _ := json.MarshalIndent(fixedOutline, "", "  ")
-		if err := ioutil.WriteFile(fixedPath, fixedData, 0644); err != nil {
+		if err := os.WriteFile(fixedPath, fixedData, 0644); err != nil {
 			fmt.Printf("修复文件保存失败: %v\n", err)
 		} else {
 			fmt.Printf("✓ 修复后的大纲已保存到: %s\n", fixedPath)
@@ -118,12 +117,12 @@ func main() {
 
 	// 导出验证结果
 	if *outputPath == "" {
-		*outputPath = filepath.Join(filepath.Dir(*outlinePath), 
+		*outputPath = filepath.Join(filepath.Dir(*outlinePath),
 			"validation_"+filepath.Base(*outlinePath))
 	}
 
 	resultData, _ := json.MarshalIndent(result, "", "  ")
-	if err := ioutil.WriteFile(*outputPath, resultData, 0644); err != nil {
+	if err := os.WriteFile(*outputPath, resultData, 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "错误: 保存验证结果失败: %v\n", err)
 	} else {
 		fmt.Printf("\n✓ 验证结果已保存到: %s\n", *outputPath)
@@ -139,9 +138,9 @@ func tryFixOutline(outline *rpg.StoryOutline, result *rpg.ValidationResult) *rpg
 	// 这里可以实现自动修复逻辑
 	// 例如：添加缺失的ID、补充默认字段等
 	fmt.Println("尝试修复问题...")
-	
+
 	fixed := *outline
-	
+
 	// 修复逻辑示例
 	for _, issue := range result.Issues {
 		switch issue.Type {
@@ -151,7 +150,7 @@ func tryFixOutline(outline *rpg.StoryOutline, result *rpg.ValidationResult) *rpg
 			}
 		}
 	}
-	
+
 	return &fixed
 }
 
@@ -173,5 +172,3 @@ func printHelp() {
 	fmt.Println("  validate-outline -i outline.json -d=false")
 	fmt.Println("  validate-outline -i outline.json -f")
 }
-
-

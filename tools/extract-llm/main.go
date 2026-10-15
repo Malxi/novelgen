@@ -12,8 +12,6 @@ import (
 
 // SimpleLLMClient 简单的LLM客户端实现
 type SimpleLLMClient struct {
-	apiKey string
-	model  string
 }
 
 // Complete 调用LLM完成请求

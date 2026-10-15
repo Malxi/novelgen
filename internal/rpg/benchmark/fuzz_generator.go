@@ -202,7 +202,6 @@ func (fg *FuzzGenerator) generateResurrectionIssue() BenchmarkTestCase {
 
 func (fg *FuzzGenerator) generateTimelineIssue() BenchmarkTestCase {
 	jumpCount := 2 + fg.rng.Intn(4) // 2-5次跳跃
-	var timeUnits []string
 
 	units := []string{"三天后", "一周后", "一个月后", "半年后", "一年后", "三年后", "十年后", "百年后"}
 
@@ -211,7 +210,6 @@ func (fg *FuzzGenerator) generateTimelineIssue() BenchmarkTestCase {
 
 	for i := 0; i < jumpCount; i++ {
 		unit := units[fg.rng.Intn(len(units))]
-		timeUnits = append(timeUnits, unit)
 		events := []string{"修为突破", "遇到强敌", "获得宝物", "结交好友", "遭遇背叛"}
 		event := events[fg.rng.Intn(len(events))]
 		text.WriteString(fmt.Sprintf("%s，%s。\n", unit, event))

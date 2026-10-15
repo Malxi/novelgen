@@ -15,15 +15,6 @@ func NewChapterContinuityBuilder(projectRoot string) *ChapterContinuityBuilder {
 	}
 }
 
-// SetUseRPGDSL controls whether generated RPG DSL state_delta facts are folded
-// into the continuity snapshot.
-func (b *ChapterContinuityBuilder) SetUseRPGDSL(enabled bool) {
-	if b == nil || b.stateManager == nil {
-		return
-	}
-	b.stateManager.SetUseRPGDSL(enabled)
-}
-
 // BuildBefore returns the continuity state before targetChapter begins. The
 // target chapter's own planned events remain future instructions, not already
 // true state.
@@ -32,16 +23,6 @@ func (b *ChapterContinuityBuilder) BuildBefore(outline *models.Outline, targetCh
 		return &models.ChapterContinuity{}
 	}
 	return chapterContinuityFromStateMatrix(b.stateManager.CalculateStateMatrixBefore(outline, targetChapter))
-}
-
-// BuildAfter returns the continuity state after targetChapter has been applied.
-// It is retained for analysis and legacy parity; write generation should prefer
-// BuildBefore.
-func (b *ChapterContinuityBuilder) BuildAfter(outline *models.Outline, targetChapter *models.Chapter) *models.ChapterContinuity {
-	if b == nil || b.stateManager == nil {
-		return &models.ChapterContinuity{}
-	}
-	return chapterContinuityFromStateMatrix(b.stateManager.CalculateStateMatrix(outline, targetChapter))
 }
 
 func chapterContinuityFromStateMatrix(state *models.StateMatrix) *models.ChapterContinuity {

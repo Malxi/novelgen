@@ -1,4 +1,4 @@
-package cmd
+package writecmd_test
 
 import (
 	"strings"

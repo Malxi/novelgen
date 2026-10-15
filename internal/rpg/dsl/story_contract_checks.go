@@ -5,6 +5,8 @@ import (
 	"math"
 	"strings"
 	"unicode"
+
+	"novelgen/internal/utils"
 )
 
 type storylineContract struct {
@@ -68,7 +70,7 @@ func (s *Simulator) storylineContracts() []storylineContract {
 	var contracts []storylineContract
 	for _, rule := range s.setupStructuredRules("storyline.contract") {
 		fields := parseSetupRuleEffect(rule.Effect)
-		name := firstNonEmpty(fields["name"], fields["id"], rule.Name)
+		name := utils.FirstNonEmpty(fields["name"], fields["id"], rule.Name)
 		contracts = append(contracts, storylineContract{
 			ID:             fields["id"],
 			Name:           name,
@@ -128,7 +130,7 @@ func (s *Simulator) collectStorylineMovements() []storylineMovement {
 					if strings.ToLower(strings.TrimSpace(delta.Kind)) != "storyline" {
 						continue
 					}
-					stage := strings.ToLower(strings.TrimSpace(firstNonEmpty(delta.To, delta.Field)))
+					stage := strings.ToLower(strings.TrimSpace(utils.FirstNonEmpty(delta.To, delta.Field)))
 					chapterMovements = append(chapterMovements, storylineMovement{
 						ChapterID: chapter.ID,
 						Index:     idx,
@@ -356,15 +358,6 @@ func hasEarlierStageBefore(movements []storylineMovement, beforeStages []string,
 		}
 	}
 	return true
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return strings.TrimSpace(value)
-		}
-	}
-	return ""
 }
 
 func nonEmptyCount(values ...string) int {

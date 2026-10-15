@@ -599,7 +599,7 @@ func improveChaptersWithAgent(ctx context.Context, agent *agents.DraftAgent, cha
 			workerID,
 			chapter,
 			outline,
-			project.LoadDraftContent(chapter.ID),
+			draft,
 			suggestions,
 			draftTeleportFixFlag,
 			draftBridgeRetriesFlag,

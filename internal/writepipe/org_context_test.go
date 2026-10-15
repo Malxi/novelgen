@@ -1,11 +1,11 @@
-package cmd
+package writepipe_test
 
 import (
 	"strings"
 	"testing"
 
-	"novelgen/cmd/writecmd"
 	"novelgen/internal/models"
+	"novelgen/internal/writepipe"
 )
 
 func TestOrganizationWriteContextOnlyIncludesRelevantOrganizations(t *testing.T) {
@@ -33,7 +33,7 @@ func TestOrganizationWriteContextOnlyIncludesRelevantOrganizations(t *testing.T)
 		},
 	}
 
-	got := writecmd.BuildOrganizationWriteContext(chapter, organizations)
+	got := writepipe.BuildOrganizationWriteContext(chapter, organizations)
 	if !strings.Contains(got, "Iron Hive") {
 		t.Fatalf("expected relevant organization in context, got %q", got)
 	}
@@ -48,7 +48,7 @@ func TestOrganizationWriteContextReturnsEmptyWithoutMatches(t *testing.T) {
 		"moon_court": {Name: "Moon Court", Type: "faction"},
 	}
 
-	if got := writecmd.BuildOrganizationWriteContext(chapter, organizations); got != "" {
+	if got := writepipe.BuildOrganizationWriteContext(chapter, organizations); got != "" {
 		t.Fatalf("expected no organization context for unrelated chapter, got %q", got)
 	}
 }

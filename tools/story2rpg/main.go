@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -111,7 +110,7 @@ func main() {
 	}
 
 	// 写入输出文件
-	if err := ioutil.WriteFile(*outputPath, []byte(exportJSON), 0644); err != nil {
+	if err := os.WriteFile(*outputPath, []byte(exportJSON), 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "错误: 写入输出文件失败: %v\n", err)
 		os.Exit(1)
 	}

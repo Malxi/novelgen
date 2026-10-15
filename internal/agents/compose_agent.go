@@ -471,21 +471,18 @@ func composeAgentSDKParams(command, workflowSkill string, maxTurns int, toolAllo
 		maxTurns = 12
 	}
 	toolAllowlist = append(append([]string(nil), toolAllowlist...), agentSDKLogToolAllowlist()...)
-	return InvokeParams{
-		SDKSkills:      []string{"novel-tools-core", workflowSkill},
-		Tools:          []string{"Bash"},
-		AllowedTools:   []string{"Bash"},
-		PermissionMode: "dontAsk",
-		RequireSDK:     true,
-		ToolAllowlist:  dedupeComposeToolAllowlist(toolAllowlist),
-		MaxTurns:       maxTurns,
-		Timeout:        900,
-		Command:        command,
-	}
+	return agentSDKToolParams(
+		[]string{"novel-tools-core", workflowSkill},
+		command,
+		dedupeToolAllowlist(toolAllowlist),
+		ToolEvidenceRequirement{},
+		maxTurns,
+		900,
+	)
 }
 
 func composeRequiredQueryAllowlist(requiredQueries []string) []string {
-	return dedupeComposeToolAllowlist(requiredQueries)
+	return dedupeToolAllowlist(requiredQueries)
 }
 
 func composeImproveToolAllowlist(volume models.Volume, promptInput composeAgentSDKImproveVolumePromptInput, applyPatches bool) []string {
@@ -500,7 +497,7 @@ func composeImproveToolAllowlist(volume models.Volume, promptInput composeAgentS
 		allowlist = append(allowlist, suggestion.Navigation.RepairRouteQuery)
 		allowlist = append(allowlist, suggestion.Navigation.RepairContextQuery)
 	}
-	return dedupeComposeToolAllowlist(allowlist)
+	return dedupeToolAllowlist(allowlist)
 }
 
 // composeImproveVolumeToolAllowlist returns the query/check/patch allowlist for
@@ -848,7 +845,7 @@ func composeGlobalRepairToolAllowlist(applyPatches bool) []string {
 		allowlist = append(allowlist, "novelgen tool patch setup --apply")
 		allowlist = append(allowlist, "novelgen tool patch outline --target volume --id --apply")
 	}
-	return dedupeComposeToolAllowlist(allowlist)
+	return dedupeToolAllowlist(allowlist)
 }
 
 func composeGlobalRepairToolAllowlistForReview(review models.ReviewResult, applyPatches bool) []string {
@@ -871,7 +868,7 @@ func composeGlobalRepairToolAllowlistForReview(review models.ReviewResult, apply
 		allowlist = append(allowlist, "novelgen tool patch setup --apply")
 		allowlist = append(allowlist, "novelgen tool patch outline --target volume --id --apply")
 	}
-	return dedupeComposeToolAllowlist(allowlist)
+	return dedupeToolAllowlist(allowlist)
 }
 
 func composeGlobalRepairRequiredPostPatchChecks(review models.ReviewResult) []string {
@@ -887,20 +884,6 @@ func composeGlobalRepairRequiredPostPatchChecks(review models.ReviewResult) []st
 		return []string{fmt.Sprintf("novelgen tool check all --target outline --scope all --category %s --min-priority low --max-issues 12", category)}
 	}
 	return nil
-}
-
-func dedupeComposeToolAllowlist(values []string) []string {
-	seen := map[string]bool{}
-	out := []string{}
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value == "" || seen[value] {
-			continue
-		}
-		seen[value] = true
-		out = append(out, value)
-	}
-	return out
 }
 
 // GenerateSkeletonWithAgentSDK asks the Claude Agent SDK workflow to query
@@ -1001,7 +984,7 @@ func (a *ComposeAgent) ImproveVolumeWithAgentSDK(ctx context.Context, input Comp
 		)
 	}
 	allowlist = append(allowlist, composeAdjacentVolumeQueryAllowlist(input.Outline, input.Volume.ID)...)
-	params := composeAgentSDKParams("review and improve this outline volume using project query/check/patch tools", "outline-improve-volume-workflow", 28, dedupeComposeToolAllowlist(allowlist))
+	params := composeAgentSDKParams("review and improve this outline volume using project query/check/patch tools", "outline-improve-volume-workflow", 28, dedupeToolAllowlist(allowlist))
 	params.ToolEvidence = composeImproveToolEvidence(promptInput, applyPatches)
 	// An explicit user prompt makes this an explicit task list: clean scoped
 	// checks must not close targets or stop the agent before the patch cycle.
@@ -1233,22 +1216,18 @@ func (a *ComposeAgent) reviewOutlineCrossVolumeAgentSDK(ctx context.Context, inp
 		}
 	}
 
-	params := InvokeParams{
-		SDKSkills:      []string{"novel-tools-core", "outline-review-workflow", "cross-volume-review-workflow"},
-		Tools:          []string{"Bash"},
-		AllowedTools:   []string{"Bash"},
-		PermissionMode: "dontAsk",
-		RequireSDK:     true,
-		ToolAllowlist:  dedupeComposeToolAllowlist(allowlist),
-		ToolEvidence: ToolEvidenceRequirement{
+	params := agentSDKToolParams(
+		[]string{"novel-tools-core", "outline-review-workflow", "cross-volume-review-workflow"},
+		"review the cross-volume continuity of the story outline and provide focused improvement suggestions",
+		dedupeToolAllowlist(allowlist),
+		ToolEvidenceRequirement{
 			MinQueryCalls:        2,
 			RequireNoDeniedTools: true,
 			RequiredToolCommands: []string{"novelgen tool query outline --type all --view index"},
 		},
-		MaxTurns: composeCrossVolumeReviewAgentSDKMaxTurns(),
-		Timeout:  1800,
-		Command:  "review the cross-volume continuity of the story outline and provide focused improvement suggestions",
-	}
+		composeCrossVolumeReviewAgentSDKMaxTurns(),
+		1800,
+	)
 	params.UserPromptDriven = strings.TrimSpace(input.UserPrompt) != ""
 
 	var output models.ReviewResult
@@ -1334,22 +1313,18 @@ func composeOutlineReviewRequiredQueries(outline models.Outline, volumeID string
 
 func composeOutlineReviewAgentSDKParams(command string, outline models.Outline, volumeID string) InvokeParams {
 	allowlist := composeOutlineReviewToolAllowlist(outline, volumeID)
-	return InvokeParams{
-		SDKSkills:      []string{"novel-tools-core", "outline-review-workflow"},
-		Tools:          []string{"Bash"},
-		AllowedTools:   []string{"Bash"},
-		PermissionMode: "dontAsk",
-		RequireSDK:     true,
-		ToolAllowlist:  dedupeComposeToolAllowlist(allowlist),
-		ToolEvidence: ToolEvidenceRequirement{
+	return agentSDKToolParams(
+		[]string{"novel-tools-core", "outline-review-workflow"},
+		command,
+		dedupeToolAllowlist(allowlist),
+		ToolEvidenceRequirement{
 			MinQueryCalls:        1,
 			RequireNoDeniedTools: true,
 			RequiredToolCommands: composeOutlineReviewRequiredQueries(outline, volumeID),
 		},
-		MaxTurns: composeOutlineReviewAgentSDKMaxTurns(),
-		Timeout:  composeOutlineReviewAgentSDKTimeout(),
-		Command:  command,
-	}
+		composeOutlineReviewAgentSDKMaxTurns(),
+		composeOutlineReviewAgentSDKTimeout(),
+	)
 }
 
 // composeCrossVolumeReviewAgentSDKMaxTurns 返回跨卷 review 的 agent 回合上限。
@@ -1442,7 +1417,7 @@ func composeOutlineReviewToolAllowlist(outline models.Outline, volumeID string) 
 				}
 			}
 		}
-		return dedupeComposeToolAllowlist(allowlist)
+		return dedupeToolAllowlist(allowlist)
 	}
 	allowlist = append(allowlist, "novelgen tool query outline --type all --view index")
 	for _, part := range outline.Parts {
@@ -1450,7 +1425,7 @@ func composeOutlineReviewToolAllowlist(outline models.Outline, volumeID string) 
 			addVolume(volume)
 		}
 	}
-	return dedupeComposeToolAllowlist(allowlist)
+	return dedupeToolAllowlist(allowlist)
 }
 
 func clipOutlineReviewResult(result *models.ReviewResult) {
@@ -1458,37 +1433,16 @@ func clipOutlineReviewResult(result *models.ReviewResult) {
 		return
 	}
 	result.Summary = clipForPrompt(result.Summary, 300)
-	result.Strengths = clipReviewStringList(result.Strengths, 4, 180)
-	result.Weaknesses = clipReviewStringList(result.Weaknesses, 4, 220)
+	result.Strengths = clipReviewStringList(result.Strengths, maxReviewStrengths, maxReviewStrengthRunes)
+	result.Weaknesses = clipReviewStringList(result.Weaknesses, maxReviewWeaknesses, maxReviewWeaknessRunes)
 	suggestions := make([]models.ReviewSuggestion, 0, len(result.Suggestions))
 	for _, s := range result.Suggestions {
-		s.Category = strings.TrimSpace(s.Category)
-		s.TargetID = strings.TrimSpace(s.TargetID)
-		s.TargetName = clipForPrompt(s.TargetName, 120)
-		s.Issue = clipForPrompt(s.Issue, 360)
-		s.Suggestion = clipForPrompt(s.Suggestion, 420)
-		s.Priority = strings.TrimSpace(s.Priority)
-		suggestions = append(suggestions, s)
-		if len(suggestions) >= 8 {
+		suggestions = append(suggestions, clipReviewSuggestion(s))
+		if len(suggestions) >= maxReviewSuggestions {
 			break
 		}
 	}
 	result.Suggestions = suggestions
-}
-
-func clipReviewStringList(values []string, maxItems int, maxRunes int) []string {
-	out := make([]string, 0, len(values))
-	for _, value := range values {
-		value = clipForPrompt(value, maxRunes)
-		if strings.TrimSpace(value) == "" {
-			continue
-		}
-		out = append(out, value)
-		if len(out) >= maxItems {
-			break
-		}
-	}
-	return out
 }
 
 func composeImproveToolEvidence(promptInput composeAgentSDKImproveVolumePromptInput, applyPatches bool) ToolEvidenceRequirement {
@@ -1745,15 +1699,15 @@ func (r composeAgentSDKReviewResult) toModelReviewResult() models.ReviewResult {
 		Summary:      clipForPrompt(r.Summary, 500),
 	}
 	for _, suggestion := range r.Suggestions {
-		result.Suggestions = append(result.Suggestions, models.ReviewSuggestion{
-			Category:   strings.TrimSpace(suggestion.Category),
-			TargetID:   strings.TrimSpace(suggestion.TargetID),
-			TargetName: clipForPrompt(suggestion.TargetName, 120),
-			Issue:      clipForPrompt(suggestion.Issue, 360),
-			Suggestion: clipForPrompt(suggestion.Suggestion, 420),
-			Priority:   strings.TrimSpace(suggestion.Priority),
-		})
-		if len(result.Suggestions) >= 8 {
+		result.Suggestions = append(result.Suggestions, clipReviewSuggestion(models.ReviewSuggestion{
+			Category:   suggestion.Category,
+			TargetID:   suggestion.TargetID,
+			TargetName: suggestion.TargetName,
+			Issue:      suggestion.Issue,
+			Suggestion: suggestion.Suggestion,
+			Priority:   suggestion.Priority,
+		}))
+		if len(result.Suggestions) >= maxReviewSuggestions {
 			break
 		}
 	}
@@ -2149,11 +2103,12 @@ func buildAgentSDKImproveVolumePromptInput(input ComposeImproveVolumeInput, appl
 }
 
 func composeAgentSDKPatchInstruction(applyPatches bool) string {
-	const jsonInput = "For Chinese/non-ASCII patch JSON, do not use --patch-json and do not run Python/Node/PowerShell/help commands to encode it. Pipe compact literal JSON on stdin instead: `printf '%s' '<compact-json>' | novelgen tool patch outline --target volume --id <target_volume_id>`. Use --patch-json only for small ASCII-only patches."
+	const patchCommand = "novelgen tool patch outline --target volume --id <target_volume_id>"
+	jsonInput := agentSDKNonASCIIPatchRule(patchCommand, true)
 	if applyPatches {
-		return "If you build a non-empty candidate patch JSON, first dry-run it with `printf '%s' '<compact-json>' | novelgen tool patch outline --target volume --id <target_volume_id>`; only after a successful dry-run, repeat the same stdin-piped patch command with `--apply`. Apply at most one successful outline volume patch in this invocation. " + jsonInput
+		return "If you build a non-empty candidate patch JSON, first dry-run it with `printf '%s' '<compact-json>' | " + patchCommand + "`; only after a successful dry-run, repeat the same stdin-piped patch command with `--apply`. Apply at most one successful outline volume patch in this invocation. " + jsonInput
 	}
-	return "If you build a non-empty volume_patch, dry-run it with `printf '%s' '<compact-json>' | novelgen tool patch outline --target volume --id <target_volume_id>` and do not use --apply. " + jsonInput
+	return "If you build a non-empty volume_patch, dry-run it with `printf '%s' '<compact-json>' | " + patchCommand + "` and do not use --apply. " + jsonInput
 }
 
 func composeAgentSDKCheckInstruction(applyPatches bool) string {
@@ -2172,7 +2127,7 @@ func composeAgentSDKReturnInstruction(applyPatches bool) string {
 
 func composeAgentSDKWriteInstruction(applyPatches bool) string {
 	if applyPatches {
-		return "Do not inspect source code or write files directly; do not read Claude tool-results temporary files. If you need more detail, rerun a narrower `novelgen tool query/check`. The only allowed write is `novelgen tool patch outline --target volume ... --apply` after dry-run validation."
+		return "Do not inspect source code or write files directly; do not read Claude tool-results temporary files. If you need more detail, rerun a narrower `novelgen tool query/check`. " + agentSDKOnlyAllowedWriteSentence("novelgen tool patch outline --target volume ...")
 	}
 	return "Do not ask for, inspect, or modify source files. Go will merge and save the returned patch."
 }
@@ -3013,14 +2968,7 @@ func compactReviewForPrompt(review models.ReviewResult) models.ReviewResult {
 		compact.Weaknesses = append(compact.Weaknesses, clipForPrompt(weakness, 260))
 	}
 	for _, suggestion := range review.Suggestions {
-		compact.Suggestions = append(compact.Suggestions, models.ReviewSuggestion{
-			Category:   suggestion.Category,
-			TargetID:   suggestion.TargetID,
-			TargetName: clipForPrompt(suggestion.TargetName, 120),
-			Issue:      clipForPrompt(suggestion.Issue, 360),
-			Suggestion: clipForPrompt(suggestion.Suggestion, 420),
-			Priority:   suggestion.Priority,
-		})
+		compact.Suggestions = append(compact.Suggestions, clipReviewSuggestion(suggestion))
 	}
 	for _, issue := range review.ContinuityIssues {
 		compact.ContinuityIssues = append(compact.ContinuityIssues, models.ContinuityIssue{
@@ -3043,12 +2991,12 @@ func compactReviewForAgentSDKPrompt(review models.ReviewResult, volumeID string)
 	}
 	for _, suggestion := range review.Suggestions {
 		brief := composeAgentSDKPromptReviewSuggestion{
-			Category:   suggestion.Category,
-			TargetID:   suggestion.TargetID,
-			TargetName: clipForPrompt(suggestion.TargetName, 120),
-			Issue:      clipForPrompt(suggestion.Issue, 360),
-			Suggestion: clipForPrompt(suggestion.Suggestion, 420),
-			Priority:   suggestion.Priority,
+			Category:   strings.TrimSpace(suggestion.Category),
+			TargetID:   strings.TrimSpace(suggestion.TargetID),
+			TargetName: clipForPrompt(suggestion.TargetName, maxReviewTargetNameRunes),
+			Issue:      clipForPrompt(suggestion.Issue, maxReviewIssueRunes),
+			Suggestion: clipForPrompt(suggestion.Suggestion, maxReviewSuggestionRunes),
+			Priority:   strings.TrimSpace(suggestion.Priority),
 			Navigation: buildComposeAgentSDKSuggestionNavigation(volumeID, suggestion),
 		}
 		compact.Suggestions = append(compact.Suggestions, brief)
@@ -3816,19 +3764,6 @@ func preserveImprovedVolumeIdentity(original *models.Volume, improved *models.Vo
 	}
 }
 
-func allVolumeIndices(outline *models.Outline) [][2]int {
-	if outline == nil {
-		return nil
-	}
-	var result [][2]int
-	for partIdx := range outline.Parts {
-		for volIdx := range outline.Parts[partIdx].Volumes {
-			result = append(result, [2]int{partIdx, volIdx})
-		}
-	}
-	return result
-}
-
 func generatedVolumeIndices(outline *models.Outline) [][2]int {
 	if outline == nil {
 		return nil
@@ -4032,8 +3967,8 @@ func (a *ComposeAgent) filterReviewForVolume(review *models.ReviewResult, volume
 		}
 	}
 	sort.SliceStable(filtered.Suggestions, func(i, j int) bool {
-		left := reviewPriorityRank(filtered.Suggestions[i].Priority)
-		right := reviewPriorityRank(filtered.Suggestions[j].Priority)
+		left := models.ReviewSuggestionPriorityRank(filtered.Suggestions[i].Priority)
+		right := models.ReviewSuggestionPriorityRank(filtered.Suggestions[j].Priority)
 		if left != right {
 			return left < right
 		}
@@ -4044,21 +3979,6 @@ func (a *ComposeAgent) filterReviewForVolume(review *models.ReviewResult, volume
 	}
 
 	return filtered
-}
-
-func reviewPriorityRank(priority string) int {
-	switch strings.ToLower(strings.TrimSpace(priority)) {
-	case models.PriorityCritical:
-		return 0
-	case models.PriorityHigh:
-		return 1
-	case models.PriorityMedium:
-		return 2
-	case models.PriorityLow:
-		return 3
-	default:
-		return 4
-	}
 }
 
 func isBlockingGlobalSuggestion(suggestion models.ReviewSuggestion) bool {
@@ -4475,51 +4395,6 @@ func chapterIdentity(chapter models.Chapter) string {
 	return key
 }
 
-// GenerateOutlineHierarchical generates a complete outline using hierarchical approach
-// First generates skeleton (parts/volumes), then generates chapters for each volume
-func (a *ComposeAgent) GenerateOutlineHierarchical(ctx context.Context, setup models.StorySetup, structure models.StoryStructure) (*models.Outline, error) {
-	logger.Section("COMPOSE AGENT - Hierarchical Outline Generation")
-	logger.Info("This will generate the outline in two phases:")
-	logger.Info("  Phase 1: Generate skeleton (parts and volumes)")
-	logger.Info("  Phase 2: Generate chapters for each volume")
-
-	// Phase 1: Generate skeleton
-	skeletonInput := ComposeSkeletonInput{
-		Setup:     setup,
-		Structure: structure,
-	}
-	skeletonOutput, err := a.GenerateSkeleton(ctx, skeletonInput)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate skeleton: %w", err)
-	}
-
-	// Phase 2: Generate chapters for each volume
-	outline := &models.Outline{
-		Parts: skeletonOutput.Parts,
-	}
-	logic.NewIDManager(outline).AssignIDsToOutline()
-	models.NormalizeOutline(outline)
-
-	return a.GenerateChaptersHierarchical(ctx, setup, structure, outline, nil)
-}
-
-// GenerateOutlineHierarchicalAgentSDK generates a full outline with SDK
-// workflows for skeleton and per-volume chapter generation.
-func (a *ComposeAgent) GenerateOutlineHierarchicalAgentSDK(ctx context.Context, setup models.StorySetup, structure models.StoryStructure) (*models.Outline, error) {
-	logger.Section("COMPOSE AGENT SDK - Hierarchical Outline Generation")
-	skeletonOutput, err := a.GenerateSkeletonWithAgentSDK(ctx, ComposeSkeletonInput{
-		Setup:     setup,
-		Structure: structure,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate skeleton: %w", err)
-	}
-	outline := &models.Outline{Parts: skeletonOutput.Parts}
-	logic.NewIDManager(outline).AssignIDsToOutline()
-	models.NormalizeOutline(outline)
-	return a.GenerateChaptersHierarchicalAgentSDK(ctx, setup, structure, outline, nil)
-}
-
 // GenerateChaptersHierarchical generates chapters for each volume in hierarchical mode
 // Supports incremental generation with save callback
 func (a *ComposeAgent) GenerateChaptersHierarchical(ctx context.Context, setup models.StorySetup, structure models.StoryStructure, outline *models.Outline, onVolumeComplete func(*models.Outline, int, int, int)) (*models.Outline, error) {
@@ -4704,13 +4579,13 @@ func (a *ComposeAgent) buildHierarchicalContext(outline *models.Outline, partIdx
 
 	// Add current part context
 	currentPart := outline.Parts[partIdx]
-	context.WriteString(fmt.Sprintf("=== CURRENT PART ===\n"))
+	context.WriteString("=== CURRENT PART ===\n")
 	context.WriteString(fmt.Sprintf("Part: %s\n", currentPart.Title))
 	context.WriteString(fmt.Sprintf("Summary: %s\n\n", currentPart.Summary))
 
 	// Add current volume context
 	currentVolume := currentPart.Volumes[volIdx]
-	context.WriteString(fmt.Sprintf("=== CURRENT VOLUME ===\n"))
+	context.WriteString("=== CURRENT VOLUME ===\n")
 	context.WriteString(fmt.Sprintf("Volume: %s\n", currentVolume.Title))
 	context.WriteString(fmt.Sprintf("Summary: %s\n", currentVolume.Summary))
 	context.WriteString("This volume needs chapters that:\n")

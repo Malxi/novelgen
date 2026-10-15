@@ -112,9 +112,8 @@ var phraseRules = []phraseRule{
 }
 
 var (
-	reBalancedNotOnly = regexp.MustCompile(`不仅[^。！？\n]{0,30}(而且|还|更|也)`)
-	reAsA             = regexp.MustCompile(`作为[^，。！？\n]{1,18}[，,]`)
-	reLongSentence    = regexp.MustCompile(`[。！？!?]`)
+	reAsA          = regexp.MustCompile(`作为[^，。！？\n]{1,18}[，,]`)
+	reLongSentence = regexp.MustCompile(`[。！？!?]`)
 	// 不是X，是Y 短句转折 (AI 强调句母句式): 不是+2-8字+，是+2-10字
 	reNotIsShort = regexp.MustCompile(`不是[^，。！？；\n]{2,8}，是[^，。！？；\n]{2,10}`)
 	// 排除合理因果: 不是因为...而是因为 (正常归因)

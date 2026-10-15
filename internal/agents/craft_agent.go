@@ -417,18 +417,7 @@ func craftAgentSDKParams(command, workflowSkill, target string, maxTurns int, ap
 		evidence.MinPatchApplyCalls = 1
 		evidence.RequirePatchApplyFollowupCheck = true
 	}
-	return InvokeParams{
-		SDKSkills:      []string{"novel-tools-core", workflowSkill},
-		Tools:          []string{"Bash"},
-		AllowedTools:   []string{"Bash"},
-		PermissionMode: "dontAsk",
-		RequireSDK:     true,
-		ToolAllowlist:  allowlist,
-		ToolEvidence:   evidence,
-		MaxTurns:       maxTurns,
-		Timeout:        900,
-		Command:        command,
-	}
+	return agentSDKToolParams([]string{"novel-tools-core", workflowSkill}, command, allowlist, evidence, maxTurns, 900)
 }
 
 func craftAgentSDKToolAllowlist(target string, names []string, requiredQueries []string, applyPatches bool) []string {
@@ -538,11 +527,12 @@ func craftAgentSDKPatchInstruction(applyPatches bool) string {
 
 func craftAgentSDKTargetPatchInstruction(target string, applyPatches bool) string {
 	target = normalizeCraftAgentSDKTarget(target)
-	jsonInput := fmt.Sprintf(" For Chinese/non-ASCII patch JSON, do not use --patch-json and do not run Python/Node/PowerShell/help commands to encode it. Pipe compact literal JSON on stdin instead: `printf '%%s' '<compact-json>' | novelgen tool patch craft --target %s --id <name>`. Use --patch-json only for small ASCII-only patches.", target)
+	patchCommand := fmt.Sprintf("novelgen tool patch craft --target %s --id <name>", target)
+	jsonInput := " " + agentSDKNonASCIIPatchRule(patchCommand, true)
 	if applyPatches {
-		return fmt.Sprintf("Before final JSON, first dry-run each changed or created %s with `printf '%%s' '<compact-json>' | novelgen tool patch craft --target %s --id <name>`; only after a successful dry-run, repeat the same stdin-piped patch command with `--apply`.%s", target, target, jsonInput)
+		return fmt.Sprintf("Before final JSON, first dry-run each changed or created %s with `printf '%%s' '<compact-json>' | %s`; only after a successful dry-run, repeat the same stdin-piped patch command with `--apply`.%s", target, patchCommand, jsonInput)
 	}
-	return fmt.Sprintf("Before final JSON, dry-run each changed or created %s with `printf '%%s' '<compact-json>' | novelgen tool patch craft --target %s --id <name>` and do not use --apply.%s", target, target, jsonInput)
+	return fmt.Sprintf("Before final JSON, dry-run each changed or created %s with `printf '%%s' '<compact-json>' | %s` and do not use --apply.%s", target, patchCommand, jsonInput)
 }
 
 func craftAgentSDKCheckInstruction(applyPatches bool) string {
@@ -581,7 +571,7 @@ func craftAgentSDKWriteInstruction(applyPatches bool) string {
 func craftAgentSDKTargetWriteInstruction(target string, applyPatches bool) string {
 	target = normalizeCraftAgentSDKTarget(target)
 	if applyPatches {
-		return fmt.Sprintf("Do not inspect source code or write files directly; the only allowed write is `novelgen tool patch craft --target %s ... --apply` after dry-run validation.", target)
+		return fmt.Sprintf("Do not inspect source code or write files directly; %s", agentSDKOnlyAllowedWriteClause(fmt.Sprintf("novelgen tool patch craft --target %s ...", target)))
 	}
 	return "Go will normalize and save; you must not write files or inspect source code."
 }
@@ -834,8 +824,8 @@ func buildCraftChapterSummary(ch models.Chapter) CraftChapterSummary {
 			advance.Pressure,
 		}, " | "))
 	}
-	summary.SceneLocations = compactStrings(summary.SceneLocations)
-	summary.SceneCharacters = compactStrings(summary.SceneCharacters)
+	summary.SceneLocations = utils.CompactStrings(summary.SceneLocations)
+	summary.SceneCharacters = utils.CompactStrings(summary.SceneCharacters)
 	return summary
 }
 
@@ -1098,23 +1088,6 @@ func joinNonEmpty(values []string, sep string) string {
 		}
 	}
 	return strings.Join(out, sep)
-}
-
-func compactStrings(values []string) []string {
-	if len(values) == 0 {
-		return nil
-	}
-	seen := map[string]bool{}
-	out := make([]string, 0, len(values))
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value == "" || seen[value] {
-			continue
-		}
-		seen[value] = true
-		out = append(out, value)
-	}
-	return out
 }
 
 func coalesceText(values ...string) string {

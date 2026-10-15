@@ -87,11 +87,6 @@ type RuntimeClient struct {
 	initErr error
 }
 
-// NewRuntimeClient creates a placeholder runtime client.
-func NewRuntimeClient(name string) *RuntimeClient {
-	return &RuntimeClient{Name: name}
-}
-
 // NewRuntimeBackedClient creates a chat-completions compatible adapter over an
 // agent runtime.
 func NewRuntimeBackedClient(name string, runtime agentruntime.Runtime, initErr error) *RuntimeClient {
@@ -523,12 +518,4 @@ func defaultMaxAttempts() int {
 
 func defaultRetryBaseDelay() time.Duration {
 	return envutil.PositiveIntMilliseconds("NOVELGEN_LLM_RETRY_BASE_MS", time.Second)
-}
-
-// truncateString truncates a string to max length
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
 }

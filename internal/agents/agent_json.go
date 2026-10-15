@@ -396,22 +396,39 @@ func extractJSONFromMarkdown(content string) string {
 		return content
 	}
 
-	// Find the matching closing brace
+	// Find the matching closing brace. Braces inside JSON strings do not affect
+	// the depth, otherwise an object whose value contains "}" would be cut short.
 	braceCount := 0
 	endIdx := -1
+	inString := false
+	escaped := false
+search:
 	for i := startIdx; i < len(content); i++ {
-		switch content[i] {
+		ch := content[i]
+		if inString {
+			if escaped {
+				escaped = false
+				continue
+			}
+			switch ch {
+			case '\\':
+				escaped = true
+			case '"':
+				inString = false
+			}
+			continue
+		}
+		switch ch {
+		case '"':
+			inString = true
 		case '{':
 			braceCount++
 		case '}':
 			braceCount--
 			if braceCount == 0 {
 				endIdx = i
-				break
+				break search
 			}
-		}
-		if braceCount == 0 && endIdx != -1 {
-			break
 		}
 	}
 

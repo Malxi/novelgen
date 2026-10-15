@@ -8,6 +8,7 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
+	"novelgen/internal/toolcmd"
 	"novelgen/internal/utils"
 	"os"
 	"path/filepath"
@@ -1365,15 +1366,12 @@ func BuildChapterRepairNavigation(chapterID, issueCategory string, entities Outl
 			fmt.Sprintf("novelgen tool query context --type chapter-write --id %q --view brief", chapterID),
 			fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", chapterID),
 		},
-		"craft_context_queries":  craftQueries,
-		"quality_check_query":    fmt.Sprintf("novelgen tool check quality --target chapter --scope chapter --id %q --category %s --min-priority low --max-issues 12", chapterID, category),
-		"simulation_check_query": fmt.Sprintf("novelgen tool check simulation --target chapter --scope chapter --id %q --category %s --min-priority low --max-issues 12", chapterID, category),
-		"all_check_query":        fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --category %s --min-priority low --max-issues 12", chapterID, category),
-		"refresh_chapter_dsl_query": fmt.Sprintf(
-			"novelgen tool refresh chapter-dsl --id %q",
-			chapterID,
-		),
-		"repair_command": fmt.Sprintf("novelgen write improve --agent-sdk --chapter %q --max-rounds 1", chapterID),
+		"craft_context_queries":     craftQueries,
+		"quality_check_query":       toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "quality", Category: category, MinPriority: "low", MaxIssues: 12}),
+		"simulation_check_query":    toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "simulation", Category: category, MinPriority: "low", MaxIssues: 12}),
+		"all_check_query":           toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Category: category, MinPriority: "low", MaxIssues: 12}),
+		"refresh_chapter_dsl_query": toolcmd.ChapterDSLRefresh(chapterID),
+		"repair_command":            fmt.Sprintf("novelgen write improve --agent-sdk --chapter %q --max-rounds 1", chapterID),
 	}
 }
 
@@ -1495,9 +1493,9 @@ func combatBalanceSimulationRepairHint(chapterID string, issue models.ReviewSugg
 			`on_complete { narration = "..." } should state the combat consequence, not just that the fight happened.`,
 		},
 		ValidationPlan: []string{
-			fmt.Sprintf("novelgen tool refresh chapter-dsl --id %q", chapterID),
-			fmt.Sprintf("novelgen tool check simulation --target chapter --scope chapter --id %q --min-priority low --max-issues 12", chapterID),
-			fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --min-priority low --max-issues 12", chapterID),
+			toolcmd.ChapterDSLRefresh(chapterID),
+			toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "simulation", MinPriority: "low", MaxIssues: 12}),
+			toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MinPriority: "low", MaxIssues: 12}),
 		},
 		Avoid: []string{
 			"Do not only add adjectives, longer action choreography, or courage lines; the simulator needs count/level/support/tactic/state-result signals.",
@@ -1527,8 +1525,8 @@ func combatResultSimulationRepairHint(chapterID string, issue models.ReviewSugge
 			`state_delta { target = "..." kind = "injury|resource|power_change|plot_thread|transition" ... } when the consequence changes durable state.`,
 		},
 		ValidationPlan: []string{
-			fmt.Sprintf("novelgen tool refresh chapter-dsl --id %q", chapterID),
-			fmt.Sprintf("novelgen tool check simulation --target chapter --scope chapter --id %q --min-priority low --max-issues 12", chapterID),
+			toolcmd.ChapterDSLRefresh(chapterID),
+			toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "simulation", MinPriority: "low", MaxIssues: 12}),
 		},
 		Avoid: []string{
 			"Do not add a vague victory sentence that changes no state.",
@@ -1555,8 +1553,8 @@ func buildChapterRepairWorkflow(chapterID, issueCategory string) map[string]inte
 			"Return improved content to the write workflow; do not write chapter markdown directly from an Agent SDK tool.",
 			"After Go saves the chapter, refresh derived chapter RPG DSL when allowed, then rerun the all_check_query and fix remaining blocking issues. Simulation checks do not invoke LLM conversion; use post_repair_refresh_query first when chapter prose changed.",
 		},
-		"post_repair_refresh_query": fmt.Sprintf("novelgen tool refresh chapter-dsl --id %q", chapterID),
-		"post_repair_check_query":   fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --min-priority low --max-issues 12", chapterID),
+		"post_repair_refresh_query": toolcmd.ChapterDSLRefresh(chapterID),
+		"post_repair_check_query":   toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MinPriority: "low", MaxIssues: 12}),
 	}
 }
 
@@ -1583,14 +1581,14 @@ func buildChapterRepairNextActions(chapterID, issueCategory string) []ToolNextAc
 		{
 			Step:    4,
 			Action:  "refresh_derived_dsl",
-			Command: fmt.Sprintf("novelgen tool refresh chapter-dsl --id %q", chapterID),
+			Command: toolcmd.ChapterDSLRefresh(chapterID),
 			Purpose: "Regenerate derived RPG DSL after prose changes; simulation checks do not invoke LLM conversion.",
 			When:    "After chapter prose has changed and refresh is allowed by the workflow.",
 		},
 		{
 			Step:    5,
 			Action:  "post_repair_check",
-			Command: fmt.Sprintf("novelgen tool check all --target chapter --scope chapter --id %q --category %s --min-priority low --max-issues 12", chapterID, category),
+			Command: toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Category: category, MinPriority: "low", MaxIssues: 12}),
 			Purpose: "Verify the targeted repair and catch remaining deterministic prose or simulation issues.",
 		},
 	}
@@ -2838,10 +2836,6 @@ func BriefCraftContextResults(results interface{}) interface{} {
 	return out
 }
 
-func briefStorySetupForCharacterContext(setup *models.StorySetup, name string) interface{} {
-	return briefStorySetupForElementContext(setup, "character", name)
-}
-
 func briefStorySetupForElementContext(setup *models.StorySetup, target, name string) interface{} {
 	if setup == nil {
 		return nil
@@ -3362,10 +3356,10 @@ func collectVolumeEntities(volume flatVolume) OutlineVolumeEntities {
 		}
 	}
 	return OutlineVolumeEntities{
-		Characters: clipToolStrings(compactStrings(characters), 25, 70),
-		Items:      clipToolStrings(compactStrings(items), 25, 70),
-		Locations:  clipToolStrings(compactStrings(locations), 25, 70),
-		Storylines: clipToolStrings(compactStrings(storylines), 25, 70),
+		Characters: clipToolStrings(utils.CompactStrings(characters), 25, 70),
+		Items:      clipToolStrings(utils.CompactStrings(items), 25, 70),
+		Locations:  clipToolStrings(utils.CompactStrings(locations), 25, 70),
+		Storylines: clipToolStrings(utils.CompactStrings(storylines), 25, 70),
 	}
 }
 
@@ -3403,10 +3397,10 @@ func collectChapterEntities(chapter models.Chapter) OutlineVolumeEntities {
 		}
 	}
 	return OutlineVolumeEntities{
-		Characters: clipToolStrings(compactStrings(characters), 18, 70),
-		Items:      clipToolStrings(compactStrings(items), 18, 70),
-		Locations:  clipToolStrings(compactStrings(locations), 12, 70),
-		Storylines: clipToolStrings(compactStrings(storylines), 12, 70),
+		Characters: clipToolStrings(utils.CompactStrings(characters), 18, 70),
+		Items:      clipToolStrings(utils.CompactStrings(items), 18, 70),
+		Locations:  clipToolStrings(utils.CompactStrings(locations), 12, 70),
+		Storylines: clipToolStrings(utils.CompactStrings(storylines), 12, 70),
 	}
 }
 
@@ -3429,7 +3423,7 @@ func chapterEntityReasons(chapter *models.Chapter, entityType, name string) []st
 		reasons = append(reasons, prefixedReasons("character", characterChapterReasons(chapter, name))...)
 		reasons = append(reasons, prefixedReasons("item", itemChapterReasons(chapter, name))...)
 		reasons = append(reasons, prefixedReasons("location", locationChapterReasons(chapter, name))...)
-		return compactStrings(reasons)
+		return utils.CompactStrings(reasons)
 	}
 }
 
@@ -3448,7 +3442,7 @@ func characterChapterReasons(chapter *models.Chapter, name string) []string {
 			reasons = append(reasons, fmt.Sprintf("events[%d]", idx))
 		}
 	}
-	return compactStrings(reasons)
+	return utils.CompactStrings(reasons)
 }
 
 func itemChapterReasons(chapter *models.Chapter, name string) []string {
@@ -3469,7 +3463,7 @@ func itemChapterReasons(chapter *models.Chapter, name string) []string {
 	if objectJSONContains(chapter.Scenes, name) {
 		reasons = append(reasons, "scenes.text")
 	}
-	return compactStrings(reasons)
+	return utils.CompactStrings(reasons)
 }
 
 func locationChapterReasons(chapter *models.Chapter, name string) []string {
@@ -3490,7 +3484,7 @@ func locationChapterReasons(chapter *models.Chapter, name string) []string {
 			reasons = append(reasons, fmt.Sprintf("events[%d]", idx))
 		}
 	}
-	return compactStrings(reasons)
+	return utils.CompactStrings(reasons)
 }
 
 // storylineChapterReasons reports where a chapter advances a named storyline.
@@ -3502,7 +3496,7 @@ func storylineChapterReasons(chapter *models.Chapter, name string) []string {
 		}
 	}
 	if len(reasons) > 0 {
-		return compactStrings(reasons)
+		return utils.CompactStrings(reasons)
 	}
 	// Fall back to free-text matching against the advance payload fields,
 	// so a query with no exact storyline name can still surface mentions.
@@ -3512,7 +3506,7 @@ func storylineChapterReasons(chapter *models.Chapter, name string) []string {
 			reasons = append(reasons, fmt.Sprintf("storyline_advances[%d].text", idx))
 		}
 	}
-	return compactStrings(reasons)
+	return utils.CompactStrings(reasons)
 }
 
 func eventReasons(event models.Event, entityType, name string) []string {
@@ -3794,23 +3788,6 @@ func prefixedReasons(prefix string, reasons []string) []string {
 	out := make([]string, 0, len(reasons))
 	for _, reason := range reasons {
 		out = append(out, prefix+"."+reason)
-	}
-	return out
-}
-
-func compactStrings(values []string) []string {
-	if len(values) == 0 {
-		return nil
-	}
-	seen := map[string]bool{}
-	out := make([]string, 0, len(values))
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value == "" || seen[value] {
-			continue
-		}
-		seen[value] = true
-		out = append(out, value)
 	}
 	return out
 }

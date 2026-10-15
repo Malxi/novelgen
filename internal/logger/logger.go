@@ -252,11 +252,3 @@ func Section(name string) {
 func Prompt(agent, name string, systemPrompt, userPrompt string) {
 	defaultLogger.Prompt(agent, name, systemPrompt, userPrompt)
 }
-
-func LLMRequest(model string, messages int, maxTokens int) {
-	defaultLogger.LLMRequest(model, messages, maxTokens)
-}
-
-func LLMResponse(model string, tokensUsed int, content string) {
-	defaultLogger.LLMResponse(model, tokensUsed, content)
-}

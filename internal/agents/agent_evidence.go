@@ -2,8 +2,10 @@ package agents
 
 import (
 	"fmt"
-	"novelgen/internal/agentruntime"
 	"strings"
+
+	"novelgen/internal/agentruntime"
+	"novelgen/internal/utils"
 )
 
 // agentEvidenceConfig maps a Go-side evidence requirement into the runner
@@ -113,7 +115,7 @@ func blockingDeniedToolCommands(summary *agentruntime.LiveSummary, requirement T
 	if len(commands) == 0 {
 		return nil
 	}
-	toleratePatchApplyRetry := summary.PatchApplies >= maxInt(1, requirement.MinPatchApplyCalls)
+	toleratePatchApplyRetry := summary.PatchApplies >= utils.MaxInt(1, requirement.MinPatchApplyCalls)
 	if requirement.RequirePatchApplyFollowupCheck && summary.ApplyWithoutFollowupCheck > 0 {
 		toleratePatchApplyRetry = false
 	}
@@ -187,11 +189,4 @@ func isDeniedPostApplyContextExpansionCommand(command string) bool {
 func isDeniedPostApplyRefreshCommand(command string) bool {
 	normalized := normalizeToolEvidenceCommand(command)
 	return strings.Contains(normalized, "novelgen tool refresh chapter-dsl")
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

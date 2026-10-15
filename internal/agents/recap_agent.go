@@ -165,15 +165,12 @@ func (a *RecapAgent) extractWithFeedback(ctx context.Context, chapterID, title s
 
 	var lastErr error
 	for i := 0; i < attempts; i++ {
-		curFeedback := strings.TrimSpace(feedback)
 		if i == 1 {
 			// Second pass: inject deterministic reasons as "must address" feedback.
 			if ok, reasons := recap.ValidateMinimal(&output.Recap); !ok {
-				curFeedback = strings.Join(reasons, "; ")
-				input.Feedback = curFeedback
+				input.Feedback = strings.Join(reasons, "; ")
 			} else if ok, reasons := recap.ValidateConsistency(&output.Recap); !ok {
-				curFeedback = strings.Join(reasons, "; ")
-				input.Feedback = curFeedback
+				input.Feedback = strings.Join(reasons, "; ")
 			}
 		}
 

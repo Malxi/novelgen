@@ -263,7 +263,7 @@ func (a *BaseAgent) invokeAIWithRuntimeResult(ctx context.Context, params Invoke
 		}, result, nil
 	}
 	if params.RequireSDK {
-		return nil, nil, fmt.Errorf("Claude Agent SDK runtime is required for this workflow")
+		return nil, nil, fmt.Errorf("the Claude Agent SDK runtime is required for this workflow")
 	}
 	if a.client == nil {
 		return nil, nil, fmt.Errorf("no LLM client or agent runtime configured")
@@ -275,11 +275,11 @@ func (a *BaseAgent) invokeAIWithRuntimeResult(ctx context.Context, params Invoke
 func loadRequiredAgentRuntime() (agentruntime.Runtime, error) {
 	cfg, err := agentruntime.LoadConfig()
 	if err != nil {
-		return nil, fmt.Errorf("Claude Agent SDK runtime is required for this workflow: %w", err)
+		return nil, fmt.Errorf("the Claude Agent SDK runtime is required for this workflow: %w", err)
 	}
 	runtime, err := cfg.NewRuntime("")
 	if err != nil {
-		return nil, fmt.Errorf("Claude Agent SDK runtime is required for this workflow: %w", err)
+		return nil, fmt.Errorf("the Claude Agent SDK runtime is required for this workflow: %w", err)
 	}
 	return runtime, nil
 }
@@ -318,9 +318,9 @@ func resolveRuntime(projectLLM *models.ProjectLLM, provided agentruntime.Runtime
 	}
 	provider := ""
 	if projectLLM != nil {
-		provider = strings.TrimSpace(strings.ToLower(projectLLM.Provider))
+		provider = projectLLM.Provider
 	}
-	if provider != "claude" && provider != "claude_sdk" && provider != "agent" {
+	if !models.IsAgentSDKProvider(provider) {
 		return nil
 	}
 	cfg, err := agentruntime.LoadConfig()

@@ -25,11 +25,11 @@ import (
 	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
 	"novelgen/internal/toolplane"
+	"novelgen/internal/utils"
 	"novelgen/internal/workerpool"
 )
 
 var (
-	composeIDFlag                string
 	composePromptFlag            string
 	composeReviewFocusFlag       string
 	composeReviewMatrixFlag      bool
@@ -66,6 +66,7 @@ var (
 	composePipelineSkipGen       bool
 	composePipelineSkipImprove   bool
 	composePipelineSkipCross     bool
+	composeNormalizeForceFlag    bool
 )
 
 var composeCmd = &cobra.Command{
@@ -228,6 +229,7 @@ Examples:
 func init() {
 	composeCheckCmd.Flags().BoolVar(&composeCheckJSONFlag, "json", false, "Output results as JSON")
 	composeCheckCmd.Flags().StringVar(&composeCheckSuggestionsOut, "suggestions-out", "", "Write deterministic check suggestions as a ReviewResult JSON report to this path")
+	composeNormalizeCmd.Flags().BoolVar(&composeNormalizeForceFlag, "force", false, "Rewrite the outline JSON and derived markdown even when no normalization change is needed")
 	composeCmd.AddCommand(composeGenCmd)
 	composeCmd.AddCommand(composeRegenCmd)
 	composeCmd.AddCommand(composeImproveCmd)
@@ -835,7 +837,7 @@ func resumeProgressMatchesRun(progressPath string, outline *models.Outline, maxR
 	if err := json.Unmarshal(data, &progress); err != nil {
 		return false
 	}
-	if progress.Iteration < 1 || progress.Iteration > maxInt(1, maxRounds) {
+	if progress.Iteration < 1 || progress.Iteration > utils.MaxInt(1, maxRounds) {
 		return false
 	}
 	targets := make(map[string]bool, len(progress.TargetVolumes))
@@ -861,13 +863,6 @@ func outlineVolumeCount(outline *models.Outline) int {
 		count += len(part.Volumes)
 	}
 	return count
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 func loadComposeImproveReportEntries(path string) ([]agents.ComposeImproveReportEntry, error) {
@@ -1579,7 +1574,7 @@ func runComposeNormalize(cmd *cobra.Command, args []string) error {
 	}
 
 	report := models.NormalizeOutline(outline)
-	if !report.Changed() {
+	if !report.Changed() && !composeNormalizeForceFlag {
 		fmt.Println("[ok] Outline already normalized")
 		return nil
 	}
@@ -1610,7 +1605,11 @@ func runComposeNormalize(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to write normalization report: %w", err)
 	}
 
-	fmt.Printf("[ok] Applied %d deterministic outline cleanup(s)\n", len(report.Changes))
+	if report.Changed() {
+		fmt.Printf("[ok] Applied %d deterministic outline cleanup(s)\n", len(report.Changes))
+	} else {
+		fmt.Println("[ok] Outline already normalized; rewrote derived files (--force)")
+	}
 	fmt.Printf("[ok] Updated %s and %s\n", outlinePath, mdPath)
 	fmt.Printf("[ok] Report saved to %s\n", reportPath)
 	return nil
@@ -2981,7 +2980,7 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 		repairReview := quality.QualityGateMediumReviewResult("Post-check medium-or-higher issues for Agent SDK targeted repair.", gate)
 		repairReview = filterAgentSDKReviewForPromptBoundary(repairReview, improvedOutline, userPrompt, "post-check repair pass")
 		if len(repairReview.Suggestions) > 0 && maxIterations > 0 {
-			repairBatch := LimitReviewSuggestionsForAgentSDKRepair(repairReview, composeRepairBudgetFlag)
+			repairBatch := quality.LimitReviewSuggestionsForAgentSDKRepair(repairReview, composeRepairBudgetFlag)
 			logger.Info("Quality/simulation gate found %d targetable medium-or-higher issue(s), running Agent SDK repair pass on %d issue(s)", len(repairReview.Suggestions), len(repairBatch.Suggestions))
 			repairOutput, repairErr := repairAgentSDKWithTransientRetry(func() (*models.Outline, error) {
 				return agent.RepairByReviewAgentSDK(ctx, improvedOutline, repairBatch, setup, agentApply, crossOutline, composeCrossVolumeAllFlag)
@@ -3071,48 +3070,6 @@ func collectAgentSDKRepairBoundaryChapterIDs(outline *models.Outline, userPrompt
 		}
 	}
 	return ids
-}
-
-func LimitReviewSuggestionsForAgentSDKRepair(review *models.ReviewResult, limit int) *models.ReviewResult {
-	if review == nil {
-		return nil
-	}
-	if limit <= 0 || len(review.Suggestions) <= limit {
-		return review
-	}
-	limited := *review
-	limited.Suggestions = append([]models.ReviewSuggestion(nil), review.Suggestions...)
-	sort.SliceStable(limited.Suggestions, func(i, j int) bool {
-		left := reviewSuggestionPriorityRank(limited.Suggestions[i].Priority)
-		right := reviewSuggestionPriorityRank(limited.Suggestions[j].Priority)
-		if left != right {
-			return left < right
-		}
-		leftTarget := strings.TrimSpace(limited.Suggestions[i].TargetID)
-		rightTarget := strings.TrimSpace(limited.Suggestions[j].TargetID)
-		if leftTarget != rightTarget {
-			return leftTarget < rightTarget
-		}
-		return strings.TrimSpace(limited.Suggestions[i].Category) < strings.TrimSpace(limited.Suggestions[j].Category)
-	})
-	limited.Suggestions = limited.Suggestions[:limit]
-	limited.Summary = fmt.Sprintf("%s Repairing the first %d of %d targetable issues in this pass.", strings.TrimSpace(review.Summary), limit, len(review.Suggestions))
-	return &limited
-}
-
-func reviewSuggestionPriorityRank(priority string) int {
-	switch strings.ToLower(strings.TrimSpace(priority)) {
-	case models.PriorityCritical:
-		return 0
-	case models.PriorityHigh:
-		return 1
-	case models.PriorityMedium:
-		return 2
-	case models.PriorityLow:
-		return 3
-	default:
-		return 4
-	}
 }
 
 func outlinesSemanticallyEqual(left, right *models.Outline) bool {

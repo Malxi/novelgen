@@ -3,8 +3,8 @@ package rpg
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"novelgen/internal/models"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -127,14 +127,14 @@ func LoadNovelgenProject(projectPath, bookName string) (*NovelgenProject, error)
 
 	// 加载大纲
 	orgPath := filepath.Join(storyPath, "craft", "organizations.json")
-	if data, err := ioutil.ReadFile(orgPath); err == nil {
+	if data, err := os.ReadFile(orgPath); err == nil {
 		if err := json.Unmarshal(data, &project.Organizations); err != nil {
 			return nil, fmt.Errorf("failed to parse organizations: %v", err)
 		}
 	}
 
 	outlinePath := filepath.Join(storyPath, "compose", "outline.json")
-	outlineData, err := ioutil.ReadFile(outlinePath)
+	outlineData, err := os.ReadFile(outlinePath)
 	if err != nil {
 		return nil, fmt.Errorf("读取大纲失败: %v", err)
 	}
@@ -147,7 +147,7 @@ func LoadNovelgenProject(projectPath, bookName string) (*NovelgenProject, error)
 
 // loadJSON 加载JSON文件
 func (np *NovelgenProject) loadJSON(path string, v interface{}) error {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -507,5 +507,5 @@ func (np *NovelgenProject) ExportRPGData(outputPath string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(outputPath, jsonData, 0644)
+	return os.WriteFile(outputPath, jsonData, 0644)
 }

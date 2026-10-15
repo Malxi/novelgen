@@ -1215,7 +1215,6 @@ func (na *NovelgenAdapter) convertOutlineToStoryline(dsl *DSL) error {
 							}},
 						},
 					})
-					stepNum++
 				}
 
 				if len(objective.Steps) > 0 {

@@ -1,9 +1,6 @@
 package agents
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
 	"path/filepath"
 
 	"novelgen/internal/models"
@@ -136,32 +133,4 @@ func (a *NovelgenProjectAdapter) GetLocations() map[string]models.Location {
 // GetOutline returns the story outline
 func (a *NovelgenProjectAdapter) GetOutline() *rpg.StoryOutline {
 	return &a.project.Outline
-}
-
-// FindChapterRecaps returns all chapter recap file paths
-func (a *NovelgenProjectAdapter) FindChapterRecaps() ([]string, error) {
-	recapsDir := filepath.Join("books", a.project.BookName, "story", "recaps")
-	
-	pattern := filepath.Join(recapsDir, "P*.json")
-	files, err := filepath.Glob(pattern)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find chapter recaps: %w", err)
-	}
-
-	return files, nil
-}
-
-// LoadChapterRecap loads a single chapter recap
-func (a *NovelgenProjectAdapter) LoadChapterRecap(filePath string) (*ChapterData, error) {
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
-	var chapter ChapterData
-	if err := json.Unmarshal(content, &chapter); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON: %w", err)
-	}
-
-	return &chapter, nil
 }

@@ -71,34 +71,26 @@ func EmitChapterRPGDSLForProject(
 	batchSize int,
 	targetChapterIDs ...string,
 ) (WriteRPGDSLResult, error) {
-	result := WriteRPGDSLResult{}
-	if batchSize <= 0 {
-		batchSize = 10
-	}
-
 	outline, err := project.LoadOutline()
 	if err != nil {
-		return result, err
+		return WriteRPGDSLResult{}, err
 	}
 	chapterInputs, err := FindProjectChapterInputs(projectRoot, outline)
 	if err != nil {
-		return result, err
+		return WriteRPGDSLResult{}, err
 	}
 	targetSet := WriteRPGDSLTargetChapterSet(targetChapterIDs)
 	if len(targetSet) > 0 {
 		chapterInputs = FilterWriteRPGDSLChapterInputs(chapterInputs, targetSet)
 	}
 	if len(chapterInputs) == 0 {
-		return result, fmt.Errorf("no chapter markdown files found under %s", filepath.Join(projectRoot, "chapters"))
+		return WriteRPGDSLResult{}, fmt.Errorf("no chapter markdown files found under %s", filepath.Join(projectRoot, "chapters"))
 	}
-	SortRPGDSLChapterInputs(chapterInputs)
 
 	characters, locations, _, _, err := project.LoadAllElements()
 	if err != nil {
-		return result, err
+		return WriteRPGDSLResult{}, err
 	}
-	characterValues := DerefCharacterMap(characters)
-	locationValues := DerefLocationMap(locations)
 
 	agent := agents.NewChapterToDSLAgent(client, llmConfig, &projectConfig.LLM, setup)
 	agent.SetLanguage(projectConfig.Language)
@@ -106,77 +98,21 @@ func EmitChapterRPGDSLForProject(
 
 	rpgDir := filepath.Join(projectRoot, "story", "rpg")
 	cacheDir := filepath.Join(rpgDir, "cache", "chapter_batches")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return result, err
-	}
 	outputPath := filepath.Join(rpgDir, "04_chapters.rpg")
 
-	combined := &rpgdsl.DSL{
-		Metadata:   &rpgdsl.Metadata{},
-		World:      &rpgdsl.World{},
-		Characters: &rpgdsl.Characters{},
-		Storyline:  &rpgdsl.Storyline{},
-		Systems:    &rpgdsl.Systems{},
-	}
-	if len(targetSet) > 0 {
-		if existing, err := LoadWriteRPGDSLExisting(outputPath); err == nil {
-			combined = existing
-			RemoveWriteRPGDSLChapters(combined, targetSet)
-		} else if !os.IsNotExist(err) {
-			logger.Warn("Ignoring existing chapter RPG DSL during targeted refresh: %v", err)
-		}
-	}
-
-	for batchIndex, batch := range SplitRPGDSLBatchInputs(chapterInputs, batchSize) {
-		manifest, err := BuildWriteRPGDSLBatchManifest(bookName, batchIndex*batchSize, batchSize, batch, cacheDir)
-		if err != nil {
-			return result, err
-		}
-		result.BatchCount++
-
-		dslContent, reused, err := LoadWriteRPGDSLBatchFromCache(manifest)
-		if err != nil {
-			return result, err
-		}
-		if reused {
-			result.ReusedBatches++
-			logger.Info("RPG DSL batch cache reused: %s -> %s (%d chapters)", manifest.Chapters[0].ChapterID, manifest.Chapters[len(manifest.Chapters)-1].ChapterID, len(manifest.Chapters))
-		} else {
-			result.GeneratedBatches++
-			logger.Info("RPG DSL AI conversion batch: %s -> %s (%d chapters)", manifest.Chapters[0].ChapterID, manifest.Chapters[len(manifest.Chapters)-1].ChapterID, len(manifest.Chapters))
-			chapterData, err := LoadWriteRPGDSLChapterData(batch)
-			if err != nil {
-				return result, err
-			}
-			dslContent, err = agent.ConvertChapterData(ctx, bookName, characterValues, locationValues, chapterData)
-			if err != nil {
-				return result, fmt.Errorf("AI chapter -> RPG DSL failed for batch %d: %w", batchIndex+1, err)
-			}
-			dslContent, err = EnsureWriteRPGDSLParseable(ctx, agent, bookName, dslContent)
-			if err != nil {
-				return result, fmt.Errorf("RPG DSL parse/repair failed for batch %d: %w", batchIndex+1, err)
-			}
-		}
-
-		parsed, err := rpgdsl.NewParser(dslContent).Parse()
-		if err != nil {
-			return result, fmt.Errorf("failed to parse RPG DSL batch cache %d: %w", batchIndex+1, err)
-		}
-		dslContent, parsed, err = EnsureWriteRPGDSLManifestChapters(dslContent, parsed, manifest)
-		if err != nil {
-			return result, fmt.Errorf("RPG DSL batch %d missing manifest chapters: %w", batchIndex+1, err)
-		}
-		NormalizeWriteRPGDSLChapterIDs(parsed, manifest)
-		EnrichWriteRPGDSLCombatSignals(parsed)
-		normalizedContent := parsed.String()
-		if !reused || normalizedContent != dslContent {
-			dslContent = normalizedContent
-			if err := SaveWriteRPGDSLBatchToCache(manifest, dslContent); err != nil {
-				return result, err
-			}
-			logger.Info("RPG DSL batch output: %s", manifest.DSLFile)
-		}
-		MergeWriteRPGDSL(combined, parsed)
+	result, combined, err := EmitWriteRPGDSL(ctx, WriteRPGDSLEmitInput{
+		BookName:         bookName,
+		CacheDir:         cacheDir,
+		Chapters:         chapterInputs,
+		BatchSize:        batchSize,
+		Agent:            agent,
+		Characters:       DerefCharacterMap(characters),
+		Locations:        DerefLocationMap(locations),
+		ExistingDSLPath:  outputPath,
+		TargetChapterIDs: targetChapterIDs,
+	})
+	if err != nil {
+		return result, err
 	}
 
 	if err := os.WriteFile(outputPath, []byte(combined.String()), 0644); err != nil {
@@ -189,7 +125,6 @@ func EmitChapterRPGDSLForProject(
 
 	result.DSLPath = outputPath
 	result.CacheDir = cacheDir
-	result.ChapterCount = len(chapterInputs)
 	return result, nil
 }
 
@@ -486,6 +421,11 @@ func LoadWriteRPGDSLBatchFromCache(expected *WriteRPGDSLBatchManifest) (string, 
 }
 
 func SaveWriteRPGDSLBatchToCache(manifest *WriteRPGDSLBatchManifest, content string) error {
+	if dir := filepath.Dir(manifest.DSLFile); dir != "" {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
 	if err := os.WriteFile(manifest.DSLFile, []byte(content), 0644); err != nil {
 		return err
 	}

@@ -7,59 +7,97 @@ import (
 	"testing"
 )
 
-func TestSyncDerivedFileAfterSaveWritesOutlineMarkdown(t *testing.T) {
+// TestMain doubles as a fake novelgen CLI: when WEBUI_FAKE_NOVELGEN is set the
+// test binary records the arguments it was called with and exits, which lets the
+// tests assert the exact CLI invocation without shipping a stub binary.
+func TestMain(m *testing.M) {
+	if os.Getenv("WEBUI_FAKE_NOVELGEN") == "1" {
+		runFakeNovelGen()
+		return
+	}
+	os.Exit(m.Run())
+}
+
+func runFakeNovelGen() {
+	if path := os.Getenv("WEBUI_FAKE_NOVELGEN_ARGS"); path != "" {
+		_ = os.WriteFile(path, []byte(strings.Join(os.Args[1:], " ")), 0644)
+	}
+	if path := os.Getenv("WEBUI_FAKE_NOVELGEN_MD"); path != "" {
+		_ = os.WriteFile(path, []byte("# Story Outline\n"), 0644)
+	}
+	os.Exit(0)
+}
+
+func TestSyncDerivedFileAfterSaveRoutesThroughCLI(t *testing.T) {
 	root := t.TempDir()
 	outlineDir := filepath.Join(root, "story", "compose")
 	if err := os.MkdirAll(outlineDir, 0755); err != nil {
 		t.Fatalf("mkdir outline dir: %v", err)
 	}
 
-	outlinePath := filepath.Join(outlineDir, "outline.json")
-	outlineJSON := `{
-  "parts": [
-    {
-      "id": "P1",
-      "title": "第一部",
-      "summary": "测试部",
-      "volumes": [
-        {
-          "id": "P1-V1",
-          "title": "第一卷",
-          "summary": "测试卷",
-          "chapters": [
-            {
-              "id": "P1-V1-C1",
-              "title": "第一章",
-              "summary": "测试章",
-              "characters": ["白烬"],
-              "location": "青岚宗",
-              "events": [],
-              "conflict": "测试冲突",
-              "pacing": "fast"
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}`
-	if err := os.WriteFile(outlinePath, []byte(outlineJSON), 0644); err != nil {
-		t.Fatalf("write outline json: %v", err)
-	}
+	argsPath := filepath.Join(root, "invocation.txt")
+	markdownPath := filepath.Join(outlineDir, "outline.md")
+	t.Setenv("NOVELGEN_BIN", executableForTest(t))
+	t.Setenv("WEBUI_FAKE_NOVELGEN", "1")
+	t.Setenv("WEBUI_FAKE_NOVELGEN_ARGS", argsPath)
+	t.Setenv("WEBUI_FAKE_NOVELGEN_MD", markdownPath)
 
-	if err := syncDerivedFileAfterSave("story/compose/outline.json", outlinePath); err != nil {
+	if err := syncDerivedFileAfterSave(root, "story/compose/outline.json"); err != nil {
 		t.Fatalf("sync derived file: %v", err)
 	}
 
-	markdown, err := os.ReadFile(filepath.Join(outlineDir, "outline.md"))
+	args, err := os.ReadFile(argsPath)
 	if err != nil {
-		t.Fatalf("read outline markdown: %v", err)
+		t.Fatalf("read recorded invocation: %v", err)
+	}
+	if got, want := strings.TrimSpace(string(args)), "compose normalize --force"; got != want {
+		t.Fatalf("CLI invocation = %q, want %q", got, want)
 	}
 
-	text := string(markdown)
-	for _, want := range []string{"# Story Outline", "## 第一部", "### 第一卷", "#### 第一章"} {
-		if !strings.Contains(text, want) {
-			t.Fatalf("outline markdown missing %q:\n%s", want, text)
-		}
+	if _, err := os.Stat(markdownPath); err != nil {
+		t.Fatalf("derived markdown should be produced by the CLI: %v", err)
 	}
+}
+
+func TestSyncDerivedFileAfterSaveIgnoresOtherPaths(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("NOVELGEN_BIN", filepath.Join(root, "must-not-run"))
+
+	if err := syncDerivedFileAfterSave(root, "story/setup/story_setup.json"); err != nil {
+		t.Fatalf("non-outline paths need no derived sync: %v", err)
+	}
+}
+
+func TestSyncDerivedFileAfterSaveSurfacesCLIFailure(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("NOVELGEN_BIN", filepath.Join(root, "missing-novelgen"))
+
+	if err := syncDerivedFileAfterSave(root, "story/compose/outline.json"); err == nil {
+		t.Fatal("expected an error when the CLI is unavailable")
+	}
+	if _, err := os.Stat(filepath.Join(root, "story", "compose", "outline.md")); err == nil {
+		t.Fatal("webui must not write derived files itself")
+	}
+}
+
+func TestNovelGenNormalizeCommandUsesProjectDir(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("NOVELGEN_BIN", executableForTest(t))
+
+	cmd := novelGenNormalizeCommand(root)
+	if got, want := strings.Join(cmd.Args[1:], " "), "compose normalize --force"; got != want {
+		t.Fatalf("args = %q, want %q", got, want)
+	}
+	if cmd.Dir != root {
+		t.Fatalf("cmd.Dir = %q, want %q", cmd.Dir, root)
+	}
+}
+
+func executableForTest(t *testing.T) string {
+	t.Helper()
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatalf("os.Executable: %v", err)
+	}
+	return exe
 }

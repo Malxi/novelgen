@@ -1,4 +1,4 @@
-package cmd
+package writersdl_test
 
 import (
 	"os"

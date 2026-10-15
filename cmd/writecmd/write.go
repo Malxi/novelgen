@@ -3,11 +3,9 @@ package writecmd
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -24,39 +22,12 @@ import (
 	"novelgen/internal/reviewstore"
 	"novelgen/internal/rpg/dsl"
 	"novelgen/internal/toolplane"
-	"novelgen/internal/utils"
 	"novelgen/internal/workerpool"
+	"novelgen/internal/writepipe"
 	"novelgen/internal/writersdl"
 
 	"github.com/spf13/cobra"
 )
-
-type WriteErrorCollector struct {
-	mu   sync.Mutex
-	errs []error
-}
-
-func (c *WriteErrorCollector) Add(err error) {
-	if err == nil {
-		return
-	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.errs = append(c.errs, err)
-}
-
-func (c *WriteErrorCollector) Addf(format string, args ...interface{}) {
-	c.Add(fmt.Errorf(format, args...))
-}
-
-func (c *WriteErrorCollector) Err() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if len(c.errs) == 0 {
-		return nil
-	}
-	return errors.Join(c.errs...)
-}
 
 func validateWriteMinScoreFlag() error {
 	if writeMinScoreFlag < 0 || writeMinScoreFlag > 100 {
@@ -371,7 +342,7 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	// Create lightweight best-of scorer (used only when --best-of is enabled)
 	scorer := agents.NewChapterScorerAgent(client, cfg, &config.LLM)
 	scorer.SetLanguage(config.Language)
-	var errc WriteErrorCollector
+	var errc writepipe.WriteErrorCollector
 
 	// Get list of chapters to generate
 	chapters, err := project.SelectChapters(outline, writeChapterFlag, writeVolumeFlag, writePartFlag, writeAllFlag)
@@ -406,7 +377,7 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 		log.Info("[Worker %d] Generating content for chapter: %s - %s", workerID, chapter.ID, chapter.Title)
 
 		// Load context drafts (previous and next chapters)
-		context := LoadChapterContext(outline, chapter, writeContextFlag)
+		context := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
 
 		// Calculate chapter continuity
 		continuity := continuityBuilder.BuildBefore(outline, chapter)
@@ -429,10 +400,10 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 			content = savedContent
 		}
 		if writeAgentSDKFlag {
-			if result, err := RunAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords); err != nil {
+			if result, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords); err != nil {
 				log.Warn("[Worker %d] Agent SDK post-save check failed for %s: %v", workerID, chapter.ID, err)
 			} else {
-				LogAgentSDKChapterPostSaveCheck(log, workerID, chapter.ID, result)
+				writepipe.LogAgentSDKChapterPostSaveCheck(log, workerID, chapter.ID, result)
 				if result.Blocking {
 					log.Warn("[Worker %d] Agent SDK generated chapter %s still has blocking post-save issues; attempting one validated agent repair", workerID, chapter.ID)
 					repaired, repairedCheck, repairErr := repairAgentSDKGeneratedChapterPostSave(ctx, log, workerID, agent, chapter, context, continuity, targetWords, content, result, writeAgentHistoryFlag)
@@ -442,7 +413,7 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 						return struct{}{}, nil
 					}
 					content = repaired
-					LogAgentSDKChapterPostSaveCheck(log, workerID, chapter.ID, repairedCheck)
+					writepipe.LogAgentSDKChapterPostSaveCheck(log, workerID, chapter.ID, repairedCheck)
 					if repairedCheck != nil && repairedCheck.Blocking {
 						errc.Addf("%s: post-save repair still has blocking issues", chapter.ID)
 						return struct{}{}, nil
@@ -452,11 +423,11 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 		}
 
 		// Auto-extract + persist recap for this final chapter (best-effort)
-		if err := ExtractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, content, workerID, writeRecapAgentSDKFlag); err != nil {
+		if err := writepipe.ExtractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, content, workerID, writeRecapAgentSDKFlag); err != nil {
 			log.Warn("[Worker %d] Recap gate failed for %s: %v", workerID, chapter.ID, err)
 		}
 
-		log.Info("[Worker %d] Content saved for chapter %s: %d narrative units", workerID, chapter.ID, chapterNarrativeUnitsForLog(chapter, content))
+		log.Info("[Worker %d] Content saved for chapter %s: %d narrative units", workerID, chapter.ID, writepipe.ChapterNarrativeUnitsForLog(chapter, content))
 		return struct{}{}, nil
 	})
 
@@ -626,265 +597,8 @@ func BuildChapterScoreInput(chapter *models.Chapter, content string, context *ag
 	return input
 }
 
-// loadChapterContent loads chapter content, preferring final version over draft
-func loadChapterContent(chapterID string) string {
-	// Try to load final chapter first
-	root, err := project.FindRoot()
-	if err != nil {
-		return project.LoadDraftContent(chapterID)
-	}
-
-	// Check for final chapter. Prefer full chapter IDs, but keep the old
-	// numeric filename as a compatibility fallback for existing projects.
-	for _, finalPath := range []string{
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapterID)),
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", utils.ExtractChapterNumber(chapterID))),
-	} {
-		if data, err := os.ReadFile(finalPath); err == nil {
-			return string(data)
-		}
-	}
-
-	// Fallback to draft
-	return project.LoadDraftContent(chapterID)
-}
-
-// LoadChapterContext loads surrounding chapter content for context
-// Prefers final chapters over drafts when available
-func LoadChapterContext(outline *models.Outline, targetChapter *models.Chapter, contextCount int) *agents.ChapterContext {
-	context := &agents.ChapterContext{
-		Current:  targetChapter,
-		Previous: make([]*agents.ContextChapter, 0),
-		Next:     make([]*agents.ContextChapter, 0),
-		Recap:    "",
-	}
-	if _, _, _, organizations, err := project.LoadAllElements(); err == nil {
-		context.Craft = BuildOrganizationWriteContext(targetChapter, organizations)
-	}
-
-	allChapters := project.AllChapters(outline)
-
-	// Find target chapter index
-	targetIndex := -1
-	for i, ch := range allChapters {
-		if ch.ID == targetChapter.ID {
-			targetIndex = i
-			break
-		}
-	}
-
-	if targetIndex == -1 {
-		return context
-	}
-
-	if recapJSON := novelcont.LoadPreviousRecapJSON(outline, targetChapter); strings.TrimSpace(recapJSON) != "" {
-		context.Recap = recapJSON
-	} else if draftRecap := novelcont.LoadPreviousDraftRecap(outline, targetChapter); strings.TrimSpace(draftRecap) != "" {
-		context.Recap = draftRecap
-	}
-
-	// Load previous chapters (prefer final, fallback to draft, then outline)
-	for i := 1; i <= contextCount; i++ {
-		idx := targetIndex - i
-		if idx >= 0 {
-			ch := allChapters[idx]
-			content := loadChapterContent(ch.ID)
-			// If no final/draft, build from outline
-			if content == "" {
-				content = buildChapterContentFromOutline(ch)
-			}
-			if content != "" {
-				// Ensure there's at least an offline recap persisted for the previous
-				// chapter so later steps (e.g., transition checks / future drafts) can
-				// use it even when generation is out-of-order.
-				if i == 1 && content != "" {
-					novelcont.PersistOfflineRecapIfMissing(ch, content)
-				}
-
-				// Note: Recap extraction is handled separately via recap command
-				context.Previous = append([]*agents.ContextChapter{{
-					Chapter: ch,
-					Content: content,
-				}}, context.Previous...)
-			}
-		}
-	}
-
-	// Load next chapters (prefer final, fallback to draft, then outline)
-	for i := 1; i <= contextCount; i++ {
-		idx := targetIndex + i
-		if idx < len(allChapters) {
-			ch := allChapters[idx]
-			content := loadChapterContent(ch.ID)
-			// If no final/draft, build from outline
-			if content == "" {
-				content = buildChapterContentFromOutline(ch)
-			}
-			if content != "" {
-				context.Next = append(context.Next, &agents.ContextChapter{
-					Chapter: ch,
-					Content: content,
-				})
-			}
-		}
-	}
-
-	return context
-}
-
-func BuildOrganizationWriteContext(chapter *models.Chapter, organizations map[string]*models.Organization) string {
-	if chapter == nil || len(organizations) == 0 {
-		return ""
-	}
-
-	haystackParts := []string{
-		chapter.ID,
-		chapter.Title,
-		chapter.Summary,
-		chapter.Location,
-		chapter.StateAnchor.Location,
-		strings.Join(chapter.Characters, " "),
-		strings.Join(chapter.GetBeats(), " "),
-		chapter.Conflict,
-		chapter.StateChange,
-	}
-	for _, scene := range chapter.Scenes {
-		haystackParts = append(haystackParts, scene.POV, scene.Goal, scene.Location, strings.Join(scene.Characters, " "), strings.Join(scene.Beats, " "))
-	}
-	for _, enemy := range chapter.Enemies {
-		haystackParts = append(haystackParts, enemy.Name, enemy.Faction, enemy.Tier, enemy.BossID, enemy.Status, enemy.Context)
-	}
-	for _, entry := range chapter.ResourceLedger {
-		haystackParts = append(haystackParts, entry.Item, entry.Reason)
-	}
-	for _, advance := range chapter.StorylineAdvances {
-		haystackParts = append(haystackParts, advance.StorylineName, advance.Stage, advance.Change, advance.Consequence, advance.Pressure)
-	}
-	for _, planted := range chapter.Mysteries.Planted {
-		haystackParts = append(haystackParts, planted.ID, planted.Clue)
-	}
-	for _, resolved := range chapter.Mysteries.Resolved {
-		haystackParts = append(haystackParts, resolved.ID, resolved.Resolution)
-	}
-	for _, event := range chapter.Events {
-		haystackParts = append(haystackParts,
-			event.GetActor(),
-			event.GetAction(),
-			event.GetTarget(),
-			event.GetTargetType(),
-			strings.Join(event.Characters, " "),
-			event.Context,
-			event.Details,
-			event.Result,
-		)
-	}
-	haystack := strings.ToLower(strings.Join(haystackParts, " "))
-
-	type organizationMatch struct {
-		id    string
-		org   *models.Organization
-		score int
-	}
-	matches := make([]organizationMatch, 0, len(organizations))
-	for id, org := range organizations {
-		if org == nil {
-			continue
-		}
-		score := 0
-		candidates := []string{id, org.Name, org.Headquarters, org.Leadership}
-		candidates = append(candidates, org.Members...)
-		candidates = append(candidates, org.Allies...)
-		candidates = append(candidates, org.Enemies...)
-		candidates = append(candidates, org.DSLTags...)
-		for _, candidate := range candidates {
-			candidate = strings.TrimSpace(candidate)
-			if candidate != "" && strings.Contains(haystack, strings.ToLower(candidate)) {
-				score++
-			}
-		}
-		if score == 0 {
-			continue
-		}
-		matches = append(matches, organizationMatch{id: id, org: org, score: score})
-	}
-	if len(matches) == 0 {
-		return ""
-	}
-	sort.SliceStable(matches, func(i, j int) bool {
-		if matches[i].score != matches[j].score {
-			return matches[i].score > matches[j].score
-		}
-		return matches[i].id < matches[j].id
-	})
-
-	if len(matches) > 8 {
-		matches = matches[:8]
-	}
-	var sb strings.Builder
-	sb.WriteString("ORGANIZATIONS:\n")
-	for _, match := range matches {
-		org := match.org
-		name := strings.TrimSpace(org.Name)
-		if name == "" {
-			name = match.id
-		}
-		sb.WriteString(fmt.Sprintf("- %s", name))
-		if strings.TrimSpace(org.Type) != "" {
-			sb.WriteString(fmt.Sprintf(" (%s)", strings.TrimSpace(org.Type)))
-		}
-		sb.WriteString(": ")
-		parts := []string{}
-		appendPart := func(label, value string) {
-			value = strings.TrimSpace(value)
-			if value == "" {
-				return
-			}
-			if label == "" {
-				parts = append(parts, value)
-			} else {
-				parts = append(parts, label+"="+value)
-			}
-		}
-		appendPart("", org.Description)
-		appendPart("leadership", org.Leadership)
-		appendPart("headquarters", org.Headquarters)
-		appendPart("goals", strings.Join(org.Goals, " | "))
-		appendPart("resources", strings.Join(org.Resources, " | "))
-		appendPart("allies", strings.Join(org.Allies, " | "))
-		appendPart("enemies", strings.Join(org.Enemies, " | "))
-		appendPart("", org.Significance)
-		sb.WriteString(strings.Join(parts, "; "))
-		sb.WriteString("\n")
-	}
-	return strings.TrimSpace(sb.String())
-}
-
-// buildChapterContentFromOutline builds chapter content from outline data
-// Used as fallback when no draft or final content exists
-func buildChapterContentFromOutline(chapter *models.Chapter) string {
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Chapter: %s\n", chapter.ID))
-	sb.WriteString(fmt.Sprintf("Summary: %s\n", chapter.Summary))
-	if len(chapter.GetBeats()) > 0 {
-		sb.WriteString("Beats:\n")
-		for i, beat := range chapter.GetBeats() {
-			sb.WriteString(fmt.Sprintf("  %d. %s\n", i+1, beat))
-		}
-	}
-	return sb.String()
-}
-
-// SaveFinalChapter saves the generated final chapter content
-func SaveFinalChapter(chapter *models.Chapter, content string) error {
-	return project.SaveFinalChapter(chapter, content)
-}
-
 func FinalChapterContentChanged(chapter *models.Chapter, before, after string) bool {
 	return project.ChapterContentChanged(chapter, before, after)
-}
-
-func chapterNarrativeUnitsForLog(chapter *models.Chapter, content string) int {
-	return project.ChapterNarrativeUnits(chapter, content)
 }
 
 func saveWriteReviewResult(chapter *models.Chapter, review models.ReviewResult) error {
@@ -907,65 +621,6 @@ func saveWriteReviewResult(chapter *models.Chapter, review models.ReviewResult) 
 		return fmt.Errorf("failed to marshal write review: %w", err)
 	}
 	return os.WriteFile(reviewPath, data, 0644)
-}
-
-type recapExtractor interface {
-	Extract(ctx context.Context, chapterID, title string, chapterText string) (*models.ChapterRecap, error)
-	ExtractWithFeedback(ctx context.Context, chapterID, title string, chapterText string, feedback string) (*models.ChapterRecap, error)
-	ExtractWithAgentSDK(ctx context.Context, chapterID, title string, chapterText string) (*models.ChapterRecap, error)
-	ExtractWithFeedbackAgentSDK(ctx context.Context, chapterID, title string, chapterText string, feedback string) (*models.ChapterRecap, error)
-}
-
-func ExtractAndSaveRecapWithGate(ctx context.Context, recapAgent recapExtractor, recapStore *recap.Store, chapter *models.Chapter, content string, workerID int, useAgentSDK bool) error {
-	if recapAgent == nil || recapStore == nil {
-		return fmt.Errorf("recap dependencies are not initialized")
-	}
-	if chapter == nil {
-		return fmt.Errorf("chapter is nil")
-	}
-
-	recapData, err := extractRecap(ctx, recapAgent, chapter.ID, chapter.Title, content, useAgentSDK)
-	if err != nil {
-		return fmt.Errorf("extract recap: %w", err)
-	}
-
-	log := logger.GetLogger()
-	if ok, reasons := recap.ValidateMinimal(recapData); !ok {
-		log.Warn("[Worker %d] Recap minimal validation failed for %s: %v", workerID, chapter.ID, reasons)
-
-		fb := novelcont.RecapGateFeedback(reasons, recapData)
-		recap2, err := extractRecapWithFeedback(ctx, recapAgent, chapter.ID, chapter.Title, content, fb, useAgentSDK)
-		if err != nil {
-			return fmt.Errorf("retry recap extraction: %w", err)
-		}
-		if okR, reasonsR := recap.ValidateMinimal(recap2); !okR {
-			return fmt.Errorf("recap retry still failed minimal validation: %s", strings.Join(reasonsR, "; "))
-		}
-		recapData = recap2
-	}
-
-	if ok, reasons := recap.ValidateConsistency(recapData); !ok {
-		log.Warn("[Worker %d] Recap consistency validation warning for %s: %v", workerID, chapter.ID, reasons)
-	}
-
-	if err := recapStore.Save(recapData); err != nil {
-		return fmt.Errorf("save recap: %w", err)
-	}
-	return nil
-}
-
-func extractRecap(ctx context.Context, recapAgent recapExtractor, chapterID, title, content string, useAgentSDK bool) (*models.ChapterRecap, error) {
-	if useAgentSDK {
-		return recapAgent.ExtractWithAgentSDK(ctx, chapterID, title, content)
-	}
-	return recapAgent.Extract(ctx, chapterID, title, content)
-}
-
-func extractRecapWithFeedback(ctx context.Context, recapAgent recapExtractor, chapterID, title, content, feedback string, useAgentSDK bool) (*models.ChapterRecap, error) {
-	if useAgentSDK {
-		return recapAgent.ExtractWithFeedbackAgentSDK(ctx, chapterID, title, content, feedback)
-	}
-	return recapAgent.ExtractWithFeedback(ctx, chapterID, title, content, feedback)
 }
 
 func loadFinalChapterContentsForVolume(volume *models.Volume) map[string]string {
@@ -1301,9 +956,9 @@ func setupWriteAgentHistoryCutoff(agentHistory bool) {
 }
 
 // improveChaptersWithWriteAgent improves chapters using the write agent
-func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent, recapAgent recapExtractor, recapStore *recap.Store, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, continuityBuilder *logic.ChapterContinuityBuilder, concurrency int, targetWords int, useAgentSDK bool, agentApply bool, useAgentHistory bool) (int, error) {
+func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent, recapAgent writepipe.RecapExtractor, recapStore *recap.Store, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, continuityBuilder *logic.ChapterContinuityBuilder, concurrency int, targetWords int, useAgentSDK bool, agentApply bool, useAgentHistory bool) (int, error) {
 	log := logger.GetLogger()
-	var errc WriteErrorCollector
+	var errc writepipe.WriteErrorCollector
 
 	// Pre-build DSL simulation for enrichment (shared across goroutines)
 	var dslIssues []dsl.SimulationIssue
@@ -1364,25 +1019,25 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 			suggestions += "\n\n## 用户要求\n\n" + writePromptFlag
 		}
 		if useAgentSDK {
-			if checkSuggestions := BuildAgentSDKChapterCheckSuggestions(chapter, targetWords); checkSuggestions != "" {
+			if checkSuggestions := writepipe.BuildAgentSDKChapterCheckSuggestions(chapter, targetWords); checkSuggestions != "" {
 				suggestions += "\n\n" + checkSuggestions
 			}
 		}
 
 		// Load context drafts
-		context := LoadChapterContext(outline, chapter, writeContextFlag)
+		context := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
 
 		// Calculate chapter continuity
 		continuity := continuityBuilder.BuildBefore(outline, chapter)
 
 		// Generate improved content with suggestions
-		content, err := GenerateImprovedChapter(ctx, agent, chapter, context, continuity, targetWords, currentContent, suggestions, useAgentSDK, agentApply, useAgentHistory)
+		content, err := writepipe.GenerateImprovedChapter(ctx, agent, chapter, context, continuity, targetWords, currentContent, suggestions, useAgentSDK, agentApply, useAgentHistory)
 		if err != nil {
 			log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
 			errc.Addf("%s: improve failed: %w", chapter.ID, err)
 			return false, nil
 		}
-		content, agentApplied := ResolveAgentAppliedChapterContent(log, workerID, chapter, currentContent, content, useAgentSDK, agentApply)
+		content, agentApplied := writepipe.ResolveAgentAppliedChapterContent(log, workerID, chapter, currentContent, content, useAgentSDK, agentApply)
 
 		// Apply enabled minimal-change fixers (teleport bridge, character presence)
 		knownChars := project.KnownCharacterNames(outline)
@@ -1396,13 +1051,13 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 			writeTeleportFixFlag,
 			writeBridgeRetriesFlag,
 			func(s string) (string, error) {
-				return GenerateImprovedChapter(ctx, agent, chapter, context, continuity, targetWords, content, s, useAgentSDK, agentApply, useAgentHistory)
+				return writepipe.GenerateImprovedChapter(ctx, agent, chapter, context, continuity, targetWords, content, s, useAgentSDK, agentApply, useAgentHistory)
 			},
 			writeCharacterFixFlag,
 			writeCharacterPatchRetriesFlag,
 			knownChars,
 			func(s string) (string, error) {
-				return GenerateImprovedChapter(ctx, agent, chapter, context, continuity, targetWords, content, s, useAgentSDK, agentApply, useAgentHistory)
+				return writepipe.GenerateImprovedChapter(ctx, agent, chapter, context, continuity, targetWords, content, s, useAgentSDK, agentApply, useAgentHistory)
 			},
 		)
 		content = fixed
@@ -1422,18 +1077,18 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 			return false, nil
 		}
 		if useAgentSDK {
-			postCheck, err := RunAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords)
+			postCheck, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords)
 			if err != nil {
 				log.Warn("[Worker %d] Agent SDK post-save check failed for %s: %v", workerID, chapter.ID, err)
 			} else {
-				LogAgentSDKChapterPostSaveCheck(log, workerID, chapter.ID, postCheck)
+				writepipe.LogAgentSDKChapterPostSaveCheck(log, workerID, chapter.ID, postCheck)
 				AppendAgentSDKPostSaveReviewSuggestions(review, postCheck)
 			}
 		}
 		if savedContent := project.LoadFinalChapterContent(chapter); strings.TrimSpace(savedContent) != "" {
 			content = savedContent
 		}
-		if err := ExtractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, content, workerID, useAgentSDK); err != nil {
+		if err := writepipe.ExtractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, content, workerID, useAgentSDK); err != nil {
 			log.Warn("[Worker %d] Recap refresh failed for improved chapter %s: %v", workerID, chapter.ID, err)
 		} else {
 			log.Info("[Worker %d] Updated recap for improved chapter %s", workerID, chapter.ID)
@@ -1468,25 +1123,6 @@ func fallbackDraftReviewForForcedImprove(chapter *models.Chapter) *agents.DraftR
 	return review
 }
 
-func GenerateImprovedChapter(ctx context.Context, agent *agents.WriteAgent, chapter *models.Chapter, context *agents.ChapterContext, continuity *models.ChapterContinuity, targetWords int, currentContent string, suggestions string, useAgentSDK bool, agentApply bool, useAgentHistory bool, iteration ...int) (string, error) {
-	if useAgentSDK {
-		effectiveTargetWords := EffectiveAgentSDKImproveTargetWords(chapter, targetWords, currentContent, suggestions, useAgentSDK)
-		content, err := agent.GenerateChapterWithSuggestionsAgentSDK(ctx, chapter, context, continuity, effectiveTargetWords, currentContent, suggestions, agentApply, useAgentHistory, iteration...)
-		if err != nil && IsAgentSDKLengthOvershootError(err) {
-			logger.GetLogger().Warn("Agent SDK chapter improvement overshot target length; retrying once with strict minimal-repair length guidance")
-			content, err = agent.GenerateChapterWithSuggestionsAgentSDK(ctx, chapter, context, continuity, effectiveTargetWords, currentContent, AppendAgentSDKLengthRetrySuggestions(suggestions, effectiveTargetWords), agentApply, useAgentHistory, iteration...)
-		}
-		if err != nil {
-			if recovered, ok := RecoverAgentAppliedChapterContentAfterError(chapter, currentContent, effectiveTargetWords, agentApply); ok {
-				logger.GetLogger().Warn("Agent SDK returned an error after applying a chapter patch; recovering saved content for %s and continuing Go validation: %v", chapter.ID, err)
-				return recovered, nil
-			}
-		}
-		return content, err
-	}
-	return agent.GenerateChapterWithSuggestions(ctx, chapter, context, continuity, targetWords, currentContent, suggestions, iteration...)
-}
-
 func repairAgentSDKGeneratedChapterPostSave(ctx context.Context, log logger.LoggerInterface, workerID int, agent *agents.WriteAgent, chapter *models.Chapter, context *agents.ChapterContext, continuity *models.ChapterContinuity, targetWords int, currentContent string, check *toolplane.ToolCheckResult, useAgentHistory bool) (string, *toolplane.ToolCheckResult, error) {
 	if agent == nil {
 		return "", nil, fmt.Errorf("write agent is nil")
@@ -1498,13 +1134,13 @@ func repairAgentSDKGeneratedChapterPostSave(ctx context.Context, log logger.Logg
 		"The just-generated chapter was saved, but deterministic post-save checks still found blocking issues. " +
 		"Repair only the returned check issues. Use validated `tool patch chapter` dry-run and then the matching `--apply --refresh-derived` command. " +
 		"Keep the existing chapter shape and prose volume unless the check issue is explicitly about length.\n\n" +
-		FormatAgentSDKChapterCheckSuggestions(check)
+		writepipe.FormatAgentSDKChapterCheckSuggestions(check)
 
-	repaired, err := GenerateImprovedChapter(ctx, agent, chapter, context, continuity, targetWords, currentContent, suggestions, true, true, useAgentHistory, 1)
+	repaired, err := writepipe.GenerateImprovedChapter(ctx, agent, chapter, context, continuity, targetWords, currentContent, suggestions, true, true, useAgentHistory, 1)
 	if err != nil {
 		return "", nil, err
 	}
-	repaired, agentApplied := ResolveAgentAppliedChapterContent(log, workerID, chapter, currentContent, repaired, true, true)
+	repaired, agentApplied := writepipe.ResolveAgentAppliedChapterContent(log, workerID, chapter, currentContent, repaired, true, true)
 	if !agentApplied {
 		if err := project.SaveFinalChapter(chapter, repaired); err != nil {
 			return "", nil, fmt.Errorf("save repaired final chapter: %w", err)
@@ -1513,204 +1149,11 @@ func repairAgentSDKGeneratedChapterPostSave(ctx context.Context, log logger.Logg
 			repaired = saved
 		}
 	}
-	recheck, err := RunAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords)
+	recheck, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords)
 	if err != nil {
 		return repaired, nil, err
 	}
 	return repaired, recheck, nil
-}
-
-func EffectiveAgentSDKImproveTargetWords(chapter *models.Chapter, targetWords int, currentContent string, suggestions string, useAgentSDK bool) int {
-	if !useAgentSDK || targetWords <= 0 || suggestionsRequestLengthExpansion(suggestions) {
-		return targetWords
-	}
-	currentUnits := chapterNarrativeUnitsForLog(chapter, currentContent)
-	if currentUnits <= 0 {
-		return targetWords
-	}
-	if currentUnits > targetWords {
-		return targetWords
-	}
-	return currentUnits
-}
-
-func suggestionsRequestLengthExpansion(suggestions string) bool {
-	text := strings.ToLower(strings.TrimSpace(suggestions))
-	if text == "" {
-		return false
-	}
-	for _, marker := range []string{
-		"too little content",
-		"too short",
-		"shortfall",
-		"under target",
-		"length",
-		"word count",
-		"字数",
-		"篇幅",
-		"过短",
-		"太短",
-		"不足",
-		"扩写",
-		"补足",
-	} {
-		if strings.Contains(text, marker) {
-			return true
-		}
-	}
-	return false
-}
-
-func RecoverAgentAppliedChapterContentAfterError(chapter *models.Chapter, previousContent string, targetWords int, agentApply bool) (string, bool) {
-	if !agentApply || chapter == nil {
-		return "", false
-	}
-	saved := project.LoadFinalChapterContent(chapter)
-	if strings.TrimSpace(saved) == "" || strings.TrimSpace(saved) == strings.TrimSpace(previousContent) {
-		return "", false
-	}
-	if err := validateRecoveredAgentSDKChapterLength(chapter, saved, targetWords); err != nil {
-		logger.GetLogger().Warn("Agent SDK saved content exists but is not recoverable: %v", err)
-		return "", false
-	}
-	return saved, true
-}
-
-func validateRecoveredAgentSDKChapterLength(chapter *models.Chapter, content string, targetWords int) error {
-	if targetWords <= 0 {
-		return nil
-	}
-	count := toolplane.ToolNarrativeUnitCount(content)
-	hardMax := int(float64(targetWords) * 1.35)
-	if targetWords+300 > hardMax {
-		hardMax = targetWords + 300
-	}
-	if count > hardMax {
-		chapterID := ""
-		if chapter != nil {
-			chapterID = chapter.ID
-		}
-		return fmt.Errorf("saved agent patch is too long for chapter %s: got %d narrative units, target %d, hard max %d", chapterID, count, targetWords, hardMax)
-	}
-	return nil
-}
-
-func ResolveAgentAppliedChapterContent(log logger.LoggerInterface, workerID int, chapter *models.Chapter, previousContent, agentContent string, useAgentSDK, agentApply bool) (string, bool) {
-	if !useAgentSDK || !agentApply || chapter == nil {
-		return agentContent, false
-	}
-	saved := project.LoadFinalChapterContent(chapter)
-	if strings.TrimSpace(saved) == "" || strings.TrimSpace(saved) == strings.TrimSpace(previousContent) {
-		return agentContent, false
-	}
-	if strings.TrimSpace(saved) != strings.TrimSpace(agentContent) {
-		log.Info("[Worker %d] Agent apply changed %s; using saved patch content instead of returned JSON content", workerID, chapter.ID)
-	}
-	return saved, true
-}
-
-func IsAgentSDKLengthOvershootError(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "agent-sdk returned too much content")
-}
-
-func AppendAgentSDKLengthRetrySuggestions(suggestions string, targetWords int) string {
-	var sb strings.Builder
-	sb.WriteString(strings.TrimSpace(suggestions))
-	if sb.Len() > 0 {
-		sb.WriteString("\n\n")
-	}
-	sb.WriteString("## Agent SDK Length Retry\n\n")
-	sb.WriteString("The previous Agent SDK attempt was rejected because it produced too much content. ")
-	sb.WriteString("Retry with minimal repair only: preserve the existing chapter shape, replace only the paragraphs needed to fix the reported check issues, and do not expand the scene list. ")
-	if targetWords > 0 {
-		low := int(float64(targetWords) * 0.9)
-		high := int(float64(targetWords) * 1.1)
-		sb.WriteString(fmt.Sprintf("The returned `content` must be close to %d narrative units, preferably %d-%d, and must not exceed %d. ", targetWords, low, high, int(float64(targetWords)*1.35)))
-	}
-	sb.WriteString("Return only the final JSON object with the revised chapter content.")
-	return sb.String()
-}
-
-func BuildAgentSDKChapterCheckSuggestions(chapter *models.Chapter, targetWords int) string {
-	if chapter == nil || strings.TrimSpace(chapter.ID) == "" {
-		return ""
-	}
-	root, err := project.FindRoot()
-	if err != nil {
-		return fmt.Sprintf("## Agent SDK Chapter Check\n\nCould not run focused chapter check before improvement: %v", err)
-	}
-	result, err := toolplane.RunToolChapterCheckWithTargetWords(root, "all", "chapter", chapter.ID, targetWords)
-	if err != nil {
-		return fmt.Sprintf("## Agent SDK Chapter Check\n\nCould not run focused chapter check before improvement: %v", err)
-	}
-	if err := toolplane.ApplyToolCheckIssueFilters(result, "low", "", 8); err != nil {
-		return fmt.Sprintf("## Agent SDK Chapter Check\n\nCould not filter focused chapter check before improvement: %v", err)
-	}
-	return FormatAgentSDKChapterCheckSuggestions(result)
-}
-
-func FormatAgentSDKChapterCheckSuggestions(result *toolplane.ToolCheckResult) string {
-	if result == nil {
-		return ""
-	}
-	data, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return fmt.Sprintf("## Agent SDK Chapter Check\n\nCould not encode focused chapter check before improvement: %v", err)
-	}
-	return "## Agent SDK Chapter Check\n\n" +
-		"Treat this deterministic `tool check --target chapter` result as the primary repair task list. " +
-		"If an issue contains `navigation.refresh_query`, run it first, then run `navigation.post_refresh_check_query` before deciding whether prose needs repair. " +
-		"Before rewriting, execute each remaining issue's `navigation.repair_route_query` when present; it returns an index-sized route and next_actions. " +
-		"Only execute `navigation.repair_context_query` when the route says detailed facts or excerpts are needed. " +
-		"Do not query full setup, full outline, or full chapter files unless the focused repair context is insufficient.\n\n" +
-		"```json\n" + string(data) + "\n```"
-}
-
-func RunAgentSDKChapterPostSaveCheck(ctx context.Context, chapter *models.Chapter, targetWords int) (*toolplane.ToolCheckResult, error) {
-	if chapter == nil || strings.TrimSpace(chapter.ID) == "" {
-		return nil, fmt.Errorf("chapter is nil or has no ID")
-	}
-	root, err := project.FindRoot()
-	if err != nil {
-		return nil, err
-	}
-	restoreLogger := toolplane.SuppressToolRefreshLogs()
-	_, refreshErr := toolplane.RefreshToolChapterDSL(ctx, root, chapter.ID, toolplane.ToolRefreshFlags.BatchSize)
-	restoreLogger()
-	if refreshErr != nil {
-		return nil, fmt.Errorf("refresh chapter RPG DSL before post-save check: %w", refreshErr)
-	}
-	result, err := toolplane.RunToolChapterCheckWithTargetWords(root, "all", "chapter", chapter.ID, targetWords)
-	if err != nil {
-		return nil, err
-	}
-	if err := toolplane.ApplyToolCheckIssueFilters(result, "low", "", 12); err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-func LogAgentSDKChapterPostSaveCheck(log logger.LoggerInterface, workerID int, chapterID string, result *toolplane.ToolCheckResult) {
-	if result == nil {
-		return
-	}
-	log.Info("[Worker %d] Agent SDK post-save check for %s: ok=%t blocking=%t score=%.0f issues=%d (critical=%d high=%d medium=%d low=%d)",
-		workerID,
-		chapterID,
-		result.OK,
-		result.Blocking,
-		result.Score,
-		result.Summary.Total,
-		result.Summary.Critical,
-		result.Summary.High,
-		result.Summary.Medium,
-		result.Summary.Low,
-	)
-	if result.Blocking {
-		for _, issue := range firstNReviewSuggestions(result.Issues, 3) {
-			log.Warn("[Worker %d] Remaining chapter issue for %s: [%s/%s] %s", workerID, chapterID, issue.Priority, issue.Category, issue.Issue)
-		}
-	}
 }
 
 func AppendAgentSDKPostSaveReviewSuggestions(review *agents.DraftReview, result *toolplane.ToolCheckResult) {
@@ -1756,16 +1199,6 @@ func formatAgentSDKPostSaveIssueSuggestion(kind, target, scope string, issue mod
 		parts = append(parts, "focused_check_query="+check)
 	}
 	return strings.Join(parts, "; ")
-}
-
-func firstNReviewSuggestions(items []models.ReviewSuggestion, n int) []models.ReviewSuggestion {
-	if n < 0 {
-		n = 0
-	}
-	if len(items) <= n {
-		return items
-	}
-	return items[:n]
 }
 
 func GetWriteChaptersNeedingImprovement(review *agents.VolumeReview, outline *models.Outline, minScorePercent int) []*models.Chapter {
@@ -1869,7 +1302,7 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 	// Group chapters by volume for saving reviews
 	volumeReviews := make(map[string]*agents.VolumeReview)
 	volumeContents := make(map[string]map[string]string)
-	var errc WriteErrorCollector
+	var errc writepipe.WriteErrorCollector
 
 	// Review chapters concurrently
 	concurrency := writeConcurrencyFlag
@@ -1900,7 +1333,7 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 		}
 
 		// Load context with recap for continuity checking
-		chapterContext := LoadChapterContext(outline, chapter, writeContextFlag)
+		chapterContext := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
 
 		// Calculate continuity snapshot for continuity checking
 		continuity := continuityBuilder.BuildBefore(outline, chapter)
@@ -2022,7 +1455,7 @@ func getChaptersToReview(outline *models.Outline, chapterFlag, volumeFlag, partF
 	// If volume flag specified, return all chapters in volume
 	if volumeFlag != "" {
 		var chapters []*models.Chapter
-		volumeID := ResolveVolumeID(outline, volumeFlag, partFlag)
+		volumeID := writepipe.ResolveVolumeID(outline, volumeFlag, partFlag)
 		for _, ch := range project.AllChapters(outline) {
 			if strings.HasPrefix(ch.ID, volumeID) {
 				chapters = append(chapters, ch)
@@ -2043,30 +1476,6 @@ func getVolumeIDFromChapter(chapterID string) string {
 		return strings.Join(parts[:2], "-")
 	}
 	return ""
-}
-
-// ResolveVolumeID resolves volume flag to full volume ID
-func ResolveVolumeID(outline *models.Outline, volumeFlag, partFlag string) string {
-	// If already full ID, return as is
-	if strings.Contains(volumeFlag, "-") {
-		return volumeFlag
-	}
-
-	// Try to resolve with part flag
-	partID := partFlag
-	if partID == "" {
-		partID = "P1" // Default to first part
-	}
-	if !strings.HasPrefix(partID, "P") {
-		partID = "P" + partID
-	}
-
-	volumeID := volumeFlag
-	if !strings.HasPrefix(volumeID, "V") {
-		volumeID = "V" + volumeID
-	}
-
-	return partID + "-" + volumeID
 }
 
 // reviewVolumeWithWriteAgent reviews all chapters in a volume using the write agent
@@ -2092,7 +1501,7 @@ func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAge
 		Reviews:     make([]agents.DraftReview, 0),
 	}
 	volumeContents := make(map[string]string)
-	var errc WriteErrorCollector
+	var errc writepipe.WriteErrorCollector
 
 	// Review chapters concurrently
 	if concurrency <= 0 {
@@ -2120,7 +1529,7 @@ func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAge
 		}
 
 		// Load context with recap for continuity checking
-		chapterContext := LoadChapterContext(outline, chapter, writeContextFlag)
+		chapterContext := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
 
 		// Calculate continuity snapshot for continuity checking
 		continuity := continuityBuilder.BuildBefore(outline, chapter)
@@ -2283,7 +1692,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	// before generation would analyze stale or missing chapter files.
 	var rpgDSLIssues []dsl.SimulationIssue
 	knownChars := project.KnownCharacterNames(outline)
-	var errc WriteErrorCollector
+	var errc writepipe.WriteErrorCollector
 
 	// Process each chapter completely before moving to the next
 	for chapterIdx, chapter := range chaptersToProcess {
@@ -2296,7 +1705,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		content := project.LoadFinalChapterContent(chapter)
 		if content == "" {
 			log.Info("Generating chapter: %s - %s", chapter.ID, chapter.Title)
-			chapterContext := LoadChapterContext(outline, chapter, writeContextFlag)
+			chapterContext := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
 			continuity := continuityBuilder.BuildBefore(outline, chapter)
 			generatedContent, err := GenerateChapterContentForRun(ctx, writeAgent, scorer, chapter, chapterContext, continuity, targetWords, WriteBestOfFlag, writeAgentSDKFlag, writeAgentHistoryFlag)
 			if err != nil {
@@ -2320,7 +1729,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 
 		// Step 2: Review chapter
 		log.Info("\n[Step 2/4] Reviewing chapter...")
-		chapterContext := LoadChapterContext(outline, chapter, writeContextFlag)
+		chapterContext := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
 		continuity := continuityBuilder.BuildBefore(outline, chapter)
 		var reviewResult models.ReviewResult
 		var err error
@@ -2431,19 +1840,19 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				suggestions += "\n\n" + chapterRPGIssues
 			}
 			if writeAgentSDKFlag {
-				if checkSuggestions := BuildAgentSDKChapterCheckSuggestions(chapter, targetWords); checkSuggestions != "" {
+				if checkSuggestions := writepipe.BuildAgentSDKChapterCheckSuggestions(chapter, targetWords); checkSuggestions != "" {
 					suggestions += "\n\n" + checkSuggestions
 				}
 			}
-			chapterContext := LoadChapterContext(outline, chapter, writeContextFlag)
+			chapterContext := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
 			continuity := continuityBuilder.BuildBefore(outline, chapter)
-			improvedContent, err := GenerateImprovedChapter(ctx, writeAgent, chapter, chapterContext, continuity, targetWords, currentContent, suggestions, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag, round)
+			improvedContent, err := writepipe.GenerateImprovedChapter(ctx, writeAgent, chapter, chapterContext, continuity, targetWords, currentContent, suggestions, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag, round)
 			if err != nil {
 				log.Error("Failed to improve chapter %s: %v", chapter.ID, err)
 				errc.Addf("%s: improve round %d failed: %w", chapter.ID, round, err)
 				break
 			}
-			improvedContent, agentApplied := ResolveAgentAppliedChapterContent(log, 0, chapter, currentContent, improvedContent, writeAgentSDKFlag, writeAgentApplyFlag)
+			improvedContent, agentApplied := writepipe.ResolveAgentAppliedChapterContent(log, 0, chapter, currentContent, improvedContent, writeAgentSDKFlag, writeAgentApplyFlag)
 
 			fixedContent, sum := novelcont.ApplyImproveFixesWrite(
 				log,
@@ -2455,13 +1864,13 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				writeTeleportFixFlag,
 				writeBridgeRetriesFlag,
 				func(s string) (string, error) {
-					return GenerateImprovedChapter(ctx, writeAgent, chapter, chapterContext, continuity, targetWords, improvedContent, s, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag, round)
+					return writepipe.GenerateImprovedChapter(ctx, writeAgent, chapter, chapterContext, continuity, targetWords, improvedContent, s, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag, round)
 				},
 				writeCharacterFixFlag,
 				writeCharacterPatchRetriesFlag,
 				knownChars,
 				func(s string) (string, error) {
-					return GenerateImprovedChapter(ctx, writeAgent, chapter, chapterContext, continuity, targetWords, improvedContent, s, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag, round)
+					return writepipe.GenerateImprovedChapter(ctx, writeAgent, chapter, chapterContext, continuity, targetWords, improvedContent, s, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag, round)
 				},
 			)
 			improvedContent = fixedContent
@@ -2480,11 +1889,11 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				break
 			}
 			if writeAgentSDKFlag {
-				postCheck, err := RunAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords)
+				postCheck, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords)
 				if err != nil {
 					log.Warn("Agent SDK post-save check failed for %s: %v", chapter.ID, err)
 				} else {
-					LogAgentSDKChapterPostSaveCheck(log, 0, chapter.ID, postCheck)
+					writepipe.LogAgentSDKChapterPostSaveCheck(log, 0, chapter.ID, postCheck)
 					AppendAgentSDKPostSaveReviewSuggestions(chapterReview, postCheck)
 					if err := reviewstore.SaveVolumeReview(volumeReview); err != nil {
 						log.Warn("Failed to save Agent SDK post-save review suggestions for %s: %v", chapter.ID, err)
@@ -2540,7 +1949,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 
 		// Step 4: Generate recap
 		log.Info("\n[Step 4/4] Generating recap...")
-		if err := ExtractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, currentContent, 0, usePipelineRecapAgentSDK); err != nil {
+		if err := writepipe.ExtractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, currentContent, 0, usePipelineRecapAgentSDK); err != nil {
 			log.Error("Failed to generate/save recap for chapter %s: %v", chapter.ID, err)
 			errc.Addf("%s: final recap failed: %w", chapter.ID, err)
 		} else {

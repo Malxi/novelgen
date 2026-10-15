@@ -5,12 +5,10 @@ package rpgllm
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"novelgen/internal/llm"
-	"novelgen/internal/models"
 	"novelgen/internal/rpg"
 )
 
@@ -54,87 +52,6 @@ func (c *NovelgenLLMClient) Complete(prompt string, text string) (string, error)
 func ExtractWithNovelgenClient(client llm.Client, options *llm.ChatOptions, text string) (*rpg.NovelRPGData, error) {
 	extractor := NewNovelgenLLMClient(client, options)
 	return extractor.ExtractFromNovel(text)
-}
-
-// ExtractWithConfig 使用配置文件创建 client 并提取
-func ExtractWithConfig(config *llm.Config, projectLLM *models.ProjectLLM, text string) (*rpg.NovelRPGData, error) {
-	client := config.CreateClient(projectLLM)
-	if client == nil {
-		return nil, fmt.Errorf("failed to create LLM client")
-	}
-
-	options := config.GetChatOptions(projectLLM)
-	return ExtractWithNovelgenClient(client, options, text)
-}
-
-// SimpleExtract 简单提取（使用默认配置）
-func SimpleExtract(text string) (*rpg.NovelRPGData, error) {
-	config, err := llm.LoadOrCreateConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
-	}
-
-	// 使用默认配置
-	defaultProjectLLM := &models.ProjectLLM{
-		Provider: config.DefaultProvider,
-		Model:    config.DefaultModel,
-	}
-
-	return ExtractWithConfig(config, defaultProjectLLM, text)
-}
-
-// LLMExtractResult 结构化的 LLM 提取结果
-type LLMExtractResult struct {
-	Success   bool              `json:"success"`
-	Data      *rpg.NovelRPGData `json:"data,omitempty"`
-	Error     string            `json:"error,omitempty"`
-	TokenUsed int               `json:"token_used"`
-	Model     string            `json:"model"`
-}
-
-// ExtractWithDetails 带详细信息的提取
-func ExtractWithDetails(client llm.Client, options *llm.ChatOptions, text string) (*LLMExtractResult, error) {
-	result := &LLMExtractResult{
-		Success: false,
-	}
-
-	// 记录 token 使用（需要在 client 中实现）
-	messages := []llm.Message{
-		{
-			Role:    "system",
-			Content: rpg.BuildExtractionPrompt(),
-		},
-		{
-			Role:    "user",
-			Content: text,
-		},
-	}
-
-	resp, err := client.ChatCompletion(context.Background(), messages, options)
-	if err != nil {
-		result.Error = err.Error()
-		return result, err
-	}
-
-	result.Model = resp.Model
-	result.TokenUsed = resp.Usage.TotalTokens
-
-	// 解析响应
-	var extractionResult rpg.LLMExtractionResult
-	jsonStr := rpg.ExtractJSON(resp.Content)
-	if err := json.Unmarshal([]byte(jsonStr), &extractionResult); err != nil {
-		result.Error = fmt.Sprintf("failed to parse LLM response: %v", err)
-		return result, err
-	}
-
-	// 转换为 rpg.NovelRPGData
-	extractor := rpg.NewLLMExtractor(&NovelgenLLMClient{client: client, options: options})
-	data := extractor.ConvertToSystemFormat(extractionResult)
-
-	result.Success = true
-	result.Data = data
-
-	return result, nil
 }
 
 // BatchExtract 批量提取多个文本片段
@@ -234,6 +151,12 @@ func ExtractLargeText(client llm.Client, options *llm.ChatOptions, text string, 
 func splitTextIntoChunks(text string, chunkSize int) []string {
 	var chunks []string
 	lines := strings.Split(text, "\n")
+	// A trailing newline produces an empty final element; dropping it keeps the
+	// concatenated chunks equal to the original text instead of appending an
+	// extra blank line.
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
 
 	var currentChunk strings.Builder
 	for _, line := range lines {

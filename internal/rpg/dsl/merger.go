@@ -819,36 +819,6 @@ func (dm *DSLMerger) coalesceSlice(current, new []string) []string {
 	return current
 }
 
-// HasUnfilledPlaceholders checks if there are any unfilled placeholders
-func (dm *DSLMerger) HasUnfilledPlaceholders(result *MergeResult) bool {
-	return len(result.Placeholders) > 0
-}
-
-// GetUnfilledPlaceholdersSummary returns a summary of unfilled placeholders
-func (dm *DSLMerger) GetUnfilledPlaceholdersSummary(result *MergeResult) string {
-	if len(result.Placeholders) == 0 {
-		return "All placeholders filled!"
-	}
-
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Found %d unfilled placeholders:\n\n", len(result.Placeholders)))
-
-	grouped := make(map[string][]PlaceholderInfo)
-	for _, p := range result.Placeholders {
-		grouped[p.Type] = append(grouped[p.Type], p)
-	}
-
-	for typ, placeholders := range grouped {
-		sb.WriteString(fmt.Sprintf("[%s] (%d):\n", typ, len(placeholders)))
-		for _, p := range placeholders {
-			sb.WriteString(fmt.Sprintf("  - %s (id: %s)\n", p.Name, p.ID))
-		}
-		sb.WriteString("\n")
-	}
-
-	return sb.String()
-}
-
 // GeneratePromptForPlaceholders generates AI prompts for unfilled placeholders
 func (dm *DSLMerger) GeneratePromptForPlaceholders(result *MergeResult) string {
 	if len(result.Placeholders) == 0 {

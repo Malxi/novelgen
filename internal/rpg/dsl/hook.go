@@ -55,9 +55,7 @@ func (hm *HookManager) RegisterHooks(systems *Systems) {
 	}
 
 	// Register triggers
-	for _, trigger := range systems.Triggers {
-		hm.triggers = append(hm.triggers, trigger)
-	}
+	hm.triggers = append(hm.triggers, systems.Triggers...)
 }
 
 // OnKill is called when a character kills an enemy

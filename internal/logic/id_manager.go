@@ -297,35 +297,3 @@ func (m *IDManager) GetAllVolumes() []*models.Volume {
 	}
 	return volumes
 }
-
-// GetGlobalChapterNumber returns the global chapter number for a chapter ID
-func (m *IDManager) GetGlobalChapterNumber(chapterID string) int {
-	globalNum := 0
-	for partIdx := range m.outline.Parts {
-		for volIdx := range m.outline.Parts[partIdx].Volumes {
-			for chapIdx := range m.outline.Parts[partIdx].Volumes[volIdx].Chapters {
-				globalNum++
-				expectedID := m.GenerateChapterID(partIdx+1, volIdx+1, chapIdx+1)
-				if m.outline.Parts[partIdx].Volumes[volIdx].Chapters[chapIdx].ID == chapterID || expectedID == chapterID {
-					return globalNum
-				}
-			}
-		}
-	}
-	return -1
-}
-
-// GetGlobalVolumeNumber returns the global volume number for a volume ID
-func (m *IDManager) GetGlobalVolumeNumber(volumeID string) int {
-	globalNum := 0
-	for partIdx := range m.outline.Parts {
-		for volIdx := range m.outline.Parts[partIdx].Volumes {
-			globalNum++
-			expectedID := m.GenerateVolumeID(partIdx+1, volIdx+1)
-			if m.outline.Parts[partIdx].Volumes[volIdx].ID == volumeID || expectedID == volumeID {
-				return globalNum
-			}
-		}
-	}
-	return -1
-}

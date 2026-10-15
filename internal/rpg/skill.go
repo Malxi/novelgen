@@ -104,13 +104,6 @@ type Skill struct {
 	Tags []string `json:"tags,omitempty"`
 }
 
-// 技能实例（角色已学习的技能）
-type SkillInstance struct {
-	SkillID   string `json:"skill_id"`
-	Level     int    `json:"level"`
-	CurrentCD int    `json:"current_cd"` // 当前冷却
-}
-
 // 技能管理器
 type SkillManager struct {
 	skills map[string]*Skill

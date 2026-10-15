@@ -1,4 +1,4 @@
-package cmd
+package writepipe_test
 
 import (
 	"os"
@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"novelgen/cmd/writecmd"
 	"novelgen/internal/models"
+	"novelgen/internal/writepipe"
 )
 
 func TestRecoverAgentAppliedChapterContentAfterErrorUsesSavedPatch(t *testing.T) {
@@ -38,7 +38,7 @@ func TestRecoverAgentAppliedChapterContentAfterErrorUsesSavedPatch(t *testing.T)
 		}
 	}()
 
-	got, ok := writecmd.RecoverAgentAppliedChapterContentAfterError(chapter, previous, 200, true)
+	got, ok := writepipe.RecoverAgentAppliedChapterContentAfterError(chapter, previous, 200, true)
 	if !ok || got != saved {
 		t.Fatalf("recovered = %t content len=%d, want saved len=%d", ok, len(got), len(saved))
 	}
@@ -71,7 +71,7 @@ func TestRecoverAgentAppliedChapterContentAfterErrorRejectsOvershoot(t *testing.
 		}
 	}()
 
-	if got, ok := writecmd.RecoverAgentAppliedChapterContentAfterError(chapter, "# Opening\n\nold draft", 100, true); ok {
+	if got, ok := writepipe.RecoverAgentAppliedChapterContentAfterError(chapter, "# Opening\n\nold draft", 100, true); ok {
 		t.Fatalf("overshoot should not recover, got len=%d", len(got))
 	}
 }
@@ -96,8 +96,8 @@ func TestSaveFinalChapterStripsRepeatedTitleAfterHeading(t *testing.T) {
 
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "第1章：倒计时"}
 	content := "# 第1章：倒计时\n\n第1章：倒计时\n\n李侑醒来时，先闻到潮湿木板的霉味。"
-	if err := writecmd.SaveFinalChapter(chapter, content); err != nil {
-		t.Fatalf("writecmd.SaveFinalChapter() error = %v", err)
+	if err := writepipe.SaveFinalChapter(chapter, content); err != nil {
+		t.Fatalf("writepipe.SaveFinalChapter() error = %v", err)
 	}
 	data, err := os.ReadFile(filepath.Join(root, "chapters", "chapter-P1-V1-C1.md"))
 	if err != nil {
@@ -116,24 +116,24 @@ func TestEffectiveAgentSDKImproveTargetWordsPreservesExistingLengthForFocusedRep
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening"}
 	content := "# Opening\n\n" + strings.Repeat("word ", 1800)
 
-	got := writecmd.EffectiveAgentSDKImproveTargetWords(chapter, 3000, content, "repair one low-priority structure issue", true)
+	got := writepipe.EffectiveAgentSDKImproveTargetWords(chapter, 3000, content, "repair one low-priority structure issue", true)
 	if got != 1800 {
 		t.Fatalf("effective target = %d, want current length 1800", got)
 	}
 
 	shortCurrent := "# Opening\n\n" + strings.Repeat("word ", 1100)
-	got = writecmd.EffectiveAgentSDKImproveTargetWords(chapter, 3000, shortCurrent, "minimum revision: tighten repeated explanation", true)
+	got = writepipe.EffectiveAgentSDKImproveTargetWords(chapter, 3000, shortCurrent, "minimum revision: tighten repeated explanation", true)
 	if got != 1100 {
 		t.Fatalf("short effective target = %d, want current length 1100", got)
 	}
 
 	longCurrent := "# Opening\n\n" + strings.Repeat("word ", 1800)
-	got = writecmd.EffectiveAgentSDKImproveTargetWords(chapter, 1200, longCurrent, "remove formatting artifacts", true)
+	got = writepipe.EffectiveAgentSDKImproveTargetWords(chapter, 1200, longCurrent, "remove formatting artifacts", true)
 	if got != 1200 {
 		t.Fatalf("long effective target = %d, want requested target 1200", got)
 	}
 
-	got = writecmd.EffectiveAgentSDKImproveTargetWords(chapter, 3000, content, "chapter is too short; expand the scene", true)
+	got = writepipe.EffectiveAgentSDKImproveTargetWords(chapter, 3000, content, "chapter is too short; expand the scene", true)
 	if got != 3000 {
 		t.Fatalf("length expansion target = %d, want original target 3000", got)
 	}

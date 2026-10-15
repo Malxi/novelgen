@@ -2,10 +2,7 @@ package agents
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -121,26 +118,6 @@ func (a *ChapterToDSLAgent) SetRequireAI(requireAI bool) {
 	a.requireAI = requireAI
 }
 
-// ConvertChapters converts multiple chapters to DSL format
-func (a *ChapterToDSLAgent) ConvertChapters(ctx context.Context, bookName string, characters map[string]models.Character, locations map[string]models.Location, chapterFiles []string) (string, error) {
-	logger.Section("CHAPTER TO DSL AGENT - Converting Chapters")
-	logger.Info("Book: %s, Chapters: %d", bookName, len(chapterFiles))
-	logger.Info("Language: %s", a.base.language)
-
-	// Load all chapter data
-	var chapters []ChapterData
-	for _, file := range chapterFiles {
-		chapter, err := a.loadChapterFile(file)
-		if err != nil {
-			logger.Warn("Failed to load chapter %s: %v", file, err)
-			continue
-		}
-		chapters = append(chapters, *chapter)
-	}
-
-	return a.ConvertChapterData(ctx, bookName, characters, locations, chapters)
-}
-
 // ConvertChapterData converts already-loaded full chapter data to DSL format.
 func (a *ChapterToDSLAgent) ConvertChapterData(ctx context.Context, bookName string, characters map[string]models.Character, locations map[string]models.Location, chapters []ChapterData) (string, error) {
 	if len(chapters) == 0 {
@@ -189,72 +166,6 @@ func (a *ChapterToDSLAgent) ConvertChapterData(ctx context.Context, bookName str
 	}
 
 	logger.Info("✓ Generated DSL content (%d characters)", len(output.DSLContent))
-
-	return output.DSLContent, nil
-}
-
-// loadChapterFile loads a single chapter recap JSON or chapter markdown file.
-func (a *ChapterToDSLAgent) loadChapterFile(filePath string) (*ChapterData, error) {
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
-	if strings.EqualFold(filepath.Ext(filePath), ".md") {
-		chapterID := strings.TrimSuffix(strings.TrimPrefix(filepath.Base(filePath), "chapter-"), filepath.Ext(filePath))
-		return &ChapterData{
-			ChapterID: chapterID,
-			Title:     firstMarkdownHeading(string(content), chapterID),
-			Content:   string(content),
-		}, nil
-	}
-
-	var chapter ChapterData
-	if err := json.Unmarshal(content, &chapter); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON: %w", err)
-	}
-
-	return &chapter, nil
-}
-
-func firstMarkdownHeading(content, fallback string) string {
-	for _, line := range strings.Split(content, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "#") {
-			return strings.TrimSpace(strings.TrimLeft(line, "#"))
-		}
-	}
-	return fallback
-}
-
-// ConvertSingleChapter converts a single chapter to DSL (for testing)
-func (a *ChapterToDSLAgent) ConvertSingleChapter(ctx context.Context, bookName string, characters map[string]models.Character, locations map[string]models.Location, chapterFile string) (string, error) {
-	logger.Section("CHAPTER TO DSL AGENT - Converting Single Chapter")
-	logger.Info("File: %s", chapterFile)
-
-	chapter, err := a.loadChapterFile(chapterFile)
-	if err != nil {
-		return "", err
-	}
-
-	input := ChapterToDSLInput{
-		BookName:   bookName,
-		StorySetup: derefStorySetup(a.setup),
-		SetupHints: buildChapterToDSLSetupHints(a.setup),
-		Characters: characters,
-		Locations:  locations,
-		Chapters:   []ChapterData{*chapter},
-	}
-
-	var output ChapterToDSLOutput
-	params := InvokeParams{
-		Skills:  []string{"chapter-to-dsl"},
-		Command: "convert chapter to RPG-DSL format",
-	}
-
-	if err := a.base.Execute(ctx, params, input, &output); err != nil {
-		return "", err
-	}
 
 	return output.DSLContent, nil
 }
@@ -349,35 +260,6 @@ func (a *ChapterToDSLAgent) RepairDSL(ctx context.Context, bookName, parseErr, i
 	return output.DSLContent, nil
 }
 
-// GenerateOutlineDSL generates a complete outline DSL from all chapters
-func (a *ChapterToDSLAgent) GenerateOutlineDSL(ctx context.Context, bookName string, characters map[string]models.Character, locations map[string]models.Location, chaptersDir string) (string, error) {
-	// Find all chapter files
-	pattern := filepath.Join(chaptersDir, "*.json")
-	files, err := filepath.Glob(pattern)
-	if err != nil {
-		return "", fmt.Errorf("failed to find chapter files: %w", err)
-	}
-
-	// Filter only valid chapter files (P1-V*-C*.json)
-	var validFiles []string
-	for _, f := range files {
-		base := filepath.Base(f)
-		if strings.HasPrefix(base, "P") && strings.Contains(base, "-V") && strings.Contains(base, "-C") {
-			validFiles = append(validFiles, f)
-		}
-	}
-
-	if len(validFiles) == 0 {
-		return "", fmt.Errorf("no valid chapter files found in %s", chaptersDir)
-	}
-
-	// Sort files by name
-	sort.Strings(validFiles)
-
-	// Convert all chapters
-	return a.ConvertChapters(ctx, bookName, characters, locations, validFiles)
-}
-
 // convertChaptersRuleBased performs rule-based conversion without LLM
 func (a *ChapterToDSLAgent) convertChaptersRuleBased(bookName string, characters map[string]models.Character, locations map[string]models.Location, chapters []ChapterData) (string, error) {
 	logger.Info("Performing rule-based DSL conversion")
@@ -386,16 +268,16 @@ func (a *ChapterToDSLAgent) convertChaptersRuleBased(bookName string, characters
 
 	// Generate metadata
 	dsl.WriteString(fmt.Sprintf("# %s Outline DSL\n", bookName))
-	dsl.WriteString(fmt.Sprintf("# Generated from chapter recaps\n\n"))
-	dsl.WriteString(fmt.Sprintf("metadata {\n"))
+	dsl.WriteString("# Generated from chapter recaps\n\n")
+	dsl.WriteString("metadata {\n")
 	dsl.WriteString(fmt.Sprintf("  title = \"%s\"\n", bookName))
-	dsl.WriteString(fmt.Sprintf("  dsl_version = \"0.2.0\"\n"))
-	dsl.WriteString(fmt.Sprintf("  source = \"novelgen_outline\"\n"))
-	dsl.WriteString(fmt.Sprintf("}\n\n"))
+	dsl.WriteString("  dsl_version = \"0.2.0\"\n")
+	dsl.WriteString("  source = \"novelgen_outline\"\n")
+	dsl.WriteString("}\n\n")
 
 	// Generate characters section
 	if len(characters) > 0 {
-		dsl.WriteString(fmt.Sprintf("characters {\n"))
+		dsl.WriteString("characters {\n")
 		for id, char := range characters {
 			dsl.WriteString(fmt.Sprintf("  npc \"%s\" {\n", char.Name))
 			dsl.WriteString(fmt.Sprintf("    id = \"%s\"\n", id))
@@ -406,15 +288,15 @@ func (a *ChapterToDSLAgent) convertChaptersRuleBased(bookName string, characters
 			if char.RoleInStory != "" {
 				dsl.WriteString(fmt.Sprintf("    role = \"%s\"\n", char.RoleInStory))
 			}
-			dsl.WriteString(fmt.Sprintf("    __placeholder__ = false\n"))
-			dsl.WriteString(fmt.Sprintf("  }\n"))
+			dsl.WriteString("    __placeholder__ = false\n")
+			dsl.WriteString("  }\n")
 		}
-		dsl.WriteString(fmt.Sprintf("}\n\n"))
+		dsl.WriteString("}\n\n")
 	}
 
 	// Generate world section
 	if len(locations) > 0 {
-		dsl.WriteString(fmt.Sprintf("world {\n"))
+		dsl.WriteString("world {\n")
 		for id, loc := range locations {
 			dsl.WriteString(fmt.Sprintf("  location \"%s\" {\n", loc.Name))
 			dsl.WriteString(fmt.Sprintf("    id = \"%s\"\n", id))
@@ -422,19 +304,19 @@ func (a *ChapterToDSLAgent) convertChaptersRuleBased(bookName string, characters
 			if loc.Description != "" {
 				dsl.WriteString(fmt.Sprintf("    description = \"%s\"\n", escapeDSLString(loc.Description)))
 			}
-			dsl.WriteString(fmt.Sprintf("    __placeholder__ = false\n"))
-			dsl.WriteString(fmt.Sprintf("  }\n"))
+			dsl.WriteString("    __placeholder__ = false\n")
+			dsl.WriteString("  }\n")
 		}
-		dsl.WriteString(fmt.Sprintf("}\n\n"))
+		dsl.WriteString("}\n\n")
 	}
 
 	// Generate storyline section
-	dsl.WriteString(fmt.Sprintf("storyline {\n"))
+	dsl.WriteString("storyline {\n")
 	for _, chapter := range chapters {
 		dsl.WriteString(fmt.Sprintf("  chapter \"%s\" {\n", chapter.Title))
 		dsl.WriteString(fmt.Sprintf("    id = \"%s\"\n", chapter.ChapterID))
-		dsl.WriteString(fmt.Sprintf("\n"))
-		dsl.WriteString(fmt.Sprintf("    objective \"主要剧情\" {\n"))
+		dsl.WriteString("\n")
+		dsl.WriteString("    objective \"主要剧情\" {\n")
 
 		// Convert plot beats to steps
 		for i, beat := range chapter.PlotBeats {
@@ -443,16 +325,16 @@ func (a *ChapterToDSLAgent) convertChaptersRuleBased(bookName string, characters
 			}
 			dsl.WriteString(fmt.Sprintf("      step %d {\n", i+1))
 			dsl.WriteString(fmt.Sprintf("        description = \"%s\"\n", escapeDSLString(beat)))
-			dsl.WriteString(fmt.Sprintf("        event {\n"))
+			dsl.WriteString("        event {\n")
 			dsl.WriteString(fmt.Sprintf("          type = \"%s\"\n", detectEventType(beat)))
-			dsl.WriteString(fmt.Sprintf("        }\n"))
-			dsl.WriteString(fmt.Sprintf("      }\n"))
+			dsl.WriteString("        }\n")
+			dsl.WriteString("      }\n")
 		}
 
-		dsl.WriteString(fmt.Sprintf("    }\n"))
-		dsl.WriteString(fmt.Sprintf("  }\n"))
+		dsl.WriteString("    }\n")
+		dsl.WriteString("  }\n")
 	}
-	dsl.WriteString(fmt.Sprintf("}\n"))
+	dsl.WriteString("}\n")
 
 	return dsl.String(), nil
 }

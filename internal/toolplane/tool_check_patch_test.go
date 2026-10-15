@@ -1,4 +1,4 @@
-package cmd
+package toolplane_test
 
 import (
 	"bytes"
@@ -16,7 +16,9 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/testfixtures"
 	"novelgen/internal/toolplane"
+	"novelgen/internal/writepipe"
 
 	"github.com/spf13/cobra"
 )
@@ -116,11 +118,11 @@ func TestRunToolOutlineCheckAllMergesQualityAndSimulation(t *testing.T) {
 }
 
 func TestRunToolOutlineCheckChapterScopeKeepsVolumeContext(t *testing.T) {
-	chapter1 := validChapterForQualityGate()
+	chapter1 := testfixtures.ValidChapterForQualityGate()
 	chapter1.ID = "P1-V1-C1"
 	chapter1.Location = "Outer Gate"
 	chapter1.StateAnchor.Location = "Outer Gate"
-	chapter2 := validChapterForQualityGate()
+	chapter2 := testfixtures.ValidChapterForQualityGate()
 	chapter2.ID = "P1-V1-C2"
 	chapter2.Location = "Inner Hall"
 	chapter2.StateAnchor.Location = "Inner Hall"
@@ -1299,7 +1301,7 @@ func TestAgentSDKChapterCheckSuggestionsPreferRepairContext(t *testing.T) {
 		}},
 	}
 
-	text := writecmd.FormatAgentSDKChapterCheckSuggestions(result)
+	text := writepipe.FormatAgentSDKChapterCheckSuggestions(result)
 	if !strings.Contains(text, "primary repair task list") ||
 		!strings.Contains(text, "navigation.repair_route_query") ||
 		!strings.Contains(text, "navigation.repair_context_query") ||
@@ -1346,7 +1348,7 @@ func TestAgentSDKPostSaveCheckAppendsReviewSuggestions(t *testing.T) {
 }
 
 func TestAgentSDKLengthRetrySuggestions(t *testing.T) {
-	text := writecmd.AppendAgentSDKLengthRetrySuggestions("base suggestions", 3000)
+	text := writepipe.AppendAgentSDKLengthRetrySuggestions("base suggestions", 3000)
 	if !strings.Contains(text, "base suggestions") ||
 		!strings.Contains(text, "Agent SDK Length Retry") ||
 		!strings.Contains(text, "minimal repair only") ||
@@ -1354,10 +1356,10 @@ func TestAgentSDKLengthRetrySuggestions(t *testing.T) {
 		!strings.Contains(text, "must not exceed 4050") {
 		t.Fatalf("length retry suggestions missing strict guidance: %s", text)
 	}
-	if !writecmd.IsAgentSDKLengthOvershootError(fmt.Errorf("agent-sdk returned too much content for chapter P1-V1-C1")) {
+	if !writepipe.IsAgentSDKLengthOvershootError(fmt.Errorf("agent-sdk returned too much content for chapter P1-V1-C1")) {
 		t.Fatalf("expected overshoot error detection")
 	}
-	if writecmd.IsAgentSDKLengthOvershootError(fmt.Errorf("some other error")) {
+	if writepipe.IsAgentSDKLengthOvershootError(fmt.Errorf("some other error")) {
 		t.Fatalf("unexpected overshoot detection")
 	}
 }
@@ -2744,7 +2746,7 @@ func TestRunToolSetupCheckAllMergesQualityAndSimulation(t *testing.T) {
 
 func TestRunToolSetupPatchApplyWritesFilesAndCheckpoint(t *testing.T) {
 	root := t.TempDir()
-	setup := validLongFormSetup()
+	setup := testfixtures.ValidLongFormSetup()
 	if err := os.MkdirAll(filepath.Join(root, "story", "setup"), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -2789,7 +2791,7 @@ func TestRunToolSetupPatchApplyWritesFilesAndCheckpoint(t *testing.T) {
 }
 
 func TestApplySetupPatchObjectUpsertsPremises(t *testing.T) {
-	setup := *validLongFormSetup()
+	setup := *testfixtures.ValidLongFormSetup()
 	setup.Premises = []models.Premise{{
 		Name:        "Ranking System",
 		Category:    "progression",
@@ -2844,7 +2846,7 @@ func TestApplySetupPatchObjectUpsertsPremises(t *testing.T) {
 }
 
 func TestApplySetupPatchObjectMergesNestedPlanAndStringLists(t *testing.T) {
-	setup := *validLongFormSetup()
+	setup := *testfixtures.ValidLongFormSetup()
 	setup.Rules = []string{"Existing rule"}
 	setup.LongFormPlan = &models.LongFormPlan{
 		TargetChapters:   1000,
@@ -2896,7 +2898,7 @@ func TestApplySetupPatchObjectMergesNestedPlanAndStringLists(t *testing.T) {
 }
 
 func TestApplySetupPatchObjectPatchesStringListByIndex(t *testing.T) {
-	setup := *validLongFormSetup()
+	setup := *testfixtures.ValidLongFormSetup()
 	setup.Genres = []string{"sci-fi", "progression"}
 	setup.Rules = []string{"short rule", "this rule is far too verbose and needs to be compacted"}
 
@@ -2919,7 +2921,7 @@ func TestApplySetupPatchObjectPatchesStringListByIndex(t *testing.T) {
 }
 
 func TestApplySetupPatchObjectRejectsStringListPatchOutOfRange(t *testing.T) {
-	setup := *validLongFormSetup()
+	setup := *testfixtures.ValidLongFormSetup()
 	setup.Rules = []string{"short rule"}
 
 	_, _, err := toolplane.ApplySetupPatchObject(setup, []byte(`{"rules_patch":[{"index":2,"value":"nope"}]}`))
@@ -2933,7 +2935,7 @@ func TestRunToolPatchSetupDoesNotRequireID(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"title":"Test"}`), 0644); err != nil {
 		t.Fatal(err)
 	}
-	setup := validLongFormSetup()
+	setup := testfixtures.ValidLongFormSetup()
 	if err := os.MkdirAll(filepath.Join(root, "story", "setup"), 0755); err != nil {
 		t.Fatal(err)
 	}

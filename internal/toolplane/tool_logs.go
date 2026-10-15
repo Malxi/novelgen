@@ -172,11 +172,6 @@ func logAgentFromFilename(filename string) string {
 	return base
 }
 
-func readLogPreview(path string, maxRunes int) (string, bool) {
-	content, truncated := readLogExcerpt(path, maxRunes)
-	return logPreviewFromExcerpt(content, truncated)
-}
-
 func readLogPreviewForQuery(path string, kind string, maxRunes int) (string, bool) {
 	content, truncated := readLogExcerptForQuery(path, kind, maxRunes)
 	return logPreviewFromExcerpt(content, truncated)
@@ -240,19 +235,6 @@ func readLogExcerptForQuery(path string, kind string, maxRunes int) (string, boo
 	if NormalizeLogKind(kind) == "agent-live" {
 		text = sanitizeAgentLiveLogText(text)
 	}
-	runes := []rune(text)
-	if len(runes) <= maxRunes {
-		return text, false
-	}
-	return string(runes[:maxRunes]), true
-}
-
-func readLogExcerpt(path string, maxRunes int) (string, bool) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", false
-	}
-	text := string(utils.StripUTF8BOM(data))
 	runes := []rune(text)
 	if len(runes) <= maxRunes {
 		return text, false

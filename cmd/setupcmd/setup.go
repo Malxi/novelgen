@@ -1147,10 +1147,10 @@ func generateStorySetupWithAI(ctx context.Context, prompt, language string, proj
 
 	// Use project LLM settings from novel.json
 	if projectLLM.Provider == "" {
-		projectLLM.Provider = "ollama"
+		projectLLM.Provider = models.ProviderOllama
 	}
 	if projectLLM.Model == "" {
-		if projectLLM.Provider == "openai" {
+		if projectLLM.Provider == models.ProviderOpenAI {
 			projectLLM.Model = "gpt-5.2"
 		} else {
 			projectLLM.Model = "qwen3.5:4b"

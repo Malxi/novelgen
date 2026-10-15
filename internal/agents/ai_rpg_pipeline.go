@@ -234,14 +234,7 @@ func (p *AIRPGPipeline) aggregateIssues(analysis *ChapterAnalysisOutput, simRepo
 			continue
 		}
 
-		issue := ValidationIssue{
-			Category:    aiIssue.Category,
-			Severity:    aiIssue.Severity,
-			Target:      aiIssue.Target,
-			Description: aiIssue.Description,
-			Evidence:    aiIssue.Evidence,
-			Suggestion:  aiIssue.Suggestion,
-		}
+		issue := ValidationIssue(aiIssue)
 		issues = append(issues, issue)
 	}
 
