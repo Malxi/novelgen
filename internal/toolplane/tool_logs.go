@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"novelgen/internal/envutil"
 	"novelgen/internal/store"
+	"novelgen/internal/toolcmd"
 	"novelgen/internal/utils"
 	"os"
 	"path/filepath"
@@ -82,7 +83,7 @@ func queryLogsAt(root *store.Root, queryType, id, name string, includeContent bo
 			Path:        rel,
 			SizeBytes:   info.Size(),
 			ModifiedAt:  info.ModTime(),
-			DetailQuery: fmt.Sprintf("novelgen tool query logs --id %q --view brief", rel),
+			DetailQuery: toolcmd.QueryLogs(toolcmd.QueryOptions{ID: rel, View: "brief"}),
 		}
 		if kind == "agent-live" {
 			hit.Summary = summary

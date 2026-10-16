@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"novelgen/internal/toolcmd"
 	"strings"
 
 	"novelgen/internal/llm"
@@ -107,9 +108,9 @@ func (a *RecapAgent) extractWithFeedbackAgentSDK(ctx context.Context, chapterID,
 		params.AllowedTools = []string{"Bash"}
 		params.PermissionMode = "dontAsk"
 		params.ToolAllowlist = []string{
-			fmt.Sprintf("novelgen tool query context --type recap-repair --id %q --view brief", chapterID),
-			fmt.Sprintf("novelgen tool check quality --target recap --scope chapter --id %q --min-priority low --max-issues 8", chapterID),
-			fmt.Sprintf("novelgen tool patch recap --id %q --apply", chapterID),
+			toolcmd.QueryContext(toolcmd.QueryOptions{Type: "recap-repair", ID: chapterID, View: "brief"}),
+			toolcmd.Check(toolcmd.CheckOptions{Kind: "quality", Target: "recap", Scope: "chapter", ID: chapterID, MinPriority: "low", MaxIssues: 8}),
+			toolcmd.Patch(toolcmd.PatchOptions{Section: "recap", ID: chapterID, Apply: true}),
 		}
 		params.ToolEvidence = ToolEvidenceRequirement{
 			MinContextQueryCalls:           1,
@@ -333,8 +334,8 @@ func buildRecapAgentSDKRequiredQueries(chapterID string, applyPatches bool) []st
 		return nil
 	}
 	return []string{
-		fmt.Sprintf("novelgen tool query context --type recap-repair --id %q --view brief", chapterID),
-		fmt.Sprintf("novelgen tool check quality --target recap --scope chapter --id %q --min-priority low --max-issues 8", chapterID),
+		toolcmd.QueryContext(toolcmd.QueryOptions{Type: "recap-repair", ID: chapterID, View: "brief"}),
+		toolcmd.Check(toolcmd.CheckOptions{Kind: "quality", Target: "recap", Scope: "chapter", ID: chapterID, MinPriority: "low", MaxIssues: 8}),
 	}
 }
 

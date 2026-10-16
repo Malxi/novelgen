@@ -3,6 +3,7 @@ package agents
 import (
 	"context"
 	"fmt"
+	"novelgen/internal/toolcmd"
 	"strings"
 
 	"novelgen/internal/llm"
@@ -440,8 +441,8 @@ func craftAgentSDKToolAllowlist(target string, names []string, requiredQueries [
 		if name == "" {
 			continue
 		}
-		add(fmt.Sprintf("novelgen tool check schema --target craft --scope %s --id %q", target, name))
-		patchTool := fmt.Sprintf("novelgen tool patch craft --target %s --id %q", target, name)
+		add(toolcmd.Check(toolcmd.CheckOptions{Kind: "schema", Target: "craft", Scope: target, ID: name}))
+		patchTool := toolcmd.PatchCraft(target, name)
 		if applyPatches {
 			patchTool += " --apply"
 		}
@@ -472,7 +473,7 @@ func buildCraftAgentSDKCharactersPromptInput(names []string, customPrompt string
 		if name == "" {
 			continue
 		}
-		required = append(required, fmt.Sprintf("novelgen tool query context --type craft-character --name %q --view brief", name))
+		required = append(required, toolcmd.QueryContext(toolcmd.QueryOptions{Type: "craft-character", Name: name, View: "brief"}))
 	}
 	return CraftAgentSDKCharactersPromptInput{
 		Characters:      append([]string(nil), names...),
@@ -500,7 +501,7 @@ func buildCraftAgentSDKElementsPromptInput(target, outputKey string, names []str
 		if name == "" {
 			continue
 		}
-		required = append(required, fmt.Sprintf("novelgen tool query context --type craft-%s --name %q --view brief", target, name))
+		required = append(required, toolcmd.QueryContext(toolcmd.QueryOptions{Type: "craft-" + target, Name: name, View: "brief"}))
 	}
 	return CraftAgentSDKElementsPromptInput{
 		Target:          target,

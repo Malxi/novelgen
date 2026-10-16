@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"novelgen/internal/toolcmd"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -511,14 +512,14 @@ func composeImproveVolumeToolAllowlist(volume models.Volume, promptInput compose
 	allowExploratoryDetail := composeImproveHasFocusedTasks(promptInput) && !composeImproveUsesCleanProbe(promptInput)
 	if volumeID != "" {
 		allowlist = append(allowlist,
-			fmt.Sprintf("novelgen tool query context --type outline-volume --id %s --view brief", volumeID),
+			toolcmd.QueryContext(toolcmd.QueryOptions{Type: "outline-volume", ID: volumeID, View: "brief"}),
 			fmt.Sprintf("novelgen tool query context --type outline-repair --id %s --name", volumeID),
-			fmt.Sprintf("novelgen tool check all --target outline --scope volume --id %q", volumeID),
+			toolcmd.Check(toolcmd.CheckOptions{Target: "outline", Scope: "volume", ID: volumeID}),
 		)
 		if allowExploratoryDetail {
 			allowlist = append(allowlist,
-				fmt.Sprintf("novelgen tool query context --type outline-volume --id %s", volumeID),
-				fmt.Sprintf("novelgen tool query outline --type volume --id %q", volumeID),
+				toolcmd.QueryContext(toolcmd.QueryOptions{Type: "outline-volume", ID: volumeID}),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "volume", ID: volumeID}),
 				"novelgen tool query outline --type refs --entity-type character --name",
 				"novelgen tool query outline --type refs --entity-type item --name",
 				"novelgen tool query outline --type refs --entity-type location --name",
@@ -528,8 +529,8 @@ func composeImproveVolumeToolAllowlist(volume models.Volume, promptInput compose
 				"novelgen tool query story-setup --type premise --name",
 				"novelgen tool query story-setup --type resource --name",
 				"novelgen tool query story-setup --type timeline --name",
-				fmt.Sprintf("novelgen tool query outline --type events --volume-id %q --view brief", volumeID),
-				fmt.Sprintf("novelgen tool query outline --type events --volume-id %q --fields action,actor,target,target_type,type,details,result --view brief", volumeID),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "events", VolumeID: volumeID, View: "brief"}),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "events", VolumeID: volumeID, Fields: "action,actor,target,target_type,type,details,result", View: "brief"}),
 			)
 		}
 	}
@@ -540,14 +541,14 @@ func composeImproveVolumeToolAllowlist(volume models.Volume, promptInput compose
 		}
 		allowlist = append(allowlist,
 			fmt.Sprintf("novelgen tool query context --type outline-repair --id %s --name", chapterID),
-			fmt.Sprintf("novelgen tool check all --target outline --scope chapter --id %q", chapterID),
+			toolcmd.Check(toolcmd.CheckOptions{Target: "outline", Scope: "chapter", ID: chapterID}),
 		)
 		if allowExploratoryDetail && (!restrictDetailChapters || detailChapterIDs[chapterID]) {
 			allowlist = append(allowlist,
-				fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", chapterID),
-				fmt.Sprintf("novelgen tool query outline --type chapter --id %q --fields scenes --view brief", chapterID),
-				fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q --view brief", chapterID),
-				fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q --fields result,details,target,target_type,actor,action --view brief", chapterID),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "chapter", ID: chapterID, View: "brief"}),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "chapter", ID: chapterID, Fields: "scenes", View: "brief"}),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "events", ChapterID: chapterID, View: "brief"}),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "events", ChapterID: chapterID, Fields: "result,details,target,target_type,actor,action", View: "brief"}),
 			)
 		}
 	}
@@ -600,7 +601,7 @@ func composeAdjacentVolumeQueryAllowlist(outline models.Outline, volumeID string
 			continue
 		}
 		allowlist = append(allowlist,
-			fmt.Sprintf("novelgen tool query outline --type volume --id %q --fields payoff_contract,summary --view brief", adjacentID),
+			toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "volume", ID: adjacentID, Fields: "payoff_contract,summary", View: "brief"}),
 		)
 	}
 	return allowlist
@@ -724,10 +725,10 @@ func composeImproveRequiredFocusedChecks(volume models.Volume, prompt string) []
 			if strings.EqualFold(strings.TrimSpace(category), "all") {
 				// "all" 意味着任意 category 均可：用裸命令(不带 --category)作为要求，
 				// 这样 agent 实际跑的 --category pacing/logic/... 变体都能被 contains 匹配。
-				checks = append(checks, fmt.Sprintf("novelgen tool check all --target outline --scope chapter --id %q", id))
+				checks = append(checks, toolcmd.Check(toolcmd.CheckOptions{Target: "outline", Scope: "chapter", ID: id}))
 				continue
 			}
-			checks = append(checks, fmt.Sprintf("novelgen tool check all --target outline --scope chapter --id %q --category %s --min-priority low --max-issues 8", id, category))
+			checks = append(checks, toolcmd.Check(toolcmd.CheckOptions{Target: "outline", Scope: "chapter", ID: id, Category: category, MinPriority: "low", MaxIssues: 8}))
 		}
 	}
 	return checks
@@ -880,9 +881,9 @@ func composeGlobalRepairRequiredPostPatchChecks(review models.ReviewResult) []st
 		}
 		targetID := strings.TrimSpace(suggestion.TargetID)
 		if category == "faction_tier" && targetID != "" && !strings.EqualFold(targetID, "global") {
-			return []string{fmt.Sprintf("novelgen tool check all --target setup --category %s --min-priority low --max-issues 12", category)}
+			return []string{toolcmd.Check(toolcmd.CheckOptions{Target: "setup", Category: category, MinPriority: "low", MaxIssues: 12})}
 		}
-		return []string{fmt.Sprintf("novelgen tool check all --target outline --scope all --category %s --min-priority low --max-issues 12", category)}
+		return []string{toolcmd.Check(toolcmd.CheckOptions{Target: "outline", Scope: "all", Category: category, MinPriority: "low", MaxIssues: 12})}
 	}
 	return nil
 }
@@ -1188,7 +1189,7 @@ func (a *ComposeAgent) reviewOutlineCrossVolumeAgentSDK(ctx context.Context, inp
 			// internal structure panels (which are routinely misread as
 			// 'AI flavor' — e.g. the forced opponent-misread slot).
 			allowlist = append(allowlist,
-				fmt.Sprintf("novelgen tool query outline --type volume --id %q --fields summary --view brief", vid),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "volume", ID: vid, Fields: "summary", View: "brief"}),
 			)
 			for _, chapter := range v.Chapters {
 				cid := strings.TrimSpace(chapter.ID)
@@ -1196,14 +1197,14 @@ func (a *ComposeAgent) reviewOutlineCrossVolumeAgentSDK(ctx context.Context, inp
 					continue
 				}
 				allowlist = append(allowlist,
-					fmt.Sprintf("novelgen tool query outline --type chapter --id %q --fields title,summary,opening_beat,scenes --view brief", cid),
+					toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "chapter", ID: cid, Fields: "title,summary,opening_beat,scenes", View: "brief"}),
 				)
 			}
 			continue
 		}
 		allowlist = append(allowlist,
-			fmt.Sprintf("novelgen tool query outline --type volume --id %q --view brief", vid),
-			fmt.Sprintf("novelgen tool query outline --type events --volume-id %q --view brief", vid),
+			toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "volume", ID: vid, View: "brief"}),
+			toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "events", VolumeID: vid, View: "brief"}),
 		)
 		for _, chapter := range v.Chapters {
 			cid := strings.TrimSpace(chapter.ID)
@@ -1211,8 +1212,8 @@ func (a *ComposeAgent) reviewOutlineCrossVolumeAgentSDK(ctx context.Context, inp
 				continue
 			}
 			allowlist = append(allowlist,
-				fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", cid),
-				fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q --view brief", cid),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "chapter", ID: cid, View: "brief"}),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "events", ChapterID: cid, View: "brief"}),
 			)
 		}
 	}
@@ -1307,7 +1308,7 @@ func countOutlineScope(outline models.Outline, volumeID string) (int, int) {
 func composeOutlineReviewRequiredQueries(outline models.Outline, volumeID string) []string {
 	volumeID = strings.TrimSpace(volumeID)
 	if volumeID != "" {
-		return []string{fmt.Sprintf("novelgen tool query context --type outline-volume --id %s --view index", volumeID)}
+		return []string{toolcmd.QueryContext(toolcmd.QueryOptions{Type: "outline-volume", ID: volumeID, View: "index"})}
 	}
 	return []string{"novelgen tool query outline --type all --view index"}
 }
@@ -1356,8 +1357,8 @@ func composeOutlineReviewAgentSDKMaxTurns() int {
 }
 
 // composeOutlineReviewToolAllowlist 列出单卷/全书 review 允许的只读查询。
-// 说明：review 要核对 setup 铁律，必须放行 story-setup --type rules（cmd/tool.go 的
-// 合法类型集合里含 rules），否则 agent 会撞 deny 白耗一个回合。
+// 说明：review 要核对 setup 铁律，必须放行 story-setup --type rules（internal/toolplane
+// 的 story-setup 合法类型表里含 rules），否则 agent 会撞 deny 白耗一个回合。
 func composeOutlineReviewToolAllowlist(outline models.Outline, volumeID string) []string {
 	allowlist := []string{
 		"novelgen tool query story-setup --type rules",
@@ -1381,8 +1382,8 @@ func composeOutlineReviewToolAllowlist(outline models.Outline, volumeID string) 
 			return
 		}
 		allowlist = append(allowlist,
-			fmt.Sprintf("novelgen tool query outline --type volume --id %q --view brief", vid),
-			fmt.Sprintf("novelgen tool query outline --type events --volume-id %q --view brief", vid),
+			toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "volume", ID: vid, View: "brief"}),
+			toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "events", VolumeID: vid, View: "brief"}),
 		)
 		for _, chapter := range volume.Chapters {
 			cid := strings.TrimSpace(chapter.ID)
@@ -1390,14 +1391,14 @@ func composeOutlineReviewToolAllowlist(outline models.Outline, volumeID string) 
 				continue
 			}
 			allowlist = append(allowlist,
-				fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", cid),
-				fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q --view brief", cid),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "chapter", ID: cid, View: "brief"}),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "events", ChapterID: cid, View: "brief"}),
 			)
 		}
 	}
 	volumeID = strings.TrimSpace(volumeID)
 	if volumeID != "" {
-		allowlist = append(allowlist, fmt.Sprintf("novelgen tool query context --type outline-volume --id %s --view index", volumeID))
+		allowlist = append(allowlist, toolcmd.QueryContext(toolcmd.QueryOptions{Type: "outline-volume", ID: volumeID, View: "index"}))
 		for _, part := range outline.Parts {
 			for _, volume := range part.Volumes {
 				if strings.EqualFold(strings.TrimSpace(volume.ID), volumeID) {
@@ -1980,7 +1981,7 @@ func isEmptyPayoffContract(payoff *models.VolumePayoffContract) bool {
 
 func buildAgentSDKChaptersPromptInput(input ComposeChaptersInput) composeAgentSDKChaptersPromptInput {
 	required := []string{
-		"novelgen tool query context --type outline-volume --id " + input.Volume.ID + " --view brief",
+		toolcmd.QueryContext(toolcmd.QueryOptions{Type: "outline-volume", ID: input.Volume.ID, View: "brief"}),
 	}
 	previousID := ""
 	if input.PreviousVolume != nil && strings.TrimSpace(input.PreviousVolume.ID) != "" {
@@ -2007,7 +2008,7 @@ func buildAgentSDKChaptersPromptInput(input ComposeChaptersInput) composeAgentSD
 
 func buildAgentSDKImproveVolumePromptInput(input ComposeImproveVolumeInput, applyPatches bool, forceIssueRepair bool) composeAgentSDKImproveVolumePromptInput {
 	required := []string{
-		"novelgen tool query context --type outline-volume --id " + input.Volume.ID + " --view index",
+		toolcmd.QueryContext(toolcmd.QueryOptions{Type: "outline-volume", ID: input.Volume.ID, View: "index"}),
 	}
 	crossVolume := len(input.CrossVolumeIDs) > 0
 	hasFocusedTasks := len(input.ReviewResult.Suggestions) > 0 || strings.TrimSpace(input.UserPrompt) != ""
@@ -3012,18 +3013,18 @@ func buildComposeAgentSDKSuggestionNavigation(volumeID string, suggestion models
 	if volumeID == "" {
 		nav := &composeAgentSDKSuggestionNavigation{
 			TargetKind:         "outline.global",
-			FocusedCheckQuery:  fmt.Sprintf("novelgen tool check all --target outline --scope all --category %s --min-priority low --max-issues 12", category),
-			RepairRouteQuery:   fmt.Sprintf("novelgen tool query context --type outline-global-repair --name %q --view index", category),
-			RepairContextQuery: fmt.Sprintf("novelgen tool query context --type outline-global-repair --name %q --view brief", category),
+			FocusedCheckQuery:  toolcmd.Check(toolcmd.CheckOptions{Target: "outline", Scope: "all", Category: category, MinPriority: "low", MaxIssues: 12}),
+			RepairRouteQuery:   toolcmd.QueryContext(toolcmd.QueryOptions{Type: "outline-global-repair", Name: category, View: "index"}),
+			RepairContextQuery: toolcmd.QueryContext(toolcmd.QueryOptions{Type: "outline-global-repair", Name: category, View: "brief"}),
 		}
 		if category == "faction_tier" && targetID != "" && !strings.EqualFold(targetID, "global") {
 			nav.TargetKind = "setup.faction_tier"
 			nav.DetailQueries = []string{
-				fmt.Sprintf("novelgen tool query story-setup --type search --name %q --view index", targetID),
-				fmt.Sprintf("novelgen tool query story-setup --type search --name %q --view brief", targetID),
+				toolcmd.QueryStorySetup(toolcmd.QueryOptions{Type: "search", Name: targetID, View: "index"}),
+				toolcmd.QueryStorySetup(toolcmd.QueryOptions{Type: "search", Name: targetID, View: "brief"}),
 			}
-			nav.RepairRouteQuery = fmt.Sprintf("novelgen tool query story-setup --type search --name %q --view index", targetID)
-			nav.RepairContextQuery = fmt.Sprintf("novelgen tool query story-setup --type search --name %q --view brief", targetID)
+			nav.RepairRouteQuery = toolcmd.QueryStorySetup(toolcmd.QueryOptions{Type: "search", Name: targetID, View: "index"})
+			nav.RepairContextQuery = toolcmd.QueryStorySetup(toolcmd.QueryOptions{Type: "search", Name: targetID, View: "brief"})
 			nav.PatchQuery = "novelgen tool patch setup"
 			nav.PatchShape = map[string]interface{}{
 				"premises": []map[string]string{{
@@ -3043,12 +3044,12 @@ func buildComposeAgentSDKSuggestionNavigation(volumeID string, suggestion models
 			TargetKind: "volume",
 			VolumeID:   volumeID,
 			DetailQueries: []string{
-				fmt.Sprintf("novelgen tool query context --type outline-volume --id %q --view brief", volumeID),
+				toolcmd.QueryContext(toolcmd.QueryOptions{Type: "outline-volume", ID: volumeID, View: "brief"}),
 			},
-			FocusedCheckQuery:  fmt.Sprintf("novelgen tool check all --target outline --scope volume --id %q --category %s --min-priority low --max-issues 12", volumeID, category),
-			RepairRouteQuery:   fmt.Sprintf("novelgen tool query context --type outline-repair --id %q --name %q --view index", volumeID, category),
-			RepairContextQuery: fmt.Sprintf("novelgen tool query context --type outline-repair --id %q --name %q --view brief", volumeID, category),
-			PatchQuery:         fmt.Sprintf("novelgen tool patch outline --target volume --id %q", volumeID),
+			FocusedCheckQuery:  toolcmd.Check(toolcmd.CheckOptions{Target: "outline", Scope: "volume", ID: volumeID, Category: category, MinPriority: "low", MaxIssues: 12}),
+			RepairRouteQuery:   toolcmd.QueryContext(toolcmd.QueryOptions{Type: "outline-repair", ID: volumeID, Name: category, View: "index"}),
+			RepairContextQuery: toolcmd.QueryContext(toolcmd.QueryOptions{Type: "outline-repair", ID: volumeID, Name: category, View: "brief"}),
+			PatchQuery:         toolcmd.PatchOutlineVolume(volumeID),
 		}
 	}
 	if strings.HasPrefix(targetID, volumeID+"-") {
@@ -3056,13 +3057,13 @@ func buildComposeAgentSDKSuggestionNavigation(volumeID string, suggestion models
 			TargetKind: "chapter",
 			VolumeID:   volumeID,
 			DetailQueries: []string{
-				fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", targetID),
-				fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q --fields result,details,target,target_type,actor,action --view brief", targetID),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "chapter", ID: targetID, View: "brief"}),
+				toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "events", ChapterID: targetID, Fields: "result,details,target,target_type,actor,action", View: "brief"}),
 			},
-			FocusedCheckQuery:  fmt.Sprintf("novelgen tool check all --target outline --scope chapter --id %q --category %s --min-priority low --max-issues 8", targetID, category),
-			RepairRouteQuery:   fmt.Sprintf("novelgen tool query context --type outline-repair --id %q --name %q --view index", targetID, category),
-			RepairContextQuery: fmt.Sprintf("novelgen tool query context --type outline-repair --id %q --name %q --view brief", targetID, category),
-			PatchQuery:         fmt.Sprintf("novelgen tool patch outline --target volume --id %q", volumeID),
+			FocusedCheckQuery:  toolcmd.Check(toolcmd.CheckOptions{Target: "outline", Scope: "chapter", ID: targetID, Category: category, MinPriority: "low", MaxIssues: 8}),
+			RepairRouteQuery:   toolcmd.QueryContext(toolcmd.QueryOptions{Type: "outline-repair", ID: targetID, Name: category, View: "index"}),
+			RepairContextQuery: toolcmd.QueryContext(toolcmd.QueryOptions{Type: "outline-repair", ID: targetID, Name: category, View: "brief"}),
+			PatchQuery:         toolcmd.PatchOutlineVolume(volumeID),
 			PatchShape:         composeAgentSDKOutlineChapterPatchShape(targetID, suggestion),
 		}
 	}

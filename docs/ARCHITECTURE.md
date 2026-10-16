@@ -50,8 +50,8 @@ novelgen/
 │   ├── registry.go            # init()-based 命令自注册
 │   ├── setup.go compose.go craft.go draft.go write.go
 │   ├── recap_cmd.go project.go rpg.go rpg_dsl.go simulate_dsl.go
-│   ├── tool.go tool_logs.go tool_view.go tool_brief.go   # Agent 工具面：查询/上下文（见 §5）
-│   ├── tool_check.go tool_patch.go tool_refresh.go polish.go
+│   ├── tool_register.go       # 仅接线 internal/toolplane.NewCommand()（实现见 §5）
+│   ├── polish.go
 │   ├── config/                # package config，     config.NewCommand()
 │   ├── translate/             # package translate，  translate.NewCommand()
 │   ├── initcmd/               # package initcmd，    initcmd.NewCommand()
@@ -103,10 +103,15 @@ novelgen/
 │   ├── quality/               # setup/outline 确定性质量门（无 LLM）
 │   ├── writersdl/             # 章节→RPG-DSL 生成、批缓存、信号增强
 │   ├── rpgllm/                # LLM 驱动的 RPG 抽取适配（让 rpg 引擎不依赖 llm）
-│   ├── toolplane/             # Agent 工具面：query/check/patch/brief/view/refresh + 类型
+│   ├── toolplane/             # Agent 工具面（见 §5）；命令面、DTO 与各查询/上下文域分文件
+│   │                          #   tool.go: 命令面 + section/--type 表（help 与报错都由表生成）
+│   │                          #   tool_flags.go/tool_types.go: 各命令 flag 与响应/上下文 DTO
+│   │                          #   tool_query_{setup,outline,craft}.go: 查询域；tool_context*.go: 工作流上下文包
+│   │                          #   tool_check_*.go/tool_patch_*.go/tool_brief_*.go: 按 target（setup/outline/craft/chapter/recap）分文件
+│   │                          #   tool_view.go/tool_logs.go/tool_refresh.go/tool_match.go/tool_normalize.go/tool_snapshot.go/tool_diff.go: 视图预算、日志、派生刷新与共享助手
 │   ├── writepipe/             # write/polish 共享的章节生成·改进·post-save·recap 门禁逻辑
 │   ├── testfixtures/          # 仅测试使用的共享夹具（quality/toolplane 等复用）
-│   ├── toolcmd/              # `novelgen tool ...` 命令串的规范构造（toolplane 与 agents 共用）
+│   ├── toolcmd/              # `novelgen tool ...` 命令串的规范构造：每个形状一个 builder，固定 flag 顺序（toolplane 与 agents 共用）
 │   └── architecture/          # 分层依赖约束测试（internal 包导入方向）
 │   ├── rpg/                   # RPG 引擎（GameWorld / 模拟 / 基准）
 │   │   ├── dsl/               # DSL：AST/解析/校验/转换/模拟/合并/hook
@@ -197,7 +202,7 @@ SDK Agent **不能直接读写项目文件**。它们只能通过 CLI 的 `tool`
 | `tool patch-buffer append/show/clear` | 大正文分块暂存 |
 | `tool refresh [chapter-dsl]` | 重建派生数据 |
 
-这保证了 AGENTS.md 的硬规则：**AI 输出不得直接成为项目状态**。Agent 只能提交 patch，由 [`cmd/tool_patch.go`](../cmd/tool_patch.go)（落盘）与 [`cmd/tool_check.go`](../cmd/tool_check.go)（校验）负责 merge、保留 ID、normalize、schema/quality/simulation 校验，失败即拒绝，`--apply` 才落盘。
+这保证了 AGENTS.md 的硬规则：**AI 输出不得直接成为项目状态**。Agent 只能提交 patch，由 [`internal/toolplane/tool_patch.go`](../internal/toolplane/tool_patch.go)（落盘）与 [`internal/toolplane/tool_check.go`](../internal/toolplane/tool_check.go)（校验）负责 merge、保留 ID、normalize、schema/quality/simulation 校验，失败即拒绝，`--apply` 才落盘。
 
 ---
 

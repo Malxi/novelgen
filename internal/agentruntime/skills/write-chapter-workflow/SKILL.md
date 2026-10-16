@@ -10,7 +10,7 @@ description: 使用 chapter-write 上下文生成单章正文 JSON。
 ## 必须执行
 
 - 先查询调用方指定的 `chapter-write` 小型确认包：
-  `novelgen tool query context --type chapter-write --id "<chapter_id>" --view brief --fields path,navigation,stats,warnings`
+  `novelgen tool query context --type chapter-write --id "<chapter_id>" --fields path,navigation,stats,warnings --view brief`
 - 章节事实、recap、前后文和 next-chapter hook 以调用方 typed input 为准；这个小型确认包只用于确认项目路径、相邻章节、实体名和工具策略。
 - 只写当前章节，不修改 outline、setup、craft、recap、draft 或其它章节。
 - 生成模式没有 patch 权限。不要运行 `tool patch`、`patch-buffer`、`tool check`、`tool refresh`。

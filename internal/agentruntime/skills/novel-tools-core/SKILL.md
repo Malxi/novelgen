@@ -23,7 +23,7 @@ description: Common Novelgen Agent SDK tool rules. Project facts may only be que
 - `tool query` 和 `tool check` 是只读操作；优先使用 context bundle。
 - 有 `navigation`、`workflow`、`next_actions` 时按最小下一步执行。
 - 单章修复任务优先使用 `novelgen tool query context --type chapter-repair --id "<chapter_id>" --view brief`。
-- 章节生成任务只能使用 `novelgen tool query context --type chapter-write --id "<chapter_id>" --view brief --fields path,navigation,stats,warnings`；正文事实来自调用方 typed input，不要再查询普通 brief/full 或已保存章节正文。
+- 章节生成任务只能使用 `novelgen tool query context --type chapter-write --id "<chapter_id>" --fields path,navigation,stats,warnings --view brief`；正文事实来自调用方 typed input，不要再查询普通 brief/full 或已保存章节正文。
 - 只有章节 review/improve/repair 等明确需要检查已有草稿的任务，才使用 `novelgen tool query chapter --id "<chapter_id>" --content --view brief`；不要用 shell 读 `chapters/` 文件。
 - 不要一次扫描完整 setup、outline 或所有章节。
 - 有 `meta.context_budget` 或 `check_budget` 时必须遵守；不要违反 `avoid`。

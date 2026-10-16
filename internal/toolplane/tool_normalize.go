@@ -1,0 +1,168 @@
+// Normalizers for the tool plane: alias-to-canonical key/type mapping, mojibake repair for
+// agent-supplied lookup text, and result limit helpers.
+
+package toolplane
+
+import (
+	"fmt"
+	"strings"
+
+	"novelgen/internal/utils"
+)
+
+func StringMapValue(value map[string]interface{}, key string) string {
+	if value == nil {
+		return ""
+	}
+	raw, ok := value[key]
+	if !ok || raw == nil {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprint(raw))
+}
+
+func RepairToolLookupText(value string) (string, bool) {
+	trimmed := strings.TrimSpace(value)
+	repaired := utils.RepairLikelyMojibakeText(trimmed)
+	return repaired, repaired != trimmed
+}
+
+func NormalizeKey(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func normalizeContextType(value string) string {
+	switch NormalizeKey(value) {
+	case "", "craft-character", "character-craft", "character", "char":
+		return "craft-character"
+	case "craft-item", "item-craft", "item":
+		return "craft-item"
+	case "craft-location", "location-craft", "location", "loc":
+		return "craft-location"
+	case "craft-organization", "organization-craft", "organization", "org":
+		return "craft-organization"
+	case "outline-volume", "volume-outline", "volume", "compose-volume":
+		return "outline-volume"
+	case "outline-repair", "repair-outline", "repair", "issue", "issue-repair":
+		return "outline-repair"
+	case "outline-global-repair", "global-outline-repair", "outline-global", "global-repair":
+		return "outline-global-repair"
+	case "recap-repair", "repair-recap", "recap", "recap-context":
+		return "recap-repair"
+	case "chapter-repair", "repair-chapter", "final-chapter-repair", "chapter-issue", "chapter-check-repair":
+		return "chapter-repair"
+	case "chapter-write", "write-chapter", "chapter-draft", "draft-chapter", "write", "chapter-context":
+		return "chapter-write"
+	default:
+		return NormalizeKey(value)
+	}
+}
+
+func normalizeEntityType(value string) string {
+	switch NormalizeKey(value) {
+	case "characters", "char":
+		return "character"
+	case "items":
+		return "item"
+	case "locations", "loc":
+		return "location"
+	case "storylines":
+		return "storyline"
+	default:
+		return NormalizeKey(value)
+	}
+}
+
+func limitOutlineHitResults(results interface{}, max int) []OutlineHit {
+	values, _ := results.([]OutlineHit)
+	if max > 0 && len(values) > max {
+		return values[:max]
+	}
+	return values
+}
+
+func limitChapterHitResults(results interface{}, max int) []chapterHit {
+	values, _ := results.([]chapterHit)
+	if max > 0 && len(values) > max {
+		return values[:max]
+	}
+	return values
+}
+
+func limitEventHitResults(results interface{}, max int) []EventHit {
+	values, _ := results.([]EventHit)
+	if max > 0 && len(values) > max {
+		return values[:max]
+	}
+	return values
+}
+
+func normalizeSetupType(value string) string {
+	switch NormalizeKey(value) {
+	case "storylines", "arc", "arcs":
+		return "storyline"
+	case "premises":
+		return "premise"
+	case "cast", "core_cast", "corecast":
+		return "core-cast"
+	case "resources", "world-resource", "world-resources":
+		return "resource"
+	case "world-timeline":
+		return "timeline"
+	case "rule", "rules", "setup-rules", "iron-rules":
+		return "rules"
+	case "longform", "long_form_plan", "long-form":
+		return "long-form-plan"
+	default:
+		return NormalizeKey(value)
+	}
+}
+
+func normalizeOutlineType(value string) string {
+	switch NormalizeKey(value) {
+	case "parts":
+		return "part"
+	case "volumes":
+		return "volume"
+	case "chapters", "outline-chapter", "outline-chapters":
+		return "chapter"
+	case "reference", "references":
+		return "refs"
+	default:
+		return NormalizeKey(value)
+	}
+}
+
+func normalizeCraftType(value string) string {
+	switch NormalizeKey(value) {
+	case "characters", "char", "chars":
+		return "character"
+	case "items":
+		return "item"
+	case "locations", "loc", "locs":
+		return "location"
+	case "organizations", "org", "orgs":
+		return "organization"
+	default:
+		return NormalizeKey(value)
+	}
+}
+
+func normalizeChapterType(value string) string {
+	switch NormalizeKey(value) {
+	case "reference", "references":
+		return "refs"
+	case "event":
+		return "events"
+	default:
+		return NormalizeKey(value)
+	}
+}
+
+func prefixedReasons(prefix string, reasons []string) []string {
+	out := make([]string, 0, len(reasons))
+	for _, reason := range reasons {
+		out = append(out, prefix+"."+reason)
+	}
+	return out
+}

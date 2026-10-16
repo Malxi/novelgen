@@ -634,7 +634,7 @@ SDK. The agent receives the normal typed write input, may use
 `novelgen tool query ...` and `novelgen tool check ...`, and should start from:
 
 ```bash
-novelgen tool query context --type chapter-write --id P1-V1-C1 --view brief --fields path,navigation,stats,warnings
+novelgen tool query context --type chapter-write --id P1-V1-C1 --fields path,navigation,stats,warnings --view brief
 ```
 
 The typed write input already contains the chapter facts, recap, adjacent

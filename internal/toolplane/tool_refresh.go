@@ -20,11 +20,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var ToolRefreshFlags struct {
-	ID        string
-	BatchSize int
-}
-
 type toolRefreshResult struct {
 	OK               bool             `json:"ok"`
 	Target           string           `json:"target"`

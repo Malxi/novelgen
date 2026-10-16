@@ -726,7 +726,7 @@ func writeGenRequiredContextQuery(chapterID string) string {
 	if chapterID == "" {
 		return ""
 	}
-	return fmt.Sprintf("novelgen tool query context --type chapter-write --id %q --view brief --fields path,navigation,stats,warnings", chapterID)
+	return toolcmd.QueryContext(toolcmd.QueryOptions{Type: "chapter-write", ID: chapterID, Fields: "path,navigation,stats,warnings", View: "brief"})
 }
 
 func writeImproveToolAllowlist(chapterID string, applyPatches bool, targetWords ...int) []string {
@@ -740,11 +740,11 @@ func writeImproveToolAllowlist(chapterID string, applyPatches bool, targetWords 
 		}
 		bufferID := chapterID + "-draft"
 		allowlist = append(allowlist,
-			fmt.Sprintf("novelgen tool query chapter --id %q --view brief", chapterID),
-			fmt.Sprintf("novelgen tool query chapter --id %q --content", chapterID),
-			fmt.Sprintf("novelgen tool query chapter --id %q --content --view brief", chapterID),
-			fmt.Sprintf("novelgen tool query outline --type chapter --id %q --view brief", chapterID),
-			fmt.Sprintf("novelgen tool check all --target outline --scope chapter --id %q --max-issues 8", chapterID),
+			toolcmd.QueryChapter(toolcmd.QueryOptions{ID: chapterID, View: "brief"}),
+			toolcmd.QueryChapter(toolcmd.QueryOptions{ID: chapterID, Content: true}),
+			toolcmd.QueryChapter(toolcmd.QueryOptions{ID: chapterID, Content: true, View: "brief"}),
+			toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "chapter", ID: chapterID, View: "brief"}),
+			toolcmd.Check(toolcmd.CheckOptions{Target: "outline", Scope: "chapter", ID: chapterID, MaxIssues: 8}),
 			toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "simulation", MaxIssues: 8}),
 			toolcmd.ChapterDSLRefresh(chapterID),
 			fmt.Sprintf("novelgen tool patch-buffer --id %q", bufferID),
@@ -754,28 +754,28 @@ func writeImproveToolAllowlist(chapterID string, applyPatches bool, targetWords 
 				toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "quality", MaxIssues: 8, TargetWords: targetWordCount}),
 				toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MaxIssues: 8, TargetWords: targetWordCount}),
 				toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MinPriority: "low", MaxIssues: 12, TargetWords: targetWordCount}),
-				fmt.Sprintf("novelgen tool patch chapter --id %q%s", chapterID, targetWordsFlag),
-				fmt.Sprintf("novelgen tool patch chapter --id %q --patch-buffer %q%s", chapterID, bufferID, targetWordsFlag),
+				toolcmd.Patch(toolcmd.PatchOptions{Section: "chapter", ID: chapterID})+targetWordsFlag,
+				toolcmd.Patch(toolcmd.PatchOptions{Section: "chapter", ID: chapterID, Buffer: bufferID})+targetWordsFlag,
 			)
 		} else {
 			allowlist = append(allowlist,
 				toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "quality", MaxIssues: 8}),
 				toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MaxIssues: 8}),
 				toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MinPriority: "low", MaxIssues: 12}),
-				fmt.Sprintf("novelgen tool patch chapter --id %q", chapterID),
-				fmt.Sprintf("novelgen tool patch chapter --id %q --patch-buffer %q", chapterID, bufferID),
+				toolcmd.PatchChapter(chapterID),
+				toolcmd.Patch(toolcmd.PatchOptions{Section: "chapter", ID: chapterID, Buffer: bufferID}),
 			)
 		}
 		if applyPatches {
 			if targetWordCount > 0 {
 				allowlist = append(allowlist,
-					fmt.Sprintf("novelgen tool patch chapter --id %q --apply --refresh-derived%s", chapterID, targetWordsFlag),
-					fmt.Sprintf("novelgen tool patch chapter --id %q --patch-buffer %q --apply --refresh-derived%s", chapterID, bufferID, targetWordsFlag),
+					toolcmd.Patch(toolcmd.PatchOptions{Section: "chapter", ID: chapterID, Apply: true, RefreshDerived: true})+targetWordsFlag,
+					toolcmd.Patch(toolcmd.PatchOptions{Section: "chapter", ID: chapterID, Buffer: bufferID, Apply: true, RefreshDerived: true})+targetWordsFlag,
 				)
 			} else {
 				allowlist = append(allowlist,
-					fmt.Sprintf("novelgen tool patch chapter --id %q --apply --refresh-derived", chapterID),
-					fmt.Sprintf("novelgen tool patch chapter --id %q --patch-buffer %q --apply --refresh-derived", chapterID, bufferID),
+					toolcmd.Patch(toolcmd.PatchOptions{Section: "chapter", ID: chapterID, Apply: true, RefreshDerived: true}),
+					toolcmd.Patch(toolcmd.PatchOptions{Section: "chapter", ID: chapterID, Buffer: bufferID, Apply: true, RefreshDerived: true}),
 				)
 			}
 		}
@@ -793,10 +793,10 @@ func writeFocusedQueryAllowlist(chapterID string) []string {
 	allowlist = append(allowlist, agentSDKLogToolAllowlist()...)
 	if chapterID != "" {
 		allowlist = append([]string{
-			fmt.Sprintf("novelgen tool query context --type chapter-write --id %q --view index", chapterID),
-			fmt.Sprintf("novelgen tool query context --type chapter-write --id %q --view brief", chapterID),
-			fmt.Sprintf("novelgen tool query context --type chapter-write --id %q --view brief --fields existing_chapter_excerpt", chapterID),
-			fmt.Sprintf("novelgen tool query context --type chapter-repair --id %q", chapterID),
+			toolcmd.QueryContext(toolcmd.QueryOptions{Type: "chapter-write", ID: chapterID, View: "index"}),
+			toolcmd.QueryContext(toolcmd.QueryOptions{Type: "chapter-write", ID: chapterID, View: "brief"}),
+			toolcmd.QueryContext(toolcmd.QueryOptions{Type: "chapter-write", ID: chapterID, Fields: "existing_chapter_excerpt", View: "brief"}),
+			toolcmd.QueryContext(toolcmd.QueryOptions{Type: "chapter-repair", ID: chapterID}),
 		}, allowlist...)
 	}
 	return dedupeToolAllowlist(allowlist)
@@ -969,12 +969,12 @@ func writeReviewAgentSDKParams(command string, chapterID string, targetWords ...
 		checkCommand := toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{MaxIssues: 8, TargetWords: targetWordCount})
 		command = fmt.Sprintf("%s. Before reviewing, run exactly these tools first: `novelgen tool query context --type chapter-repair --id %q --view brief`, then `%s`. Do not run alternate check command shapes.", command, chapterID, checkCommand)
 		allowlist = append(allowlist,
-			fmt.Sprintf("novelgen tool query outline --type chapter --id %q", chapterID),
-			fmt.Sprintf("novelgen tool query outline --type events --chapter-id %q", chapterID),
+			toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "chapter", ID: chapterID}),
+			toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "events", ChapterID: chapterID}),
 			toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "quality", MaxIssues: 8, TargetWords: targetWordCount}),
 			toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "simulation", MaxIssues: 8}),
 			checkCommand,
-			fmt.Sprintf("novelgen tool check all --target outline --scope chapter --id %q --max-issues 8", chapterID),
+			toolcmd.Check(toolcmd.CheckOptions{Target: "outline", Scope: "chapter", ID: chapterID, MaxIssues: 8}),
 			toolcmd.ChapterDSLRefresh(chapterID),
 		)
 	}
