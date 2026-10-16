@@ -9,6 +9,7 @@ import (
 
 	"novelgen/internal/models"
 	"novelgen/internal/rpg"
+	"novelgen/internal/store"
 )
 
 // NovelgenAdapter converts novelgen project data to DSL
@@ -296,9 +297,12 @@ func (na *NovelgenAdapter) addOutlineItemPlaceholders(dsl *DSL) {
 }
 
 func (na *NovelgenAdapter) loadStorySetup() *models.StorySetup {
+	// ProjectPath 是项目目录本身（internal/store 的 Root.Dir()），setup 路径也由
+	// store 拼，不再假设 <workspace>/books/<name> 布局。
+	project := store.OpenFS(na.project.ProjectPath, store.OSFS{})
 	candidates := []string{
-		filepath.Join(na.project.ProjectPath, "books", na.project.BookName, "story", "setup", "story_setup.json"),
-		filepath.Join(na.project.ProjectPath, "books", na.project.BookName, "story", "setup.json"),
+		project.SetupJSON(),
+		filepath.Join(project.Dir(), "story", "setup.json"),
 	}
 	var lastErr error
 	for _, setupPath := range candidates {

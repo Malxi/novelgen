@@ -18,8 +18,8 @@ func NewNovelgenProjectAdapter(project *rpg.NovelgenProject) *NovelgenProjectAda
 
 // LoadNovelgenProject loads a novelgen project and returns it wrapped in adapter
 func LoadNovelgenProject(bookName string) (*NovelgenProjectAdapter, error) {
-	// 使用当前目录作为项目路径
-	project, err := rpg.LoadNovelgenProject(".", bookName)
+	// 使用当前工作区下的 books/<bookName>
+	project, err := rpg.LoadNovelgenProject(store.BookDir("", bookName))
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,9 @@ func LoadNovelgenProject(bookName string) (*NovelgenProjectAdapter, error) {
 // GetStorySetup creates a StorySetup from setup.json or outline
 func (a *NovelgenProjectAdapter) GetStorySetup() *models.StorySetup {
 	// 优先尝试从 setup.json 加载
-	setupPath := store.OpenFS(store.BookDir("", a.project.BookName), store.OSFS{}).SetupJSON()
+	// ProjectPath 现在是项目目录本身（BookName 可能来自 novel.json 的显示名，
+	// 不再保证等于目录名）。
+	setupPath := store.OpenFS(a.project.ProjectPath, store.OSFS{}).SetupJSON()
 	if setup, err := models.LoadStorySetup(setupPath); err == nil {
 		// 成功加载 setup.json
 		return setup

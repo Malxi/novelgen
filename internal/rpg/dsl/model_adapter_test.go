@@ -86,7 +86,8 @@ func TestModelAdapterOutlinePlayerUsesCraftProtagonistDetails(t *testing.T) {
 func TestNovelgenAdapterOutlineAddsUsablePlayerLocationsAndEventTypes(t *testing.T) {
 	tmp := t.TempDir()
 	bookName := "mine-v2"
-	setupDir := filepath.Join(tmp, "books", bookName, "story", "setup")
+	// ProjectPath 现在是项目目录本身，setup 位于 <project>/story/setup/。
+	setupDir := filepath.Join(tmp, "story", "setup")
 	if err := os.MkdirAll(setupDir, 0o755); err != nil {
 		t.Fatalf("mkdir setup: %v", err)
 	}

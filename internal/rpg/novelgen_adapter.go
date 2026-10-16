@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
+	"novelgen/internal/utils"
 	"os"
 	"path/filepath"
 	"strings"
@@ -92,57 +94,67 @@ type NovelgenLocation struct {
 	StateEffects   []models.CraftStateEffect `json:"state_effects,omitempty"`
 }
 
-// LoadNovelgenProject 加载novelgen项目
-// projectPath: 项目根目录（包含books文件夹的目录）
-// bookName: 书籍名称（books文件夹下的子目录名）
-func LoadNovelgenProject(projectPath, bookName string) (*NovelgenProject, error) {
+// LoadNovelgenProject 加载 bookDir 处的 novelgen 项目（含 novel.json 的目录）。
+//
+// 以前它的签名是 (工作区根, 书名)，并硬编码 <工作区>/books/<书名>。那样只有恰好
+// 位于 books/<name> 下的项目能加载，任何显式指定的项目目录（例如 `novelgen --dir`）
+// 都会去找一个不存在的路径。路径现在由 internal/store 给出，与 CLI 其余部分一致。
+func LoadNovelgenProject(bookDir string) (*NovelgenProject, error) {
+	root, err := store.Open(bookDir)
+	if err != nil {
+		return nil, err
+	}
 	project := &NovelgenProject{
-		ProjectPath:   projectPath,
-		BookName:      bookName,
+		ProjectPath:   root.Dir(),
+		BookName:      bookNameForProject(root),
 		Characters:    make(map[string]NovelgenCharacter),
 		Items:         make(map[string]NovelgenItem),
 		Locations:     make(map[string]NovelgenLocation),
 		Organizations: make(map[string]models.Organization),
 	}
 
-	storyPath := filepath.Join(projectPath, "books", bookName, "story")
-
 	// 加载角色
-	charPath := filepath.Join(storyPath, "craft", "characters.json")
-	if err := project.loadJSON(charPath, &project.Characters); err != nil {
+	if err := project.loadJSON(root.CraftFile(store.CraftCharacters), &project.Characters); err != nil {
 		return nil, fmt.Errorf("加载角色失败: %v", err)
 	}
 
 	// 加载物品
-	itemPath := filepath.Join(storyPath, "craft", "items.json")
-	if err := project.loadJSON(itemPath, &project.Items); err != nil {
+	if err := project.loadJSON(root.CraftFile(store.CraftItems), &project.Items); err != nil {
 		return nil, fmt.Errorf("加载物品失败: %v", err)
 	}
 
 	// 加载地点
-	locPath := filepath.Join(storyPath, "craft", "locations.json")
-	if err := project.loadJSON(locPath, &project.Locations); err != nil {
+	if err := project.loadJSON(root.CraftFile(store.CraftLocations), &project.Locations); err != nil {
 		return nil, fmt.Errorf("加载地点失败: %v", err)
 	}
 
 	// 加载大纲
-	orgPath := filepath.Join(storyPath, "craft", "organizations.json")
-	if data, err := os.ReadFile(orgPath); err == nil {
-		if err := json.Unmarshal(data, &project.Organizations); err != nil {
+	if data, err := root.Read(root.CraftFile(store.CraftOrganizations)); err == nil {
+		if err := json.Unmarshal(utils.StripUTF8BOM(data), &project.Organizations); err != nil {
 			return nil, fmt.Errorf("failed to parse organizations: %v", err)
 		}
 	}
 
-	outlinePath := filepath.Join(storyPath, "compose", "outline.json")
-	outlineData, err := os.ReadFile(outlinePath)
+	outlineData, err := root.Read(root.OutlineJSON())
 	if err != nil {
 		return nil, fmt.Errorf("读取大纲失败: %v", err)
 	}
-	if err := json.Unmarshal(outlineData, &project.Outline); err != nil {
+	if err := json.Unmarshal(utils.StripUTF8BOM(outlineData), &project.Outline); err != nil {
 		return nil, fmt.Errorf("解析大纲失败: %v", err)
 	}
 
 	return project, nil
+}
+
+// bookNameForProject prefers the name recorded in novel.json so RPG output and
+// summaries show the book's own name rather than its folder name.
+func bookNameForProject(root *store.Root) string {
+	if config, err := root.LoadConfig(); err == nil {
+		if name := strings.TrimSpace(config.Name); name != "" {
+			return name
+		}
+	}
+	return filepath.Base(root.Dir())
 }
 
 // loadJSON 加载JSON文件
@@ -151,7 +163,7 @@ func (np *NovelgenProject) loadJSON(path string, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(data, v)
+	return json.Unmarshal(utils.StripUTF8BOM(data), v)
 }
 
 // ConvertToRPG 转换为RPG世界

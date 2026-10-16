@@ -278,7 +278,8 @@ AI 分析章节/大纲
 ## 8. Web UI（`webui` module）
 
 - Gin HTTP 服务 + WebSocket（[`webui/main.go`](../webui/main.go)），前端为 React + Vite（`webui/frontend/`），由 `frontend/dist` 静态托管。
-- 只读端点直接读取项目文件并透传原始 JSON；**所有写、派生文件与长任务都通过 `exec` 调用 `novelgen` 二进制**（例如保存大纲后调用 `novelgen compose normalize --force` 重写 `outline.md`），webui 不再 import 父 module 的任何包。
+- 只读端点直接读取项目文件并透传原始 JSON；**所有写、派生文件与长任务都通过 `exec` 调用 `novelgen` 二进制**（例如保存大纲后调用 `novelgen compose normalize --force` 重写 `outline.md`）。
+- webui **不 import 父 module 的任何包**（连 `internal/models` 也没有）：它自己拼只读路径（约 50 处），因此这部分布局知识与 `internal/store` 是**并行维护**的，改动项目布局时必须两边一起改。章节 id 目前由文件名派生（`chapters/<id>.md` → id 去掉 `.md`），所以对外的 id 是文件名而不是大纲里的章节 ID。
 - 本机访问加固在 [`webui/security.go`](../webui/security.go)。
 
 **集成边界（由 `webui/boundary_test.go` 强制）**：webui 不得 import `novelgen/cmd/**` 或 `novelgen/internal/**`；写与派生文件只走 CLI `exec`。二进制位置可用 `NOVELGEN_BIN` 覆盖。
@@ -315,8 +316,8 @@ AI 分析章节/大纲
 13. **仍存的少量平行实现**（有意保留）：各 `tools/*` 自带的 `printHelp`/`printSummary` 等打印函数；`models.Event` 与 `rpg.StoryEvent` 各自的旧格式事件适配（服务于两套不同的模型，需同步维护）；`toolplane.reviewPriorityRank` 与 models 版本签名不同（前者区分未知优先级）。
 14. **静态检查基线**：根模块与 webui 的 `go vet ./...` 与 `staticcheck ./...` 均为干净，唯一剩余的是第 8 条里 DSL Phase-2 脚手架的 4 个 `U1000`。新增告警请当场处理，别让基线退化——这一轮就是靠它翻出 `draft improve` 丢弃生成稿、`fmt.Errorf` 动态格式串、JSON 提取被字符串内 `}` 截断等问题。
 15. **小说 storage 已收敛（本轮完成）**：新增 [`internal/store`](../internal/store/)，磁盘布局、原子写、检查点/备份、类型化产物读写都只此一处；`internal/project` 退化为它上面的门面，`cmd/root.go` 负责解析一次根（`--dir` / `NOVELGEN_PROJECT_DIR` / 向上查找）。之前"同一份布局散在 47 个文件里、`compose` 用 cwd 相对路径而 `write` 用向上查找"的不一致已消除——`compose check` 现在在子目录与 `--dir` 两种场景下都可用（原实现要求 cwd 就是项目根）。`internal/models` 现在只保留 `Parse*`/`MarshalForSave` 与**路径入参**的便利读写（不含布局知识），`FindProjectRoot` 移入 store。测试不再靠 `os.Chdir` 定位项目：改为向命令上下文注入 root（`bindProject`）或安装进程默认根（`useProjectRoot`），全仓只剩 `cmd/rpgdsl` 一处 chdir，因为 `rpg-dsl` 的契约本身就是"在含 `books/` 的工作区里运行"，那不是项目根、store 无法表达。
-16. **仍是三套寻址约定**：项目命令按 `novel.json` 找项目（store）；dev 工具（`tools/*`、`rpg-dsl`、`rpg.NovelgenProject`）按 `<workspace>/books/<name>` 找书（字面量已收敛到 `store.BooksDirName`/`store.BookDir`，但 `internal/rpg/novelgen_adapter.go` 仍自己拼 `books/<name>/story/...`）；webui 只读端点自己拼路径（被 `boundary_test.go` 挡在 `internal/*` 之外）。若要把 dev 工具也改成 root 注入，应当给它们显式的 workspace 参数，而不是让 store 假装知道 workspace 在哪。
-17. **`logger.ProjectDir()` 与 store 根并存**：write 流水线通过 `logger.SetProjectDir` 钉住日志目录，agents 的日志/工作区根现在先读它、再读 `store.Default()`、最后才退回 cwd（见 `agentLogRoot`/`agentWorkspaceRoot`）。这是两个"当前项目"来源，下一步可把 logger 的那份也换成 `*store.Root`。
+16. **RPG 侧的工作区假设已消除（本轮完成）**：`rpg.LoadNovelgenProject` 以前签名是 `(工作区根, 书名)` 并硬编码 `<工作区>/books/<书名>/story/...`，导致任何不在 `books/<name>` 下的项目（包括 `--dir` 指定的）都加载失败；现在它只接受**项目目录**，路径由 `store` 给出，书名取 `novel.json` 的 `name`（缺失才退回目录名）。调用方（`cmd/rpgcmd`、`cmd/rpgdsl`、`internal/agents/chapter_to_dsl_adapter`、`tools/novelgen-rpg`、`tools/rpg-write`）都只传目录；`internal/rpg/dsl` 的 setup 查找同样改用 store。`cmd/rpgcmd` 仍保留 `<workspace>/output/rpg_data.json` 这份"顺手再存一份"的行为，但只在项目确实位于 `books/<name>` 下时才写，不再往凭空推导的路径写文件。RPG 侧现在也容忍 BOM。
+17. **仍是两套寻址约定 + 一个"当前项目"重复来源**：项目命令与 `rpg`/`rpg-dsl`/`tools/*` 都按给定目录工作（`rpg-dsl`/`tools/*` 仍以 `<workspace>/books/<name>` 作为**默认**目录，字面量收敛到 `store.BooksDirName`/`store.BookDir`），webui 则自己拼只读路径（见 §8）。`logger.ProjectDir()` 与 store 根并存：write 流水线用 `logger.SetProjectDir` 钉住日志目录，agents/llm 的日志与工作区根现在按"logger → `store.Default()` → cwd"的顺序解析（`agentLogRoot`/`agentWorkspaceRoot`/`runtimeWorkspaceRoot`），`logger` 处于层表第 1 层因此不能自己读 store。下一步可把 logger 的那份也换成 `*store.Root`。
 
 ---
 

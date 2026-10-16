@@ -19,6 +19,7 @@ import (
 	"novelgen/internal/agentruntime"
 	"novelgen/internal/envutil"
 	"novelgen/internal/logger"
+	"novelgen/internal/store"
 )
 
 // Client interface for LLM providers
@@ -143,9 +144,15 @@ func (c *RuntimeClient) ChatCompletion(ctx context.Context, messages []Message, 
 	}, nil
 }
 
+// runtimeWorkspaceRoot returns the directory an SDK run should work in: the
+// logger's project directory when the pipeline pinned one, otherwise the
+// resolved project root, otherwise the working directory.
 func runtimeWorkspaceRoot() string {
 	if dir := strings.TrimSpace(logger.Default().ProjectDir()); dir != "" {
 		return dir
+	}
+	if root, err := store.Default(); err == nil {
+		return root.Dir()
 	}
 	if cwd, err := os.Getwd(); err == nil {
 		return cwd

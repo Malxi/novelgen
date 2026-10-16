@@ -335,9 +335,14 @@ func FirstMarkdownHeadingForWriteRPGDSL(content, fallback string) string {
 }
 
 func DumpWriteRPGDSLFailure(bookName, content string, parseErr error) {
-	root, err := store.Open(store.BookDir("", bookName))
+	// Prefer the project the pipeline is actually working in; the books/<name>
+	// workspace layout is only the standalone-tool fallback.
+	root, err := store.Default()
 	if err != nil {
-		return
+		root, err = store.Open(store.BookDir("", bookName))
+		if err != nil {
+			return
+		}
 	}
 	if projectDir := strings.TrimSpace(logger.Default().ProjectDir()); projectDir != "" {
 		if projectRoot, openErr := store.Open(projectDir); openErr == nil {

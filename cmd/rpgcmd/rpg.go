@@ -11,6 +11,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/rpg"
 	"novelgen/internal/rpg/benchmark"
+	"novelgen/internal/store"
 	"novelgen/internal/utils"
 
 	"github.com/spf13/cobra"
@@ -137,6 +138,17 @@ func init() {
 }
 
 // NewCommand returns the `novelgen rpg` command tree.
+// workspaceRootFor returns the workspace directory that holds books/, when
+// bookDir follows the books/<name> layout that the RPG tools historically
+// assumed.
+func workspaceRootFor(bookDir string) (string, bool) {
+	parent := filepath.Dir(bookDir)
+	if filepath.Base(parent) != store.BooksDirName {
+		return "", false
+	}
+	return filepath.Dir(parent), true
+}
+
 func NewCommand() *cobra.Command {
 	return rpgCmd
 }
@@ -170,21 +182,15 @@ func runRPGGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get project root - findProjectRoot returns the book directory
-	// We need the parent of books directory as project root
 	bookDir, err := project.FindRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
 
-	// Get the book folder name (e.g., "mine")
-	bookFolder := filepath.Base(bookDir)
-	// Get the project root (parent of books directory)
-	projectRoot := filepath.Dir(filepath.Dir(bookDir))
-
-	log.Info("Loading novelgen project: %s (book: %s)", bookName, bookFolder)
+	log.Info("Loading novelgen project: %s (%s)", bookName, bookDir)
 
 	// Load novelgen project
-	project, err := rpg.LoadNovelgenProject(projectRoot, bookFolder)
+	project, err := rpg.LoadNovelgenProject(bookDir)
 	if err != nil {
 		return fmt.Errorf("failed to load project: %w", err)
 	}
@@ -285,9 +291,15 @@ func runRPGGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Also export to project output directory for convenience
-	outputRPGPath := filepath.Join(projectRoot, "output", "rpg_data.json")
-	if err := os.MkdirAll(filepath.Dir(outputRPGPath), 0755); err == nil {
-		_ = project.ExportRPGData(outputRPGPath)
+	//
+	// The convenience copy used to land in <workspace>/output/, which only
+	// exists for the books/<name> layout; a project that lives elsewhere has no
+	// such workspace, so the copy is skipped instead of written to a made-up path.
+	if workspace, ok := workspaceRootFor(bookDir); ok {
+		outputRPGPath := filepath.Join(workspace, "output", "rpg_data.json")
+		if err := os.MkdirAll(filepath.Dir(outputRPGPath), 0755); err == nil {
+			_ = project.ExportRPGData(outputRPGPath)
+		}
 	}
 
 	fmt.Println("✓ RPG data exported successfully")
@@ -310,16 +322,10 @@ func runRPGSimulate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("book name not set in project config")
 	}
 
-	// Get project root - findProjectRoot returns the book directory
 	bookDir, err := project.FindRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
-
-	// Get the book folder name (e.g., "mine")
-	bookFolder := filepath.Base(bookDir)
-	// Get the project root (parent of books directory)
-	projectRoot := filepath.Dir(filepath.Dir(bookDir))
 
 	log.Info("Loading RPG data for book: %s", bookName)
 
@@ -338,7 +344,7 @@ func runRPGSimulate(cmd *cobra.Command, args []string) error {
 
 		// Generate RPG data on the fly from project (simpler and more reliable)
 		fmt.Println("Loading RPG data from project...")
-		project, err := rpg.LoadNovelgenProject(projectRoot, bookFolder)
+		project, err := rpg.LoadNovelgenProject(bookDir)
 		if err != nil {
 			return fmt.Errorf("failed to load project: %w", err)
 		}
@@ -353,7 +359,7 @@ func runRPGSimulate(cmd *cobra.Command, args []string) error {
 	} else {
 		// Generate RPG data on the fly
 		fmt.Println("RPG data not found, generating from novel elements...")
-		project, err := rpg.LoadNovelgenProject(projectRoot, bookFolder)
+		project, err := rpg.LoadNovelgenProject(bookDir)
 		if err != nil {
 			return fmt.Errorf("failed to load project: %w", err)
 		}
@@ -532,19 +538,15 @@ func runRPGExport(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("book name not set in project config")
 	}
 
-	// Get project root
 	bookDir, err := project.FindRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
 
-	bookFolder := filepath.Base(bookDir)
-	projectRoot := filepath.Dir(filepath.Dir(bookDir))
-
 	log.Info("Loading RPG data for export: %s", bookName)
 
 	// Load or generate RPG world
-	project, err := rpg.LoadNovelgenProject(projectRoot, bookFolder)
+	project, err := rpg.LoadNovelgenProject(bookDir)
 	if err != nil {
 		return fmt.Errorf("failed to load project: %w", err)
 	}

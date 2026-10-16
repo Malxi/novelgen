@@ -697,7 +697,7 @@ func getBookRPGDir(bookName string) string {
 }
 
 func loadNovelgenProject(bookName string) (*rpg.NovelgenProject, error) {
-	return rpg.LoadNovelgenProject(".", bookName)
+	return rpg.LoadNovelgenProject(store.BookDir("", bookName))
 }
 
 func loadNovelgenProjectForConvert(bookName, phase string) (*rpg.NovelgenProject, error) {
@@ -710,12 +710,15 @@ func loadNovelgenProjectForConvert(bookName, phase string) (*rpg.NovelgenProject
 			Locations:   map[string]rpg.NovelgenLocation{},
 		}
 		if phase == "outline" {
-			outlinePath := store.OpenFS(store.BookDir("", bookName), store.OSFS{}).OutlineJSON()
-			data, err := os.ReadFile(outlinePath)
+			book, err := store.Open(store.BookDir("", bookName))
+			if err != nil {
+				return nil, err
+			}
+			data, err := book.Read(book.OutlineJSON())
 			if err != nil {
 				return nil, fmt.Errorf("读取大纲失败: %w", err)
 			}
-			if err := json.Unmarshal(data, &project.Outline); err != nil {
+			if err := json.Unmarshal(utils.StripUTF8BOM(data), &project.Outline); err != nil {
 				return nil, fmt.Errorf("解析大纲失败: %w", err)
 			}
 		}
