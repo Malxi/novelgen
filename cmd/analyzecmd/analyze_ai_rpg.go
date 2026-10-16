@@ -20,7 +20,7 @@ import (
 
 var analyzeAIRPGCmd = &cobra.Command{
 	Use:   "analyze-ai-rpg [chapter-file]",
-	Short: "使用AI+RPG Pipeline分析章节",
+	Short: "Analyze chapters with the AI + RPG pipeline",
 	Long: `完整流程: chapters -> AI Agent -> RPG DSL -> RPG Simulate -> Issues
 
 示例:

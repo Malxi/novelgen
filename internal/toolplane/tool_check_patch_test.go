@@ -16,6 +16,7 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/store"
 	"novelgen/internal/testfixtures"
 	"novelgen/internal/toolplane"
 	"novelgen/internal/writepipe"
@@ -1710,7 +1711,7 @@ func TestToolPatchBufferAppendShowClear(t *testing.T) {
 		t.Fatalf("unexpected show output: %#v", shown)
 	}
 
-	path, err := toolplane.ToolPatchBufferPath(root, "P1-V1-C1-draft")
+	path, err := toolplane.ToolPatchBufferPath(toolRoot(t, root), "P1-V1-C1-draft")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1751,7 +1752,7 @@ func TestBuildChapterPatchNextActionsAfterRefreshDerived(t *testing.T) {
 
 func TestLoadToolPatchBufferWrapsChapterContent(t *testing.T) {
 	root := t.TempDir()
-	path, err := toolplane.ToolPatchBufferPath(root, "chapter-draft")
+	path, err := toolplane.ToolPatchBufferPath(toolRoot(t, root), "chapter-draft")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1763,7 +1764,7 @@ func TestLoadToolPatchBufferWrapsChapterContent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	payload, err := toolplane.LoadToolPatchBuffer(root, "chapter-draft", "chapter")
+	payload, err := toolplane.LoadToolPatchBuffer(toolRoot(t, root), "chapter-draft", "chapter")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1774,7 +1775,7 @@ func TestLoadToolPatchBufferWrapsChapterContent(t *testing.T) {
 	if decoded["content"] != content {
 		t.Fatalf("content = %q, want %q", decoded["content"], content)
 	}
-	if _, err := toolplane.ToolPatchBufferPath(root, "../bad"); err == nil {
+	if _, err := toolplane.ToolPatchBufferPath(toolRoot(t, root), "../bad"); err == nil {
 		t.Fatalf("expected invalid patch buffer id to be rejected")
 	}
 }
@@ -1784,7 +1785,7 @@ func TestToolPatchBufferShowCapsPreview(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"project_name":"Patch Buffer Test"}`), 0644); err != nil {
 		t.Fatal(err)
 	}
-	path, err := toolplane.ToolPatchBufferPath(root, "long-draft")
+	path, err := toolplane.ToolPatchBufferPath(toolRoot(t, root), "long-draft")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2351,14 +2352,14 @@ func TestRunToolCraftPatchApplyWritesFileAndCheckpoint(t *testing.T) {
 			"role_in_story": "protagonist",
 		},
 	}
-	if err := toolplane.SaveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
+	if err := writeCraftFixture(t, root, store.CraftCharacters, initial); err != nil {
 		t.Fatal(err)
 	}
 
 	cmd := &cobra.Command{}
 	var out strings.Builder
 	cmd.SetOut(&out)
-	err := toolplane.RunToolCraftPatch(cmd, root, "character", "Lin", []byte(`{"notes":"updated by tool"}`), true, nil)
+	err := toolplane.RunToolCraftPatch(cmd, toolRoot(t, root), "character", "Lin", []byte(`{"notes":"updated by tool"}`), true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2398,7 +2399,7 @@ func TestRunToolCraftSchemaCheckFlagsProtagonistFieldDistribution(t *testing.T) 
 			"notes":         strings.Repeat("tactical note ", 120),
 		},
 	}
-	if err := toolplane.SaveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
+	if err := writeCraftFixture(t, root, store.CraftCharacters, initial); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2428,14 +2429,14 @@ func TestRunToolCraftPatchDryRunReturnsCraftQualityCheck(t *testing.T) {
 			"role_in_story": "protagonist",
 		},
 	}
-	if err := toolplane.SaveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
+	if err := writeCraftFixture(t, root, store.CraftCharacters, initial); err != nil {
 		t.Fatal(err)
 	}
 
 	cmd := &cobra.Command{}
 	var out strings.Builder
 	cmd.SetOut(&out)
-	err := toolplane.RunToolCraftPatch(cmd, root, "character", "Lin", []byte(`{"notes":"updated only"}`), false, nil)
+	err := toolplane.RunToolCraftPatch(cmd, toolRoot(t, root), "character", "Lin", []byte(`{"notes":"updated only"}`), false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2586,7 +2587,7 @@ func TestRunToolRecapPatchApplyWritesValidatedFileAndCheckpoint(t *testing.T) {
 	cmd := &cobra.Command{}
 	var out strings.Builder
 	cmd.SetOut(&out)
-	err := toolplane.RunToolRecapPatch(cmd, root, chapterID, []byte(`{
+	err := toolplane.RunToolRecapPatch(cmd, toolRoot(t, root), chapterID, []byte(`{
 		"chapter_id":"WRONG",
 		"title":"Wrong title",
 		"location":"New place",
@@ -2646,7 +2647,7 @@ func TestRunToolRecapPatchRejectsBlockingApply(t *testing.T) {
 	}
 
 	cmd := &cobra.Command{}
-	err := toolplane.RunToolRecapPatch(cmd, root, chapterID, []byte(`{"location":"","present":[]}`), true, nil)
+	err := toolplane.RunToolRecapPatch(cmd, toolRoot(t, root), chapterID, []byte(`{"location":"","present":[]}`), true, nil)
 	if err == nil || !strings.Contains(err.Error(), "patch rejected") {
 		t.Fatalf("expected blocking recap patch rejection, got %v", err)
 	}
@@ -2691,7 +2692,7 @@ func TestRunToolSetupPatchApplyWritesFilesAndCheckpoint(t *testing.T) {
 	cmd := &cobra.Command{}
 	var out strings.Builder
 	cmd.SetOut(&out)
-	err := toolplane.RunToolSetupPatch(cmd, root, []byte(`{"theme":"updated by setup patch"}`), true, nil)
+	err := toolplane.RunToolSetupPatch(cmd, toolRoot(t, root), []byte(`{"theme":"updated by setup patch"}`), true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2925,7 +2926,7 @@ func TestRunToolPatchStripsBOMFromStdinPatch(t *testing.T) {
 			"role_in_story": "protagonist",
 		},
 	}
-	if err := toolplane.SaveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
+	if err := writeCraftFixture(t, root, store.CraftCharacters, initial); err != nil {
 		t.Fatal(err)
 	}
 	storeRoot := toolRoot(t, root)
@@ -2977,7 +2978,7 @@ func TestRunToolCraftSchemaCheckValidatesSavedCharacter(t *testing.T) {
 			},
 		},
 	}
-	if err := toolplane.SaveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
+	if err := writeCraftFixture(t, root, store.CraftCharacters, initial); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3005,7 +3006,7 @@ func TestRunToolCraftSchemaCheckReportsInvalidSavedCharacter(t *testing.T) {
 			},
 		},
 	}
-	if err := toolplane.SaveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
+	if err := writeCraftFixture(t, root, store.CraftCharacters, initial); err != nil {
 		t.Fatal(err)
 	}
 

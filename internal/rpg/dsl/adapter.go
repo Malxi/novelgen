@@ -302,7 +302,10 @@ func (na *NovelgenAdapter) loadStorySetup() *models.StorySetup {
 	project := store.OpenFS(na.project.ProjectPath, store.OSFS{})
 	candidates := []string{
 		project.SetupJSON(),
-		filepath.Join(project.Dir(), "story", "setup.json"),
+		// The flat story/setup.json that projects created before the setup/
+		// directory existed used. The directory comes from store; only the
+		// legacy file name is this adapter's compatibility concern.
+		filepath.Join(project.StoryDir(), "setup.json"),
 	}
 	var lastErr error
 	for _, setupPath := range candidates {

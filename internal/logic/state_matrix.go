@@ -3,13 +3,13 @@ package logic
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
 	"novelgen/internal/models"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/store"
 	"novelgen/internal/utils"
 )
 
@@ -29,6 +29,11 @@ func NewStateMatrixManager(projectRoot string) *StateMatrixManager {
 	return &StateMatrixManager{projectRoot: projectRoot, useRPGDSL: true}
 }
 
+// root is the manager's project as a storage handle. The manager keeps the
+// directory string for its "no project configured" check, but every path it
+// derives comes from internal/store.
+func (m *StateMatrixManager) root() *store.Root { return store.At(m.projectRoot) }
+
 // loadSetup loads the story setup from file
 func (m *StateMatrixManager) loadSetup() *models.StorySetup {
 	if m.setup != nil {
@@ -38,8 +43,7 @@ func (m *StateMatrixManager) loadSetup() *models.StorySetup {
 		return nil
 	}
 
-	setupPath := filepath.Join(m.projectRoot, "story", "setup", "story_setup.json")
-	data, err := os.ReadFile(setupPath)
+	data, err := os.ReadFile(m.root().SetupJSON())
 	if err != nil {
 		return nil
 	}
@@ -610,13 +614,10 @@ func (m *StateMatrixManager) loadRPGDSLDeltas() map[string][]models.RPGStateDelt
 }
 
 func (m *StateMatrixManager) rpgDSLPaths() []string {
-	rpgDir := filepath.Join(m.projectRoot, "story", "rpg")
-	candidates := []string{
-		filepath.Join(rpgDir, "00_setup.rpg"),
-		filepath.Join(rpgDir, "01_outline.rpg"),
-		filepath.Join(rpgDir, "02_craft.rpg"),
-		filepath.Join(rpgDir, "03_systems.rpg"),
-		filepath.Join(rpgDir, "04_chapters.rpg"),
+	root := m.root()
+	candidates := make([]string, 0, len(store.RPGPhaseFiles()))
+	for _, name := range store.RPGPhaseFiles() {
+		candidates = append(candidates, root.RPGFile(name))
 	}
 	paths := make([]string, 0, len(candidates))
 	for _, path := range candidates {
@@ -856,7 +857,7 @@ func (m *StateMatrixManager) loadElementsIntoState(state *models.StateMatrix) {
 	}
 
 	// Load characters
-	charPath := filepath.Join(m.projectRoot, "story", "craft", "characters.json")
+	charPath := m.root().CraftFile(store.CraftCharacters)
 	if data, err := os.ReadFile(charPath); err == nil {
 		var chars map[string]*models.Character
 		if err := json.Unmarshal(data, &chars); err == nil {
@@ -878,7 +879,7 @@ func (m *StateMatrixManager) loadElementsIntoState(state *models.StateMatrix) {
 	}
 
 	// Load locations
-	locPath := filepath.Join(m.projectRoot, "story", "craft", "locations.json")
+	locPath := m.root().CraftFile(store.CraftLocations)
 	if data, err := os.ReadFile(locPath); err == nil {
 		var locs map[string]*models.Location
 		if err := json.Unmarshal(data, &locs); err == nil {
@@ -890,7 +891,7 @@ func (m *StateMatrixManager) loadElementsIntoState(state *models.StateMatrix) {
 
 	// Load items
 	// Note: Items from craft are loaded without owners. Ownership is tracked via Events.
-	itemPath := filepath.Join(m.projectRoot, "story", "craft", "items.json")
+	itemPath := m.root().CraftFile(store.CraftItems)
 	if data, err := os.ReadFile(itemPath); err == nil {
 		var items map[string]*models.Item
 		if err := json.Unmarshal(data, &items); err == nil {

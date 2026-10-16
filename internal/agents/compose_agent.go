@@ -1652,7 +1652,7 @@ func loadAgentSDKAppliedOutlineVolume(original models.Volume, requireApplied boo
 		}
 		return original, nil
 	}
-	outlinePath := filepath.Join(root, "story", "compose", "outline.json")
+	outlinePath := store.At(root).OutlineJSON()
 	outline, err := models.LoadOutline(outlinePath)
 	if err != nil {
 		if requireApplied {

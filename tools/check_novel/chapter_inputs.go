@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"novelgen/internal/rpg"
+	"novelgen/internal/store"
 	"novelgen/internal/writersdl"
 )
 
@@ -15,12 +16,13 @@ import (
 // book path instead of assuming the process working directory is the novel
 // project.
 func findCheckNovelChapterInputs(bookPath string, outline *rpg.StoryOutline) ([]writersdl.WriteRPGDSLChapterInput, error) {
+	book := store.At(bookPath)
 	chapterFiles := map[string]string{}
 	if outline != nil {
 		for _, part := range outline.Parts {
 			for _, volume := range part.Volumes {
 				for _, chapter := range volume.Chapters {
-					for _, path := range candidateCheckNovelChapterPaths(bookPath, chapter.ID) {
+					for _, path := range book.ChapterCandidates(chapter.ID) {
 						if _, err := os.Stat(path); err == nil {
 							chapterFiles[chapter.ID] = path
 							break
@@ -31,7 +33,7 @@ func findCheckNovelChapterInputs(bookPath string, outline *rpg.StoryOutline) ([]
 		}
 	}
 	if len(chapterFiles) == 0 {
-		pattern := filepath.Join(bookPath, "chapters", "chapter-*.md")
+		pattern := filepath.Join(book.ChaptersDir(), "chapter-*.md")
 		files, err := filepath.Glob(pattern)
 		if err != nil {
 			return nil, err
@@ -48,31 +50,11 @@ func findCheckNovelChapterInputs(bookPath string, outline *rpg.StoryOutline) ([]
 			ChapterID:   chapterID,
 			ChapterPath: chapterPath,
 		}
-		recapPath := filepath.Join(bookPath, "story", "recaps", chapterID+".json")
+		recapPath := book.RecapFile(chapterID)
 		if _, err := os.Stat(recapPath); err == nil {
 			input.RecapPath = recapPath
 		}
 		inputs = append(inputs, input)
 	}
 	return inputs, nil
-}
-
-func candidateCheckNovelChapterPaths(bookPath, chapterID string) []string {
-	return []string{
-		filepath.Join(bookPath, "chapters", "chapter-"+chapterID+".md"),
-		filepath.Join(bookPath, "chapters", "chapter-"+extractCheckNovelChapterNumber(chapterID)+".md"),
-	}
-}
-
-func extractCheckNovelChapterNumber(chapterID string) string {
-	parts := strings.Split(chapterID, "-")
-	if len(parts) > 0 {
-		last := parts[len(parts)-1]
-		return strings.TrimLeft(last, "Cc")
-	}
-	parts = strings.Split(chapterID, "_")
-	if len(parts) > 0 {
-		return parts[len(parts)-1]
-	}
-	return chapterID
 }

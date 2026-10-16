@@ -42,3 +42,11 @@ func bindProject(cmd *cobra.Command, root *store.Root) *cobra.Command {
 	cmd.SetContext(store.WithRoot(context.Background(), root))
 	return cmd
 }
+
+// writeCraftFixture writes one craft element file into a fixture project through
+// the project layout, so tests seed craft the same way the tool plane reads it.
+func writeCraftFixture(t *testing.T, dir string, kind store.CraftKind, values map[string]map[string]interface{}) error {
+	t.Helper()
+	root := toolRoot(t, dir)
+	return root.WriteJSON(root.CraftFile(kind), values)
+}

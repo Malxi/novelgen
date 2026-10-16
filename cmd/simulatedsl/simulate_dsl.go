@@ -14,7 +14,7 @@ import (
 
 var simulateDSLCmd = &cobra.Command{
 	Use:   "simulate-dsl [dsl-file]",
-	Short: "运行 DSL 模拟器检测问题",
+	Short: "Run the DSL simulator to detect story-logic issues",
 	Long: `直接运行 DSL 模拟器，检测剧情逻辑问题。
 
 示例:

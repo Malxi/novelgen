@@ -16,7 +16,7 @@ import (
 
 var analyzeChapterAICmd = &cobra.Command{
 	Use:   "analyze-chapter-ai [chapter-file]",
-	Short: "使用AI分析章节RPG数据",
+	Short: "Analyze chapter RPG data with AI",
 	Long: `使用AI Agent分析小说章节，提取角色、事件、战力变化等RPG数据。
 
 示例:

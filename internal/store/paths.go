@@ -10,24 +10,27 @@ import (
 // Layout directories and file names. These constants are the canonical
 // spelling of the project layout documented in docs/ARCHITECTURE.md §7.
 const (
-	novelFileName       = "novel.json"
-	llmConfigName       = "llm_config.json"
-	storyDirName        = "story"
-	setupDirName        = "setup"
-	composeDirName      = "compose"
-	craftDirName        = "craft"
-	recapsDirName       = "recaps"
-	reviewsDirName      = "reviews"
-	rpgDirName          = "rpg"
-	chaptersDirName     = "chapters"
-	draftsDirName       = "drafts"
-	logsDirName         = "logs"
-	checkpointsName     = "checkpoints"
-	backupsName         = "backups"
-	setupJSONName       = "story_setup.json"
-	setupMarkdownName   = "story_setup.md"
-	outlineJSONName     = "outline.json"
-	outlineMarkdownName = "outline.md"
+	novelFileName         = "novel.json"
+	llmConfigName         = "llm_config.json"
+	storyDirName          = "story"
+	setupDirName          = "setup"
+	composeDirName        = "compose"
+	craftDirName          = "craft"
+	recapsDirName         = "recaps"
+	reviewsDirName        = "reviews"
+	rpgDirName            = "rpg"
+	chaptersDirName       = "chapters"
+	draftsDirName         = "drafts"
+	logsDirName           = "logs"
+	checkpointsName       = "checkpoints"
+	backupsName           = "backups"
+	setupJSONName         = "story_setup.json"
+	setupMarkdownName     = "story_setup.md"
+	outlineJSONName       = "outline.json"
+	outlineMarkdownName   = "outline.md"
+	cacheDirName          = "cache"
+	chapterBatchesDirName = "chapter_batches"
+	agentPatchDirName     = "agent-patches"
 )
 
 // CraftKind identifies one of the four craft element files.
@@ -168,6 +171,64 @@ func (r *Root) RPGDir() string { return filepath.Join(r.StoryDir(), rpgDirName) 
 
 // RPGFile is story/rpg/<name>.
 func (r *Root) RPGFile(name string) string { return filepath.Join(r.RPGDir(), name) }
+
+// Phased RPG-DSL fragment names. The fragments are derived project state, but
+// their names are part of the layout, so a caller that reads or replaces one
+// phase asks for it here instead of spelling "04_chapters.rpg" itself.
+const (
+	RPGPhaseSetupFile    = "00_setup.rpg"
+	RPGPhaseOutlineFile  = "01_outline.rpg"
+	RPGPhaseCraftFile    = "02_craft.rpg"
+	RPGPhaseSystemsFile  = "03_systems.rpg"
+	RPGPhaseChaptersFile = "04_chapters.rpg"
+)
+
+// RPGPhaseFiles returns the phased DSL fragment names in merge order.
+func RPGPhaseFiles() []string {
+	return []string{
+		RPGPhaseSetupFile,
+		RPGPhaseOutlineFile,
+		RPGPhaseCraftFile,
+		RPGPhaseSystemsFile,
+		RPGPhaseChaptersFile,
+	}
+}
+
+// RPGChaptersDSL is story/rpg/04_chapters.rpg, the phase the write pipeline
+// rebuilds from chapter markdown.
+func (r *Root) RPGChaptersDSL() string { return r.RPGFile(RPGPhaseChaptersFile) }
+
+// RPGCacheDir is story/rpg/cache.
+func (r *Root) RPGCacheDir() string { return filepath.Join(r.RPGDir(), cacheDirName) }
+
+// RPGChapterBatchCacheDir is story/rpg/cache/chapter_batches, where the
+// chapter→DSL batching keeps one cached fragment per batch.
+func (r *Root) RPGChapterBatchCacheDir() string {
+	return filepath.Join(r.RPGCacheDir(), chapterBatchesDirName)
+}
+
+// AgentWorkDirName is the project-local scratch directory the CLI owns: agent
+// patch buffers today. It never holds story state, and it is what `project
+// clone` skips so a new sandbox starts with clean agent scratch.
+const AgentWorkDirName = ".novelgen"
+
+// AgentWorkDir is the project-local agent scratch directory.
+func (r *Root) AgentWorkDir() string { return filepath.Join(r.Dir(), AgentWorkDirName) }
+
+// AgentPatchDir is where `tool patch-buffer` keeps its temporary buffers.
+func (r *Root) AgentPatchDir() string {
+	return filepath.Join(r.AgentWorkDir(), agentPatchDirName)
+}
+
+// RelPath renders a project path relative to the project directory with forward
+// slashes, the form agent tool responses report derived artifacts in.
+func (r *Root) RelPath(path string) string {
+	rel, err := filepath.Rel(r.Dir(), path)
+	if err != nil {
+		return filepath.ToSlash(path)
+	}
+	return filepath.ToSlash(rel)
+}
 
 // ChaptersDir is the directory of finished chapter markdown.
 func (r *Root) ChaptersDir() string { return filepath.Join(r.Dir(), chaptersDirName) }

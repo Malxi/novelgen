@@ -48,11 +48,16 @@ func TestLayoutPaths(t *testing.T) {
 		{"VolumeReviewFile", root.VolumeReviewFile("P1-V1"), "book/story/reviews/P1-V1_review.json"},
 		{"ReviewFile", root.ReviewFile("outline_review.json"), "book/story/reviews/outline_review.json"},
 		{"RPGFile", root.RPGFile("01_outline.rpg"), "book/story/rpg/01_outline.rpg"},
+		{"RPGChaptersDSL", root.RPGChaptersDSL(), "book/story/rpg/04_chapters.rpg"},
+		{"RPGCacheDir", root.RPGCacheDir(), "book/story/rpg/cache"},
+		{"RPGChapterBatchCacheDir", root.RPGChapterBatchCacheDir(), "book/story/rpg/cache/chapter_batches"},
 		{"ChapterFile", root.ChapterFile("P1-V1-C1"), "book/chapters/chapter-P1-V1-C1.md"},
 		{"DraftFile", root.DraftFile("P1-V1-C1"), "book/drafts/P1-V1-C1.md"},
 		{"UsageLog", root.UsageLog(), "book/logs/usage.jsonl"},
 		{"CloneManifest", root.CloneManifest(), "book/logs/clone_manifest.json"},
 		{"LogFile", root.LogFile("agent-live"), "book/logs/agent-live"},
+		{"AgentWorkDir", root.AgentWorkDir(), "book/.novelgen"},
+		{"AgentPatchDir", root.AgentPatchDir(), "book/.novelgen/agent-patches"},
 		{"CheckpointsDir", root.CheckpointsDir(store.ScopeCompose), "book/story/compose/checkpoints"},
 		{"CheckpointsDirChapters", root.CheckpointsDir(store.ScopeChapters), "book/chapters/checkpoints"},
 		{"BackupsDir", root.BackupsDir(store.ScopeCompose), "book/story/compose/backups"},
@@ -65,6 +70,50 @@ func TestLayoutPaths(t *testing.T) {
 				t.Fatalf("%s = %q, want %q", tc.name, got, tc.want)
 			}
 		})
+	}
+}
+
+// TestRPGPhaseFiles pins the phased DSL fragment names and their merge order.
+func TestRPGPhaseFiles(t *testing.T) {
+	t.Parallel()
+
+	got := store.RPGPhaseFiles()
+	want := []string{"00_setup.rpg", "01_outline.rpg", "02_craft.rpg", "03_systems.rpg", "04_chapters.rpg"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("RPGPhaseFiles = %v, want %v", got, want)
+	}
+	if store.RPGPhaseChaptersFile != "04_chapters.rpg" {
+		t.Fatalf("RPGPhaseChaptersFile = %q, want 04_chapters.rpg", store.RPGPhaseChaptersFile)
+	}
+}
+
+// TestAtAcceptsAnAlreadyResolvedDirectory pins the constructor the callers that
+// hold a directory string use: it must not absolutize or require the directory
+// to exist.
+func TestAtAcceptsAnAlreadyResolvedDirectory(t *testing.T) {
+	t.Parallel()
+
+	dir := filepath.Join(t.TempDir(), "does", "not", "exist", "yet")
+	root := store.At(dir)
+	if filepath.ToSlash(root.Dir()) != filepath.ToSlash(filepath.Clean(dir)) {
+		t.Fatalf("At(%q).Dir() = %q", dir, root.Dir())
+	}
+	if got := filepath.ToSlash(root.OutlineJSON()); got != filepath.ToSlash(filepath.Join(dir, "story", "compose", "outline.json")) {
+		t.Fatalf("OutlineJSON = %q", got)
+	}
+}
+
+// TestRelPathReportsProjectRelativeArtifacts pins the form agent tool responses
+// report derived artifacts in.
+func TestRelPathReportsProjectRelativeArtifacts(t *testing.T) {
+	t.Parallel()
+
+	root := store.MemRoot()
+	if got := root.RelPath(root.RPGChaptersDSL()); got != "story/rpg/04_chapters.rpg" {
+		t.Fatalf("RelPath(RPGChaptersDSL) = %q", got)
+	}
+	if got := root.RelPath(root.RPGChapterBatchCacheDir()); got != "story/rpg/cache/chapter_batches" {
+		t.Fatalf("RelPath(RPGChapterBatchCacheDir) = %q", got)
 	}
 }
 

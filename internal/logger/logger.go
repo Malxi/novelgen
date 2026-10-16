@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"novelgen/internal/store"
 )
 
 // Level represents log level
@@ -89,8 +91,12 @@ func (l *Logger) EnableFileLogging() error {
 		return fmt.Errorf("project directory not set")
 	}
 
-	logDir := filepath.Join(l.projectDir, "logs")
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	// The log directory is part of the project layout, so it comes from
+	// internal/store rather than being spelled here. logger sits at the store
+	// layer in internal/architecture/layers_test.go for exactly this reason.
+	root := store.At(l.projectDir)
+	logDir := root.LogsDir()
+	if err := root.MkdirAll(logDir, store.DirMode); err != nil {
 		return fmt.Errorf("failed to create log directory: %w", err)
 	}
 

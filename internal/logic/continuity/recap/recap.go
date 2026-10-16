@@ -29,6 +29,16 @@ func NewStore(projectRoot string) *Store {
 	return &Store{root: root}
 }
 
+// NewStoreAt opens the recap store over an already-resolved project root, so a
+// caller that holds a *store.Root does not have to round-trip through a
+// directory string.
+func NewStoreAt(root *store.Root) *Store {
+	if root == nil || root.Dir() == "" {
+		return &Store{}
+	}
+	return &Store{root: root}
+}
+
 func (s *Store) Save(recap *models.ChapterRecap) error {
 	if s.root == nil || recap == nil {
 		return nil

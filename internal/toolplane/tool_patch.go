@@ -21,14 +21,15 @@ import (
 func RunToolPatch(cmd *cobra.Command, args []string) error {
 	section := NormalizeKey(args[0])
 	if section != "outline" && section != "craft" && section != "setup" && section != "recap" && section != "chapter" {
-		return fmt.Errorf("unsupported patch section %q", section)
+		return fmt.Errorf("unsupported patch section %q; valid sections: %s",
+			section, strings.Join(toolPatchSections, ", "))
 	}
 	target := NormalizeKey(ToolPatchFlags.Target)
 	if section == "outline" && target == "" {
 		target = "chapter"
 	}
 	if section == "outline" && target != "chapter" && target != "volume" {
-		return fmt.Errorf("unsupported outline patch target %q", target)
+		return fmt.Errorf("unsupported outline patch --target %q; valid targets: chapter, volume", target)
 	}
 	if section == "craft" {
 		target = normalizeCraftPatchTarget(target)
@@ -57,7 +58,7 @@ func RunToolPatch(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	root := book.Dir()
+	root := book.Root
 	var patchBytes []byte
 	if taskID != "" {
 		resolvedTarget, resolvedID, resolvedPatchBytes, taskWarnings, err := resolveToolPatchTask(root, section, target, id, taskID)
@@ -105,7 +106,7 @@ func RunToolPatch(cmd *cobra.Command, args []string) error {
 	}
 }
 
-func resolveToolPatchTask(root, section, target, id, taskID string) (string, string, []byte, []string, error) {
+func resolveToolPatchTask(root *store.Root, section, target, id, taskID string) (string, string, []byte, []string, error) {
 	if section != "outline" {
 		return "", "", nil, nil, fmt.Errorf("--task is currently supported only for outline patches")
 	}
@@ -178,7 +179,7 @@ func RunToolPatchBuffer(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	root := book.Dir()
+	root := book.Root
 	path, err := ToolPatchBufferPath(root, id)
 	if err != nil {
 		return err
@@ -259,7 +260,7 @@ func RunToolPatchBuffer(cmd *cobra.Command, args []string) error {
 	return fmt.Errorf("unsupported patch-buffer operation %q", op)
 }
 
-func LoadToolPatchBuffer(root, id, section string) ([]byte, error) {
+func LoadToolPatchBuffer(root *store.Root, id, section string) ([]byte, error) {
 	path, err := ToolPatchBufferPath(root, id)
 	if err != nil {
 		return nil, err
@@ -282,7 +283,10 @@ func LoadToolPatchBuffer(root, id, section string) ([]byte, error) {
 	return []byte(content), nil
 }
 
-func ToolPatchBufferPath(root, id string) (string, error) {
+// ToolPatchBufferPath returns the file `tool patch-buffer` keeps a chunked patch
+// in. The buffer is novelgen-owned scratch state under the project's agent work
+// directory, never story state.
+func ToolPatchBufferPath(root *store.Root, id string) (string, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return "", fmt.Errorf("patch buffer id is required")
@@ -302,10 +306,10 @@ func ToolPatchBufferPath(root, id string) (string, error) {
 	if clean == "" || clean != id {
 		return "", fmt.Errorf("invalid patch buffer id %q", id)
 	}
-	return filepath.Join(root, ".novelgen", "agent-patches", clean+".txt"), nil
+	return filepath.Join(root.AgentPatchDir(), clean+".txt"), nil
 }
 
-func runToolOutlinePatch(cmd *cobra.Command, root, target, id string, patchBytes []byte, apply bool, warnings []string) error {
+func runToolOutlinePatch(cmd *cobra.Command, root *store.Root, target, id string, patchBytes []byte, apply bool, warnings []string) error {
 	ctx := ToolProjectContext{Root: root}
 	if err := ctx.loadSetup(); err != nil {
 		return err
@@ -332,12 +336,12 @@ func runToolOutlinePatch(cmd *cobra.Command, root, target, id string, patchBytes
 	if err != nil {
 		return err
 	}
-	addToolCheckMeta(check, "project_root", root)
+	addToolCheckMeta(check, "project_root", root.Dir())
 	globalCheck, err := RunToolPatchValidationCheck(ctx.Setup, ctx.Outline, "all", "")
 	if err != nil {
 		return err
 	}
-	addToolCheckMeta(globalCheck, "project_root", root)
+	addToolCheckMeta(globalCheck, "project_root", root.Dir())
 	if newBlocking := newBlockingPatchIssues(beforeOutline, ctx.Setup, globalCheck); len(newBlocking) > 0 {
 		ctx.Outline = beforeOutline
 		first := newBlocking[0]
@@ -354,11 +358,11 @@ func runToolOutlinePatch(cmd *cobra.Command, root, target, id string, patchBytes
 		if err != nil {
 			return err
 		}
-		OutlinePath := filepath.Join(root, "story", "compose", "outline.json")
+		OutlinePath := root.OutlineJSON()
 		if err := project.SavePartialOutline(ctx.Outline, OutlinePath); err != nil {
 			return fmt.Errorf("failed to save patched outline: %w", err)
 		}
-		mdPath := filepath.Join(root, "story", "compose", "outline.md")
+		mdPath := root.OutlineMarkdown()
 		if err := project.CreateOutlineMarkdown(ctx.Outline, mdPath); err != nil {
 			return fmt.Errorf("failed to save outline markdown: %w", err)
 		}
@@ -381,7 +385,7 @@ func runToolOutlinePatch(cmd *cobra.Command, root, target, id string, patchBytes
 		Warnings:    warnings,
 		NextActions: buildPatchNextActions(apply, check, OutlinePatchPostCheckCommand(target, id)),
 		Meta: map[string]interface{}{
-			"project_root": root,
+			"project_root": root.Dir(),
 			"validation":   toolPatchValidationMeta(check),
 		},
 	}
@@ -429,10 +433,14 @@ func toolPatchIssueSignature(issue models.ReviewSuggestion) string {
 	}, "\x00")
 }
 
-func RunToolCraftPatch(cmd *cobra.Command, root, target, id string, patchBytes []byte, apply bool, warnings []string) error {
+func RunToolCraftPatch(cmd *cobra.Command, root *store.Root, target, id string, patchBytes []byte, apply bool, warnings []string) error {
 	filename, err := craftPatchFilename(target)
 	if err != nil {
 		return err
+	}
+	kind, ok := store.CraftKindForFile(filename)
+	if !ok {
+		return fmt.Errorf("unknown craft file %q", filename)
 	}
 	values, err := loadRawCraftMap(root, filename)
 	if err != nil {
@@ -456,7 +464,7 @@ func RunToolCraftPatch(cmd *cobra.Command, root, target, id string, patchBytes [
 	validateCraftQualityObject(&gate, target, key, values[key])
 	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	check := MakeToolCheckResult("schema", "craft", target, key, gate)
-	addToolCheckMeta(check, "project_root", root)
+	addToolCheckMeta(check, "project_root", root.Dir())
 
 	files := map[string]string{}
 	if apply {
@@ -465,8 +473,8 @@ func RunToolCraftPatch(cmd *cobra.Command, root, target, id string, patchBytes [
 		if err != nil {
 			return err
 		}
-		path := filepath.Join(root, "story", "craft", filename)
-		if err := SaveRawCraftMap(path, values); err != nil {
+		path := root.CraftFile(kind)
+		if err := root.WriteJSON(path, values); err != nil {
 			return err
 		}
 		files["craft"] = path
@@ -485,16 +493,16 @@ func RunToolCraftPatch(cmd *cobra.Command, root, target, id string, patchBytes [
 		Warnings:    warnings,
 		NextActions: buildPatchNextActions(apply, check, fmt.Sprintf("novelgen tool check schema --target craft --scope %s --id %q", target, key)),
 		Meta: map[string]interface{}{
-			"project_root": root,
+			"project_root": root.Dir(),
 			"action":       action,
 		},
 	}
 	return writeJSON(cmd, result)
 }
 
-func RunToolSetupPatch(cmd *cobra.Command, root string, patchBytes []byte, apply bool, warnings []string) error {
-	setupPath := filepath.Join(root, "story", "setup", "story_setup.json")
-	setup, err := models.LoadStorySetup(setupPath)
+func RunToolSetupPatch(cmd *cobra.Command, root *store.Root, patchBytes []byte, apply bool, warnings []string) error {
+	setupPath := root.SetupJSON()
+	setup, err := root.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
@@ -513,7 +521,7 @@ func RunToolSetupPatch(cmd *cobra.Command, root string, patchBytes []byte, apply
 	if err != nil {
 		return err
 	}
-	addToolCheckMeta(check, "project_root", root)
+	addToolCheckMeta(check, "project_root", root.Dir())
 	if apply && check.Blocking {
 		return fmt.Errorf("patch rejected: setup quality/simulation check found blocking issues (critical=%d high=%d total=%d)", check.Summary.Critical, check.Summary.High, check.Summary.Total)
 	}
@@ -527,7 +535,7 @@ func RunToolSetupPatch(cmd *cobra.Command, root string, patchBytes []byte, apply
 		if err := merged.Save(setupPath); err != nil {
 			return fmt.Errorf("failed to save patched story setup: %w", err)
 		}
-		mdPath := filepath.Join(root, "story", "setup", "story_setup.md")
+		mdPath := root.SetupMarkdown()
 		if err := project.CreateStorySetupMarkdown(&merged, mdPath); err != nil {
 			return fmt.Errorf("failed to save story setup markdown: %w", err)
 		}
@@ -548,7 +556,7 @@ func RunToolSetupPatch(cmd *cobra.Command, root string, patchBytes []byte, apply
 		Warnings:    warnings,
 		NextActions: buildPatchNextActions(apply, check, "novelgen tool check all --target setup --min-priority medium --max-issues 12"),
 		Meta: map[string]interface{}{
-			"project_root": root,
+			"project_root": root.Dir(),
 		},
 	}
 	return writeJSON(cmd, result)
@@ -884,15 +892,15 @@ func normalizeSetupPatchKey(key string) string {
 	return strings.ToLower(strings.TrimSpace(key))
 }
 
-func RunToolRecapPatch(cmd *cobra.Command, root, id string, patchBytes []byte, apply bool, warnings []string) error {
-	recaps := recap.NewStore(root)
+func RunToolRecapPatch(cmd *cobra.Command, root *store.Root, id string, patchBytes []byte, apply bool, warnings []string) error {
+	recaps := recap.NewStoreAt(root)
 	before, err := recaps.Load(id)
 	if err != nil {
 		before = &models.ChapterRecap{ChapterID: id}
 		warnings = append(warnings, fmt.Sprintf("recap file not found; patch will create %s", id))
 	}
 	var outlineChapter *models.Chapter
-	if outline, err := models.LoadOutline(filepath.Join(root, "story", "compose", "outline.json")); err == nil && outline != nil {
+	if outline, err := root.LoadOutline(); err == nil && outline != nil {
 		outlineChapter = outline.GetChapterByID(id)
 	}
 
@@ -907,7 +915,7 @@ func RunToolRecapPatch(cmd *cobra.Command, root, id string, patchBytes []byte, a
 	}
 
 	check := runToolRecapCheckForValue("all", "chapter", id, &merged, outlineChapter)
-	addToolCheckMeta(check, "project_root", root)
+	addToolCheckMeta(check, "project_root", root.Dir())
 	if apply && check.Blocking {
 		return fmt.Errorf("patch rejected: recap check found blocking issues (critical=%d high=%d total=%d)", check.Summary.Critical, check.Summary.High, check.Summary.Total)
 	}
@@ -921,7 +929,7 @@ func RunToolRecapPatch(cmd *cobra.Command, root, id string, patchBytes []byte, a
 		if err := recaps.Save(&merged); err != nil {
 			return fmt.Errorf("failed to save patched recap: %w", err)
 		}
-		files["recap"] = filepath.Join(root, "story", "recaps", id+".json")
+		files["recap"] = root.RecapFile(id)
 		files["checkpoint"] = checkpointPath
 	}
 
@@ -937,14 +945,14 @@ func RunToolRecapPatch(cmd *cobra.Command, root, id string, patchBytes []byte, a
 		Warnings:    warnings,
 		NextActions: buildPatchNextActions(apply, check, fmt.Sprintf("novelgen tool check quality --target recap --scope chapter --id %q --min-priority low --max-issues 8", id)),
 		Meta: map[string]interface{}{
-			"project_root": root,
+			"project_root": root.Dir(),
 		},
 	}
 	return writeJSON(cmd, result)
 }
 
-func runToolChapterPatch(cmd *cobra.Command, root, id string, patchBytes []byte, apply bool, warnings []string) error {
-	outline, err := models.LoadOutline(filepath.Join(root, "story", "compose", "outline.json"))
+func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchBytes []byte, apply bool, warnings []string) error {
+	outline, err := root.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load outline: %w", err)
 	}
@@ -984,7 +992,7 @@ func runToolChapterPatch(cmd *cobra.Command, root, id string, patchBytes []byte,
 	}
 
 	qualityCheck := MakeToolCheckResult("quality", "chapter", "chapter", id, RunToolChapterQualityGate(chapter, content, targetWords))
-	addToolCheckMeta(qualityCheck, "project_root", root)
+	addToolCheckMeta(qualityCheck, "project_root", root.Dir())
 	addToolCheckMeta(qualityCheck, "mode", "pre_apply")
 	addToolCheckMeta(qualityCheck, "target_words", targetWords)
 	if apply && qualityCheck.Blocking {
@@ -1000,10 +1008,9 @@ func runToolChapterPatch(cmd *cobra.Command, root, id string, patchBytes []byte,
 			return err
 		}
 		path := toolFinalChapterPathForID(root, id)
-		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-			return err
-		}
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		// root.WriteText is the atomic write (sibling temp file + rename), so an
+		// interrupted apply cannot leave a half-written chapter behind.
+		if err := root.WriteText(path, content); err != nil {
 			return fmt.Errorf("failed to save patched chapter: %w", err)
 		}
 		files["chapter"] = path
@@ -1013,7 +1020,7 @@ func runToolChapterPatch(cmd *cobra.Command, root, id string, patchBytes []byte,
 			func() {
 				restoreLogger := SuppressToolRefreshLogs()
 				defer restoreLogger()
-				refresh, err = RefreshToolChapterDSL(cmd.Context(), root, id, 0)
+				refresh, err = refreshToolChapterDSLAt(cmd.Context(), root, id, 0)
 			}()
 			if err != nil {
 				return fmt.Errorf("chapter patch applied but derived RPG DSL refresh failed: %w", err)
@@ -1025,20 +1032,20 @@ func runToolChapterPatch(cmd *cobra.Command, root, id string, patchBytes []byte,
 			if refresh.CacheDir != "" {
 				files["chapter_dsl_cache"] = refresh.CacheDir
 			}
-			postCheck, err := RunToolChapterCheckWithTargetWords(root, "all", "chapter", id, targetWords)
+			postCheck, err := runToolChapterCheckAt(root, "all", "chapter", id, targetWords)
 			if err != nil {
 				return err
 			}
-			addToolCheckMeta(postCheck, "project_root", root)
+			addToolCheckMeta(postCheck, "project_root", root.Dir())
 			addToolCheckMeta(postCheck, "mode", "post_apply_refresh_all")
 			addToolCheckMeta(postCheck, "derived_dsl_refreshed", true)
 			check = postCheck
 		} else {
-			postCheck, err := RunToolChapterCheckWithTargetWords(root, "quality", "chapter", id, targetWords)
+			postCheck, err := runToolChapterCheckAt(root, "quality", "chapter", id, targetWords)
 			if err != nil {
 				return err
 			}
-			addToolCheckMeta(postCheck, "project_root", root)
+			addToolCheckMeta(postCheck, "project_root", root.Dir())
 			addToolCheckMeta(postCheck, "mode", "post_apply_quality")
 			addToolCheckMeta(postCheck, "simulation_requires_derived_dsl_refresh", true)
 			check = postCheck
@@ -1232,12 +1239,8 @@ func toolChapterLengthHardMax(targetWords int) int {
 	return hardMax
 }
 
-func loadFinalChapterContentWithPath(root, chapterID string) (string, string) {
-	candidates := []string{
-		toolFinalChapterPathForID(root, chapterID),
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", utils.ExtractChapterNumber(chapterID))),
-	}
-	for _, path := range candidates {
+func loadFinalChapterContentWithPath(root *store.Root, chapterID string) (string, string) {
+	for _, path := range root.ChapterCandidates(chapterID) {
 		data, err := os.ReadFile(path)
 		if err == nil {
 			return path, string(data)
@@ -1811,7 +1814,7 @@ func CloneStorySetup(setup *models.StorySetup) models.StorySetup {
 // with its own copy of the checkpoint directory and timestamp format. Naming and
 // writing now live in internal/store (SaveCheckpoint), which also makes the
 // snapshot write atomic.
-func saveToolCheckpointJSON(root string, scope store.Scope, prefix string, value interface{}) (string, error) {
+func saveToolCheckpointJSON(root *store.Root, scope store.Scope, prefix string, value interface{}) (string, error) {
 	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		return "", err
@@ -1819,15 +1822,11 @@ func saveToolCheckpointJSON(root string, scope store.Scope, prefix string, value
 	return writeToolCheckpoint(root, scope, prefix, ".json", data)
 }
 
-func writeToolCheckpoint(root string, scope store.Scope, prefix, ext string, data []byte) (string, error) {
-	project, err := store.Open(root)
-	if err != nil {
-		return "", err
-	}
-	return project.SaveCheckpoint(scope, prefix, ext, data)
+func writeToolCheckpoint(root *store.Root, scope store.Scope, prefix, ext string, data []byte) (string, error) {
+	return root.SaveCheckpoint(scope, prefix, ext, data)
 }
 
-func saveToolChapterPatchCheckpoint(root, chapterID, beforePath, beforeContent string) (string, error) {
+func saveToolChapterPatchCheckpoint(root *store.Root, chapterID, beforePath, beforeContent string) (string, error) {
 	var sb strings.Builder
 	sb.WriteString("<!-- novelgen tool patch chapter checkpoint")
 	if strings.TrimSpace(beforePath) != "" {
@@ -1838,17 +1837,6 @@ func saveToolChapterPatchCheckpoint(root, chapterID, beforePath, beforeContent s
 	sb.WriteString(" -->\n\n")
 	sb.WriteString(beforeContent)
 	return writeToolCheckpoint(root, store.ScopeChapters, chapterID, ".md", []byte(sb.String()))
-}
-
-func SaveRawCraftMap(path string, values map[string]map[string]interface{}) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(values, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0644)
 }
 
 func writeJSON(cmd *cobra.Command, value interface{}) error {

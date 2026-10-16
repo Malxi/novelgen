@@ -209,9 +209,5 @@ func agentLogRoot() string {
 // agentLogDir returns the directory holding one kind of agent log, using the
 // project layout from internal/store so log locations stay defined in one place.
 func agentLogDir(kind string) string {
-	root, err := store.Open(agentLogRoot())
-	if err != nil {
-		return filepath.Join(agentLogRoot(), "logs", kind)
-	}
-	return root.LogFile(kind)
+	return store.At(agentLogRoot()).LogFile(kind)
 }

@@ -15,15 +15,17 @@ import (
 // layer assigns each internal package a level. A package may import another
 // package only when that package's level is lower or equal (same cluster).
 var layer = map[string]int{
-	"internal/models":                      0,
-	"internal/utils":                       1,
-	"internal/envutil":                     1,
-	"internal/logger":                      1,
-	"internal/usage":                       1,
-	"internal/workerpool":                  1,
-	"internal/cli":                         1,
-	"internal/testfixtures":                1,
-	"internal/toolcmd":                     1,
+	"internal/models":       0,
+	"internal/utils":        1,
+	"internal/envutil":      1,
+	"internal/usage":        1,
+	"internal/workerpool":   1,
+	"internal/cli":          1,
+	"internal/testfixtures": 1,
+	"internal/toolcmd":      1,
+	// logger writes into the project layout (the logs/ directory), so it sits at
+	// the storage layer rather than beside the other leaf utilities.
+	"internal/logger":                      2,
 	"internal/store":                       2,
 	"internal/rpg":                         2,
 	"internal/rpg/dsl":                     2,

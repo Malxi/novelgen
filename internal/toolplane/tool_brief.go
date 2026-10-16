@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 	"novelgen/internal/toolcmd"
-	"novelgen/internal/utils"
-	"novelgen/internal/writersdl"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -985,7 +983,7 @@ func recapUsableForChapter(value *models.ChapterRecap, chapter *models.Chapter) 
 	return true, ""
 }
 
-func loadUsableToolContextRecap(root string, store *recap.Store, chapter *models.Chapter) (*models.ChapterRecap, string) {
+func loadUsableToolContextRecap(root *store.Root, store *recap.Store, chapter *models.Chapter) (*models.ChapterRecap, string) {
 	if store == nil || chapter == nil {
 		return nil, ""
 	}
@@ -1002,14 +1000,13 @@ func loadUsableToolContextRecap(root string, store *recap.Store, chapter *models
 	return loaded, ""
 }
 
-func recapFreshForChapterMarkdown(root, chapterID string) (bool, string) {
-	root = strings.TrimSpace(root)
+func recapFreshForChapterMarkdown(root *store.Root, chapterID string) (bool, string) {
 	chapterID = strings.TrimSpace(chapterID)
-	if root == "" || chapterID == "" {
+	if root.Dir() == "" || chapterID == "" {
 		return true, ""
 	}
-	recapPath := filepath.Join(root, "story", "recaps", chapterID+".json")
-	chapterPath := firstExistingPath(writersdl.CandidateChapterMarkdownPaths(root, chapterID))
+	recapPath := root.RecapFile(chapterID)
+	chapterPath := firstExistingPath(root.ChapterCandidates(chapterID))
 	if chapterPath == "" {
 		return true, ""
 	}
@@ -1147,15 +1144,12 @@ func firstNStrings(values []string, maxItems int) []string {
 	return values
 }
 
-func loadChapterExcerptForTool(root, chapterID string) (map[string]string, []string) {
-	if strings.TrimSpace(root) == "" || strings.TrimSpace(chapterID) == "" {
+func loadChapterExcerptForTool(root *store.Root, chapterID string) (map[string]string, []string) {
+	chapterID = strings.TrimSpace(chapterID)
+	if root.Dir() == "" || chapterID == "" {
 		return nil, []string{"project root or chapter id missing; chapter excerpt unavailable"}
 	}
-	candidates := []string{
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapterID)),
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", utils.ExtractChapterNumber(chapterID))),
-	}
-	for _, path := range candidates {
+	for _, path := range root.ChapterCandidates(chapterID) {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			continue

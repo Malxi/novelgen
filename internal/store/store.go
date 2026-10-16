@@ -46,6 +46,15 @@ func Open(dir string) (*Root, error) {
 	return &Root{dir: filepath.Clean(abs), fs: OSFS{}}, nil
 }
 
+// At returns a Root over an already-resolved project directory on the host
+// filesystem. It is the constructor for callers that hold a project directory
+// string (a Root's Dir(), or a path a command was given) and need the layout
+// helpers without another abs/stat round trip. It neither absolutizes nor
+// validates the directory: Open resolves, Locate searches.
+func At(dir string) *Root {
+	return OpenFS(dir, OSFS{})
+}
+
 // OpenFS returns a Root over a caller-supplied filesystem. It is the seam used
 // by tests (see MemFS) and the entry point for a non-filesystem backend.
 //

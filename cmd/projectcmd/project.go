@@ -19,7 +19,6 @@ import (
 	"novelgen/internal/store"
 	"novelgen/internal/toolplane"
 	"novelgen/internal/usage"
-	"novelgen/internal/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -407,8 +406,8 @@ func inspectProjectForAgentSDK(root string) projectDoctorReport {
 		addCheck("novel_json", true, "info", fmt.Sprintf("project %q uses %s/%s", config.Name, config.LLM.Provider, config.LLM.Model))
 	}
 
-	setupPath := filepath.Join(root, "story", "setup", "story_setup.json")
-	setup, err := models.LoadStorySetup(setupPath)
+	projectRoot := store.At(root)
+	setup, err := projectRoot.LoadSetup()
 	if err != nil {
 		addCheck("story_setup", false, "error", fmt.Sprintf("cannot load story setup: %v", err))
 	} else {
@@ -422,8 +421,7 @@ func inspectProjectForAgentSDK(root string) projectDoctorReport {
 		}
 	}
 
-	outlinePath := filepath.Join(root, "story", "compose", "outline.json")
-	outline, err := models.LoadOutline(outlinePath)
+	outline, err := projectRoot.LoadOutline()
 	if err != nil {
 		if os.IsNotExist(err) {
 			addCheck("outline", false, "warning", "outline.json is missing; run compose gen/pipeline before write workflows")
@@ -452,7 +450,7 @@ func inspectProjectForAgentSDK(root string) projectDoctorReport {
 	} else {
 		addCheck("logs", true, "info", fmt.Sprintf("found %d queryable log files (prompts=%d responses=%d agent-live=%d)", logResp.Count, report.Counts["logs_prompts"], report.Counts["logs_responses"], report.Counts["logs_agent_live"]))
 	}
-	if _, err := os.Stat(filepath.Join(root, "logs", "clone_manifest.json")); err == nil {
+	if projectRoot.Exists(projectRoot.CloneManifest()) {
 		addCheck("clone_manifest", true, "info", "clone manifest is present")
 	}
 	addAgentSDKReadinessChecks(report, addCheck, config.LLM.Model)
@@ -690,7 +688,7 @@ func cloneProject(opts projectCloneOptions) (*projectCloneManifest, error) {
 		_ = os.RemoveAll(targetRoot)
 		return nil, fmt.Errorf("save cloned novel.json: %w", err)
 	}
-	if err := os.MkdirAll(filepath.Join(targetRoot, "logs"), 0755); err != nil {
+	if err := store.At(targetRoot).MkdirAll(store.At(targetRoot).LogsDir(), store.DirMode); err != nil {
 		_ = os.RemoveAll(targetRoot)
 		return nil, fmt.Errorf("create cloned logs directory: %w", err)
 	}
@@ -719,7 +717,7 @@ func nextAgentHistoryWriteCommand(root string) string {
 }
 
 func firstUnwrittenOutlineChapterID(root string) string {
-	outline, err := models.LoadOutline(filepath.Join(root, "story", "compose", "outline.json"))
+	outline, err := store.At(root).LoadOutline()
 	if err != nil || outline == nil {
 		return ""
 	}
@@ -744,11 +742,7 @@ func firstUnwrittenOutlineChapterID(root string) string {
 }
 
 func projectChapterMarkdownExists(root, chapterID string) bool {
-	for _, path := range []string{
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapterID)),
-		filepath.Join(root, "chapters", chapterID+".md"),
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", utils.ExtractChapterNumber(chapterID))),
-	} {
+	for _, path := range store.At(root).ChapterCandidates(chapterID) {
 		data, err := os.ReadFile(path)
 		if err == nil && strings.TrimSpace(string(data)) != "" {
 			return true
@@ -769,7 +763,7 @@ func copyProjectTree(sourceRoot, targetRoot string, withLogs bool) error {
 		if rel == "." {
 			return os.MkdirAll(targetRoot, 0755)
 		}
-		if rel == ".novelgen" && entry.IsDir() {
+		if rel == store.AgentWorkDirName && entry.IsDir() {
 			return filepath.SkipDir
 		}
 		if rel == "logs" && entry.IsDir() && !withLogs {
@@ -818,12 +812,8 @@ func copyProjectFile(sourcePath, targetPath string, perm os.FileMode, modTime ti
 }
 
 func writeProjectCloneManifest(targetRoot string, manifest *projectCloneManifest) error {
-	data, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
-		return err
-	}
-	path := filepath.Join(targetRoot, "logs", "clone_manifest.json")
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	root := store.At(targetRoot)
+	if err := root.WriteJSON(root.CloneManifest(), manifest); err != nil {
 		return fmt.Errorf("write clone manifest: %w", err)
 	}
 	return nil

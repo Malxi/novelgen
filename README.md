@@ -498,6 +498,25 @@ novelgen project doctor
 novelgen project doctor --json
 ```
 
+### 13. `novelgen tool` - Agent 工具面（只读查询 / 校验 / 受控 patch）
+
+SDK Agent 不能直接读写项目文件，只能通过 `tool` 子命令访问项目事实。查询与校验是只读的，patch 默认 dry-run，只有显式 `--apply` 才落盘：
+
+```bash
+novelgen tool query story-setup --view index
+novelgen tool query outline --type chapter --id P1-V1-C1 --view brief
+novelgen tool query context --type chapter-repair --id P1-V1-C1 --view brief
+novelgen tool check all --target outline --scope volume --id P1-V1
+novelgen tool patch outline --target volume --id P1-V1 --patch-json '{"changed_chapters":[...]}'   # dry-run
+novelgen tool refresh chapter-dsl --id P1-V1-C1
+```
+
+每个 section 可用的 `--type`、patch 的 section/`--target` 组合、`--patch-buffer` 与 `--task` 的用法都写在 `novelgen tool <subcommand> --help` 里；完整契约见 [docs/AGENT_TOOLS.md](docs/AGENT_TOOLS.md)。
+
+### 14. RPG / 分析类命令（Go 自有的确定性工具）
+
+`novelgen rpg`（生成/模拟/导出 RPG 数据）、`novelgen rpg-dsl`（校验、合并、转换、导出分阶段 DSL）、`novelgen simulate-dsl`（DSL 模拟器）、`novelgen analyze-ai-rpg` / `analyze-chapter-ai`（AI 章节分析）属于确定性或分析基础设施，不参与 Agent SDK 创作流水线；详见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+
 ---
 
 ## 环境变量

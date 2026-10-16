@@ -6,7 +6,8 @@
 Run commands from a novel project root, or any child directory under a project
 containing `novel.json`.
 
-The command is organized by four query sections:
+The command is organized by six query sections (`story-setup`, `outline`, `craft`,
+`chapter`, `context`, `logs`):
 
 ```bash
 novelgen tool query story-setup [flags]
@@ -80,6 +81,31 @@ recap, and save only when `--apply` is present and no blocking issue remains.
 Use `--view brief|index|full` to control output size. The default is `brief`.
 Agents should use `index`/`brief` for navigation and only use `full` for a
 precise small object.
+
+`--type` values per query section (`novelgen tool query --help` prints the same
+table). An omitted `--type` uses the first value. A `--type` outside the table is
+rejected with the valid list, so a typo tells the agent how to correct itself:
+
+| Section | `--type` values |
+| --- | --- |
+| `story-setup` | `all`, `index`, `search`, `storyline`, `premise`, `core-cast`, `resource`, `timeline`, `rules`, `long-form-plan` |
+| `outline` | `all`, `part`, `volume`, `chapter`, `refs`, `events` |
+| `craft` | `all`, `character`, `item`, `location`, `organization` |
+| `chapter` | `all`, `refs`, `events` |
+| `context` | `craft-character`, `craft-item`, `craft-location`, `craft-organization`, `outline-volume`, `outline-repair`, `outline-global-repair`, `recap-repair`, `chapter-write`, `chapter-repair` |
+| `logs` | `prompts`, `responses`, `agent-live` |
+
+`tool patch` takes the section as its positional argument and `--target` selects
+inside it: `outline` takes `--target chapter` (default) or `volume` with the
+chapter/volume id; `craft` requires `--target character|item|location|organization`
+with the element key; `setup`, `recap` and `chapter` take neither a `--target`
+nor a `--task` and address their object by `--id` alone (`setup` needs no `--id`).
+Patch JSON comes from stdin, from `--patch-json` for short ASCII-only patches,
+from `--patch-buffer` for long chapter prose, or from `--task
+outline-global-repair:<issue category>` to reuse a validated outline repair
+patch shape. `tool check` accepts kind `quality|simulation|all|schema`; `schema`
+applies to `--target craft` and `--target recap` only.
+
 Use `--fields a,b,c` to project only selected JSON fields from each result while
 preserving navigation keys such as `id`, `title`, and `path`. Prefer this over
 shell pipes like `Select-String` or `grep`.

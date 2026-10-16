@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"novelgen/internal/envutil"
+	"novelgen/internal/store"
 	"novelgen/internal/utils"
 	"os"
 	"path/filepath"
@@ -13,8 +14,14 @@ import (
 	"time"
 )
 
-func QueryLogs(root, queryType, id, name string, includeContent bool) ToolResponse {
-	logsRoot := filepath.Join(root, "logs")
+// QueryLogs is the string-root entry point for callers that hold a resolved
+// project directory.
+func QueryLogs(rootDir, queryType, id, name string, includeContent bool) ToolResponse {
+	return queryLogsAt(store.At(rootDir), queryType, id, name, includeContent)
+}
+
+func queryLogsAt(root *store.Root, queryType, id, name string, includeContent bool) ToolResponse {
+	logsRoot := root.LogsDir()
 	if _, err := os.Stat(logsRoot); err != nil {
 		return ToolResponse{OK: true, Section: "logs", Count: 0, Results: nil, Warnings: []string{"logs directory not found"}}
 	}

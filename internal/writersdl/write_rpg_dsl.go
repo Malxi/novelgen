@@ -21,7 +21,6 @@ import (
 	"novelgen/internal/project"
 	rpgdsl "novelgen/internal/rpg/dsl"
 	"novelgen/internal/store"
-	"novelgen/internal/utils"
 )
 
 const writeRPGDSLCacheVersion = 4
@@ -76,7 +75,11 @@ func EmitChapterRPGDSLForProject(
 	if err != nil {
 		return WriteRPGDSLResult{}, err
 	}
-	chapterInputs, err := FindProjectChapterInputs(projectRoot, outline)
+	book, err := store.Open(projectRoot)
+	if err != nil {
+		return WriteRPGDSLResult{}, err
+	}
+	chapterInputs, err := FindProjectChapterInputsAt(book, outline)
 	if err != nil {
 		return WriteRPGDSLResult{}, err
 	}
@@ -85,7 +88,7 @@ func EmitChapterRPGDSLForProject(
 		chapterInputs = FilterWriteRPGDSLChapterInputs(chapterInputs, targetSet)
 	}
 	if len(chapterInputs) == 0 {
-		return WriteRPGDSLResult{}, fmt.Errorf("no chapter markdown files found under %s", filepath.Join(projectRoot, "chapters"))
+		return WriteRPGDSLResult{}, fmt.Errorf("no chapter markdown files found under %s", book.ChaptersDir())
 	}
 
 	characters, locations, _, _, err := project.LoadAllElements()
@@ -97,9 +100,8 @@ func EmitChapterRPGDSLForProject(
 	agent.SetLanguage(projectConfig.Language)
 	agent.SetRequireAI(true)
 
-	rpgDir := filepath.Join(projectRoot, "story", "rpg")
-	cacheDir := filepath.Join(rpgDir, "cache", "chapter_batches")
-	outputPath := filepath.Join(rpgDir, "04_chapters.rpg")
+	cacheDir := book.RPGChapterBatchCacheDir()
+	outputPath := book.RPGChaptersDSL()
 
 	result, combined, err := EmitWriteRPGDSL(ctx, WriteRPGDSLEmitInput{
 		BookName:         bookName,
@@ -116,7 +118,7 @@ func EmitChapterRPGDSLForProject(
 		return result, err
 	}
 
-	if err := os.WriteFile(outputPath, []byte(combined.String()), 0644); err != nil {
+	if err := book.WriteText(outputPath, combined.String()); err != nil {
 		return result, err
 	}
 
@@ -130,9 +132,15 @@ func EmitChapterRPGDSLForProject(
 }
 
 func FindProjectChapterInputs(projectRoot string, outline *models.Outline) ([]WriteRPGDSLChapterInput, error) {
+	return FindProjectChapterInputsAt(store.At(projectRoot), outline)
+}
+
+// FindProjectChapterInputsAt is FindProjectChapterInputs for a caller that
+// already holds a project root.
+func FindProjectChapterInputsAt(book *store.Root, outline *models.Outline) ([]WriteRPGDSLChapterInput, error) {
 	chapterFiles := map[string]string{}
 	for _, chapter := range AllOutlineChapters(outline) {
-		for _, path := range CandidateChapterMarkdownPaths(projectRoot, chapter.ID) {
+		for _, path := range book.ChapterCandidates(chapter.ID) {
 			if _, err := os.Stat(path); err == nil {
 				chapterFiles[chapter.ID] = path
 				break
@@ -141,7 +149,7 @@ func FindProjectChapterInputs(projectRoot string, outline *models.Outline) ([]Wr
 	}
 
 	if len(chapterFiles) == 0 {
-		pattern := filepath.Join(projectRoot, "chapters", "chapter-*.md")
+		pattern := filepath.Join(book.ChaptersDir(), "chapter-*.md")
 		files, err := filepath.Glob(pattern)
 		if err != nil {
 			return nil, err
@@ -158,7 +166,7 @@ func FindProjectChapterInputs(projectRoot string, outline *models.Outline) ([]Wr
 			ChapterID:   chapterID,
 			ChapterPath: chapterPath,
 		}
-		recapPath := filepath.Join(projectRoot, "story", "recaps", chapterID+".json")
+		recapPath := book.RecapFile(chapterID)
 		if _, err := os.Stat(recapPath); err == nil {
 			if WriteRPGDSLRecapIsStale(chapterPath, recapPath) {
 				logger.Warn("Skipping stale recap for RPG DSL conversion: %s is older than %s", recapPath, chapterPath)
@@ -259,11 +267,12 @@ func AllOutlineChapters(outline *models.Outline) []*models.Chapter {
 	return chapters
 }
 
+// CandidateChapterMarkdownPaths returns the file names a saved chapter may live
+// under, in the order callers should try them. The list comes from internal/store
+// so the DSL pipeline, the write pipeline and the agent tools all read the same
+// file for a chapter.
 func CandidateChapterMarkdownPaths(projectRoot, chapterID string) []string {
-	return []string{
-		filepath.Join(projectRoot, "chapters", "chapter-"+chapterID+".md"),
-		filepath.Join(projectRoot, "chapters", "chapter-"+utils.ExtractChapterNumber(chapterID)+".md"),
-	}
+	return store.At(projectRoot).ChapterCandidates(chapterID)
 }
 
 func EnsureWriteRPGDSLParseable(ctx context.Context, agent *agents.ChapterToDSLAgent, bookName, content string) (string, error) {
@@ -354,8 +363,9 @@ func DumpWriteRPGDSLFailure(bookName, content string, parseErr error) {
 		return
 	}
 	stem := filepath.Join(dir, "failed_"+time.Now().Format("20060102_150405"))
-	_ = os.WriteFile(stem+".rpg", []byte(content), 0644)
-	_ = os.WriteFile(stem+".err.txt", []byte(parseErr.Error()), 0644)
+	cache := store.At(dir)
+	_ = cache.WriteText(stem+".rpg", content)
+	_ = cache.WriteText(stem+".err.txt", parseErr.Error())
 	logger.Error("Failed RPG DSL dump: %s.rpg", stem)
 }
 
@@ -433,21 +443,13 @@ func LoadWriteRPGDSLBatchFromCache(expected *WriteRPGDSLBatchManifest) (string, 
 }
 
 func SaveWriteRPGDSLBatchToCache(manifest *WriteRPGDSLBatchManifest, content string) error {
-	if dir := filepath.Dir(manifest.DSLFile); dir != "" {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return err
-		}
-	}
-	if err := os.WriteFile(manifest.DSLFile, []byte(content), 0644); err != nil {
+	cache := store.At(filepath.Dir(manifest.DSLFile))
+	if err := cache.WriteText(manifest.DSLFile, content); err != nil {
 		return err
 	}
 	manifest.UpdatedAt = time.Now().Format(time.RFC3339)
-	data, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
-		return err
-	}
 	manifestPath := strings.TrimSuffix(manifest.DSLFile, filepath.Ext(manifest.DSLFile)) + ".json"
-	return os.WriteFile(manifestPath, data, 0644)
+	return cache.WriteJSON(manifestPath, manifest)
 }
 
 func NormalizeWriteRPGDSLChapterIDs(parsed *rpgdsl.DSL, manifest *WriteRPGDSLBatchManifest) {

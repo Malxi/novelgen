@@ -14,6 +14,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/models"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/store"
 	"novelgen/internal/writersdl"
 )
 
@@ -130,14 +131,15 @@ func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutp
 	agent.SetLanguage("zh")
 	agent.SetRequireAI(true)
 
-	rpgDir := filepath.Join(bookPath, "story", "rpg")
-	if err := os.MkdirAll(rpgDir, 0755); err != nil {
+	book := store.At(bookPath)
+	rpgDir := book.RPGDir()
+	if err := book.MkdirAll(rpgDir, store.DirMode); err != nil {
 		return fmt.Errorf("鍒涘缓 rpg 鐩綍澶辫触: %w", err)
 	}
 
 	_, dslData, err := writersdl.EmitWriteRPGDSL(ctx, writersdl.WriteRPGDSLEmitInput{
 		BookName:   bookName,
-		CacheDir:   filepath.Join(rpgDir, "cache", "chapter_batches"),
+		CacheDir:   book.RPGChapterBatchCacheDir(),
 		Chapters:   chapterFiles,
 		BatchSize:  batchSize,
 		Agent:      agent,
@@ -149,8 +151,8 @@ func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutp
 	}
 
 	dslContent := dslData.String()
-	dslFile := filepath.Join(rpgDir, "04_chapters.rpg")
-	if err := os.WriteFile(dslFile, []byte(dslContent), 0644); err != nil {
+	dslFile := book.RPGChaptersDSL()
+	if err := book.WriteText(dslFile, dslContent); err != nil {
 		return fmt.Errorf("淇濆瓨 DSL 鏂囦欢澶辫触: %w", err)
 	}
 
@@ -194,7 +196,7 @@ func maybeEvaluateGolden(bookPath, requestedPath string, issues []dsl.Simulation
 	path := strings.TrimSpace(requestedPath)
 	explicit := path != ""
 	if path == "" {
-		path = filepath.Join(bookPath, "story", "rpg", "expected_issues.json")
+		path = store.At(bookPath).RPGFile("expected_issues.json")
 	}
 	if _, err := os.Stat(path); err != nil {
 		if explicit {

@@ -21,6 +21,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/reviewstore"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/store"
 	"novelgen/internal/toolplane"
 	"novelgen/internal/workerpool"
 	"novelgen/internal/writepipe"
@@ -602,25 +603,14 @@ func FinalChapterContentChanged(chapter *models.Chapter, before, after string) b
 }
 
 func saveWriteReviewResult(chapter *models.Chapter, review models.ReviewResult) error {
-	root, err := project.FindRoot()
-	if err != nil {
-		return err
-	}
 	if chapter == nil {
 		return fmt.Errorf("chapter is nil")
 	}
-
-	reviewDir := filepath.Join(root, "story", "reviews")
-	if err := os.MkdirAll(reviewDir, 0755); err != nil {
-		return fmt.Errorf("failed to create reviews directory: %w", err)
-	}
-
-	reviewPath := filepath.Join(reviewDir, chapter.ID+"_write_review.json")
-	data, err := json.MarshalIndent(review, "", "  ")
+	root, err := store.Default()
 	if err != nil {
-		return fmt.Errorf("failed to marshal write review: %w", err)
+		return err
 	}
-	return os.WriteFile(reviewPath, data, 0644)
+	return root.WriteJSON(root.ReviewFile(chapter.ID+"_write_review.json"), review)
 }
 
 func loadFinalChapterContentsForVolume(volume *models.Volume) map[string]string {
@@ -1660,7 +1650,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 
 	log.Info("=== WRITE PIPELINE ===")
 	log.Info("Processing %d chapter(s)", len(chaptersToProcess))
-	log.Info("RPG DSL export: enabled=%t batch_size=%d output=%s", writeEmitRPGDSLFlag, writeRPGBatchSizeFlag, filepath.Join(root, "story", "rpg", "04_chapters.rpg"))
+	log.Info("RPG DSL export: enabled=%t batch_size=%d output=%s", writeEmitRPGDSLFlag, writeRPGBatchSizeFlag, store.At(root).RPGChaptersDSL())
 	minScorePercent := writeMinScorePercent()
 	log.Info("Minimum acceptable score: %.0f/100", minScorePercent)
 	if WriteBestOfFlag > 1 {
@@ -1762,7 +1752,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		volumeID := getVolumeIDFromChapter(chapter.ID)
 		volume := outline.GetVolumeByID(volumeID)
 		var volumeReview *agents.VolumeReview
-		reviewPath := filepath.Join(root, "story", "reviews", volumeID+"_review.json")
+		reviewPath := store.At(root).VolumeReviewFile(volumeID)
 		if data, err := os.ReadFile(reviewPath); err == nil {
 			var existingReview agents.VolumeReview
 			if err := json.Unmarshal(data, &existingReview); err == nil {
@@ -1953,7 +1943,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 			log.Error("Failed to generate/save recap for chapter %s: %v", chapter.ID, err)
 			errc.Addf("%s: final recap failed: %w", chapter.ID, err)
 		} else {
-			log.Info("Recap output: %s", filepath.Join(root, "story", "recaps", chapter.ID+".json"))
+			log.Info("Recap output: %s", store.At(root).RecapFile(chapter.ID))
 		}
 
 		if writeEmitRPGDSLFlag {

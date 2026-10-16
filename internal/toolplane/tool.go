@@ -479,22 +479,118 @@ var ToolCmd = &cobra.Command{
 	Short: "Project tools for agents",
 	Long: `Project tools for agents.
 
-	Query and check commands return JSON and never mutate project state. Patch
+Query and check commands return JSON and never mutate project state. Patch
 commands can mutate project state only when explicitly called with --apply.`,
 }
 
-var ToolQueryCmd = &cobra.Command{
-	Use:   "query [story-setup|outline|craft|chapter|context|logs]",
-	Short: "Query novel project data as JSON",
-	Long: `Query novel project data as JSON.
+// toolQuerySections lists the query sections in help order. It is the single
+// source for the command's Use line, its long help and the "section is
+// required" error, so a new section cannot be added to one and forgotten in the
+// others.
+var toolQuerySections = []string{"story-setup", "outline", "craft", "chapter", "context", "logs"}
 
-Sections:
-  story-setup   Query setup, storylines, premises, cast seeds, resources
-  outline       Query outline parts, volumes, chapters, refs, events
-  craft         Query crafted characters, items, locations, organizations
-  chapter       Query chapter outline records and manuscript text
-  context       Query compact workflow-specific context bundles
-  logs          Query prompt, response, and agent-live log indexes`,
+// toolQuerySectionSummary describes what each section returns, for the long
+// help.
+var toolQuerySectionSummary = map[string]string{
+	"story-setup": "Setup, storylines, premises, cast seeds, resources, timeline",
+	"outline":     "Outline parts, volumes, chapters, refs, events",
+	"craft":       "Crafted characters, items, locations, organizations",
+	"chapter":     "Chapter outline records and manuscript text",
+	"context":     "Compact workflow-specific context bundles",
+	"logs":        "Prompt, response, and agent-live log indexes",
+}
+
+// toolQuerySectionTypes is the canonical --type value set per section. Aliases
+// the normalizers also accept (for example "chapters" for "chapter") are
+// deliberately not listed: an agent should see one spelling per query shape.
+// The first entry of each list is what an omitted --type resolves to.
+var toolQuerySectionTypes = map[string][]string{
+	"story-setup": {"all", "index", "search", "storyline", "premise", "core-cast", "resource", "timeline", "rules", "long-form-plan"},
+	"outline":     {"all", "part", "volume", "chapter", "refs", "events"},
+	"craft":       {"all", "character", "item", "location", "organization"},
+	"chapter":     {"all", "refs", "events"},
+	"context": {
+		"craft-character", "craft-item", "craft-location", "craft-organization",
+		"outline-volume", "outline-repair", "outline-global-repair",
+		"recap-repair", "chapter-write", "chapter-repair",
+	},
+	"logs": {"prompts", "responses", "agent-live"},
+}
+
+// toolQueryLongHelp renders the section list and the per-section --type values
+// from the tables above, so the help text cannot drift from what the command
+// accepts.
+func toolQueryLongHelp() string {
+	var b strings.Builder
+	b.WriteString("Query novel project data as JSON.\n\nSections and the --type values they accept (an omitted --type uses the first value):\n")
+	for _, section := range toolQuerySections {
+		fmt.Fprintf(&b, "  %-12s %s -- %s\n",
+			section,
+			strings.Join(toolQuerySectionTypes[section], "|"),
+			toolQuerySectionSummary[section])
+	}
+	b.WriteString("\n--view index|brief|full, --fields, --limit and exact --id/--name narrow the output.")
+	return b.String()
+}
+
+// toolQuerySectionAlias maps the section spellings the command accepts to the
+// canonical section name used by the tables and the loaders.
+func toolQuerySectionAlias(section string) string {
+	switch section {
+	case "setup":
+		return "story-setup"
+	case "chapters":
+		return "chapter"
+	case "log":
+		return "logs"
+	default:
+		return section
+	}
+}
+
+// canonicalToolQueryType resolves a raw --type against the section's aliases.
+func canonicalToolQueryType(section, queryType string) string {
+	switch section {
+	case "story-setup":
+		return normalizeSetupType(queryType)
+	case "outline":
+		return normalizeOutlineType(queryType)
+	case "craft":
+		return normalizeCraftType(queryType)
+	case "chapter":
+		return normalizeChapterType(queryType)
+	case "context":
+		return normalizeContextType(queryType)
+	case "logs":
+		return NormalizeLogKind(queryType)
+	default:
+		return NormalizeKey(queryType)
+	}
+}
+
+// unknownToolQueryTypeError names the values the section does accept. It is the
+// counterpart of the tables in the help text: a wrong --type tells the agent how
+// to correct itself instead of just failing.
+func unknownToolQueryTypeError(section, queryType string) error {
+	return fmt.Errorf("unsupported --type %q for section %q; valid types: %s",
+		queryType, section, strings.Join(toolQuerySectionTypes[section], ", "))
+}
+
+// toolQueryTypeKnown reports whether a canonical type is one the section's help
+// table lists.
+func toolQueryTypeKnown(section, canonicalType string) bool {
+	for _, known := range toolQuerySectionTypes[section] {
+		if known == canonicalType {
+			return true
+		}
+	}
+	return false
+}
+
+var ToolQueryCmd = &cobra.Command{
+	Use:   "query [" + strings.Join(toolQuerySections, "|") + "]",
+	Short: "Query novel project data as JSON",
+	Long:  toolQueryLongHelp(),
 	Example: `  novelgen tool query story-setup
   novelgen tool query story-setup --type storyline --name "Main arc"
   novelgen tool query outline --type chapter --id chap_001
@@ -542,12 +638,19 @@ var allowedToolPatchBufferOps = map[string]bool{
 func runToolQuery(cmd *cobra.Command, args []string) error {
 	section := ""
 	if len(args) > 0 {
-		section = NormalizeKey(args[0])
+		section = toolQuerySectionAlias(NormalizeKey(args[0]))
 	}
 	if section == "" {
-		return fmt.Errorf("query section is required: story-setup, outline, craft, chapter, or context")
+		return fmt.Errorf("query section is required: %s", strings.Join(toolQuerySections, ", "))
+	}
+	if _, known := toolQuerySectionTypes[section]; !known {
+		return fmt.Errorf("unsupported query section %q; valid sections: %s",
+			args[0], strings.Join(toolQuerySections, ", "))
 	}
 	queryType := NormalizeKey(ToolQueryFlags.Type)
+	if canonical := canonicalToolQueryType(section, queryType); canonical != "" && !toolQueryTypeKnown(section, canonical) {
+		return unknownToolQueryTypeError(section, ToolQueryFlags.Type)
+	}
 	queryID, idRepaired := RepairToolLookupText(ToolQueryFlags.ID)
 	queryName, nameRepaired := RepairToolLookupText(ToolQueryFlags.Name)
 	queryChapterID, chapterIDRepaired := RepairToolLookupText(ToolQueryFlags.ChapterID)
@@ -556,7 +659,7 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	root := book.Dir()
+	root := book.Root
 
 	ctx := ToolProjectContext{Root: root}
 	if err := ctx.load(section); err != nil {
@@ -565,20 +668,18 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 
 	var resp ToolResponse
 	switch section {
-	case "story-setup", "setup":
+	case "story-setup":
 		resp = QueryStorySetup(ctx, queryType, queryName)
 	case "outline":
 		resp = queryOutline(ctx, queryType, queryID, ToolQueryFlags.EntityType, queryName, queryChapterID, queryVolumeID)
 	case "craft":
 		resp = QueryCraft(ctx, queryType, queryName)
-	case "chapter", "chapters":
+	case "chapter":
 		resp = queryChapterSection(ctx, queryType, queryID, ToolQueryFlags.EntityType, queryName, queryChapterID, queryVolumeID, ToolQueryFlags.IncludeContent)
 	case "context":
 		resp = QueryContext(ctx, queryType, queryID, queryName)
-	case "logs", "log":
-		resp = QueryLogs(ctx.Root, queryType, queryID, queryName, ToolQueryFlags.IncludeContent)
-	default:
-		return fmt.Errorf("unsupported query section %q", section)
+	case "logs":
+		resp = queryLogsAt(root, queryType, queryID, queryName, ToolQueryFlags.IncludeContent)
 	}
 	if idRepaired {
 		resp.Warnings = append(resp.Warnings, fmt.Sprintf("repaired possible mojibake in --id from %q to %q", ToolQueryFlags.ID, queryID))
@@ -607,7 +708,7 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 	if resp.Meta == nil {
 		resp.Meta = map[string]interface{}{}
 	}
-	resp.Meta["project_root"] = root
+	resp.Meta["project_root"] = root.Dir()
 	ApplyToolView(&resp, ToolQueryFlags.View)
 	ApplyToolFields(&resp, ToolQueryFlags.Fields)
 	applyToolLimit(&resp, ToolQueryFlags.Limit)
@@ -615,7 +716,7 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 }
 
 type ToolProjectContext struct {
-	Root          string
+	Root          *store.Root
 	Setup         *models.StorySetup
 	Outline       *models.Outline
 	Characters    map[string]*models.Character
@@ -627,6 +728,12 @@ type ToolProjectContext struct {
 	RawItems      map[string]map[string]interface{}
 	RawOrgs       map[string]map[string]interface{}
 }
+
+// dir returns the project directory this context is scoped to, or "" when the
+// context carries no root. Tests also build a ToolProjectContext with artifacts
+// pre-loaded and no root, so every use of Root goes through here or through a
+// nil-safe *store.Root path method.
+func (c ToolProjectContext) dir() string { return c.Root.Dir() }
 
 func (c *ToolProjectContext) load(kind string) error {
 	switch kind {
@@ -963,8 +1070,6 @@ func queryChapterSection(ctx ToolProjectContext, queryType, id, entityType, name
 		return queryChaptersByEntity(ctx, entityType, name, includeContent)
 	case "events":
 		return QueryEvents(ctx.Outline, chapterID, volumeID, entityType, name)
-	case "outline":
-		return QueryOutlineNode(ctx.Outline, "chapter", id)
 	default:
 		return ToolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported chapter type %q", queryType)}}
 	}
@@ -1027,8 +1132,8 @@ func queryChapterWriteContext(ctx ToolProjectContext, chapterID string) ToolResp
 	var previousRecap *models.ChapterRecap
 	var currentRecap *models.ChapterRecap
 	warnings := []string{}
-	if ctx.Root != "" {
-		store := recap.NewStore(ctx.Root)
+	if ctx.Root != nil {
+		store := recap.NewStoreAt(ctx.Root)
 		if previousChapter != nil && previousChapter.Chapter != nil {
 			if loaded, warning := loadUsableToolContextRecap(ctx.Root, store, previousChapter.Chapter); loaded != nil {
 				previousRecap = loaded
@@ -1103,12 +1208,11 @@ func queryChapterWriteContext(ctx ToolProjectContext, chapterID string) ToolResp
 	return ToolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: warnings}
 }
 
-func buildChapterWriteHistory(root string) *chapterWriteHistory {
-	root = strings.TrimSpace(root)
-	if root == "" {
+func buildChapterWriteHistory(root *store.Root) *chapterWriteHistory {
+	if root.Dir() == "" {
 		return nil
 	}
-	logsRoot := filepath.Join(root, "logs")
+	logsRoot := root.LogsDir()
 	if _, err := os.Stat(logsRoot); err != nil {
 		return nil
 	}
@@ -1288,11 +1392,11 @@ func queryChapterRepairContext(ctx ToolProjectContext, chapterID, issueCategory 
 
 	warnings := []string{}
 	var check *ToolCheckResult
-	if strings.TrimSpace(ctx.Root) == "" {
+	if ctx.dir() == "" {
 		warnings = append(warnings, "project root missing; chapter quality/simulation check unavailable")
 	} else {
 		var err error
-		check, err = runToolChapterCheck(ctx.Root, "all", "chapter", target.Chapter.ID)
+		check, err = runToolChapterCheckAt(ctx.Root, "all", "chapter", target.Chapter.ID, 0)
 		if err != nil {
 			warnings = append(warnings, "chapter check unavailable: "+err.Error())
 		} else if err := ApplyToolCheckIssueFilters(check, "low", ChapterRepairIssueCategoryFilter(issueCategory), 12); err != nil {
@@ -1616,15 +1720,15 @@ func queryRecapRepairContext(ctx ToolProjectContext, chapterID string) ToolRespo
 		return ToolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
 	}
 
-	check, err := RunToolRecapCheck(ctx.Root, "quality", "chapter", target.Chapter.ID)
+	check, err := runToolRecapCheckAt(ctx.Root, "quality", "chapter", target.Chapter.ID)
 	if err != nil {
 		return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{err.Error()}}
 	}
 	_ = ApplyToolCheckIssueFilters(check, "low", "recap", 8)
 
 	var current *models.ChapterRecap
-	if ctx.Root != "" {
-		if loaded, err := recap.NewStore(ctx.Root).Load(target.Chapter.ID); err == nil {
+	if ctx.Root != nil {
+		if loaded, err := recap.NewStoreAt(ctx.Root).Load(target.Chapter.ID); err == nil {
 			current = loaded
 		}
 	}
@@ -2699,7 +2803,7 @@ func queryAllChapters(ctx ToolProjectContext, includeContent bool) ToolResponse 
 			Outline: item.Chapter,
 		}
 		if includeContent {
-			hit.ContentPath, hit.Content = LoadToolChapterContent(ctx.Root, item.Chapter.ID)
+			hit.Content, hit.ContentPath = ctx.Root.LoadChapterContent(item.Chapter.ID)
 		}
 		chapters = append(chapters, hit)
 	}
@@ -2707,8 +2811,7 @@ func queryAllChapters(ctx ToolProjectContext, includeContent bool) ToolResponse 
 }
 
 func (c *ToolProjectContext) loadSetup() error {
-	path := filepath.Join(c.Root, "story", "setup", "story_setup.json")
-	setup, err := models.LoadStorySetup(path)
+	setup, err := c.Root.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
@@ -2717,8 +2820,7 @@ func (c *ToolProjectContext) loadSetup() error {
 }
 
 func (c *ToolProjectContext) loadOutline() error {
-	path := filepath.Join(c.Root, "story", "compose", "outline.json")
-	outline, err := models.LoadOutline(path)
+	outline, err := c.Root.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load outline: %w", err)
 	}
@@ -2727,7 +2829,7 @@ func (c *ToolProjectContext) loadOutline() error {
 }
 
 func (c *ToolProjectContext) loadElements() error {
-	characters, locations, items, organizations, err := project.LoadAllElements()
+	characters, locations, items, organizations, err := c.Root.LoadElements()
 	if err != nil {
 		return err
 	}
@@ -2735,21 +2837,18 @@ func (c *ToolProjectContext) loadElements() error {
 	c.Locations = locations
 	c.Items = items
 	c.Organizations = organizations
-	c.RawCharacters, err = loadRawCraftMap(c.Root, "characters.json")
-	if err != nil {
-		return err
+	raw := map[store.CraftKind]*map[string]map[string]interface{}{
+		store.CraftCharacters:    &c.RawCharacters,
+		store.CraftLocations:     &c.RawLocations,
+		store.CraftItems:         &c.RawItems,
+		store.CraftOrganizations: &c.RawOrgs,
 	}
-	c.RawLocations, err = loadRawCraftMap(c.Root, "locations.json")
-	if err != nil {
-		return err
-	}
-	c.RawItems, err = loadRawCraftMap(c.Root, "items.json")
-	if err != nil {
-		return err
-	}
-	c.RawOrgs, err = loadRawCraftMap(c.Root, "organizations.json")
-	if err != nil {
-		return err
+	for kind, target := range raw {
+		values, err := c.Root.LoadCraftRaw(kind)
+		if err != nil {
+			return fmt.Errorf("failed to read %s: %w", kind.FileName(), err)
+		}
+		*target = values
 	}
 	return nil
 }
@@ -2757,16 +2856,12 @@ func (c *ToolProjectContext) loadElements() error {
 // loadRawCraftMap reads one craft element file as the string-keyed map the patch
 // plane and the schema checks work with. Missing files yield an empty map, so a
 // patch against a not-yet-crafted element creates it.
-func loadRawCraftMap(root, filename string) (map[string]map[string]interface{}, error) {
+func loadRawCraftMap(root *store.Root, filename string) (map[string]map[string]interface{}, error) {
 	kind, ok := store.CraftKindForFile(filename)
 	if !ok {
 		return nil, fmt.Errorf("unknown craft file %q", filename)
 	}
-	project, err := store.Open(root)
-	if err != nil {
-		return nil, err
-	}
-	values, err := project.LoadCraftRaw(kind)
+	values, err := root.LoadCraftRaw(kind)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", filename, err)
 	}
@@ -3113,7 +3208,7 @@ func queryChapter(ctx ToolProjectContext, id string, includeContent bool) ToolRe
 			Outline: chapter.Chapter,
 		}
 		if includeContent {
-			hit.ContentPath, hit.Content = LoadToolChapterContent(ctx.Root, chapter.Chapter.ID)
+			hit.Content, hit.ContentPath = ctx.Root.LoadChapterContent(chapter.Chapter.ID)
 		}
 		return ToolResponse{OK: true, Count: 1, Results: []chapterHit{hit}}
 	}
@@ -3158,7 +3253,7 @@ func queryChaptersByEntity(ctx ToolProjectContext, entityType, name string, incl
 			Reasons: hit.Reasons,
 		}
 		if includeContent {
-			chapterHit.ContentPath, chapterHit.Content = LoadToolChapterContent(ctx.Root, hit.ID)
+			chapterHit.Content, chapterHit.ContentPath = ctx.Root.LoadChapterContent(hit.ID)
 		}
 		chapters = append(chapters, chapterHit)
 	}
@@ -3561,21 +3656,6 @@ func legacyEventTypeMatches(eventType, entityType string) bool {
 	}
 }
 
-func LoadToolChapterContent(root, chapterID string) (string, string) {
-	candidates := []string{
-		filepath.Join(root, "chapters", "chapter-"+chapterID+".md"),
-		filepath.Join(root, "chapters", chapterID+".md"),
-		filepath.Join(root, "drafts", chapterID+".md"),
-	}
-	for _, path := range candidates {
-		data, err := os.ReadFile(path)
-		if err == nil {
-			return path, string(data)
-		}
-	}
-	return "", ""
-}
-
 func namedObjectMatches[T any](key string, value *T, name string) bool {
 	if strings.TrimSpace(name) == "" {
 		return true
@@ -3762,13 +3842,13 @@ func normalizeOutlineType(value string) string {
 
 func normalizeCraftType(value string) string {
 	switch NormalizeKey(value) {
-	case "characters", "char":
+	case "characters", "char", "chars":
 		return "character"
 	case "items":
 		return "item"
-	case "locations", "loc":
+	case "locations", "loc", "locs":
 		return "location"
-	case "organizations", "org":
+	case "organizations", "org", "orgs":
 		return "organization"
 	default:
 		return NormalizeKey(value)
@@ -3781,8 +3861,6 @@ func normalizeChapterType(value string) string {
 		return "refs"
 	case "event":
 		return "events"
-	case "outline-chapter":
-		return "outline"
 	default:
 		return NormalizeKey(value)
 	}
@@ -3806,28 +3884,36 @@ func WriteToolJSON(cmd *cobra.Command, resp ToolResponse) error {
 }
 
 func init() {
-	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Type, "type", "", "Section-specific query type")
-	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.ID, "id", "", "ID for part, volume, or chapter queries")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Type, "type", "",
+		"Query type within the selected section; the section table lists the values it accepts")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.ID, "id", "",
+		"Target ID: outline part/volume/chapter, chapter ID, or context target ID")
 	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Name, "name", "", "Name or substring to search")
-	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.EntityType, "entity-type", "", "Entity type for ref queries: character, item, location, storyline")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.EntityType, "entity-type", "",
+		"Entity type for --type refs/events queries: character, item, location, storyline")
 	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.ChapterID, "chapter-id", "", "Limit event queries to a chapter ID")
 	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.VolumeID, "volume-id", "", "Limit event queries to a volume ID")
-	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.View, "view", "brief", "Output detail level: brief, index, or full")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.View, "view", "brief",
+		"Output detail level: index (ids and counts), brief (default), or full (one precise object)")
 	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Fields, "fields", "", "Comma-separated JSON fields to return from each result, e.g. storyline_advances,chapter_payoff,conflict")
 	ToolQueryCmd.Flags().BoolVar(&ToolQueryFlags.IncludeContent, "content", false, "Include chapter text content when available")
 	ToolQueryCmd.Flags().IntVar(&ToolQueryFlags.Limit, "limit", 0, "Maximum number of results to return")
-	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Target, "target", "outline", "Check target: outline, setup, craft, chapter, or recap")
-	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Scope, "scope", "all", "Check scope: outline all/volume/chapter, craft character/item/location/organization, chapter chapter, or recap chapter")
+	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Target, "target", "outline",
+		"Check target: outline, setup, craft, chapter, or recap; craft requires kind schema")
+	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Scope, "scope", "all",
+		"Scope within the target: outline all|volume|chapter, craft character|item|location|organization, chapter chapter, recap chapter")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.ID, "id", "", "Volume/chapter ID, craft element name, final chapter ID, or recap chapter ID for scoped checks")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.MinPriority, "min-priority", "", "Only return issues at or above priority: low, medium, high, critical")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Category, "category", "", "Only return issues in comma-separated categories, e.g. logic,plot,structure")
 	ToolCheckCmd.Flags().IntVar(&ToolCheckFlags.MaxIssues, "max-issues", 0, "Maximum number of issues to return without changing the summary")
 	ToolCheckCmd.Flags().IntVar(&ToolCheckFlags.TargetWords, "target-words", 0, "Override target narrative units for final chapter length checks")
-	ToolPatchCmd.Flags().StringVar(&ToolPatchFlags.Target, "target", "chapter", "Patch target: outline chapter/volume or craft character/item/location/organization")
+	ToolPatchCmd.Flags().StringVar(&ToolPatchFlags.Target, "target", "",
+		"Section-specific patch target: outline chapter|volume (default chapter), craft character|item|location|organization (required); setup/recap/chapter ignore it")
 	ToolPatchCmd.Flags().StringVar(&ToolPatchFlags.ID, "id", "", "Target outline ID, final chapter ID, recap chapter ID, or craft element name/key")
 	ToolPatchCmd.Flags().StringVar(&ToolPatchFlags.PatchJSON, "patch-json", "", "Patch JSON string; stdin is used when omitted")
 	ToolPatchCmd.Flags().StringVar(&ToolPatchFlags.PatchBuffer, "patch-buffer", "", "Read patch content from a novelgen-managed agent patch buffer")
-	ToolPatchCmd.Flags().StringVar(&ToolPatchFlags.Task, "task", "", "Use a validated project patch task instead of stdin or --patch-json")
+	ToolPatchCmd.Flags().StringVar(&ToolPatchFlags.Task, "task", "",
+		"Reuse a validated outline repair task instead of stdin or --patch-json; the only supported form is outline-global-repair:<issue category>")
 	ToolPatchCmd.Flags().BoolVar(&ToolPatchFlags.Apply, "apply", false, "Apply the patch and save project files")
 	ToolPatchCmd.Flags().BoolVar(&ToolPatchFlags.DryRun, "dry-run", false, "Force dry-run mode even when --apply is present")
 	ToolPatchCmd.Flags().BoolVar(&ToolPatchFlags.RefreshDerived, "refresh-derived", false, "For chapter --apply, regenerate derived RPG DSL and return a post-refresh all check")

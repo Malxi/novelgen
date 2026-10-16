@@ -275,7 +275,8 @@ func init() {
 	composeReviewCmd.Flags().Int64Var(&composeReviewSeedFlag, "seed", 42, "Random seed for --matrix sampling")
 	composeReviewCmd.Flags().IntVar(&composeReviewParallelFlag, "parallel", 4, "Concurrent reviews in --matrix mode")
 	composeReviewCmd.Flags().IntVar(&composeImproveVolume, "volume", 0, "Review one 1-based global volume index")
-	composeReviewCmd.Flags().StringVar(&composeReviewOutFlag, "out", "story/compose/outline_review.json", "Review report output path")
+	composeReviewCmd.Flags().StringVar(&composeReviewOutFlag, "out", "",
+		"Review report output path (default: story/compose/outline_review.json inside the project)")
 	composeReviewCmd.Flags().StringVar(&composeModelFlag, "model", "", "Override the project model for this review run (e.g. deepseek-v4-pro)")
 	composeSkeletonReviewCmd.Flags().StringVar(&composePromptFlag, "prompt", "", "Additional review focus")
 	composeSkeletonImproveCmd.Flags().IntVar(&composeMaxRoundsFlag, "max-rounds", 1, "Maximum skeleton improvement rounds")

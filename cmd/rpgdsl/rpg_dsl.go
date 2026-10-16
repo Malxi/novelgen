@@ -22,7 +22,7 @@ import (
 // rpgDSLCmd represents the rpg-dsl command
 var rpgDSLCmd = &cobra.Command{
 	Use:   "rpg-dsl",
-	Short: "DSL-RPG 工具集",
+	Short: "Validate, merge, convert and export project RPG DSL",
 	Long:  `用于处理 RPG-DSL 文件的命令行工具，支持验证、合并、转换等功能。`,
 }
 
@@ -296,7 +296,7 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("generate setup DSL failed: %w", err)
 		}
-		setupPath := filepath.Join(outputDir, "00_setup.rpg")
+		setupPath := filepath.Join(outputDir, store.RPGPhaseSetupFile)
 		if err := setupDSL.WriteToFile(setupPath); err != nil {
 			return fmt.Errorf("write setup DSL failed: %w", err)
 		}
@@ -313,7 +313,7 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("生成 outline DSL 失败: %w", err)
 		}
-		outlinePath := filepath.Join(outputDir, "01_outline.rpg")
+		outlinePath := filepath.Join(outputDir, store.RPGPhaseOutlineFile)
 		if outlineVolumeFlag > 0 {
 			outlinePath = filepath.Join(outputDir, fmt.Sprintf("01_outline_v%02d.rpg", outlineVolumeFlag))
 		}
@@ -333,7 +333,7 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("生成 craft DSL 失败: %w", err)
 		}
-		craftPath := filepath.Join(outputDir, "02_craft.rpg")
+		craftPath := filepath.Join(outputDir, store.RPGPhaseCraftFile)
 		if err := craftDSL.WriteToFile(craftPath); err != nil {
 			return fmt.Errorf("写入 craft DSL 失败: %w", err)
 		}
@@ -556,8 +556,9 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 	fmt.Printf("📚 找到 %d 个章节 markdown 文件\n", len(chapterInputs))
 
 	// 3. 创建 RPG 目录 (use project root, not relative path)
-	rpgDir := filepath.Join(root, "story", "rpg")
-	if err := os.MkdirAll(rpgDir, 0755); err != nil {
+	projectRoot := store.At(root)
+	rpgDir := projectRoot.RPGDir()
+	if err := projectRoot.MkdirAll(rpgDir, store.DirMode); err != nil {
 		return fmt.Errorf("创建 RPG 目录失败: %w", err)
 	}
 
@@ -639,8 +640,8 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 		fmt.Printf("  ✓ %d 字符\n", len(dslContent))
 	}
 
-	chaptersFile := filepath.Join(rpgDir, "04_chapters.rpg")
-	if err := os.WriteFile(chaptersFile, []byte(combined.String()), 0644); err != nil {
+	chaptersFile := projectRoot.RPGChaptersDSL()
+	if err := projectRoot.WriteText(chaptersFile, combined.String()); err != nil {
 		return fmt.Errorf("保存 DSL 文件失败: %w", err)
 	}
 
@@ -689,11 +690,7 @@ func filterChapterInputs(inputs []writersdl.WriteRPGDSLChapterInput, volume int,
 // Helper functions
 
 func getBookRPGDir(bookName string) string {
-	root, err := store.Open(store.BookDir("", bookName))
-	if err != nil {
-		return filepath.Join(store.BooksDirName, bookName, "story", "rpg")
-	}
-	return root.RPGDir()
+	return store.At(store.BookDir("", bookName)).RPGDir()
 }
 
 func loadNovelgenProject(bookName string) (*rpg.NovelgenProject, error) {
@@ -761,13 +758,7 @@ func loadDSLFragments(bookName string) ([]*dsl.DSLFragment, error) {
 	rpgDir := getBookRPGDir(bookName)
 
 	// Look for DSL files
-	patterns := []string{
-		"00_setup.rpg",
-		"01_outline.rpg",
-		"02_craft.rpg",
-		"03_systems.rpg",
-		"*.rpg",
-	}
+	patterns := append(store.RPGPhaseFiles(), "*.rpg")
 
 	var fragments []*dsl.DSLFragment
 	seen := make(map[string]bool)

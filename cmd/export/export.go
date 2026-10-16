@@ -11,7 +11,7 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
 	"novelgen/internal/project"
-	"novelgen/internal/utils"
+	"novelgen/internal/store"
 
 	"github.com/spf13/cobra"
 )
@@ -257,14 +257,7 @@ func isMarkdownHorizontalRule(trimmed string) bool {
 
 // loadChapterFile loads a chapter file from the chapters directory
 func loadChapterFile(root, chapterID string) (string, error) {
-	// Try different naming patterns
-	patterns := []string{
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapterID)),
-		filepath.Join(root, "chapters", chapterID+".md"),
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", utils.ExtractChapterNumber(chapterID))),
-	}
-
-	for _, path := range patterns {
+	for _, path := range store.At(root).ChapterCandidates(chapterID) {
 		data, err := os.ReadFile(path)
 		if err == nil {
 			return string(data), nil

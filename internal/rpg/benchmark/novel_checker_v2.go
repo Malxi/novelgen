@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"novelgen/internal/store"
 )
 
 // ============================================================
@@ -90,7 +92,7 @@ func NewSmartNovelChecker(bookPath string, settings *BookSettings) (*SmartNovelC
 
 // CheckAllChapters 检测所有章节
 func (snc *SmartNovelChecker) CheckAllChapters() error {
-	chaptersDir := filepath.Join(snc.BookPath, "chapters")
+	chaptersDir := store.At(snc.BookPath).ChaptersDir()
 
 	files, err := os.ReadDir(chaptersDir)
 	if err != nil {

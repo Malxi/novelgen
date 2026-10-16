@@ -2,11 +2,11 @@ package writecmd
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 )
 
 func setupWriteRunLogging(projectRoot, label string) {
@@ -23,13 +23,13 @@ func setupWriteRunLogging(projectRoot, label string) {
 	logger.Info("Working dir: %s", cwd)
 	logger.Info("Project root: %s", projectRoot)
 	logger.Info("Log file: %s", log.LogFilePath())
-	logger.Info("Prompt logs: %s", filepath.Join(projectRoot, "logs", "prompts"))
-	logger.Info("Response logs: %s", filepath.Join(projectRoot, "logs", "responses"))
+	logger.Info("Prompt logs: %s", store.At(projectRoot).LogFile("prompts"))
+	logger.Info("Response logs: %s", store.At(projectRoot).LogFile("responses"))
 }
 
 func finalChapterPath(projectRoot string, chapter *models.Chapter) string {
 	if chapter == nil {
-		return filepath.Join(projectRoot, "chapters")
+		return store.At(projectRoot).ChaptersDir()
 	}
-	return filepath.Join(projectRoot, "chapters", "chapter-"+chapter.ID+".md")
+	return store.At(projectRoot).ChapterFile(chapter.ID)
 }

@@ -13,6 +13,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/store"
 	"novelgen/internal/toolcmd"
 	"novelgen/internal/writersdl"
 
@@ -56,12 +57,12 @@ func runToolRefreshChapterDSL(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	root := book.Dir()
+	root := book.Root
 	id := strings.TrimSpace(ToolRefreshFlags.ID)
 	if id == "" {
 		return fmt.Errorf("--id is required for chapter-dsl refresh")
 	}
-	refresh, err := RefreshToolChapterDSL(cmd.Context(), root, id, ToolRefreshFlags.BatchSize)
+	refresh, err := refreshToolChapterDSLAt(cmd.Context(), root, id, ToolRefreshFlags.BatchSize)
 	if err != nil {
 		return err
 	}
@@ -76,7 +77,13 @@ func SuppressToolRefreshLogs() func() {
 	}
 }
 
-func RefreshToolChapterDSL(ctx context.Context, root, id string, batchSize int) (*toolRefreshResult, error) {
+// RefreshToolChapterDSL is the string-root entry point used by the write
+// pipeline, which holds a resolved project directory.
+func RefreshToolChapterDSL(ctx context.Context, rootDir, id string, batchSize int) (*toolRefreshResult, error) {
+	return refreshToolChapterDSLAt(ctx, store.At(rootDir), id, batchSize)
+}
+
+func refreshToolChapterDSLAt(ctx context.Context, root *store.Root, id string, batchSize int) (*toolRefreshResult, error) {
 	config, setup, outline, cfg, client, err := loadToolRefreshProjectState()
 	if err != nil {
 		return nil, err
@@ -85,19 +92,19 @@ func RefreshToolChapterDSL(ctx context.Context, root, id string, batchSize int) 
 	if chapter == nil {
 		return nil, fmt.Errorf("chapter %q not found in outline", id)
 	}
-	chapterPath := firstExistingPath(writersdl.CandidateChapterMarkdownPaths(root, id))
+	chapterPath := firstExistingPath(root.ChapterCandidates(id))
 	if chapterPath == "" {
-		return nil, fmt.Errorf("chapter markdown for %q not found under %s", id, filepath.Join(root, "chapters"))
+		return nil, fmt.Errorf("chapter markdown for %q not found under %s", id, root.ChaptersDir())
 	}
 	if batchSize <= 0 {
 		batchSize = 10
 	}
 
-	result, err := writersdl.EmitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, batchSize, id)
+	result, err := writersdl.EmitChapterRPGDSLForProject(ctx, root.Dir(), filepath.Base(root.Dir()), config, cfg, setup, client, batchSize, id)
 	if err != nil {
 		return nil, err
 	}
-	gate := RunToolChapterSimulationGate(root, id)
+	gate := runToolChapterSimulationGateAt(root, id)
 	check := MakeToolCheckResult("simulation", "chapter", "chapter", id, gate)
 	refresh := toolRefreshResult{
 		OK:               check == nil || !check.Blocking,
@@ -111,11 +118,11 @@ func RefreshToolChapterDSL(ctx context.Context, root, id string, batchSize int) 
 		GeneratedBatches: result.GeneratedBatches,
 		Check:            check,
 		Meta: map[string]any{
-			"project_root":      root,
+			"project_root":      root.Dir(),
 			"chapter_path":      chapterPath,
 			"post_check_query":  toolcmd.ChapterCheck(id, toolcmd.ChapterCheckOptions{Kind: "simulation", MinPriority: "low", MaxIssues: 12}),
 			"refresh_scope":     "target chapter cache plus combined 04_chapters.rpg chapter replacement",
-			"derived_artifacts": []string{"story/rpg/04_chapters.rpg", "story/rpg/cache/chapter_batches"},
+			"derived_artifacts": []string{root.RelPath(root.RPGChaptersDSL()), root.RelPath(root.RPGChapterBatchCacheDir())},
 		},
 	}
 	return &refresh, nil

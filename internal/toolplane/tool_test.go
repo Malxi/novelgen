@@ -1362,7 +1362,7 @@ func TestToolQueryContextRecapRepairBundlesFocusedExcerptAndCheck(t *testing.T) 
 		t.Fatal(err)
 	}
 	ctx := toolplane.ToolProjectContext{
-		Root: root,
+		Root: toolRoot(t, root),
 		Outline: &models.Outline{Parts: []models.Part{{
 			ID: "P1",
 			Volumes: []models.Volume{{
@@ -1558,7 +1558,7 @@ func TestToolQueryContextChapterWriteBundlesFocusedContinuityAndNavigation(t *te
 		t.Fatal(err)
 	}
 	ctx := toolplane.ToolProjectContext{
-		Root: root,
+		Root: toolRoot(t, root),
 		Outline: &models.Outline{Parts: []models.Part{{
 			ID: "P1",
 			Volumes: []models.Volume{{
@@ -1703,7 +1703,7 @@ func TestToolQueryContextChapterWriteSkipsStalePreviousRecap(t *testing.T) {
 	}
 
 	ctx := toolplane.ToolProjectContext{
-		Root: root,
+		Root: toolRoot(t, root),
 		Outline: &models.Outline{Parts: []models.Part{{
 			ID: "P1",
 			Volumes: []models.Volume{{
@@ -1744,7 +1744,7 @@ func TestToolQueryContextChapterWriteIncludesCreativeHistorySnapshot(t *testing.
 	writeToolHistoryLog(t, root, "prompts", "CraftAgent_20260706_085900.md", "Generate craft with system-log contrast.", toolplane.ToolProcessStartedAt.Add(-3*time.Hour))
 
 	ctx := toolplane.ToolProjectContext{
-		Root:  root,
+		Root:  toolRoot(t, root),
 		Setup: &models.StorySetup{ProjectName: "System Log", Premise: "A protagonist reads system logs."},
 		Outline: &models.Outline{Parts: []models.Part{{
 			ID: "P1",
@@ -1798,7 +1798,7 @@ func TestToolQueryContextChapterWriteSkipsCurrentProcessPromptLog(t *testing.T) 
 	writeToolHistoryLog(t, root, "prompts", "WriteAgent_20990101_000000.md", "current prompt should not be reflected", toolplane.ToolProcessStartedAt.Add(5*time.Second))
 
 	ctx := toolplane.ToolProjectContext{
-		Root: root,
+		Root: toolRoot(t, root),
 		Outline: &models.Outline{Parts: []models.Part{{
 			ID: "P1",
 			Volumes: []models.Volume{{
@@ -1855,7 +1855,7 @@ func TestToolQueryContextChapterRepairBundlesChecksAndNavigation(t *testing.T) {
 	}
 
 	ctx := toolplane.ToolProjectContext{
-		Root:    root,
+		Root:    toolRoot(t, root),
 		Outline: outline,
 		Setup:   &models.StorySetup{ProjectName: "Test", Premise: "Signal in the mine."},
 	}
@@ -2739,23 +2739,46 @@ func TestNormalizeCraftPatchObjectRejectsUnsupportedRPGStats(t *testing.T) {
 	}
 }
 
-func TestLoadToolChapterContentUsesFinalChapterPath(t *testing.T) {
+// The chapter excerpt an agent gets from a repair context must come from the same
+// file the write pipeline and export read. This used to be a separate candidate
+// list inside the tool plane, which silently skipped the legacy numeric chapter
+// filename.
+func TestChapterRepairContextReadsStoreChapterCandidates(t *testing.T) {
+	chapterID := "chap_1_2_3"
 	root := t.TempDir()
 	chapterDir := filepath.Join(root, "chapters")
 	if err := os.MkdirAll(chapterDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(chapterDir, "chapter-chap_001.md")
+	path := filepath.Join(chapterDir, "chapter-3.md")
 	if err := os.WriteFile(path, []byte("chapter text"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	gotPath, content := toolplane.LoadToolChapterContent(root, "chap_001")
-	if gotPath != path {
-		t.Fatalf("path = %q, want %q", gotPath, path)
+	ctx := toolplane.ToolProjectContext{
+		Root: toolRoot(t, root),
+		Outline: &models.Outline{Parts: []models.Part{{
+			ID: "P1",
+			Volumes: []models.Volume{{
+				ID:       "P1-V2",
+				Chapters: []models.Chapter{{ID: chapterID, Title: "Numeric"}},
+			}},
+		}}},
 	}
-	if content != "chapter text" {
-		t.Fatalf("content = %q, want chapter text", content)
+
+	resp := toolplane.QueryContext(ctx, "chapter-repair", chapterID, "")
+	if !resp.OK || resp.Count != 1 {
+		t.Fatalf("chapter repair context = ok %v count %d warnings %v", resp.OK, resp.Count, resp.Warnings)
+	}
+	bundle, ok := resp.Results.(toolplane.ChapterRepairContext)
+	if !ok {
+		t.Fatalf("results type = %T, want toolplane.ChapterRepairContext", resp.Results)
+	}
+	if gotPath := bundle.ExistingChapterExcerpt["content_path"]; gotPath != path {
+		t.Fatalf("excerpt path = %q, want %q", gotPath, path)
+	}
+	if opening := bundle.ExistingChapterExcerpt["opening"]; opening != "chapter text" {
+		t.Fatalf("excerpt opening = %q, want chapter text", opening)
 	}
 }
 

@@ -19,6 +19,7 @@ import (
 
 	"novelgen/internal/envutil"
 	"novelgen/internal/logger"
+	"novelgen/internal/store"
 )
 
 // ProcessRuntime invokes an SDK runner process over JSON stdin/stdout.
@@ -421,7 +422,7 @@ func (r *ProcessRuntime) defaultLiveLogPath(invocation Invocation) string {
 	}
 	name = sanitizeLogName(name)
 	timestamp := time.Now().Format("20060102_150405_000000000")
-	return filepath.Join(root, "logs", "agent-live", fmt.Sprintf("%s_%s.jsonl", name, timestamp))
+	return filepath.Join(store.At(root).LogFile("agent-live"), fmt.Sprintf("%s_%s.jsonl", name, timestamp))
 }
 
 func sanitizeLogName(name string) string {

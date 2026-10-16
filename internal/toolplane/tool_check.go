@@ -11,6 +11,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/store"
 	"novelgen/internal/toolcmd"
 	"novelgen/internal/utils"
 	"novelgen/internal/writersdl"
@@ -905,19 +906,34 @@ schema validates typed craft objects and saved recap JSON already in project sta
 }
 
 var ToolPatchCmd = &cobra.Command{
-	Use:   "patch [outline|craft|setup|recap|chapter]",
+	Use:   "patch [" + strings.Join(toolPatchSections, "|") + "]",
 	Short: "Apply a validated JSON patch to project state",
 	Long: `Apply a validated JSON patch to project state.
 
 The tool reads the current project from the workspace. The agent submits only
 the target and patch JSON on stdin. Project files are written only with --apply;
 without --apply the command performs a dry run and returns the diff/check JSON.
-Setup patches do not require --id; outline, craft, and recap patches patch a
-specific target object. Chapter patches update saved final chapter markdown with
-{"content":"..."} and run deterministic chapter checks.`,
+
+The section is the positional argument; --target selects what inside that
+section is patched:
+  outline   --target chapter (default) or volume, --id <chapter|volume id>
+  craft     --target character|item|location|organization (required), --id <element key>
+  setup     no --id, no --target; the patch merges into the typed story setup
+  recap     no --target; --id <chapter id>
+  chapter   no --target; --id <chapter id> with {"content":"..."}; runs the
+            deterministic chapter check, and with --refresh-derived also
+            rebuilds the chapter RPG DSL
+
+Patch JSON comes from stdin, from --patch-json (short ASCII-only patches) or from
+a --patch-buffer filled by ` + "`tool patch-buffer`" + `. --task reuses the patch
+shape of a validated outline repair task instead.`,
 	Args: cobra.ExactArgs(1),
 	RunE: RunToolPatch,
 }
+
+// toolPatchSections lists the patch sections in help order, used by the Use line
+// and by the unsupported-section error.
+var toolPatchSections = []string{"outline", "craft", "setup", "recap", "chapter"}
 
 func runToolCheck(cmd *cobra.Command, args []string) error {
 	kind := "all"
@@ -928,23 +944,23 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 		kind = "all"
 	}
 	if kind != "quality" && kind != "simulation" && kind != "all" && kind != "schema" {
-		return fmt.Errorf("unsupported check kind %q", kind)
+		return fmt.Errorf("unsupported check kind %q; valid kinds: quality, simulation, all, schema", kind)
 	}
 	target := NormalizeKey(ToolCheckFlags.Target)
 	if target == "" {
 		target = "outline"
 	}
 	if target != "outline" && target != "craft" && target != "setup" && target != "recap" && target != "chapter" {
-		return fmt.Errorf("unsupported check target %q", target)
+		return fmt.Errorf("unsupported check target %q; valid targets: outline, setup, craft, chapter, recap", target)
 	}
 	if (target == "outline" || target == "setup") && kind == "schema" {
-		return fmt.Errorf("schema check is only supported for --target craft or --target recap")
+		return fmt.Errorf("kind schema is only supported for --target craft or --target recap, not --target %s; use quality/simulation/all instead", target)
 	}
 	if target == "craft" && kind != "schema" {
-		return fmt.Errorf("craft checks currently support only kind schema")
+		return fmt.Errorf("craft checks currently support only kind schema, got %q", kind)
 	}
 	if target == "recap" && kind == "simulation" {
-		return fmt.Errorf("recap checks do not support kind simulation")
+		return fmt.Errorf("recap checks do not support kind simulation; use quality, all, or schema")
 	}
 	if target == "chapter" && kind != "quality" && kind != "simulation" && kind != "all" {
 		return fmt.Errorf("chapter checks currently support only kind quality, simulation, or all")
@@ -954,35 +970,35 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	root := book.Dir()
+	root := book.Root
 	if target == "craft" {
-		result, err := RunToolCraftSchemaCheck(root, ToolCheckFlags.Scope, ToolCheckFlags.ID)
+		result, err := runToolCraftSchemaCheckAt(root, ToolCheckFlags.Scope, ToolCheckFlags.ID)
 		if err != nil {
 			return err
 		}
-		addToolCheckMeta(result, "project_root", root)
+		addToolCheckMeta(result, "project_root", root.Dir())
 		if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 			return err
 		}
 		return writeJSON(cmd, result)
 	}
 	if target == "recap" {
-		result, err := RunToolRecapCheck(root, kind, ToolCheckFlags.Scope, ToolCheckFlags.ID)
+		result, err := runToolRecapCheckAt(root, kind, ToolCheckFlags.Scope, ToolCheckFlags.ID)
 		if err != nil {
 			return err
 		}
-		addToolCheckMeta(result, "project_root", root)
+		addToolCheckMeta(result, "project_root", root.Dir())
 		if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 			return err
 		}
 		return writeJSON(cmd, result)
 	}
 	if target == "chapter" {
-		result, err := RunToolChapterCheckWithTargetWords(root, kind, ToolCheckFlags.Scope, ToolCheckFlags.ID, ToolCheckFlags.TargetWords)
+		result, err := runToolChapterCheckAt(root, kind, ToolCheckFlags.Scope, ToolCheckFlags.ID, ToolCheckFlags.TargetWords)
 		if err != nil {
 			return err
 		}
-		addToolCheckMeta(result, "project_root", root)
+		addToolCheckMeta(result, "project_root", root.Dir())
 		if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 			return err
 		}
@@ -997,7 +1013,7 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		addToolCheckMeta(result, "project_root", root)
+		addToolCheckMeta(result, "project_root", root.Dir())
 		if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 			return err
 		}
@@ -1177,7 +1193,14 @@ func RunToolOutlineCheck(kind string, setup *models.StorySetup, outline *models.
 	return MakeToolCheckResult(kind, "outline", scope, id, gate), nil
 }
 
-func RunToolCraftSchemaCheck(root, scope, id string) (*ToolCheckResult, error) {
+// RunToolCraftSchemaCheck is the string-root entry point for callers that hold a
+// resolved project directory. It exists so the store-based implementation stays
+// the only one that spells project paths.
+func RunToolCraftSchemaCheck(rootDir, scope, id string) (*ToolCheckResult, error) {
+	return runToolCraftSchemaCheckAt(store.At(rootDir), scope, id)
+}
+
+func runToolCraftSchemaCheckAt(root *store.Root, scope, id string) (*ToolCheckResult, error) {
 	scope = normalizeCraftPatchTarget(scope)
 	if scope == "" {
 		return nil, fmt.Errorf("--scope is required for craft schema check (character/item/location/organization)")
@@ -1227,7 +1250,13 @@ func RunToolCraftSchemaCheck(root, scope, id string) (*ToolCheckResult, error) {
 	return MakeToolCheckResult("schema", "craft", scope, "", gate), nil
 }
 
-func RunToolRecapCheck(root, kind, scope, id string) (*ToolCheckResult, error) {
+// RunToolRecapCheck is the string-root entry point for callers that hold a
+// resolved project directory.
+func RunToolRecapCheck(rootDir, kind, scope, id string) (*ToolCheckResult, error) {
+	return runToolRecapCheckAt(store.At(rootDir), kind, scope, id)
+}
+
+func runToolRecapCheckAt(root *store.Root, kind, scope, id string) (*ToolCheckResult, error) {
 	kind = NormalizeKey(kind)
 	if kind == "" {
 		kind = "all"
@@ -1246,8 +1275,8 @@ func RunToolRecapCheck(root, kind, scope, id string) (*ToolCheckResult, error) {
 		return nil, fmt.Errorf("--id is required for recap chapter check")
 	}
 
-	store := recap.NewStore(root)
-	recapData, err := store.Load(id)
+	recapStore := recap.NewStoreAt(root)
+	recapData, err := recapStore.Load(id)
 	gate := quality.QualityGateResult{}
 	if err != nil {
 		gate.Suggestions = append(gate.Suggestions, models.ReviewSuggestion{
@@ -1262,7 +1291,7 @@ func RunToolRecapCheck(root, kind, scope, id string) (*ToolCheckResult, error) {
 		return MakeToolCheckResult(kind, "recap", scope, id, gate), nil
 	}
 	var outlineChapter *models.Chapter
-	if outline, err := models.LoadOutline(filepath.Join(root, "story", "compose", "outline.json")); err == nil && outline != nil {
+	if outline, err := root.LoadOutline(); err == nil && outline != nil {
 		outlineChapter = outline.GetChapterByID(id)
 	}
 	return runToolRecapCheckForValue(kind, scope, id, recapData, outlineChapter), nil
@@ -1276,11 +1305,13 @@ func runToolRecapCheckForValue(kind, scope, id string, recapData *models.Chapter
 	return MakeToolCheckResult(kind, "recap", scope, id, gate)
 }
 
-func runToolChapterCheck(root, kind, scope, id string) (*ToolCheckResult, error) {
-	return RunToolChapterCheckWithTargetWords(root, kind, scope, id, 0)
+// RunToolChapterCheckWithTargetWords is the string-root entry point used by the
+// write pipeline, which holds a resolved project directory.
+func RunToolChapterCheckWithTargetWords(rootDir, kind, scope, id string, targetWordsOverride int) (*ToolCheckResult, error) {
+	return runToolChapterCheckAt(store.At(rootDir), kind, scope, id, targetWordsOverride)
 }
 
-func RunToolChapterCheckWithTargetWords(root, kind, scope, id string, targetWordsOverride int) (*ToolCheckResult, error) {
+func runToolChapterCheckAt(root *store.Root, kind, scope, id string, targetWordsOverride int) (*ToolCheckResult, error) {
 	kind = NormalizeKey(kind)
 	if kind == "" {
 		kind = "quality"
@@ -1302,7 +1333,7 @@ func RunToolChapterCheckWithTargetWords(root, kind, scope, id string, targetWord
 		return nil, fmt.Errorf("--id is required for chapter check")
 	}
 
-	outline, err := models.LoadOutline(filepath.Join(root, "story", "compose", "outline.json"))
+	outline, err := root.LoadOutline()
 	if err != nil {
 		return nil, fmt.Errorf("load outline: %w", err)
 	}
@@ -1311,7 +1342,10 @@ func RunToolChapterCheckWithTargetWords(root, kind, scope, id string, targetWord
 		return nil, fmt.Errorf("chapter %q not found in outline", id)
 	}
 
-	content := project.LoadFinalChapterContent(chapter)
+	// Read the manuscript through the same candidate list the write pipeline and
+	// export use, and from the project this check was scoped to rather than from
+	// the ambient default root.
+	content, _ := root.LoadChapterContent(chapter.ID)
 	targetWords := targetWordsOverride
 	if targetWords <= 0 {
 		targetWords = toolChapterTargetWords()
@@ -1321,10 +1355,10 @@ func RunToolChapterCheckWithTargetWords(root, kind, scope, id string, targetWord
 	case "quality":
 		gate = RunToolChapterQualityGate(chapter, content, targetWords)
 	case "simulation":
-		gate = RunToolChapterSimulationGate(root, id)
+		gate = runToolChapterSimulationGateAt(root, id)
 	case "all":
 		gate = RunToolChapterQualityGate(chapter, content, targetWords)
-		sim := RunToolChapterSimulationGate(root, id)
+		sim := runToolChapterSimulationGateAt(root, id)
 		gate.Add(sim.Suggestions...)
 		gate.Dedup()
 		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
@@ -1521,7 +1555,13 @@ func toolChapterParagraphCount(content string) int {
 	return count
 }
 
-func RunToolChapterSimulationGate(root, chapterID string) quality.QualityGateResult {
+// RunToolChapterSimulationGate is the string-root entry point for callers that
+// hold a resolved project directory.
+func RunToolChapterSimulationGate(rootDir, chapterID string) quality.QualityGateResult {
+	return runToolChapterSimulationGateAt(store.At(rootDir), chapterID)
+}
+
+func runToolChapterSimulationGateAt(root *store.Root, chapterID string) quality.QualityGateResult {
 	var gate quality.QualityGateResult
 	if stale, info := toolChapterRPGDSLStale(root, chapterID); stale {
 		gate.Add(quality.QualitySuggestion(
@@ -1759,14 +1799,14 @@ type toolChapterRPGDSLStaleInfo struct {
 	DSLPath     string
 }
 
-func toolChapterRPGDSLStale(root, chapterID string) (bool, toolChapterRPGDSLStaleInfo) {
+func toolChapterRPGDSLStale(root *store.Root, chapterID string) (bool, toolChapterRPGDSLStaleInfo) {
 	info := toolChapterRPGDSLStaleInfo{
 		ChapterPath: toolFinalChapterPathForID(root, chapterID),
-		DSLPath:     filepath.Join(root, "story", "rpg", "04_chapters.rpg"),
+		DSLPath:     root.RPGChaptersDSL(),
 	}
 	chapterStat, err := os.Stat(info.ChapterPath)
 	if err != nil {
-		fallback := filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", utils.ExtractChapterNumber(chapterID)))
+		fallback := numericChapterFallbackPath(root, chapterID)
 		chapterStat, err = os.Stat(fallback)
 		if err != nil {
 			return false, info
@@ -1780,17 +1820,23 @@ func toolChapterRPGDSLStale(root, chapterID string) (bool, toolChapterRPGDSLStal
 	return chapterStat.ModTime().After(dslStat.ModTime()), info
 }
 
-func toolFinalChapterPathForID(root, chapterID string) string {
-	return filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapterID))
+// numericChapterFallbackPath is the legacy numeric chapter filename
+// (chapters/chapter-3.md for "P1-V1-C3"), which older projects still use.
+func numericChapterFallbackPath(root *store.Root, chapterID string) string {
+	return root.ChapterFile(utils.ExtractChapterNumber(chapterID))
 }
 
-func loadToolMergedRPGDSL(root string) (*rpgdsl.DSL, error) {
+func toolFinalChapterPathForID(root *store.Root, chapterID string) string {
+	return root.ChapterFile(chapterID)
+}
+
+func loadToolMergedRPGDSL(root *store.Root) (*rpgdsl.DSL, error) {
 	fragments, err := loadToolRPGDSLFragments(root)
 	if err != nil {
 		return nil, err
 	}
 	if len(fragments) == 0 {
-		return nil, fmt.Errorf("no RPG DSL files found under story/rpg")
+		return nil, fmt.Errorf("no RPG DSL files found under %s", root.RPGDir())
 	}
 	if len(fragments) == 1 {
 		return fragments[0].DSL, nil
@@ -1806,16 +1852,9 @@ func loadToolMergedRPGDSL(root string) (*rpgdsl.DSL, error) {
 	return result.DSL, nil
 }
 
-func loadToolRPGDSLFragments(root string) ([]*rpgdsl.DSLFragment, error) {
-	rpgDir := filepath.Join(root, "story", "rpg")
-	patterns := []string{
-		"00_setup.rpg",
-		"01_outline.rpg",
-		"02_craft.rpg",
-		"03_systems.rpg",
-		"04_chapters.rpg",
-		"*.rpg",
-	}
+func loadToolRPGDSLFragments(root *store.Root) ([]*rpgdsl.DSLFragment, error) {
+	rpgDir := root.RPGDir()
+	patterns := append(store.RPGPhaseFiles(), "*.rpg")
 	var fragments []*rpgdsl.DSLFragment
 	seen := map[string]bool{}
 	var parseErrors []string
@@ -1958,7 +1997,7 @@ func validateCraftSchemaObject(gate *quality.QualityGateResult, scope, key strin
 	}
 }
 
-func loadCraftCharacterNames(root string) map[string]bool {
+func loadCraftCharacterNames(root *store.Root) map[string]bool {
 	names := map[string]bool{}
 	values, err := loadRawCraftMap(root, "characters.json")
 	if err != nil {
