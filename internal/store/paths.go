@@ -206,14 +206,6 @@ func (r *Root) LogsDir() string { return filepath.Join(r.Dir(), logsDirName) }
 // LogFile is logs/<name>.
 func (r *Root) LogFile(name string) string { return filepath.Join(r.LogsDir(), name) }
 
-// PromptLogsDir, ResponseLogsDir, AICallLogsDir, AgentLiveLogsDir and
-// WriteContextLogsDir are the log streams the CLI and the web UI both read.
-func (r *Root) PromptLogsDir() string       { return r.LogFile("prompts") }
-func (r *Root) ResponseLogsDir() string     { return r.LogFile("responses") }
-func (r *Root) AICallLogsDir() string       { return r.LogFile("ai_calls") }
-func (r *Root) AgentLiveLogsDir() string    { return r.LogFile("agent-live") }
-func (r *Root) WriteContextLogsDir() string { return r.LogFile("write_contexts") }
-
 // UsageLog is logs/usage.jsonl, the append-only LLM usage ledger.
 func (r *Root) UsageLog() string { return r.LogFile("usage.jsonl") }
 

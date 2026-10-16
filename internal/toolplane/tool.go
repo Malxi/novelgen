@@ -8,6 +8,7 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
+	"novelgen/internal/store"
 	"novelgen/internal/toolcmd"
 	"novelgen/internal/utils"
 	"os"
@@ -2753,19 +2754,21 @@ func (c *ToolProjectContext) loadElements() error {
 	return nil
 }
 
+// loadRawCraftMap reads one craft element file as the string-keyed map the patch
+// plane and the schema checks work with. Missing files yield an empty map, so a
+// patch against a not-yet-crafted element creates it.
 func loadRawCraftMap(root, filename string) (map[string]map[string]interface{}, error) {
-	path := filepath.Join(root, "story", "craft", filename)
-	data, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		return nil, nil
+	kind, ok := store.CraftKindForFile(filename)
+	if !ok {
+		return nil, fmt.Errorf("unknown craft file %q", filename)
 	}
+	project, err := store.Open(root)
+	if err != nil {
+		return nil, err
+	}
+	values, err := project.LoadCraftRaw(kind)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", filename, err)
-	}
-	data = utils.StripUTF8BOM(data)
-	var values map[string]map[string]interface{}
-	if err := json.Unmarshal(data, &values); err != nil {
-		return nil, fmt.Errorf("failed to parse %s: %w", filename, err)
 	}
 	return values, nil
 }

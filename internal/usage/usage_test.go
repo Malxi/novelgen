@@ -1,50 +1,13 @@
 package usage
 
 import (
-	"os"
-	"path/filepath"
-	"strings"
-	"sync"
 	"testing"
 	"time"
 )
 
-func TestAppendAndReadRoundTrip(t *testing.T) {
-	root := t.TempDir()
-	base := time.Date(2026, 9, 26, 10, 0, 0, 0, time.UTC)
-
-	entries := []Entry{
-		{Time: base, Agent: "ComposeAgent", Command: "generate outline", Model: "m1", PromptTokens: 100, CompletionTokens: 50, TotalTokens: 150, Success: true},
-		{Time: base.Add(time.Hour), Agent: "WriteAgent", Command: "write chapter", Model: "m1", PromptTokens: 200, CompletionTokens: 80, TotalTokens: 280, Success: true},
-		{Time: base.Add(2 * time.Hour), Agent: "WriteAgent", Command: "write chapter", Model: "m2", TotalTokens: 0, Success: false, Error: "AI request failed: 502"},
-	}
-	for _, entry := range entries {
-		if err := Append(root, entry); err != nil {
-			t.Fatalf("Append: %v", err)
-		}
-	}
-
-	got, err := Read(root)
-	if err != nil {
-		t.Fatalf("Read: %v", err)
-	}
-	if len(got) != len(entries) {
-		t.Fatalf("read %d entries, want %d", len(got), len(entries))
-	}
-	if got[0].Agent != "ComposeAgent" || got[2].Error == "" {
-		t.Fatalf("unexpected entries: %+v", got)
-	}
-}
-
-func TestReadMissingLogIsNotAnError(t *testing.T) {
-	entries, err := Read(t.TempDir())
-	if err != nil {
-		t.Fatalf("Read: %v", err)
-	}
-	if len(entries) != 0 {
-		t.Fatalf("entries = %d, want 0", len(entries))
-	}
-}
+// Reading and appending logs/usage.jsonl is covered by internal/store
+// (Root.AppendUsage / Root.ReadUsage); this package only shapes and aggregates
+// the records.
 
 func TestSummarizeGroupsAndTotals(t *testing.T) {
 	base := time.Date(2026, 9, 26, 10, 0, 0, 0, time.UTC)
@@ -87,47 +50,3 @@ func TestFilterSince(t *testing.T) {
 	}
 }
 
-func TestAppendIsSafeUnderConcurrency(t *testing.T) {
-	root := t.TempDir()
-	var wg sync.WaitGroup
-	for i := 0; i < 32; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			if err := Append(root, Entry{Time: time.Now(), Agent: "Concurrent", TotalTokens: i, Success: true}); err != nil {
-				t.Errorf("Append: %v", err)
-			}
-		}(i)
-	}
-	wg.Wait()
-
-	entries, err := Read(root)
-	if err != nil {
-		t.Fatalf("Read: %v", err)
-	}
-	if len(entries) != 32 {
-		t.Fatalf("read %d entries, want 32 (interleaved writes would corrupt lines)", len(entries))
-	}
-}
-
-func TestReadSkipsCorruptLines(t *testing.T) {
-	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, "logs"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	content := strings.Join([]string{
-		`{"agent":"A","total_tokens":1,"success":true}`,
-		`not json`,
-		`{"agent":"B","total_tokens":2,"success":true}`,
-	}, "\n")
-	if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(RelativeLogPath)), []byte(content), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	entries, err := Read(root)
-	if err != nil {
-		t.Fatalf("Read: %v", err)
-	}
-	if len(entries) != 2 {
-		t.Fatalf("entries = %d, want 2", len(entries))
-	}
-}

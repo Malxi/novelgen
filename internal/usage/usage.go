@@ -3,20 +3,10 @@
 package usage
 
 import (
-	"bufio"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 )
-
-// RelativeLogPath is where entries are appended inside a project.
-const RelativeLogPath = "logs/usage.jsonl"
 
 // Entry is one recorded LLM call.
 type Entry struct {
@@ -33,70 +23,9 @@ type Entry struct {
 	Error            string    `json:"error,omitempty"`
 }
 
-// Append adds one entry to <root>/logs/usage.jsonl. Failures are returned so
-// callers can decide whether to surface them; usage logging is never fatal.
-func Append(root string, entry Entry) error {
-	if strings.TrimSpace(root) == "" {
-		root = "."
-	}
-	if entry.Time.IsZero() {
-		entry.Time = time.Now()
-	}
-	path := filepath.Join(root, filepath.FromSlash(RelativeLogPath))
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("create usage log dir: %w", err)
-	}
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		return fmt.Errorf("open usage log: %w", err)
-	}
-	defer file.Close()
-
-	data, err := json.Marshal(entry)
-	if err != nil {
-		return fmt.Errorf("marshal usage entry: %w", err)
-	}
-	if _, err := file.Write(append(data, '\n')); err != nil {
-		return fmt.Errorf("write usage entry: %w", err)
-	}
-	return nil
-}
-
-// Read loads every entry for a project. A missing log is not an error.
-func Read(root string) ([]Entry, error) {
-	if strings.TrimSpace(root) == "" {
-		root = "."
-	}
-	path := filepath.Join(root, filepath.FromSlash(RelativeLogPath))
-	file, err := os.Open(path)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	defer file.Close()
-
-	entries := []Entry{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-		var entry Entry
-		if err := json.Unmarshal([]byte(line), &entry); err != nil {
-			// Skip unreadable lines instead of failing the whole report.
-			continue
-		}
-		entries = append(entries, entry)
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return entries, nil
-}
+// Reading and appending the ledger lives in internal/store
+// (Root.ReadUsage / Root.AppendUsage): the ledger's location is part of the
+// project layout, and this package stays a pure record/aggregate layer.
 
 // Bucket aggregates tokens for one grouping key.
 type Bucket struct {

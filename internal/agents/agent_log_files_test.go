@@ -9,7 +9,7 @@ import (
 
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
-	"novelgen/internal/usage"
+	"novelgen/internal/store"
 )
 
 func TestWriteAgentLogFileDoesNotOverwriteConcurrentWrites(t *testing.T) {
@@ -92,7 +92,11 @@ func TestBaseAgentExecuteRecordsUsage(t *testing.T) {
 		t.Fatalf("Execute: %v", err)
 	}
 
-	entries, err := usage.Read(root)
+	projectRoot, err := store.Open(root)
+	if err != nil {
+		t.Fatalf("open project: %v", err)
+	}
+	entries, err := projectRoot.ReadUsage()
 	if err != nil {
 		t.Fatalf("read usage: %v", err)
 	}

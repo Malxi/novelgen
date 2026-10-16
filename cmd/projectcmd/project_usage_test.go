@@ -3,7 +3,6 @@ package projectcmd
 import (
 	"bytes"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -33,12 +32,16 @@ func useProjectRoot(t *testing.T, dir string) {
 
 func TestProjectUsageSummarizesRecordedTokens(t *testing.T) {
 	root := writeCloneProjectFixture(t)
+	projectRoot, err := store.Open(root)
+	if err != nil {
+		t.Fatalf("open project: %v", err)
+	}
 	base := time.Date(2026, 9, 26, 10, 0, 0, 0, time.UTC)
 	for _, entry := range []usage.Entry{
 		{Time: base, Agent: "ComposeAgent", Model: "deepseek-v4-flash", PromptTokens: 1000, CompletionTokens: 500, TotalTokens: 1500, Success: true},
 		{Time: base.Add(time.Minute), Agent: "WriteAgent", Model: "deepseek-v4-flash", PromptTokens: 2000, CompletionTokens: 800, TotalTokens: 2800, Success: true},
 	} {
-		if err := usage.Append(root, entry); err != nil {
+		if err := projectRoot.AppendUsage(entry); err != nil {
 			t.Fatalf("append usage: %v", err)
 		}
 	}
@@ -64,6 +67,10 @@ func TestProjectUsageSummarizesRecordedTokens(t *testing.T) {
 
 func TestProjectUsageSinceFilterAndMissingLog(t *testing.T) {
 	root := writeCloneProjectFixture(t)
+	projectRoot, err := store.Open(root)
+	if err != nil {
+		t.Fatalf("open project: %v", err)
+	}
 
 	useProjectRoot(t, root)
 
@@ -79,7 +86,7 @@ func TestProjectUsageSinceFilterAndMissingLog(t *testing.T) {
 		t.Fatalf("expected empty-log message, got:\n%s", out.String())
 	}
 
-	if err := usage.Append(root, usage.Entry{
+	if err := projectRoot.AppendUsage(usage.Entry{
 		Time: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), Agent: "Old", TotalTokens: 5, Success: true,
 	}); err != nil {
 		t.Fatalf("append usage: %v", err)
@@ -99,7 +106,7 @@ func TestProjectUsageSinceFilterAndMissingLog(t *testing.T) {
 	}
 	projectUsageSince = ""
 
-	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(usage.RelativeLogPath))); err != nil {
+	if _, err := os.Stat(projectRoot.UsageLog()); err != nil {
 		t.Fatalf("usage log missing: %v", err)
 	}
 }

@@ -186,7 +186,12 @@ func (a *BaseAgent) recordUsage(params InvokeParams, kind, model string, tokens 
 	if callErr != nil {
 		entry.Error = callErr.Error()
 	}
-	if err := usage.Append(agentLogRoot(), entry); err != nil {
+	root, err := store.Open(agentLogRoot())
+	if err != nil {
+		logger.Debug("[%s] Failed to record usage: %v", a.name, err)
+		return
+	}
+	if err := root.AppendUsage(entry); err != nil {
 		logger.Debug("[%s] Failed to record usage: %v", a.name, err)
 	}
 }

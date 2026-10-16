@@ -1,7 +1,6 @@
 package store
 
 import (
-	"encoding/json"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -50,13 +49,4 @@ func (r *Root) BackupFile(scope Scope, src, prefix string) (string, error) {
 		return "", nil
 	}
 	return r.SaveBackup(scope, prefix, filepath.Ext(src), data)
-}
-
-// WriteJSONSnapshot is SaveCheckpoint for a JSON value.
-func (r *Root) WriteJSONSnapshot(scope Scope, prefix string, value any) (string, error) {
-	data, err := json.MarshalIndent(value, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	return r.SaveCheckpoint(scope, prefix, ".json", data)
 }

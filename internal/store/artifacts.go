@@ -64,14 +64,7 @@ func (r *Root) HasConfig() bool { return r.Exists(r.NovelJSON()) }
 
 // LoadConfig reads novel.json.
 func (r *Root) LoadConfig() (*models.ProjectConfig, error) {
-	return r.LoadConfigAt(r.NovelJSON())
-}
-
-// LoadConfigAt reads a project config from an explicit path. It exists for the
-// tools that operate on a book directory discovered outside the CLI's root
-// resolution.
-func (r *Root) LoadConfigAt(path string) (*models.ProjectConfig, error) {
-	data, err := r.Read(path)
+	data, err := r.Read(r.NovelJSON())
 	if err != nil {
 		return nil, err
 	}
@@ -233,9 +226,9 @@ func NormalizeElements(
 	}
 }
 
-// ReadCraftJSON returns the raw bytes of one craft file. found is false when
-// the file does not exist, which the patch plane treats as "create it".
-func (r *Root) ReadCraftJSON(kind CraftKind) ([]byte, bool, error) {
+// readCraftJSON returns the raw bytes of one craft file. found is false when the
+// file does not exist, which the patch plane treats as "create it".
+func (r *Root) readCraftJSON(kind CraftKind) ([]byte, bool, error) {
 	data, err := r.Read(r.CraftFile(kind))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -250,7 +243,7 @@ func (r *Root) ReadCraftJSON(kind CraftKind) ([]byte, bool, error) {
 // patch plane and the schema checks work with.
 func (r *Root) LoadCraftRaw(kind CraftKind) (map[string]map[string]any, error) {
 	values := make(map[string]map[string]any)
-	data, found, err := r.ReadCraftJSON(kind)
+	data, found, err := r.readCraftJSON(kind)
 	if err != nil || !found {
 		return values, err
 	}
@@ -258,11 +251,6 @@ func (r *Root) LoadCraftRaw(kind CraftKind) (map[string]map[string]any, error) {
 		return nil, err
 	}
 	return values, nil
-}
-
-// WriteCraftRaw writes one craft file from the raw map shape.
-func (r *Root) WriteCraftRaw(kind CraftKind, values map[string]map[string]any) error {
-	return r.WriteJSON(r.CraftFile(kind), values)
 }
 
 // LoadChapterContent returns the stored markdown for a chapter and the path it
@@ -283,12 +271,6 @@ func (r *Root) SaveChapterContent(chapterID, content string) error {
 		return errors.New("chapter id is required")
 	}
 	return r.Write(r.ChapterFile(chapterID), []byte(content), FileMode)
-}
-
-// ChapterExists reports whether any known chapter file exists.
-func (r *Root) ChapterExists(chapterID string) bool {
-	_, path := r.LoadChapterContent(chapterID)
-	return path != ""
 }
 
 // LoadDraftContent returns drafts/<chapterID>.md, or "" when it is missing.
