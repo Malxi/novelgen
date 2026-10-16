@@ -17,6 +17,7 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 	"novelgen/internal/utils"
 )
 
@@ -3314,7 +3315,10 @@ func (a *ComposeAgent) RepairByReviewAgentSDK(ctx context.Context, outline *mode
 // improveVolumesWithCheckpoint improves volumes with checkpoint/resume support
 func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int, setup *models.StorySetup) (*models.Outline, error) {
 	currentOutline := *outline
-	progressPath := "story/compose/outline_improve_progress.json"
+	progressPath, err := composeImproveProgressPath()
+	if err != nil {
+		return nil, err
+	}
 	targetVolumes := improveTargetVolumeIDs(outline, volumesToImprove)
 
 	// Try to load existing progress
@@ -3428,20 +3432,27 @@ type ComposeImproveReportEntry struct {
 	RemainingMediumPlus int     `json:"remaining_medium_plus"`
 }
 
-const composeImproveReportPath = "story/compose/outline_improve_report.jsonl"
-
 func appendComposeImproveReport(entry ComposeImproveReportEntry) error {
+	root, err := store.Open(agentWorkspaceRoot())
+	if err != nil {
+		return err
+	}
 	data, err := json.Marshal(entry)
 	if err != nil {
 		return err
 	}
-	file, err := os.OpenFile(composeImproveReportPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	return root.Append(root.ComposeFile("outline_improve_report.jsonl"), append(data, '\n'), store.FileMode)
+}
+
+// composeImproveProgressPath returns the resume checkpoint for the project the
+// agent is working in. The path used to be spelled relative to the SDK process
+// working directory, which only coincided with the project by accident.
+func composeImproveProgressPath() (string, error) {
+	root, err := store.Open(agentWorkspaceRoot())
 	if err != nil {
-		return err
+		return "", fmt.Errorf("resolve project root for compose improve progress: %w", err)
 	}
-	defer file.Close()
-	_, err = file.Write(append(data, '\n'))
-	return err
+	return root.ComposeFile("outline_improve_progress.json"), nil
 }
 
 func countMediumOrHigherReviewSuggestions(review models.ReviewResult) int {
@@ -3457,7 +3468,10 @@ func countMediumOrHigherReviewSuggestions(review models.ReviewResult) int {
 
 func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup, applyPatches bool, crossOutline *models.Outline, allVolumes bool) (*models.Outline, *models.ReviewResult, int, error) {
 	currentOutline := *outline
-	progressPath := "story/compose/outline_improve_progress.json"
+	progressPath, err := composeImproveProgressPath()
+	if err != nil {
+		return nil, nil, 0, err
+	}
 	targetVolumes := improveTargetVolumeIDs(outline, volumesToImprove)
 	var finalReview *models.ReviewResult
 
