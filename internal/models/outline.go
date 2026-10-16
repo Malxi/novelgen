@@ -326,14 +326,29 @@ const (
 	EventTypeStatus       = "status"       // (status, character, statusType, change) 角色状态变化，subject 应为状态类型（如"修为"、"伤势"、"身份"）
 )
 
+// MarshalForSave normalizes the outline and returns indented JSON. Models own
+// the serialized form; internal/store owns the file handling.
+func (o *Outline) MarshalForSave() ([]byte, error) {
+	NormalizeOutline(o)
+	return json.MarshalIndent(o, "", "  ")
+}
+
 // Save writes the outline to a file
 func (o *Outline) Save(path string) error {
-	NormalizeOutline(o)
-	data, err := json.MarshalIndent(o, "", "  ")
+	data, err := o.MarshalForSave()
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+// ParseOutline decodes an outline from raw JSON bytes.
+func ParseOutline(data []byte) (*Outline, error) {
+	var outline Outline
+	if err := json.Unmarshal(data, &outline); err != nil {
+		return nil, err
+	}
+	return &outline, nil
 }
 
 // LoadOutline reads the outline from a file
@@ -342,11 +357,7 @@ func LoadOutline(path string) (*Outline, error) {
 	if err != nil {
 		return nil, err
 	}
-	var outline Outline
-	if err := json.Unmarshal(data, &outline); err != nil {
-		return nil, err
-	}
-	return &outline, nil
+	return ParseOutline(data)
 }
 
 // GetChapterByID finds a chapter by its ID

@@ -3,12 +3,12 @@ package craftcmd
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"novelgen/internal/models"
 	"novelgen/internal/project"
+	"novelgen/internal/store"
 
 	"github.com/spf13/cobra"
 )
@@ -63,28 +63,42 @@ func TestElementExtractorUsesRPGRelevantOutlineFields(t *testing.T) {
 	}
 }
 
-func TestSaveJSONMergesExistingUTF8BOMFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "characters.json")
-	if err := os.WriteFile(path, append([]byte{0xEF, 0xBB, 0xBF}, []byte(`{"Lin":{"name":"Lin"}}`)...), 0644); err != nil {
-		t.Fatal(err)
-	}
+// Craft element merging is covered by internal/store, which now owns the
+// read-merge-write of story/craft/*.json (see
+// store.TestWriteJSONMergingKeepsExistingKeys and
+// store.TestLoadElementsToleratesMissingFiles).
 
-	if err := saveJSON(path, map[string]models.Character{
+func TestSaveCraftElementsWritesToProjectStoryCraft(t *testing.T) {
+	root, err := store.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open project: %v", err)
+	}
+	previous, _ := store.Default()
+	store.SetDefault(root)
+	t.Cleanup(func() {
+		if previous != nil {
+			store.SetDefault(previous)
+			return
+		}
+		store.ResetDefault()
+	})
+
+	if err := saveCraftElements(store.CraftCharacters, map[string]models.Character{
 		"Mira": {Name: "Mira", RoleInStory: "ally"},
 	}); err != nil {
-		t.Fatal(err)
+		t.Fatalf("saveCraftElements: %v", err)
 	}
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(root.CraftFile(store.CraftCharacters))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("read craft file: %v", err)
 	}
 	var got map[string]interface{}
 	if err := json.Unmarshal(data, &got); err != nil {
-		t.Fatal(err)
+		t.Fatalf("parse craft file: %v", err)
 	}
-	if got["Lin"] == nil || got["Mira"] == nil {
-		t.Fatalf("merged data missing existing or new key: %#v", got)
+	if got["Mira"] == nil {
+		t.Fatalf("craft file missing saved character: %#v", got)
 	}
 }
 

@@ -551,10 +551,11 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 	queryName, nameRepaired := RepairToolLookupText(ToolQueryFlags.Name)
 	queryChapterID, chapterIDRepaired := RepairToolLookupText(ToolQueryFlags.ChapterID)
 	queryVolumeID, volumeIDRepaired := RepairToolLookupText(ToolQueryFlags.VolumeID)
-	root, err := project.FindRoot()
+	book, err := project.ForCommand(cmd)
 	if err != nil {
 		return err
 	}
+	root := book.Dir()
 
 	ctx := ToolProjectContext{Root: root}
 	if err := ctx.load(section); err != nil {

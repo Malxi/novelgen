@@ -14,6 +14,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/rpg"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/store"
 	"novelgen/internal/utils"
 	"novelgen/internal/writersdl"
 )
@@ -688,7 +689,11 @@ func filterChapterInputs(inputs []writersdl.WriteRPGDSLChapterInput, volume int,
 // Helper functions
 
 func getBookRPGDir(bookName string) string {
-	return filepath.Join("books", bookName, "story", "rpg")
+	root, err := store.Open(store.BookDir("", bookName))
+	if err != nil {
+		return filepath.Join(store.BooksDirName, bookName, "story", "rpg")
+	}
+	return root.RPGDir()
 }
 
 func loadNovelgenProject(bookName string) (*rpg.NovelgenProject, error) {
@@ -705,7 +710,7 @@ func loadNovelgenProjectForConvert(bookName, phase string) (*rpg.NovelgenProject
 			Locations:   map[string]rpg.NovelgenLocation{},
 		}
 		if phase == "outline" {
-			outlinePath := filepath.Join("books", bookName, "story", "compose", "outline.json")
+			outlinePath := store.OpenFS(store.BookDir("", bookName), store.OSFS{}).OutlineJSON()
 			data, err := os.ReadFile(outlinePath)
 			if err != nil {
 				return nil, fmt.Errorf("读取大纲失败: %w", err)

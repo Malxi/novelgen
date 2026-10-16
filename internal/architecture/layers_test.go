@@ -24,6 +24,7 @@ var layer = map[string]int{
 	"internal/cli":                         1,
 	"internal/testfixtures":                1,
 	"internal/toolcmd":                     1,
+	"internal/store":                       2,
 	"internal/rpg":                         2,
 	"internal/rpg/dsl":                     2,
 	"internal/rpg/benchmark":               2,

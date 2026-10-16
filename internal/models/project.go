@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -63,14 +62,30 @@ type ProjectLLM struct {
 	Model    string `json:"model"`    // e.g., "qwen3.5:4b", "gpt-4"
 }
 
+// MarshalForSave serializes the config for persistence: it stamps UpdatedAt and
+// returns indented JSON. File handling belongs to internal/store; models own the
+// serialized form so every writer produces identical bytes.
+func (p *ProjectConfig) MarshalForSave() ([]byte, error) {
+	p.UpdatedAt = time.Now()
+	return json.MarshalIndent(p, "", "  ")
+}
+
 // Save writes the project config to novel.json
 func (p *ProjectConfig) Save(path string) error {
-	p.UpdatedAt = time.Now()
-	data, err := json.MarshalIndent(p, "", "  ")
+	data, err := p.MarshalForSave()
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+// ParseProjectConfig decodes a project config from raw novel.json bytes.
+func ParseProjectConfig(data []byte) (*ProjectConfig, error) {
+	var config ProjectConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, err
+	}
+	return &config, nil
 }
 
 // LoadProjectConfig reads the project config from novel.json
@@ -79,30 +94,7 @@ func LoadProjectConfig(path string) (*ProjectConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	var config ProjectConfig
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, err
-	}
-	return &config, nil
-}
-
-// FindProjectRoot searches for novel.json in startDir and its parent
-// directories, returning the first directory that contains it.
-func FindProjectRoot(startDir string) (string, error) {
-	dir, err := filepath.Abs(startDir)
-	if err != nil {
-		return "", err
-	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "novel.json")); err == nil {
-			return dir, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", os.ErrNotExist
-		}
-		dir = parent
-	}
+	return ParseProjectConfig(data)
 }
 
 // Validation errors

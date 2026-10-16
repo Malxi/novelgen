@@ -189,14 +189,29 @@ type WorldResource struct {
 	Description string `json:"description" prompt:"描述" desc:"功能与来源简述"`
 }
 
+// MarshalForSave normalizes the setup and returns indented JSON. Models own the
+// serialized form; internal/store owns the file handling.
+func (s *StorySetup) MarshalForSave() ([]byte, error) {
+	NormalizeStorySetup(s)
+	return json.MarshalIndent(s, "", "  ")
+}
+
 // Save writes the story setup to a file
 func (s *StorySetup) Save(path string) error {
-	NormalizeStorySetup(s)
-	data, err := json.MarshalIndent(s, "", "  ")
+	data, err := s.MarshalForSave()
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+// ParseStorySetup decodes a story setup from raw JSON bytes.
+func ParseStorySetup(data []byte) (*StorySetup, error) {
+	var setup StorySetup
+	if err := json.Unmarshal(data, &setup); err != nil {
+		return nil, err
+	}
+	return &setup, nil
 }
 
 // LoadStorySetup reads the story setup from a file
@@ -205,9 +220,5 @@ func LoadStorySetup(path string) (*StorySetup, error) {
 	if err != nil {
 		return nil, err
 	}
-	var setup StorySetup
-	if err := json.Unmarshal(data, &setup); err != nil {
-		return nil, err
-	}
-	return &setup, nil
+	return ParseStorySetup(data)
 }

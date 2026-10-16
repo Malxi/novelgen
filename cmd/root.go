@@ -2,12 +2,22 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 
 	"novelgen/internal/cli"
+	"novelgen/internal/envutil"
+	"novelgen/internal/store"
 
 	"github.com/spf13/cobra"
 )
+
+// projectDirFlag overrides project discovery for a single invocation. It is the
+// supported way to run a command against a project that is not the working
+// directory, and it is how the commands stopped disagreeing about whether the
+// working directory is the project root.
+var projectDirFlag string
 
 var rootCmd = &cobra.Command{
 	Use:   "novelgen",
@@ -26,6 +36,44 @@ Legacy note: draft commands still exist for old projects, but the recommended
 workflow writes final chapters directly with "novelgen write pipeline".
 
 Use "novelgen <command> --help" for more information about a command.`,
+	PersistentPreRunE: resolveProjectRoot,
+}
+
+func init() {
+	rootCmd.PersistentFlags().StringVar(&projectDirFlag, "dir", "",
+		"Project directory to operate on (default: nearest novel.json above the working directory)")
+}
+
+// resolveProjectRoot installs the project root for the invocation, so both the
+// command tree (through the command context) and library code reached without a
+// command handle (through the ambient store default) resolve the same project.
+//
+// A missing project is not an error here: `init` creates one, and commands that
+// require an existing project report their own, better error.
+func resolveProjectRoot(cmd *cobra.Command, _ []string) error {
+	dir := strings.TrimSpace(projectDirFlag)
+	if dir == "" {
+		dir = strings.TrimSpace(envutil.String("NOVELGEN_PROJECT_DIR"))
+	}
+	if dir != "" {
+		root, err := store.Open(dir)
+		if err != nil {
+			return err
+		}
+		if !store.DirExists(root.Dir()) {
+			return fmt.Errorf("project directory %s does not exist", dir)
+		}
+		store.SetDefault(root)
+		cmd.SetContext(store.WithRoot(cmd.Context(), root))
+		return nil
+	}
+	root, err := store.LocateCWD()
+	if err != nil {
+		return nil
+	}
+	store.SetDefault(root)
+	cmd.SetContext(store.WithRoot(cmd.Context(), root))
+	return nil
 }
 
 // ExecuteContext runs the command tree with the given context so callers can

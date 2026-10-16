@@ -8,31 +8,22 @@ import (
 	"testing"
 
 	"novelgen/internal/models"
+	"novelgen/internal/project"
+	"novelgen/internal/store"
 )
 
 func TestWriteComposeImproveReport(t *testing.T) {
-	dir := t.TempDir()
-	oldDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = os.Chdir(oldDir) }()
+	book := newComposeTestBook(t)
 
-	if err := os.MkdirAll(filepath.Join("story", "compose"), 0o755); err != nil {
-		t.Fatal(err)
-	}
 	entry := `{"iteration":1,"volume_id":"P1-V1","volume_title":"第一卷：外门修仙","score":76,"changed":true,"summary":"补齐 payoff_contract 与开场节拍","remaining_medium_plus":3}` + "\n"
-	if err := os.WriteFile(filepath.Join("story", "compose", "outline_improve_report.jsonl"), []byte(entry), 0o644); err != nil {
+	if err := book.WriteText(book.ComposeFile("outline_improve_report.jsonl"), entry); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := writeComposeImproveReport(5); err != nil {
+	if err := writeComposeImproveReport(book, 5); err != nil {
 		t.Fatalf("writeComposeImproveReport() error: %v", err)
 	}
-	reports, err := filepath.Glob(filepath.Join("logs", "compose_improve_report_*.md"))
+	reports, err := filepath.Glob(book.LogFile("compose_improve_report_*.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,23 +50,30 @@ func TestWriteComposeImproveReport(t *testing.T) {
 }
 
 func TestWriteComposeImproveReportEmpty(t *testing.T) {
-	dir := t.TempDir()
-	oldDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = os.Chdir(oldDir) }()
+	book := newComposeTestBook(t)
 
-	if err := writeComposeImproveReport(-1); err != nil {
+	if err := writeComposeImproveReport(book, -1); err != nil {
 		t.Fatalf("empty report should not error: %v", err)
 	}
-	reports, _ := filepath.Glob(filepath.Join("logs", "compose_improve_report_*.md"))
+	reports, _ := filepath.Glob(book.LogFile("compose_improve_report_*.md"))
 	if len(reports) != 0 {
 		t.Fatalf("empty report should not create a file, got %d", len(reports))
 	}
+}
+
+// newComposeTestBook returns a project rooted in a temporary directory, so tests
+// exercise compose against an explicit root instead of chdir-ing the process
+// into a fixture.
+func newComposeTestBook(t *testing.T) *project.Book {
+	t.Helper()
+	root, err := store.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open temp project: %v", err)
+	}
+	if err := root.WriteText(root.NovelJSON(), `{"name":"compose-test"}`); err != nil {
+		t.Fatalf("write novel.json: %v", err)
+	}
+	return project.Open(root)
 }
 
 func TestResumeProgressMatchesRun(t *testing.T) {

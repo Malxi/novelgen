@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -18,7 +16,7 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/project"
 	"novelgen/internal/rpg/dsl"
-	"novelgen/internal/utils"
+	"novelgen/internal/store"
 	"novelgen/internal/workerpool"
 
 	"github.com/spf13/cobra"
@@ -813,14 +811,13 @@ func loadGeneratedElements() *GeneratedElements {
 		Organizations: make(map[string]bool),
 	}
 
-	root, err := project.FindRoot()
+	book, err := project.Default()
 	if err != nil {
 		return result
 	}
 
 	// Load characters
-	charPath := filepath.Join(root, "story", "craft", "characters.json")
-	if data, err := os.ReadFile(charPath); err == nil {
+	if data, err := book.Read(book.CraftFile(store.CraftCharacters)); err == nil {
 		var chars map[string]interface{}
 		if err := json.Unmarshal(data, &chars); err == nil {
 			for name := range chars {
@@ -830,8 +827,7 @@ func loadGeneratedElements() *GeneratedElements {
 	}
 
 	// Load locations
-	locPath := filepath.Join(root, "story", "craft", "locations.json")
-	if data, err := os.ReadFile(locPath); err == nil {
+	if data, err := book.Read(book.CraftFile(store.CraftLocations)); err == nil {
 		var locs map[string]interface{}
 		if err := json.Unmarshal(data, &locs); err == nil {
 			for name := range locs {
@@ -841,8 +837,7 @@ func loadGeneratedElements() *GeneratedElements {
 	}
 
 	// Load items
-	itemPath := filepath.Join(root, "story", "craft", "items.json")
-	if data, err := os.ReadFile(itemPath); err == nil {
+	if data, err := book.Read(book.CraftFile(store.CraftItems)); err == nil {
 		var items map[string]interface{}
 		if err := json.Unmarshal(data, &items); err == nil {
 			for name := range items {
@@ -852,8 +847,7 @@ func loadGeneratedElements() *GeneratedElements {
 	}
 
 	// Load organizations
-	orgPath := filepath.Join(root, "story", "craft", "organizations.json")
-	if data, err := os.ReadFile(orgPath); err == nil {
+	if data, err := book.Read(book.CraftFile(store.CraftOrganizations)); err == nil {
 		var orgs map[string]interface{}
 		if err := json.Unmarshal(data, &orgs); err == nil {
 			for name := range orgs {
@@ -1450,12 +1444,7 @@ func saveCharacters(characters map[string]models.Character) error {
 		char.NormalizeForCraft(name)
 		characters[name] = char
 	}
-	root, err := project.FindRoot()
-	if err != nil {
-		return err
-	}
-	path := filepath.Join(root, "story", "craft", "characters.json")
-	return saveJSON(path, characters)
+	return saveCraftElements(store.CraftCharacters, characters)
 }
 
 func saveLocations(locations map[string]models.Location) error {
@@ -1463,12 +1452,7 @@ func saveLocations(locations map[string]models.Location) error {
 		loc.NormalizeForCraft(name)
 		locations[name] = loc
 	}
-	root, err := project.FindRoot()
-	if err != nil {
-		return err
-	}
-	path := filepath.Join(root, "story", "craft", "locations.json")
-	return saveJSON(path, locations)
+	return saveCraftElements(store.CraftLocations, locations)
 }
 
 func saveItems(items map[string]models.Item) error {
@@ -1476,12 +1460,7 @@ func saveItems(items map[string]models.Item) error {
 		item.NormalizeForCraft(name)
 		items[name] = item
 	}
-	root, err := project.FindRoot()
-	if err != nil {
-		return err
-	}
-	path := filepath.Join(root, "story", "craft", "items.json")
-	return saveJSON(path, items)
+	return saveCraftElements(store.CraftItems, items)
 }
 
 func saveOrganizations(organizations map[string]models.Organization) error {
@@ -1489,16 +1468,17 @@ func saveOrganizations(organizations map[string]models.Organization) error {
 		org.NormalizeForCraft(name)
 		organizations[name] = org
 	}
-	root, err := project.FindRoot()
+	return saveCraftElements(store.CraftOrganizations, organizations)
+}
+
+// saveCraftElements merges a craft file through the project store, so the craft
+// command no longer spells out story/craft/<file>.json four times.
+func saveCraftElements(kind store.CraftKind, values interface{}) error {
+	book, err := project.Default()
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(root, "story", "craft", "organizations.json")
-	return saveJSON(path, organizations)
-}
-
-func saveJSON(path string, data interface{}) error {
-	return utils.SaveJSONMerging(path, data)
+	return book.WriteJSONMerging(book.CraftFile(kind), values)
 }
 
 func runCraftImprove(cmd *cobra.Command, args []string) error {

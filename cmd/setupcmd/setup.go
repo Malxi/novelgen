@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -17,6 +15,7 @@ import (
 	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/store"
 	"novelgen/internal/toolplane"
 	"novelgen/internal/utils"
 
@@ -174,14 +173,13 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN SETUP")
 
-	// Check if we're in a project directory
-	if _, err := os.Stat("novel.json"); err != nil {
-		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first")
+	book, err := setupProject(cmd)
+	if err != nil {
+		return err
 	}
 
 	// Load project config
-	projectConfig, err := models.LoadProjectConfig("novel.json")
+	projectConfig, err := book.LoadConfig()
 	if err != nil {
 		logger.Error("Failed to load novel.json: %v", err)
 		return fmt.Errorf("failed to load novel.json: %w", err)
@@ -204,7 +202,7 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 	quality.LogQualityGateResult("setup", gate)
 
 	// Save story setup
-	if err := saveStorySetup(setup); err != nil {
+	if err := saveStorySetup(book, setup); err != nil {
 		return fmt.Errorf("failed to save story setup: %w", err)
 	}
 
@@ -227,14 +225,13 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Check if we're in a project directory
-	if _, err := os.Stat("novel.json"); err != nil {
-		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first")
+	book, err := setupProject(cmd)
+	if err != nil {
+		return err
 	}
 
 	// Load project config
-	projectConfig, err := models.LoadProjectConfig("novel.json")
+	projectConfig, err := book.LoadConfig()
 	if err != nil {
 		logger.Error("Failed to load novel.json: %v", err)
 		return fmt.Errorf("failed to load novel.json: %w", err)
@@ -242,8 +239,7 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Load existing story setup
-	setupPath := filepath.Join("story", "setup", "story_setup.json")
-	existingSetup, err := models.LoadStorySetup(setupPath)
+	existingSetup, err := book.LoadSetup()
 	if err != nil {
 		logger.Error("Failed to load existing story setup: %v", err)
 		return fmt.Errorf("failed to load existing story setup: %w", err)
@@ -259,16 +255,16 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 		if prompt == "" {
 			prompt = "Regenerate and tighten the story setup using the current project facts. Preserve stable project identity, repair setup check issues, and make only justified patch changes."
 		}
-		improved, review, changed, err := runSetupImproveAgentSDK(cmd.Context(), agent, existingSetup, setupPath, 1, prompt, true, setupAgentApply)
+		improved, review, changed, err := runSetupImproveAgentSDK(book, cmd.Context(), agent, existingSetup, 1, prompt, true, setupAgentApply)
 		if err != nil {
 			logger.Error("Failed to regenerate story setup with Agent SDK: %v", err)
 			return fmt.Errorf("failed to regenerate story setup with Agent SDK: %w", err)
 		}
 		if !setupAgentApply && changed {
-			if _, err := toolplane.SaveToolSetupPatchCheckpoint(".", *existingSetup); err != nil {
+			if _, err := saveSetupCheckpoint(book, existingSetup); err != nil {
 				return fmt.Errorf("failed to checkpoint original story setup: %w", err)
 			}
-			if err := saveStorySetup(improved); err != nil {
+			if err := saveStorySetup(book, improved); err != nil {
 				return fmt.Errorf("failed to save regenerated story setup: %w", err)
 			}
 		}
@@ -313,7 +309,7 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 	quality.LogQualityGateResult("setup", gate)
 
 	// Save story setup
-	if err := saveStorySetup(setup); err != nil {
+	if err := saveStorySetup(book, setup); err != nil {
 		return fmt.Errorf("failed to save story setup: %w", err)
 	}
 
@@ -333,14 +329,13 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Check if we're in a project directory
-	if _, err := os.Stat("novel.json"); err != nil {
-		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first")
+	book, err := setupProject(cmd)
+	if err != nil {
+		return err
 	}
 
 	// Load project config
-	projectConfig, err := models.LoadProjectConfig("novel.json")
+	projectConfig, err := book.LoadConfig()
 	if err != nil {
 		logger.Error("Failed to load novel.json: %v", err)
 		return fmt.Errorf("failed to load novel.json: %w", err)
@@ -348,8 +343,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Load existing story setup
-	setupPath := filepath.Join("story", "setup", "story_setup.json")
-	setup, err := models.LoadStorySetup(setupPath)
+	setup, err := book.LoadSetup()
 	if err != nil {
 		logger.Error("Failed to load existing story setup: %v", err)
 		return fmt.Errorf("failed to load existing story setup: %w", err)
@@ -364,17 +358,17 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 
 	if setupAgentSDK {
 		originalSetup := toolplane.CloneStorySetup(setup)
-		improved, review, changed, err := runSetupImproveAgentSDK(cmd.Context(), agent, setup, setupPath, setupMaxRounds, setupImprovePrompt, setupForceImprove, setupAgentApply)
+		improved, review, changed, err := runSetupImproveAgentSDK(book, cmd.Context(), agent, setup, setupMaxRounds, setupImprovePrompt, setupForceImprove, setupAgentApply)
 		if err != nil {
 			logger.Error("Failed to improve story setup with Agent SDK: %v", err)
 			return fmt.Errorf("failed to improve story setup with Agent SDK: %w", err)
 		}
 		setup = improved
 		if !setupAgentApply && changed {
-			if _, err := toolplane.SaveToolSetupPatchCheckpoint(".", originalSetup); err != nil {
+			if _, err := saveSetupCheckpoint(book, &originalSetup); err != nil {
 				return fmt.Errorf("failed to checkpoint original story setup: %w", err)
 			}
-			if err := saveStorySetup(setup); err != nil {
+			if err := saveStorySetup(book, setup); err != nil {
 				return fmt.Errorf("failed to save improved story setup: %w", err)
 			}
 		}
@@ -435,7 +429,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 		quality.LogQualityGateResult("setup", gate)
 
 		// Save improved setup
-		if err := saveStorySetup(setup); err != nil {
+		if err := saveStorySetup(book, setup); err != nil {
 			return fmt.Errorf("failed to save improved story setup: %w", err)
 		}
 
@@ -480,7 +474,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 
 		// Enrich with cross-module feedback (compose→setup)
 		if review != nil {
-			crossIssues, crossWarnings := loadAndCrossCheckSetup(improvedSetup)
+			crossIssues, crossWarnings := loadAndCrossCheckSetup(book, improvedSetup)
 			for _, iss := range crossIssues {
 				review.Suggestions = append(review.Suggestions, models.ReviewSuggestion{
 					Category: "cross-module", TargetName: "setup", Issue: iss,
@@ -520,7 +514,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 		quality.LogQualityGateResult("setup", gate)
 
 		// Save improved setup
-		if err := saveStorySetup(setup); err != nil {
+		if err := saveStorySetup(book, setup); err != nil {
 			return fmt.Errorf("failed to save improved story setup: %w", err)
 		}
 
@@ -558,9 +552,8 @@ func newSetupAgentForProject(projectConfig *models.ProjectConfig) (*agents.Setup
 	return agent, nil
 }
 
-func loadAndCrossCheckSetup(setup *models.StorySetup) (issues, warnings []string) {
-	outlinePath := filepath.Join("story", "compose", "outline.json")
-	data, err := os.ReadFile(outlinePath)
+func loadAndCrossCheckSetup(book *project.Book, setup *models.StorySetup) (issues, warnings []string) {
+	data, err := book.Read(book.OutlineJSON())
 	if err != nil {
 		return nil, nil // no outline yet, skip
 	}
@@ -571,7 +564,7 @@ func loadAndCrossCheckSetup(setup *models.StorySetup) (issues, warnings []string
 	return quality.ValidateSetupOutlineCross(setup, &storyOutline)
 }
 
-func runSetupImproveAgentSDK(ctx context.Context, agent *agents.SetupAgent, setup *models.StorySetup, setupPath string, maxRounds int, userPrompt string, forceImprove bool, agentApply bool) (*models.StorySetup, *models.ReviewResult, bool, error) {
+func runSetupImproveAgentSDK(book *project.Book, ctx context.Context, agent *agents.SetupAgent, setup *models.StorySetup, maxRounds int, userPrompt string, forceImprove bool, agentApply bool) (*models.StorySetup, *models.ReviewResult, bool, error) {
 	if setup == nil {
 		return nil, nil, false, fmt.Errorf("setup is nil")
 	}
@@ -621,7 +614,7 @@ func runSetupImproveAgentSDK(ctx context.Context, agent *agents.SetupAgent, setu
 		}
 
 		if agentApply {
-			reloaded, err := models.LoadStorySetup(setupPath)
+			reloaded, err := book.LoadSetup()
 			if err != nil {
 				return &current, finalReview, changed, fmt.Errorf("failed to reload setup after agent apply: %w", err)
 			}
@@ -715,14 +708,13 @@ func runSetupImport(cmd *cobra.Command, args []string) error {
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN SETUP IMPORT")
 
-	// Check if we're in a project directory
-	if _, err := os.Stat("novel.json"); err != nil {
-		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first")
+	book, err := setupProject(cmd)
+	if err != nil {
+		return err
 	}
 
 	// Load project config
-	projectConfig, err := models.LoadProjectConfig("novel.json")
+	projectConfig, err := book.LoadConfig()
 	if err != nil {
 		logger.Error("Failed to load novel.json: %v", err)
 		return fmt.Errorf("failed to load novel.json: %w", err)
@@ -730,14 +722,14 @@ func runSetupImport(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Determine markdown file path
-	mdPath := filepath.Join("story", "setup", "story_setup.md")
+	mdPath := book.SetupMarkdown()
 	if len(args) > 0 {
-		mdPath = args[0]
+		mdPath = book.ResolvePath(args[0])
 	}
 	logger.Info("Importing from: %s", mdPath)
 
 	// Read markdown file
-	mdContent, err := os.ReadFile(mdPath)
+	mdContent, err := book.Read(mdPath)
 	if err != nil {
 		logger.Error("Failed to read markdown file: %v", err)
 		return fmt.Errorf("failed to read markdown file %s: %w", mdPath, err)
@@ -756,7 +748,7 @@ func runSetupImport(cmd *cobra.Command, args []string) error {
 	}
 
 	// Save story setup
-	if err := saveStorySetup(setup); err != nil {
+	if err := saveStorySetup(book, setup); err != nil {
 		return fmt.Errorf("failed to save story setup: %w", err)
 	}
 
@@ -1219,20 +1211,41 @@ func repairSetupWithQualityGate(ctx context.Context, setup *models.StorySetup, p
 	return repaired, finalGate, nil
 }
 
-func saveStorySetup(setup *models.StorySetup) error {
+func saveStorySetup(book *project.Book, setup *models.StorySetup) error {
 	// Create story_setup.json in story/setup/
-	setupPath := filepath.Join("story", "setup", "story_setup.json")
-	if err := setup.Save(setupPath); err != nil {
+	if err := book.SaveSetup(setup); err != nil {
 		return fmt.Errorf("failed to save story_setup.json: %w", err)
 	}
 
 	// Create story_setup.md (markdown version for easier editing)
-	mdPath := filepath.Join("story", "setup", "story_setup.md")
-	if err := project.CreateStorySetupMarkdown(setup, mdPath); err != nil {
+	if err := project.CreateStorySetupMarkdown(setup, book.SetupMarkdown()); err != nil {
 		return fmt.Errorf("failed to save story_setup.md: %w", err)
 	}
 
 	return nil
+}
+
+// saveSetupCheckpoint snapshots the setup that an Agent SDK run is about to
+// replace, under story/setup/checkpoints.
+func saveSetupCheckpoint(book *project.Book, setup *models.StorySetup) (string, error) {
+	if setup == nil {
+		return "", fmt.Errorf("cannot checkpoint a nil story setup")
+	}
+	data, err := json.MarshalIndent(setup, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return book.SaveCheckpoint(store.ScopeSetup, "story_setup", ".json", data)
+}
+
+// setupProject resolves the project a setup command operates on.
+func setupProject(cmd *cobra.Command) (*project.Book, error) {
+	book, err := project.ForCommand(cmd)
+	if err != nil {
+		logger.Error("Not a novel project directory (novel.json not found)")
+		return nil, fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first")
+	}
+	return book, nil
 }
 
 func trimMarkdownField(line, field string) string {
@@ -1408,12 +1421,16 @@ func normalizeMarkdownLabel(key string) string {
 func runSetupCheck(cmd *cobra.Command, args []string) error {
 	logger.Section("NOVELGEN SETUP CHECK")
 
-	setupPath := filepath.Join("story", "setup", "story_setup.json")
-	if _, err := os.Stat(setupPath); err != nil {
+	book, err := setupProject(cmd)
+	if err != nil {
+		return err
+	}
+	setupPath := book.SetupJSON()
+	if !book.HasSetup() {
 		return fmt.Errorf("story setup not found at %s", setupPath)
 	}
 
-	data, err := os.ReadFile(setupPath)
+	data, err := book.Read(setupPath)
 	if err != nil {
 		return fmt.Errorf("failed to read setup: %w", err)
 	}
@@ -1538,3 +1555,4 @@ func runSetupCheck(cmd *cobra.Command, args []string) error {
 	fmt.Printf("\n结果: %d 问题, %d 警告, %d 建议\n", issues, warnings, suggestions)
 	return nil
 }
+

@@ -52,10 +52,11 @@ func runToolRefreshChapterDSL(cmd *cobra.Command) error {
 	restoreLogger := SuppressToolRefreshLogs()
 	defer restoreLogger()
 
-	root, err := project.FindRoot()
+	book, err := project.ForCommand(cmd)
 	if err != nil {
 		return err
 	}
+	root := book.Dir()
 	id := strings.TrimSpace(ToolRefreshFlags.ID)
 	if id == "" {
 		return fmt.Errorf("--id is required for chapter-dsl refresh")

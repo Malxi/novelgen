@@ -24,6 +24,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
+	"novelgen/internal/store"
 	"novelgen/internal/toolplane"
 	"novelgen/internal/utils"
 	"novelgen/internal/workerpool"
@@ -315,14 +316,13 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Check if we're in a novel project
-	if _, err := os.Stat("novel.json"); err != nil {
-		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first")
+	book, err := composeProject(cmd)
+	if err != nil {
+		return err
 	}
 
 	// Load project config
-	projectConfig, err := models.LoadProjectConfig("novel.json")
+	projectConfig, err := book.LoadConfig()
 	if err != nil {
 		logger.Error("Failed to load novel.json: %v", err)
 		return fmt.Errorf("failed to load novel.json: %w", err)
@@ -330,21 +330,21 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Check if story_setup.json exists
-	setupPath := filepath.Join("story", "setup", "story_setup.json")
-	if _, err := os.Stat(setupPath); err != nil {
+	setupPath := book.SetupJSON()
+	if !book.HasSetup() {
 		return fmt.Errorf("story setup not found at %s. Run 'novelgen setup gen' first", setupPath)
 	}
 
 	// Load story setup
-	setup, err := models.LoadStorySetup(setupPath)
+	setup, err := book.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
 
 	// Check if outline already exists. Hierarchical generation can resume from
 	// an incomplete outline.json whose later volumes still have empty chapters.
-	outlinePath := filepath.Join("story", "compose", "outline.json")
-	if _, err := os.Stat(outlinePath); err == nil {
+	outlinePath := book.OutlineJSON()
+	if book.HasOutline() {
 		if !composeForceGenFlag && !composeOneShotFlag && canResumeOutlineGeneration(outlinePath, projectConfig.Structure) {
 			logger.Info("Found incomplete outline at %s; resuming chapter generation", outlinePath)
 		} else if !composeForceGenFlag {
@@ -353,32 +353,13 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 
 			// Backup existing outline
 			logger.Info("Outline exists, creating backup...")
-			backupDir := filepath.Join("story", "compose", "backups")
-			if err := os.MkdirAll(backupDir, 0755); err != nil {
-				return fmt.Errorf("failed to create backup directory: %w", err)
-			}
-
-			// Generate backup filename with timestamp
-			timestamp := time.Now().Format("20060102_150405")
-			backupPath := filepath.Join(backupDir, fmt.Sprintf("outline_%s.json", timestamp))
-
-			// Read and backup current outline
-			outlineData, err := os.ReadFile(outlinePath)
+			backupPath, err := book.BackupFile(store.ScopeCompose, outlinePath, "outline")
 			if err != nil {
-				return fmt.Errorf("failed to read existing outline for backup: %w", err)
-			}
-
-			if err := os.WriteFile(backupPath, outlineData, 0644); err != nil {
 				return fmt.Errorf("failed to backup outline: %w", err)
 			}
 
 			// Also backup markdown if exists
-			mdPath := filepath.Join("story", "compose", "outline.md")
-			if _, err := os.Stat(mdPath); err == nil {
-				mdData, _ := os.ReadFile(mdPath)
-				mdBackupPath := filepath.Join(backupDir, fmt.Sprintf("outline_%s.md", timestamp))
-				os.WriteFile(mdBackupPath, mdData, 0644)
-			}
+			_, _ = book.BackupFile(store.ScopeCompose, book.OutlineMarkdown(), "outline")
 
 			logger.Info("Outline backed up to: %s", backupPath)
 			fmt.Printf("\n📦 Existing outline backed up to: %s\n\n", backupPath)
@@ -399,16 +380,16 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 
 	if composeAgentSDKFlag {
 		logger.Info("Using Claude Agent SDK hierarchical generation mode")
-		outline, err = generateOutlineHierarchicalAgentSDK(setup, projectConfig)
+		outline, err = generateOutlineHierarchicalAgentSDK(book, setup, projectConfig)
 	} else if useHierarchical {
 		logger.Info("Using hierarchical generation mode (better quality)")
-		outline, err = generateOutlineHierarchical(setup, projectConfig)
+		outline, err = generateOutlineHierarchical(book, setup, projectConfig)
 	} else {
 		logger.Info("Using one-shot generation mode (faster, less stable for long outlines)")
 		outline, err = generateOutlineWithAI(setup, projectConfig)
 		if err != nil {
 			logger.Warn("One-shot outline generation failed; falling back to hierarchical generation: %v", err)
-			outline, err = generateOutlineHierarchical(setup, projectConfig)
+			outline, err = generateOutlineHierarchical(book, setup, projectConfig)
 		}
 	}
 	if err != nil {
@@ -417,9 +398,9 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 
 	var gate quality.QualityGateResult
 	if composeAgentSDKFlag {
-		outline, gate, err = repairOutlineWithQualityGateAgentSDK(cmd.Context(), outline, setup, projectConfig, "generation", false, false, "", nil)
+		outline, gate, err = repairOutlineWithQualityGateAgentSDK(book, cmd.Context(), outline, setup, projectConfig, "generation", false, false, "", nil)
 	} else {
-		outline, gate, err = repairOutlineWithQualityGate(cmd.Context(), outline, setup, projectConfig, "generation", false)
+		outline, gate, err = repairOutlineWithQualityGate(book, cmd.Context(), outline, setup, projectConfig, "generation", false)
 	}
 	if err != nil {
 		return err
@@ -427,12 +408,12 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 	quality.LogQualityGateResult("outline", gate)
 
 	// Save outline
-	if err := outline.Save(outlinePath); err != nil {
+	if err := book.SaveOutline(outline); err != nil {
 		return fmt.Errorf("failed to save outline: %w", err)
 	}
 
 	// Create markdown version
-	mdPath := filepath.Join("story", "compose", "outline.md")
+	mdPath := book.OutlineMarkdown()
 	if err := project.CreateOutlineMarkdown(outline, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
@@ -459,14 +440,13 @@ func runComposeRegen(cmd *cobra.Command, args []string) error {
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN COMPOSE REGEN")
 
-	// Check if we're in a novel project
-	if _, err := os.Stat("novel.json"); err != nil {
-		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first")
+	book, err := composeProject(cmd)
+	if err != nil {
+		return err
 	}
 
 	// Load project config
-	projectConfig, err := models.LoadProjectConfig("novel.json")
+	projectConfig, err := book.LoadConfig()
 	if err != nil {
 		logger.Error("Failed to load novel.json: %v", err)
 		return fmt.Errorf("failed to load novel.json: %w", err)
@@ -474,20 +454,20 @@ func runComposeRegen(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Check if story_setup.json exists
-	setupPath := filepath.Join("story", "setup", "story_setup.json")
-	if _, err := os.Stat(setupPath); err != nil {
+	setupPath := book.SetupJSON()
+	if !book.HasSetup() {
 		return fmt.Errorf("story setup not found at %s. Run 'novelgen setup gen' first", setupPath)
 	}
 
 	// Load story setup
-	setup, err := models.LoadStorySetup(setupPath)
+	setup, err := book.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
 
 	// Load existing outline
-	outlinePath := filepath.Join("story", "compose", "outline.json")
-	outline, err := models.LoadOutline(outlinePath)
+	outlinePath := book.OutlineJSON()
+	outline, err := book.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load existing outline: %w", err)
 	}
@@ -498,12 +478,12 @@ func runComposeRegen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Save outline
-	if err := outline.Save(outlinePath); err != nil {
+	if err := book.SaveOutline(outline); err != nil {
 		return fmt.Errorf("failed to save outline: %w", err)
 	}
 
 	// Create markdown version
-	mdPath := filepath.Join("story", "compose", "outline.md")
+	mdPath := book.OutlineMarkdown()
 	if err := project.CreateOutlineMarkdown(outline, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
@@ -524,14 +504,13 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Check if we're in a novel project
-	if _, err := os.Stat("novel.json"); err != nil {
-		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first")
+	book, err := composeProject(cmd)
+	if err != nil {
+		return err
 	}
 
 	// Load project config
-	projectConfig, err := models.LoadProjectConfig("novel.json")
+	projectConfig, err := book.LoadConfig()
 	if err != nil {
 		logger.Error("Failed to load novel.json: %v", err)
 		return fmt.Errorf("failed to load novel.json: %w", err)
@@ -539,20 +518,20 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Check if story_setup.json exists
-	setupPath := filepath.Join("story", "setup", "story_setup.json")
-	if _, err := os.Stat(setupPath); err != nil {
+	setupPath := book.SetupJSON()
+	if !book.HasSetup() {
 		return fmt.Errorf("story setup not found at %s. Run 'novelgen setup gen' first", setupPath)
 	}
 
 	// Load story setup
-	setup, err := models.LoadStorySetup(setupPath)
+	setup, err := book.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
 
 	// Load existing outline
-	outlinePath := filepath.Join("story", "compose", "outline.json")
-	outline, err := models.LoadOutline(outlinePath)
+	outlinePath := book.OutlineJSON()
+	outline, err := book.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load existing outline: %w", err)
 	}
@@ -566,7 +545,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	// legacy and Agent SDK improve paths overwrite outline.json in place; the
 	// in-memory clone above only guards against a no-op run, so a disk backup
 	// is the only way to recover the pre-improve outline after a bad iteration.
-	if err := backupOutlineFiles(); err != nil {
+	if err := backupOutlineFiles(book); err != nil {
 		logger.Error("Failed to backup outline before improve: %v", err)
 		return err
 	}
@@ -605,10 +584,10 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		// A fresh run (no resume checkpoint) starts an empty improvement report.
 		// A resume run keeps the existing report file so already-completed
 		// volumes are not re-appended after a transient failure.
-		progressPath := filepath.Join("story", "compose", "outline_improve_progress.json")
+		progressPath := book.ComposeFile("outline_improve_progress.json")
 		keepReport := resumeProgressMatchesRun(progressPath, improveOutline, composeMaxRoundsFlag)
 		if !keepReport {
-			_ = os.Remove(filepath.Join("story", "compose", "outline_improve_report.jsonl"))
+			_ = book.Remove(book.ComposeFile("outline_improve_report.jsonl"))
 		}
 		agentSDKForceImprove := composeForceImproveFlag || selectedImprove
 		var suggestions []models.ReviewSuggestion
@@ -626,9 +605,9 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		if selectedImprove {
 			improveCrossOutline = outline
 		}
-		err = runAgentSDKImproveWithResume(improveOutline, setup, projectConfig, composeMaxRoundsFlag, agentSDKForceImprove, composePromptFlag, composeAgentApplyFlag, improveOutline != outline, suggestions, composeModelFlag, improveCrossOutline)
+		err = runAgentSDKImproveWithResume(book, improveOutline, setup, projectConfig, composeMaxRoundsFlag, agentSDKForceImprove, composePromptFlag, composeAgentApplyFlag, improveOutline != outline, suggestions, composeModelFlag, improveCrossOutline)
 	} else {
-		err = iterateOutlineImprovement(improveOutline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, useHierarchical, composeForceImproveFlag, composePromptFlag)
+		err = iterateOutlineImprovement(book, improveOutline, setup, projectConfig, composeMaxRoundsFlag, composeConcurrencyFlag, useHierarchical, composeForceImproveFlag, composePromptFlag)
 	}
 	if err != nil {
 		logger.Error("Improvement failed: %v", err)
@@ -641,9 +620,9 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 			if selectedImprove {
 				repairCrossOutline = outline
 			}
-			improveOutline, gate, err = repairOutlineWithQualityGateAgentSDK(cmd.Context(), improveOutline, setup, projectConfig, "improvement", composeAgentApplyFlag, true, composePromptFlag, repairCrossOutline)
+			improveOutline, gate, err = repairOutlineWithQualityGateAgentSDK(book, cmd.Context(), improveOutline, setup, projectConfig, "improvement", composeAgentApplyFlag, true, composePromptFlag, repairCrossOutline)
 		} else {
-			improveOutline, gate, err = repairOutlineWithQualityGate(cmd.Context(), improveOutline, setup, projectConfig, "improvement", true)
+			improveOutline, gate, err = repairOutlineWithQualityGate(book, cmd.Context(), improveOutline, setup, projectConfig, "improvement", true)
 		}
 		if err != nil {
 			return err
@@ -652,9 +631,9 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		mergeGeneratedVolumes(outline, improveOutline)
 	} else {
 		if composeAgentSDKFlag {
-			outline, gate, err = repairOutlineWithQualityGateAgentSDK(cmd.Context(), outline, setup, projectConfig, "improvement", composeAgentApplyFlag, false, composePromptFlag, nil)
+			outline, gate, err = repairOutlineWithQualityGateAgentSDK(book, cmd.Context(), outline, setup, projectConfig, "improvement", composeAgentApplyFlag, false, composePromptFlag, nil)
 		} else {
-			outline, gate, err = repairOutlineWithQualityGate(cmd.Context(), outline, setup, projectConfig, "improvement", false)
+			outline, gate, err = repairOutlineWithQualityGate(book, cmd.Context(), outline, setup, projectConfig, "improvement", false)
 		}
 		if err != nil {
 			return err
@@ -667,7 +646,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	// volumes are not rewritten as a side effect of saving.
 	if composeAgentSDKFlag && selectedImprove && outlinesSemanticallyEqual(originalOutline, outline) {
 		logger.Info("Agent SDK selected-volume improve made no effective outline changes; skipping outline.json and outline.md rewrite")
-		if reportErr := writeComposeImproveReport(-1); reportErr != nil {
+		if reportErr := writeComposeImproveReport(book, -1); reportErr != nil {
 			logger.Warn("Failed to write compose improve report: %v", reportErr)
 		}
 		fmt.Printf("\n[ok] Outline checked; no effective changes were applied to %s\n", outlinePath)
@@ -676,21 +655,21 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	if composeAgentSDKFlag && selectedImprove {
 		err = project.SavePartialOutline(outline, outlinePath)
 	} else {
-		err = outline.Save(outlinePath)
+		err = book.SaveOutline(outline)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to save improved outline: %w", err)
 	}
 
 	// Update markdown version
-	mdPath := filepath.Join("story", "compose", "outline.md")
+	mdPath := book.OutlineMarkdown()
 	if err := project.CreateOutlineMarkdown(outline, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
 	if composeAgentSDKFlag {
 		remainingGateIssues := len(quality.FilterMediumOrHigherOutlineTargetSuggestions(gate.Suggestions))
-		if reportErr := writeComposeImproveReport(remainingGateIssues); reportErr != nil {
+		if reportErr := writeComposeImproveReport(book, remainingGateIssues); reportErr != nil {
 			logger.Warn("Failed to write compose improve report: %v", reportErr)
 		}
 	}
@@ -710,6 +689,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 const composeAgentSDKImproveResumeAttempts = 3
 
 func runAgentSDKImproveWithResume(
+	book *project.Book,
 	improveOutline *models.Outline,
 	setup *models.StorySetup,
 	projectConfig *models.ProjectConfig,
@@ -723,7 +703,7 @@ func runAgentSDKImproveWithResume(
 	crossOutline *models.Outline,
 ) error {
 	return retryAgentSDKImproveWithResume(composeAgentSDKImproveResumeAttempts, func() error {
-		return iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, maxRounds, forceImprove, userPrompt, applyPatches, scoped, suggestions, modelOverride, crossOutline)
+		return iterateOutlineImprovementAgentSDK(book, improveOutline, setup, projectConfig, maxRounds, forceImprove, userPrompt, applyPatches, scoped, suggestions, modelOverride, crossOutline)
 	})
 }
 
@@ -775,7 +755,7 @@ func retryAgentSDKImproveWithResume(attempts int, run func() error) error {
 // resumes from the last completed volume instead of restarting the whole
 // batch. Permanent failures return immediately, and a leftover repair
 // checkpoint is removed so a later invocation never resumes stale work.
-func repairAgentSDKWithTransientRetry(repair func() (*models.Outline, error)) (*models.Outline, error) {
+func repairAgentSDKWithTransientRetry(book *project.Book, repair func() (*models.Outline, error)) (*models.Outline, error) {
 	const maxRepairAttempts = 3
 	var lastErr error
 	for attempt := 1; attempt <= maxRepairAttempts; attempt++ {
@@ -792,7 +772,7 @@ func repairAgentSDKWithTransientRetry(repair func() (*models.Outline, error)) (*
 	}
 	// The repair pass's checkpoint (iteration 0) is only removed on success;
 	// clear it on permanent failure so the next invocation starts clean.
-	if removeErr := os.Remove("story/compose/outline_improve_progress.json"); removeErr != nil && !os.IsNotExist(removeErr) {
+	if removeErr := book.Remove(book.ComposeFile("outline_improve_progress.json")); removeErr != nil {
 		logger.Warn("Failed to remove stale Agent SDK repair checkpoint: %v", removeErr)
 	}
 	return nil, lastErr
@@ -901,19 +881,16 @@ func loadComposeImproveReportEntries(path string) ([]agents.ComposeImproveReport
 // writeComposeImproveReport aggregates the per-volume report entries recorded
 // by the Agent SDK improvement run into a Markdown file under logs/. Pass a
 // negative remainingGateIssues when no gate result is available.
-func writeComposeImproveReport(remainingGateIssues int) error {
-	entries, err := loadComposeImproveReportEntries(filepath.Join("story", "compose", "outline_improve_report.jsonl"))
+func writeComposeImproveReport(book *project.Book, remainingGateIssues int) error {
+	entries, err := loadComposeImproveReportEntries(book.ComposeFile("outline_improve_report.jsonl"))
 	if err != nil {
 		return err
 	}
 	if len(entries) == 0 && remainingGateIssues < 0 {
 		return nil
 	}
-	if err := os.MkdirAll("logs", 0o755); err != nil {
-		return err
-	}
 	now := time.Now()
-	reportPath := filepath.Join("logs", fmt.Sprintf("compose_improve_report_%s.md", now.Format("20060102_150405")))
+	reportPath := book.LogFile(fmt.Sprintf("compose_improve_report_%s.md", now.Format("20060102_150405")))
 
 	var builder strings.Builder
 	builder.WriteString("# Compose Improve 报告\n\n")
@@ -942,7 +919,7 @@ func writeComposeImproveReport(remainingGateIssues int) error {
 		fmt.Fprintf(&builder, "## 门禁修复后\n\n- 剩余中高优问题: %d\n", remainingGateIssues)
 	}
 
-	if err := os.WriteFile(reportPath, []byte(builder.String()), 0o644); err != nil {
+	if err := book.WriteText(reportPath, builder.String()); err != nil {
 		return err
 	}
 	logger.Info("Compose improve report written: %s", reportPath)
@@ -954,7 +931,7 @@ func runComposeSkeletonReview(cmd *cobra.Command, args []string) error {
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN COMPOSE SKELETON REVIEW")
 
-	projectConfig, setup, outline, err := loadComposeProjectState()
+	book, projectConfig, setup, outline, err := loadComposeProjectState(cmd)
 	if err != nil {
 		return err
 	}
@@ -975,7 +952,7 @@ func runComposeSkeletonReview(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("skeleton review failed: %w", err)
 	}
 
-	reportPath := filepath.Join("story", "compose", "skeleton_review.json")
+	reportPath := book.ComposeFile("skeleton_review.json")
 	if err := saveReviewResult(reportPath, review.Result); err != nil {
 		return err
 	}
@@ -996,7 +973,7 @@ func runComposeReview(cmd *cobra.Command, args []string) error {
 		return runComposeCrossVolumeReview(cmd, args)
 	}
 
-	projectConfig, setup, outline, err := loadComposeProjectState()
+	book, projectConfig, setup, outline, err := loadComposeProjectState(cmd)
 	if err != nil {
 		return err
 	}
@@ -1050,7 +1027,9 @@ func runComposeReview(cmd *cobra.Command, args []string) error {
 
 	reportPath := strings.TrimSpace(composeReviewOutFlag)
 	if reportPath == "" {
-		reportPath = filepath.Join("story", "compose", "outline_review.json")
+		reportPath = book.ComposeFile("outline_review.json")
+	} else {
+		reportPath = book.ResolvePath(reportPath)
 	}
 	if err := os.MkdirAll(filepath.Dir(reportPath), 0755); err != nil {
 		return fmt.Errorf("failed to create review report directory: %w", err)
@@ -1067,7 +1046,7 @@ func runComposeReview(cmd *cobra.Command, args []string) error {
 // 每个 (model, focus) 组合跑一轮只读 review, 合并所有建议, 按主题聚类,
 // 分层抽样后输出 sampled JSON (可直接喂 --suggestions) 和合理化 prompt。
 func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
-	projectConfig, setup, outline, err := loadComposeProjectState()
+	book, projectConfig, setup, outline, err := loadComposeProjectState(cmd)
 	if err != nil {
 		return err
 	}
@@ -1207,15 +1186,12 @@ func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
 	fmt.Printf("主题分布: %v\n", themeCount)
 
 	// 输出目录: story/reviews/matrix_<timestamp>/
-	outDir := filepath.Join("story", "reviews", fmt.Sprintf("matrix_%s", time.Now().Format("20060102_150405")))
-	if err := os.MkdirAll(outDir, 0755); err != nil {
-		return err
-	}
+	outDir := book.ReviewFile(fmt.Sprintf("matrix_%s", time.Now().Format("20060102_150405")))
 
 	// 保存全部建议
 	allPath := filepath.Join(outDir, "all_suggestions.json")
 	if data, err := json.MarshalIndent(allSugs, "", "  "); err == nil {
-		if err := os.WriteFile(allPath, data, 0644); err != nil {
+		if err := book.Write(allPath, data, store.FileMode); err != nil {
 			return err
 		}
 	}
@@ -1233,7 +1209,7 @@ func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
 
 	samplePath := filepath.Join(outDir, fmt.Sprintf("sampled_%d.json", len(sampled)))
 	if data, err := json.MarshalIndent(sampled, "", "  "); err == nil {
-		if err := os.WriteFile(samplePath, data, 0644); err != nil {
+		if err := book.Write(samplePath, data, store.FileMode); err != nil {
 			return err
 		}
 	}
@@ -1241,7 +1217,7 @@ func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
 	// 合理化 prompt
 	rp := agents.BuildRationalizePrompt(sampled)
 	rpPath := filepath.Join(outDir, "rationalize_prompt.txt")
-	if err := os.WriteFile(rpPath, []byte(rp), 0644); err != nil {
+	if err := book.WriteText(rpPath, rp); err != nil {
 		return err
 	}
 
@@ -1262,7 +1238,7 @@ func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
 		sampleThemes[primary]++
 	}
 	fmt.Fprintf(&rb, "抽样主题覆盖: %v\n", sampleThemes)
-	if err := os.WriteFile(reportPath, []byte(rb.String()), 0644); err != nil {
+	if err := book.WriteText(reportPath, rb.String()); err != nil {
 		return err
 	}
 
@@ -1277,7 +1253,7 @@ func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
 
 // runComposeCrossVolumeReview 跨卷审查: 单 agent session 内审查卷范围的连续性。
 func runComposeCrossVolumeReview(cmd *cobra.Command, args []string) error {
-	projectConfig, setup, outline, err := loadComposeProjectState()
+	book, projectConfig, setup, outline, err := loadComposeProjectState(cmd)
 	if err != nil {
 		return err
 	}
@@ -1324,7 +1300,9 @@ func runComposeCrossVolumeReview(cmd *cobra.Command, args []string) error {
 
 	reportPath := strings.TrimSpace(composeReviewOutFlag)
 	if reportPath == "" {
-		reportPath = filepath.Join("story", "reviews", "cross_volume_review.json")
+		reportPath = book.ReviewFile("cross_volume_review.json")
+	} else {
+		reportPath = book.ResolvePath(reportPath)
 	}
 	if err := os.MkdirAll(filepath.Dir(reportPath), 0755); err != nil {
 		return fmt.Errorf("failed to create review report directory: %w", err)
@@ -1361,7 +1339,7 @@ func runComposeSkeletonImprove(cmd *cobra.Command, args []string) error {
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN COMPOSE SKELETON IMPROVE")
 
-	projectConfig, setup, outline, err := loadComposeProjectState()
+	book, projectConfig, setup, outline, err := loadComposeProjectState(cmd)
 	if err != nil {
 		return err
 	}
@@ -1380,22 +1358,22 @@ func runComposeSkeletonImprove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("skeleton improvement failed: %w", err)
 	}
 
-	applyOutlineNormalization(improved, "skeleton_improve")
-	if err := backupOutlineFiles(); err != nil {
+	applyOutlineNormalization(book, improved, "skeleton_improve")
+	if err := backupOutlineFiles(book); err != nil {
 		return err
 	}
 
-	outlinePath := filepath.Join("story", "compose", "outline.json")
-	if err := improved.Save(outlinePath); err != nil {
+	outlinePath := book.OutlineJSON()
+	if err := book.SaveOutline(improved); err != nil {
 		return fmt.Errorf("failed to save improved skeleton outline: %w", err)
 	}
-	mdPath := filepath.Join("story", "compose", "outline.md")
+	mdPath := book.OutlineMarkdown()
 	if err := project.CreateOutlineMarkdown(improved, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
 	if review != nil {
-		reportPath := filepath.Join("story", "compose", "skeleton_improve_review.json")
+		reportPath := book.ComposeFile("skeleton_improve_review.json")
 		if err := saveReviewResult(reportPath, *review); err != nil {
 			return err
 		}
@@ -1411,12 +1389,16 @@ func runComposeSkeletonImprove(cmd *cobra.Command, args []string) error {
 func runComposeCheck(cmd *cobra.Command, args []string) error {
 	logger.Section("NOVELGEN COMPOSE CHECK")
 
-	outlinePath := filepath.Join("story", "compose", "outline.json")
-	if _, err := os.Stat(outlinePath); err != nil {
+	book, err := composeProject(cmd)
+	if err != nil {
+		return err
+	}
+	outlinePath := book.OutlineJSON()
+	if !book.HasOutline() {
 		return fmt.Errorf("outline not found at %s. Run 'novelgen compose gen' first", outlinePath)
 	}
 
-	data, err := os.ReadFile(outlinePath)
+	data, err := book.Read(outlinePath)
 	if err != nil {
 		return fmt.Errorf("failed to read outline: %w", err)
 	}
@@ -1442,9 +1424,8 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 	}
 
 	if checkOutline != nil {
-		setupPath := filepath.Join("story", "setup", "story_setup.json")
 		var setupForGate *models.StorySetup
-		if loadedSetup, loadErr := models.LoadStorySetup(setupPath); loadErr == nil {
+		if loadedSetup, loadErr := book.LoadSetup(); loadErr == nil {
 			setupForGate = loadedSetup
 		}
 		quality.LogQualityGateResult("outline", quality.RunOutlineQualityGate(setupForGate, checkOutline))
@@ -1512,8 +1493,8 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 	fmt.Printf("\n%s\n", result.Summary)
 
 	// Cross-module: verify outline consistency with story setup
-	setupPath := filepath.Join("story", "setup", "story_setup.json")
-	if setupData, err := os.ReadFile(setupPath); err == nil {
+	setupPath := book.SetupJSON()
+	if setupData, err := book.Read(setupPath); err == nil {
 		var setup models.StorySetup
 		if json.Unmarshal(setupData, &setup) == nil {
 			crossIssues, crossWarnings := quality.ValidateSetupOutlineCross(&setup, &storyOutline)
@@ -1545,7 +1526,7 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 							Description: "(自动添加 — 请手动补充描述)",
 						})
 					}
-					if saveErr := setup.Save(setupPath); saveErr == nil {
+					if saveErr := book.SaveSetup(&setup); saveErr == nil {
 						fmt.Printf("\n  [ok] Auto-patched setup: added %d missing resources\n", len(missingResources))
 					}
 				}
@@ -1567,8 +1548,12 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 func runComposeNormalize(cmd *cobra.Command, args []string) error {
 	logger.Section("NOVELGEN COMPOSE NORMALIZE")
 
-	outlinePath := filepath.Join("story", "compose", "outline.json")
-	outline, err := models.LoadOutline(outlinePath)
+	book, err := composeProject(cmd)
+	if err != nil {
+		return err
+	}
+	outlinePath := book.OutlineJSON()
+	outline, err := book.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load outline at %s: %w", outlinePath, err)
 	}
@@ -1579,30 +1564,22 @@ func runComposeNormalize(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	if err := backupOutlineFiles(); err != nil {
+	if err := backupOutlineFiles(book); err != nil {
 		return err
 	}
 
-	data, err := json.MarshalIndent(outline, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal normalized outline: %w", err)
-	}
-	if err := os.WriteFile(outlinePath, data, 0644); err != nil {
+	if err := book.SaveOutline(outline); err != nil {
 		return fmt.Errorf("failed to write normalized outline: %w", err)
 	}
 
-	mdPath := filepath.Join("story", "compose", "outline.md")
+	mdPath := book.OutlineMarkdown()
 	if err := project.CreateOutlineMarkdown(outline, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
-	reportPath := filepath.Join("story", "compose", "outline_normalization_manual.json")
-	reportData, err := json.MarshalIndent(report, "", "  ")
-	if err != nil {
+	reportPath := book.ComposeFile("outline_normalization_manual.json")
+	if err := book.WriteJSON(reportPath, report); err != nil {
 		return fmt.Errorf("failed to marshal normalization report: %w", err)
-	}
-	if err := os.WriteFile(reportPath, reportData, 0644); err != nil {
-		return fmt.Errorf("failed to write normalization report: %w", err)
 	}
 
 	if report.Changed() {
@@ -1626,16 +1603,17 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if _, err := os.Stat("novel.json"); err != nil {
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first")
+	book, err := composeProject(cmd)
+	if err != nil {
+		return err
 	}
 
-	projectConfig, err := models.LoadProjectConfig("novel.json")
+	projectConfig, err := book.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load novel.json: %w", err)
 	}
-	setupPath := filepath.Join("story", "setup", "story_setup.json")
-	setup, err := models.LoadStorySetup(setupPath)
+	setupPath := book.SetupJSON()
+	setup, err := book.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup at %s: %w", setupPath, err)
 	}
@@ -1668,12 +1646,12 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 	agent.SetLanguage(projectConfig.Language)
 
 	ctx := cli.CommandContext()
-	outlinePath := filepath.Join("story", "compose", "outline.json")
-	outline, err := ensureComposePipelineSkeleton(ctx, agent, setup, projectConfig, outlinePath, composeAgentSDKFlag)
+	outlinePath := book.OutlineJSON()
+	outline, err := ensureComposePipelineSkeleton(book, ctx, agent, setup, projectConfig, outlinePath, composeAgentSDKFlag)
 	if err != nil {
 		return err
 	}
-	if err := saveComposePipelineOutline(outline, outlinePath); err != nil {
+	if err := saveComposePipelineOutline(book, outline, outlinePath); err != nil {
 		return err
 	}
 	fmt.Printf("Pipeline range: volumes %d..%d (%d total)\n", fromVolume, toVolume, totalVolumes)
@@ -1691,14 +1669,14 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 				fmt.Printf("Generation skipped: volume already has %d chapter(s)\n", len(volume.Chapters))
 			} else {
 				if composeAgentSDKFlag {
-					err = generateComposePipelineVolumeAgentSDK(ctx, agent, setup, projectConfig, outline, partIdx, volIdx, globalVolume, totalVolumes)
+					err = generateComposePipelineVolumeAgentSDK(book, ctx, agent, setup, projectConfig, outline, partIdx, volIdx, globalVolume, totalVolumes)
 				} else {
-					err = generateComposePipelineVolume(ctx, agent, setup, projectConfig, outline, partIdx, volIdx, globalVolume, totalVolumes)
+					err = generateComposePipelineVolume(book, ctx, agent, setup, projectConfig, outline, partIdx, volIdx, globalVolume, totalVolumes)
 				}
 				if err != nil {
 					return err
 				}
-				if err := saveComposePipelineOutline(outline, outlinePath); err != nil {
+				if err := saveComposePipelineOutline(book, outline, outlinePath); err != nil {
 					return err
 				}
 				fmt.Printf("Saved after generation: %s\n", outlinePath)
@@ -1714,22 +1692,22 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 				return err
 			}
 			if composeAgentSDKFlag {
-				err = iterateOutlineImprovementAgentSDK(improveOutline, setup, projectConfig, composePipelineMaxRounds, composePipelineForce, composePromptFlag, composeAgentApplyFlag, true, nil, "", outline)
+				err = iterateOutlineImprovementAgentSDK(book, improveOutline, setup, projectConfig, composePipelineMaxRounds, composePipelineForce, composePromptFlag, composeAgentApplyFlag, true, nil, "", outline)
 			} else {
-				err = iterateOutlineImprovement(improveOutline, setup, projectConfig, composePipelineMaxRounds, 1, true, composePipelineForce, composePromptFlag)
+				err = iterateOutlineImprovement(book, improveOutline, setup, projectConfig, composePipelineMaxRounds, 1, true, composePipelineForce, composePromptFlag)
 			}
 			if err != nil {
 				return fmt.Errorf("failed to improve volume %d: %w", globalVolume, err)
 			}
 			mergeGeneratedVolumes(outline, improveOutline)
-			if err := saveComposePipelineOutline(outline, outlinePath); err != nil {
+			if err := saveComposePipelineOutline(book, outline, outlinePath); err != nil {
 				return err
 			}
 			fmt.Printf("Saved after improve: %s\n", outlinePath)
 		}
 
 		if !composePipelineSkipCross {
-			patched, issues, warnings, err := applySetupOutlineCrossPatch(setupPath, setup, outline)
+			patched, issues, warnings, err := applySetupOutlineCrossPatch(book, setup, outline)
 			if err != nil {
 				return err
 			}
@@ -1748,23 +1726,23 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func ensureComposePipelineSkeleton(ctx context.Context, agent *agents.ComposeAgent, setup *models.StorySetup, projectConfig *models.ProjectConfig, outlinePath string, useAgentSDK bool) (*models.Outline, error) {
-	if _, err := os.Stat(outlinePath); err == nil {
-		outline, err := models.LoadOutline(outlinePath)
+func ensureComposePipelineSkeleton(book *project.Book, ctx context.Context, agent *agents.ComposeAgent, setup *models.StorySetup, projectConfig *models.ProjectConfig, outlinePath string, useAgentSDK bool) (*models.Outline, error) {
+	if book.Exists(outlinePath) {
+		outline, err := book.LoadOutlineAt(outlinePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load existing outline: %w", err)
 		}
-		applyOutlineNormalization(outline, "pipeline_skeleton")
+		applyOutlineNormalization(book, outline, "pipeline_skeleton")
 		return outline, nil
 	}
 
-	legacyProgressPath := filepath.Join("story", "compose", "outline_progress.json")
-	if _, err := os.Stat(legacyProgressPath); err == nil {
+	legacyProgressPath := book.ComposeFile("outline_progress.json")
+	if book.Exists(legacyProgressPath) {
 		outline, err := loadPartialOutline(legacyProgressPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load legacy outline progress: %w", err)
 		}
-		applyOutlineNormalization(outline, "pipeline_skeleton")
+		applyOutlineNormalization(book, outline, "pipeline_skeleton")
 		return outline, nil
 	}
 
@@ -1785,11 +1763,11 @@ func ensureComposePipelineSkeleton(ctx context.Context, agent *agents.ComposeAge
 	}
 	outline := &models.Outline{Parts: skeletonOutput.Parts}
 	logic.NewIDManager(outline).AssignIDsToOutline()
-	applyOutlineNormalization(outline, "pipeline_skeleton")
+	applyOutlineNormalization(book, outline, "pipeline_skeleton")
 	return outline, nil
 }
 
-func generateComposePipelineVolume(ctx context.Context, agent *agents.ComposeAgent, setup *models.StorySetup, projectConfig *models.ProjectConfig, outline *models.Outline, partIdx, volIdx, globalVolume, totalVolumes int) error {
+func generateComposePipelineVolume(book *project.Book, ctx context.Context, agent *agents.ComposeAgent, setup *models.StorySetup, projectConfig *models.ProjectConfig, outline *models.Outline, partIdx, volIdx, globalVolume, totalVolumes int) error {
 	if outline == nil || setup == nil || projectConfig == nil {
 		return fmt.Errorf("pipeline generation requires setup, project config, and outline")
 	}
@@ -1825,11 +1803,11 @@ func generateComposePipelineVolume(ctx context.Context, agent *agents.ComposeAge
 
 	volume.Chapters = output.Chapters
 	logic.NewIDManager(outline).AssignIDsToOutline()
-	applyOutlineNormalization(outline, fmt.Sprintf("pipeline_gen_v%02d", globalVolume))
+	applyOutlineNormalization(book, outline, fmt.Sprintf("pipeline_gen_v%02d", globalVolume))
 	return nil
 }
 
-func generateComposePipelineVolumeAgentSDK(ctx context.Context, agent *agents.ComposeAgent, setup *models.StorySetup, projectConfig *models.ProjectConfig, outline *models.Outline, partIdx, volIdx, globalVolume, totalVolumes int) error {
+func generateComposePipelineVolumeAgentSDK(book *project.Book, ctx context.Context, agent *agents.ComposeAgent, setup *models.StorySetup, projectConfig *models.ProjectConfig, outline *models.Outline, partIdx, volIdx, globalVolume, totalVolumes int) error {
 	if outline == nil || setup == nil || projectConfig == nil {
 		return fmt.Errorf("pipeline generation requires setup, project config, and outline")
 	}
@@ -1865,15 +1843,15 @@ func generateComposePipelineVolumeAgentSDK(ctx context.Context, agent *agents.Co
 
 	outline.Parts[partIdx].Volumes[volIdx] = output.Volume
 	logic.NewIDManager(outline).AssignIDsToOutline()
-	applyOutlineNormalization(outline, fmt.Sprintf("pipeline_agent_sdk_gen_v%02d", globalVolume))
+	applyOutlineNormalization(book, outline, fmt.Sprintf("pipeline_agent_sdk_gen_v%02d", globalVolume))
 	return nil
 }
 
-func saveComposePipelineOutline(outline *models.Outline, outlinePath string) error {
+func saveComposePipelineOutline(book *project.Book, outline *models.Outline, outlinePath string) error {
 	if err := project.SavePartialOutline(outline, outlinePath); err != nil {
 		return err
 	}
-	mdPath := filepath.Join("story", "compose", "outline.md")
+	mdPath := book.OutlineMarkdown()
 	if err := project.CreateOutlineMarkdown(outline, mdPath); err != nil {
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
@@ -1899,7 +1877,7 @@ func outlineVolumePosition(outline *models.Outline, globalVolume int) (int, int,
 	return 0, 0, fmt.Errorf("volume %d not found in outline (%d volume(s) available)", globalVolume, current)
 }
 
-func applySetupOutlineCrossPatch(setupPath string, setup *models.StorySetup, outline *models.Outline) (int, []string, []string, error) {
+func applySetupOutlineCrossPatch(book *project.Book, setup *models.StorySetup, outline *models.Outline) (int, []string, []string, error) {
 	if setup == nil || outline == nil {
 		return 0, nil, nil, nil
 	}
@@ -1929,7 +1907,7 @@ func applySetupOutlineCrossPatch(setupPath string, setup *models.StorySetup, out
 			Description: "Auto-added by compose pipeline cross check; refine manually.",
 		})
 	}
-	if err := setup.Save(setupPath); err != nil {
+	if err := book.SaveSetup(setup); err != nil {
 		return 0, issues, warnings, fmt.Errorf("failed to save cross-patched setup: %w", err)
 	}
 	return len(missingResources), issues, warnings, nil
@@ -2008,8 +1986,8 @@ func generateOutlineWithAI(setup *models.StorySetup, projectConfig *models.Proje
 	return &output.Outline, nil
 }
 
-func repairOutlineWithQualityGate(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string, scoped bool) (*models.Outline, quality.QualityGateResult, error) {
-	applyOutlineNormalization(outline, "pre_gate_"+stage)
+func repairOutlineWithQualityGate(book *project.Book, ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string, scoped bool) (*models.Outline, quality.QualityGateResult, error) {
+	applyOutlineNormalization(book, outline, "pre_gate_"+stage)
 	gate := runOutlineQualityGateForScope(setup, outline, scoped)
 	if !gate.Blocking {
 		return outline, gate, nil
@@ -2035,18 +2013,18 @@ func repairOutlineWithQualityGate(ctx context.Context, outline *models.Outline, 
 	if err != nil {
 		return outline, gate, fmt.Errorf("outline quality gate repair failed: %w", err)
 	}
-	applyOutlineNormalization(repaired, "post_gate_"+stage)
+	applyOutlineNormalization(book, repaired, "post_gate_"+stage)
 	finalGate := runOutlineQualityGateForScope(setup, repaired, scoped)
 	return repaired, finalGate, nil
 }
 
-func repairOutlineWithQualityGateAgentSDK(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string, agentApply bool, scoped bool, userPrompt string, crossOutline *models.Outline) (*models.Outline, quality.QualityGateResult, error) {
-	applyOutlineNormalization(outline, "pre_gate_"+stage)
+func repairOutlineWithQualityGateAgentSDK(book *project.Book, ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string, agentApply bool, scoped bool, userPrompt string, crossOutline *models.Outline) (*models.Outline, quality.QualityGateResult, error) {
+	applyOutlineNormalization(book, outline, "pre_gate_"+stage)
 	gate := runOutlineQualityGateForScope(setup, outline, scoped)
 	repairGate := filterQualityGateForAgentSDKPromptBoundary(gate, outline, userPrompt, "quality-gate repair")
 	if !gate.Blocking {
 		if agentApply && outlineGateHasPatchableGlobalIssues(repairGate, outline) {
-			repairedOutline, repairedGate, err := repairOutlineGlobalIssuesAgentSDK(ctx, outline, setup, projectConfig, repairGate, stage)
+			repairedOutline, repairedGate, err := repairOutlineGlobalIssuesAgentSDK(book, ctx, outline, setup, projectConfig, repairGate, stage)
 			if err != nil {
 				return outline, gate, err
 			}
@@ -2079,7 +2057,7 @@ func repairOutlineWithQualityGateAgentSDK(ctx context.Context, outline *models.O
 	if err != nil {
 		return outline, gate, fmt.Errorf("outline quality gate Agent SDK repair failed: %w", err)
 	}
-	applyOutlineNormalization(repaired, "post_gate_"+stage)
+	applyOutlineNormalization(book, repaired, "post_gate_"+stage)
 	finalGate := runOutlineQualityGateForScope(setup, repaired, scoped)
 	return repaired, finalGate, nil
 }
@@ -2109,7 +2087,7 @@ func outlineGateHasPatchableGlobalIssues(gate quality.QualityGateResult, outline
 	return false
 }
 
-func repairOutlineGlobalIssuesAgentSDK(ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, gate quality.QualityGateResult, stage string) (*models.Outline, quality.QualityGateResult, error) {
+func repairOutlineGlobalIssuesAgentSDK(book *project.Book, ctx context.Context, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, gate quality.QualityGateResult, stage string) (*models.Outline, quality.QualityGateResult, error) {
 	logger.Info("Outline quality gate found patchable global issues after %s; running one Agent SDK global repair pass", stage)
 	cfg, err := llm.LoadOrCreateConfig()
 	if err != nil {
@@ -2126,13 +2104,13 @@ func repairOutlineGlobalIssuesAgentSDK(ctx context.Context, outline *models.Outl
 		return outline, gate, fmt.Errorf("global outline quality gate Agent SDK repair failed: %w", err)
 	}
 	reloadedSetup := setup
-	if loaded, loadErr := models.LoadStorySetup(filepath.Join("story", "setup", "story_setup.json")); loadErr == nil {
+	if loaded, loadErr := book.LoadSetup(); loadErr == nil {
 		reloadedSetup = loaded
 	} else {
 		logger.Warn("Failed to reload story setup after global repair: %v", loadErr)
 	}
 	reloadedOutline := outline
-	if loaded, loadErr := models.LoadOutline(filepath.Join("story", "compose", "outline.json")); loadErr == nil {
+	if loaded, loadErr := book.LoadOutline(); loadErr == nil {
 		reloadedOutline = loaded
 	} else {
 		logger.Warn("Failed to reload outline after global repair; using in-memory outline: %v", loadErr)
@@ -2142,7 +2120,7 @@ func repairOutlineGlobalIssuesAgentSDK(ctx context.Context, outline *models.Outl
 
 // generateOutlineHierarchical generates outline using hierarchical approach
 // Supports incremental save and resume
-func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models.ProjectConfig) (*models.Outline, error) {
+func generateOutlineHierarchical(book *project.Book, setup *models.StorySetup, projectConfig *models.ProjectConfig) (*models.Outline, error) {
 	// Load LLM config
 	cfg, err := llm.LoadOrCreateConfig()
 	if err != nil {
@@ -2163,13 +2141,13 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 		projectConfig.Structure.TotalChapters())
 	fmt.Println()
 
-	outlinePath := filepath.Join("story", "compose", "outline.json")
-	legacyProgressPath := filepath.Join("story", "compose", "outline_progress.json")
+	outlinePath := book.OutlineJSON()
+	legacyProgressPath := book.ComposeFile("outline_progress.json")
 
 	var outline *models.Outline
 	var resumeMode bool
 
-	if _, err := os.Stat(outlinePath); err == nil && !composeForceGenFlag {
+	if book.Exists(outlinePath) && !composeForceGenFlag {
 		fmt.Println("📂 Found existing outline.json. Resuming empty-volume chapter generation...")
 		outline, err = loadPartialOutline(outlinePath)
 		if err != nil {
@@ -2180,7 +2158,7 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 			fmt.Println("[ok] Resumed from outline.json")
 			printProgressStatus(outline, projectConfig.Structure)
 		}
-	} else if _, err := os.Stat(legacyProgressPath); err == nil && !composeForceGenFlag {
+	} else if book.Exists(legacyProgressPath) && !composeForceGenFlag {
 		fmt.Println("📂 Found legacy outline_progress.json. Migrating to outline.json and resuming...")
 		outline, err = loadPartialOutline(legacyProgressPath)
 		if err != nil {
@@ -2237,7 +2215,7 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 			Parts: skeletonOutput.Parts,
 		}
 		logic.NewIDManager(outline).AssignIDsToOutline()
-		applyOutlineNormalization(outline, "fresh_skeleton")
+		applyOutlineNormalization(book, outline, "fresh_skeleton")
 
 		// Save skeleton as initial outline with empty chapter arrays.
 		if err := project.SavePartialOutline(outline, outlinePath); err != nil {
@@ -2278,7 +2256,7 @@ func generateOutlineHierarchical(setup *models.StorySetup, projectConfig *models
 	return outline, nil
 }
 
-func generateOutlineHierarchicalAgentSDK(setup *models.StorySetup, projectConfig *models.ProjectConfig) (*models.Outline, error) {
+func generateOutlineHierarchicalAgentSDK(book *project.Book, setup *models.StorySetup, projectConfig *models.ProjectConfig) (*models.Outline, error) {
 	cfg, err := llm.LoadOrCreateConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load LLM config: %w", err)
@@ -2297,12 +2275,12 @@ func generateOutlineHierarchicalAgentSDK(setup *models.StorySetup, projectConfig
 	fmt.Println("Mode: Claude Agent SDK with read-only novelgen tool queries")
 	fmt.Println()
 
-	outlinePath := filepath.Join("story", "compose", "outline.json")
-	legacyProgressPath := filepath.Join("story", "compose", "outline_progress.json")
+	outlinePath := book.OutlineJSON()
+	legacyProgressPath := book.ComposeFile("outline_progress.json")
 
 	var outline *models.Outline
 	var resumeMode bool
-	if _, err := os.Stat(outlinePath); err == nil && !composeForceGenFlag {
+	if book.Exists(outlinePath) && !composeForceGenFlag {
 		fmt.Println("[resume] Found existing outline.json. Resuming empty-volume Agent SDK chapter generation...")
 		outline, err = loadPartialOutline(outlinePath)
 		if err != nil {
@@ -2313,7 +2291,7 @@ func generateOutlineHierarchicalAgentSDK(setup *models.StorySetup, projectConfig
 			fmt.Println("[ok] Resumed from outline.json")
 			printProgressStatus(outline, projectConfig.Structure)
 		}
-	} else if _, err := os.Stat(legacyProgressPath); err == nil && !composeForceGenFlag {
+	} else if book.Exists(legacyProgressPath) && !composeForceGenFlag {
 		fmt.Println("[resume] Found legacy outline_progress.json. Migrating to outline.json and resuming...")
 		outline, err = loadPartialOutline(legacyProgressPath)
 		if err != nil {
@@ -2343,7 +2321,7 @@ func generateOutlineHierarchicalAgentSDK(setup *models.StorySetup, projectConfig
 		} else {
 			fmt.Printf("[save] outline.json saved (%d volumes completed)\n", volumeCount)
 		}
-		if err := project.CreateOutlineMarkdown(o, filepath.Join("story", "compose", "outline.md")); err != nil {
+		if err := project.CreateOutlineMarkdown(o, book.OutlineMarkdown()); err != nil {
 			logger.GetLogger().Warn("Failed to save outline markdown progress: %v", err)
 		}
 	}
@@ -2364,7 +2342,7 @@ func generateOutlineHierarchicalAgentSDK(setup *models.StorySetup, projectConfig
 		}
 		outline = &models.Outline{Parts: skeletonOutput.Parts}
 		logic.NewIDManager(outline).AssignIDsToOutline()
-		applyOutlineNormalization(outline, "agent_sdk_fresh_skeleton")
+		applyOutlineNormalization(book, outline, "agent_sdk_fresh_skeleton")
 		if err := project.SavePartialOutline(outline, outlinePath); err != nil {
 			logger.GetLogger().Warn("Failed to save initial outline: %v", err)
 		}
@@ -2723,28 +2701,42 @@ func getRegenPrompt() (string, error) {
 	return strings.TrimSpace(prompt), nil
 }
 
-func loadComposeProjectState() (*models.ProjectConfig, *models.StorySetup, *models.Outline, error) {
-	if _, err := os.Stat("novel.json"); err != nil {
-		return nil, nil, nil, fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first")
-	}
-	projectConfig, err := models.LoadProjectConfig("novel.json")
+// composeProject resolves the project a compose command operates on. Compose used
+// to require the working directory to be the project root, so `compose gen`
+// failed from a subdirectory while `write` worked there; every compose path now
+// comes from the store.
+func composeProject(cmd *cobra.Command) (*project.Book, error) {
+	book, err := project.ForCommand(cmd)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to load novel.json: %w", err)
+		logger.Error("Not a novel project directory (novel.json not found)")
+		return nil, fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first")
+	}
+	return book, nil
+}
+
+func loadComposeProjectState(cmd *cobra.Command) (*project.Book, *models.ProjectConfig, *models.StorySetup, *models.Outline, error) {
+	book, err := composeProject(cmd)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	projectConfig, err := book.LoadConfig()
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("failed to load novel.json: %w", err)
 	}
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
-	setupPath := filepath.Join("story", "setup", "story_setup.json")
-	setup, err := models.LoadStorySetup(setupPath)
+	setupPath := book.SetupJSON()
+	setup, err := book.LoadSetup()
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to load story setup at %s: %w", setupPath, err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to load story setup at %s: %w", setupPath, err)
 	}
 
-	outlinePath := filepath.Join("story", "compose", "outline.json")
-	outline, err := models.LoadOutline(outlinePath)
+	outlinePath := book.OutlineJSON()
+	outline, err := book.LoadOutline()
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to load outline at %s: %w", outlinePath, err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to load outline at %s: %w", outlinePath, err)
 	}
-	return projectConfig, setup, outline, nil
+	return book, projectConfig, setup, outline, nil
 }
 
 func newComposeAgentForProject(projectConfig *models.ProjectConfig) (*agents.ComposeAgent, error) {
@@ -2788,30 +2780,18 @@ func printReviewResult(label string, result models.ReviewResult) {
 	}
 }
 
-func backupOutlineFiles() error {
-	outlinePath := filepath.Join("story", "compose", "outline.json")
-	outlineData, err := os.ReadFile(outlinePath)
+// backupOutlineFiles copies outline.json (and outline.md when present) into
+// story/compose/backups before an improvement pass overwrites them.
+func backupOutlineFiles(book *project.Book) error {
+	backupPath, err := book.BackupFile(store.ScopeCompose, book.OutlineJSON(), "outline")
 	if err != nil {
-		return fmt.Errorf("failed to read outline for backup: %w", err)
-	}
-
-	backupDir := filepath.Join("story", "compose", "backups")
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
-		return fmt.Errorf("failed to create backup directory: %w", err)
-	}
-
-	timestamp := time.Now().Format("20060102_150405")
-	backupPath := filepath.Join(backupDir, fmt.Sprintf("outline_%s.json", timestamp))
-	if err := os.WriteFile(backupPath, outlineData, 0644); err != nil {
 		return fmt.Errorf("failed to backup outline: %w", err)
 	}
-
-	mdPath := filepath.Join("story", "compose", "outline.md")
-	if mdData, err := os.ReadFile(mdPath); err == nil {
-		mdBackupPath := filepath.Join(backupDir, fmt.Sprintf("outline_%s.md", timestamp))
-		if err := os.WriteFile(mdBackupPath, mdData, 0644); err != nil {
-			return fmt.Errorf("failed to backup outline markdown: %w", err)
-		}
+	if backupPath == "" {
+		return fmt.Errorf("failed to read outline for backup: %w", os.ErrNotExist)
+	}
+	if _, err := book.BackupFile(store.ScopeCompose, book.OutlineMarkdown(), "outline"); err != nil {
+		return fmt.Errorf("failed to backup outline markdown: %w", err)
 	}
 
 	logger.Info("Outline backed up to: %s", backupPath)
@@ -2819,7 +2799,7 @@ func backupOutlineFiles() error {
 }
 
 // iterateOutlineImprovement runs the review-improvement loop
-func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, concurrency int, hierarchical bool, forceImprove bool, userPrompt string) error {
+func iterateOutlineImprovement(book *project.Book, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, concurrency int, hierarchical bool, forceImprove bool, userPrompt string) error {
 	logger.Section("Outline Iteration Improvement")
 	logger.Info("Maximum iterations: %d", maxIterations)
 	if hierarchical {
@@ -2847,7 +2827,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 
 	ctx := cli.CommandContext()
 
-	applyOutlineNormalization(outline, "pre_improve")
+	applyOutlineNormalization(book, outline, "pre_improve")
 
 	var improvedOutline *models.Outline
 	var review *models.ReviewResult
@@ -2869,7 +2849,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 	}
 
 	// Update the outline with improved version
-	applyOutlineNormalization(improvedOutline, "post_improve")
+	applyOutlineNormalization(book, improvedOutline, "post_improve")
 	*outline = *improvedOutline
 
 	// Enrich with direct model checks + DSL simulation + outline validator feedback.
@@ -2888,7 +2868,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 			repairOutput, repairErr := agent.RepairByReview(ctx, improvedOutline, review, setup)
 			if repairErr == nil {
 				improvedOutline = repairOutput
-				applyOutlineNormalization(improvedOutline, "post_repair")
+				applyOutlineNormalization(book, improvedOutline, "post_repair")
 				*outline = *improvedOutline
 				logger.Info("Partial compose repair pass completed for DSL/validator feedback")
 			} else {
@@ -2898,8 +2878,8 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 	}
 
 	// Save intermediate result
-	outlinePath := filepath.Join("story", "compose", fmt.Sprintf("outline_iter_%d.json", maxIterations))
-	if err := outline.Save(outlinePath); err != nil {
+	outlinePath := book.ComposeFile(fmt.Sprintf("outline_iter_%d.json", maxIterations))
+	if err := book.SaveOutlineAt(outlinePath, outline); err != nil {
 		logger.Error("Failed to save intermediate outline: %v", err)
 	} else {
 		logger.Info("Saved intermediate outline to %s", outlinePath)
@@ -2912,7 +2892,7 @@ func iterateOutlineImprovement(outline *models.Outline, setup *models.StorySetup
 	return nil
 }
 
-func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, forceImprove bool, userPrompt string, agentApply bool, scoped bool, suggestions []models.ReviewSuggestion, modelOverride string, crossOutline *models.Outline) error {
+func iterateOutlineImprovementAgentSDK(book *project.Book, outline *models.Outline, setup *models.StorySetup, projectConfig *models.ProjectConfig, maxIterations int, forceImprove bool, userPrompt string, agentApply bool, scoped bool, suggestions []models.ReviewSuggestion, modelOverride string, crossOutline *models.Outline) error {
 	logger.Section("Outline Agent SDK Iteration Improvement")
 	logger.Info("Maximum iterations: %d", maxIterations)
 	logger.Info("Mode: Agent SDK hierarchical per-volume review/improve")
@@ -2939,7 +2919,7 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 
 	ctx := cli.CommandContext()
 	beforeOutline := toolplane.CloneOutline(outline)
-	applyOutlineNormalization(outline, "pre_agent_sdk_improve")
+	applyOutlineNormalization(book, outline, "pre_agent_sdk_improve")
 
 	preGate := quality.RunOutlineCombinedGateForScope(setup, outline, scoped)
 	var seedReview *models.ReviewResult
@@ -2968,7 +2948,7 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 		return fmt.Errorf("iteration failed: %w", err)
 	}
 
-	applyOutlineNormalization(improvedOutline, "post_agent_sdk_improve")
+	applyOutlineNormalization(book, improvedOutline, "post_agent_sdk_improve")
 	*outline = *improvedOutline
 
 	if review != nil {
@@ -2982,12 +2962,12 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 		if len(repairReview.Suggestions) > 0 && maxIterations > 0 {
 			repairBatch := quality.LimitReviewSuggestionsForAgentSDKRepair(repairReview, composeRepairBudgetFlag)
 			logger.Info("Quality/simulation gate found %d targetable medium-or-higher issue(s), running Agent SDK repair pass on %d issue(s)", len(repairReview.Suggestions), len(repairBatch.Suggestions))
-			repairOutput, repairErr := repairAgentSDKWithTransientRetry(func() (*models.Outline, error) {
+			repairOutput, repairErr := repairAgentSDKWithTransientRetry(book, func() (*models.Outline, error) {
 				return agent.RepairByReviewAgentSDK(ctx, improvedOutline, repairBatch, setup, agentApply, crossOutline, composeCrossVolumeAllFlag)
 			})
 			if repairErr == nil {
 				improvedOutline = repairOutput
-				applyOutlineNormalization(improvedOutline, "post_agent_sdk_repair")
+				applyOutlineNormalization(book, improvedOutline, "post_agent_sdk_repair")
 				*outline = *improvedOutline
 				repairGate := quality.RunOutlineCombinedGateForScope(setup, improvedOutline, scoped)
 				remaining := quality.FilterMediumOrHigherOutlineTargetSuggestions(repairGate.Suggestions)
@@ -3005,7 +2985,7 @@ func iterateOutlineImprovementAgentSDK(outline *models.Outline, setup *models.St
 	if outlinesSemanticallyEqual(beforeOutline, outline) {
 		logger.Info("Agent SDK iteration made no effective outline changes; skipping intermediate outline_iter_%d.json", maxIterations)
 	} else {
-		outlinePath := filepath.Join("story", "compose", fmt.Sprintf("outline_iter_%d.json", maxIterations))
+		outlinePath := book.ComposeFile(fmt.Sprintf("outline_iter_%d.json", maxIterations))
 		if err := project.SavePartialOutline(outline, outlinePath); err != nil {
 			logger.Error("Failed to save intermediate outline: %v", err)
 		} else {
@@ -3079,20 +3059,18 @@ func outlinesSemanticallyEqual(left, right *models.Outline) bool {
 	return reflect.DeepEqual(left, right)
 }
 
-func applyOutlineNormalization(outline *models.Outline, stage string) {
+// applyOutlineNormalization normalizes an outline and records the deterministic
+// changes it made. The report is a diagnostics artifact, so a failed write only
+// warns: the outline itself is saved by the caller.
+func applyOutlineNormalization(book *project.Book, outline *models.Outline, stage string) {
 	report := models.NormalizeOutline(outline)
 	if !report.Changed() {
 		return
 	}
 
 	logger.Info("Outline normalizer applied %d changes at %s", len(report.Changes), stage)
-	reportPath := filepath.Join("story", "compose", fmt.Sprintf("outline_normalization_%s.json", stage))
-	data, err := json.MarshalIndent(report, "", "  ")
-	if err != nil {
-		logger.Warn("Failed to marshal outline normalization report: %v", err)
-		return
-	}
-	if err := os.WriteFile(reportPath, data, 0644); err != nil {
+	reportPath := book.ComposeFile(fmt.Sprintf("outline_normalization_%s.json", stage))
+	if err := book.WriteJSON(reportPath, report); err != nil {
 		logger.Warn("Failed to save outline normalization report: %v", err)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
+	"novelgen/internal/store"
 	"novelgen/internal/toolcmd"
 	"novelgen/internal/utils"
 	"os"
@@ -53,10 +54,11 @@ func RunToolPatch(cmd *cobra.Command, args []string) error {
 	}
 	apply := ToolPatchFlags.Apply && !ToolPatchFlags.DryRun
 
-	root, err := project.FindRoot()
+	book, err := project.ForCommand(cmd)
 	if err != nil {
 		return err
 	}
+	root := book.Dir()
 	var patchBytes []byte
 	if taskID != "" {
 		resolvedTarget, resolvedID, resolvedPatchBytes, taskWarnings, err := resolveToolPatchTask(root, section, target, id, taskID)
@@ -173,10 +175,11 @@ func RunToolPatchBuffer(cmd *cobra.Command, args []string) error {
 	if id == "" {
 		return fmt.Errorf("--id is required")
 	}
-	root, err := project.FindRoot()
+	book, err := project.ForCommand(cmd)
 	if err != nil {
 		return err
 	}
+	root := book.Dir()
 	path, err := ToolPatchBufferPath(root, id)
 	if err != nil {
 		return err
@@ -348,7 +351,7 @@ func runToolOutlinePatch(cmd *cobra.Command, root, target, id string, patchBytes
 
 	files := map[string]string{}
 	if apply {
-		checkpointPath, err := saveToolPatchCheckpoint(root, beforeOutline)
+		checkpointPath, err := saveToolCheckpointJSON(root, store.ScopeCompose, "outline", beforeOutline)
 		if err != nil {
 			return err
 		}
@@ -458,7 +461,8 @@ func RunToolCraftPatch(cmd *cobra.Command, root, target, id string, patchBytes [
 
 	files := map[string]string{}
 	if apply {
-		checkpointPath, err := saveToolCraftPatchCheckpoint(root, filename, beforeValues)
+		base := strings.TrimSuffix(filename, filepath.Ext(filename))
+		checkpointPath, err := saveToolCheckpointJSON(root, store.ScopeCraft, base, beforeValues)
 		if err != nil {
 			return err
 		}
@@ -517,7 +521,7 @@ func RunToolSetupPatch(cmd *cobra.Command, root string, patchBytes []byte, apply
 
 	files := map[string]string{}
 	if apply {
-		checkpointPath, err := SaveToolSetupPatchCheckpoint(root, before)
+		checkpointPath, err := saveToolCheckpointJSON(root, store.ScopeSetup, "story_setup", before)
 		if err != nil {
 			return err
 		}
@@ -882,8 +886,8 @@ func normalizeSetupPatchKey(key string) string {
 }
 
 func RunToolRecapPatch(cmd *cobra.Command, root, id string, patchBytes []byte, apply bool, warnings []string) error {
-	store := recap.NewStore(root)
-	before, err := store.Load(id)
+	recaps := recap.NewStore(root)
+	before, err := recaps.Load(id)
 	if err != nil {
 		before = &models.ChapterRecap{ChapterID: id}
 		warnings = append(warnings, fmt.Sprintf("recap file not found; patch will create %s", id))
@@ -911,11 +915,11 @@ func RunToolRecapPatch(cmd *cobra.Command, root, id string, patchBytes []byte, a
 
 	files := map[string]string{}
 	if apply {
-		checkpointPath, err := saveToolRecapPatchCheckpoint(root, id, before)
+		checkpointPath, err := saveToolCheckpointJSON(root, store.ScopeRecaps, id, before)
 		if err != nil {
 			return err
 		}
-		if err := store.Save(&merged); err != nil {
+		if err := recaps.Save(&merged); err != nil {
 			return fmt.Errorf("failed to save patched recap: %w", err)
 		}
 		files["recap"] = filepath.Join(root, "story", "recaps", id+".json")
@@ -1802,63 +1806,33 @@ func CloneStorySetup(setup *models.StorySetup) models.StorySetup {
 	return cloned
 }
 
-func saveToolPatchCheckpoint(root string, outline *models.Outline) (string, error) {
-	dir := filepath.Join(root, "story", "compose", "checkpoints")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", err
-	}
-	path := filepath.Join(dir, "outline_"+time.Now().Format("20060102_150405")+".json")
-	data, err := json.MarshalIndent(outline, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return "", err
-	}
-	return path, nil
-}
+// checkpointStamp layouts the pre-patch snapshot names that the CLI, the SDK
+// agents and the web UI all read back.
+const checkpointStamp = "20060102_150405"
 
-func SaveToolSetupPatchCheckpoint(root string, setup models.StorySetup) (string, error) {
-	dir := filepath.Join(root, "story", "setup", "checkpoints")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", err
-	}
-	path := filepath.Join(dir, "story_setup_"+time.Now().Format("20060102_150405")+".json")
-	data, err := json.MarshalIndent(setup, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return "", err
-	}
-	return path, nil
-}
-
-func saveToolCraftPatchCheckpoint(root, filename string, values map[string]map[string]interface{}) (string, error) {
-	dir := filepath.Join(root, "story", "craft", "checkpoints")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", err
-	}
-	base := strings.TrimSuffix(filename, filepath.Ext(filename))
-	path := filepath.Join(dir, base+"_"+time.Now().Format("20060102_150405")+".json")
-	data, err := json.MarshalIndent(values, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return "", err
-	}
-	return path, nil
-}
-
-func saveToolRecapPatchCheckpoint(root, chapterID string, value *models.ChapterRecap) (string, error) {
-	dir := filepath.Join(root, "story", "recaps", "checkpoints")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", err
-	}
-	path := filepath.Join(dir, chapterID+"_"+time.Now().Format("20060102_150405")+".json")
+// saveToolCheckpoint snapshots the state a patch is about to replace.
+//
+// This used to be five near-identical functions, one per patch section, each
+// with its own copy of the checkpoint directory and timestamp format.
+func saveToolCheckpointJSON(root string, scope store.Scope, prefix string, value interface{}) (string, error) {
 	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
+		return "", err
+	}
+	return writeToolCheckpoint(root, scope, prefix, ".json", data)
+}
+
+func writeToolCheckpoint(root string, scope store.Scope, prefix, ext string, data []byte) (string, error) {
+	if !filepath.IsAbs(root) {
+		abs, err := filepath.Abs(root)
+		if err != nil {
+			return "", err
+		}
+		root = abs
+	}
+	path := filepath.Join(store.OpenFS(root, store.OSFS{}).CheckpointsDir(scope),
+		prefix+"_"+time.Now().Format(checkpointStamp)+ext)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return "", err
 	}
 	if err := os.WriteFile(path, data, 0644); err != nil {
@@ -1868,11 +1842,6 @@ func saveToolRecapPatchCheckpoint(root, chapterID string, value *models.ChapterR
 }
 
 func saveToolChapterPatchCheckpoint(root, chapterID, beforePath, beforeContent string) (string, error) {
-	dir := filepath.Join(root, "chapters", "checkpoints")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", err
-	}
-	path := filepath.Join(dir, chapterID+"_"+time.Now().Format("20060102_150405")+".md")
 	var sb strings.Builder
 	sb.WriteString("<!-- novelgen tool patch chapter checkpoint")
 	if strings.TrimSpace(beforePath) != "" {
@@ -1882,10 +1851,7 @@ func saveToolChapterPatchCheckpoint(root, chapterID, beforePath, beforeContent s
 	}
 	sb.WriteString(" -->\n\n")
 	sb.WriteString(beforeContent)
-	if err := os.WriteFile(path, []byte(sb.String()), 0644); err != nil {
-		return "", err
-	}
-	return path, nil
+	return writeToolCheckpoint(root, store.ScopeChapters, chapterID, ".md", []byte(sb.String()))
 }
 
 func SaveRawCraftMap(path string, values map[string]map[string]interface{}) error {

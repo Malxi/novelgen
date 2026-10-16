@@ -1,10 +1,9 @@
 package agents
 
 import (
-	"path/filepath"
-
 	"novelgen/internal/models"
 	"novelgen/internal/rpg"
+	"novelgen/internal/store"
 )
 
 // NovelgenProjectAdapter adapts rpg.NovelgenProject to agent input format
@@ -31,7 +30,7 @@ func LoadNovelgenProject(bookName string) (*NovelgenProjectAdapter, error) {
 // GetStorySetup creates a StorySetup from setup.json or outline
 func (a *NovelgenProjectAdapter) GetStorySetup() *models.StorySetup {
 	// 优先尝试从 setup.json 加载
-	setupPath := filepath.Join("books", a.project.BookName, "story", "setup.json")
+	setupPath := store.OpenFS(store.BookDir("", a.project.BookName), store.OSFS{}).SetupJSON()
 	if setup, err := models.LoadStorySetup(setupPath); err == nil {
 		// 成功加载 setup.json
 		return setup

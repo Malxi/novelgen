@@ -950,10 +950,11 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("chapter checks currently support only kind quality, simulation, or all")
 	}
 
-	root, err := project.FindRoot()
+	book, err := project.ForCommand(cmd)
 	if err != nil {
 		return err
 	}
+	root := book.Dir()
 	if target == "craft" {
 		result, err := RunToolCraftSchemaCheck(root, ToolCheckFlags.Scope, ToolCheckFlags.ID)
 		if err != nil {

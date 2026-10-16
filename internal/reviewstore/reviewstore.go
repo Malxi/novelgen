@@ -4,45 +4,45 @@
 package reviewstore
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"novelgen/internal/agents"
 	"novelgen/internal/project"
 )
 
-// SaveVolumeReview writes story/reviews/<volumeID>_review.json.
+// SaveVolumeReview writes story/reviews/<volumeID>_review.json through the
+// ambient project root.
 func SaveVolumeReview(review *agents.VolumeReview) error {
-	root, err := project.FindRoot()
+	book, err := project.Default()
 	if err != nil {
 		return err
 	}
-	reviewDir := filepath.Join(root, "story", "reviews")
-	if err := os.MkdirAll(reviewDir, 0755); err != nil {
-		return fmt.Errorf("failed to create reviews directory: %w", err)
-	}
-	data, err := json.MarshalIndent(review, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal review: %w", err)
-	}
-	return os.WriteFile(filepath.Join(reviewDir, review.VolumeID+"_review.json"), data, 0644)
+	return SaveVolumeReviewAt(book, review)
 }
 
-// LoadVolumeReview reads story/reviews/<volumeID>_review.json.
+// SaveVolumeReviewAt writes a volume review under an explicit project root.
+func SaveVolumeReviewAt(book *project.Book, review *agents.VolumeReview) error {
+	if review == nil {
+		return fmt.Errorf("cannot save nil volume review")
+	}
+	return book.WriteJSON(book.VolumeReviewFile(review.VolumeID), review)
+}
+
+// LoadVolumeReview reads story/reviews/<volumeID>_review.json through the
+// ambient project root.
 func LoadVolumeReview(volumeID string) (*agents.VolumeReview, error) {
-	root, err := project.FindRoot()
+	book, err := project.Default()
 	if err != nil {
 		return nil, err
 	}
-	data, err := os.ReadFile(filepath.Join(root, "story", "reviews", volumeID+"_review.json"))
-	if err != nil {
-		return nil, err
-	}
+	return LoadVolumeReviewAt(book, volumeID)
+}
+
+// LoadVolumeReviewAt reads a volume review under an explicit project root.
+func LoadVolumeReviewAt(book *project.Book, volumeID string) (*agents.VolumeReview, error) {
 	var review agents.VolumeReview
-	if err := json.Unmarshal(data, &review); err != nil {
+	if err := book.ReadJSON(book.VolumeReviewFile(volumeID), &review); err != nil {
 		return nil, err
 	}
 	return &review, nil

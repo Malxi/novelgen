@@ -4,53 +4,52 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 )
 
-// Store persists per-chapter recaps for continuity
+// Store persists per-chapter recaps for continuity. It is a thin view over the
+// project store: the recap directory layout lives there, not here.
 type Store struct {
-	projectRoot string
+	root *store.Root
 }
 
+// NewStore opens the recap store for a project directory. An empty directory
+// keeps the historical "no project, no recaps" behavior.
 func NewStore(projectRoot string) *Store {
-	return &Store{projectRoot: projectRoot}
-}
-
-func (s *Store) recapPath(chapterID string) string {
-	return filepath.Join(s.projectRoot, "story", "recaps", chapterID+".json")
+	if strings.TrimSpace(projectRoot) == "" {
+		return &Store{}
+	}
+	root, err := store.Open(projectRoot)
+	if err != nil {
+		return &Store{}
+	}
+	return &Store{root: root}
 }
 
 func (s *Store) Save(recap *models.ChapterRecap) error {
-	if s.projectRoot == "" || recap == nil {
+	if s.root == nil || recap == nil {
 		return nil
 	}
-	dir := filepath.Join(s.projectRoot, "story", "recaps")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-	b, err := json.MarshalIndent(recap, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(s.recapPath(recap.ChapterID), b, 0644)
+	return s.root.SaveRecap(recap)
 }
 
 func (s *Store) Load(chapterID string) (*models.ChapterRecap, error) {
-	if s.projectRoot == "" {
+	if s.root == nil {
 		return nil, os.ErrNotExist
 	}
-	b, err := os.ReadFile(s.recapPath(chapterID))
-	if err != nil {
-		return nil, err
+	return s.root.LoadRecap(chapterID)
+}
+
+// Path returns the recap file path for a chapter, for callers that need to
+// report or compare it.
+func (s *Store) Path(chapterID string) string {
+	if s.root == nil {
+		return ""
 	}
-	var recap models.ChapterRecap
-	if err := json.Unmarshal(b, &recap); err != nil {
-		return nil, err
-	}
-	return &recap, nil
+	return s.root.RecapFile(chapterID)
 }
 
 // ValidateMinimal checks whether a recap is minimally useful as a continuity anchor.
@@ -114,7 +113,7 @@ func CheckQuality(projectRoot string, chapterID string) (ok bool, issues []strin
 		return false, []string{"projectRoot/chapterID 为空"}, []string{"确保运行环境能定位项目根目录并生成 story/recaps"}
 	}
 
-	p := filepath.Join(projectRoot, "story", "recaps", chapterID+".json")
+	p := NewStore(projectRoot).Path(chapterID)
 	b, err := os.ReadFile(p)
 	if err != nil {
 		return false, []string{fmt.Sprintf("未找到 recap 文件: %s", p)}, []string{"先生成章节或运行 recap 抽取；确保 recap 保存成功"}

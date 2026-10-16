@@ -20,6 +20,7 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/project"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/store"
 	"novelgen/internal/utils"
 )
 
@@ -334,10 +335,16 @@ func FirstMarkdownHeadingForWriteRPGDSL(content, fallback string) string {
 }
 
 func DumpWriteRPGDSLFailure(bookName, content string, parseErr error) {
-	dir := filepath.Join("books", bookName, "story", "rpg", "cache", "failed_dsl")
-	if projectDir := strings.TrimSpace(logger.Default().ProjectDir()); projectDir != "" {
-		dir = filepath.Join(projectDir, "story", "rpg", "cache", "failed_dsl")
+	root, err := store.Open(store.BookDir("", bookName))
+	if err != nil {
+		return
 	}
+	if projectDir := strings.TrimSpace(logger.Default().ProjectDir()); projectDir != "" {
+		if projectRoot, openErr := store.Open(projectDir); openErr == nil {
+			root = projectRoot
+		}
+	}
+	dir := root.RPGFile(filepath.Join("cache", "failed_dsl"))
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return
 	}

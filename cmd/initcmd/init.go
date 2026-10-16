@@ -3,13 +3,13 @@ package initcmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/project"
+	"novelgen/internal/store"
 
 	"github.com/spf13/cobra"
 )
@@ -53,8 +53,17 @@ func runInit(cmd *cobra.Command, args []string) error {
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN INIT")
 
+	// init is the one command that does not need an existing project: it creates
+	// one in the target directory (--dir, NOVELGEN_PROJECT_DIR, or the working
+	// directory).
+	target, err := project.CommandDir(cmd)
+	if err != nil {
+		return err
+	}
+	book := project.Open(target)
+
 	// Check if novel.json already exists
-	if _, err := os.Stat("novel.json"); err == nil {
+	if book.HasConfig() {
 		logger.Error("A novel project already exists in this directory (novel.json found)")
 		return fmt.Errorf("a novel project already exists in this directory (novel.json found)")
 	}
@@ -101,12 +110,12 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create project directory structure
-	if err := createProjectStructure(config); err != nil {
+	if err := createProjectStructure(book, config); err != nil {
 		return fmt.Errorf("failed to create project structure: %w", err)
 	}
 
 	// Save novel.json
-	if err := config.Save("novel.json"); err != nil {
+	if err := book.SaveConfig(config); err != nil {
 		return fmt.Errorf("failed to save novel.json: %w", err)
 	}
 
@@ -123,25 +132,25 @@ func runInit(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func createProjectStructure(config *models.ProjectConfig) error {
+func createProjectStructure(book *project.Book, config *models.ProjectConfig) error {
 	dirs := []string{
-		"story/setup",
-		"story/compose",
-		"story/craft",
-		"story/reviews",
-		"chapters",
-		"drafts",
-		"logs",
+		book.SetupDir(),
+		book.ComposeDir(),
+		book.CraftDir(),
+		book.ReviewsDir(),
+		book.ChaptersDir(),
+		book.DraftsDir(),
+		book.LogsDir(),
 	}
 
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := book.MkdirAll(dir, store.DirMode); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
 
 	// Create placeholder story_setup.md
-	mdPath := filepath.Join("story", "setup", "story_setup.md")
+	mdPath := book.SetupMarkdown()
 	placeholder := fmt.Sprintf(`# %s
 
 ## Story Setup
@@ -177,7 +186,7 @@ None
 		"- 未分类",
 	)
 
-	if err := os.WriteFile(mdPath, []byte(placeholder), 0644); err != nil {
+	if err := book.WriteText(mdPath, placeholder); err != nil {
 		return fmt.Errorf("failed to create story_setup.md: %w", err)
 	}
 

@@ -3,8 +3,6 @@ package writepipe
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -13,7 +11,6 @@ import (
 	novelcont "novelgen/internal/continuity"
 	"novelgen/internal/models"
 	"novelgen/internal/project"
-	"novelgen/internal/utils"
 )
 
 type WriteErrorCollector struct {
@@ -44,25 +41,17 @@ func (c *WriteErrorCollector) Err() error {
 }
 
 func loadChapterContent(chapterID string) string {
-	// Try to load final chapter first
-	root, err := project.FindRoot()
+	// Prefer the final chapter; the chapter file-name fallbacks (full id, legacy
+	// numeric, bare id) live in the project store so this cannot drift from the
+	// other readers again.
+	book, err := project.Default()
 	if err != nil {
-		return project.LoadDraftContent(chapterID)
+		return ""
 	}
-
-	// Check for final chapter. Prefer full chapter IDs, but keep the old
-	// numeric filename as a compatibility fallback for existing projects.
-	for _, finalPath := range []string{
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", chapterID)),
-		filepath.Join(root, "chapters", fmt.Sprintf("chapter-%s.md", utils.ExtractChapterNumber(chapterID))),
-	} {
-		if data, err := os.ReadFile(finalPath); err == nil {
-			return string(data)
-		}
+	if content, _ := book.LoadChapterContent(chapterID); content != "" {
+		return content
 	}
-
-	// Fallback to draft
-	return project.LoadDraftContent(chapterID)
+	return book.LoadDraftContent(chapterID)
 }
 
 func LoadChapterContext(outline *models.Outline, targetChapter *models.Chapter, contextCount int) *agents.ChapterContext {

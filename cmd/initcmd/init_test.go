@@ -7,35 +7,31 @@ import (
 	"testing"
 
 	"novelgen/internal/models"
+	"novelgen/internal/project"
+	"novelgen/internal/store"
 )
 
-// chdirTo switches the process working directory for the rest of the test.
-// t.Chdir needs go1.24 while this module targets go1.21, so it is done manually.
-func chdirTo(t *testing.T, dir string) {
+// testBook returns a project rooted at a temporary directory, so these tests
+// never have to switch the process working directory.
+func testBook(t *testing.T, dir string) *project.Book {
 	t.Helper()
-	original, err := os.Getwd()
+	root, err := store.Open(dir)
 	if err != nil {
-		t.Fatalf("getwd: %v", err)
+		t.Fatalf("open %s: %v", dir, err)
 	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("chdir %s: %v", dir, err)
-	}
-	t.Cleanup(func() {
-		if err := os.Chdir(original); err != nil {
-			t.Fatalf("restore cwd: %v", err)
-		}
-	})
+	return project.Open(root)
 }
 
 func TestCreateProjectStructureCreatesDocumentedLayout(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
-	chdirTo(t, root)
 
 	config := &models.ProjectConfig{
 		Name: "test-book",
 		LLM:  models.ProjectLLM{Provider: models.ProviderClaude, Model: "sonnet"},
 	}
-	if err := createProjectStructure(config); err != nil {
+	if err := createProjectStructure(testBook(t, root), config); err != nil {
 		t.Fatalf("createProjectStructure: %v", err)
 	}
 

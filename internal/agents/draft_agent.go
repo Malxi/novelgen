@@ -300,7 +300,7 @@ func (a *DraftAgent) ReviewDraft(ctx context.Context, chapter *models.Chapter, d
 
 // logDraftContext logs the draft context to a markdown file for debugging
 func (a *DraftAgent) logDraftContext(chapterID, variant string, input interface{}, output string) error {
-	debugDir := filepath.Join("logs", "draft_contexts")
+	debugDir := agentLogDir("draft_contexts")
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		return fmt.Errorf("failed to create debug directory: %w", err)
 	}

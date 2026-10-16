@@ -3,12 +3,11 @@ package translate
 
 import (
 	"fmt"
-	"os"
 
 	"novelgen/internal/agents"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
-	"novelgen/internal/models"
+	"novelgen/internal/project"
 
 	"github.com/spf13/cobra"
 )
@@ -57,14 +56,14 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN TRANSLATE")
 
-	// Check if we're in a project directory
-	if _, err := os.Stat("novel.json"); err != nil {
+	book, err := project.ForCommand(cmd)
+	if err != nil {
 		logger.Error("Not a novel project directory (novel.json not found)")
 		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first")
 	}
 
 	// Load project config
-	projectConfig, err := models.LoadProjectConfig("novel.json")
+	projectConfig, err := book.LoadConfig()
 	if err != nil {
 		logger.Error("Failed to load novel.json: %v", err)
 		return fmt.Errorf("failed to load novel.json: %w", err)
@@ -72,7 +71,7 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Read input file
-	content, err := os.ReadFile(inputFile)
+	content, err := book.Read(book.ResolvePath(inputFile))
 	if err != nil {
 		logger.Error("Failed to read input file: %v", err)
 		return fmt.Errorf("failed to read input file %s: %w", inputFile, err)
@@ -113,7 +112,7 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 
 	// Output result
 	if translateOutputFile != "" {
-		if err := os.WriteFile(translateOutputFile, []byte(translated), 0644); err != nil {
+		if err := book.WriteText(book.ResolvePath(translateOutputFile), translated); err != nil {
 			logger.Error("Failed to write output file: %v", err)
 			return fmt.Errorf("failed to write output file: %w", err)
 		}

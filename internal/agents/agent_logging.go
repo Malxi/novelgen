@@ -6,6 +6,7 @@ import (
 	"novelgen/internal/envutil"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
+	"novelgen/internal/store"
 	"novelgen/internal/usage"
 	"os"
 	"path/filepath"
@@ -124,7 +125,7 @@ func writeAgentLogFile(kind, agentName, content string) (string, error) {
 	if agentLogsDisabled() {
 		return "", nil
 	}
-	logsDir := filepath.Join(agentLogRoot(), "logs", kind)
+	logsDir := agentLogDir(kind)
 	if err := os.MkdirAll(logsDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create logs directory: %w", err)
 	}
@@ -194,5 +195,18 @@ func agentLogRoot() string {
 	if dir := strings.TrimSpace(logger.Default().ProjectDir()); dir != "" {
 		return dir
 	}
+	if root, err := store.Default(); err == nil {
+		return root.Dir()
+	}
 	return "."
+}
+
+// agentLogDir returns the directory holding one kind of agent log, using the
+// project layout from internal/store so log locations stay defined in one place.
+func agentLogDir(kind string) string {
+	root, err := store.Open(agentLogRoot())
+	if err != nil {
+		return filepath.Join(agentLogRoot(), "logs", kind)
+	}
+	return root.LogFile(kind)
 }

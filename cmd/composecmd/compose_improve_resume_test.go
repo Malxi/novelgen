@@ -102,7 +102,7 @@ func TestIsTransientAgentSDKError(t *testing.T) {
 
 func TestRepairAgentSDKWithTransientRetryRetriesThenSucceeds(t *testing.T) {
 	calls := 0
-	outline, err := repairAgentSDKWithTransientRetry(func() (*models.Outline, error) {
+	outline, err := repairAgentSDKWithTransientRetry(newComposeTestBook(t), func() (*models.Outline, error) {
 		calls++
 		if calls < 3 {
 			return nil, errors.New("agent runner failed: exit status 1: Error in hook callback hook_0")
@@ -122,7 +122,7 @@ func TestRepairAgentSDKWithTransientRetryRetriesThenSucceeds(t *testing.T) {
 
 func TestRepairAgentSDKWithTransientRetryGivesUpAfterAttempts(t *testing.T) {
 	calls := 0
-	outline, err := repairAgentSDKWithTransientRetry(func() (*models.Outline, error) {
+	outline, err := repairAgentSDKWithTransientRetry(newComposeTestBook(t), func() (*models.Outline, error) {
 		calls++
 		return nil, errors.New("agent runner failed: exit status 1: Error in hook callback hook_2")
 	})
@@ -142,7 +142,7 @@ func TestRepairAgentSDKWithTransientRetryGivesUpAfterAttempts(t *testing.T) {
 
 func TestRepairAgentSDKWithTransientRetryPermanentFailureSingleAttempt(t *testing.T) {
 	calls := 0
-	_, err := repairAgentSDKWithTransientRetry(func() (*models.Outline, error) {
+	_, err := repairAgentSDKWithTransientRetry(newComposeTestBook(t), func() (*models.Outline, error) {
 		calls++
 		return nil, errors.New("agent runner failed: exit status 1: failed to parse structured output")
 	})

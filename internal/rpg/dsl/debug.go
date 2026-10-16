@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 )
 
-// DebugLoadDSL 调试用函数
-func DebugLoadDSL(bookName string) {
-	rpgDir := filepath.Join("books", bookName, "story", "rpg")
+// DebugLoadDSL 调试用函数。rpgDir 由调用方给出，因为 story/rpg 的布局由
+// internal/store 拥有，DSL 引擎本身不依赖项目存储。
+func DebugLoadDSL(rpgDir string) {
 
 	fmt.Printf("RPG Dir: %s\n", rpgDir)
 	fmt.Printf("Current Dir: ")

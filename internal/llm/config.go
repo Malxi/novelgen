@@ -11,6 +11,7 @@ import (
 	"novelgen/internal/agentruntime"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 )
 
 // ModelConfig represents configuration for a specific model
@@ -185,8 +186,14 @@ func GetConfigPath() string {
 	}
 
 	// Then check for local config
-	if _, err := os.Stat("llm_config.json"); err == nil {
-		return "llm_config.json"
+	// The project-local file lives next to novel.json, so it is found even when
+	// the command runs from a subdirectory.
+	localPath := "llm_config.json"
+	if root, rootErr := store.Default(); rootErr == nil {
+		localPath = root.LLMConfigJSON()
+	}
+	if _, err := os.Stat(localPath); err == nil {
+		return localPath
 	}
 
 	// Return global path as default (for error messages)

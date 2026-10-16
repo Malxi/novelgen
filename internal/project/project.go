@@ -1,63 +1,108 @@
-// Package project centralizes locating a Novelgen project directory and
-// loading its persisted state (config, story setup, outline, craft elements).
+// Package project is the project-scoped view over internal/store.
 //
-// The CLI used to keep this logic as unexported helpers inside the single
-// `cmd` package, which made it impossible to split commands into subpackages.
-// Moving it here gives every command group one shared, testable entry point.
+// It is the compatibility facade the CLI, the write pipeline and the tools have
+// always used: the free functions at the bottom of this file resolve the
+// project from the ambient root (cmd/root.go installs it once per invocation).
+// Code that already holds a *store.Root uses Book, which is the same behavior
+// without the ambient lookup — that is how tests drive a command against a
+// temporary project instead of chdir-ing the process into it.
 package project
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
-	"novelgen/internal/utils"
+	"novelgen/internal/store"
 )
+
+// Book is a project root plus the chapter-text semantics that belong to the
+// project layer: which legacy file name a chapter may live under, and how a
+// chapter body is normalized before it is stored.
+type Book struct {
+	*store.Root
+}
+
+// Open wraps a storage root as a project view.
+func Open(root *store.Root) *Book {
+	return &Book{Root: root}
+}
+
+// Default returns the ambient project view, resolving the project root from the
+// working directory when no root has been installed.
+func Default() (*Book, error) {
+	root, err := store.Default()
+	if err != nil {
+		return nil, err
+	}
+	return Open(root), nil
+}
+
+// ForCommand returns the project a command should operate on: a root attached to
+// the command context, then the ambient root, then the project containing the
+// working directory.
+func ForCommand(cmd *cobra.Command) (*Book, error) {
+	if cmd != nil {
+		if root, ok := store.FromContext(cmd.Context()); ok {
+			return Open(root), nil
+		}
+	}
+	return Default()
+}
+
+// CommandDir returns the directory a command works in, without requiring a
+// project to exist yet. Commands that create a project (init) and commands that
+// only report "not a project" need this lenient form.
+func CommandDir(cmd *cobra.Command) (*store.Root, error) {
+	if cmd != nil {
+		if root, ok := store.FromContext(cmd.Context()); ok {
+			return root, nil
+		}
+	}
+	if root, err := store.Default(); err == nil {
+		return root, nil
+	}
+	return store.Open(".")
+}
 
 // FindRoot walks up from the current working directory until it finds the
 // directory containing novel.json.
 func FindRoot() (string, error) {
-	cwd, err := os.Getwd()
+	root, err := store.Default()
 	if err != nil {
 		return "", err
 	}
-	root, err := models.FindProjectRoot(cwd)
-	if err != nil {
-		return "", fmt.Errorf("project root not found (novel.json not found in current or parent directories)")
-	}
-	return root, nil
+	return root.Dir(), nil
 }
 
 // LoadConfig loads novel.json from the project root.
 func LoadConfig() (*models.ProjectConfig, error) {
-	root, err := FindRoot()
+	book, err := Default()
 	if err != nil {
 		return nil, err
 	}
-	return models.LoadProjectConfig(filepath.Join(root, "novel.json"))
+	return book.LoadConfig()
 }
 
 // LoadStorySetup loads story/setup/story_setup.json from the project root.
 func LoadStorySetup() (*models.StorySetup, error) {
-	root, err := FindRoot()
+	book, err := Default()
 	if err != nil {
 		return nil, err
 	}
-	return models.LoadStorySetup(filepath.Join(root, "story", "setup", "story_setup.json"))
+	return book.LoadSetup()
 }
 
 // LoadOutline loads story/compose/outline.json from the project root.
 func LoadOutline() (*models.Outline, error) {
-	root, err := FindRoot()
+	book, err := Default()
 	if err != nil {
 		return nil, err
 	}
-	return models.LoadOutline(filepath.Join(root, "story", "compose", "outline.json"))
+	return book.LoadOutline()
 }
 
 // LoadAllElements loads the four craft element files and normalizes them.
@@ -70,43 +115,11 @@ func LoadAllElements() (
 	map[string]*models.Organization,
 	error,
 ) {
-	root, err := FindRoot()
+	book, err := Default()
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-
-	characters, err := loadCraftFile[models.Character](root, "characters.json")
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to parse characters: %w", err)
-	}
-	locations, err := loadCraftFile[models.Location](root, "locations.json")
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to parse locations: %w", err)
-	}
-	items, err := loadCraftFile[models.Item](root, "items.json")
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to parse items: %w", err)
-	}
-	organizations, err := loadCraftFile[models.Organization](root, "organizations.json")
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to parse organizations: %w", err)
-	}
-
-	NormalizeLoadedElements(characters, locations, items, organizations)
-	return characters, locations, items, organizations, nil
-}
-
-func loadCraftFile[T any](root, filename string) (map[string]*T, error) {
-	values := make(map[string]*T)
-	data, err := os.ReadFile(filepath.Join(root, "story", "craft", filename))
-	if err != nil {
-		return values, nil
-	}
-	data = utils.StripUTF8BOM(data)
-	if err := json.Unmarshal(data, &values); err != nil {
-		return nil, err
-	}
-	return values, nil
+	return book.LoadElements()
 }
 
 // NormalizeLoadedElements drops nil entries and applies per-type craft
@@ -117,34 +130,7 @@ func NormalizeLoadedElements(
 	items map[string]*models.Item,
 	organizations map[string]*models.Organization,
 ) {
-	for name, character := range characters {
-		if character == nil {
-			delete(characters, name)
-			continue
-		}
-		character.NormalizeForCraft(name)
-	}
-	for name, location := range locations {
-		if location == nil {
-			delete(locations, name)
-			continue
-		}
-		location.NormalizeForCraft(name)
-	}
-	for name, item := range items {
-		if item == nil {
-			delete(items, name)
-			continue
-		}
-		item.NormalizeForCraft(name)
-	}
-	for name, organization := range organizations {
-		if organization == nil {
-			delete(organizations, name)
-			continue
-		}
-		organization.NormalizeForCraft(name)
-	}
+	store.NormalizeElements(characters, locations, items, organizations)
 }
 
 // AllChapters returns every chapter in the outline, in reading order.

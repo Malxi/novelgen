@@ -1065,7 +1065,7 @@ func (a *WriteAgent) ReviewVolume(ctx context.Context, volume *models.Volume, ch
 
 // logWriteContext logs the write context to a markdown file for debugging
 func (a *WriteAgent) logWriteContext(chapterID, variant string, input interface{}, output string) error {
-	debugDir := filepath.Join("logs", "write_contexts")
+	debugDir := agentLogDir("write_contexts")
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		return fmt.Errorf("failed to create debug directory: %w", err)
 	}

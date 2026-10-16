@@ -2,14 +2,11 @@ package project
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
-	"novelgen/internal/utils"
 )
 
 // ChapterFileName returns the canonical final-chapter filename for a chapter ID
@@ -20,93 +17,91 @@ func ChapterFileName(chapterID string) string {
 
 // SaveFinalChapter writes chapters/chapter-<id>.md with canonical content
 // (exactly one "# <title>" heading).
-func SaveFinalChapter(chapter *models.Chapter, content string) error {
+func (b *Book) SaveFinalChapter(chapter *models.Chapter, content string) error {
 	if chapter == nil {
 		return fmt.Errorf("chapter is nil")
 	}
-	root, err := FindRoot()
-	if err != nil {
-		return err
-	}
-	chaptersDir := filepath.Join(root, "chapters")
-	if err := os.MkdirAll(chaptersDir, 0755); err != nil {
-		return fmt.Errorf("failed to create chapters directory: %w", err)
-	}
-	content = NormalizeChapterContent(chapter, content)
-	return os.WriteFile(filepath.Join(chaptersDir, ChapterFileName(chapter.ID)), []byte(content), 0644)
+	return b.SaveChapterContent(chapter.ID, NormalizeChapterContent(chapter, content))
 }
 
 // LoadFinalChapterContent reads a chapter's final markdown, trying the full-id
 // filename first and the numeric filename as a compatibility fallback. It
 // returns "" when the project root or the chapter file is missing.
-func LoadFinalChapterContent(chapter *models.Chapter) string {
+func (b *Book) LoadFinalChapterContent(chapter *models.Chapter) string {
 	if chapter == nil {
 		return ""
 	}
-	root, err := FindRoot()
-	if err != nil {
-		return ""
-	}
-	for _, path := range []string{
-		filepath.Join(root, "chapters", ChapterFileName(chapter.ID)),
-		filepath.Join(root, "chapters", ChapterFileName(utils.ExtractChapterNumber(chapter.ID))),
-	} {
-		if data, err := os.ReadFile(path); err == nil {
-			return string(data)
-		}
-	}
-	return ""
+	content, _ := b.LoadChapterContent(chapter.ID)
+	return content
 }
 
 // LoadDraftContent reads drafts/<chapterID>.md, returning "" when missing.
-func LoadDraftContent(chapterID string) string {
-	root, err := FindRoot()
-	if err != nil {
-		return ""
-	}
-	data, err := os.ReadFile(filepath.Join(root, "drafts", chapterID+".md"))
-	if err != nil {
-		return ""
-	}
-	return string(data)
+func (b *Book) LoadDraftContent(chapterID string) string {
+	return b.Root.LoadDraftContent(chapterID)
 }
 
-// SaveDraft writes drafts/<chapterID>.md with a markdown title header. It writes
-// relative to the current working directory (historical CLI behavior).
-func SaveDraft(chapter *models.Chapter, draft string) error {
+// SaveDraft writes drafts/<chapterID>.md with a markdown title header.
+//
+// This used to write relative to the working directory rather than to the
+// project, so running the legacy draft command from a subdirectory scattered
+// drafts outside the novel. Drafts now land in the project like every other
+// artifact.
+func (b *Book) SaveDraft(chapter *models.Chapter, draft string) error {
 	if chapter == nil {
 		return fmt.Errorf("chapter is nil")
 	}
-	draftsDir := "drafts"
-	if err := os.MkdirAll(draftsDir, 0755); err != nil {
-		return fmt.Errorf("failed to create drafts directory: %w", err)
-	}
 	content := fmt.Sprintf("# %s\n\n%s\n", chapter.Title, draft)
-	return os.WriteFile(filepath.Join(draftsDir, chapter.ID+".md"), []byte(content), 0644)
+	return b.SaveDraftContent(chapter.ID, content)
 }
 
 // LoadAllDrafts returns every drafts/*.md keyed by chapter ID.
+func (b *Book) LoadAllDrafts() map[string]string {
+	return b.Root.LoadAllDrafts()
+}
+
+// SaveFinalChapter writes a chapter through the ambient project root.
+func SaveFinalChapter(chapter *models.Chapter, content string) error {
+	book, err := Default()
+	if err != nil {
+		return err
+	}
+	return book.SaveFinalChapter(chapter, content)
+}
+
+// LoadFinalChapterContent reads a chapter through the ambient project root.
+func LoadFinalChapterContent(chapter *models.Chapter) string {
+	book, err := Default()
+	if err != nil {
+		return ""
+	}
+	return book.LoadFinalChapterContent(chapter)
+}
+
+// LoadDraftContent reads a draft through the ambient project root.
+func LoadDraftContent(chapterID string) string {
+	book, err := Default()
+	if err != nil {
+		return ""
+	}
+	return book.LoadDraftContent(chapterID)
+}
+
+// SaveDraft writes a draft through the ambient project root.
+func SaveDraft(chapter *models.Chapter, draft string) error {
+	book, err := Default()
+	if err != nil {
+		return err
+	}
+	return book.SaveDraft(chapter, draft)
+}
+
+// LoadAllDrafts reads every draft through the ambient project root.
 func LoadAllDrafts() map[string]string {
-	drafts := make(map[string]string)
-	root, err := FindRoot()
+	book, err := Default()
 	if err != nil {
-		return drafts
+		return map[string]string{}
 	}
-	draftsDir := filepath.Join(root, "drafts")
-	entries, err := os.ReadDir(draftsDir)
-	if err != nil {
-		return drafts
-	}
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
-			continue
-		}
-		chapterID := strings.TrimSuffix(entry.Name(), ".md")
-		if data, err := os.ReadFile(filepath.Join(draftsDir, entry.Name())); err == nil {
-			drafts[chapterID] = string(data)
-		}
-	}
-	return drafts
+	return book.LoadAllDrafts()
 }
 
 // SelectChapters resolves the chapter-selection flags shared by the draft,
