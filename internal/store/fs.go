@@ -64,6 +64,11 @@ var tempCounter atomic.Uint64
 // place, so an interrupted write (Ctrl-C, crash, full disk) can never leave a
 // half-written artifact behind. Everything the project persists goes through
 // here; the previous scattered writes could truncate outline.json mid-write.
+//
+// The cost of the pattern is that a crash between the write and the rename can
+// leave a stray "<name>.tmp<pid>-<n>" file next to the real one. That is a
+// harmless artifact rather than corrupted project state, and it is what makes
+// the rename worth it.
 func writeFileAtomic(fs FS, path string, data []byte, perm os.FileMode) error {
 	tmp := fmt.Sprintf("%s.tmp%d-%d", path, os.Getpid(), tempCounter.Add(1))
 	if err := fs.WriteFile(tmp, data, perm); err != nil {

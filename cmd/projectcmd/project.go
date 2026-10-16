@@ -16,6 +16,7 @@ import (
 	"novelgen/internal/agentruntime"
 	"novelgen/internal/models"
 	"novelgen/internal/project"
+	"novelgen/internal/store"
 	"novelgen/internal/toolplane"
 	"novelgen/internal/usage"
 	"novelgen/internal/utils"
@@ -276,12 +277,15 @@ func resolveProjectCloneSource(sourceFlag, bookFlag string) (string, error) {
 		return "", fmt.Errorf("--source and --book are mutually exclusive")
 	}
 	if bookFlag != "" {
-		return resolveBookProjectRoot(bookFlag)
+		return resolveBookProjectRoot("", bookFlag)
 	}
 	return sourceFlag, nil
 }
 
-func resolveBookProjectRoot(book string) (string, error) {
+// resolveBookProjectRoot locates <somewhere>/books/<book>. When startDir is
+// empty the search starts at the working directory; tests pass an explicit
+// directory instead of chdir-ing.
+func resolveBookProjectRoot(startDir, book string) (string, error) {
 	book = strings.TrimSpace(book)
 	if book == "" {
 		return "", fmt.Errorf("book name cannot be empty")
@@ -289,13 +293,16 @@ func resolveBookProjectRoot(book string) (string, error) {
 	if filepath.IsAbs(book) || strings.ContainsAny(book, `/\`) {
 		return "", fmt.Errorf("--book expects a book directory name under books/, got %q", book)
 	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", err
+	if strings.TrimSpace(startDir) == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return "", err
+		}
+		startDir = wd
 	}
-	for dir := wd; ; dir = filepath.Dir(dir) {
-		candidate := filepath.Join(dir, "books", book)
-		if _, err := os.Stat(filepath.Join(candidate, "novel.json")); err == nil {
+	for dir := startDir; ; dir = filepath.Dir(dir) {
+		candidate := store.BookDir(dir, book)
+		if bookDir, openErr := store.Open(candidate); openErr == nil && bookDir.HasConfig() {
 			return candidate, nil
 		}
 		parent := filepath.Dir(dir)

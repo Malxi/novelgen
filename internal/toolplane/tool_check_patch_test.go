@@ -1544,18 +1544,7 @@ func TestRunToolRefreshChapterDSLRequiresIDBeforeLLM(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"project_name":"Refresh Test"}`), 0644); err != nil {
 		t.Fatal(err)
 	}
-	oldWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.Chdir(oldWd); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	cmd := toolCmd(t, root)
 
 	originalFlags := toolplane.ToolRefreshFlags
 	defer func() { toolplane.ToolRefreshFlags = originalFlags }()
@@ -1564,7 +1553,7 @@ func TestRunToolRefreshChapterDSLRequiresIDBeforeLLM(t *testing.T) {
 		BatchSize int
 	}{}
 
-	err = toolplane.RunToolRefresh(&cobra.Command{}, []string{"chapter-dsl"})
+	err := toolplane.RunToolRefresh(cmd, []string{"chapter-dsl"})
 	if err == nil || !strings.Contains(err.Error(), "--id is required") {
 		t.Fatalf("expected --id error before LLM setup, got %v", err)
 	}
@@ -1588,18 +1577,7 @@ func TestToolPatchChapterDryRunAndApply(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.Chdir(oldWd); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	storeRoot := toolRoot(t, root)
 
 	content := "# Opening\n\n" + strings.Repeat("Lin repairs the star core inside the mine and keeps the signal stable. ", 140)
 	patch := fmt.Sprintf(`{"content":%q}`, content)
@@ -1618,7 +1596,7 @@ func TestToolPatchChapterDryRunAndApply(t *testing.T) {
 		TargetWords    int
 	}{ID: "P1-V1-C1", PatchJSON: patch}
 	var dryOut bytes.Buffer
-	dryCmd := &cobra.Command{}
+	dryCmd := bindProject(&cobra.Command{}, storeRoot)
 	dryCmd.SetOut(&dryOut)
 	if err := toolplane.RunToolPatch(dryCmd, []string{"chapter"}); err != nil {
 		t.Fatalf("dry-run chapter patch: %v", err)
@@ -1639,7 +1617,7 @@ func TestToolPatchChapterDryRunAndApply(t *testing.T) {
 
 	toolplane.ToolPatchFlags.Apply = true
 	var applyOut bytes.Buffer
-	applyCmd := &cobra.Command{}
+	applyCmd := bindProject(&cobra.Command{}, storeRoot)
 	applyCmd.SetOut(&applyOut)
 	if err := toolplane.RunToolPatch(applyCmd, []string{"chapter"}); err != nil {
 		t.Fatalf("apply chapter patch: %v", err)
@@ -1684,25 +1662,14 @@ func TestToolPatchBufferAppendShowClear(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.Chdir(oldWd); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	storeRoot := toolRoot(t, root)
 
 	originalFlags := toolplane.ToolPatchBufferFlags
 	defer func() { toolplane.ToolPatchBufferFlags = originalFlags }()
 
 	toolplane.ToolPatchBufferFlags.ID = "P1-V1-C1-draft"
 	toolplane.ToolPatchBufferFlags.Text = "# Opening\n\nLin repairs "
-	appendCmd := &cobra.Command{}
+	appendCmd := bindProject(&cobra.Command{}, storeRoot)
 	var appendOut bytes.Buffer
 	appendCmd.SetOut(&appendOut)
 	if err := toolplane.RunToolPatchBuffer(appendCmd, []string{"append"}); err != nil {
@@ -1711,7 +1678,7 @@ func TestToolPatchBufferAppendShowClear(t *testing.T) {
 
 	toolplane.ToolPatchBufferFlags.Text = "the star core."
 	var appendOut2 bytes.Buffer
-	appendCmd2 := &cobra.Command{}
+	appendCmd2 := bindProject(&cobra.Command{}, storeRoot)
 	appendCmd2.SetOut(&appendOut2)
 	if err := toolplane.RunToolPatchBuffer(appendCmd2, []string{"append"}); err != nil {
 		t.Fatalf("append buffer second chunk: %v", err)
@@ -1720,7 +1687,7 @@ func TestToolPatchBufferAppendShowClear(t *testing.T) {
 	toolplane.ToolPatchBufferFlags.Text = ""
 	toolplane.ToolPatchBufferFlags.Stdin = true
 	var appendOut3 bytes.Buffer
-	appendCmd3 := &cobra.Command{}
+	appendCmd3 := bindProject(&cobra.Command{}, storeRoot)
 	appendCmd3.SetIn(strings.NewReader("\n林野用 stdin 继续追加。"))
 	appendCmd3.SetOut(&appendOut3)
 	if err := toolplane.RunToolPatchBuffer(appendCmd3, []string{"append"}); err != nil {
@@ -1730,7 +1697,7 @@ func TestToolPatchBufferAppendShowClear(t *testing.T) {
 	toolplane.ToolPatchBufferFlags.Stdin = false
 	toolplane.ToolPatchBufferFlags.MaxChars = 18
 	var showOut bytes.Buffer
-	showCmd := &cobra.Command{}
+	showCmd := bindProject(&cobra.Command{}, storeRoot)
 	showCmd.SetOut(&showOut)
 	if err := toolplane.RunToolPatchBuffer(showCmd, []string{"show"}); err != nil {
 		t.Fatalf("show buffer: %v", err)
@@ -1756,7 +1723,7 @@ func TestToolPatchBufferAppendShowClear(t *testing.T) {
 	}
 
 	var clearOut bytes.Buffer
-	clearCmd := &cobra.Command{}
+	clearCmd := bindProject(&cobra.Command{}, storeRoot)
 	clearCmd.SetOut(&clearOut)
 	if err := toolplane.RunToolPatchBuffer(clearCmd, []string{"clear"}); err != nil {
 		t.Fatalf("clear buffer: %v", err)
@@ -1828,25 +1795,14 @@ func TestToolPatchBufferShowCapsPreview(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.Chdir(oldWd); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	storeRoot := toolRoot(t, root)
 
 	originalFlags := toolplane.ToolPatchBufferFlags
 	defer func() { toolplane.ToolPatchBufferFlags = originalFlags }()
 	toolplane.ToolPatchBufferFlags.ID = "long-draft"
 	toolplane.ToolPatchBufferFlags.MaxChars = 999999
 	var out bytes.Buffer
-	cmd := &cobra.Command{}
+	cmd := bindProject(&cobra.Command{}, storeRoot)
 	cmd.SetOut(&out)
 	if err := toolplane.RunToolPatchBuffer(cmd, []string{"show"}); err != nil {
 		t.Fatal(err)
@@ -1901,18 +1857,7 @@ func TestToolOutlinePatchResultExposesValidationCoverage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.Chdir(oldWd); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	storeRoot := toolRoot(t, root)
 
 	originalFlags := toolplane.ToolPatchFlags
 	defer func() { toolplane.ToolPatchFlags = originalFlags }()
@@ -1933,7 +1878,7 @@ func TestToolOutlinePatchResultExposesValidationCoverage(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	cmd := &cobra.Command{}
+	cmd := bindProject(&cobra.Command{}, storeRoot)
 	cmd.SetOut(&out)
 	if err := toolplane.RunToolPatch(cmd, []string{"outline"}); err != nil {
 		t.Fatalf("outline patch dry-run: %v", err)
@@ -1988,18 +1933,7 @@ func TestToolOutlinePatchRejectsNewGlobalBlockingIssueOnDryRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.Chdir(oldWd); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	storeRoot := toolRoot(t, root)
 
 	originalFlags := toolplane.ToolPatchFlags
 	defer func() { toolplane.ToolPatchFlags = originalFlags }()
@@ -2020,9 +1954,9 @@ func TestToolOutlinePatchRejectsNewGlobalBlockingIssueOnDryRun(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	cmd := &cobra.Command{}
+	cmd := bindProject(&cobra.Command{}, storeRoot)
 	cmd.SetOut(&out)
-	err = toolplane.RunToolPatch(cmd, []string{"outline"})
+	err := toolplane.RunToolPatch(cmd, []string{"outline"})
 	if err == nil || !strings.Contains(err.Error(), "global outline check introduced") || !strings.Contains(err.Error(), "myst_old_barrier") {
 		t.Fatalf("expected global blocking rejection, got %v output=%s", err, out.String())
 	}
@@ -2942,15 +2876,8 @@ func TestRunToolPatchSetupDoesNotRequireID(t *testing.T) {
 	if err := setup.Save(filepath.Join(root, "story", "setup", "story_setup.json")); err != nil {
 		t.Fatal(err)
 	}
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
+	storeRoot := toolRoot(t, root)
 	t.Cleanup(func() {
-		_ = os.Chdir(oldWD)
 		toolplane.ToolPatchFlags = struct {
 			Target         string
 			ID             string
@@ -2965,7 +2892,7 @@ func TestRunToolPatchSetupDoesNotRequireID(t *testing.T) {
 	})
 
 	toolplane.ToolPatchFlags.PatchJSON = `{"tone":"dry-run setup tone"}`
-	cmd := &cobra.Command{}
+	cmd := bindProject(&cobra.Command{}, storeRoot)
 	var out strings.Builder
 	cmd.SetOut(&out)
 	if err := toolplane.RunToolPatch(cmd, []string{"setup"}); err != nil {
@@ -3001,15 +2928,8 @@ func TestRunToolPatchStripsBOMFromStdinPatch(t *testing.T) {
 	if err := toolplane.SaveRawCraftMap(filepath.Join(root, "story", "craft", "characters.json"), initial); err != nil {
 		t.Fatal(err)
 	}
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
+	storeRoot := toolRoot(t, root)
 	t.Cleanup(func() {
-		_ = os.Chdir(oldWD)
 		toolplane.ToolPatchFlags = struct {
 			Target         string
 			ID             string
@@ -3025,7 +2945,7 @@ func TestRunToolPatchStripsBOMFromStdinPatch(t *testing.T) {
 
 	toolplane.ToolPatchFlags.Target = "character"
 	toolplane.ToolPatchFlags.ID = "Lin"
-	cmd := &cobra.Command{}
+	cmd := bindProject(&cobra.Command{}, storeRoot)
 	var out strings.Builder
 	cmd.SetOut(&out)
 	cmd.SetIn(strings.NewReader(string([]byte{0xEF, 0xBB, 0xBF}) + `{"notes":"stdin patch"}`))

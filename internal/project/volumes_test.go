@@ -28,6 +28,8 @@ func volumeIDs(volumes []*models.Volume) string {
 }
 
 func TestVolumesForSelection(t *testing.T) {
+	t.Parallel()
+
 	outline := volumesTestOutline()
 
 	if got := volumeIDs(VolumesForSelection(outline, "", "")); got != "P1-V1,P1-V2" {

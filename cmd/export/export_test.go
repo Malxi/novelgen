@@ -7,23 +7,26 @@ import (
 	"testing"
 
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 )
 
-// chdirTo switches the process working directory for the rest of the test.
-// t.Chdir needs go1.24 while this module targets go1.21, so it is done manually.
-func chdirTo(t *testing.T, dir string) {
+// useProjectRoot points the ambient project root at dir for the rest of the
+// test. Export resolves chapters through internal/project, so a test injects a
+// root instead of chdir-ing the process into a fixture.
+func useProjectRoot(t *testing.T, dir string) {
 	t.Helper()
-	original, err := os.Getwd()
+	root, err := store.Open(dir)
 	if err != nil {
-		t.Fatalf("getwd: %v", err)
+		t.Fatalf("open %s: %v", dir, err)
 	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("chdir %s: %v", dir, err)
-	}
+	previous, _ := store.Default()
+	store.SetDefault(root)
 	t.Cleanup(func() {
-		if err := os.Chdir(original); err != nil {
-			t.Fatalf("restore cwd: %v", err)
+		if previous != nil {
+			store.SetDefault(previous)
+			return
 		}
+		store.ResetDefault()
 	})
 }
 
@@ -73,7 +76,7 @@ func TestBuildNovelContentFormats(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(chapterDir, "chapter-P1-V1-C1.md"), []byte("# Opening\n\nBody text.\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	chdirTo(t, root)
+	useProjectRoot(t, root)
 
 	config := &models.ProjectConfig{Name: "test"}
 	setup := &models.StorySetup{ProjectName: "My Novel"}

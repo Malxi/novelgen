@@ -11,8 +11,28 @@ import (
 	"novelgen/internal/agentruntime"
 	"novelgen/internal/llm"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 	"novelgen/internal/utils"
 )
+
+// useProjectRoot points the ambient project root at dir for the rest of the
+// test, so agent stages that read project state no longer need a chdir.
+func useProjectRoot(t *testing.T, dir string) {
+	t.Helper()
+	root, err := store.Open(dir)
+	if err != nil {
+		t.Fatalf("open project %s: %v", dir, err)
+	}
+	previous, _ := store.Default()
+	store.SetDefault(root)
+	t.Cleanup(func() {
+		if previous != nil {
+			store.SetDefault(previous)
+			return
+		}
+		store.ResetDefault()
+	})
+}
 
 type fakeComposeImproveRuntime struct {
 	result     *agentruntime.Result
@@ -1599,16 +1619,7 @@ func TestImproveVolumeWithAgentSDKApplyFalseDoesNotReloadDiskOutline(t *testing.
 	if err := diskOutline.Save(filepath.Join(root, "story", "compose", "outline.json")); err != nil {
 		t.Fatalf("save disk outline: %v", err)
 	}
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("get wd: %v", err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-	t.Cleanup(func() {
-		_ = os.Chdir(oldWD)
-	})
+	useProjectRoot(t, root)
 
 	output := `{"review_result":{"overall_score":100,"summary":"medium check clean","suggestions":[]},"applied_patches":false,"applied_patch_count":0,"final_check":"clean"}`
 	runtime := &fakeComposeImproveRuntime{result: &agentruntime.Result{
@@ -1671,14 +1682,7 @@ func TestImproveVolumeWithAgentSDKRecoversAppliedPatchAfterMaxTurns(t *testing.T
 	if err := diskOutline.Save(filepath.Join(root, "story", "compose", "outline.json")); err != nil {
 		t.Fatalf("save disk outline: %v", err)
 	}
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("get wd: %v", err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(oldWD) })
+	useProjectRoot(t, root)
 
 	runtime := &fakeComposeImproveRuntime{
 		err: errors.New("Reached maximum number of turns (28)"),

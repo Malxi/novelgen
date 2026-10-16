@@ -64,10 +64,24 @@ func RunOutlineQualityGateWithOptions(setup *models.StorySetup, outline *models.
 }
 
 func RunOutlineSimulationGate(setup *models.StorySetup, outline *models.Outline) QualityGateResult {
+	characters, locations, items, organizations, _ := project.LoadAllElements()
+	return RunOutlineSimulationGateWithElements(setup, outline, characters, locations, items, organizations)
+}
+
+// RunOutlineSimulationGateWithElements runs the simulation gate against
+// explicitly supplied craft elements. Callers that already hold the project (or
+// that test the gate) do not have to go through the ambient project root.
+func RunOutlineSimulationGateWithElements(
+	setup *models.StorySetup,
+	outline *models.Outline,
+	characters map[string]*models.Character,
+	locations map[string]*models.Location,
+	items map[string]*models.Item,
+	organizations map[string]*models.Organization,
+) QualityGateResult {
 	var result QualityGateResult
 	models.NormalizeStorySetup(setup)
 	models.NormalizeOutline(outline)
-	characters, locations, items, organizations, _ := project.LoadAllElements()
 	adapter := dsl.NewModelAdapterWithOrganizations(setup, outline, characters, locations, items, organizations)
 	if issues, err := adapter.Simulate(dsl.PhaseOutline); err == nil {
 		result.Add(dsl.NewSimulationBridge().ConvertIssuesToSuggestions(issues)...)

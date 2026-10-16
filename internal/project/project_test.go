@@ -4,21 +4,20 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"novelgen/internal/store"
 )
 
-// chdir switches to dir for the duration of the test and always restores the
-// original working directory. (t.Chdir is Go 1.24+, and this module targets
-// 1.21.)
-func chdir(t *testing.T, dir string) {
+// openBook returns the project view for a fixture directory. Tests hold an
+// explicit root instead of switching the process working directory, which is
+// what lets them run in parallel.
+func openBook(t *testing.T, dir string) *Book {
 	t.Helper()
-	original, err := os.Getwd()
+	root, err := store.Open(dir)
 	if err != nil {
-		t.Fatalf("getwd: %v", err)
+		t.Fatalf("open %q: %v", dir, err)
 	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("chdir %q: %v", dir, err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(original) })
+	return Open(root)
 }
 
 func writeFile(t *testing.T, path, content string) {
@@ -32,24 +31,29 @@ func writeFile(t *testing.T, path, content string) {
 }
 
 func TestFindRootWalksUpFromWorkingDirectory(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "novel.json"), `{"name":"demo"}`)
 	nested := filepath.Join(root, "story", "compose")
 	if err := os.MkdirAll(nested, 0755); err != nil {
 		t.Fatalf("mkdir nested: %v", err)
 	}
-	chdir(t, nested)
 
-	got, err := FindRoot()
+	// Locating from a nested directory is what FindRoot wraps; the walk-up
+	// itself is asserted in internal/store.
+	located, err := store.Locate(nested)
 	if err != nil {
-		t.Fatalf("FindRoot error: %v", err)
+		t.Fatalf("Locate error: %v", err)
 	}
-	if filepath.Clean(got) != filepath.Clean(root) {
-		t.Fatalf("FindRoot = %q, want %q", got, root)
+	if filepath.Clean(located.Dir()) != filepath.Clean(root) {
+		t.Fatalf("Locate = %q, want %q", located.Dir(), root)
 	}
 }
 
 func TestLoadAllElementsNormalizesAndSkipsMissingFiles(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "novel.json"), `{"name":"demo"}`)
 	// characters.json carries a UTF-8 BOM and a null entry that must be dropped.
@@ -57,9 +61,9 @@ func TestLoadAllElementsNormalizesAndSkipsMissingFiles(t *testing.T) {
 		"\uFEFF{\"A\":{\"name\":\"A\"},\"nil\":null}")
 	writeFile(t, filepath.Join(root, "story", "craft", "organizations.json"),
 		`{"Org":null}`)
-	chdir(t, root)
+	book := openBook(t, root)
 
-	characters, locations, items, organizations, err := LoadAllElements()
+	characters, locations, items, organizations, err := book.LoadElements()
 	if err != nil {
 		t.Fatalf("LoadAllElements error: %v", err)
 	}

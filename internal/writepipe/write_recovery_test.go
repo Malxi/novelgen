@@ -7,8 +7,29 @@ import (
 	"testing"
 
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 	"novelgen/internal/writepipe"
 )
+
+// useProjectRoot points the ambient project root at dir for the rest of the
+// test. The write pipeline resolves its project the same way the CLI does, so
+// tests inject a root instead of chdir-ing the process into a fixture.
+func useProjectRoot(t *testing.T, dir string) {
+	t.Helper()
+	root, err := store.Open(dir)
+	if err != nil {
+		t.Fatalf("open project %s: %v", dir, err)
+	}
+	previous, _ := store.Default()
+	store.SetDefault(root)
+	t.Cleanup(func() {
+		if previous != nil {
+			store.SetDefault(previous)
+			return
+		}
+		store.ResetDefault()
+	})
+}
 
 func TestRecoverAgentAppliedChapterContentAfterErrorUsesSavedPatch(t *testing.T) {
 	root := t.TempDir()
@@ -25,18 +46,7 @@ func TestRecoverAgentAppliedChapterContentAfterErrorUsesSavedPatch(t *testing.T)
 		t.Fatal(err)
 	}
 
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.Chdir(oldWD); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	useProjectRoot(t, root)
 
 	got, ok := writepipe.RecoverAgentAppliedChapterContentAfterError(chapter, previous, 200, true)
 	if !ok || got != saved {
@@ -58,18 +68,7 @@ func TestRecoverAgentAppliedChapterContentAfterErrorRejectsOvershoot(t *testing.
 		t.Fatal(err)
 	}
 
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.Chdir(oldWD); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	useProjectRoot(t, root)
 
 	if got, ok := writepipe.RecoverAgentAppliedChapterContentAfterError(chapter, "# Opening\n\nold draft", 100, true); ok {
 		t.Fatalf("overshoot should not recover, got len=%d", len(got))
@@ -81,18 +80,7 @@ func TestSaveFinalChapterStripsRepeatedTitleAfterHeading(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"project_name":"Save Test"}`), 0644); err != nil {
 		t.Fatal(err)
 	}
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.Chdir(oldWD); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	useProjectRoot(t, root)
 
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "第1章：倒计时"}
 	content := "# 第1章：倒计时\n\n第1章：倒计时\n\n李侑醒来时，先闻到潮湿木板的霉味。"

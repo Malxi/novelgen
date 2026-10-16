@@ -8,6 +8,8 @@ import (
 )
 
 func TestKnownCharacterNamesDedupesSortsAndSkipsBlank(t *testing.T) {
+	t.Parallel()
+
 	outline := &models.Outline{Parts: []models.Part{{
 		Volumes: []models.Volume{{
 			Chapters: []models.Chapter{

@@ -8,8 +8,28 @@ import (
 	"testing"
 	"time"
 
+	"novelgen/internal/store"
 	"novelgen/internal/usage"
 )
+
+// useProjectRoot points the ambient project root at dir for the rest of the
+// test, so project commands read a fixture without a process chdir.
+func useProjectRoot(t *testing.T, dir string) {
+	t.Helper()
+	root, err := store.Open(dir)
+	if err != nil {
+		t.Fatalf("open %s: %v", dir, err)
+	}
+	previous, _ := store.Default()
+	store.SetDefault(root)
+	t.Cleanup(func() {
+		if previous != nil {
+			store.SetDefault(previous)
+			return
+		}
+		store.ResetDefault()
+	})
+}
 
 func TestProjectUsageSummarizesRecordedTokens(t *testing.T) {
 	root := writeCloneProjectFixture(t)
@@ -23,14 +43,7 @@ func TestProjectUsageSummarizesRecordedTokens(t *testing.T) {
 		}
 	}
 
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(oldWD) })
+	useProjectRoot(t, root)
 
 	projectUsageJSON = false
 	projectUsageSince = ""
@@ -52,14 +65,7 @@ func TestProjectUsageSummarizesRecordedTokens(t *testing.T) {
 func TestProjectUsageSinceFilterAndMissingLog(t *testing.T) {
 	root := writeCloneProjectFixture(t)
 
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(oldWD) })
+	useProjectRoot(t, root)
 
 	projectUsageJSON = false
 	projectUsageSince = ""

@@ -7,13 +7,21 @@ import (
 	"testing"
 
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/store"
 )
 
 func TestLoadDSLFragments(t *testing.T) {
 	chdirRepoRoot(t)
 
 	bookName := "fire-galaxy"
-	rpgDir := filepath.Join("books", bookName, "story", "rpg")
+	// rpg-dsl is the one command group that addresses projects as
+	// <workspace>/books/<name> instead of resolving novel.json, so its fixture
+	// lives next to the checkout rather than being created by the test. Skip
+	// (instead of failing) when a developer has no such book.
+	rpgDir := filepath.Join(store.BooksDirName, bookName, "story", "rpg")
+	if !dirExists(rpgDir) {
+		t.Skipf("fixture %s is not present in this checkout", rpgDir)
+	}
 
 	fmt.Printf("RPG Dir: %s\n", rpgDir)
 	fmt.Printf("Exists: %v\n", dirExists(rpgDir))
@@ -52,7 +60,10 @@ func TestLoadDSLFragments(t *testing.T) {
 }
 
 // chdirRepoRoot switches to the module root so the test can read books/...,
-// independent of the package directory depth.
+// independent of the package directory depth. This is the only remaining chdir
+// in the suite: rpg-dsl's whole contract is "run me from the workspace that
+// holds books/", which internal/store cannot express because that workspace is
+// not a project.
 func chdirRepoRoot(t *testing.T) {
 	t.Helper()
 	wd, err := os.Getwd()

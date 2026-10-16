@@ -8,6 +8,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 	"novelgen/internal/utils"
 	"os"
 	"path/filepath"
@@ -297,9 +298,17 @@ func messageContent(messages []llm.Message, role string) string {
 	return ""
 }
 
+// agentWorkspaceRoot returns the directory the Agent SDK runs against: the
+// logger's project directory when the write pipeline pinned one, otherwise the
+// resolved project root, otherwise the working directory. Reading the store
+// first is what keeps an SDK run pointed at the project even when the process
+// was not started inside it (for example with `novelgen --dir`).
 func agentWorkspaceRoot() string {
 	if dir := strings.TrimSpace(logger.Default().ProjectDir()); dir != "" {
 		return dir
+	}
+	if root, err := store.Default(); err == nil {
+		return root.Dir()
 	}
 	if cwd, err := os.Getwd(); err == nil {
 		return cwd

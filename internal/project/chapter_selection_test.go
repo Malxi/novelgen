@@ -34,6 +34,8 @@ func chapterIDs(chapters []*models.Chapter) string {
 // shared by the draft/recap/write concurrency loops. The worker refactor must
 // not change which chapters are selected, their order, or the error contract.
 func TestGetChaptersToGenerate(t *testing.T) {
+	t.Parallel()
+
 	outline := selectionTestOutline()
 
 	t.Run("all returns every chapter in order", func(t *testing.T) {

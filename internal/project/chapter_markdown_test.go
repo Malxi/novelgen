@@ -7,6 +7,8 @@ import (
 )
 
 func TestNormalizeChapterContentProducesSingleTitleHeading(t *testing.T) {
+	t.Parallel()
+
 	chapter := &models.Chapter{Title: "第一章 寒矿"}
 	cases := []struct {
 		name  string

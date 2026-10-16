@@ -1,9 +1,6 @@
 package quality_test
 
 import (
-	"encoding/json"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -373,15 +370,9 @@ func TestLimitReviewSuggestionsForAgentSDKRepairBatchesHighestPriority(t *testin
 }
 
 func TestRunOutlineSimulationGateUsesCraftProtagonistDetails(t *testing.T) {
-	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"project_name":"Fire"}`), 0o644); err != nil {
-		t.Fatalf("write novel.json: %v", err)
-	}
-	craftDir := filepath.Join(root, "story", "craft")
-	if err := os.MkdirAll(craftDir, 0o755); err != nil {
-		t.Fatalf("mkdir craft: %v", err)
-	}
-	characters := map[string]models.Character{
+	t.Parallel()
+
+	characters := map[string]*models.Character{
 		"Lin": {
 			Name:        "Lin",
 			RoleInStory: "protagonist",
@@ -391,25 +382,15 @@ func TestRunOutlineSimulationGateUsesCraftProtagonistDetails(t *testing.T) {
 			CombatRole:  "mech pilot",
 		},
 	}
-	data, err := json.Marshal(characters)
-	if err != nil {
-		t.Fatalf("marshal characters: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(craftDir, "characters.json"), data, 0o644); err != nil {
-		t.Fatalf("write characters: %v", err)
-	}
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("get wd: %v", err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-	t.Cleanup(func() {
-		_ = os.Chdir(oldWD)
-	})
 
-	gate := quality.RunOutlineSimulationGate(&models.StorySetup{ProjectName: "Fire"}, &models.Outline{})
+	gate := quality.RunOutlineSimulationGateWithElements(
+		&models.StorySetup{ProjectName: "Fire"},
+		&models.Outline{},
+		characters,
+		nil,
+		nil,
+		nil,
+	)
 
 	assertNoIssue(t, gate.Suggestions, "主角缺少背景故事")
 	assertNoIssue(t, gate.Suggestions, "主角缺少性格或动机描述")

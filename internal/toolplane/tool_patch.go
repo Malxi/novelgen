@@ -16,7 +16,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"time"
 )
 
 func RunToolPatch(cmd *cobra.Command, args []string) error {
@@ -1806,14 +1805,12 @@ func CloneStorySetup(setup *models.StorySetup) models.StorySetup {
 	return cloned
 }
 
-// checkpointStamp layouts the pre-patch snapshot names that the CLI, the SDK
-// agents and the web UI all read back.
-const checkpointStamp = "20060102_150405"
-
-// saveToolCheckpoint snapshots the state a patch is about to replace.
+// saveToolCheckpointJSON snapshots the state a patch is about to replace.
 //
 // This used to be five near-identical functions, one per patch section, each
-// with its own copy of the checkpoint directory and timestamp format.
+// with its own copy of the checkpoint directory and timestamp format. Naming and
+// writing now live in internal/store (SaveCheckpoint), which also makes the
+// snapshot write atomic.
 func saveToolCheckpointJSON(root string, scope store.Scope, prefix string, value interface{}) (string, error) {
 	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
@@ -1823,22 +1820,11 @@ func saveToolCheckpointJSON(root string, scope store.Scope, prefix string, value
 }
 
 func writeToolCheckpoint(root string, scope store.Scope, prefix, ext string, data []byte) (string, error) {
-	if !filepath.IsAbs(root) {
-		abs, err := filepath.Abs(root)
-		if err != nil {
-			return "", err
-		}
-		root = abs
-	}
-	path := filepath.Join(store.OpenFS(root, store.OSFS{}).CheckpointsDir(scope),
-		prefix+"_"+time.Now().Format(checkpointStamp)+ext)
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	project, err := store.Open(root)
+	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return "", err
-	}
-	return path, nil
+	return project.SaveCheckpoint(scope, prefix, ext, data)
 }
 
 func saveToolChapterPatchCheckpoint(root, chapterID, beforePath, beforeContent string) (string, error) {

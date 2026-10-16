@@ -52,6 +52,19 @@ cd my_novel
 6. export   → 导出完成的小说
 ```
 
+### 项目目录与 `--dir`
+
+除 `init` 外，所有命令都按下面的顺序确定要操作的项目：`--dir <目录>` → 环境变量
+`NOVELGEN_PROJECT_DIR` → 从当前目录向上查找 `novel.json`。因此可以在任意目录下运行：
+
+```bash
+novelgen --dir ~/books/my_novel compose check
+# 或者在项目子目录里（会自动向上找到项目根）
+cd ~/books/my_novel/story && novelgen compose check
+```
+
+`init` 用同一个目标目录创建项目，所以 `novelgen --dir ~/books/new_book init new_book` 也成立。
+
 ## 整体生成流程说明（从灵感到成书）
 
 - **项目初始化**：`init` 生成项目结构与基础配置。

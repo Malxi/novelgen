@@ -6,9 +6,13 @@ import (
 	"testing"
 
 	"novelgen/internal/agents"
+	"novelgen/internal/project"
+	"novelgen/internal/store"
 )
 
 func TestBuildImprovementSuggestionsSectionOrderAndTrailingNewline(t *testing.T) {
+	t.Parallel()
+
 	review := &agents.DraftReview{
 		SceneContinuity:      agents.SceneContinuityReview{Suggestions: []string{"a"}},
 		CharacterPresence:    agents.PresenceReview{Suggestions: []string{"b"}},
@@ -34,24 +38,23 @@ func TestBuildImprovementSuggestionsSectionOrderAndTrailingNewline(t *testing.T)
 }
 
 func TestSaveLoadVolumeReviewRoundTrip(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"name":"x"}`), 0644); err != nil {
 		t.Fatalf("write novel.json: %v", err)
 	}
-	original, err := os.Getwd()
+	storeRoot, err := store.Open(root)
 	if err != nil {
-		t.Fatalf("getwd: %v", err)
+		t.Fatalf("open project: %v", err)
 	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(original) })
+	book := project.Open(storeRoot)
 
 	review := &agents.VolumeReview{VolumeID: "P1-V1", VolumeTitle: "Vol", Reviews: []agents.DraftReview{{ChapterID: "C1"}}}
-	if err := SaveVolumeReview(review); err != nil {
+	if err := SaveVolumeReviewAt(book, review); err != nil {
 		t.Fatalf("SaveVolumeReview: %v", err)
 	}
-	got, err := LoadVolumeReview("P1-V1")
+	got, err := LoadVolumeReviewAt(book, "P1-V1")
 	if err != nil {
 		t.Fatalf("LoadVolumeReview: %v", err)
 	}

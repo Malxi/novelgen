@@ -90,9 +90,13 @@ novelgen/
 │   │   ├── config.go          # llm_config.json + provider 解析
 │   │   └── client.go          # OpenAI 兼容客户端 + RuntimeClient + 重试
 │   ├── models/                # 持久化数据模型（唯一事实源）
-│   ├── project/               # 项目定位与状态加载
-│   │                          #   project.go: FindRoot/LoadConfig/LoadStorySetup/LoadOutline/LoadAllElements/AllChapters/KnownCharacterNames
-│   │                          #   chapters.go: 章节/草稿 IO + SaveFinalChapter + SelectChapters + VolumesForSelection
+│   ├── store/                 # 项目存储（唯一知道磁盘布局的地方，见 §7）
+│   │                          #   store.go: Root/Open/Locate/Default + 上下文与默认根
+│   │                          #   fs.go: FS 接口 + OSFS + 原子写；memfs.go: 内存后端（测试与未来后端）
+│   │                          #   paths.go: 全部路径方法；artifacts.go: 类型化读写；snapshots.go: checkpoints/backups
+│   ├── project/               # store 之上的项目视图（门面）
+│   │                          #   Book: 显式 root 的章节/草稿/加载 API；ForCommand/CommandDir: 从命令取根
+│   │                          #   project.go/chapters.go: 兼容的自由函数（走 store.Default()）
 │   │                          #   chapter_markdown.go: 章节标题/正文规范化 + 叙事单元计数
 │   ├── continuity/            # 章节连续性：上下文加载、离线 recap、转场/角色出场自动修复
 │   ├── reviewstore/           # 卷级评审 JSON 读写 + 改进建议块格式化
@@ -250,8 +254,24 @@ AI 分析章节/大纲
 │   └── rpg/*.rpg
 ├── drafts/C{n}.md                 # legacy（write 直接产出最终稿）
 ├── chapters/chapter-{n}.md
-└── logs/{prompts,responses,agent-live,usage.jsonl,write_contexts}/
+├── logs/{prompts,responses,ai_calls,agent-live,write_contexts,usage.jsonl,clone_manifest.json}
+└── story/{setup,compose,craft,recaps}/checkpoints/   # patch 前快照
 ```
+
+**这份布局只由 [`internal/store`](../internal/store/paths.go) 描述。** 任何需要项目内路径的代码都通过
+`*store.Root`（或它上面的 [`internal/project.Book`](../internal/project/project.go)）取得，不再自己拼
+`story/...`。磁盘写在 `Root.Write` 里统一走"同目录临时文件 + rename"的原子替换，因此中断的
+`outline.json`/`story_setup.json` 写入不会留下半截文件。
+
+项目根的解析顺序（[`cmd/root.go`](../cmd/root.go) 的 `PersistentPreRunE`）：
+
+1. `--dir <目录>`（显式指定，目录必须存在）；
+2. `NOVELGEN_PROJECT_DIR` 环境变量；
+3. 从工作目录向上查找 `novel.json`。
+
+解析结果同时安装到命令上下文（`store.WithRoot`）与进程默认根（`store.SetDefault`），所以
+`compose`/`setup`/`craft`/`translate`/`tool` 等命令在子目录里运行、或用 `--dir` 指向别处时行为一致。
+`init` 是唯一的例外：它用同一套目标目录，但允许那里还没有 `novel.json`。
 
 ---
 
@@ -294,6 +314,9 @@ AI 分析章节/大纲
 12. **工具与内部流水线已统一**：`tools/check_novel` 原先自带一份章节→DSL 批处理/缓存的旧副本，现在改为调用 [`writersdl.EmitWriteRPGDSL`](../internal/writersdl/emit.go)（新增的共享入口，`EmitChapterRPGDSLForProject` 也复用它），该工具从 1113 行降到 597 行，并自动获得 manifest 章节校验与战斗信号增强。同一轮还把 `dsl.ApplySimulationDefaults`（simulatedsl 与 check_novel 各一份）和 `models.ReviewSuggestionPriorityRank`（quality 与 agents 各一份）收敛为单一实现。
 13. **仍存的少量平行实现**（有意保留）：各 `tools/*` 自带的 `printHelp`/`printSummary` 等打印函数；`models.Event` 与 `rpg.StoryEvent` 各自的旧格式事件适配（服务于两套不同的模型，需同步维护）；`toolplane.reviewPriorityRank` 与 models 版本签名不同（前者区分未知优先级）。
 14. **静态检查基线**：根模块与 webui 的 `go vet ./...` 与 `staticcheck ./...` 均为干净，唯一剩余的是第 8 条里 DSL Phase-2 脚手架的 4 个 `U1000`。新增告警请当场处理，别让基线退化——这一轮就是靠它翻出 `draft improve` 丢弃生成稿、`fmt.Errorf` 动态格式串、JSON 提取被字符串内 `}` 截断等问题。
+15. **小说 storage 已收敛（本轮完成）**：新增 [`internal/store`](../internal/store/)，磁盘布局、原子写、检查点/备份、类型化产物读写都只此一处；`internal/project` 退化为它上面的门面，`cmd/root.go` 负责解析一次根（`--dir` / `NOVELGEN_PROJECT_DIR` / 向上查找）。之前"同一份布局散在 47 个文件里、`compose` 用 cwd 相对路径而 `write` 用向上查找"的不一致已消除——`compose check` 现在在子目录与 `--dir` 两种场景下都可用（原实现要求 cwd 就是项目根）。`internal/models` 现在只保留 `Parse*`/`MarshalForSave` 与**路径入参**的便利读写（不含布局知识），`FindProjectRoot` 移入 store。测试不再靠 `os.Chdir` 定位项目：改为向命令上下文注入 root（`bindProject`）或安装进程默认根（`useProjectRoot`），全仓只剩 `cmd/rpgdsl` 一处 chdir，因为 `rpg-dsl` 的契约本身就是"在含 `books/` 的工作区里运行"，那不是项目根、store 无法表达。
+16. **仍是三套寻址约定**：项目命令按 `novel.json` 找项目（store）；dev 工具（`tools/*`、`rpg-dsl`、`rpg.NovelgenProject`）按 `<workspace>/books/<name>` 找书（字面量已收敛到 `store.BooksDirName`/`store.BookDir`，但 `internal/rpg/novelgen_adapter.go` 仍自己拼 `books/<name>/story/...`）；webui 只读端点自己拼路径（被 `boundary_test.go` 挡在 `internal/*` 之外）。若要把 dev 工具也改成 root 注入，应当给它们显式的 workspace 参数，而不是让 store 假装知道 workspace 在哪。
+17. **`logger.ProjectDir()` 与 store 根并存**：write 流水线通过 `logger.SetProjectDir` 钉住日志目录，agents 的日志/工作区根现在先读它、再读 `store.Default()`、最后才退回 cwd（见 `agentLogRoot`/`agentWorkspaceRoot`）。这是两个"当前项目"来源，下一步可把 logger 的那份也换成 `*store.Root`。
 
 ---
 

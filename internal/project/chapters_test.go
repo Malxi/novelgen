@@ -10,12 +10,14 @@ import (
 )
 
 func TestLoadFinalChapterContentPrefersFullIDThenNumericFallback(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "novel.json"), `{"name":"demo"}`)
 	writeFile(t, filepath.Join(root, "chapters", "chapter-P1-V1-C1.md"), "# full id")
-	chdir(t, root)
+	book := openBook(t, root)
 
-	got := LoadFinalChapterContent(&models.Chapter{ID: "P1-V1-C1"})
+	got := book.LoadFinalChapterContent(&models.Chapter{ID: "P1-V1-C1"})
 	if got != "# full id" {
 		t.Fatalf("content = %q, want full-id file", got)
 	}
@@ -23,33 +25,35 @@ func TestLoadFinalChapterContentPrefersFullIDThenNumericFallback(t *testing.T) {
 	// Underscore IDs reduce to their trailing segment, matching the historical
 	// numeric-fallback naming (chapter-3.md).
 	writeFile(t, filepath.Join(root, "chapters", "chapter-3.md"), "# numeric")
-	if got := LoadFinalChapterContent(&models.Chapter{ID: "chap_1_2_3"}); got != "# numeric" {
+	if got := book.LoadFinalChapterContent(&models.Chapter{ID: "chap_1_2_3"}); got != "# numeric" {
 		t.Fatalf("numeric fallback content = %q, want %q", got, "# numeric")
 	}
 
-	if got := LoadFinalChapterContent(&models.Chapter{ID: "missing"}); got != "" {
+	if got := book.LoadFinalChapterContent(&models.Chapter{ID: "missing"}); got != "" {
 		t.Fatalf("missing chapter content = %q, want empty", got)
 	}
-	if got := LoadFinalChapterContent(nil); got != "" {
+	if got := book.LoadFinalChapterContent(nil); got != "" {
 		t.Fatalf("nil chapter content = %q, want empty", got)
 	}
 }
 
 func TestLoadDraftContentAndSaveDraft(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "novel.json"), `{"name":"demo"}`)
 	writeFile(t, filepath.Join(root, "drafts", "P1-V1-C1.md"), "draft body")
-	chdir(t, root)
+	book := openBook(t, root)
 
-	if got := LoadDraftContent("P1-V1-C1"); got != "draft body" {
+	if got := book.LoadDraftContent("P1-V1-C1"); got != "draft body" {
 		t.Fatalf("LoadDraftContent = %q", got)
 	}
-	if got := LoadDraftContent("nope"); got != "" {
+	if got := book.LoadDraftContent("nope"); got != "" {
 		t.Fatalf("missing draft = %q, want empty", got)
 	}
 
 	chapter := &models.Chapter{ID: "P1-V1-C2", Title: "Chapter Two"}
-	if err := SaveDraft(chapter, "new body"); err != nil {
+	if err := book.SaveDraft(chapter, "new body"); err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}
 	data, err := os.ReadFile(filepath.Join(root, "drafts", "P1-V1-C2.md"))

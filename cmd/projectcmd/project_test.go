@@ -97,18 +97,12 @@ func TestResolveProjectCloneSourceFromBookName(t *testing.T) {
 	if err := os.MkdirAll(nested, 0755); err != nil {
 		t.Fatal(err)
 	}
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(nested); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(oldWD) })
 
-	got, err := resolveProjectCloneSource("", "system-log")
+	// Discovery walks up from an explicit start directory, so the test no longer
+	// has to chdir the process into the nested scratch directory.
+	got, err := resolveBookProjectRoot(nested, "system-log")
 	if err != nil {
-		t.Fatalf("resolveProjectCloneSource() error = %v", err)
+		t.Fatalf("resolveBookProjectRoot() error = %v", err)
 	}
 	if got != source {
 		t.Fatalf("source = %q, want %q", got, source)

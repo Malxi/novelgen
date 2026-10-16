@@ -869,6 +869,10 @@ Contract status:
   `write pipeline` unless they intentionally support old projects.
 - Do not introduce new persistent dependencies on `drafts/` without documenting
   why final chapters cannot be used.
+- `drafts/` is resolved inside the project root like every other artifact
+  (through `internal/store`), so running the legacy draft command from a
+  subdirectory writes into the project instead of scattering `drafts/` next to
+  the working directory.
 
 ## Contract Change Review
 
