@@ -52,11 +52,14 @@ func RunToolSetupPatch(cmd *cobra.Command, root *store.Root, patchBytes []byte, 
 		if err != nil {
 			return err
 		}
-		if err := merged.Save(setupPath); err != nil {
+		// SaveSetup is the store's atomic, normalizing write; the patch plane used
+		// to call models.StorySetup.Save here, which wrote the canonical file with
+		// a plain os.WriteFile and could leave a truncated story_setup.json.
+		if err := root.SaveSetup(&merged); err != nil {
 			return fmt.Errorf("failed to save patched story setup: %w", err)
 		}
-		mdPath := root.SetupMarkdown()
-		if err := project.CreateStorySetupMarkdown(&merged, mdPath); err != nil {
+		mdPath, err := project.Open(root).SaveStorySetupMarkdown(&merged)
+		if err != nil {
 			return fmt.Errorf("failed to save story setup markdown: %w", err)
 		}
 		files["setup"] = setupPath

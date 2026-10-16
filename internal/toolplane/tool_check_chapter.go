@@ -6,7 +6,7 @@ package toolplane
 import (
 	"errors"
 	"fmt"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -64,7 +64,10 @@ func runToolChapterCheckAt(root *store.Root, kind, scope, id string, targetWords
 	// Read the manuscript through the same candidate list the write pipeline and
 	// export use, and from the project this check was scoped to rather than from
 	// the ambient default root.
-	content, _ := root.LoadChapterContent(chapter.ID)
+	content, _, err := root.LoadChapterContent(chapter.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read chapter %s: %w", chapter.ID, err)
+	}
 	targetWords := targetWordsOverride
 	if targetWords <= 0 {
 		targetWords = toolChapterTargetWords()
@@ -523,16 +526,16 @@ func toolChapterRPGDSLStale(root *store.Root, chapterID string) (bool, toolChapt
 		ChapterPath: toolFinalChapterPathForID(root, chapterID),
 		DSLPath:     root.RPGChaptersDSL(),
 	}
-	chapterStat, err := os.Stat(info.ChapterPath)
+	chapterStat, err := root.FS().Stat(info.ChapterPath)
 	if err != nil {
 		fallback := numericChapterFallbackPath(root, chapterID)
-		chapterStat, err = os.Stat(fallback)
+		chapterStat, err = root.FS().Stat(fallback)
 		if err != nil {
 			return false, info
 		}
 		info.ChapterPath = fallback
 	}
-	dslStat, err := os.Stat(info.DSLPath)
+	dslStat, err := root.FS().Stat(info.DSLPath)
 	if err != nil {
 		return false, info
 	}
@@ -573,36 +576,60 @@ func loadToolMergedRPGDSL(root *store.Root) (*rpgdsl.DSL, error) {
 
 func loadToolRPGDSLFragments(root *store.Root) ([]*rpgdsl.DSLFragment, error) {
 	rpgDir := root.RPGDir()
-	patterns := append(store.RPGPhaseFiles(), "*.rpg")
 	var fragments []*rpgdsl.DSLFragment
-	seen := map[string]bool{}
 	var parseErrors []string
-	for _, pattern := range patterns {
-		matches, err := filepath.Glob(filepath.Join(rpgDir, pattern))
-		if err != nil {
+	// List the DSL directory through the store and order the fragments by phase,
+	// which is the merge order the pipeline expects; any extra *.rpg file follows
+	// in name order.
+	entries, err := root.FS().ReadDir(rpgDir)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".rpg") {
 			continue
 		}
-		for _, file := range matches {
-			if seen[file] {
-				continue
-			}
-			seen[file] = true
-			content, err := os.ReadFile(file)
-			if err != nil {
-				parseErrors = append(parseErrors, fmt.Sprintf("read %s failed: %v", file, err))
-				continue
-			}
-			parsed, err := rpgdsl.NewParser(string(content)).Parse()
-			if err != nil {
-				parseErrors = append(parseErrors, fmt.Sprintf("parse %s failed: %v", file, err))
-				continue
-			}
-			fragments = append(fragments, &rpgdsl.DSLFragment{
-				DSL:      parsed,
-				Phase:    writersdl.InferPhaseFromFilename(filepath.Base(file)),
-				FilePath: file,
-			})
+		names = append(names, entry.Name())
+	}
+	phaseRank := map[string]int{}
+	for i, name := range store.RPGPhaseFiles() {
+		phaseRank[name] = i
+	}
+	sort.Slice(names, func(i, j int) bool {
+		ri, iKnown := phaseRank[names[i]]
+		rj, jKnown := phaseRank[names[j]]
+		switch {
+		case iKnown && jKnown:
+			return ri < rj
+		case iKnown:
+			return true
+		case jKnown:
+			return false
+		default:
+			return names[i] < names[j]
 		}
+	})
+	for _, name := range names {
+		file := filepath.Join(rpgDir, name)
+		content, err := root.Read(file)
+		if err != nil {
+			parseErrors = append(parseErrors, fmt.Sprintf("read %s failed: %v", file, err))
+			continue
+		}
+		parsed, err := rpgdsl.NewParser(string(content)).Parse()
+		if err != nil {
+			parseErrors = append(parseErrors, fmt.Sprintf("parse %s failed: %v", file, err))
+			continue
+		}
+		fragments = append(fragments, &rpgdsl.DSLFragment{
+			DSL:      parsed,
+			Phase:    writersdl.InferPhaseFromFilename(name),
+			FilePath: file,
+		})
 	}
 	if len(fragments) == 0 && len(parseErrors) > 0 {
 		return nil, errors.New(strings.Join(parseErrors, "; "))

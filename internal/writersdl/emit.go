@@ -2,13 +2,15 @@ package writersdl
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
+	iofs "io/fs"
 
 	"novelgen/internal/agents"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/store"
 )
 
 // WriteRPGDSLEmitInput describes one chapter→RPG-DSL emission run with all
@@ -22,6 +24,10 @@ type WriteRPGDSLEmitInput struct {
 	Chapters  []WriteRPGDSLChapterInput
 	BatchSize int
 	Agent     *agents.ChapterToDSLAgent
+	// FS is the filesystem holding the chapter files and the batch cache.
+	// Callers that hold a *store.Root pass root.FS(); leaving it nil means the
+	// host filesystem, which is what the standalone tools do.
+	FS store.FS
 	// Characters and Locations are the craft element values the conversion
 	// agent receives as project facts.
 	Characters map[string]models.Character
@@ -38,6 +44,10 @@ type WriteRPGDSLEmitInput struct {
 // to post-process the DSL first (for example to apply simulation defaults).
 func EmitWriteRPGDSL(ctx context.Context, input WriteRPGDSLEmitInput) (WriteRPGDSLResult, *rpgdsl.DSL, error) {
 	result := WriteRPGDSLResult{}
+	fs := input.FS
+	if fs == nil {
+		fs = store.OSFS{}
+	}
 	batchSize := input.BatchSize
 	if batchSize <= 0 {
 		batchSize = 10
@@ -53,7 +63,7 @@ func EmitWriteRPGDSL(ctx context.Context, input WriteRPGDSLEmitInput) (WriteRPGD
 	}
 	SortRPGDSLChapterInputs(chapters)
 
-	if err := os.MkdirAll(input.CacheDir, 0755); err != nil {
+	if err := fs.MkdirAll(input.CacheDir, store.DirMode); err != nil {
 		return result, nil, err
 	}
 
@@ -65,22 +75,22 @@ func EmitWriteRPGDSL(ctx context.Context, input WriteRPGDSLEmitInput) (WriteRPGD
 		Systems:    &rpgdsl.Systems{},
 	}
 	if len(targetSet) > 0 && input.ExistingDSLPath != "" {
-		if existing, err := LoadWriteRPGDSLExisting(input.ExistingDSLPath); err == nil {
+		if existing, err := LoadWriteRPGDSLExisting(fs, input.ExistingDSLPath); err == nil {
 			combined = existing
 			RemoveWriteRPGDSLChapters(combined, targetSet)
-		} else if !os.IsNotExist(err) {
+		} else if !errors.Is(err, iofs.ErrNotExist) {
 			logger.Warn("Ignoring existing chapter RPG DSL during targeted refresh: %v", err)
 		}
 	}
 
 	for batchIndex, batch := range SplitRPGDSLBatchInputs(chapters, batchSize) {
-		manifest, err := BuildWriteRPGDSLBatchManifest(input.BookName, batchIndex*batchSize, batchSize, batch, input.CacheDir)
+		manifest, err := BuildWriteRPGDSLBatchManifest(fs, input.BookName, batchIndex*batchSize, batchSize, batch, input.CacheDir)
 		if err != nil {
 			return result, nil, err
 		}
 		result.BatchCount++
 
-		dslContent, reused, err := LoadWriteRPGDSLBatchFromCache(manifest)
+		dslContent, reused, err := LoadWriteRPGDSLBatchFromCache(fs, manifest)
 		if err != nil {
 			return result, nil, err
 		}
@@ -90,7 +100,7 @@ func EmitWriteRPGDSL(ctx context.Context, input WriteRPGDSLEmitInput) (WriteRPGD
 		} else {
 			result.GeneratedBatches++
 			logger.Info("RPG DSL AI conversion batch: %s -> %s (%d chapters)", manifest.Chapters[0].ChapterID, manifest.Chapters[len(manifest.Chapters)-1].ChapterID, len(manifest.Chapters))
-			chapterData, err := LoadWriteRPGDSLChapterData(batch)
+			chapterData, err := LoadWriteRPGDSLChapterData(fs, batch)
 			if err != nil {
 				return result, nil, err
 			}
@@ -117,7 +127,7 @@ func EmitWriteRPGDSL(ctx context.Context, input WriteRPGDSLEmitInput) (WriteRPGD
 		normalizedContent := parsed.String()
 		if !reused || normalizedContent != dslContent {
 			dslContent = normalizedContent
-			if err := SaveWriteRPGDSLBatchToCache(manifest, dslContent); err != nil {
+			if err := SaveWriteRPGDSLBatchToCache(fs, manifest, dslContent); err != nil {
 				return result, nil, err
 			}
 			logger.Info("RPG DSL batch output: %s", manifest.DSLFile)

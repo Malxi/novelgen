@@ -56,7 +56,7 @@ import (
 // GenerateImprovedChapter runs one improvement pass, applying the Agent SDK
 // length-overshoot retry and post-error recovery rules when the SDK path is
 // used.
-func GenerateImprovedChapter(ctx context.Context, agent *agents.WriteAgent, chapter *models.Chapter, context *agents.ChapterContext, continuity *models.ChapterContinuity, targetWords int, currentContent string, suggestions string, useAgentSDK bool, agentApply bool, useAgentHistory bool, iteration ...int) (string, error) {
+func GenerateImprovedChapter(book *project.Book, ctx context.Context, agent *agents.WriteAgent, chapter *models.Chapter, context *agents.ChapterContext, continuity *models.ChapterContinuity, targetWords int, currentContent string, suggestions string, useAgentSDK bool, agentApply bool, useAgentHistory bool, iteration ...int) (string, error) {
 	if useAgentSDK {
 		effectiveTargetWords := EffectiveAgentSDKImproveTargetWords(chapter, targetWords, currentContent, suggestions, useAgentSDK)
 		content, err := agent.GenerateChapterWithSuggestionsAgentSDK(ctx, chapter, context, continuity, effectiveTargetWords, currentContent, suggestions, agentApply, useAgentHistory, iteration...)
@@ -65,7 +65,7 @@ func GenerateImprovedChapter(ctx context.Context, agent *agents.WriteAgent, chap
 			content, err = agent.GenerateChapterWithSuggestionsAgentSDK(ctx, chapter, context, continuity, effectiveTargetWords, currentContent, AppendAgentSDKLengthRetrySuggestions(suggestions, effectiveTargetWords), agentApply, useAgentHistory, iteration...)
 		}
 		if err != nil {
-			if recovered, ok := RecoverAgentAppliedChapterContentAfterError(chapter, currentContent, effectiveTargetWords, agentApply); ok {
+			if recovered, ok := RecoverAgentAppliedChapterContentAfterError(book, chapter, currentContent, effectiveTargetWords, agentApply); ok {
 				logger.GetLogger().Warn("Agent SDK returned an error after applying a chapter patch; recovering saved content for %s and continuing Go validation: %v", chapter.ID, err)
 				return recovered, nil
 			}
@@ -116,11 +116,15 @@ func suggestionsRequestLengthExpansion(suggestions string) bool {
 	return false
 }
 
-func RecoverAgentAppliedChapterContentAfterError(chapter *models.Chapter, previousContent string, targetWords int, agentApply bool) (string, bool) {
-	if !agentApply || chapter == nil {
+func RecoverAgentAppliedChapterContentAfterError(book *project.Book, chapter *models.Chapter, previousContent string, targetWords int, agentApply bool) (string, bool) {
+	if !agentApply || chapter == nil || book == nil {
 		return "", false
 	}
-	saved := project.LoadFinalChapterContent(chapter)
+	saved, readErr := book.LoadFinalChapterContent(chapter)
+	if readErr != nil {
+		logger.GetLogger().Warn("Cannot recover agent-applied content for %s: %v", chapter.ID, readErr)
+		return "", false
+	}
 	if strings.TrimSpace(saved) == "" || strings.TrimSpace(saved) == strings.TrimSpace(previousContent) {
 		return "", false
 	}
@@ -150,11 +154,15 @@ func validateRecoveredAgentSDKChapterLength(chapter *models.Chapter, content str
 	return nil
 }
 
-func ResolveAgentAppliedChapterContent(log logger.LoggerInterface, workerID int, chapter *models.Chapter, previousContent, agentContent string, useAgentSDK, agentApply bool) (string, bool) {
-	if !useAgentSDK || !agentApply || chapter == nil {
+func ResolveAgentAppliedChapterContent(log logger.LoggerInterface, book *project.Book, workerID int, chapter *models.Chapter, previousContent, agentContent string, useAgentSDK, agentApply bool) (string, bool) {
+	if !useAgentSDK || !agentApply || chapter == nil || book == nil {
 		return agentContent, false
 	}
-	saved := project.LoadFinalChapterContent(chapter)
+	saved, readErr := book.LoadFinalChapterContent(chapter)
+	if readErr != nil {
+		log.Warn("[Worker %d] Cannot read saved chapter %s; keeping returned content: %v", workerID, chapter.ID, readErr)
+		return agentContent, false
+	}
 	if strings.TrimSpace(saved) == "" || strings.TrimSpace(saved) == strings.TrimSpace(previousContent) {
 		return agentContent, false
 	}

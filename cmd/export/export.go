@@ -257,11 +257,13 @@ func isMarkdownHorizontalRule(trimmed string) bool {
 
 // loadChapterFile loads a chapter file from the chapters directory
 func loadChapterFile(root, chapterID string) (string, error) {
-	for _, path := range store.At(root).ChapterCandidates(chapterID) {
-		data, err := os.ReadFile(path)
-		if err == nil {
-			return string(data), nil
-		}
+	project := store.At(root)
+	content, _, err := project.LoadChapterContent(chapterID)
+	if err != nil {
+		return "", err
+	}
+	if content != "" {
+		return content, nil
 	}
 
 	return "", fmt.Errorf("chapter file not found: %s", chapterID)

@@ -40,28 +40,34 @@ func (c *WriteErrorCollector) Err() error {
 	return errors.Join(c.errs...)
 }
 
-func loadChapterContent(chapterID string) string {
+func loadChapterContent(book *project.Book, chapterID string) string {
 	// Prefer the final chapter; the chapter file-name fallbacks (full id, legacy
 	// numeric, bare id) live in the project store so this cannot drift from the
 	// other readers again.
-	book, err := project.Default()
-	if err != nil {
+	if book == nil {
 		return ""
 	}
-	if content, _ := book.LoadChapterContent(chapterID); content != "" {
+	// Best-effort context: an unreadable chapter degrades to the draft fallback
+	// rather than failing the run. The paths that act on the value (chapter
+	// checks, patch before-state, post-save recovery) handle the error.
+	if content, _, err := book.LoadChapterContent(chapterID); err == nil && content != "" {
 		return content
 	}
-	return book.LoadDraftContent(chapterID)
+	draft, _ := book.LoadDraftContent(chapterID)
+	return draft
 }
 
-func LoadChapterContext(outline *models.Outline, targetChapter *models.Chapter, contextCount int) *agents.ChapterContext {
+func LoadChapterContext(book *project.Book, outline *models.Outline, targetChapter *models.Chapter, contextCount int) *agents.ChapterContext {
 	context := &agents.ChapterContext{
 		Current:  targetChapter,
 		Previous: make([]*agents.ContextChapter, 0),
 		Next:     make([]*agents.ContextChapter, 0),
 		Recap:    "",
 	}
-	if _, _, _, organizations, err := project.LoadAllElements(); err == nil {
+	if book == nil {
+		return context
+	}
+	if _, _, _, organizations, err := book.LoadElements(); err == nil {
 		context.Craft = BuildOrganizationWriteContext(targetChapter, organizations)
 	}
 
@@ -82,7 +88,7 @@ func LoadChapterContext(outline *models.Outline, targetChapter *models.Chapter, 
 
 	if recapJSON := novelcont.LoadPreviousRecapJSON(outline, targetChapter); strings.TrimSpace(recapJSON) != "" {
 		context.Recap = recapJSON
-	} else if draftRecap := novelcont.LoadPreviousDraftRecap(outline, targetChapter); strings.TrimSpace(draftRecap) != "" {
+	} else if draftRecap := novelcont.LoadPreviousDraftRecap(book, outline, targetChapter); strings.TrimSpace(draftRecap) != "" {
 		context.Recap = draftRecap
 	}
 
@@ -91,7 +97,7 @@ func LoadChapterContext(outline *models.Outline, targetChapter *models.Chapter, 
 		idx := targetIndex - i
 		if idx >= 0 {
 			ch := allChapters[idx]
-			content := loadChapterContent(ch.ID)
+			content := loadChapterContent(book, ch.ID)
 			// If no final/draft, build from outline
 			if content == "" {
 				content = buildChapterContentFromOutline(ch)
@@ -101,7 +107,7 @@ func LoadChapterContext(outline *models.Outline, targetChapter *models.Chapter, 
 				// chapter so later steps (e.g., transition checks / future drafts) can
 				// use it even when generation is out-of-order.
 				if i == 1 && content != "" {
-					novelcont.PersistOfflineRecapIfMissing(ch, content)
+					novelcont.PersistOfflineRecapIfMissing(book, ch, content)
 				}
 
 				// Note: Recap extraction is handled separately via recap command
@@ -118,7 +124,7 @@ func LoadChapterContext(outline *models.Outline, targetChapter *models.Chapter, 
 		idx := targetIndex + i
 		if idx < len(allChapters) {
 			ch := allChapters[idx]
-			content := loadChapterContent(ch.ID)
+			content := loadChapterContent(book, ch.ID)
 			// If no final/draft, build from outline
 			if content == "" {
 				content = buildChapterContentFromOutline(ch)
@@ -277,10 +283,13 @@ func buildChapterContentFromOutline(chapter *models.Chapter) string {
 	return sb.String()
 }
 
-// SaveFinalChapter saves the generated final chapter content
-// SaveFinalChapter saves the generated final chapter content.
-func SaveFinalChapter(chapter *models.Chapter, content string) error {
-	return project.SaveFinalChapter(chapter, content)
+// SaveFinalChapter saves the generated final chapter content into an explicit
+// project.
+func SaveFinalChapter(book *project.Book, chapter *models.Chapter, content string) error {
+	if book == nil {
+		return fmt.Errorf("project is required")
+	}
+	return book.SaveFinalChapter(chapter, content)
 }
 
 // ChapterNarrativeUnitsForLog counts the narrative units the project reports

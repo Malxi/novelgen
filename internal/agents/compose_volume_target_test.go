@@ -1616,7 +1616,7 @@ func TestImproveVolumeWithAgentSDKApplyFalseDoesNotReloadDiskOutline(t *testing.
 			}},
 		}},
 	}}}
-	if err := diskOutline.Save(filepath.Join(root, "story", "compose", "outline.json")); err != nil {
+	if err := store.At(root).SaveOutline(&diskOutline); err != nil {
 		t.Fatalf("save disk outline: %v", err)
 	}
 	useProjectRoot(t, root)
@@ -1679,7 +1679,7 @@ func TestImproveVolumeWithAgentSDKRecoversAppliedPatchAfterMaxTurns(t *testing.T
 			}},
 		}},
 	}}}
-	if err := diskOutline.Save(filepath.Join(root, "story", "compose", "outline.json")); err != nil {
+	if err := store.At(root).SaveOutline(&diskOutline); err != nil {
 		t.Fatalf("save disk outline: %v", err)
 	}
 	useProjectRoot(t, root)

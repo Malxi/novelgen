@@ -12,15 +12,11 @@ import (
 	"novelgen/internal/toolplane"
 )
 
-func BuildAgentSDKChapterCheckSuggestions(chapter *models.Chapter, targetWords int) string {
-	if chapter == nil || strings.TrimSpace(chapter.ID) == "" {
+func BuildAgentSDKChapterCheckSuggestions(book *project.Book, chapter *models.Chapter, targetWords int) string {
+	if book == nil || chapter == nil || strings.TrimSpace(chapter.ID) == "" {
 		return ""
 	}
-	root, err := project.FindRoot()
-	if err != nil {
-		return fmt.Sprintf("## Agent SDK Chapter Check\n\nCould not run focused chapter check before improvement: %v", err)
-	}
-	result, err := toolplane.RunToolChapterCheckWithTargetWords(root, "all", "chapter", chapter.ID, targetWords)
+	result, err := toolplane.RunToolChapterCheckWithTargetWords(book.Dir(), "all", "chapter", chapter.ID, targetWords)
 	if err != nil {
 		return fmt.Sprintf("## Agent SDK Chapter Check\n\nCould not run focused chapter check before improvement: %v", err)
 	}
@@ -49,21 +45,20 @@ func FormatAgentSDKChapterCheckSuggestions(result *toolplane.ToolCheckResult) st
 
 // RunAgentSDKChapterPostSaveCheck refreshes the chapter RPG DSL and runs the
 // deterministic post-save checks that gate further repair.
-func RunAgentSDKChapterPostSaveCheck(ctx context.Context, chapter *models.Chapter, targetWords int) (*toolplane.ToolCheckResult, error) {
+func RunAgentSDKChapterPostSaveCheck(ctx context.Context, book *project.Book, chapter *models.Chapter, targetWords int) (*toolplane.ToolCheckResult, error) {
 	if chapter == nil || strings.TrimSpace(chapter.ID) == "" {
 		return nil, fmt.Errorf("chapter is nil or has no ID")
 	}
-	root, err := project.FindRoot()
-	if err != nil {
-		return nil, err
+	if book == nil {
+		return nil, fmt.Errorf("project is required")
 	}
 	restoreLogger := toolplane.SuppressToolRefreshLogs()
-	_, refreshErr := toolplane.RefreshToolChapterDSL(ctx, root, chapter.ID, toolplane.ToolRefreshFlags.BatchSize)
+	_, refreshErr := toolplane.RefreshToolChapterDSL(ctx, book.Dir(), chapter.ID, toolplane.ToolRefreshFlags.BatchSize)
 	restoreLogger()
 	if refreshErr != nil {
 		return nil, fmt.Errorf("refresh chapter RPG DSL before post-save check: %w", refreshErr)
 	}
-	result, err := toolplane.RunToolChapterCheckWithTargetWords(root, "all", "chapter", chapter.ID, targetWords)
+	result, err := toolplane.RunToolChapterCheckWithTargetWords(book.Dir(), "all", "chapter", chapter.ID, targetWords)
 	if err != nil {
 		return nil, err
 	}

@@ -136,13 +136,13 @@ func normalizeCraftPatchTarget(target string) string {
 func craftPatchFilename(kind string) (string, error) {
 	switch normalizeCraftPatchTarget(kind) {
 	case "character":
-		return "characters.json", nil
+		return store.CraftCharacters.FileName(), nil
 	case "item":
-		return "items.json", nil
+		return store.CraftItems.FileName(), nil
 	case "location":
-		return "locations.json", nil
+		return store.CraftLocations.FileName(), nil
 	case "organization":
-		return "organizations.json", nil
+		return store.CraftOrganizations.FileName(), nil
 	default:
 		return "", fmt.Errorf("unsupported craft patch target %q", kind)
 	}

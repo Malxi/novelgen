@@ -4,7 +4,6 @@ package toolplane
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"novelgen/internal/models"
@@ -117,7 +116,7 @@ func loadChapterExcerptForTool(root *store.Root, chapterID string) (map[string]s
 		return nil, []string{"project root or chapter id missing; chapter excerpt unavailable"}
 	}
 	for _, path := range root.ChapterCandidates(chapterID) {
-		data, err := os.ReadFile(path)
+		data, err := root.Read(path)
 		if err != nil {
 			continue
 		}

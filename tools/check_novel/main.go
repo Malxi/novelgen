@@ -12,7 +12,6 @@ import (
 
 	"novelgen/internal/agents"
 	"novelgen/internal/llm"
-	"novelgen/internal/models"
 	"novelgen/internal/rpg/dsl"
 	"novelgen/internal/store"
 	"novelgen/internal/writersdl"
@@ -113,7 +112,7 @@ func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutp
 		return fmt.Errorf("鏈壘鍒版湁鏁?LLM 閰嶇疆锛屾棤娉曟墽琛?AI -> DSL")
 	}
 
-	projectConfig, err := models.LoadProjectConfig(filepath.Join(bookPath, "novel.json"))
+	projectConfig, err := store.At(bookPath).LoadConfig()
 	if err != nil {
 		return fmt.Errorf("鍔犺浇 novel.json 澶辫触: %w", err)
 	}
@@ -139,6 +138,7 @@ func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutp
 
 	_, dslData, err := writersdl.EmitWriteRPGDSL(ctx, writersdl.WriteRPGDSLEmitInput{
 		BookName:   bookName,
+		FS:         book.FS(),
 		CacheDir:   book.RPGChapterBatchCacheDir(),
 		Chapters:   chapterFiles,
 		BatchSize:  batchSize,
@@ -219,8 +219,7 @@ func resolveBook(bookArg string) (bookName string, bookPath string, err error) {
 	}
 
 	if st, statErr := os.Stat(trimmed); statErr == nil && st.IsDir() {
-		novelPath := filepath.Join(trimmed, "novel.json")
-		if _, err := os.Stat(novelPath); err == nil {
+		if store.At(trimmed).Exists(store.At(trimmed).NovelJSON()) {
 			absPath, _ := filepath.Abs(trimmed)
 			return filepath.Base(absPath), absPath, nil
 		}
@@ -229,8 +228,7 @@ func resolveBook(bookArg string) (bookName string, bookPath string, err error) {
 
 	candidate := filepath.Join("books", trimmed)
 	if st, statErr := os.Stat(candidate); statErr == nil && st.IsDir() {
-		novelPath := filepath.Join(candidate, "novel.json")
-		if _, err := os.Stat(novelPath); err == nil {
+		if store.At(candidate).Exists(store.At(candidate).NovelJSON()) {
 			absPath, _ := filepath.Abs(candidate)
 			return trimmed, absPath, nil
 		}

@@ -1218,7 +1218,7 @@ func saveStorySetup(book *project.Book, setup *models.StorySetup) error {
 	}
 
 	// Create story_setup.md (markdown version for easier editing)
-	if err := project.CreateStorySetupMarkdown(setup, book.SetupMarkdown()); err != nil {
+	if _, err := book.SaveStorySetupMarkdown(setup); err != nil {
 		return fmt.Errorf("failed to save story_setup.md: %w", err)
 	}
 
@@ -1555,4 +1555,3 @@ func runSetupCheck(cmd *cobra.Command, args []string) error {
 	fmt.Printf("\n结果: %d 问题, %d 警告, %d 建议\n", issues, warnings, suggestions)
 	return nil
 }
-

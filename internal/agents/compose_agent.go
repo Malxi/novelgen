@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"novelgen/internal/toolcmd"
-	"os"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
@@ -1653,8 +1651,9 @@ func loadAgentSDKAppliedOutlineVolume(original models.Volume, requireApplied boo
 		}
 		return original, nil
 	}
-	outlinePath := store.At(root).OutlineJSON()
-	outline, err := models.LoadOutline(outlinePath)
+	project := store.At(root)
+	outlinePath := project.OutlineJSON()
+	outline, err := project.LoadOutline()
 	if err != nil {
 		if requireApplied {
 			return models.Volume{}, fmt.Errorf("agent SDK applied outline patch but reloading %s failed: %w", outlinePath, err)
@@ -3316,7 +3315,7 @@ func (a *ComposeAgent) RepairByReviewAgentSDK(ctx context.Context, outline *mode
 // improveVolumesWithCheckpoint improves volumes with checkpoint/resume support
 func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int, setup *models.StorySetup) (*models.Outline, error) {
 	currentOutline := *outline
-	progressPath, err := composeImproveProgressPath()
+	root, progressPath, err := composeImproveProgress()
 	if err != nil {
 		return nil, err
 	}
@@ -3324,8 +3323,8 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 
 	// Try to load existing progress
 	var progress *ImproveProgress
-	if _, err := os.Stat(progressPath); err == nil {
-		loadedProgress, err := a.loadImproveProgress(progressPath)
+	if root.Exists(progressPath) {
+		loadedProgress, err := a.loadImproveProgress(root, progressPath)
 		if err == nil && loadedProgress.Iteration == currentIteration && equalStringSlices(loadedProgress.TargetVolumes, targetVolumes) {
 			logger.Info("📂 Found existing progress for iteration %d, resuming...", currentIteration)
 			progress = loadedProgress
@@ -3347,7 +3346,7 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 			ReviewResult:     *reviewResult,
 		}
 		// Save initial progress
-		if err := a.saveImproveProgress(progress, progressPath); err != nil {
+		if err := a.saveImproveProgress(root, progress, progressPath); err != nil {
 			logger.Warn("Failed to save initial progress: %v", err)
 		}
 	}
@@ -3390,7 +3389,7 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 			// Save progress before returning error
 			progress.CurrentVolumeIdx = idx
 			progress.Outline = currentOutline
-			if saveErr := a.saveImproveProgress(progress, progressPath); saveErr != nil {
+			if saveErr := a.saveImproveProgress(root, progress, progressPath); saveErr != nil {
 				logger.Warn("Failed to save progress on error: %v", saveErr)
 			}
 			return nil, fmt.Errorf("failed to improve volume %d.%d: %w", partIdx+1, volIdx+1, err)
@@ -3405,7 +3404,7 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 		progress.Outline = currentOutline
 
 		// Save progress after each volume
-		if err := a.saveImproveProgress(progress, progressPath); err != nil {
+		if err := a.saveImproveProgress(root, progress, progressPath); err != nil {
 			logger.Warn("Failed to save progress: %v", err)
 		} else {
 			logger.Info("[save] Progress saved (%d/%d volumes completed)", len(progress.CompletedVolumes), progress.TotalVolumes)
@@ -3413,7 +3412,7 @@ func (a *ComposeAgent) improveVolumesWithCheckpoint(ctx context.Context, outline
 	}
 
 	// Remove progress file on successful completion of this iteration
-	os.Remove(progressPath)
+	_ = root.Remove(progressPath)
 	logger.Info("[ok] Iteration %d complete. Progress file removed.", currentIteration)
 
 	return &currentOutline, nil
@@ -3445,15 +3444,15 @@ func appendComposeImproveReport(entry ComposeImproveReportEntry) error {
 	return root.Append(root.ComposeFile("outline_improve_report.jsonl"), append(data, '\n'), store.FileMode)
 }
 
-// composeImproveProgressPath returns the resume checkpoint for the project the
-// agent is working in. The path used to be spelled relative to the SDK process
-// working directory, which only coincided with the project by accident.
-func composeImproveProgressPath() (string, error) {
+// composeImproveProgress returns the project the improve loop checkpoints into
+// and the progress file's path. The path used to be spelled relative to the SDK
+// process working directory, which only coincided with the project by accident.
+func composeImproveProgress() (*store.Root, string, error) {
 	root, err := store.Open(agentWorkspaceRoot())
 	if err != nil {
-		return "", fmt.Errorf("resolve project root for compose improve progress: %w", err)
+		return nil, "", fmt.Errorf("resolve project root for compose improve progress: %w", err)
 	}
-	return root.ComposeFile("outline_improve_progress.json"), nil
+	return root, root.ComposeFile("outline_improve_progress.json"), nil
 }
 
 func countMediumOrHigherReviewSuggestions(review models.ReviewResult) int {
@@ -3469,7 +3468,7 @@ func countMediumOrHigherReviewSuggestions(review models.ReviewResult) int {
 
 func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context, outline *models.Outline, volumesToImprove [][2]int, reviewResult *models.ReviewResult, currentIteration int, totalIterations int, qualityThreshold float64, forceImprove bool, userPrompt string, setup *models.StorySetup, applyPatches bool, crossOutline *models.Outline, allVolumes bool) (*models.Outline, *models.ReviewResult, int, error) {
 	currentOutline := *outline
-	progressPath, err := composeImproveProgressPath()
+	root, progressPath, err := composeImproveProgress()
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -3477,8 +3476,8 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 	var finalReview *models.ReviewResult
 
 	var progress *ImproveProgress
-	if _, err := os.Stat(progressPath); err == nil {
-		loadedProgress, err := a.loadImproveProgress(progressPath)
+	if root.Exists(progressPath) {
+		loadedProgress, err := a.loadImproveProgress(root, progressPath)
 		if err == nil && loadedProgress.Iteration == currentIteration && equalStringSlices(loadedProgress.TargetVolumes, targetVolumes) {
 			logger.Info("[resume] Found existing Agent SDK progress for iteration %d, resuming...", currentIteration)
 			progress = loadedProgress
@@ -3503,7 +3502,7 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 		if reviewResult != nil {
 			progress.ReviewResult = *reviewResult
 		}
-		if err := a.saveImproveProgress(progress, progressPath); err != nil {
+		if err := a.saveImproveProgress(root, progress, progressPath); err != nil {
 			logger.Warn("Failed to save initial Agent SDK progress: %v", err)
 		}
 	}
@@ -3546,7 +3545,7 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 			progress.CompletedVolumes = append(progress.CompletedVolumes, volume.ID)
 			progress.CurrentVolumeIdx = idx + 1
 			progress.Outline = currentOutline
-			if err := a.saveImproveProgress(progress, progressPath); err != nil {
+			if err := a.saveImproveProgress(root, progress, progressPath); err != nil {
 				logger.Warn("Failed to save Agent SDK progress after skip: %v", err)
 			}
 			if err := appendComposeImproveReport(ComposeImproveReportEntry{
@@ -3628,7 +3627,7 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 		if err != nil {
 			progress.CurrentVolumeIdx = idx
 			progress.Outline = currentOutline
-			if saveErr := a.saveImproveProgress(progress, progressPath); saveErr != nil {
+			if saveErr := a.saveImproveProgress(root, progress, progressPath); saveErr != nil {
 				logger.Warn("Failed to save Agent SDK progress on error: %v", saveErr)
 			}
 			return nil, finalReview, improvedCount, fmt.Errorf("failed to improve volume %d.%d: %w", partIdx+1, volIdx+1, err)
@@ -3659,7 +3658,7 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 		progress.CompletedVolumes = append(progress.CompletedVolumes, volume.ID)
 		progress.CurrentVolumeIdx = idx + 1
 		progress.Outline = currentOutline
-		if err := a.saveImproveProgress(progress, progressPath); err != nil {
+		if err := a.saveImproveProgress(root, progress, progressPath); err != nil {
 			logger.Warn("Failed to save Agent SDK progress: %v", err)
 		} else {
 			logger.Info("[save] Agent SDK progress saved (%d/%d volumes completed)", len(progress.CompletedVolumes), progress.TotalVolumes)
@@ -3677,7 +3676,7 @@ func (a *ComposeAgent) improveVolumesWithCheckpointAgentSDK(ctx context.Context,
 		}
 	}
 
-	os.Remove(progressPath)
+	_ = root.Remove(progressPath)
 	logger.Info("[ok] Agent SDK iteration %d complete. Progress file removed.", currentIteration)
 	return &currentOutline, finalReview, improvedCount, nil
 }
@@ -3845,49 +3844,25 @@ func equalStringSlices(a, b []string) bool {
 	return true
 }
 
-// loadImproveProgress loads improvement progress from file
-func (a *ComposeAgent) loadImproveProgress(path string) (*ImproveProgress, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
+// loadImproveProgress loads improvement progress through the project store.
+func (a *ComposeAgent) loadImproveProgress(root *store.Root, path string) (*ImproveProgress, error) {
+	var progress ImproveProgress
+	if err := root.ReadJSON(path, &progress); err != nil {
 		return nil, fmt.Errorf("failed to read progress file: %w", err)
 	}
-
-	var progress ImproveProgress
-	if err := json.Unmarshal(data, &progress); err != nil {
-		return nil, fmt.Errorf("failed to parse progress file: %w", err)
-	}
-
 	return &progress, nil
 }
 
-// saveImproveProgress saves improvement progress to file
-func (a *ComposeAgent) saveImproveProgress(progress *ImproveProgress, path string) error {
+// saveImproveProgress saves improvement progress through the store's atomic
+// write. It used to hand-roll a temp-file-plus-rename of its own next to the
+// store's version, which meant two implementations of the same guarantee.
+func (a *ComposeAgent) saveImproveProgress(root *store.Root, progress *ImproveProgress, path string) error {
 	if progress == nil {
 		return fmt.Errorf("cannot save nil progress")
 	}
-
-	// Ensure directory exists
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	// Marshal with indentation for readability
-	data, err := json.MarshalIndent(progress, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal progress: %w", err)
-	}
-
-	// Write to temporary file first, then rename for atomic operation
-	tempPath := path + ".tmp"
-	if err := os.WriteFile(tempPath, data, 0644); err != nil {
+	if err := root.WriteJSON(path, progress); err != nil {
 		return fmt.Errorf("failed to write progress file: %w", err)
 	}
-
-	if err := os.Rename(tempPath, path); err != nil {
-		return fmt.Errorf("failed to rename progress file: %w", err)
-	}
-
 	return nil
 }
 

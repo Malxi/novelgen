@@ -1,6 +1,7 @@
 package store
 
 import (
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -21,6 +22,7 @@ type MemFS struct {
 	mu    sync.RWMutex
 	files map[string][]byte
 	dirs  map[string]bool
+	times map[string]time.Time
 }
 
 // NewMemFS returns an empty in-memory filesystem with its root directory.
@@ -28,6 +30,7 @@ func NewMemFS() *MemFS {
 	return &MemFS{
 		files: map[string][]byte{},
 		dirs:  map[string]bool{"/": true},
+		times: map[string]time.Time{},
 	}
 }
 
@@ -54,7 +57,15 @@ func (m *MemFS) SetFile(name string, data []byte) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.createParents(key(name))
-	m.files[key(name)] = append([]byte(nil), data...)
+	m.store(key(name), data)
+}
+
+// store writes a file's contents, keeping the modification time in step with the
+// host filesystem so code that compares artifact freshness behaves the same
+// under MemFS. Callers hold the write lock.
+func (m *MemFS) store(name string, data []byte) {
+	m.files[name] = append([]byte(nil), data...)
+	m.times[name] = time.Now()
 }
 
 // File returns a file's contents and whether it exists.
@@ -106,7 +117,23 @@ func (m *MemFS) WriteFile(name string, data []byte, perm os.FileMode) error {
 		return &fs.PathError{Op: "open", Path: name, Err: errIsDir{}}
 	}
 	m.createParents(key)
-	m.files[key] = append([]byte(nil), data...)
+	m.store(key, data)
+	return nil
+}
+
+// WriteFileExclusive mirrors os.OpenFile with O_CREATE|O_EXCL.
+func (m *MemFS) WriteFileExclusive(name string, data []byte, perm os.FileMode) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	key := key(name)
+	if _, ok := m.files[key]; ok {
+		return &fs.PathError{Op: "open", Path: name, Err: fs.ErrExist}
+	}
+	if m.dirs[key] {
+		return &fs.PathError{Op: "open", Path: name, Err: errIsDir{}}
+	}
+	m.createParents(key)
+	m.store(key, data)
 	return nil
 }
 
@@ -115,7 +142,51 @@ func (m *MemFS) AppendFile(name string, data []byte, perm os.FileMode) error {
 	defer m.mu.Unlock()
 	key := key(name)
 	m.createParents(key)
-	m.files[key] = append(m.files[key], data...)
+	combined := append(append([]byte(nil), m.files[key]...), data...)
+	m.store(key, combined)
+	return nil
+}
+
+// OpenAppend returns a handle that appends to a file as it is written, like
+// os.OpenFile with O_APPEND|O_CREATE|O_WRONLY. Writes are visible to readers
+// immediately, which is what a streaming log needs.
+func (m *MemFS) OpenAppend(name string, perm os.FileMode) (io.WriteCloser, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	key := key(name)
+	if m.dirs[key] {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: errIsDir{}}
+	}
+	m.createParents(key)
+	if _, ok := m.files[key]; !ok {
+		m.store(key, nil)
+	}
+	return &memAppendHandle{fs: m, key: key, name: name}, nil
+}
+
+// memAppendHandle is the MemFS counterpart of an append-only *os.File.
+type memAppendHandle struct {
+	fs     *MemFS
+	key    string
+	name   string
+	closed bool
+}
+
+func (h *memAppendHandle) Write(p []byte) (int, error) {
+	h.fs.mu.Lock()
+	defer h.fs.mu.Unlock()
+	if h.closed {
+		return 0, &fs.PathError{Op: "write", Path: h.name, Err: fs.ErrClosed}
+	}
+	combined := append(append([]byte(nil), h.fs.files[h.key]...), p...)
+	h.fs.store(h.key, combined)
+	return len(p), nil
+}
+
+func (h *memAppendHandle) Close() error {
+	h.fs.mu.Lock()
+	defer h.fs.mu.Unlock()
+	h.closed = true
 	return nil
 }
 
@@ -143,7 +214,11 @@ func (m *MemFS) ReadDir(dir string) ([]os.DirEntry, error) {
 	for name := range m.files {
 		if child, ok := directChild(key, name); ok && !seen[child] {
 			seen[child] = true
-			entries = append(entries, memDirEntry{name: child})
+			entries = append(entries, memDirEntry{
+				name: child,
+				size: int64(len(m.files[name])),
+				mod:  m.times[name],
+			})
 		}
 	}
 	for name := range m.dirs {
@@ -192,7 +267,7 @@ func (m *MemFS) Stat(name string) (os.FileInfo, error) {
 	defer m.mu.RUnlock()
 	key := key(name)
 	if data, ok := m.files[key]; ok {
-		return memFileInfo{name: path.Base(key), size: int64(len(data))}, nil
+		return memFileInfo{name: path.Base(key), size: int64(len(data)), mod: m.times[key]}, nil
 	}
 	if m.dirs[key] {
 		return memFileInfo{name: path.Base(key), dir: true}, nil
@@ -206,6 +281,7 @@ func (m *MemFS) Remove(name string) error {
 	key := key(name)
 	if _, ok := m.files[key]; ok {
 		delete(m.files, key)
+		delete(m.times, key)
 		return nil
 	}
 	if m.dirs[key] {
@@ -229,8 +305,13 @@ func (m *MemFS) Rename(oldpath, newpath string) error {
 		return &fs.PathError{Op: "rename", Path: oldpath, Err: fs.ErrNotExist}
 	}
 	m.createParents(newKey)
-	m.files[newKey] = data
+	mod := m.times[oldKey]
+	m.store(newKey, data)
+	if !mod.IsZero() {
+		m.times[newKey] = mod
+	}
 	delete(m.files, oldKey)
+	delete(m.times, oldKey)
 	return nil
 }
 
@@ -245,12 +326,16 @@ func (errIsDir) Is(target error) bool { return target == fs.ErrInvalid }
 type memDirEntry struct {
 	name string
 	dir  bool
+	size int64
+	mod  time.Time
 }
 
-func (e memDirEntry) Name() string               { return e.name }
-func (e memDirEntry) IsDir() bool                { return e.dir }
-func (e memDirEntry) Type() fs.FileMode          { return e.mode().Type() }
-func (e memDirEntry) Info() (fs.FileInfo, error) { return memFileInfo{name: e.name, dir: e.dir}, nil }
+func (e memDirEntry) Name() string      { return e.name }
+func (e memDirEntry) IsDir() bool       { return e.dir }
+func (e memDirEntry) Type() fs.FileMode { return e.mode().Type() }
+func (e memDirEntry) Info() (fs.FileInfo, error) {
+	return memFileInfo{name: e.name, dir: e.dir, size: e.size, mod: e.mod}, nil
+}
 func (e memDirEntry) mode() fs.FileMode {
 	if e.dir {
 		return fs.ModeDir | DirMode
@@ -262,6 +347,7 @@ type memFileInfo struct {
 	name string
 	size int64
 	dir  bool
+	mod  time.Time
 }
 
 func (i memFileInfo) Name() string { return i.name }
@@ -272,7 +358,7 @@ func (i memFileInfo) Mode() fs.FileMode {
 	}
 	return FileMode
 }
-func (i memFileInfo) ModTime() time.Time { return time.Time{} }
+func (i memFileInfo) ModTime() time.Time { return i.mod }
 func (i memFileInfo) IsDir() bool        { return i.dir }
 func (i memFileInfo) Sys() any           { return nil }
 

@@ -96,26 +96,26 @@ func TestResumeProgressMatchesRun(t *testing.T) {
 	}
 
 	writeProgress(1, []string{"P1-V1", "P1-V2"})
-	if !resumeProgressMatchesRun(progressPath, outline, 1) {
+	if !resumeProgressMatchesRun(store.At(dir), progressPath, outline, 1) {
 		t.Fatalf("matching progress should be recognized as a resume")
 	}
 
 	writeProgress(1, []string{"P1-V2", "P1-V1"})
-	if !resumeProgressMatchesRun(progressPath, outline, 1) {
+	if !resumeProgressMatchesRun(store.At(dir), progressPath, outline, 1) {
 		t.Fatalf("target order should not matter")
 	}
 
 	writeProgress(1, []string{"P1-V1"})
-	if resumeProgressMatchesRun(progressPath, outline, 1) {
+	if resumeProgressMatchesRun(store.At(dir), progressPath, outline, 1) {
 		t.Fatalf("missing target should not match")
 	}
 
 	writeProgress(0, []string{"P1-V1", "P1-V2"})
-	if resumeProgressMatchesRun(progressPath, outline, 1) {
+	if resumeProgressMatchesRun(store.At(dir), progressPath, outline, 1) {
 		t.Fatalf("gate-repair iteration 0 must not match the main run")
 	}
 
-	if resumeProgressMatchesRun(filepath.Join(dir, "missing.json"), outline, 1) {
+	if resumeProgressMatchesRun(store.At(dir), filepath.Join(dir, "missing.json"), outline, 1) {
 		t.Fatalf("missing progress file must not match")
 	}
 }
@@ -132,7 +132,7 @@ func TestLoadComposeImproveReportEntriesDedupe(t *testing.T) {
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	entries, err := loadComposeImproveReportEntries(path)
+	entries, err := loadComposeImproveReportEntries(store.At(dir), path)
 	if err != nil {
 		t.Fatal(err)
 	}

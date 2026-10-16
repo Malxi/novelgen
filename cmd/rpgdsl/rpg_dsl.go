@@ -571,8 +571,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 		llmConfig = nil
 	}
 
-	projectConfigPath := filepath.Join(root, "novel.json")
-	projectConfig, err := models.LoadProjectConfig(projectConfigPath)
+	projectConfig, err := store.At(root).LoadConfig()
 	if err != nil {
 		fmt.Printf("⚠️  加载项目配置失败: %v\n", err)
 	} else {
@@ -617,7 +616,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 	for i, batch := range batches {
 		fmt.Printf("\n📦 Batch %d/%d: %s → %s (%d 章)\n",
 			i+1, len(batches), batch[0].ChapterID, batch[len(batch)-1].ChapterID, len(batch))
-		chapterData, err := writersdl.LoadWriteRPGDSLChapterData(batch)
+		chapterData, err := writersdl.LoadWriteRPGDSLChapterData(store.At(root).FS(), batch)
 		if err != nil {
 			return fmt.Errorf("加载批次 %d 章节内容失败: %w", i+1, err)
 		}
@@ -756,6 +755,7 @@ func selectOutlineVolume(project *rpg.NovelgenProject, volumeIndex int) error {
 
 func loadDSLFragments(bookName string) ([]*dsl.DSLFragment, error) {
 	rpgDir := getBookRPGDir(bookName)
+	rpgRoot := store.At(filepath.Dir(rpgDir))
 
 	// Look for DSL files
 	patterns := append(store.RPGPhaseFiles(), "*.rpg")
@@ -780,7 +780,7 @@ func loadDSLFragments(bookName string) ([]*dsl.DSLFragment, error) {
 			phase := writersdl.InferPhaseFromFilename(filepath.Base(file))
 
 			// Parse DSL
-			content, err := os.ReadFile(file)
+			content, err := rpgRoot.Read(file)
 			if err != nil {
 				parseErrors = append(parseErrors, fmt.Sprintf("读取 %s 失败: %v", file, err))
 				continue

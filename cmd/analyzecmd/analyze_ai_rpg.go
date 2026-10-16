@@ -15,6 +15,7 @@ import (
 	"novelgen/internal/agents"
 	"novelgen/internal/llm"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 	"novelgen/internal/utils"
 )
 
@@ -165,10 +166,11 @@ func runBatchMode(ctx context.Context, pipeline *agents.AIRPGPipeline, dirPath, 
 
 func initLLMForAIRPG(bookPath string) (llm.Client, *llm.Config, *models.ProjectLLM, error) {
 	// 1. 从 novel.json 读取配置
-	novelJSONPath := filepath.Join(bookPath, "novel.json")
+	projectRoot := store.At(bookPath)
+	novelJSONPath := projectRoot.NovelJSON()
 	var projectLLM *models.ProjectLLM
 
-	if data, err := os.ReadFile(novelJSONPath); err == nil {
+	if data, err := projectRoot.Read(novelJSONPath); err == nil {
 		var novelConfig struct {
 			LLM struct {
 				Provider string `json:"provider"`

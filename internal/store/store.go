@@ -10,6 +10,17 @@
 // This package is the single place that knows where project artifacts live.
 // Callers hold a *Root, which carries both the project directory and the
 // filesystem used to reach it, so nothing here depends on process state.
+//
+// The contract has two halves, and both are enforced by tests in
+// internal/architecture:
+//
+//  1. Layout ownership — no other package spells "story/...", "chapters/...",
+//     "drafts/...", "logs/...", a phased "0N_*.rpg" name, or one of the artifact
+//     file names; they ask a Root instead.
+//  2. IO ownership — project files are read and written through Root.Read /
+//     Root.Write* / Root.Append / Root.FS(), never by handing a Root-derived path
+//     to os.*. FS is the only seam that touches the storage medium, which is what
+//     makes MemFS a usable backend rather than a promise.
 package store
 
 import (
@@ -85,13 +96,6 @@ func (r *Root) String() string {
 	return r.Dir()
 }
 
-// Sub returns the same project scoped to a subdirectory. It exists for callers
-// that need to treat a nested directory (for example story/compose) as a root
-// of its own, and keeps the filesystem seam intact.
-func (r *Root) Sub(name string) *Root {
-	return &Root{dir: filepath.Join(r.Dir(), name), fs: r.FS()}
-}
-
 // Locate walks up from startDir until it finds a directory containing
 // novel.json.
 func Locate(startDir string) (*Root, error) {
@@ -128,15 +132,6 @@ func locate(fs FS, startDir string) (*Root, error) {
 		}
 		dir = parent
 	}
-}
-
-// IsProjectDir reports whether dir looks like a novel project directory.
-func IsProjectDir(dir string) bool {
-	candidate, err := Open(dir)
-	if err != nil {
-		return false
-	}
-	return candidate.Exists(candidate.NovelJSON())
 }
 
 // defaultRoot carries a process-wide project root for library code that has no

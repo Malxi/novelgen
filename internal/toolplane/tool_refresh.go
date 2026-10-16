@@ -3,7 +3,6 @@ package toolplane
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -87,7 +86,7 @@ func refreshToolChapterDSLAt(ctx context.Context, root *store.Root, id string, b
 	if chapter == nil {
 		return nil, fmt.Errorf("chapter %q not found in outline", id)
 	}
-	chapterPath := firstExistingPath(root.ChapterCandidates(id))
+	chapterPath := firstExistingPath(root.FS(), root.ChapterCandidates(id))
 	if chapterPath == "" {
 		return nil, fmt.Errorf("chapter markdown for %q not found under %s", id, root.ChaptersDir())
 	}
@@ -156,9 +155,11 @@ func MakeToolRefreshChapterDSLCheck(chapterID string, issues []rpgdsl.Simulation
 	return MakeToolCheckResult("simulation", "chapter", "chapter", chapterID, gate)
 }
 
-func firstExistingPath(paths []string) string {
+// firstExistingPath returns the first candidate that exists on the project's
+// filesystem, so chapter-name fallbacks are probed through the store.
+func firstExistingPath(fs store.FS, paths []string) string {
 	for _, path := range paths {
-		if _, err := os.Stat(path); err == nil {
+		if _, err := fs.Stat(path); err == nil {
 			return path
 		}
 	}

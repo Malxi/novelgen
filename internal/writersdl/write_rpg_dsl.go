@@ -5,8 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"os"
+	iofs "io/fs"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -105,6 +106,7 @@ func EmitChapterRPGDSLForProject(
 
 	result, combined, err := EmitWriteRPGDSL(ctx, WriteRPGDSLEmitInput{
 		BookName:         bookName,
+		FS:               book.FS(),
 		CacheDir:         cacheDir,
 		Chapters:         chapterInputs,
 		BatchSize:        batchSize,
@@ -141,7 +143,7 @@ func FindProjectChapterInputsAt(book *store.Root, outline *models.Outline) ([]Wr
 	chapterFiles := map[string]string{}
 	for _, chapter := range AllOutlineChapters(outline) {
 		for _, path := range book.ChapterCandidates(chapter.ID) {
-			if _, err := os.Stat(path); err == nil {
+			if book.Exists(path) {
 				chapterFiles[chapter.ID] = path
 				break
 			}
@@ -149,14 +151,17 @@ func FindProjectChapterInputsAt(book *store.Root, outline *models.Outline) ([]Wr
 	}
 
 	if len(chapterFiles) == 0 {
-		pattern := filepath.Join(book.ChaptersDir(), "chapter-*.md")
-		files, err := filepath.Glob(pattern)
-		if err != nil {
+		entries, err := book.FS().ReadDir(book.ChaptersDir())
+		if err != nil && !errors.Is(err, iofs.ErrNotExist) {
 			return nil, err
 		}
-		for _, file := range files {
-			chapterID := strings.TrimSuffix(strings.TrimPrefix(filepath.Base(file), "chapter-"), filepath.Ext(file))
-			chapterFiles[chapterID] = file
+		for _, entry := range entries {
+			name := entry.Name()
+			if entry.IsDir() || !strings.HasPrefix(name, "chapter-") || !strings.HasSuffix(name, ".md") {
+				continue
+			}
+			chapterID := strings.TrimSuffix(strings.TrimPrefix(name, "chapter-"), ".md")
+			chapterFiles[chapterID] = filepath.Join(book.ChaptersDir(), name)
 		}
 	}
 
@@ -167,8 +172,8 @@ func FindProjectChapterInputsAt(book *store.Root, outline *models.Outline) ([]Wr
 			ChapterPath: chapterPath,
 		}
 		recapPath := book.RecapFile(chapterID)
-		if _, err := os.Stat(recapPath); err == nil {
-			if WriteRPGDSLRecapIsStale(chapterPath, recapPath) {
+		if book.Exists(recapPath) {
+			if recapIsStale(book.FS(), chapterPath, recapPath) {
 				logger.Warn("Skipping stale recap for RPG DSL conversion: %s is older than %s", recapPath, chapterPath)
 			} else {
 				input.RecapPath = recapPath
@@ -179,9 +184,11 @@ func FindProjectChapterInputsAt(book *store.Root, outline *models.Outline) ([]Wr
 	return inputs, nil
 }
 
-func WriteRPGDSLRecapIsStale(chapterPath, recapPath string) bool {
-	chapterInfo, chapterErr := os.Stat(chapterPath)
-	recapInfo, recapErr := os.Stat(recapPath)
+// recapIsStale reports whether the stored recap is older than the chapter it
+// describes. Both files are read through the project's filesystem.
+func recapIsStale(fs store.FS, chapterPath, recapPath string) bool {
+	chapterInfo, chapterErr := fs.Stat(chapterPath)
+	recapInfo, recapErr := fs.Stat(recapPath)
 	if chapterErr != nil || recapErr != nil {
 		return false
 	}
@@ -212,8 +219,8 @@ func FilterWriteRPGDSLChapterInputs(inputs []WriteRPGDSLChapterInput, targetSet 
 	return out
 }
 
-func LoadWriteRPGDSLExisting(path string) (*rpgdsl.DSL, error) {
-	data, err := os.ReadFile(path)
+func LoadWriteRPGDSLExisting(fs store.FS, path string) (*rpgdsl.DSL, error) {
+	data, err := fs.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -298,10 +305,10 @@ func EnsureWriteRPGDSLParseable(ctx context.Context, agent *agents.ChapterToDSLA
 	}
 }
 
-func LoadWriteRPGDSLChapterData(inputs []WriteRPGDSLChapterInput) ([]agents.ChapterData, error) {
+func LoadWriteRPGDSLChapterData(fs store.FS, inputs []WriteRPGDSLChapterInput) ([]agents.ChapterData, error) {
 	chapters := make([]agents.ChapterData, 0, len(inputs))
 	for _, input := range inputs {
-		content, err := os.ReadFile(input.ChapterPath)
+		content, err := fs.ReadFile(input.ChapterPath)
 		if err != nil {
 			return nil, err
 		}
@@ -311,7 +318,7 @@ func LoadWriteRPGDSLChapterData(inputs []WriteRPGDSLChapterInput) ([]agents.Chap
 			Content:   string(content),
 		}
 		if input.RecapPath != "" {
-			recapData, err := os.ReadFile(input.RecapPath)
+			recapData, err := fs.ReadFile(input.RecapPath)
 			if err != nil {
 				return nil, err
 			}
@@ -359,28 +366,27 @@ func DumpWriteRPGDSLFailure(bookName, content string, parseErr error) {
 		}
 	}
 	dir := root.RPGFile(filepath.Join("cache", "failed_dsl"))
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := root.MkdirAll(dir, store.DirMode); err != nil {
 		return
 	}
 	stem := filepath.Join(dir, "failed_"+time.Now().Format("20060102_150405"))
-	cache := store.At(dir)
-	_ = cache.WriteText(stem+".rpg", content)
-	_ = cache.WriteText(stem+".err.txt", parseErr.Error())
+	_ = root.WriteText(stem+".rpg", content)
+	_ = root.WriteText(stem+".err.txt", parseErr.Error())
 	logger.Error("Failed RPG DSL dump: %s.rpg", stem)
 }
 
-func BuildWriteRPGDSLBatchManifest(bookName string, batchIndex, batchSize int, chapterInputs []WriteRPGDSLChapterInput, cacheDir string) (*WriteRPGDSLBatchManifest, error) {
+func BuildWriteRPGDSLBatchManifest(fs store.FS, bookName string, batchIndex, batchSize int, chapterInputs []WriteRPGDSLChapterInput, cacheDir string) (*WriteRPGDSLBatchManifest, error) {
 	chapters := make([]WriteRPGDSLChapterState, 0, len(chapterInputs))
 	var hashInput strings.Builder
 	hashInput.WriteString(fmt.Sprintf("version=%d\nbook=%s\nbatch_index=%d\nbatch_size=%d\n", writeRPGDSLCacheVersion, bookName, batchIndex, batchSize))
 	for _, input := range chapterInputs {
-		chapterSum, err := FileSHA256ForWriteRPGDSL(input.ChapterPath)
+		chapterSum, err := FileSHA256ForWriteRPGDSL(fs, input.ChapterPath)
 		if err != nil {
 			return nil, err
 		}
 		recapSum := ""
 		if input.RecapPath != "" {
-			recapSum, err = FileSHA256ForWriteRPGDSL(input.RecapPath)
+			recapSum, err = FileSHA256ForWriteRPGDSL(fs, input.RecapPath)
 			if err != nil {
 				return nil, err
 			}
@@ -413,11 +419,11 @@ func BuildWriteRPGDSLBatchManifest(bookName string, batchIndex, batchSize int, c
 	}, nil
 }
 
-func LoadWriteRPGDSLBatchFromCache(expected *WriteRPGDSLBatchManifest) (string, bool, error) {
+func LoadWriteRPGDSLBatchFromCache(fs store.FS, expected *WriteRPGDSLBatchManifest) (string, bool, error) {
 	manifestPath := strings.TrimSuffix(expected.DSLFile, filepath.Ext(expected.DSLFile)) + ".json"
-	data, err := os.ReadFile(manifestPath)
+	data, err := fs.ReadFile(manifestPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, iofs.ErrNotExist) {
 			return "", false, nil
 		}
 		return "", false, err
@@ -429,9 +435,9 @@ func LoadWriteRPGDSLBatchFromCache(expected *WriteRPGDSLBatchManifest) (string, 
 	if cached.Version != expected.Version || cached.BookName != expected.BookName || cached.BatchIndex != expected.BatchIndex || cached.BatchSize != expected.BatchSize || cached.BatchHash != expected.BatchHash || cached.DSLFile != expected.DSLFile {
 		return "", false, nil
 	}
-	content, err := os.ReadFile(expected.DSLFile)
+	content, err := fs.ReadFile(expected.DSLFile)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, iofs.ErrNotExist) {
 			return "", false, nil
 		}
 		return "", false, err
@@ -442,8 +448,15 @@ func LoadWriteRPGDSLBatchFromCache(expected *WriteRPGDSLBatchManifest) (string, 
 	return string(content), true, nil
 }
 
-func SaveWriteRPGDSLBatchToCache(manifest *WriteRPGDSLBatchManifest, content string) error {
-	cache := store.At(filepath.Dir(manifest.DSLFile))
+// SaveWriteRPGDSLBatchToCache stores one converted batch plus its manifest. It
+// writes through the caller's filesystem (the cache and the chapter files must
+// live on the same one), which the FS-less version of this function quietly did
+// not: it always went to the host filesystem.
+func SaveWriteRPGDSLBatchToCache(fs store.FS, manifest *WriteRPGDSLBatchManifest, content string) error {
+	if fs == nil {
+		fs = store.OSFS{}
+	}
+	cache := store.OpenFS(filepath.Dir(manifest.DSLFile), fs)
 	if err := cache.WriteText(manifest.DSLFile, content); err != nil {
 		return err
 	}
@@ -879,8 +892,8 @@ func ParseRPGDSLChapterID(chapterID string) (int, int, int) {
 	return p, v, c
 }
 
-func FileSHA256ForWriteRPGDSL(path string) (string, error) {
-	data, err := os.ReadFile(path)
+func FileSHA256ForWriteRPGDSL(fs store.FS, path string) (string, error) {
+	data, err := fs.ReadFile(path)
 	if err != nil {
 		return "", err
 	}

@@ -17,7 +17,10 @@ func TestLoadFinalChapterContentPrefersFullIDThenNumericFallback(t *testing.T) {
 	writeFile(t, filepath.Join(root, "chapters", "chapter-P1-V1-C1.md"), "# full id")
 	book := openBook(t, root)
 
-	got := book.LoadFinalChapterContent(&models.Chapter{ID: "P1-V1-C1"})
+	got, err := book.LoadFinalChapterContent(&models.Chapter{ID: "P1-V1-C1"})
+	if err != nil {
+		t.Fatalf("LoadFinalChapterContent: %v", err)
+	}
 	if got != "# full id" {
 		t.Fatalf("content = %q, want full-id file", got)
 	}
@@ -25,14 +28,14 @@ func TestLoadFinalChapterContentPrefersFullIDThenNumericFallback(t *testing.T) {
 	// Underscore IDs reduce to their trailing segment, matching the historical
 	// numeric-fallback naming (chapter-3.md).
 	writeFile(t, filepath.Join(root, "chapters", "chapter-3.md"), "# numeric")
-	if got := book.LoadFinalChapterContent(&models.Chapter{ID: "chap_1_2_3"}); got != "# numeric" {
+	if got, err := book.LoadFinalChapterContent(&models.Chapter{ID: "chap_1_2_3"}); err != nil || got != "# numeric" {
 		t.Fatalf("numeric fallback content = %q, want %q", got, "# numeric")
 	}
 
-	if got := book.LoadFinalChapterContent(&models.Chapter{ID: "missing"}); got != "" {
+	if got, err := book.LoadFinalChapterContent(&models.Chapter{ID: "missing"}); err != nil || got != "" {
 		t.Fatalf("missing chapter content = %q, want empty", got)
 	}
-	if got := book.LoadFinalChapterContent(nil); got != "" {
+	if got, err := book.LoadFinalChapterContent(nil); err != nil || got != "" {
 		t.Fatalf("nil chapter content = %q, want empty", got)
 	}
 }
@@ -45,10 +48,10 @@ func TestLoadDraftContentAndSaveDraft(t *testing.T) {
 	writeFile(t, filepath.Join(root, "drafts", "P1-V1-C1.md"), "draft body")
 	book := openBook(t, root)
 
-	if got := book.LoadDraftContent("P1-V1-C1"); got != "draft body" {
+	if got, err := book.LoadDraftContent("P1-V1-C1"); err != nil || got != "draft body" {
 		t.Fatalf("LoadDraftContent = %q", got)
 	}
-	if got := book.LoadDraftContent("nope"); got != "" {
+	if got, err := book.LoadDraftContent("nope"); err != nil || got != "" {
 		t.Fatalf("missing draft = %q, want empty", got)
 	}
 

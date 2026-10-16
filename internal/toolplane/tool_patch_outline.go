@@ -74,11 +74,11 @@ func runToolOutlinePatch(cmd *cobra.Command, root *store.Root, target, id string
 			return err
 		}
 		OutlinePath := root.OutlineJSON()
-		if err := project.SavePartialOutline(ctx.Outline, OutlinePath); err != nil {
+		if err := root.SaveOutlineAt(OutlinePath, ctx.Outline); err != nil {
 			return fmt.Errorf("failed to save patched outline: %w", err)
 		}
-		mdPath := root.OutlineMarkdown()
-		if err := project.CreateOutlineMarkdown(ctx.Outline, mdPath); err != nil {
+		mdPath, err := project.Open(root).SaveOutlineMarkdown(ctx.Outline)
+		if err != nil {
 			return fmt.Errorf("failed to save outline markdown: %w", err)
 		}
 		files["outline"] = OutlinePath

@@ -21,7 +21,7 @@ import (
 
 // LoadPreviousDraftContext loads FULL previous draft chapters for continuity.
 // contextCount = number of previous chapters to include.
-func LoadPreviousDraftContext(outline *models.Outline, targetChapter *models.Chapter, contextCount int) string {
+func LoadPreviousDraftContext(book *project.Book, outline *models.Outline, targetChapter *models.Chapter, contextCount int) string {
 	if contextCount <= 0 {
 		return ""
 	}
@@ -48,7 +48,14 @@ func LoadPreviousDraftContext(outline *models.Outline, targetChapter *models.Cha
 
 	for i := start; i < targetIndex; i++ {
 		ch := allChapters[i]
-		draft := project.LoadDraftContent(ch.ID)
+		// Best-effort continuity context: a draft that is missing and a draft that
+		// cannot be read both mean "no text to include here". Callers that act on
+		// the value (recap extraction, chapter checks, patch before-state) go
+		// through the error-returning reader instead.
+		var draft string
+		if book != nil {
+			draft, _ = book.LoadDraftContent(ch.ID)
+		}
 		if strings.TrimSpace(draft) == "" {
 			continue
 		}
@@ -65,7 +72,7 @@ func LoadPreviousDraftContext(outline *models.Outline, targetChapter *models.Cha
 
 // LoadPreviousDraftRecap returns a compact, high-signal recap of the immediately
 // previous chapter draft (best-effort). If not available, returns "".
-func LoadPreviousDraftRecap(outline *models.Outline, targetChapter *models.Chapter) string {
+func LoadPreviousDraftRecap(book *project.Book, outline *models.Outline, targetChapter *models.Chapter) string {
 	if outline == nil || targetChapter == nil {
 		return ""
 	}
@@ -83,7 +90,10 @@ func LoadPreviousDraftRecap(outline *models.Outline, targetChapter *models.Chapt
 	}
 
 	prev := allChapters[targetIndex-1]
-	draft := project.LoadDraftContent(prev.ID)
+	if book == nil {
+		return ""
+	}
+	draft, _ := book.LoadDraftContent(prev.ID)
 	if strings.TrimSpace(draft) == "" {
 		return ""
 	}
@@ -204,19 +214,15 @@ func BuildOfflineRecap(ch *models.Chapter, text string) *models.ChapterRecap {
 
 // PersistOfflineRecap saves an offline recap for the given chapter.
 // Best-effort: failures are ignored by callers.
-func PersistOfflineRecap(ch *models.Chapter, text string) {
-	if ch == nil {
+func PersistOfflineRecap(book *project.Book, ch *models.Chapter, text string) {
+	if book == nil || ch == nil {
 		return
 	}
 	clean := strings.TrimSpace(text)
 	if clean == "" {
 		return
 	}
-	root, err := project.FindRoot()
-	if err != nil {
-		return
-	}
-	store := recap.NewStore(root)
+	store := recap.NewStoreAt(book.Root)
 	_ = store.Save(BuildOfflineRecap(ch, clean))
 }
 
@@ -224,19 +230,15 @@ func PersistOfflineRecap(ch *models.Chapter, text string) {
 // persisted recap JSON yet. This is useful for chapter-to-chapter continuity
 // when generating out of order or in environments where recap extraction hasn't
 // run.
-func PersistOfflineRecapIfMissing(ch *models.Chapter, text string) {
-	if ch == nil {
+func PersistOfflineRecapIfMissing(book *project.Book, ch *models.Chapter, text string) {
+	if book == nil || ch == nil {
 		return
 	}
 	clean := strings.TrimSpace(text)
 	if clean == "" {
 		return
 	}
-	root, err := project.FindRoot()
-	if err != nil {
-		return
-	}
-	store := recap.NewStore(root)
+	store := recap.NewStoreAt(book.Root)
 	if saved, err := store.Load(ch.ID); err == nil && saved != nil {
 		return
 	}

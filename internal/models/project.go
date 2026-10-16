@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 )
 
@@ -71,14 +70,6 @@ func (p *ProjectConfig) MarshalForSave() ([]byte, error) {
 }
 
 // Save writes the project config to novel.json
-func (p *ProjectConfig) Save(path string) error {
-	data, err := p.MarshalForSave()
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0644)
-}
-
 // ParseProjectConfig decodes a project config from raw novel.json bytes.
 func ParseProjectConfig(data []byte) (*ProjectConfig, error) {
 	var config ProjectConfig
@@ -86,15 +77,6 @@ func ParseProjectConfig(data []byte) (*ProjectConfig, error) {
 		return nil, err
 	}
 	return &config, nil
-}
-
-// LoadProjectConfig reads the project config from novel.json
-func LoadProjectConfig(path string) (*ProjectConfig, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return ParseProjectConfig(data)
 }
 
 // Validation errors

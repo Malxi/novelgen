@@ -41,7 +41,7 @@ type Logger struct {
 	mu         sync.RWMutex
 	level      Level
 	output     io.Writer
-	file       *os.File
+	file       io.WriteCloser
 	projectDir string
 	logFile    string
 }
@@ -95,17 +95,14 @@ func (l *Logger) EnableFileLogging() error {
 	// internal/store rather than being spelled here. logger sits at the store
 	// layer in internal/architecture/layers_test.go for exactly this reason.
 	root := store.At(l.projectDir)
-	logDir := root.LogsDir()
-	if err := root.MkdirAll(logDir, store.DirMode); err != nil {
-		return fmt.Errorf("failed to create log directory: %w", err)
-	}
-
-	logFile := filepath.Join(logDir, fmt.Sprintf("novelgen_%s.log", time.Now().Format("20060102_150405")))
-	file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	logFile := filepath.Join(root.LogsDir(), fmt.Sprintf("novelgen_%s.log", time.Now().Format("20060102_150405")))
+	// Root.OpenAppend is the store's streaming write: the run log has to keep one
+	// handle open for the whole process, which a whole-file write cannot express.
+	file, err := root.OpenAppend(logFile, store.FileMode)
 	if err != nil {
 		return fmt.Errorf("failed to open log file: %w", err)
 	}
-	if info, statErr := file.Stat(); statErr == nil && info.Size() == 0 {
+	if info, statErr := root.FS().Stat(logFile); statErr == nil && info.Size() == 0 {
 		if _, err := file.Write([]byte{0xEF, 0xBB, 0xBF}); err != nil {
 			file.Close()
 			return fmt.Errorf("failed to write UTF-8 BOM: %w", err)

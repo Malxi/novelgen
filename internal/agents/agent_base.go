@@ -176,9 +176,11 @@ func (a *BaseAgent) ExecuteWithRuntimeResult(ctx context.Context, params InvokeP
 		logAgentRuntimeLiveSummary(a.name, runtimeResult)
 		logger.Error("[%s] AI request failed: %v", a.name, err)
 		a.recordUsage(params, "chat", "", llm.Usage{}, time.Since(callStartedAt), err)
+		a.recordAICall(params, "", systemPrompt, userPrompt, "", llm.Usage{}, callStartedAt)
 		return runtimeResult, fmt.Errorf("AI request failed: %w", err)
 	}
 	a.recordUsage(params, "chat", resp.Model, resp.Usage, time.Since(callStartedAt), nil)
+	a.recordAICall(params, resp.Model, systemPrompt, userPrompt, resp.Content, resp.Usage, callStartedAt)
 	if err := validateAgentRuntimeToolEvidence(a.name, params.ToolEvidence, runtimeResult); err != nil {
 		return runtimeResult, err
 	}

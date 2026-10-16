@@ -137,10 +137,16 @@ func runRecapGen(cmd *cobra.Command, args []string) error {
 
 	_, _ = workerpool.Map(ctx, concurrency, chapters, func(ctx context.Context, workerID int, ch *models.Chapter) (struct{}, error) {
 		text := ""
+		var readErr error
 		if src == "drafts" {
-			text = project.LoadDraftContent(ch.ID)
+			text, readErr = project.LoadDraftContent(ch.ID)
 		} else {
-			text = project.LoadFinalChapterContent(ch)
+			text, readErr = project.LoadFinalChapterContent(ch)
+		}
+		if readErr != nil {
+			// A chapter file that exists but cannot be read must not look like
+			// "this chapter has not been written yet".
+			return struct{}{}, fmt.Errorf("read %s source for %s: %w", src, ch.ID, readErr)
 		}
 		if strings.TrimSpace(text) == "" {
 			log.Warn("[Worker %d] No source text for %s (%s); skipping", workerID, ch.ID, src)

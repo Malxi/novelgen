@@ -1,17 +1,17 @@
 package agents
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
+
 	"novelgen/internal/agentruntime"
 	"novelgen/internal/envutil"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/store"
 	"novelgen/internal/usage"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 func logAgentRuntimeLiveSummary(agentName string, result *agentruntime.Result) {
@@ -86,7 +86,7 @@ func (a *BaseAgent) savePromptsToFile(agentName, systemPrompt, userPrompt string
 	content.WriteString("# USER PROMPT\n\n")
 	content.WriteString(userPrompt)
 
-	path, err := writeAgentLogFile("prompts", agentName, content.String())
+	path, err := writeAgentLogFile(store.LogPromptsName, agentName, content.String())
 	if err != nil {
 		return fmt.Errorf("failed to write prompts file: %w", err)
 	}
@@ -108,7 +108,7 @@ func (a *BaseAgent) saveResponseToFile(agentName, response string) error {
 	content.WriteString(response)
 	content.WriteString("\n```\n")
 
-	path, err := writeAgentLogFile("responses", agentName, content.String())
+	path, err := writeAgentLogFile(store.LogResponsesName, agentName, content.String())
 	if err != nil {
 		return fmt.Errorf("failed to write response file: %w", err)
 	}
@@ -118,53 +118,94 @@ func (a *BaseAgent) saveResponseToFile(agentName, response string) error {
 	return nil
 }
 
-// writeAgentLogFile stores one agent log file and returns its path. Names are
-// allocated with O_EXCL so concurrent workers writing in the same second can
-// never overwrite each other.
+// writeAgentLogFile stores one agent log file and returns its path. Name
+// allocation (O_EXCL plus a numeric suffix on collision) lives in internal/store,
+// so concurrent workers writing in the same second cannot overwrite each other.
 func writeAgentLogFile(kind, agentName, content string) (string, error) {
 	if agentLogsDisabled() {
 		return "", nil
 	}
-	logsDir := agentLogDir(kind)
-	if err := os.MkdirAll(logsDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create logs directory: %w", err)
+	root, err := store.Open(agentLogRoot())
+	if err != nil {
+		return "", fmt.Errorf("resolve agent log root: %w", err)
 	}
-
-	now := time.Now()
-	stamp := now.Format("20060102_150405")
-	candidates := []string{
-		filepath.Join(logsDir, fmt.Sprintf("%s_%s.md", agentName, stamp)),
-		// A single second is not enough resolution when best-of-N, craft
-		// concurrency, or write workers fire at the same moment.
-		filepath.Join(logsDir, fmt.Sprintf("%s_%s_%09d.md", agentName, stamp, now.Nanosecond())),
+	path, err := root.SaveLogStream(kind, agentName, ".md", []byte(content))
+	if err != nil {
+		return "", fmt.Errorf("failed to write %s log: %w", kind, err)
 	}
-	for attempt := 2; attempt < 64; attempt++ {
-		candidates = append(candidates, filepath.Join(logsDir,
-			fmt.Sprintf("%s_%s_%09d_%d.md", agentName, stamp, now.Nanosecond(), attempt)))
-	}
-
-	for _, path := range candidates {
-		file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
-		if err != nil {
-			if os.IsExist(err) {
-				continue
-			}
-			return "", err
-		}
-		if _, err := file.WriteString(content); err != nil {
-			_ = file.Close()
-			return "", err
-		}
-		if err := file.Close(); err != nil {
-			return "", err
-		}
-		return path, nil
-	}
-	return "", fmt.Errorf("could not allocate a unique log file name in %s", logsDir)
+	return path, nil
 }
 
 func agentLogsDisabled() bool {
 	return envutil.Bool(AgentLogsDisabledEnv, false)
+}
+
+// aiCallRecord is one AI call as the web UI's AI-call viewer reads it from
+// logs/ai_calls/<id>.json. webui cannot import this package, so these JSON tags
+// are a cross-module contract: internal/architecture has a test that fails when
+// this struct and the reader in webui/main.go drift apart.
+type aiCallRecord struct {
+	// ID stays empty on purpose. The reader derives a call's identity from its
+	// file name, which is also what keeps it unique when two calls land in the
+	// same second.
+	ID           string      `json:"id"`
+	Agent        string      `json:"agent"`
+	Command      string      `json:"command"`
+	Skills       []string    `json:"skills"`
+	Model        string      `json:"model"`
+	StartedAt    time.Time   `json:"started_at"`
+	CompletedAt  time.Time   `json:"completed_at"`
+	SystemPrompt string      `json:"system_prompt"`
+	UserPrompt   string      `json:"user_prompt"`
+	Response     string      `json:"response"`
+	Usage        aiCallUsage `json:"usage"`
+}
+
+// aiCallUsage is the nested usage object of the same record.
+type aiCallUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
+}
+
+// recordAICall writes one structured record for a finished AI call: the model,
+// both prompts, the response and the token usage the markdown prompt/response
+// logs next to it do not carry. Failed calls are recorded too (with an empty
+// response), because "did the call fail, and with what prompt" is exactly what
+// those logs get opened to answer. It never fails a run.
+func (a *BaseAgent) recordAICall(params InvokeParams, model, systemPrompt, userPrompt, response string, tokens llm.Usage, startedAt time.Time) {
+	if agentLogsDisabled() {
+		return
+	}
+	root, err := store.Open(agentLogRoot())
+	if err != nil {
+		logger.Debug("[%s] Failed to record AI call: %v", a.name, err)
+		return
+	}
+	record := aiCallRecord{
+		Agent:        a.name,
+		Command:      params.Command,
+		Skills:       params.Skills,
+		Model:        model,
+		StartedAt:    startedAt,
+		CompletedAt:  time.Now(),
+		SystemPrompt: systemPrompt,
+		UserPrompt:   userPrompt,
+		Response:     response,
+		Usage: aiCallUsage{
+			PromptTokens:     tokens.PromptTokens,
+			CompletionTokens: tokens.CompletionTokens,
+			TotalTokens:      tokens.TotalTokens,
+		},
+	}
+	data, err := json.MarshalIndent(record, "", "  ")
+	if err != nil {
+		logger.Debug("[%s] Failed to encode AI call record: %v", a.name, err)
+		return
+	}
+	if _, err := root.SaveLogStream(store.LogAICallsName, a.name, ".json", append(data, '\n')); err != nil {
+		logger.Debug("[%s] Failed to write AI call record: %v", a.name, err)
+	}
 }
 
 // recordUsage appends one line to logs/usage.jsonl so a long creative run can
@@ -204,10 +245,4 @@ func agentLogRoot() string {
 		return root.Dir()
 	}
 	return "."
-}
-
-// agentLogDir returns the directory holding one kind of agent log, using the
-// project layout from internal/store so log locations stay defined in one place.
-func agentLogDir(kind string) string {
-	return store.At(agentLogRoot()).LogFile(kind)
 }

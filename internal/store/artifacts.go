@@ -37,26 +37,24 @@ func (r *Root) WriteJSON(path string, value any) error {
 // WriteJSONMerging writes value as indented JSON, merging its top-level keys
 // into whatever object already lives at path (new keys win). Callers use it to
 // update a subset of fields without dropping the rest.
+//
+// Only a missing file counts as "nothing to merge into". A file that exists but
+// cannot be read or parsed is an error: merging into an assumed-empty object
+// would silently drop every key the caller did not mention.
 func (r *Root) WriteJSONMerging(path string, value any) error {
-	existing := make(map[string]any)
-	if data, err := r.Read(path); err == nil {
-		if err := json.Unmarshal(utils.StripUTF8BOM(data), &existing); err != nil {
-			return fmt.Errorf("failed to parse existing data: %w", err)
-		}
+	var existing []byte
+	data, err := r.Read(path)
+	if err == nil {
+		existing = data
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("read existing %s: %w", path, err)
 	}
 
-	encoded, err := json.Marshal(value)
+	merged, err := utils.MergeTopLevelJSON(existing, value)
 	if err != nil {
-		return fmt.Errorf("failed to marshal new data: %w", err)
+		return fmt.Errorf("merge %s: %w", path, err)
 	}
-	var incoming map[string]any
-	if err := json.Unmarshal(encoded, &incoming); err != nil {
-		return fmt.Errorf("failed to parse new data: %w", err)
-	}
-	for key, item := range incoming {
-		existing[key] = item
-	}
-	return r.WriteJSON(path, existing)
+	return r.Write(path, merged, FileMode)
 }
 
 // HasConfig reports whether novel.json exists.
@@ -88,7 +86,13 @@ func (r *Root) HasSetup() bool { return r.Exists(r.SetupJSON()) }
 
 // LoadSetup reads story/setup/story_setup.json.
 func (r *Root) LoadSetup() (*models.StorySetup, error) {
-	data, err := r.Read(r.SetupJSON())
+	return r.LoadSetupAt(r.SetupJSON())
+}
+
+// LoadSetupAt reads a story setup from an explicit path. It exists for the
+// legacy flat story/setup.json that the RPG adapter still has to read.
+func (r *Root) LoadSetupAt(path string) (*models.StorySetup, error) {
+	data, err := r.Read(path)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +137,9 @@ func (r *Root) SaveOutline(outline *models.Outline) error {
 	return r.SaveOutlineAt(r.OutlineJSON(), outline)
 }
 
-// SaveOutlineAt writes an outline to an explicit path.
+// SaveOutlineAt writes an outline to an explicit path, normalized and
+// atomically. It serves both the canonical outline.json and the compose
+// pipeline's per-iteration progress files, which have the same shape.
 func (r *Root) SaveOutlineAt(path string, outline *models.Outline) error {
 	if outline == nil {
 		return errors.New("cannot save nil outline")
@@ -180,7 +186,13 @@ func loadCraftFile[T any](r *Root, kind CraftKind) (map[string]*T, error) {
 	values := make(map[string]*T)
 	data, err := r.Read(r.CraftFile(kind))
 	if err != nil {
-		return values, nil
+		// A craft file that has not been generated yet is not an error; one that
+		// exists but cannot be read is, because the caller is about to treat the
+		// elements as "the project has none".
+		if errors.Is(err, fs.ErrNotExist) {
+			return values, nil
+		}
+		return nil, err
 	}
 	if err := json.Unmarshal(utils.StripUTF8BOM(data), &values); err != nil {
 		return nil, err
@@ -255,14 +267,19 @@ func (r *Root) LoadCraftRaw(kind CraftKind) (map[string]map[string]any, error) {
 
 // LoadChapterContent returns the stored markdown for a chapter and the path it
 // was found at, walking the legacy file-name candidates. Both return values are
-// empty when the chapter has not been written yet.
-func (r *Root) LoadChapterContent(chapterID string) (string, string) {
+// empty when the chapter has not been written yet; a chapter file that exists
+// but cannot be read is reported as an error instead of as "not written".
+func (r *Root) LoadChapterContent(chapterID string) (string, string, error) {
 	for _, path := range r.ChapterCandidates(chapterID) {
-		if data, err := r.Read(path); err == nil {
-			return string(data), path
+		data, err := r.Read(path)
+		if err == nil {
+			return string(data), path, nil
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return "", "", err
 		}
 	}
-	return "", ""
+	return "", "", nil
 }
 
 // SaveChapterContent writes chapters/chapter-<id>.md.
@@ -274,12 +291,15 @@ func (r *Root) SaveChapterContent(chapterID, content string) error {
 }
 
 // LoadDraftContent returns drafts/<chapterID>.md, or "" when it is missing.
-func (r *Root) LoadDraftContent(chapterID string) string {
+func (r *Root) LoadDraftContent(chapterID string) (string, error) {
 	data, err := r.Read(r.DraftFile(chapterID))
 	if err != nil {
-		return ""
+		if errors.Is(err, fs.ErrNotExist) {
+			return "", nil
+		}
+		return "", err
 	}
-	return string(data)
+	return string(data), nil
 }
 
 // SaveDraftContent writes drafts/<chapterID>.md.
@@ -290,23 +310,30 @@ func (r *Root) SaveDraftContent(chapterID, content string) error {
 	return r.Write(r.DraftFile(chapterID), []byte(content), FileMode)
 }
 
-// LoadAllDrafts returns every drafts/*.md keyed by chapter ID.
-func (r *Root) LoadAllDrafts() map[string]string {
+// LoadAllDrafts returns every drafts/*.md keyed by chapter ID. A project that
+// never used the legacy draft pipeline has no drafts directory, which yields an
+// empty map rather than an error.
+func (r *Root) LoadAllDrafts() (map[string]string, error) {
 	drafts := make(map[string]string)
 	dir := r.DraftsDir()
 	entries, err := r.FS().ReadDir(dir)
 	if err != nil {
-		return drafts
+		if errors.Is(err, fs.ErrNotExist) {
+			return drafts, nil
+		}
+		return nil, err
 	}
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
 			continue
 		}
-		if data, err := r.Read(filepath.Join(dir, entry.Name())); err == nil {
-			drafts[strings.TrimSuffix(entry.Name(), ".md")] = string(data)
+		data, err := r.Read(filepath.Join(dir, entry.Name()))
+		if err != nil {
+			return nil, err
 		}
+		drafts[strings.TrimSuffix(entry.Name(), ".md")] = string(data)
 	}
-	return drafts
+	return drafts, nil
 }
 
 // LoadRecap reads story/recaps/<chapterID>.json.
@@ -327,9 +354,4 @@ func (r *Root) SaveRecap(recap *models.ChapterRecap) error {
 		return errors.New("recap chapter id is required")
 	}
 	return r.WriteJSON(r.RecapFile(recap.ChapterID), recap)
-}
-
-// ReadDir returns the directory entries at a project path.
-func (r *Root) ReadDir(path string) ([]fs.DirEntry, error) {
-	return r.FS().ReadDir(path)
 }

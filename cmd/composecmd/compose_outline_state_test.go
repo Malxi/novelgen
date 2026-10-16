@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"novelgen/internal/models"
-	"novelgen/internal/project"
 	"novelgen/internal/quality"
 	"novelgen/internal/rpg"
+	"novelgen/internal/store"
 	"novelgen/internal/toolplane"
 )
 
@@ -21,11 +21,11 @@ func TestCanResumeOutlineGenerationWithEmptyVolumes(t *testing.T) {
 			{ID: "volume_2", Title: "Pending", Chapters: []models.Chapter{}},
 		},
 	}}}
-	if err := project.SavePartialOutline(outline, path); err != nil {
+	if err := store.At(dir).SaveOutlineAt(path, outline); err != nil {
 		t.Fatalf("save outline: %v", err)
 	}
 
-	if !canResumeOutlineGeneration(path, models.StoryStructure{TargetParts: 1, TargetVolumes: 2, TargetChapters: 10}) {
+	if !canResumeOutlineGeneration(store.At(dir), path, models.StoryStructure{TargetParts: 1, TargetVolumes: 2, TargetChapters: 10}) {
 		t.Fatalf("expected outline with empty volumes to be resumable")
 	}
 }

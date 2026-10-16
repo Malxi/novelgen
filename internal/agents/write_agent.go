@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 	"unicode"
@@ -16,6 +14,7 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 	"novelgen/internal/toolcmd"
 	"novelgen/internal/utils"
 )
@@ -1065,14 +1064,6 @@ func (a *WriteAgent) ReviewVolume(ctx context.Context, volume *models.Volume, ch
 
 // logWriteContext logs the write context to a markdown file for debugging
 func (a *WriteAgent) logWriteContext(chapterID, variant string, input interface{}, output string) error {
-	debugDir := agentLogDir("write_contexts")
-	if err := os.MkdirAll(debugDir, 0755); err != nil {
-		return fmt.Errorf("failed to create debug directory: %w", err)
-	}
-
-	timestamp := time.Now().Format("20060102_150405")
-	filename := filepath.Join(debugDir, fmt.Sprintf("%s_%s_%s.md", chapterID, variant, timestamp))
-
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# Write Context: %s (%s)\n\n", chapterID, variant))
 	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().Format("2006-01-02 15:04:05")))
@@ -1091,7 +1082,14 @@ func (a *WriteAgent) logWriteContext(chapterID, variant string, input interface{
 	sb.WriteString(output)
 	sb.WriteString("\n```\n")
 
-	return os.WriteFile(filename, []byte(sb.String()), 0644)
+	root, err := store.Open(agentLogRoot())
+	if err != nil {
+		return fmt.Errorf("resolve agent log root: %w", err)
+	}
+	if _, err := root.SaveLogStream(store.LogWriteContextsName, fmt.Sprintf("%s_%s", chapterID, variant), ".md", []byte(sb.String())); err != nil {
+		return fmt.Errorf("failed to write context log: %w", err)
+	}
+	return nil
 }
 
 // formatChapterContext formats the chapter context for the prompt

@@ -2,7 +2,6 @@ package logic
 
 import (
 	"encoding/json"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -43,17 +42,11 @@ func (m *StateMatrixManager) loadSetup() *models.StorySetup {
 		return nil
 	}
 
-	data, err := os.ReadFile(m.root().SetupJSON())
+	setup, err := m.root().LoadSetup()
 	if err != nil {
 		return nil
 	}
-
-	var setup models.StorySetup
-	if err := json.Unmarshal(data, &setup); err != nil {
-		return nil
-	}
-
-	m.setup = &setup
+	m.setup = setup
 	return m.setup
 }
 
@@ -586,8 +579,9 @@ func (m *StateMatrixManager) loadRPGDSLDeltas() map[string][]models.RPGStateDelt
 		return m.rpgDeltasByChapter
 	}
 
+	root := m.root()
 	for _, path := range m.rpgDSLPaths() {
-		data, err := os.ReadFile(path)
+		data, err := root.Read(path)
 		if err != nil {
 			continue
 		}
@@ -621,7 +615,7 @@ func (m *StateMatrixManager) rpgDSLPaths() []string {
 	}
 	paths := make([]string, 0, len(candidates))
 	for _, path := range candidates {
-		if _, err := os.Stat(path); err == nil {
+		if root.Exists(path) {
 			paths = append(paths, path)
 		}
 	}
@@ -858,7 +852,7 @@ func (m *StateMatrixManager) loadElementsIntoState(state *models.StateMatrix) {
 
 	// Load characters
 	charPath := m.root().CraftFile(store.CraftCharacters)
-	if data, err := os.ReadFile(charPath); err == nil {
+	if data, err := m.root().Read(charPath); err == nil {
 		var chars map[string]*models.Character
 		if err := json.Unmarshal(data, &chars); err == nil {
 			for name, char := range chars {
@@ -880,7 +874,7 @@ func (m *StateMatrixManager) loadElementsIntoState(state *models.StateMatrix) {
 
 	// Load locations
 	locPath := m.root().CraftFile(store.CraftLocations)
-	if data, err := os.ReadFile(locPath); err == nil {
+	if data, err := m.root().Read(locPath); err == nil {
 		var locs map[string]*models.Location
 		if err := json.Unmarshal(data, &locs); err == nil {
 			for name, loc := range locs {
@@ -892,7 +886,7 @@ func (m *StateMatrixManager) loadElementsIntoState(state *models.StateMatrix) {
 	// Load items
 	// Note: Items from craft are loaded without owners. Ownership is tracked via Events.
 	itemPath := m.root().CraftFile(store.CraftItems)
-	if data, err := os.ReadFile(itemPath); err == nil {
+	if data, err := m.root().Read(itemPath); err == nil {
 		var items map[string]*models.Item
 		if err := json.Unmarshal(data, &items); err == nil {
 			for name, item := range items {

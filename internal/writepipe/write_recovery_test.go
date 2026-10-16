@@ -1,97 +1,74 @@
 package writepipe_test
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"novelgen/internal/models"
+	"novelgen/internal/project"
 	"novelgen/internal/store"
 	"novelgen/internal/writepipe"
 )
 
-// useProjectRoot points the ambient project root at dir for the rest of the
-// test. The write pipeline resolves its project the same way the CLI does, so
-// tests inject a root instead of chdir-ing the process into a fixture.
-func useProjectRoot(t *testing.T, dir string) {
+// memBook is an in-memory project for the write pipeline. The pipeline takes an
+// explicit *project.Book now, so its tests no longer point the ambient project
+// root at a temp directory — and these tests passing is evidence that the
+// pipeline reads and writes only through the store.
+func memBook(t *testing.T) *project.Book {
 	t.Helper()
-	root, err := store.Open(dir)
-	if err != nil {
-		t.Fatalf("open project %s: %v", dir, err)
+	book := project.Open(store.MemRoot())
+	if err := book.SaveConfig(&models.ProjectConfig{Name: "Recovery Test"}); err != nil {
+		t.Fatalf("SaveConfig: %v", err)
 	}
-	previous, _ := store.Default()
-	store.SetDefault(root)
-	t.Cleanup(func() {
-		if previous != nil {
-			store.SetDefault(previous)
-			return
-		}
-		store.ResetDefault()
-	})
+	return book
 }
 
 func TestRecoverAgentAppliedChapterContentAfterErrorUsesSavedPatch(t *testing.T) {
-	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"project_name":"Recover Test"}`), 0644); err != nil {
-		t.Fatal(err)
-	}
+	t.Parallel()
+
+	book := memBook(t)
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening"}
 	previous := "# Opening\n\nold draft"
-	if err := os.MkdirAll(filepath.Join(root, "chapters"), 0755); err != nil {
-		t.Fatal(err)
-	}
 	saved := "# Opening\n\n" + strings.Repeat("Lin repairs the scene. ", 80)
-	if err := os.WriteFile(filepath.Join(root, "chapters", "chapter-P1-V1-C1.md"), []byte(saved), 0644); err != nil {
-		t.Fatal(err)
+	if err := book.SaveChapterContent(chapter.ID, saved); err != nil {
+		t.Fatalf("SaveChapterContent: %v", err)
 	}
 
-	useProjectRoot(t, root)
-
-	got, ok := writepipe.RecoverAgentAppliedChapterContentAfterError(chapter, previous, 200, true)
+	got, ok := writepipe.RecoverAgentAppliedChapterContentAfterError(book, chapter, previous, 200, true)
 	if !ok || got != saved {
 		t.Fatalf("recovered = %t content len=%d, want saved len=%d", ok, len(got), len(saved))
 	}
 }
 
 func TestRecoverAgentAppliedChapterContentAfterErrorRejectsOvershoot(t *testing.T) {
-	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"project_name":"Recover Test"}`), 0644); err != nil {
-		t.Fatal(err)
-	}
+	t.Parallel()
+
+	book := memBook(t)
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening"}
-	if err := os.MkdirAll(filepath.Join(root, "chapters"), 0755); err != nil {
-		t.Fatal(err)
-	}
 	saved := "# Opening\n\n" + strings.Repeat("word ", 500)
-	if err := os.WriteFile(filepath.Join(root, "chapters", "chapter-P1-V1-C1.md"), []byte(saved), 0644); err != nil {
-		t.Fatal(err)
+	if err := book.SaveChapterContent(chapter.ID, saved); err != nil {
+		t.Fatalf("SaveChapterContent: %v", err)
 	}
 
-	useProjectRoot(t, root)
-
-	if got, ok := writepipe.RecoverAgentAppliedChapterContentAfterError(chapter, "# Opening\n\nold draft", 100, true); ok {
+	if got, ok := writepipe.RecoverAgentAppliedChapterContentAfterError(book, chapter, "# Opening\n\nold draft", 100, true); ok {
 		t.Fatalf("overshoot should not recover, got len=%d", len(got))
 	}
 }
 
 func TestSaveFinalChapterStripsRepeatedTitleAfterHeading(t *testing.T) {
-	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"project_name":"Save Test"}`), 0644); err != nil {
-		t.Fatal(err)
-	}
-	useProjectRoot(t, root)
+	t.Parallel()
 
+	book := memBook(t)
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "第1章：倒计时"}
 	content := "# 第1章：倒计时\n\n第1章：倒计时\n\n李侑醒来时，先闻到潮湿木板的霉味。"
-	if err := writepipe.SaveFinalChapter(chapter, content); err != nil {
+	if err := writepipe.SaveFinalChapter(book, chapter, content); err != nil {
 		t.Fatalf("writepipe.SaveFinalChapter() error = %v", err)
 	}
-	data, err := os.ReadFile(filepath.Join(root, "chapters", "chapter-P1-V1-C1.md"))
+
+	got, _, err := book.LoadChapterContent(chapter.ID)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("LoadChapterContent: %v", err)
 	}
-	got := string(data)
 	if strings.Contains(got, "\n\n第1章：倒计时\n\n") {
 		t.Fatalf("saved chapter still repeats title: %q", got)
 	}
@@ -101,6 +78,8 @@ func TestSaveFinalChapterStripsRepeatedTitleAfterHeading(t *testing.T) {
 }
 
 func TestEffectiveAgentSDKImproveTargetWordsPreservesExistingLengthForFocusedRepair(t *testing.T) {
+	t.Parallel()
+
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening"}
 	content := "# Opening\n\n" + strings.Repeat("word ", 1800)
 

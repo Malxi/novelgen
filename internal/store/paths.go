@@ -1,8 +1,10 @@
 package store
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"novelgen/internal/utils"
 )
@@ -43,8 +45,8 @@ const (
 	CraftOrganizations CraftKind = "organizations"
 )
 
-// CraftKinds lists the craft element files in their canonical order.
-func CraftKinds() []CraftKind {
+// craftKinds lists the craft element files in their canonical order.
+func craftKinds() []CraftKind {
 	return []CraftKind{CraftCharacters, CraftLocations, CraftItems, CraftOrganizations}
 }
 
@@ -53,7 +55,7 @@ func (k CraftKind) FileName() string { return string(k) + ".json" }
 
 // Valid reports whether k is one of the four known craft kinds.
 func (k CraftKind) Valid() bool {
-	for _, known := range CraftKinds() {
+	for _, known := range craftKinds() {
 		if k == known {
 			return true
 		}
@@ -273,6 +275,46 @@ func (r *Root) UsageLog() string { return r.LogFile("usage.jsonl") }
 // CloneManifest is logs/clone_manifest.json, written by `project clone`.
 func (r *Root) CloneManifest() string { return r.LogFile("clone_manifest.json") }
 
+// Log stream names under logs/. They are part of the layout the CLI writes and
+// the web UI reads, so they are spelled once here; the layout parity test fails
+// when a web UI literal stops matching these names.
+const (
+	LogPromptsName   = "prompts"
+	LogResponsesName = "responses"
+	// LogAICallsName holds one structured JSON record per AI call. internal/agents
+	// writes them; the web UI's AI-call viewer reads them, so the record's JSON
+	// tags are a cross-module contract (an architecture test keeps the two in step).
+	LogAICallsName       = "ai_calls"
+	LogAgentLiveName     = "agent-live"
+	LogWriteContextsName = "write_contexts"
+	LogDraftContextsName = "draft_contexts"
+)
+
+// LogStreamNames returns every log stream directory store knows about, so a
+// guard can check callers against the declared set instead of any name at all.
+func LogStreamNames() []string {
+	return []string{
+		LogPromptsName,
+		LogResponsesName,
+		LogAICallsName,
+		LogAgentLiveName,
+		LogWriteContextsName,
+		LogDraftContextsName,
+	}
+}
+
+// SaveLogStream writes one debug log file under logs/<kind>, named
+// <stem>_<timestamp><ext>, and returns its path. The name is allocated with
+// O_EXCL, so two workers logging in the same second cannot overwrite each
+// other's file.
+func (r *Root) SaveLogStream(kind, stem, ext string, data []byte) (string, error) {
+	if kind == "" {
+		return "", errors.New("log stream name is required")
+	}
+	base := stem + "_" + time.Now().Format(timestampLayout)
+	return writeUniqueFile(r.FS(), r.LogFile(kind), base, ext, data, FileMode)
+}
+
 // scopeDir maps a scope to the directory it belongs under.
 func (r *Root) scopeDir(scope Scope) string {
 	if scope == ScopeChapters {
@@ -281,12 +323,12 @@ func (r *Root) scopeDir(scope Scope) string {
 	return filepath.Join(r.StoryDir(), string(scope))
 }
 
-// CheckpointsDir is where the pre-patch snapshots for a scope are written.
-func (r *Root) CheckpointsDir(scope Scope) string {
+// checkpointsDir is where the pre-patch snapshots for a scope are written.
+func (r *Root) checkpointsDir(scope Scope) string {
 	return filepath.Join(r.scopeDir(scope), checkpointsName)
 }
 
-// BackupsDir is where the pre-regeneration snapshots for a scope are written.
-func (r *Root) BackupsDir(scope Scope) string {
+// backupsDir is where the pre-regeneration snapshots for a scope are written.
+func (r *Root) backupsDir(scope Scope) string {
 	return filepath.Join(r.scopeDir(scope), backupsName)
 }

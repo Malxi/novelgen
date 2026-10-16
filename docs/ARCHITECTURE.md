@@ -259,18 +259,44 @@ AI 分析章节/大纲
 │   └── rpg/*.rpg
 ├── drafts/C{n}.md                 # legacy（write 直接产出最终稿）
 ├── chapters/chapter-{n}.md
-├── logs/{prompts,responses,ai_calls,agent-live,write_contexts,usage.jsonl,clone_manifest.json}
+├── logs/{prompts,responses,agent-live,write_contexts,draft_contexts}.md 日志流
+│        ai_calls/<id>.json（每次 AI 调用一条结构化记录：model/tokens/两个 prompt/response）
+│        usage.jsonl（成本账本）、clone_manifest.json
 └── story/{setup,compose,craft,recaps}/checkpoints/   # patch 前快照
 ```
 
 **这份布局只由 [`internal/store`](../internal/store/paths.go) 描述，并由
-[`internal/architecture/layout_test.go`](../internal/architecture/layout_test.go) 强制**：该测试扫描根模块所有
-非测试 Go 文件，凡是自己拼 `story/...`、`chapters/...`、`drafts/...`、`logs/...` 或分阶段
-`0N_*.rpg` 文件名的地方直接失败（webui 按 §8 的边界例外）。任何需要项目内路径的代码都通过
-`*store.Root`（或它上面的 [`internal/project.Book`](../internal/project/project.go)）取得；已持有目录字符串的
-调用方用 `store.At(dir)` 换到同一个 Root，不再自己拼路径。磁盘写走 `Root.Write`/`WriteText`/`WriteJSON`
-的"同目录临时文件 + rename"原子替换，因此中断的 `outline.json`/`story_setup.json`/章节正文/派生
-`04_chapters.rpg` 写入不会留下半截文件。
+[`internal/architecture/layout_test.go`](../internal/architecture/layout_test.go) 强制**。四条守卫测试覆盖四类漂移：
+
+1. **目录与文件名**：根模块非测试 Go 文件里出现 `story/...`、`chapters/...`、`drafts/...`、`logs/...`、
+   分阶段 `0N_*.rpg` 文件名，或 `novel.json`/`story_setup.json`/`outline.json`/四个 craft 文件名/
+   `usage.jsonl`/`clone_manifest.json` 这些**文件名**字面量就直接失败（`llm_config.json` 例外：同一个名字也是
+   用户全局配置 `~/.novelgen/llm_config.json`，不归 store 所有）。
+2. **IO 归属**（`TestProjectIOGoesThroughStore`）：把 store 给出的路径再喂给 `os.ReadFile/WriteFile/OpenFile/
+   Stat/ReadDir/MkdirAll/Remove/Rename` 会失败——项目状态只能走 `Root.Read/Write/Append/FS()`。允许清单
+   （`projectIOAllowlist`）**故意为空**：操作主机路径的代码（全局配置、agent home、用户的输出路径、
+   `project clone` 的整树复制）根本不会把 store 路径递给 `os.*`，规则也就看不见它们；将来真需要例外时才加条目，
+   且一旦该条目不再命中，测试会要求删掉它。
+3. **环境根**（`TestAmbientProjectRootUseIsPinned`）：层表里第 5 层及以上的包调用 `store.Default()`/
+   `project.Default()` 会失败，除非该文件在允许清单里（只剩 5 处：`internal/llm/{config,client}.go`、
+   `internal/agents/{agent_base,agent_logging}.go`、`internal/writersdl/write_rpg_dsl.go`）。新代码要显式接收
+   `*store.Root`；允许清单条目一旦不再命中同样会失败（防止清单腐化）。
+4. **webui 平行副本**（`TestWebUILayoutMatchesStore`）：webui 不能 import 父模块（§8），它手抄的只读路径
+   若与 store 产出的路径前缀不符即失败，把"改布局要两边一起改"从口头约定变成会失败的测试；`logs/<流名>`
+   的第一级还要落在 `store.LogStreamNames()` 声明的集合里，所以改名不会留下一个读空目录的页面。
+   跨模块的**记录格式**（不是路径）由 `internal/architecture/schema_test.go` 盯住：它逐个比较
+   `internal/agents.aiCallRecord` 与 `webui.aiCallLogFile` 的 JSON 标签，任一边改名都会失败。
+
+任何需要项目内路径的代码都通过 `*store.Root`（或它上面的
+[`internal/project.Book`](../internal/project/project.go)）取得；已持有目录字符串的调用方用 `store.At(dir)`
+换到同一个 Root，不再自己拼路径。磁盘写走 `Root.Write`/`WriteText`/`WriteJSON` 的"同目录临时文件 + rename"
+原子替换（`FS` 另提供 `WriteFileExclusive`/`OpenAppend` 供日志抢名与流式写入），因此中断的
+`outline.json`/`story_setup.json`/章节正文/派生 `04_chapters.rpg` 写入不会留下半截文件——包括
+`tool patch setup|outline --apply` 这两条 agent 写入路径（它们此前用裸 `os.WriteFile`）。
+
+快照（checkpoint/backup）与日志流都用"秒级时间戳 + `WriteFileExclusive` 抢名（冲突时加数字后缀）"，
+同一秒内的两次 patch 不会互相覆盖；`checkpoints/`、`backups/` 只增不删，删掉它们不影响 CLI 读取，
+但它们是唯一的改前状态记录，所以 CLI 不会自动清理。
 
 章节正文的候选文件名（`chapters/chapter-<id>.md` → 兼容的数字名 → `chapters/<id>.md`）由
 `store.Root.ChapterCandidates` 单点定义，写入流水线、导出、DSL 转换与 agent 工具面共用同一份；
@@ -291,7 +317,7 @@ AI 分析章节/大纲
 ## 8. Web UI（`webui` module）
 
 - Gin HTTP 服务 + WebSocket（[`webui/main.go`](../webui/main.go)），前端为 React + Vite（`webui/frontend/`），由 `frontend/dist` 静态托管。
-- 只读端点直接读取项目文件并透传原始 JSON；**所有写、派生文件与长任务都通过 `exec` 调用 `novelgen` 二进制**（例如保存大纲后调用 `novelgen compose normalize --force` 重写 `outline.md`）。
+- 只读端点直接读取项目文件并透传原始 JSON；**所有写、派生文件与长任务都通过 `exec` 调用 `novelgen` 二进制**（例如保存大纲后调用 `novelgen compose normalize --force` 重写 `outline.md`）。AI 调用查看器（`AICallsViewer`）读两类来源：CLI 默认写的 `logs/prompts`↔`logs/responses` markdown 配对，以及每次调用一条的 `logs/ai_calls/<id>.json` 结构化记录（由 `internal/agents` 写，字段含 model/tokens/耗时；两边的 JSON 契约由 `internal/architecture` 的 schema 测试盯住）。
 - webui **不 import 父 module 的任何包**（连 `internal/models` 也没有）：它自己拼只读路径（约 50 处），因此这部分布局知识与 `internal/store` 是**并行维护**的，改动项目布局时必须两边一起改。章节 id 目前由文件名派生（`chapters/<id>.md` → id 去掉 `.md`），所以对外的 id 是文件名而不是大纲里的章节 ID。
 - 本机访问加固在 [`webui/security.go`](../webui/security.go)。
 
@@ -333,6 +359,22 @@ AI 分析章节/大纲
    **后续一轮把残留的平行实现也并回 store**（此前本节曾写成"已消除"，实际还有二十余处）：`internal/toolplane` 全部改用 `*store.Root`（含章节正文读取、craft 读写与 checkpoint），`internal/writersdl`（含 `04_chapters.rpg`、批缓存与 manifest 改走原子写）、`internal/logic/state_matrix.go`、`internal/logger`、`internal/agentruntime`、`internal/agents`、`cmd/{export,projectcmd,rpgdsl,writecmd}`、`tools/check_novel`、`internal/rpg/{benchmark,dsl}` 都改为向 store 取路径。这一轮还修掉了三处真实分歧：① 工具面自带一份章节候选文件名（缺数字名回退、多认 `drafts/`），与 write/export 读取的可能是不同文件；② `tool patch chapter --apply` 与 `rpg-dsl` 导出直接 `os.WriteFile`，绕过原子替换；③ `RunToolChapterCheckWithTargetWords` 走 `project.LoadFinalChapterContent`（进程默认根），注入 root 的调用会读到别的项目。剩下的"平行维护"只有 webui（§8 的边界所致）。
 16. **RPG 侧的工作区假设已消除（本轮完成）**：`rpg.LoadNovelgenProject` 以前签名是 `(工作区根, 书名)` 并硬编码 `<工作区>/books/<书名>/story/...`，导致任何不在 `books/<name>` 下的项目（包括 `--dir` 指定的）都加载失败；现在它只接受**项目目录**，路径由 `store` 给出，书名取 `novel.json` 的 `name`（缺失才退回目录名）。调用方（`cmd/rpgcmd`、`cmd/rpgdsl`、`internal/agents/chapter_to_dsl_adapter`、`tools/novelgen-rpg`、`tools/rpg-write`）都只传目录；`internal/rpg/dsl` 的 setup 查找同样改用 store。`cmd/rpgcmd` 仍保留 `<workspace>/output/rpg_data.json` 这份"顺手再存一份"的行为，但只在项目确实位于 `books/<name>` 下时才写，不再往凭空推导的路径写文件。RPG 侧现在也容忍 BOM。
 17. **仍是两套寻址约定**：项目命令与 `rpg`/`rpg-dsl`/`tools/*` 都按给定目录工作（`rpg-dsl`/`tools/*` 仍以 `<workspace>/books/<name>` 作为**默认**目录，字面量收敛到 `store.BooksDirName`/`store.BookDir`），webui 则自己拼只读路径（见 §8）。`logger` 现在通过 `store.At(projectDir).LogsDir()` 取日志目录、并被移到层表第 2 层，`logger.ProjectDir()` 只是"当前项目目录"的缓存，不再自带一份布局；agents/llm 的日志与工作区根仍按"logger → `store.Default()` → cwd"的顺序解析（`agentLogRoot`/`agentWorkspaceRoot`/`runtimeWorkspaceRoot`）。
+
+18. **storage 抽象的两半（本轮收口）**：布局所有权这一半此前已成立，IO 这一半只做了一半——`FS`/`MemFS` 除了 store 自己的测试以外没有任何使用者，因为项目状态的读写仍在各处走 `os.*`。本轮按 §7 的四条守卫把两半对齐：原子写覆盖 `tool patch setup|outline --apply`（此前走 `models.*.Save`/`project.SavePartialOutline` 的裸 `os.WriteFile`）、派生 markdown、compose 报告与 improve progress；`FS` 补上 `WriteFileExclusive` 与 `OpenAppend`，于是快照/agent 日志/运行日志改用 O_EXCL 抢名（同一秒不再互相覆盖，agent 日志的手写 64 次重试循环删除），writer 自己的 temp+rename 实现并回 store；`MemFS` 补上修改时间与独占创建，三处"比较新旧"的判断（章节 vs DSL、recap vs 章节、章节 vs recap）在内存后端下行为一致。同时把"读不到"从"不存在"里分出来：`LoadChapterContent`/`LoadDraftContent`/`LoadAllDrafts`/`LoadSetupAt` 返回错误，只有 `fs.ErrNotExist` 才表示"没有"，`WriteJSONMerging` 不再把读失败当成空文件合并（那会悄悄丢掉其余键），`BackupFile`/`loadCraftFile` 同理；确实需要"没有就算了"的上下文构造点（continuity/writepipe 的上下文加载、write 流水线的启发式检查）显式忽略错误或记日志。
+
+   同一轮还把 seam 从"存在"推进到"被证明"：`internal/toolplane`（`TestToolPlaneRunsOnAnInMemoryProject`）与
+   `internal/writersdl`（`TestEmitWriteRPGDSLRunsOnAnInMemoryProject`）各有一个端到端用例，把 setup/craft patch、
+   patch buffer、批次缓存与合并全部跑在 `store.MemFS` 上——这两个用例就是当初"内存后端没人能用"的反证，也各自
+   逼出了两个真漏点（`RunToolPatchBuffer` 从命令上下文解析项目、`SaveWriteRPGDSLBatchToCache` 写缓存时绕过传入的 FS）。
+   同时把隐式环境根从库层摘掉：`internal/writepipe`（章节上下文、post-save check、章节正文读写）、
+   `internal/reviewstore`（卷级 review）、`internal/continuity`（前后章上下文、离线 recap 落盘）现在都要求调用方传入
+   `*project.Book`，`cmd/writecmd`、`cmd/draftcmd`、`cmd/polishcmd` 在命令入口解析一次并向下传。
+
+19. **仍未收口的部分（清楚记着）**：
+    - **`logs/ai_calls` 的生产者已补上（本轮）**：`internal/agents.recordAICall` 在每次 AI 调用结束时（成功与失败都算）按 webui 既有的 `aiCallLogFile` schema 写一条 JSON，开关与 markdown prompt/response 日志共用 `NOVELGEN_AGENT_LOGS`；schema 由 `internal/architecture/schema_test.go` 与 webui 读取端逐字段对齐，`logs/ai_calls` 也已进入 `store.LogStreamNames()`，所以 webui 侧的路径与流名都被守卫覆盖。代价是每次调用多落一份 prompt+response（与 markdown 日志重复），关掉日志开关即可完全避免。
+    - 日志流名字本身仍有开放面：webui 只列出它知道的流（现在都在 `store.LogStreamNames()` 里），但流内**文件**的命名约定（`<agent>_<timestamp>.md`、`<id>.json`）没有跨模块校验，只有 store 负责保证唯一性。
+    - agent home（`~/.novelgen/agents`、Claude settings、runner 脚手架）不是项目布局，仍直接走 `os.*`；`internal/agentruntime` 与 `internal/llm` 也仍在环境根上取工作区（第 3 条守卫的允许清单）。
+    - `FS` 只覆盖"整文件 + 独占创建 + 追加句柄"，没有权限/符号链接语义：`project clone` 这种整树复制、以及 agent-home 操作天生在 seam 之外。`Root.Walk` 提供递归列目录（日志面在用）。
 
 ---
 

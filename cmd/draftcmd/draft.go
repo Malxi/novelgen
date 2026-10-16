@@ -161,20 +161,25 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
 
-	// Load project config
-	config, err := project.LoadConfig()
+	// Resolve the project this command operates on once, then read everything through it.
+	book, err := project.ForCommand(cmd)
+	if err != nil {
+		return err
+	}
+
+	config, err := book.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load project config: %w", err)
 	}
 
 	// Load story setup
-	setup, err := project.LoadStorySetup()
+	setup, err := book.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
 
 	// Load outline
-	outline, err := project.LoadOutline()
+	outline, err := book.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load outline: %w", err)
 	}
@@ -195,11 +200,7 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 	agent := agents.NewDraftAgent(client, cfg, &config.LLM, setup, outline)
 	agent.SetLanguage(config.Language)
 
-	// Get project root for state matrix manager
-	root, err := project.FindRoot()
-	if err != nil {
-		return fmt.Errorf("failed to find project root: %w", err)
-	}
+	root := book.Dir()
 
 	// Create state matrix manager
 	stateManager := logic.NewStateMatrixManager(root)
@@ -232,9 +233,9 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 		stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
 
 		// Load continuity context from previous draft chapters
-		contextText := continuity.LoadPreviousDraftContext(outline, chapter, draftContextFlag)
+		contextText := continuity.LoadPreviousDraftContext(book, outline, chapter, draftContextFlag)
 		// Extract a compact recap from the immediately previous chapter (if available)
-		prevRecap := continuity.LoadPreviousDraftRecap(outline, chapter)
+		prevRecap := continuity.LoadPreviousDraftRecap(book, outline, chapter)
 		// Load next chapters for foreshadowing (default: 2 chapters ahead)
 		nextChapters := continuity.LoadNextChapters(outline, chapter, 2)
 
@@ -247,10 +248,10 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 
 		// Persist a best-effort recap for this chapter so the NEXT chapter can
 		// reuse a stable, compact continuity anchor without additional LLM calls.
-		continuity.PersistOfflineRecap(chapter, draft)
+		continuity.PersistOfflineRecap(book, chapter, draft)
 
 		// Save draft
-		if err := saveDraft(chapter, draft); err != nil {
+		if err := saveDraft(book, chapter, draft); err != nil {
 			log.Error("Failed to save draft for chapter %s: %v", chapter.ID, err)
 			return struct{}{}, nil
 		}
@@ -296,9 +297,9 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// saveDraft saves the generated draft to file
-func saveDraft(chapter *models.Chapter, draft string) error {
-	return project.SaveDraft(chapter, draft)
+// saveDraft saves the generated draft into an explicit project.
+func saveDraft(book *project.Book, chapter *models.Chapter, draft string) error {
+	return book.SaveDraft(chapter, draft)
 }
 
 // runDraftReview reviews drafts and provides feedback
@@ -306,26 +307,34 @@ func runDraftReview(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
 
-	// Load project config
-	config, err := project.LoadConfig()
+	// Resolve the project this command operates on once, then read everything through it.
+	book, err := project.ForCommand(cmd)
+	if err != nil {
+		return err
+	}
+
+	config, err := book.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load project config: %w", err)
 	}
 
 	// Load story setup
-	setup, err := project.LoadStorySetup()
+	setup, err := book.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
 
 	// Load outline
-	outline, err := project.LoadOutline()
+	outline, err := book.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load outline: %w", err)
 	}
 
 	// Load drafts
-	drafts := loadAllDrafts()
+	drafts, err := loadAllDrafts(book)
+	if err != nil {
+		return fmt.Errorf("failed to load drafts: %w", err)
+	}
 	if len(drafts) == 0 {
 		return fmt.Errorf("no drafts found. Run 'novelgen draft gen' first")
 	}
@@ -369,7 +378,7 @@ func runDraftReview(cmd *cobra.Command, args []string) error {
 		continuity.ApplyHeuristicTransitionChecks(volume, volumeDrafts, review)
 
 		// Save review
-		if err := reviewstore.SaveVolumeReview(review); err != nil {
+		if err := reviewstore.SaveVolumeReviewAt(book, review); err != nil {
 			log.Error("Failed to save review: %v", err)
 			continue
 		}
@@ -396,20 +405,25 @@ func runDraftImprove(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
 
-	// Load project config
-	config, err := project.LoadConfig()
+	// Resolve the project this command operates on once, then read everything through it.
+	book, err := project.ForCommand(cmd)
+	if err != nil {
+		return err
+	}
+
+	config, err := book.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load project config: %w", err)
 	}
 
 	// Load story setup
-	setup, err := project.LoadStorySetup()
+	setup, err := book.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
 
 	// Load outline
-	outline, err := project.LoadOutline()
+	outline, err := book.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load outline: %w", err)
 	}
@@ -444,7 +458,7 @@ func runDraftImprove(cmd *cobra.Command, args []string) error {
 
 		for _, volume := range volumes {
 			// Load review for this volume
-			review, err := reviewstore.LoadVolumeReview(volume.ID)
+			review, err := reviewstore.LoadVolumeReviewAt(book, volume.ID)
 			if err != nil {
 				log.Warn("No review found for volume %s, skipping", volume.ID)
 				continue
@@ -460,7 +474,7 @@ func runDraftImprove(cmd *cobra.Command, args []string) error {
 			log.Info("Volume %s: Improving %d chapters", volume.ID, len(chaptersToImprove))
 
 			// Improve chapters concurrently
-			improved := improveChaptersWithAgent(ctx, draftAgent, chaptersToImprove, review.Reviews, outline, draftConcurrencyFlag)
+			improved := improveChaptersWithAgent(ctx, book, draftAgent, chaptersToImprove, review.Reviews, outline, draftConcurrencyFlag)
 			improvedCount += improved
 		}
 
@@ -484,9 +498,9 @@ func runDraftImprove(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// loadAllDrafts loads all draft files
-func loadAllDrafts() map[string]string {
-	return project.LoadAllDrafts()
+// loadAllDrafts loads all draft files from an explicit project.
+func loadAllDrafts(book *project.Book) (map[string]string, error) {
+	return book.LoadAllDrafts()
 }
 
 // filterDraftsForVolume filters drafts for a specific volume
@@ -517,22 +531,18 @@ func getChaptersNeedingImprovement(review *agents.VolumeReview, outline *models.
 }
 
 // improveChaptersWithAgent improves chapters using the draft agent
-func improveChaptersWithAgent(ctx context.Context, agent *agents.DraftAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, concurrency int) int {
+func improveChaptersWithAgent(ctx context.Context, book *project.Book, agent *agents.DraftAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, concurrency int) int {
 	log := logger.GetLogger()
 
 	// Get project root for state matrix manager
-	root, err := project.FindRoot()
-	if err != nil {
-		log.Error("Failed to find project root: %v", err)
-		return 0
-	}
+	root := book.Dir()
 	stateManager := logic.NewStateMatrixManager(root)
 
 	// Pre-build DSL simulation for enrichment (shared across goroutines)
 	var dslIssues []dsl.SimulationIssue
 	dslBridge := dsl.NewSimulationBridge()
-	if charModels, locModels, itemModels, orgModels, elErr := project.LoadAllElements(); elErr == nil {
-		setup, _ := project.LoadStorySetup()
+	if charModels, locModels, itemModels, orgModels, elErr := book.LoadElements(); elErr == nil {
+		setup, _ := book.LoadSetup()
 		dslAdapter := dsl.NewModelAdapterWithOrganizations(setup, outline, charModels, locModels, itemModels, orgModels)
 		dslIssues, _ = dslAdapter.Simulate(dsl.PhaseCraft)
 		if len(dslIssues) > 0 {
@@ -579,9 +589,9 @@ func improveChaptersWithAgent(ctx context.Context, agent *agents.DraftAgent, cha
 		stateMatrix := stateManager.CalculateStateMatrix(outline, chapter)
 
 		// Load continuity context from previous draft chapters
-		contextText := continuity.LoadPreviousDraftContext(outline, chapter, draftContextFlag)
+		contextText := continuity.LoadPreviousDraftContext(book, outline, chapter, draftContextFlag)
 		// Extract a compact recap from the immediately previous chapter (if available)
-		prevRecap := continuity.LoadPreviousDraftRecap(outline, chapter)
+		prevRecap := continuity.LoadPreviousDraftRecap(book, outline, chapter)
 		// Load next chapters for foreshadowing (default: 2 chapters ahead)
 		nextChapters := continuity.LoadNextChapters(outline, chapter, 2)
 
@@ -617,7 +627,7 @@ func improveChaptersWithAgent(ctx context.Context, agent *agents.DraftAgent, cha
 		log.Info("[Worker %d] Fix summary for %s: %s", workerID, chapter.ID, sum.String())
 
 		// Save improved draft
-		if err := saveDraft(chapter, draft); err != nil {
+		if err := saveDraft(book, chapter, draft); err != nil {
 			log.Error("[Worker %d] Failed to save improved draft for chapter %s: %v", workerID, chapter.ID, err)
 			return false, nil
 		}

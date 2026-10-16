@@ -2,7 +2,6 @@ package models
 
 import (
 	"encoding/json"
-	"os"
 	"strings"
 )
 
@@ -196,15 +195,6 @@ func (s *StorySetup) MarshalForSave() ([]byte, error) {
 	return json.MarshalIndent(s, "", "  ")
 }
 
-// Save writes the story setup to a file
-func (s *StorySetup) Save(path string) error {
-	data, err := s.MarshalForSave()
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0644)
-}
-
 // ParseStorySetup decodes a story setup from raw JSON bytes.
 func ParseStorySetup(data []byte) (*StorySetup, error) {
 	var setup StorySetup
@@ -212,13 +202,4 @@ func ParseStorySetup(data []byte) (*StorySetup, error) {
 		return nil, err
 	}
 	return &setup, nil
-}
-
-// LoadStorySetup reads the story setup from a file
-func LoadStorySetup(path string) (*StorySetup, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return ParseStorySetup(data)
 }

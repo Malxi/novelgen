@@ -4,6 +4,8 @@
 package architecture
 
 import (
+	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
@@ -11,6 +13,95 @@ import (
 	"strings"
 	"testing"
 )
+
+// ambientRootLayer is the first layer whose packages are pipeline stages rather
+// than leaves: a stage that resolves the ambient project root can silently act
+// on whatever project the process happens to be in, which already caused one
+// reading-the-wrong-project bug (docs/ARCHITECTURE.md §10).
+const ambientRootLayer = 5
+
+// ambientRootAllowlist pins the files that still resolve the ambient root from a
+// pipeline layer. New callers must take an explicit *store.Root instead; the
+// entries below are the remaining ones that have no root parameter to use yet.
+var ambientRootAllowlist = map[string]string{
+	"internal/llm/config.go":              "provider/config resolution is reached without a project handle",
+	"internal/llm/client.go":              "resolves the SDK workspace root; no root parameter on the client",
+	"internal/agents/agent_base.go":       "skill directory lookup with no root parameter",
+	"internal/agents/agent_logging.go":    "agent log root falls back to the ambient project",
+	"internal/writersdl/write_rpg_dsl.go": "the failure dump only has a book name to work with",
+}
+
+// TestAmbientProjectRootUseIsPinned keeps new pipeline code from reaching for the
+// process-wide project root. store.Default / project.Default are fine at the
+// edges (a command entry point, the project facade), and they are what make the
+// CLI work without plumbing a root everywhere, but from a pipeline layer they
+// mean "operate on whichever project the process is in", which is how a check
+// once read a different project than the one the caller injected.
+func TestAmbientProjectRootUseIsPinned(t *testing.T) {
+	root := repoRoot(t)
+	fset := token.NewFileSet()
+	var violations []string
+	ambientRootAllowlistHits := map[string]int{}
+
+	for pkgPath, level := range layer {
+		if level < ambientRootLayer {
+			continue
+		}
+		dir := filepath.Join(root, filepath.FromSlash(pkgPath))
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			name := entry.Name()
+			if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+				continue
+			}
+			rel := pkgPath + "/" + name
+			_, allowed := ambientRootAllowlist[rel]
+			if allowed {
+				ambientRootAllowlistHits[rel] = 0
+			}
+			file, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, 0)
+			if err != nil {
+				t.Fatalf("parse %s: %v", rel, err)
+			}
+			var hits []string
+			ast.Inspect(file, func(node ast.Node) bool {
+				call, ok := node.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				selector, ok := call.Fun.(*ast.SelectorExpr)
+				if !ok || selector.Sel.Name != "Default" {
+					return true
+				}
+				pkg, ok := selector.X.(*ast.Ident)
+				if !ok || (pkg.Name != "store" && pkg.Name != "project") {
+					return true
+				}
+				hits = append(hits, fmt.Sprintf("%s:%d: %s.Default() in a pipeline layer; take an explicit *store.Root instead",
+					rel, fset.Position(call.Pos()).Line, pkg.Name))
+				return true
+			})
+			if allowed {
+				ambientRootAllowlistHits[rel] = len(hits)
+				continue
+			}
+			violations = append(violations, hits...)
+		}
+	}
+
+	if len(violations) > 0 {
+		t.Errorf("ambient project root must not be resolved by new pipeline code:\n  %s",
+			strings.Join(violations, "\n  "))
+	}
+	for rel := range ambientRootAllowlist {
+		if ambientRootAllowlistHits[rel] == 0 {
+			t.Errorf("ambientRootAllowlist entry %q no longer resolves the ambient root; remove it", rel)
+		}
+	}
+}
 
 // layer assigns each internal package a level. A package may import another
 // package only when that package's level is lower or equal (same cluster).

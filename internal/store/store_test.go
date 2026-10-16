@@ -58,9 +58,6 @@ func TestLayoutPaths(t *testing.T) {
 		{"LogFile", root.LogFile("agent-live"), "book/logs/agent-live"},
 		{"AgentWorkDir", root.AgentWorkDir(), "book/.novelgen"},
 		{"AgentPatchDir", root.AgentPatchDir(), "book/.novelgen/agent-patches"},
-		{"CheckpointsDir", root.CheckpointsDir(store.ScopeCompose), "book/story/compose/checkpoints"},
-		{"CheckpointsDirChapters", root.CheckpointsDir(store.ScopeChapters), "book/chapters/checkpoints"},
-		{"BackupsDir", root.BackupsDir(store.ScopeCompose), "book/story/compose/backups"},
 	}
 	for _, tc := range cases {
 		tc := tc
@@ -158,16 +155,10 @@ func TestLocateWalksUpAndReportsMissingProject(t *testing.T) {
 	if found.Dir() != filepath.Clean(dir) {
 		t.Fatalf("Locate = %q, want %q", found.Dir(), dir)
 	}
-	if !store.IsProjectDir(dir) {
-		t.Fatalf("IsProjectDir(%q) = false", dir)
-	}
 
 	empty := t.TempDir()
 	if _, err := store.Locate(empty); !errors.Is(err, store.ErrNoProject) {
 		t.Fatalf("Locate on empty dir = %v, want ErrNoProject", err)
-	}
-	if store.IsProjectDir(empty) {
-		t.Fatalf("IsProjectDir(%q) = true", empty)
 	}
 }
 
@@ -336,14 +327,17 @@ func TestChapterAndDraftContentFallbacks(t *testing.T) {
 	t.Parallel()
 
 	root := store.MemRoot()
-	if content, path := root.LoadChapterContent("P1-V1-C1"); content != "" || path != "" {
+	if content, path, err := root.LoadChapterContent("P1-V1-C1"); err != nil || content != "" || path != "" {
 		t.Fatalf("missing chapter = %q at %q, want empty", content, path)
 	}
 
 	if err := root.SaveChapterContent("P1-V1-C1", "# Canonical"); err != nil {
 		t.Fatalf("SaveChapterContent: %v", err)
 	}
-	content, path := root.LoadChapterContent("P1-V1-C1")
+	content, path, err := root.LoadChapterContent("P1-V1-C1")
+	if err != nil {
+		t.Fatalf("LoadChapterContent: %v", err)
+	}
 	if content != "# Canonical" || filepath.Base(path) != "chapter-P1-V1-C1.md" {
 		t.Fatalf("chapter = %q at %q", content, path)
 	}
@@ -351,17 +345,21 @@ func TestChapterAndDraftContentFallbacks(t *testing.T) {
 	// Legacy numeric name wins over the bare-id name.
 	root.FS().(*store.MemFS).SetFile(root.ChapterFile("3"), []byte("# Numeric"))
 	root.FS().(*store.MemFS).SetFile(filepath.Join(root.ChaptersDir(), "chap_1_2_3.md"), []byte("# Bare"))
-	if content, path := root.LoadChapterContent("chap_1_2_3"); content != "# Numeric" {
+	if content, path, loadErr := root.LoadChapterContent("chap_1_2_3"); loadErr != nil || content != "# Numeric" {
 		t.Fatalf("legacy chapter = %q at %q, want numeric fallback", content, path)
 	}
 
 	if err := root.SaveDraftContent("P1-V1-C1", "# Draft"); err != nil {
 		t.Fatalf("SaveDraftContent: %v", err)
 	}
-	if got := root.LoadDraftContent("P1-V1-C1"); got != "# Draft" {
+	if got, loadErr := root.LoadDraftContent("P1-V1-C1"); loadErr != nil || got != "# Draft" {
 		t.Fatalf("draft = %q", got)
 	}
-	if drafts := root.LoadAllDrafts(); len(drafts) != 1 || drafts["P1-V1-C1"] != "# Draft" {
+	drafts, err := root.LoadAllDrafts()
+	if err != nil {
+		t.Fatalf("LoadAllDrafts: %v", err)
+	}
+	if len(drafts) != 1 || drafts["P1-V1-C1"] != "# Draft" {
 		t.Fatalf("drafts = %v", drafts)
 	}
 }
@@ -379,6 +377,29 @@ func TestSnapshots(t *testing.T) {
 	}
 	if base := filepath.Base(checkpoint); !strings.HasPrefix(base, "outline_") || !strings.HasSuffix(base, ".json") {
 		t.Fatalf("checkpoint name = %q", base)
+	}
+
+	// The chapters scope keeps its checkpoints next to the chapter files rather
+	// than under story/, and two snapshots of the same artifact in the same
+	// second must not overwrite each other.
+	chapterCheckpoint, err := root.SaveCheckpoint(store.ScopeChapters, "P1-V1-C1", ".md", []byte("# before"))
+	if err != nil {
+		t.Fatalf("SaveCheckpoint chapters: %v", err)
+	}
+	if dir := filepath.ToSlash(filepath.Dir(chapterCheckpoint)); dir != "book/chapters/checkpoints" {
+		t.Fatalf("chapter checkpoint dir = %q", dir)
+	}
+	second, err := root.SaveCheckpoint(store.ScopeChapters, "P1-V1-C1", ".md", []byte("# later"))
+	if err != nil {
+		t.Fatalf("second SaveCheckpoint: %v", err)
+	}
+	if second == chapterCheckpoint {
+		t.Fatalf("second checkpoint reused %q", second)
+	}
+	if fs := root.FS().(*store.MemFS); fs != nil {
+		if content, ok := fs.File(chapterCheckpoint); !ok || string(content) != "# before" {
+			t.Fatalf("first checkpoint content = %q, %v; want the earlier state preserved", content, ok)
+		}
 	}
 
 	if path, err := root.BackupFile(store.ScopeCompose, root.OutlineJSON(), "outline"); err != nil || path != "" {

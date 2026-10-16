@@ -5,18 +5,17 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"novelgen/internal/llm"
 	"novelgen/internal/models"
 	"novelgen/internal/rpg"
 	"novelgen/internal/rpgllm"
+	"novelgen/internal/store"
 )
 
 // loadProjectConfig 从项目目录加载 novel.json
 func loadProjectConfig(projectPath string) (*models.ProjectConfig, error) {
-	configPath := filepath.Join(projectPath, "novel.json")
-	data, err := os.ReadFile(configPath)
+	data, err := store.At(projectPath).Read(store.At(projectPath).NovelJSON())
 	if err != nil {
 		return nil, err
 	}

@@ -132,18 +132,14 @@ func buildChapterWriteHistory(root *store.Root) *chapterWriteHistory {
 		return nil
 	}
 	logsRoot := root.LogsDir()
-	if _, err := os.Stat(logsRoot); err != nil {
+	if !root.IsDir(logsRoot) {
 		return nil
 	}
 	counts := map[string]int{}
 	responses := []chapterWriteHistoryEntry{}
 	prompts := []chapterWriteHistoryEntry{}
-	_ = filepath.WalkDir(logsRoot, func(path string, entry os.DirEntry, walkErr error) error {
-		if walkErr != nil || entry.IsDir() {
-			return nil
-		}
-		info, err := entry.Info()
-		if err != nil || info.Mode()&os.ModeSymlink != 0 {
+	_ = root.Walk(logsRoot, func(path string, info os.FileInfo) error {
+		if info.Mode()&os.ModeSymlink != 0 {
 			return nil
 		}
 		rel, err := filepath.Rel(logsRoot, path)
@@ -159,7 +155,7 @@ func buildChapterWriteHistory(root *store.Root) *chapterWriteHistory {
 			return nil
 		}
 		counts[kind]++
-		preview, truncated := readLogPreviewForQuery(path, kind, 700)
+		preview, truncated := readLogPreviewForQuery(root.FS(), path, kind, 700)
 		if strings.TrimSpace(preview) == "" {
 			return nil
 		}

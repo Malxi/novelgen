@@ -23,7 +23,7 @@ func QueryLogs(rootDir, queryType, id, name string, includeContent bool) ToolRes
 
 func queryLogsAt(root *store.Root, queryType, id, name string, includeContent bool) ToolResponse {
 	logsRoot := root.LogsDir()
-	if _, err := os.Stat(logsRoot); err != nil {
+	if !root.IsDir(logsRoot) {
 		return ToolResponse{OK: true, Section: "logs", Count: 0, Results: nil, Warnings: []string{"logs directory not found"}}
 	}
 	kindFilter := NormalizeLogKind(queryType)
@@ -32,17 +32,7 @@ func queryLogsAt(root *store.Root, queryType, id, name string, includeContent bo
 	historyCutoff, hasHistoryCutoff := logHistoryCutoff()
 
 	hits := []LogHit{}
-	err := filepath.WalkDir(logsRoot, func(path string, entry os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			return nil
-		}
-		info, err := entry.Info()
-		if err != nil {
-			return err
-		}
+	err := root.Walk(logsRoot, func(path string, info os.FileInfo) error {
 		if info.Mode()&os.ModeSymlink != 0 {
 			return nil
 		}
@@ -71,7 +61,7 @@ func queryLogsAt(root *store.Root, queryType, id, name string, includeContent bo
 		}
 		summary := map[string]interface{}(nil)
 		if kind == "agent-live" {
-			summary = summarizeAgentLiveLogFile(path)
+			summary = summarizeAgentLiveLogFile(root.FS(), path)
 			if id == "" && !agentLiveLogSummaryComplete(summary) {
 				return nil
 			}
@@ -89,9 +79,9 @@ func queryLogsAt(root *store.Root, queryType, id, name string, includeContent bo
 			hit.Summary = summary
 		}
 		if includeContent && id != "" {
-			hit.Content, hit.Truncated = readLogExcerptForQuery(path, kind, 12000)
+			hit.Content, hit.Truncated = readLogExcerptForQuery(root.FS(), path, kind, 12000)
 		} else {
-			hit.Preview, hit.Truncated = readLogPreviewForQuery(path, kind, 1000)
+			hit.Preview, hit.Truncated = readLogPreviewForQuery(root.FS(), path, kind, 1000)
 		}
 		hits = append(hits, hit)
 		return nil
@@ -180,8 +170,8 @@ func logAgentFromFilename(filename string) string {
 	return base
 }
 
-func readLogPreviewForQuery(path string, kind string, maxRunes int) (string, bool) {
-	content, truncated := readLogExcerptForQuery(path, kind, maxRunes)
+func readLogPreviewForQuery(fs store.FS, path string, kind string, maxRunes int) (string, bool) {
+	content, truncated := readLogExcerptForQuery(fs, path, kind, maxRunes)
 	return logPreviewFromExcerpt(content, truncated)
 }
 
@@ -234,8 +224,8 @@ func isLogPreviewMetadataLine(line string) bool {
 	return false
 }
 
-func readLogExcerptForQuery(path string, kind string, maxRunes int) (string, bool) {
-	data, err := os.ReadFile(path)
+func readLogExcerptForQuery(fs store.FS, path string, kind string, maxRunes int) (string, bool) {
+	data, err := fs.ReadFile(path)
 	if err != nil {
 		return "", false
 	}
@@ -262,8 +252,8 @@ func sanitizeAgentLiveLogText(text string) string {
 	return strings.Join(lines, "\n")
 }
 
-func summarizeAgentLiveLogFile(path string) map[string]interface{} {
-	data, err := os.ReadFile(path)
+func summarizeAgentLiveLogFile(fs store.FS, path string) map[string]interface{} {
+	data, err := fs.ReadFile(path)
 	if err != nil {
 		return nil
 	}

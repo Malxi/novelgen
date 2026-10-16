@@ -3,7 +3,6 @@ package models
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -333,15 +332,6 @@ func (o *Outline) MarshalForSave() ([]byte, error) {
 	return json.MarshalIndent(o, "", "  ")
 }
 
-// Save writes the outline to a file
-func (o *Outline) Save(path string) error {
-	data, err := o.MarshalForSave()
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0644)
-}
-
 // ParseOutline decodes an outline from raw JSON bytes.
 func ParseOutline(data []byte) (*Outline, error) {
 	var outline Outline
@@ -349,15 +339,6 @@ func ParseOutline(data []byte) (*Outline, error) {
 		return nil, err
 	}
 	return &outline, nil
-}
-
-// LoadOutline reads the outline from a file
-func LoadOutline(path string) (*Outline, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return ParseOutline(data)
 }
 
 // GetChapterByID finds a chapter by its ID

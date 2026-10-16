@@ -12,6 +12,7 @@ import (
 	"novelgen/internal/agents"
 	"novelgen/internal/llm"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 )
 
 var analyzeChapterAICmd = &cobra.Command{
@@ -103,10 +104,11 @@ func runAnalyzeChapterAI(cmd *cobra.Command, args []string) error {
 // initLLMForAnalysis 初始化LLM客户端
 func initLLMForAnalysis(bookPath string) (llm.Client, *llm.Config, *models.ProjectLLM, error) {
 	// 1. 从 novel.json 读取项目配置
-	novelJSONPath := filepath.Join(bookPath, "novel.json")
+	projectRoot := store.At(bookPath)
+	novelJSONPath := projectRoot.NovelJSON()
 	var projectLLM *models.ProjectLLM
 
-	if data, err := os.ReadFile(novelJSONPath); err == nil {
+	if data, err := projectRoot.Read(novelJSONPath); err == nil {
 		var novelConfig struct {
 			LLM struct {
 				Provider string `json:"provider"`

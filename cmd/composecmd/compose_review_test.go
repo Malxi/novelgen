@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"novelgen/internal/models"
+	"novelgen/internal/project"
+	"novelgen/internal/store"
 )
 
 func TestLoadReviewSuggestionReports(t *testing.T) {
@@ -30,14 +32,14 @@ func TestLoadReviewSuggestionReports(t *testing.T) {
 		Suggestions: []models.ReviewSuggestion{{TargetID: "P1-V2", Priority: "medium", Issue: "b"}},
 	})
 
-	got, err := loadReviewSuggestionReports(reviewPath + "," + checkPath)
+	got, err := loadReviewSuggestionReports(project.Open(store.At(dir)), reviewPath+","+checkPath)
 	if err != nil {
 		t.Fatalf("loadReviewSuggestionReports() error = %v", err)
 	}
 	if len(got) != 2 || got[0].TargetID != "P1-V1" || got[1].TargetID != "P1-V2" {
 		t.Fatalf("suggestions = %#v", got)
 	}
-	if _, err := loadReviewSuggestionReports(filepath.Join(dir, "missing.json")); err == nil {
+	if _, err := loadReviewSuggestionReports(project.Open(store.At(dir)), filepath.Join(dir, "missing.json")); err == nil {
 		t.Fatalf("loadReviewSuggestionReports with missing file should fail")
 	}
 }

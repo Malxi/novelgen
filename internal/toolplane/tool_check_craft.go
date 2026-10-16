@@ -87,7 +87,7 @@ func validateCraftSchemaObject(gate *quality.QualityGateResult, scope, key strin
 
 func loadCraftCharacterNames(root *store.Root) map[string]bool {
 	names := map[string]bool{}
-	values, err := loadRawCraftMap(root, "characters.json")
+	values, err := loadRawCraftMap(root, store.CraftCharacters.FileName())
 	if err != nil {
 		return names
 	}

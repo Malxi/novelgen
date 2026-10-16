@@ -52,8 +52,12 @@ Tests exist in `cmd/`, `internal/models/`, `internal/logic/`, and `internal/rpg/
 - AI output must not become project state directly. Parse AI output into a typed Go struct, normalize it when needed, validate deterministic invariants, then save it.
 - When changing a model used as AI input or output, update all related skill prompts, validators/normalizers, downstream consumers, docs, and at least one focused test or fixture.
 - Keep producer and consumer ownership explicit. If a field is added, document which command/agent writes it, which command/agent reads it, whether it is required, and how old projects behave when it is missing.
+- JSON that crosses the webui module boundary has no shared Go type (webui cannot import `internal/`). Change both sides in one go: the writer struct and the webui reader struct; `internal/architecture/schema_test.go` compares the JSON tags and fails when they drift (today: `logs/ai_calls` records).
 - Prefer deterministic logic for checks, normalization, IDs, ordering, state math, and DSL validation. Prompts may request good output, but code must enforce required invariants.
 - Do not read `models.Event` fields directly in state, write, continuity, or RPG logic unless there is a specific compatibility reason. Prefer `GetActor`, `GetAction`, `GetTarget`, and `GetTargetType` so old and new outline formats stay compatible.
+- Project state is read and written through `internal/store` only: get paths from a `*store.Root` (or `internal/project.Book`) and do IO with `Root.Read`/`Write*`/`Append`/`Save*`/`FS()`. Never feed a store path to `os.ReadFile`/`os.WriteFile`/`os.Stat`/…; `os.*` is for host paths that are not project layout (agent home, the user-global config, a caller-chosen output path, whole-directory copies). `internal/architecture` enforces this plus the directory/file-name literal rule, the web UI layout parity and an allowlist of the remaining ambient-root users, so a new violation fails the build.
+- Distinguish "missing" from "unreadable": only `fs.ErrNotExist` means an artifact is absent. Readers return an error for anything else, and writers must not treat a failed read as an empty file (that silently drops the rest of the artifact — see `Root.WriteJSONMerging`).
+- New pipeline code must not resolve the ambient project root (`store.Default`/`project.Default`); take an explicit `*store.Root`.
 
 ## Change checklists
 

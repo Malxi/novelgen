@@ -576,7 +576,10 @@ func runRPGExport(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal characters: %w", err)
 	}
-	charPath := filepath.Join(outputDir, "characters.json")
+	// The export claims to emit files in the novelgen craft format, so their
+	// names come from the store rather than being respelled (the output directory
+	// itself is whatever the caller chose).
+	charPath := filepath.Join(outputDir, store.CraftCharacters.FileName())
 	if err := os.WriteFile(charPath, charData, 0644); err != nil {
 		return fmt.Errorf("failed to write characters: %w", err)
 	}
@@ -587,7 +590,7 @@ func runRPGExport(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal items: %w", err)
 	}
-	itemPath := filepath.Join(outputDir, "items.json")
+	itemPath := filepath.Join(outputDir, store.CraftItems.FileName())
 	if err := os.WriteFile(itemPath, itemData, 0644); err != nil {
 		return fmt.Errorf("failed to write items: %w", err)
 	}
@@ -598,7 +601,7 @@ func runRPGExport(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal locations: %w", err)
 	}
-	locPath := filepath.Join(outputDir, "locations.json")
+	locPath := filepath.Join(outputDir, store.CraftLocations.FileName())
 	if err := os.WriteFile(locPath, locData, 0644); err != nil {
 		return fmt.Errorf("failed to write locations: %w", err)
 	}

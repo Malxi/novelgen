@@ -11,32 +11,14 @@ import (
 	"novelgen/internal/project"
 )
 
-// SaveVolumeReview writes story/reviews/<volumeID>_review.json through the
-// ambient project root.
-func SaveVolumeReview(review *agents.VolumeReview) error {
-	book, err := project.Default()
-	if err != nil {
-		return err
-	}
-	return SaveVolumeReviewAt(book, review)
-}
-
 // SaveVolumeReviewAt writes a volume review under an explicit project root.
+// There is deliberately no ambient variant: the project a review belongs to must
+// come from the caller, not from the process working directory.
 func SaveVolumeReviewAt(book *project.Book, review *agents.VolumeReview) error {
 	if review == nil {
 		return fmt.Errorf("cannot save nil volume review")
 	}
 	return book.WriteJSON(book.VolumeReviewFile(review.VolumeID), review)
-}
-
-// LoadVolumeReview reads story/reviews/<volumeID>_review.json through the
-// ambient project root.
-func LoadVolumeReview(volumeID string) (*agents.VolumeReview, error) {
-	book, err := project.Default()
-	if err != nil {
-		return nil, err
-	}
-	return LoadVolumeReviewAt(book, volumeID)
 }
 
 // LoadVolumeReviewAt reads a volume review under an explicit project root.

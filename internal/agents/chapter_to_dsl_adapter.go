@@ -32,8 +32,8 @@ func (a *NovelgenProjectAdapter) GetStorySetup() *models.StorySetup {
 	// 优先尝试从 setup.json 加载
 	// ProjectPath 现在是项目目录本身（BookName 可能来自 novel.json 的显示名，
 	// 不再保证等于目录名）。
-	setupPath := store.OpenFS(a.project.ProjectPath, store.OSFS{}).SetupJSON()
-	if setup, err := models.LoadStorySetup(setupPath); err == nil {
+	root := store.At(a.project.ProjectPath)
+	if setup, err := root.LoadSetup(); err == nil {
 		// 成功加载 setup.json
 		return setup
 	}

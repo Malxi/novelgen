@@ -358,14 +358,16 @@ func renameProject(root, name string) (string, error) {
 	if name == "" {
 		return "", fmt.Errorf("project name cannot be empty")
 	}
-	configPath := filepath.Join(root, "novel.json")
-	config, err := models.LoadProjectConfig(configPath)
+	projectRoot := store.At(root)
+	config, err := projectRoot.LoadConfig()
 	if err != nil {
 		return "", fmt.Errorf("load novel.json: %w", err)
 	}
 	oldName := config.Name
 	config.Name = name
-	if err := config.Save(configPath); err != nil {
+	// SaveConfig is the store's atomic write; models no longer owns a
+	// path-taking writer that could bypass it.
+	if err := projectRoot.SaveConfig(config); err != nil {
 		return "", fmt.Errorf("save novel.json: %w", err)
 	}
 	return oldName, nil
@@ -393,8 +395,7 @@ func inspectProjectForAgentSDK(root string) projectDoctorReport {
 		}
 	}
 
-	configPath := filepath.Join(root, "novel.json")
-	config, err := models.LoadProjectConfig(configPath)
+	config, err := store.At(root).LoadConfig()
 	if err != nil {
 		addCheck("novel_json", false, "error", fmt.Sprintf("cannot load novel.json: %v", err))
 		return report
@@ -657,7 +658,7 @@ func cloneProject(opts projectCloneOptions) (*projectCloneManifest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("source project not found: %w", err)
 	}
-	if _, err := os.Stat(filepath.Join(sourceRoot, "novel.json")); err != nil {
+	if !store.At(sourceRoot).Exists(store.At(sourceRoot).NovelJSON()) {
 		return nil, fmt.Errorf("source is not a novel project: %w", err)
 	}
 	if _, err := os.Stat(targetRoot); err == nil {
@@ -674,8 +675,8 @@ func cloneProject(opts projectCloneOptions) (*projectCloneManifest, error) {
 		return nil, err
 	}
 
-	configPath := filepath.Join(targetRoot, "novel.json")
-	config, err := models.LoadProjectConfig(configPath)
+	targetProject := store.At(targetRoot)
+	config, err := targetProject.LoadConfig()
 	if err != nil {
 		_ = os.RemoveAll(targetRoot)
 		return nil, fmt.Errorf("load cloned novel.json: %w", err)
@@ -684,7 +685,7 @@ func cloneProject(opts projectCloneOptions) (*projectCloneManifest, error) {
 	if opts.Name != "" {
 		config.Name = opts.Name
 	}
-	if err := config.Save(configPath); err != nil {
+	if err := targetProject.SaveConfig(config); err != nil {
 		_ = os.RemoveAll(targetRoot)
 		return nil, fmt.Errorf("save cloned novel.json: %w", err)
 	}
@@ -742,13 +743,8 @@ func firstUnwrittenOutlineChapterID(root string) string {
 }
 
 func projectChapterMarkdownExists(root, chapterID string) bool {
-	for _, path := range store.At(root).ChapterCandidates(chapterID) {
-		data, err := os.ReadFile(path)
-		if err == nil && strings.TrimSpace(string(data)) != "" {
-			return true
-		}
-	}
-	return false
+	content, _, err := store.At(root).LoadChapterContent(chapterID)
+	return err == nil && strings.TrimSpace(content) != ""
 }
 
 func copyProjectTree(sourceRoot, targetRoot string, withLogs bool) error {

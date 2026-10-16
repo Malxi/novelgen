@@ -1,8 +1,9 @@
 package recap
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 
@@ -123,16 +124,16 @@ func CheckQuality(projectRoot string, chapterID string) (ok bool, issues []strin
 		return false, []string{"projectRoot/chapterID 为空"}, []string{"确保运行环境能定位项目根目录并生成 story/recaps"}
 	}
 
-	p := NewStore(projectRoot).Path(chapterID)
-	b, err := os.ReadFile(p)
+	store := NewStoreAt(store.At(projectRoot))
+	p := store.Path(chapterID)
+	recap, err := store.Load(chapterID)
 	if err != nil {
-		return false, []string{fmt.Sprintf("未找到 recap 文件: %s", p)}, []string{"先生成章节或运行 recap 抽取；确保 recap 保存成功"}
+		if errors.Is(err, fs.ErrNotExist) {
+			return false, []string{fmt.Sprintf("未找到 recap 文件: %s", p)}, []string{"先生成章节或运行 recap 抽取；确保 recap 保存成功"}
+		}
+		return false, []string{fmt.Sprintf("读取 recap 文件失败: %s: %v", p, err)}, []string{"检查 recap 文件权限与内容"}
 	}
-	var r models.ChapterRecap
-	if err := json.Unmarshal(b, &r); err != nil {
-		return false, []string{"recap JSON 解析失败"}, []string{"检查 recap 抽取提示与输出是否为有效 JSON"}
-	}
-	if ok, reasons := ValidateMinimal(&r); !ok {
+	if ok, reasons := ValidateMinimal(recap); !ok {
 		return false, append([]string{"recap 未通过最小门禁"}, reasons...), []string{"重新抽取 recap，补齐 location/present/last_line/next_opening_hint"}
 	}
 	return true, nil, nil

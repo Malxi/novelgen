@@ -309,7 +309,7 @@ func (na *NovelgenAdapter) loadStorySetup() *models.StorySetup {
 	}
 	var lastErr error
 	for _, setupPath := range candidates {
-		setup, err := models.LoadStorySetup(setupPath)
+		setup, err := project.LoadSetupAt(setupPath)
 		if err == nil {
 			return setup
 		}

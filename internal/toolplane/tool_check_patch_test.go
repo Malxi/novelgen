@@ -1851,7 +1851,7 @@ func TestToolOutlinePatchResultExposesValidationCoverage(t *testing.T) {
 		t.Fatal(err)
 	}
 	setup := &models.StorySetup{ProjectName: "Patch Test", Theme: "cause and cost"}
-	if err := setup.Save(filepath.Join(root, "story", "setup", "story_setup.json")); err != nil {
+	if err := toolRoot(t, root).SaveSetup(setup); err != nil {
 		t.Fatal(err)
 	}
 	if err := writeToolTestOutline(root, validToolPatchTestOutline()); err != nil {
@@ -1915,7 +1915,7 @@ func TestToolOutlinePatchRejectsNewGlobalBlockingIssueOnDryRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	setup := &models.StorySetup{ProjectName: "Patch Test", Theme: "cause and cost"}
-	if err := setup.Save(filepath.Join(root, "story", "setup", "story_setup.json")); err != nil {
+	if err := toolRoot(t, root).SaveSetup(setup); err != nil {
 		t.Fatal(err)
 	}
 	outline := validToolPatchTestOutline()
@@ -2537,7 +2537,7 @@ func TestRunToolRecapCheckReportsOutlineTitleMismatch(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, "story", "compose"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := outline.Save(filepath.Join(root, "story", "compose", "outline.json")); err != nil {
+	if err := toolRoot(t, root).SaveOutline(outline); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2580,7 +2580,7 @@ func TestRunToolRecapPatchApplyWritesValidatedFileAndCheckpoint(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, "story", "compose"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := outline.Save(filepath.Join(root, "story", "compose", "outline.json")); err != nil {
+	if err := toolRoot(t, root).SaveOutline(outline); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2682,10 +2682,7 @@ func TestRunToolSetupCheckAllMergesQualityAndSimulation(t *testing.T) {
 func TestRunToolSetupPatchApplyWritesFilesAndCheckpoint(t *testing.T) {
 	root := t.TempDir()
 	setup := testfixtures.ValidLongFormSetup()
-	if err := os.MkdirAll(filepath.Join(root, "story", "setup"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := setup.Save(filepath.Join(root, "story", "setup", "story_setup.json")); err != nil {
+	if err := toolRoot(t, root).SaveSetup(setup); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2697,7 +2694,7 @@ func TestRunToolSetupPatchApplyWritesFilesAndCheckpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	saved, err := models.LoadStorySetup(filepath.Join(root, "story", "setup", "story_setup.json"))
+	saved, err := toolRoot(t, root).LoadSetup()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2871,10 +2868,7 @@ func TestRunToolPatchSetupDoesNotRequireID(t *testing.T) {
 		t.Fatal(err)
 	}
 	setup := testfixtures.ValidLongFormSetup()
-	if err := os.MkdirAll(filepath.Join(root, "story", "setup"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := setup.Save(filepath.Join(root, "story", "setup", "story_setup.json")); err != nil {
+	if err := toolRoot(t, root).SaveSetup(setup); err != nil {
 		t.Fatal(err)
 	}
 	storeRoot := toolRoot(t, root)
@@ -2906,7 +2900,7 @@ func TestRunToolPatchSetupDoesNotRequireID(t *testing.T) {
 	if len(result.NextActions) == 0 || result.NextActions[0].Action != "apply_validated_patch" {
 		t.Fatalf("setup dry-run should return apply next action: %#v", result.NextActions)
 	}
-	reloaded, err := models.LoadStorySetup(filepath.Join(root, "story", "setup", "story_setup.json"))
+	reloaded, err := toolRoot(t, root).LoadSetup()
 	if err != nil {
 		t.Fatal(err)
 	}

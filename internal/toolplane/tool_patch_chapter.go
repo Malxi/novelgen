@@ -5,7 +5,6 @@ package toolplane
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -48,7 +47,10 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 	if targetWords <= 0 {
 		targetWords = toolChapterTargetWords()
 	}
-	beforePath, beforeContent := loadFinalChapterContentWithPath(root, id)
+	beforeContent, beforePath, err := root.LoadChapterContent(id)
+	if err != nil {
+		return fmt.Errorf("failed to read chapter %s: %w", id, err)
+	}
 	if err := ValidateToolChapterPatchLength(chapter, content, targetWords, beforeContent); err != nil {
 		return fmt.Errorf("chapter patch rejected: %w", err)
 	}
@@ -291,14 +293,4 @@ func toolChapterLengthHardMax(targetWords int) int {
 		hardMax = targetWords + 250
 	}
 	return hardMax
-}
-
-func loadFinalChapterContentWithPath(root *store.Root, chapterID string) (string, string) {
-	for _, path := range root.ChapterCandidates(chapterID) {
-		data, err := os.ReadFile(path)
-		if err == nil {
-			return path, string(data)
-		}
-	}
-	return "", ""
 }

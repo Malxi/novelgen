@@ -26,17 +26,21 @@ func (b *Book) SaveFinalChapter(chapter *models.Chapter, content string) error {
 
 // LoadFinalChapterContent reads a chapter's final markdown, trying the full-id
 // filename first and the numeric filename as a compatibility fallback. It
-// returns "" when the project root or the chapter file is missing.
-func (b *Book) LoadFinalChapterContent(chapter *models.Chapter) string {
+// returns "" when the chapter has not been written yet; a chapter file that
+// exists but cannot be read is reported as an error.
+func (b *Book) LoadFinalChapterContent(chapter *models.Chapter) (string, error) {
 	if chapter == nil {
-		return ""
+		return "", nil
 	}
-	content, _ := b.LoadChapterContent(chapter.ID)
-	return content
+	content, _, err := b.LoadChapterContent(chapter.ID)
+	if err != nil {
+		return "", err
+	}
+	return content, nil
 }
 
 // LoadDraftContent reads drafts/<chapterID>.md, returning "" when missing.
-func (b *Book) LoadDraftContent(chapterID string) string {
+func (b *Book) LoadDraftContent(chapterID string) (string, error) {
 	return b.Root.LoadDraftContent(chapterID)
 }
 
@@ -55,7 +59,7 @@ func (b *Book) SaveDraft(chapter *models.Chapter, draft string) error {
 }
 
 // LoadAllDrafts returns every drafts/*.md keyed by chapter ID.
-func (b *Book) LoadAllDrafts() map[string]string {
+func (b *Book) LoadAllDrafts() (map[string]string, error) {
 	return b.Root.LoadAllDrafts()
 }
 
@@ -69,19 +73,19 @@ func SaveFinalChapter(chapter *models.Chapter, content string) error {
 }
 
 // LoadFinalChapterContent reads a chapter through the ambient project root.
-func LoadFinalChapterContent(chapter *models.Chapter) string {
+func LoadFinalChapterContent(chapter *models.Chapter) (string, error) {
 	book, err := Default()
 	if err != nil {
-		return ""
+		return "", err
 	}
 	return book.LoadFinalChapterContent(chapter)
 }
 
 // LoadDraftContent reads a draft through the ambient project root.
-func LoadDraftContent(chapterID string) string {
+func LoadDraftContent(chapterID string) (string, error) {
 	book, err := Default()
 	if err != nil {
-		return ""
+		return "", err
 	}
 	return book.LoadDraftContent(chapterID)
 }
@@ -96,10 +100,10 @@ func SaveDraft(chapter *models.Chapter, draft string) error {
 }
 
 // LoadAllDrafts reads every draft through the ambient project root.
-func LoadAllDrafts() map[string]string {
+func LoadAllDrafts() (map[string]string, error) {
 	book, err := Default()
 	if err != nil {
-		return map[string]string{}
+		return nil, err
 	}
 	return book.LoadAllDrafts()
 }

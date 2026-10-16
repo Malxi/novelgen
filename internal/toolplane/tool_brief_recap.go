@@ -4,7 +4,6 @@ package toolplane
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"novelgen/internal/logic/continuity/recap"
@@ -75,12 +74,12 @@ func recapFreshForChapterMarkdown(root *store.Root, chapterID string) (bool, str
 		return true, ""
 	}
 	recapPath := root.RecapFile(chapterID)
-	chapterPath := firstExistingPath(root.ChapterCandidates(chapterID))
+	chapterPath := firstExistingPath(root.FS(), root.ChapterCandidates(chapterID))
 	if chapterPath == "" {
 		return true, ""
 	}
-	recapInfo, recapErr := os.Stat(recapPath)
-	chapterInfo, chapterErr := os.Stat(chapterPath)
+	recapInfo, recapErr := root.FS().Stat(recapPath)
+	chapterInfo, chapterErr := root.FS().Stat(chapterPath)
 	if recapErr != nil || chapterErr != nil {
 		return true, ""
 	}

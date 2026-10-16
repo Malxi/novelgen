@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -37,7 +36,7 @@ func RunToolPatchBuffer(cmd *cobra.Command, args []string) error {
 	}
 	switch op {
 	case "clear":
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		if err := root.Remove(path); err != nil {
 			return fmt.Errorf("failed to clear patch buffer: %w", err)
 		}
 		return writeJSON(cmd, map[string]interface{}{"ok": true, "id": id, "path": path, "bytes": 0})
@@ -59,28 +58,18 @@ func RunToolPatchBuffer(cmd *cobra.Command, args []string) error {
 		if err := utils.ValidateNoSuspiciousPatchText(map[string]interface{}{"text": text}); err != nil {
 			return fmt.Errorf("patch buffer rejected: %w", err)
 		}
-		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-			return fmt.Errorf("failed to create patch buffer directory: %w", err)
-		}
-		f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-		if err != nil {
-			return fmt.Errorf("failed to open patch buffer: %w", err)
-		}
-		if _, err := f.WriteString(text); err != nil {
-			_ = f.Close()
+		// root.Append creates the buffer's parent directory and appends through the
+		// store, so the buffer plane shares one filesystem seam with story state.
+		if err := root.Append(path, []byte(text), store.FileMode); err != nil {
 			return fmt.Errorf("failed to append patch buffer: %w", err)
 		}
-		if err := f.Close(); err != nil {
-			return fmt.Errorf("failed to close patch buffer: %w", err)
+		info, err := root.FS().Stat(path)
+		if err != nil {
+			return fmt.Errorf("failed to stat patch buffer: %w", err)
 		}
-		info, _ := os.Stat(path)
-		size := int64(0)
-		if info != nil {
-			size = info.Size()
-		}
-		return writeJSON(cmd, map[string]interface{}{"ok": true, "id": id, "path": path, "bytes": size})
+		return writeJSON(cmd, map[string]interface{}{"ok": true, "id": id, "path": path, "bytes": info.Size()})
 	case "show":
-		data, err := os.ReadFile(path)
+		data, err := root.Read(path)
 		if err != nil {
 			return fmt.Errorf("failed to read patch buffer: %w", err)
 		}
@@ -116,7 +105,7 @@ func LoadToolPatchBuffer(root *store.Root, id, section string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	data, err := os.ReadFile(path)
+	data, err := root.Read(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read patch buffer %q: %w", id, err)
 	}

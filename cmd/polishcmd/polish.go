@@ -85,19 +85,24 @@ func runPolish(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load project config
-	config, err := project.LoadConfig()
+	book, err := project.ForCommand(cmd)
+	if err != nil {
+		return err
+	}
+
+	config, err := book.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load project config: %w", err)
 	}
 
 	// Load outline
-	outline, err := project.LoadOutline()
+	outline, err := book.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load outline: %w", err)
 	}
 
 	// Load story setup
-	setup, err := project.LoadStorySetup()
+	setup, err := book.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
@@ -115,10 +120,7 @@ func runPolish(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get project root
-	root, err := project.FindRoot()
-	if err != nil {
-		return fmt.Errorf("failed to find project root: %w", err)
-	}
+	root := book.Dir()
 
 	// Initialize agents
 	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
@@ -185,7 +187,7 @@ func runPolish(cmd *cobra.Command, args []string) error {
 
 			// Step 1: Volume-level review (AI sees all chapters at once)
 			log.Info("Performing volume-level review (AI will see all %d chapters)...", len(chapters))
-			volumeReviewResult, err := performVolumeReview(ctx, writeAgent, volume, chapters, targetWords)
+			volumeReviewResult, err := performVolumeReview(ctx, book, writeAgent, volume, chapters, targetWords)
 			if err != nil {
 				log.Error("Failed to perform volume review: %v", err)
 				errc.Addf("%s: volume review failed: %w", volume.ID, err)
@@ -215,7 +217,7 @@ func runPolish(cmd *cobra.Command, args []string) error {
 
 			// Step 2: Improve chapters based on volume review and RPG DSL issues
 			log.Info("Improving chapters based on volume review and RPG DSL issues...")
-			improvedCount, err := improveChaptersWithVolumeReviewAndRPGIssues(ctx, writeAgent, recapAgent, recapStore, continuityBuilder, volume, chapters, volumeReviewResult, rpgDSLIssues, outline, targetWords, polishAgentSDKFlag, polishAgentApplyFlag, polishRecapAgentSDK || polishAgentSDKFlag)
+			improvedCount, err := improveChaptersWithVolumeReviewAndRPGIssues(ctx, book, writeAgent, recapAgent, recapStore, continuityBuilder, volume, chapters, volumeReviewResult, rpgDSLIssues, outline, targetWords, polishAgentSDKFlag, polishAgentApplyFlag, polishRecapAgentSDK || polishAgentSDKFlag)
 			if err != nil {
 				log.Error("Failed to polish some chapters in volume %s: %v", volume.ID, err)
 				errc.Add(err)
@@ -305,13 +307,17 @@ func getChaptersForVolume(outline *models.Outline, volumeID string) []*models.Ch
 }
 
 // performVolumeReview performs a holistic review of all chapters in a volume
-func performVolumeReview(ctx context.Context, writeAgent *agents.WriteAgent, volume *models.Volume, chapters []*models.Chapter, targetWords int) (agents.VolumeReviewResult, error) {
+func performVolumeReview(ctx context.Context, book *project.Book, writeAgent *agents.WriteAgent, volume *models.Volume, chapters []*models.Chapter, targetWords int) (agents.VolumeReviewResult, error) {
 	log := logger.GetLogger()
 
 	// Load all chapter contents
 	chapterContents := make(map[string]string)
 	for _, chapter := range chapters {
-		content := project.LoadFinalChapterContent(chapter)
+		content, readErr := book.LoadFinalChapterContent(chapter)
+		if readErr != nil {
+			log.Warn("Failed to read chapter %s: %v", chapter.ID, readErr)
+			continue
+		}
 		if content == "" {
 			log.Warn("No content found for chapter %s", chapter.ID)
 			continue
@@ -337,7 +343,7 @@ func validatePolishAgentApplyOption(useAgentSDK, agentApply bool) error {
 }
 
 // improveChaptersWithVolumeReviewAndRPGIssues improves chapters based on volume-level review and RPG DSL issues
-func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent *agents.WriteAgent, recapAgent *agents.RecapAgent, recapStore *recap.Store, continuityBuilder *logic.ChapterContinuityBuilder, volume *models.Volume, chapters []*models.Chapter, volumeReview agents.VolumeReviewResult, rpgDSLIssues []dsl.SimulationIssue, outline *models.Outline, targetWords int, useAgentSDK bool, agentApply bool, recapAgentSDK bool) (int, error) {
+func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, book *project.Book, writeAgent *agents.WriteAgent, recapAgent *agents.RecapAgent, recapStore *recap.Store, continuityBuilder *logic.ChapterContinuityBuilder, volume *models.Volume, chapters []*models.Chapter, volumeReview agents.VolumeReviewResult, rpgDSLIssues []dsl.SimulationIssue, outline *models.Outline, targetWords int, useAgentSDK bool, agentApply bool, recapAgentSDK bool) (int, error) {
 	log := logger.GetLogger()
 	var errc writepipe.WriteErrorCollector
 
@@ -376,7 +382,12 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent
 		log.Info("[Worker %d] Improving chapter: %s - %s (role: %s, score: %.1f)", workerID, chapter.ID, chapter.Title, review.ChapterRole, review.ChapterScore)
 
 		// Load current content
-		currentContent := project.LoadFinalChapterContent(chapter)
+		currentContent, readErr := book.LoadFinalChapterContent(chapter)
+		if readErr != nil {
+			log.Error("[Worker %d] Failed to read chapter %s: %v", workerID, chapter.ID, readErr)
+			errc.Addf("%s: read final chapter failed: %w", chapter.ID, readErr)
+			return false, nil
+		}
 		if currentContent == "" {
 			log.Error("[Worker %d] No content for chapter %s, skipping", workerID, chapter.ID)
 			errc.Addf("%s: no final chapter content for polish", chapter.ID)
@@ -431,37 +442,43 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, writeAgent
 			suggestions.WriteString(polishPromptFlag)
 		}
 		if useAgentSDK {
-			if checkSuggestions := writepipe.BuildAgentSDKChapterCheckSuggestions(chapter, targetWords); checkSuggestions != "" {
+			if checkSuggestions := writepipe.BuildAgentSDKChapterCheckSuggestions(book, chapter, targetWords); checkSuggestions != "" {
 				suggestions.WriteString("\n\n")
 				suggestions.WriteString(checkSuggestions)
 			}
 		}
 
 		// Load context
-		chapterContext := writepipe.LoadChapterContext(outline, chapter, 2)
+		chapterContext := writepipe.LoadChapterContext(book, outline, chapter, 2)
 
 		// Calculate continuity
 		continuity := continuityBuilder.BuildBefore(outline, chapter)
 
 		// Generate improved content
-		content, err := writepipe.GenerateImprovedChapter(ctx, writeAgent, chapter, chapterContext, continuity, targetWords, currentContent, suggestions.String(), useAgentSDK, agentApply, false)
+		content, err := writepipe.GenerateImprovedChapter(book, ctx, writeAgent, chapter, chapterContext, continuity, targetWords, currentContent, suggestions.String(), useAgentSDK, agentApply, false)
 		if err != nil {
 			log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
 			errc.Addf("%s: polish improve failed: %w", chapter.ID, err)
 			return false, nil
 		}
-		content, agentApplied := writepipe.ResolveAgentAppliedChapterContent(log, workerID, chapter, currentContent, content, useAgentSDK, agentApply)
+		content, agentApplied := writepipe.ResolveAgentAppliedChapterContent(log, book, workerID, chapter, currentContent, content, useAgentSDK, agentApply)
 
 		// Save improved content
-		if agentApplied && strings.TrimSpace(project.LoadFinalChapterContent(chapter)) == strings.TrimSpace(content) {
+		savedContent, readErr := book.LoadFinalChapterContent(chapter)
+		if readErr != nil {
+			log.Error("[Worker %d] Failed to read chapter %s: %v", workerID, chapter.ID, readErr)
+			errc.Addf("%s: read final chapter failed: %w", chapter.ID, readErr)
+			return false, nil
+		}
+		if agentApplied && strings.TrimSpace(savedContent) == strings.TrimSpace(content) {
 			log.Info("[Worker %d] Agent patch already saved chapter %s through tool patch chapter --apply", workerID, chapter.ID)
-		} else if err := writepipe.SaveFinalChapter(chapter, content); err != nil {
+		} else if err := writepipe.SaveFinalChapter(book, chapter, content); err != nil {
 			log.Error("[Worker %d] Failed to save chapter %s: %v", workerID, chapter.ID, err)
 			errc.Addf("%s: save polished chapter failed: %w", chapter.ID, err)
 			return false, nil
 		}
 		if useAgentSDK {
-			postCheck, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords)
+			postCheck, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, book, chapter, targetWords)
 			if err != nil {
 				log.Warn("[Worker %d] Agent SDK post-save check failed for %s: %v", workerID, chapter.ID, err)
 			} else {

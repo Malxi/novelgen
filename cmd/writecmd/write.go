@@ -2,7 +2,6 @@ package writecmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -287,20 +286,24 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	}
 	setupWriteAgentHistoryCutoff(writeAgentHistoryFlag)
 
-	// Load project config
-	config, err := project.LoadConfig()
+	book, err := project.ForCommand(cmd)
+	if err != nil {
+		return err
+	}
+
+	config, err := book.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load project config: %w", err)
 	}
 
 	// Load story setup
-	setup, err := project.LoadStorySetup()
+	setup, err := book.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
 
 	// Load outline
-	outline, err := project.LoadOutline()
+	outline, err := book.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load outline: %w", err)
 	}
@@ -327,11 +330,7 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	agent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	agent.SetLanguage(config.Language)
 
-	// Get project root for continuity builder
-	root, err := project.FindRoot()
-	if err != nil {
-		return fmt.Errorf("failed to find project root: %w", err)
-	}
+	root := book.Dir()
 	setupWriteRunLogging(root, "write gen")
 
 	// Create continuity builder
@@ -378,7 +377,7 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 		log.Info("[Worker %d] Generating content for chapter: %s - %s", workerID, chapter.ID, chapter.Title)
 
 		// Load context drafts (previous and next chapters)
-		context := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
+		context := writepipe.LoadChapterContext(book, outline, chapter, writeContextFlag)
 
 		// Calculate chapter continuity
 		continuity := continuityBuilder.BuildBefore(outline, chapter)
@@ -392,22 +391,28 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 		}
 
 		// Save final content
-		if err := project.SaveFinalChapter(chapter, content); err != nil {
+		if err := book.SaveFinalChapter(chapter, content); err != nil {
 			log.Error("Failed to save content for chapter %s: %v", chapter.ID, err)
 			errc.Addf("%s: save final chapter failed: %w", chapter.ID, err)
 			return struct{}{}, nil
 		}
-		if savedContent := project.LoadFinalChapterContent(chapter); strings.TrimSpace(savedContent) != "" {
+		savedContent, readErr := book.LoadFinalChapterContent(chapter)
+		if readErr != nil {
+			log.Error("Failed to read back chapter %s: %v", chapter.ID, readErr)
+			errc.Addf("%s: read back final chapter failed: %w", chapter.ID, readErr)
+			return struct{}{}, nil
+		}
+		if strings.TrimSpace(savedContent) != "" {
 			content = savedContent
 		}
 		if writeAgentSDKFlag {
-			if result, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords); err != nil {
+			if result, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, book, chapter, targetWords); err != nil {
 				log.Warn("[Worker %d] Agent SDK post-save check failed for %s: %v", workerID, chapter.ID, err)
 			} else {
 				writepipe.LogAgentSDKChapterPostSaveCheck(log, workerID, chapter.ID, result)
 				if result.Blocking {
 					log.Warn("[Worker %d] Agent SDK generated chapter %s still has blocking post-save issues; attempting one validated agent repair", workerID, chapter.ID)
-					repaired, repairedCheck, repairErr := repairAgentSDKGeneratedChapterPostSave(ctx, log, workerID, agent, chapter, context, continuity, targetWords, content, result, writeAgentHistoryFlag)
+					repaired, repairedCheck, repairErr := repairAgentSDKGeneratedChapterPostSave(ctx, book, log, workerID, agent, chapter, context, continuity, targetWords, content, result, writeAgentHistoryFlag)
 					if repairErr != nil {
 						log.Error("[Worker %d] Agent SDK post-save repair failed for %s: %v", workerID, chapter.ID, repairErr)
 						errc.Addf("%s: post-save repair failed: %w", chapter.ID, repairErr)
@@ -602,7 +607,7 @@ func FinalChapterContentChanged(chapter *models.Chapter, before, after string) b
 	return project.ChapterContentChanged(chapter, before, after)
 }
 
-func saveWriteReviewResult(chapter *models.Chapter, review models.ReviewResult) error {
+func saveWriteReviewResult(book *project.Book, chapter *models.Chapter, review models.ReviewResult) error {
 	if chapter == nil {
 		return fmt.Errorf("chapter is nil")
 	}
@@ -613,18 +618,22 @@ func saveWriteReviewResult(chapter *models.Chapter, review models.ReviewResult) 
 	return root.WriteJSON(root.ReviewFile(chapter.ID+"_write_review.json"), review)
 }
 
-func loadFinalChapterContentsForVolume(volume *models.Volume) map[string]string {
+func loadFinalChapterContentsForVolume(book *project.Book, volume *models.Volume) (map[string]string, error) {
 	contents := make(map[string]string)
 	if volume == nil {
-		return contents
+		return contents, nil
 	}
 	for i := range volume.Chapters {
 		ch := &volume.Chapters[i]
-		if content := project.LoadFinalChapterContent(ch); strings.TrimSpace(content) != "" {
+		content, readErr := book.LoadFinalChapterContent(ch)
+		if readErr != nil {
+			return nil, readErr
+		}
+		if strings.TrimSpace(content) != "" {
 			contents[ch.ID] = content
 		}
 	}
-	return contents
+	return contents, nil
 }
 
 func findDraftReview(review *agents.VolumeReview, chapterID string) *agents.DraftReview {
@@ -714,13 +723,18 @@ func applyHumanizeCheckToReview(chapter *models.Chapter, content string, review 
 	}
 }
 
-func applyHumanizeChecksToVolume(volume *models.Volume, contents map[string]string, review *agents.VolumeReview) {
+func applyHumanizeChecksToVolume(book *project.Book, volume *models.Volume, contents map[string]string, review *agents.VolumeReview) {
 	if !writeHumanizeFlag || volume == nil || review == nil {
 		return
 	}
 	contentByID := contents
 	if contentByID == nil {
-		contentByID = loadFinalChapterContentsForVolume(volume)
+		loaded, err := loadFinalChapterContentsForVolume(book, volume)
+		if err != nil {
+			logger.GetLogger().Warn("Cannot load chapter contents for volume %s; skipping heuristic checks: %v", volume.ID, err)
+			loaded = map[string]string{}
+		}
+		contentByID = loaded
 	}
 	chapterByID := make(map[string]*models.Chapter)
 	for i := range volume.Chapters {
@@ -750,20 +764,24 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 	}
 	setupWriteAgentHistoryCutoff(writeAgentHistoryFlag)
 
-	// Load project config
-	config, err := project.LoadConfig()
+	book, err := project.ForCommand(cmd)
+	if err != nil {
+		return err
+	}
+
+	config, err := book.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load project config: %w", err)
 	}
 
 	// Load story setup
-	setup, err := project.LoadStorySetup()
+	setup, err := book.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
 
 	// Load outline
-	outline, err := project.LoadOutline()
+	outline, err := book.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load outline: %w", err)
 	}
@@ -790,11 +808,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	writeAgent.SetLanguage(config.Language)
 
-	// Get project root for continuity builder
-	root, err := project.FindRoot()
-	if err != nil {
-		return fmt.Errorf("failed to find project root: %w", err)
-	}
+	root := book.Dir()
 	setupWriteRunLogging(root, "write improve")
 	if writeAgentSDKFlag {
 		log.Info("Chapter improvement will use Agent SDK; Go still validates and saves final markdown")
@@ -822,7 +836,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 
 	// Check if reviews exist for all volumes
 	for _, volume := range volumes {
-		_, err := reviewstore.LoadVolumeReview(volume.ID)
+		_, err := reviewstore.LoadVolumeReviewAt(book, volume.ID)
 		if err != nil {
 			if forcedAgentSDKImprove {
 				log.Info("No review found for volume %s; Agent SDK forced improvement will use focused chapter checks instead of auto-review", volume.ID)
@@ -840,10 +854,10 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 
 		// Run review for volumes that need it
 		for _, volume := range volumes {
-			_, err := reviewstore.LoadVolumeReview(volume.ID)
+			_, err := reviewstore.LoadVolumeReviewAt(book, volume.ID)
 			if err != nil {
 				log.Info("Auto-reviewing volume: %s", volume.ID)
-				if err := reviewVolumeWithWriteAgent(ctx, writeAgent, continuityBuilder, volume, outline, targetWords, writeConcurrencyFlag); err != nil {
+				if err := reviewVolumeWithWriteAgent(ctx, book, writeAgent, continuityBuilder, volume, outline, targetWords, writeConcurrencyFlag); err != nil {
 					log.Error("Failed to auto-review volume %s: %v", volume.ID, err)
 					return err
 				}
@@ -860,7 +874,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 
 		for _, volume := range volumes {
 			// Load review for this volume
-			review, err := reviewstore.LoadVolumeReview(volume.ID)
+			review, err := reviewstore.LoadVolumeReviewAt(book, volume.ID)
 			if err != nil {
 				if forcedAgentSDKImprove {
 					log.Warn("No review found for volume %s; continuing forced Agent SDK improvement with focused check suggestions", volume.ID)
@@ -896,7 +910,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 			}
 
 			// Improve chapters concurrently
-			improved, err := improveChaptersWithWriteAgent(ctx, writeAgent, recapAgent, recapStore, chaptersToImprove, review.Reviews, outline, continuityBuilder, writeConcurrencyFlag, targetWords, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag)
+			improved, err := improveChaptersWithWriteAgent(ctx, book, writeAgent, recapAgent, recapStore, chaptersToImprove, review.Reviews, outline, continuityBuilder, writeConcurrencyFlag, targetWords, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag)
 			if err != nil {
 				log.Error("Failed to improve some chapters in volume %s: %v", volume.ID, err)
 				return err
@@ -946,15 +960,15 @@ func setupWriteAgentHistoryCutoff(agentHistory bool) {
 }
 
 // improveChaptersWithWriteAgent improves chapters using the write agent
-func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent, recapAgent writepipe.RecapExtractor, recapStore *recap.Store, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, continuityBuilder *logic.ChapterContinuityBuilder, concurrency int, targetWords int, useAgentSDK bool, agentApply bool, useAgentHistory bool) (int, error) {
+func improveChaptersWithWriteAgent(ctx context.Context, book *project.Book, agent *agents.WriteAgent, recapAgent writepipe.RecapExtractor, recapStore *recap.Store, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, continuityBuilder *logic.ChapterContinuityBuilder, concurrency int, targetWords int, useAgentSDK bool, agentApply bool, useAgentHistory bool) (int, error) {
 	log := logger.GetLogger()
 	var errc writepipe.WriteErrorCollector
 
 	// Pre-build DSL simulation for enrichment (shared across goroutines)
 	var dslIssues []dsl.SimulationIssue
 	dslBridge := dsl.NewSimulationBridge()
-	if charModels, locModels, itemModels, orgModels, elErr := project.LoadAllElements(); elErr == nil {
-		setup, _ := project.LoadStorySetup()
+	if charModels, locModels, itemModels, orgModels, elErr := book.LoadElements(); elErr == nil {
+		setup, _ := book.LoadSetup()
 		dslAdapter := dsl.NewModelAdapterWithOrganizations(setup, outline, charModels, locModels, itemModels, orgModels)
 		dslIssues, _ = dslAdapter.Simulate(dsl.PhaseCraft)
 		if len(dslIssues) > 0 {
@@ -978,7 +992,12 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 		log.Info("[Worker %d] Improving chapter: %s - %s", workerID, chapter.ID, chapter.Title)
 
 		// Load current chapter content
-		currentContent := project.LoadFinalChapterContent(chapter)
+		currentContent, readErr := book.LoadFinalChapterContent(chapter)
+		if readErr != nil {
+			log.Error("[Worker %d] Failed to read chapter %s: %v", workerID, chapter.ID, readErr)
+			errc.Addf("%s: read final chapter failed: %w", chapter.ID, readErr)
+			return false, nil
+		}
 		if currentContent == "" {
 			if useAgentSDK && agentApply {
 				log.Warn("[Worker %d] No existing content for chapter %s; Agent SDK apply may create it through validated chapter patch", workerID, chapter.ID)
@@ -1009,25 +1028,25 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 			suggestions += "\n\n## 用户要求\n\n" + writePromptFlag
 		}
 		if useAgentSDK {
-			if checkSuggestions := writepipe.BuildAgentSDKChapterCheckSuggestions(chapter, targetWords); checkSuggestions != "" {
+			if checkSuggestions := writepipe.BuildAgentSDKChapterCheckSuggestions(book, chapter, targetWords); checkSuggestions != "" {
 				suggestions += "\n\n" + checkSuggestions
 			}
 		}
 
 		// Load context drafts
-		context := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
+		context := writepipe.LoadChapterContext(book, outline, chapter, writeContextFlag)
 
 		// Calculate chapter continuity
 		continuity := continuityBuilder.BuildBefore(outline, chapter)
 
 		// Generate improved content with suggestions
-		content, err := writepipe.GenerateImprovedChapter(ctx, agent, chapter, context, continuity, targetWords, currentContent, suggestions, useAgentSDK, agentApply, useAgentHistory)
+		content, err := writepipe.GenerateImprovedChapter(book, ctx, agent, chapter, context, continuity, targetWords, currentContent, suggestions, useAgentSDK, agentApply, useAgentHistory)
 		if err != nil {
 			log.Error("[Worker %d] Failed to improve chapter %s: %v", workerID, chapter.ID, err)
 			errc.Addf("%s: improve failed: %w", chapter.ID, err)
 			return false, nil
 		}
-		content, agentApplied := writepipe.ResolveAgentAppliedChapterContent(log, workerID, chapter, currentContent, content, useAgentSDK, agentApply)
+		content, agentApplied := writepipe.ResolveAgentAppliedChapterContent(log, book, workerID, chapter, currentContent, content, useAgentSDK, agentApply)
 
 		// Apply enabled minimal-change fixers (teleport bridge, character presence)
 		knownChars := project.KnownCharacterNames(outline)
@@ -1041,13 +1060,13 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 			writeTeleportFixFlag,
 			writeBridgeRetriesFlag,
 			func(s string) (string, error) {
-				return writepipe.GenerateImprovedChapter(ctx, agent, chapter, context, continuity, targetWords, content, s, useAgentSDK, agentApply, useAgentHistory)
+				return writepipe.GenerateImprovedChapter(book, ctx, agent, chapter, context, continuity, targetWords, content, s, useAgentSDK, agentApply, useAgentHistory)
 			},
 			writeCharacterFixFlag,
 			writeCharacterPatchRetriesFlag,
 			knownChars,
 			func(s string) (string, error) {
-				return writepipe.GenerateImprovedChapter(ctx, agent, chapter, context, continuity, targetWords, content, s, useAgentSDK, agentApply, useAgentHistory)
+				return writepipe.GenerateImprovedChapter(book, ctx, agent, chapter, context, continuity, targetWords, content, s, useAgentSDK, agentApply, useAgentHistory)
 			},
 		)
 		content = fixed
@@ -1059,15 +1078,21 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 		}
 
 		// Save improved content
-		if agentApplied && strings.TrimSpace(project.LoadFinalChapterContent(chapter)) == strings.TrimSpace(content) {
+		savedContent, readErr := book.LoadFinalChapterContent(chapter)
+		if readErr != nil {
+			log.Error("[Worker %d] Failed to read chapter %s: %v", workerID, chapter.ID, readErr)
+			errc.Addf("%s: read final chapter failed: %w", chapter.ID, readErr)
+			return false, nil
+		}
+		if agentApplied && strings.TrimSpace(savedContent) == strings.TrimSpace(content) {
 			log.Info("[Worker %d] Agent patch already saved chapter %s through tool patch chapter --apply", workerID, chapter.ID)
-		} else if err := project.SaveFinalChapter(chapter, content); err != nil {
+		} else if err := book.SaveFinalChapter(chapter, content); err != nil {
 			log.Error("[Worker %d] Failed to save improved chapter %s: %v", workerID, chapter.ID, err)
 			errc.Addf("%s: save improved chapter failed: %w", chapter.ID, err)
 			return false, nil
 		}
 		if useAgentSDK {
-			postCheck, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords)
+			postCheck, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, book, chapter, targetWords)
 			if err != nil {
 				log.Warn("[Worker %d] Agent SDK post-save check failed for %s: %v", workerID, chapter.ID, err)
 			} else {
@@ -1075,7 +1100,13 @@ func improveChaptersWithWriteAgent(ctx context.Context, agent *agents.WriteAgent
 				AppendAgentSDKPostSaveReviewSuggestions(review, postCheck)
 			}
 		}
-		if savedContent := project.LoadFinalChapterContent(chapter); strings.TrimSpace(savedContent) != "" {
+		savedContent, readErr = book.LoadFinalChapterContent(chapter)
+		if readErr != nil {
+			log.Error("[Worker %d] Failed to read chapter %s: %v", workerID, chapter.ID, readErr)
+			errc.Addf("%s: read final chapter failed: %w", chapter.ID, readErr)
+			return false, nil
+		}
+		if strings.TrimSpace(savedContent) != "" {
 			content = savedContent
 		}
 		if err := writepipe.ExtractAndSaveRecapWithGate(ctx, recapAgent, recapStore, chapter, content, workerID, useAgentSDK); err != nil {
@@ -1113,7 +1144,7 @@ func fallbackDraftReviewForForcedImprove(chapter *models.Chapter) *agents.DraftR
 	return review
 }
 
-func repairAgentSDKGeneratedChapterPostSave(ctx context.Context, log logger.LoggerInterface, workerID int, agent *agents.WriteAgent, chapter *models.Chapter, context *agents.ChapterContext, continuity *models.ChapterContinuity, targetWords int, currentContent string, check *toolplane.ToolCheckResult, useAgentHistory bool) (string, *toolplane.ToolCheckResult, error) {
+func repairAgentSDKGeneratedChapterPostSave(ctx context.Context, book *project.Book, log logger.LoggerInterface, workerID int, agent *agents.WriteAgent, chapter *models.Chapter, context *agents.ChapterContext, continuity *models.ChapterContinuity, targetWords int, currentContent string, check *toolplane.ToolCheckResult, useAgentHistory bool) (string, *toolplane.ToolCheckResult, error) {
 	if agent == nil {
 		return "", nil, fmt.Errorf("write agent is nil")
 	}
@@ -1126,20 +1157,24 @@ func repairAgentSDKGeneratedChapterPostSave(ctx context.Context, log logger.Logg
 		"Keep the existing chapter shape and prose volume unless the check issue is explicitly about length.\n\n" +
 		writepipe.FormatAgentSDKChapterCheckSuggestions(check)
 
-	repaired, err := writepipe.GenerateImprovedChapter(ctx, agent, chapter, context, continuity, targetWords, currentContent, suggestions, true, true, useAgentHistory, 1)
+	repaired, err := writepipe.GenerateImprovedChapter(book, ctx, agent, chapter, context, continuity, targetWords, currentContent, suggestions, true, true, useAgentHistory, 1)
 	if err != nil {
 		return "", nil, err
 	}
-	repaired, agentApplied := writepipe.ResolveAgentAppliedChapterContent(log, workerID, chapter, currentContent, repaired, true, true)
+	repaired, agentApplied := writepipe.ResolveAgentAppliedChapterContent(log, book, workerID, chapter, currentContent, repaired, true, true)
 	if !agentApplied {
-		if err := project.SaveFinalChapter(chapter, repaired); err != nil {
+		if err := book.SaveFinalChapter(chapter, repaired); err != nil {
 			return "", nil, fmt.Errorf("save repaired final chapter: %w", err)
 		}
-		if saved := project.LoadFinalChapterContent(chapter); strings.TrimSpace(saved) != "" {
+		saved, readErr := book.LoadFinalChapterContent(chapter)
+		if readErr != nil {
+			return "", nil, fmt.Errorf("read repaired final chapter: %w", readErr)
+		}
+		if strings.TrimSpace(saved) != "" {
 			repaired = saved
 		}
 	}
-	recheck, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords)
+	recheck, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, book, chapter, targetWords)
 	if err != nil {
 		return repaired, nil, err
 	}
@@ -1228,20 +1263,24 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
 
-	// Load project config
-	config, err := project.LoadConfig()
+	book, err := project.ForCommand(cmd)
+	if err != nil {
+		return err
+	}
+
+	config, err := book.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load project config: %w", err)
 	}
 
 	// Load story setup
-	setup, err := project.LoadStorySetup()
+	setup, err := book.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
 
 	// Load outline
-	outline, err := project.LoadOutline()
+	outline, err := book.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load outline: %w", err)
 	}
@@ -1268,11 +1307,7 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	writeAgent.SetLanguage(config.Language)
 
-	// Get project root for continuity builder
-	root, err := project.FindRoot()
-	if err != nil {
-		return fmt.Errorf("failed to find project root: %w", err)
-	}
+	root := book.Dir()
 	setupWriteRunLogging(root, "write review")
 	if writeAgentSDKFlag {
 		log.Info("Chapter review will use Agent SDK; Go still saves review JSON")
@@ -1315,7 +1350,12 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 		log.Info("[Worker %d] Reviewing chapter: %s - %s", workerID, chapter.ID, chapter.Title)
 
 		// Load final chapter content
-		content := project.LoadFinalChapterContent(chapter)
+		content, readErr := book.LoadFinalChapterContent(chapter)
+		if readErr != nil {
+			log.Error("[Worker %d] Failed to read chapter %s: %v", workerID, chapter.ID, readErr)
+			errc.Addf("%s: read final chapter failed: %w", chapter.ID, readErr)
+			return nil, nil
+		}
 		if content == "" {
 			log.Warn("[Worker %d] No final content found for chapter %s, skipping", workerID, chapter.ID)
 			errc.Addf("%s: no final chapter content found for review", chapter.ID)
@@ -1323,7 +1363,7 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 		}
 
 		// Load context with recap for continuity checking
-		chapterContext := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
+		chapterContext := writepipe.LoadChapterContext(book, outline, chapter, writeContextFlag)
 
 		// Calculate continuity snapshot for continuity checking
 		continuity := continuityBuilder.BuildBefore(outline, chapter)
@@ -1341,7 +1381,7 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 			errc.Addf("%s: review failed: %w", chapter.ID, err)
 			return nil, nil
 		}
-		if err := saveWriteReviewResult(chapter, reviewResult); err != nil {
+		if err := saveWriteReviewResult(book, chapter, reviewResult); err != nil {
 			log.Warn("[Worker %d] Failed to save full write review for %s: %v", workerID, chapter.ID, err)
 		}
 
@@ -1398,20 +1438,24 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 
 	// Save all volume reviews
 	for volumeID, review := range volumeReviews {
-		if existing, err := reviewstore.LoadVolumeReview(volumeID); err == nil {
+		if existing, err := reviewstore.LoadVolumeReviewAt(book, volumeID); err == nil {
 			review = MergeVolumeReviewByChapter(existing, review)
 		} else if !os.IsNotExist(err) {
 			log.Warn("Failed to load existing review for volume %s before merge: %v", volumeID, err)
 		}
 		if volume := outline.GetVolumeByID(volumeID); volume != nil {
-			contentByID := loadFinalChapterContentsForVolume(volume)
-			for chapterID, content := range volumeContents[volumeID] {
-				contentByID[chapterID] = content
+			contentByID, err := loadFinalChapterContentsForVolume(book, volume)
+			if err != nil {
+				log.Warn("Failed to load chapter contents for volume %s; skipping heuristic checks: %v", volumeID, err)
+			} else {
+				for chapterID, content := range volumeContents[volumeID] {
+					contentByID[chapterID] = content
+				}
+				novelcont.ApplyHeuristicTransitionChecks(volume, contentByID, review)
+				applyHumanizeChecksToVolume(book, volume, contentByID, review)
 			}
-			novelcont.ApplyHeuristicTransitionChecks(volume, contentByID, review)
-			applyHumanizeChecksToVolume(volume, contentByID, review)
 		}
-		if err := reviewstore.SaveVolumeReview(review); err != nil {
+		if err := reviewstore.SaveVolumeReviewAt(book, review); err != nil {
 			log.Error("Failed to save review for volume %s: %v", volumeID, err)
 			errc.Addf("%s: save volume review failed: %w", volumeID, err)
 			continue
@@ -1469,7 +1513,7 @@ func getVolumeIDFromChapter(chapterID string) string {
 }
 
 // reviewVolumeWithWriteAgent reviews all chapters in a volume using the write agent
-func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAgent, continuityBuilder *logic.ChapterContinuityBuilder, volume *models.Volume, outline *models.Outline, targetWords int, concurrency int) error {
+func reviewVolumeWithWriteAgent(ctx context.Context, book *project.Book, writeAgent *agents.WriteAgent, continuityBuilder *logic.ChapterContinuityBuilder, volume *models.Volume, outline *models.Outline, targetWords int, concurrency int) error {
 	log := logger.GetLogger()
 
 	// Get all chapters in this volume
@@ -1511,7 +1555,12 @@ func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAge
 		log.Info("[Worker %d] Reviewing chapter: %s - %s", workerID, chapter.ID, chapter.Title)
 
 		// Load final chapter content
-		content := project.LoadFinalChapterContent(chapter)
+		content, readErr := book.LoadFinalChapterContent(chapter)
+		if readErr != nil {
+			log.Error("[Worker %d] Failed to read chapter %s: %v", workerID, chapter.ID, readErr)
+			errc.Addf("%s: read final chapter failed: %w", chapter.ID, readErr)
+			return nil, nil
+		}
 		if content == "" {
 			log.Warn("[Worker %d] No final content found for chapter %s, skipping", workerID, chapter.ID)
 			errc.Addf("%s: no final chapter content found for review", chapter.ID)
@@ -1519,7 +1568,7 @@ func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAge
 		}
 
 		// Load context with recap for continuity checking
-		chapterContext := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
+		chapterContext := writepipe.LoadChapterContext(book, outline, chapter, writeContextFlag)
 
 		// Calculate continuity snapshot for continuity checking
 		continuity := continuityBuilder.BuildBefore(outline, chapter)
@@ -1531,7 +1580,7 @@ func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAge
 			errc.Addf("%s: review failed: %w", chapter.ID, err)
 			return nil, nil
 		}
-		if err := saveWriteReviewResult(chapter, reviewResult); err != nil {
+		if err := saveWriteReviewResult(book, chapter, reviewResult); err != nil {
 			log.Warn("[Worker %d] Failed to save full write review for %s: %v", workerID, chapter.ID, err)
 		}
 
@@ -1565,8 +1614,8 @@ func reviewVolumeWithWriteAgent(ctx context.Context, writeAgent *agents.WriteAge
 
 	// Save volume review
 	novelcont.ApplyHeuristicTransitionChecks(volume, volumeContents, volumeReview)
-	applyHumanizeChecksToVolume(volume, volumeContents, volumeReview)
-	if err := reviewstore.SaveVolumeReview(volumeReview); err != nil {
+	applyHumanizeChecksToVolume(book, volume, volumeContents, volumeReview)
+	if err := reviewstore.SaveVolumeReviewAt(book, volumeReview); err != nil {
 		return fmt.Errorf("failed to save review for volume %s: %w", volume.ID, err)
 	}
 	if err := errc.Err(); err != nil {
@@ -1592,20 +1641,24 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	}
 	setupWriteAgentHistoryCutoff(writeAgentHistoryFlag)
 
-	// Load project config
-	config, err := project.LoadConfig()
+	book, err := project.ForCommand(cmd)
+	if err != nil {
+		return err
+	}
+
+	config, err := book.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load project config: %w", err)
 	}
 
 	// Load story setup
-	setup, err := project.LoadStorySetup()
+	setup, err := book.LoadSetup()
 	if err != nil {
 		return fmt.Errorf("failed to load story setup: %w", err)
 	}
 
 	// Load outline
-	outline, err := project.LoadOutline()
+	outline, err := book.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load outline: %w", err)
 	}
@@ -1632,11 +1685,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	writeAgent.SetLanguage(config.Language)
 
-	// Get project root for continuity builder
-	root, err := project.FindRoot()
-	if err != nil {
-		return fmt.Errorf("failed to find project root: %w", err)
-	}
+	root := book.Dir()
 	setupWriteRunLogging(root, "write pipeline")
 
 	// Create continuity builder
@@ -1692,10 +1741,15 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 
 		// Step 1: Generate chapter (if not exists)
 		log.Info("\n[Step 1/4] Generating chapter...")
-		content := project.LoadFinalChapterContent(chapter)
+		content, readErr := book.LoadFinalChapterContent(chapter)
+		if readErr != nil {
+			log.Error("Failed to read chapter %s: %v", chapter.ID, readErr)
+			errc.Addf("%s: read final chapter failed: %w", chapter.ID, readErr)
+			continue
+		}
 		if content == "" {
 			log.Info("Generating chapter: %s - %s", chapter.ID, chapter.Title)
-			chapterContext := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
+			chapterContext := writepipe.LoadChapterContext(book, outline, chapter, writeContextFlag)
 			continuity := continuityBuilder.BuildBefore(outline, chapter)
 			generatedContent, err := GenerateChapterContentForRun(ctx, writeAgent, scorer, chapter, chapterContext, continuity, targetWords, WriteBestOfFlag, writeAgentSDKFlag, writeAgentHistoryFlag)
 			if err != nil {
@@ -1703,12 +1757,17 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				errc.Addf("%s: generate failed: %w", chapter.ID, err)
 				continue
 			}
-			if err := project.SaveFinalChapter(chapter, generatedContent); err != nil {
+			if err := book.SaveFinalChapter(chapter, generatedContent); err != nil {
 				log.Error("Failed to save chapter %s: %v", chapter.ID, err)
 				errc.Addf("%s: save generated chapter failed: %w", chapter.ID, err)
 				continue
 			}
-			content = project.LoadFinalChapterContent(chapter)
+			content, readErr = book.LoadFinalChapterContent(chapter)
+			if readErr != nil {
+				log.Error("Failed to read back chapter %s: %v", chapter.ID, readErr)
+				errc.Addf("%s: read back final chapter failed: %w", chapter.ID, readErr)
+				continue
+			}
 			if strings.TrimSpace(content) == "" {
 				content = generatedContent
 			}
@@ -1719,7 +1778,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 
 		// Step 2: Review chapter
 		log.Info("\n[Step 2/4] Reviewing chapter...")
-		chapterContext := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
+		chapterContext := writepipe.LoadChapterContext(book, outline, chapter, writeContextFlag)
 		continuity := continuityBuilder.BuildBefore(outline, chapter)
 		var reviewResult models.ReviewResult
 		var err error
@@ -1733,7 +1792,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 			errc.Addf("%s: review failed: %w", chapter.ID, err)
 			continue
 		}
-		if err := saveWriteReviewResult(chapter, reviewResult); err != nil {
+		if err := saveWriteReviewResult(book, chapter, reviewResult); err != nil {
 			log.Warn("Failed to save full write review for %s: %v", chapter.ID, err)
 		}
 
@@ -1753,11 +1812,9 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		volume := outline.GetVolumeByID(volumeID)
 		var volumeReview *agents.VolumeReview
 		reviewPath := store.At(root).VolumeReviewFile(volumeID)
-		if data, err := os.ReadFile(reviewPath); err == nil {
-			var existingReview agents.VolumeReview
-			if err := json.Unmarshal(data, &existingReview); err == nil {
-				volumeReview = &existingReview
-			}
+		var existingReview agents.VolumeReview
+		if err := store.At(root).ReadJSON(reviewPath, &existingReview); err == nil {
+			volumeReview = &existingReview
 		}
 		if volumeReview == nil {
 			volumeTitle := ""
@@ -1782,14 +1839,18 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 			volumeReview.Reviews = append(volumeReview.Reviews, draftReview)
 		}
 		if volume != nil {
-			volumeContents := loadFinalChapterContentsForVolume(volume)
-			novelcont.ApplyHeuristicTransitionChecks(volume, volumeContents, volumeReview)
-			applyHumanizeChecksToVolume(volume, volumeContents, volumeReview)
-			if updated := findDraftReview(volumeReview, chapter.ID); updated != nil {
-				draftReview = *updated
+			volumeContents, err := loadFinalChapterContentsForVolume(book, volume)
+			if err != nil {
+				log.Warn("Failed to load chapter contents for volume %s; skipping heuristic checks: %v", volume.ID, err)
+			} else {
+				novelcont.ApplyHeuristicTransitionChecks(volume, volumeContents, volumeReview)
+				applyHumanizeChecksToVolume(book, volume, volumeContents, volumeReview)
+				if updated := findDraftReview(volumeReview, chapter.ID); updated != nil {
+					draftReview = *updated
+				}
 			}
 		}
-		if err := reviewstore.SaveVolumeReview(volumeReview); err != nil {
+		if err := reviewstore.SaveVolumeReviewAt(book, volumeReview); err != nil {
 			log.Error("Failed to save review for chapter %s: %v", chapter.ID, err)
 			errc.Addf("%s: save volume review failed: %w", chapter.ID, err)
 		}
@@ -1830,19 +1891,19 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				suggestions += "\n\n" + chapterRPGIssues
 			}
 			if writeAgentSDKFlag {
-				if checkSuggestions := writepipe.BuildAgentSDKChapterCheckSuggestions(chapter, targetWords); checkSuggestions != "" {
+				if checkSuggestions := writepipe.BuildAgentSDKChapterCheckSuggestions(book, chapter, targetWords); checkSuggestions != "" {
 					suggestions += "\n\n" + checkSuggestions
 				}
 			}
-			chapterContext := writepipe.LoadChapterContext(outline, chapter, writeContextFlag)
+			chapterContext := writepipe.LoadChapterContext(book, outline, chapter, writeContextFlag)
 			continuity := continuityBuilder.BuildBefore(outline, chapter)
-			improvedContent, err := writepipe.GenerateImprovedChapter(ctx, writeAgent, chapter, chapterContext, continuity, targetWords, currentContent, suggestions, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag, round)
+			improvedContent, err := writepipe.GenerateImprovedChapter(book, ctx, writeAgent, chapter, chapterContext, continuity, targetWords, currentContent, suggestions, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag, round)
 			if err != nil {
 				log.Error("Failed to improve chapter %s: %v", chapter.ID, err)
 				errc.Addf("%s: improve round %d failed: %w", chapter.ID, round, err)
 				break
 			}
-			improvedContent, agentApplied := writepipe.ResolveAgentAppliedChapterContent(log, 0, chapter, currentContent, improvedContent, writeAgentSDKFlag, writeAgentApplyFlag)
+			improvedContent, agentApplied := writepipe.ResolveAgentAppliedChapterContent(log, book, 0, chapter, currentContent, improvedContent, writeAgentSDKFlag, writeAgentApplyFlag)
 
 			fixedContent, sum := novelcont.ApplyImproveFixesWrite(
 				log,
@@ -1854,13 +1915,13 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				writeTeleportFixFlag,
 				writeBridgeRetriesFlag,
 				func(s string) (string, error) {
-					return writepipe.GenerateImprovedChapter(ctx, writeAgent, chapter, chapterContext, continuity, targetWords, improvedContent, s, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag, round)
+					return writepipe.GenerateImprovedChapter(book, ctx, writeAgent, chapter, chapterContext, continuity, targetWords, improvedContent, s, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag, round)
 				},
 				writeCharacterFixFlag,
 				writeCharacterPatchRetriesFlag,
 				knownChars,
 				func(s string) (string, error) {
-					return writepipe.GenerateImprovedChapter(ctx, writeAgent, chapter, chapterContext, continuity, targetWords, improvedContent, s, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag, round)
+					return writepipe.GenerateImprovedChapter(book, ctx, writeAgent, chapter, chapterContext, continuity, targetWords, improvedContent, s, writeAgentSDKFlag, writeAgentApplyFlag, writeAgentHistoryFlag, round)
 				},
 			)
 			improvedContent = fixedContent
@@ -1871,21 +1932,27 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				break
 			}
 
-			if agentApplied && strings.TrimSpace(project.LoadFinalChapterContent(chapter)) == strings.TrimSpace(improvedContent) {
+			savedContent, readErr := book.LoadFinalChapterContent(chapter)
+			if readErr != nil {
+				log.Error("Failed to read chapter %s: %v", chapter.ID, readErr)
+				errc.Addf("%s: read final chapter failed: %w", chapter.ID, readErr)
+				break
+			}
+			if agentApplied && strings.TrimSpace(savedContent) == strings.TrimSpace(improvedContent) {
 				log.Info("Agent patch already saved chapter %s through tool patch chapter --apply", chapter.ID)
-			} else if err := project.SaveFinalChapter(chapter, improvedContent); err != nil {
+			} else if err := book.SaveFinalChapter(chapter, improvedContent); err != nil {
 				log.Error("Failed to save improved chapter %s: %v", chapter.ID, err)
 				errc.Addf("%s: save improved chapter failed: %w", chapter.ID, err)
 				break
 			}
 			if writeAgentSDKFlag {
-				postCheck, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, chapter, targetWords)
+				postCheck, err := writepipe.RunAgentSDKChapterPostSaveCheck(ctx, book, chapter, targetWords)
 				if err != nil {
 					log.Warn("Agent SDK post-save check failed for %s: %v", chapter.ID, err)
 				} else {
 					writepipe.LogAgentSDKChapterPostSaveCheck(log, 0, chapter.ID, postCheck)
 					AppendAgentSDKPostSaveReviewSuggestions(chapterReview, postCheck)
-					if err := reviewstore.SaveVolumeReview(volumeReview); err != nil {
+					if err := reviewstore.SaveVolumeReviewAt(book, volumeReview); err != nil {
 						log.Warn("Failed to save Agent SDK post-save review suggestions for %s: %v", chapter.ID, err)
 					}
 				}
@@ -1906,7 +1973,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 					errc.Addf("%s: re-review after improvement failed: %w", chapter.ID, err)
 					break
 				}
-				if err := saveWriteReviewResult(chapter, reviewResult); err != nil {
+				if err := saveWriteReviewResult(book, chapter, reviewResult); err != nil {
 					log.Warn("Failed to save full write review for %s: %v", chapter.ID, err)
 				}
 				var suggestionStrings []string
@@ -1917,15 +1984,19 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				chapterReview.NeedsRevision = reviewResult.OverallScore < minScorePercent
 				chapterReview.Suggestions = suggestionStrings
 				if volume != nil {
-					volumeContents := loadFinalChapterContentsForVolume(volume)
-					novelcont.ApplyHeuristicTransitionChecks(volume, volumeContents, volumeReview)
-					applyHumanizeChecksToVolume(volume, volumeContents, volumeReview)
-					if updated := findDraftReview(volumeReview, chapter.ID); updated != nil {
-						chapterReview = updated
+					volumeContents, err := loadFinalChapterContentsForVolume(book, volume)
+					if err != nil {
+						log.Warn("Failed to load chapter contents for volume %s; skipping heuristic checks: %v", volume.ID, err)
+					} else {
+						novelcont.ApplyHeuristicTransitionChecks(volume, volumeContents, volumeReview)
+						applyHumanizeChecksToVolume(book, volume, volumeContents, volumeReview)
+						if updated := findDraftReview(volumeReview, chapter.ID); updated != nil {
+							chapterReview = updated
+						}
 					}
 				}
 				// Save updated review
-				if err := reviewstore.SaveVolumeReview(volumeReview); err != nil {
+				if err := reviewstore.SaveVolumeReviewAt(book, volumeReview); err != nil {
 					log.Error("Failed to save updated review for chapter %s: %v", chapter.ID, err)
 					errc.Addf("%s: save updated review failed: %w", chapter.ID, err)
 				}

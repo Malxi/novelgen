@@ -8,6 +8,7 @@ import (
 
 	"novelgen/internal/models"
 	rpgdsl "novelgen/internal/rpg/dsl"
+	"novelgen/internal/store"
 	"novelgen/internal/writersdl"
 )
 
@@ -29,11 +30,11 @@ func TestBuildWriteRPGDSLBatchManifestIsDeterministic(t *testing.T) {
 	cacheDir := filepath.Join(dir, "cache")
 	inputs := inputFixture(t, dir, "P1-V1-C1", "P1-V1-C2")
 
-	first, err := writersdl.BuildWriteRPGDSLBatchManifest("book", 0, 10, inputs, cacheDir)
+	first, err := writersdl.BuildWriteRPGDSLBatchManifest(store.OSFS{}, "book", 0, 10, inputs, cacheDir)
 	if err != nil {
 		t.Fatalf("build manifest: %v", err)
 	}
-	second, err := writersdl.BuildWriteRPGDSLBatchManifest("book", 0, 10, inputs, cacheDir)
+	second, err := writersdl.BuildWriteRPGDSLBatchManifest(store.OSFS{}, "book", 0, 10, inputs, cacheDir)
 	if err != nil {
 		t.Fatalf("build manifest again: %v", err)
 	}
@@ -50,7 +51,7 @@ func TestBuildWriteRPGDSLBatchManifestIsDeterministic(t *testing.T) {
 		t.Fatal("manifest version should be pinned")
 	}
 
-	if _, err := writersdl.BuildWriteRPGDSLBatchManifest("book", 0, 10, nil, cacheDir); err == nil {
+	if _, err := writersdl.BuildWriteRPGDSLBatchManifest(store.OSFS{}, "book", 0, 10, nil, cacheDir); err == nil {
 		t.Fatal("empty batch should be rejected")
 	}
 }
@@ -59,12 +60,12 @@ func TestBatchCacheRoundTripAndInvalidation(t *testing.T) {
 	dir := t.TempDir()
 	cacheDir := filepath.Join(dir, "cache")
 	inputs := inputFixture(t, dir, "P1-V1-C1")
-	manifest, err := writersdl.BuildWriteRPGDSLBatchManifest("book", 0, 10, inputs, cacheDir)
+	manifest, err := writersdl.BuildWriteRPGDSLBatchManifest(store.OSFS{}, "book", 0, 10, inputs, cacheDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, reused, err := writersdl.LoadWriteRPGDSLBatchFromCache(manifest); err != nil || reused {
+	if _, reused, err := writersdl.LoadWriteRPGDSLBatchFromCache(store.OSFS{}, manifest); err != nil || reused {
 		t.Fatalf("missing cache should not be reused: reused=%v err=%v", reused, err)
 	}
 
@@ -78,10 +79,10 @@ func TestBatchCacheRoundTripAndInvalidation(t *testing.T) {
     }
   }
 }`
-	if err := writersdl.SaveWriteRPGDSLBatchToCache(manifest, cached); err != nil {
+	if err := writersdl.SaveWriteRPGDSLBatchToCache(store.OSFS{}, manifest, cached); err != nil {
 		t.Fatal(err)
 	}
-	content, reused, err := writersdl.LoadWriteRPGDSLBatchFromCache(manifest)
+	content, reused, err := writersdl.LoadWriteRPGDSLBatchFromCache(store.OSFS{}, manifest)
 	if err != nil || !reused {
 		t.Fatalf("cache should be reused: reused=%v err=%v", reused, err)
 	}
@@ -90,10 +91,10 @@ func TestBatchCacheRoundTripAndInvalidation(t *testing.T) {
 	}
 
 	// A cached payload that no longer parses must be ignored, not returned.
-	if err := writersdl.SaveWriteRPGDSLBatchToCache(manifest, "this is not DSL"); err != nil {
+	if err := writersdl.SaveWriteRPGDSLBatchToCache(store.OSFS{}, manifest, "this is not DSL"); err != nil {
 		t.Fatal(err)
 	}
-	if _, reused, err := writersdl.LoadWriteRPGDSLBatchFromCache(manifest); err != nil || reused {
+	if _, reused, err := writersdl.LoadWriteRPGDSLBatchFromCache(store.OSFS{}, manifest); err != nil || reused {
 		t.Fatalf("unparseable cache should be invalidated: reused=%v err=%v", reused, err)
 	}
 }
@@ -101,7 +102,7 @@ func TestBatchCacheRoundTripAndInvalidation(t *testing.T) {
 func TestNormalizeWriteRPGDSLChapterIDsAssignsByPosition(t *testing.T) {
 	dir := t.TempDir()
 	inputs := inputFixture(t, dir, "P1-V1-C1", "P1-V1-C2")
-	manifest, err := writersdl.BuildWriteRPGDSLBatchManifest("book", 0, 10, inputs, filepath.Join(dir, "cache"))
+	manifest, err := writersdl.BuildWriteRPGDSLBatchManifest(store.OSFS{}, "book", 0, 10, inputs, filepath.Join(dir, "cache"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +150,7 @@ func TestSplitSortAndParseChapterInputs(t *testing.T) {
 func TestMergeWriteRPGDSLKeepsFirstOccurrence(t *testing.T) {
 	dir := t.TempDir()
 	inputs := inputFixture(t, dir, "P1-V1-C1")
-	manifest, err := writersdl.BuildWriteRPGDSLBatchManifest("book", 0, 1, inputs, filepath.Join(dir, "cache"))
+	manifest, err := writersdl.BuildWriteRPGDSLBatchManifest(store.OSFS{}, "book", 0, 1, inputs, filepath.Join(dir, "cache"))
 	if err != nil {
 		t.Fatal(err)
 	}

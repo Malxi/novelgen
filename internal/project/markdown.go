@@ -1,18 +1,15 @@
 package project
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"novelgen/internal/models"
 )
 
-// CreateStorySetupMarkdown renders story_setup.md from a typed StorySetup.
-func CreateStorySetupMarkdown(setup *models.StorySetup, path string) error {
-	content := fmt.Sprintf(`# %s
+// StorySetupMarkdown renders story_setup.md from a typed StorySetup.
+func StorySetupMarkdown(setup *models.StorySetup) string {
+	return fmt.Sprintf(`# %s
 
 ## Story Setup
 
@@ -70,32 +67,42 @@ func CreateStorySetupMarkdown(setup *models.StorySetup, path string) error {
 		FormatStorylines(setup.Storylines),
 		FormatPremises(setup.Premises),
 	)
-	return os.WriteFile(path, []byte(content), 0644)
 }
 
-// CreateOutlineMarkdown renders outline.md from a typed Outline.
-func CreateOutlineMarkdown(outline *models.Outline, path string) error {
-	return os.WriteFile(path, []byte(outline.ToMarkdown()), 0644)
-}
-
-// SavePartialOutline writes an outline as indented JSON, creating directories.
-func SavePartialOutline(outline *models.Outline, path string) error {
+// OutlineMarkdown renders outline.md from a typed Outline.
+func OutlineMarkdown(outline *models.Outline) string {
 	if outline == nil {
-		return fmt.Errorf("cannot save nil outline")
+		return ""
 	}
-	if dir := filepath.Dir(path); dir != "" {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory: %w", err)
-		}
+	return outline.ToMarkdown()
+}
+
+// SaveStorySetupMarkdown renders and stores story/setup/story_setup.md, the
+// human-readable rendering of the setup, through the store's atomic write. The
+// derived markdown used to be written with a plain os.WriteFile next to files
+// that are written atomically, so an interrupted run could leave a truncated
+// rendering beside an intact JSON.
+func (b *Book) SaveStorySetupMarkdown(setup *models.StorySetup) (string, error) {
+	if setup == nil {
+		return "", fmt.Errorf("cannot render nil story setup")
 	}
-	data, err := json.MarshalIndent(outline, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal outline: %w", err)
+	path := b.SetupMarkdown()
+	if err := b.WriteText(path, StorySetupMarkdown(setup)); err != nil {
+		return "", err
 	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("failed to write progress file: %w", err)
+	return path, nil
+}
+
+// SaveOutlineMarkdown renders and stores story/compose/outline.md atomically.
+func (b *Book) SaveOutlineMarkdown(outline *models.Outline) (string, error) {
+	if outline == nil {
+		return "", fmt.Errorf("cannot render nil outline")
 	}
-	return nil
+	path := b.OutlineMarkdown()
+	if err := b.WriteText(path, OutlineMarkdown(outline)); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 // FormatLongFormPlan renders the long-form plan block.

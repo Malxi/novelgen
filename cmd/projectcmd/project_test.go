@@ -9,6 +9,7 @@ import (
 
 	"novelgen/internal/agentruntime"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 )
 
 func TestCloneProjectSkipsLogsByDefaultAndWritesManifest(t *testing.T) {
@@ -75,7 +76,7 @@ func TestCloneProjectWithLogsAndNameOverride(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(target, ".novelgen", "agent-patches", "stale.txt")); !os.IsNotExist(err) {
 		t.Fatalf("stale agent patch buffers should not be cloned, stat err=%v", err)
 	}
-	config, err := models.LoadProjectConfig(filepath.Join(target, "novel.json"))
+	config, err := store.At(target).LoadConfig()
 	if err != nil {
 		t.Fatalf("load cloned config: %v", err)
 	}
@@ -154,7 +155,7 @@ func TestRenameProjectUpdatesOnlyProjectName(t *testing.T) {
 	if oldName != "System Log" {
 		t.Fatalf("oldName = %q", oldName)
 	}
-	config, err := models.LoadProjectConfig(filepath.Join(root, "novel.json"))
+	config, err := store.At(root).LoadConfig()
 	if err != nil {
 		t.Fatalf("load config: %v", err)
 	}
@@ -323,12 +324,12 @@ func TestProjectDoctorMissingProjectAndRuntimeModelIsConfigError(t *testing.T) {
 		return nil
 	})
 	root := writeCloneProjectFixture(t)
-	config, err := models.LoadProjectConfig(filepath.Join(root, "novel.json"))
+	config, err := store.At(root).LoadConfig()
 	if err != nil {
 		t.Fatal(err)
 	}
 	config.LLM.Model = ""
-	if err := config.Save(filepath.Join(root, "novel.json")); err != nil {
+	if err := store.At(root).SaveConfig(config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -439,7 +440,7 @@ func writeCloneProjectFixture(t *testing.T) string {
 		ChapterConfig: models.DefaultChapterConfig(),
 		LLM:           models.ProjectLLM{Provider: "claude", Model: "deepseek-v4-flash"},
 	}
-	if err := config.Save(filepath.Join(root, "novel.json")); err != nil {
+	if err := store.At(root).SaveConfig(config); err != nil {
 		t.Fatalf("write novel.json: %v", err)
 	}
 	for _, dir := range []string{

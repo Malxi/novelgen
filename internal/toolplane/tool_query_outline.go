@@ -62,7 +62,11 @@ func queryAllChapters(ctx ToolProjectContext, includeContent bool) ToolResponse 
 			Outline: item.Chapter,
 		}
 		if includeContent {
-			hit.Content, hit.ContentPath = ctx.Root.LoadChapterContent(item.Chapter.ID)
+			content, path, err := ctx.Root.LoadChapterContent(item.Chapter.ID)
+			if err != nil {
+				return ToolResponse{OK: false, Section: "chapter", Count: 0, Warnings: []string{err.Error()}}
+			}
+			hit.Content, hit.ContentPath = content, path
 		}
 		chapters = append(chapters, hit)
 	}
@@ -112,7 +116,11 @@ func queryChapter(ctx ToolProjectContext, id string, includeContent bool) ToolRe
 			Outline: chapter.Chapter,
 		}
 		if includeContent {
-			hit.Content, hit.ContentPath = ctx.Root.LoadChapterContent(chapter.Chapter.ID)
+			content, path, err := ctx.Root.LoadChapterContent(chapter.Chapter.ID)
+			if err != nil {
+				return ToolResponse{OK: false, Count: 0, Warnings: []string{err.Error()}}
+			}
+			hit.Content, hit.ContentPath = content, path
 		}
 		return ToolResponse{OK: true, Count: 1, Results: []chapterHit{hit}}
 	}
@@ -157,7 +165,11 @@ func queryChaptersByEntity(ctx ToolProjectContext, entityType, name string, incl
 			Reasons: hit.Reasons,
 		}
 		if includeContent {
-			chapterHit.Content, chapterHit.ContentPath = ctx.Root.LoadChapterContent(hit.ID)
+			content, path, err := ctx.Root.LoadChapterContent(hit.ID)
+			if err != nil {
+				return ToolResponse{OK: false, Count: 0, Warnings: []string{err.Error()}}
+			}
+			chapterHit.Content, chapterHit.ContentPath = content, path
 		}
 		chapters = append(chapters, chapterHit)
 	}
