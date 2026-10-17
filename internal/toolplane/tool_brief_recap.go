@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"novelgen/internal/logic/continuity/recap"
-	"novelgen/internal/models"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/logic/continuity/recap"
+	"novelgen/internal/platform/store"
 )
 
 func makeRecapBrief(value *models.ChapterRecap) interface{} {

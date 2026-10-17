@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"novelgen/internal/rpg"
+	"novelgen/internal/fiction/rpg"
 )
 
 func main() {

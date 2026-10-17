@@ -4,9 +4,9 @@ import (
 	"os"
 	"strings"
 
-	"novelgen/internal/logger"
-	"novelgen/internal/models"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/platform/logger"
+	"novelgen/internal/platform/store"
 )
 
 func setupWriteRunLogging(projectRoot *store.Root, label string) {

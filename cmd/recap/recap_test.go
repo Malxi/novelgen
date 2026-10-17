@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"novelgen/internal/logger"
-	"novelgen/internal/logic/continuity/recap"
-	"novelgen/internal/models"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/logic/continuity/recap"
+	"novelgen/internal/platform/logger"
 )
 
 func TestEffectiveRecapConcurrency(t *testing.T) {

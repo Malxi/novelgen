@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"strings"
 
-	"novelgen/internal/agents"
 	"novelgen/internal/app"
-	"novelgen/internal/continuity"
-	"novelgen/internal/logger"
-	"novelgen/internal/logic"
-	"novelgen/internal/logic/continuity/recap"
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/reviewstore"
-	"novelgen/internal/rpg/dsl"
-	"novelgen/internal/toolplane"
-	"novelgen/internal/workerpool"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/agents"
+	"novelgen/internal/fiction/domain/continuity"
+	"novelgen/internal/fiction/domain/logic"
+	"novelgen/internal/fiction/domain/logic/continuity/recap"
+	"novelgen/internal/fiction/domain/project"
+	reviewstore "novelgen/internal/fiction/domain/review"
+	"novelgen/internal/fiction/mutation"
+	"novelgen/internal/fiction/rpg/dsl"
+	"novelgen/internal/platform/logger"
+	"novelgen/internal/platform/workerpool"
 
 	"github.com/spf13/cobra"
 )
@@ -260,7 +260,7 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 			root := recapStore.Root()
 			if root == nil {
 				log.Warn("[Worker %d] Failed to save recap for %s: project root is missing", workerID, chapter.ID)
-			} else if _, err := toolplane.NewMutationService(root).ReplaceRecap(ctx, recapData, toolplane.MutationOptions{
+			} else if _, err := mutation.NewMutationService(root).ReplaceRecap(ctx, recapData, mutation.MutationOptions{
 				Validate: false,
 				Source:   "draft-command",
 			}); err != nil {
@@ -287,7 +287,7 @@ func saveDraft(ctx context.Context, book *project.Book, chapter *models.Chapter,
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, err := toolplane.NewMutationService(book.Root).ReplaceDraft(ctx, chapter, draft, toolplane.MutationOptions{
+	_, err := mutation.NewMutationService(book.Root).ReplaceDraft(ctx, chapter, draft, mutation.MutationOptions{
 		Source: "draft-command",
 	})
 	return err

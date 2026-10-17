@@ -24,11 +24,11 @@ const ambientRootLayer = 5
 // pipeline layer. New callers must take an explicit *store.Root instead; the
 // entries below are the remaining ones that have no root parameter to use yet.
 var ambientRootAllowlist = map[string]string{
-	"internal/llm/config.go":                "provider/config resolution is reached without a project handle",
-	"internal/llm/client.go":                "resolves the SDK workspace root; no root parameter on the client",
-	"internal/agents/base/agent_base.go":    "skill directory lookup with no root parameter",
-	"internal/agents/base/agent_logging.go": "agent log root falls back to the ambient project",
-	"internal/writersdl/write_rpg_dsl.go":   "the failure dump only has a book name to work with",
+	"internal/platform/llm/config.go":               "provider/config resolution is reached without a project handle",
+	"internal/platform/llm/client.go":               "resolves the SDK workspace root; no root parameter on the client",
+	"internal/fiction/agents/base/agent_base.go":    "skill directory lookup with no root parameter",
+	"internal/fiction/agents/base/agent_logging.go": "agent log root falls back to the ambient project",
+	"internal/fiction/derive/write_rpg_dsl.go":      "the failure dump only has a book name to work with",
 }
 
 // ambientProjectHelpers are the project package's convenience loaders. They
@@ -126,53 +126,58 @@ func TestAmbientProjectRootUseIsPinned(t *testing.T) {
 // layer assigns each internal package a level. A package may import another
 // package only when that package's level is lower or equal (same cluster).
 var layer = map[string]int{
-	"internal/models":       0,
-	"internal/utils":        1,
-	"internal/envutil":      1,
-	"internal/usage":        1,
-	"internal/workerpool":   1,
-	"internal/cli":          1,
-	"internal/testfixtures": 1,
-	"internal/toolcmd":      1,
+	"internal/contract/story":        0,
+	"internal/platform/utils":        1,
+	"internal/platform/envutil":      1,
+	"internal/platform/usage":        1,
+	"internal/platform/workerpool":   1,
+	"internal/platform/cli":          1,
+	"internal/contract/testfixtures": 1,
+	"internal/contract/toolcmd":      1,
 	// logger writes into the project layout (the logs/ directory), so it sits at
 	// the storage layer rather than beside the other leaf utilities.
-	"internal/logger":                      2,
-	"internal/store":                       2,
-	"internal/rpg":                         2,
-	"internal/rpg/dsl":                     2,
-	"internal/rpg/benchmark":               2,
-	"internal/logic":                       3,
-	"internal/logic/continuity/character":  3,
-	"internal/logic/continuity/recap":      3,
-	"internal/logic/continuity/transition": 3,
-	"internal/logic/style":                 3,
-	"internal/project":                     4,
-	"internal/agentruntime":                5,
-	"internal/llm":                         6,
-	"internal/agents":                      7,
+	"internal/platform/logger":                            2,
+	"internal/platform/store":                             2,
+	"internal/fiction/rpg":                                2,
+	"internal/fiction/rpg/dsl":                            2,
+	"internal/fiction/rpg/benchmark":                      2,
+	"internal/fiction/rpg/project":                        2,
+	"internal/fiction/domain/logic":                       3,
+	"internal/fiction/domain/logic/continuity/character":  3,
+	"internal/fiction/domain/logic/continuity/recap":      3,
+	"internal/fiction/domain/logic/continuity/transition": 3,
+	"internal/fiction/domain/logic/style":                 3,
+	"internal/fiction/domain/craft":                       3,
+	"internal/fiction/domain/quality":                     3,
+	"internal/fiction/domain/project":                     4,
+	"internal/fiction/check":                              5,
+	"internal/platform/agentruntime":                      5,
+	"internal/platform/llm":                               6,
+	"internal/fiction/mutation":                           6,
+	"internal/fiction/agents":                             7,
 	// Agent stages share the pipeline layer; base owns execution and is
 	// imported by every stage, while prompt/review/shared are leaves.
-	"internal/agents/base":      7,
-	"internal/agents/chapter":   7,
-	"internal/agents/compose":   7,
-	"internal/agents/craft":     7,
-	"internal/agents/draft":     7,
-	"internal/agents/pipeline":  7,
-	"internal/agents/prompt":    1,
-	"internal/agents/recap":     7,
-	"internal/agents/review":    2,
-	"internal/agents/setup":     7,
-	"internal/agents/shared":    1,
-	"internal/agents/translate": 7,
-	"internal/agents/write":     7,
-	"internal/rpgllm":           7,
-	"internal/continuity":       8,
-	"internal/reviewstore":      8,
-	"internal/quality":          8,
-	"internal/app":              8,
-	"internal/writersdl":        8,
-	"internal/toolplane":        8,
-	"internal/writepipe":        8,
+	"internal/fiction/agents/base":       7,
+	"internal/fiction/agents/chapter":    7,
+	"internal/fiction/agents/compose":    7,
+	"internal/fiction/agents/craft":      7,
+	"internal/fiction/agents/draft":      7,
+	"internal/fiction/agents/pipeline":   7,
+	"internal/fiction/agents/prompt":     1,
+	"internal/fiction/agents/recap":      7,
+	"internal/fiction/agents/review":     2,
+	"internal/fiction/agents/setup":      7,
+	"internal/fiction/agents/shared":     1,
+	"internal/fiction/agents/translate":  7,
+	"internal/fiction/agents/write":      7,
+	"internal/fiction/rpg/llm":           7,
+	"internal/fiction/domain/continuity": 8,
+	"internal/fiction/domain/review":     8,
+	"internal/app":                       8,
+	"internal/fiction/derive":            8,
+	"internal/fiction/refresh":           8,
+	"internal/toolplane":                 8,
+	"internal/fiction/pipeline":          8,
 }
 
 func repoRoot(t *testing.T) string {
@@ -218,13 +223,13 @@ func TestInternalImportLayers(t *testing.T) {
 // without a project handle (agent logs, provider config, and the refresh
 // helper); everything else must take an explicit *store.Root or *project.Book.
 var indirectAmbientAllowlist = map[string]string{
-	"internal/agents/base/agent_base.go":    "SDK workspace fallback for callers without a root",
-	"internal/agents/base/agent_logging.go": "agent logs have no root parameter yet",
-	"internal/app/session.go":               "composition root resolves global config once",
-	"internal/llm/client.go":                "RuntimeClient workspace root",
-	"internal/llm/config.go":                "provider config path discovery",
-	"internal/toolplane/tool_refresh.go":    "refresh context has no session handle yet",
-	"internal/writersdl/write_rpg_dsl.go":   "failure dump only has a book name",
+	"internal/fiction/agents/base/agent_base.go":    "SDK workspace fallback for callers without a root",
+	"internal/fiction/agents/base/agent_logging.go": "agent logs have no root parameter yet",
+	"internal/app/session.go":                       "composition root resolves global config once",
+	"internal/platform/llm/client.go":               "RuntimeClient workspace root",
+	"internal/platform/llm/config.go":               "provider config path discovery",
+	"internal/fiction/refresh/refresh.go":           "refresh context has no session handle yet",
+	"internal/fiction/derive/write_rpg_dsl.go":      "failure dump only has a book name",
 }
 
 // TestPipelineLayersDoNotResolveAmbientRootIndirectly closes the gap left by
@@ -417,7 +422,7 @@ func checkPackage(t *testing.T, root, dir string) error {
 
 // TestCmdGroupIsolation pins the CLI packaging rule: a command group under
 // cmd/<group>/ is an independent entry point. Groups may depend on internal/*
-// and on shared internal libraries (for example internal/writepipe), but never
+// and on shared internal libraries (for example internal/fiction/pipeline), but never
 // on another command group or on the cmd root package, so importing one
 // command can never drag in another command's wiring.
 func TestCmdGroupIsolation(t *testing.T) {

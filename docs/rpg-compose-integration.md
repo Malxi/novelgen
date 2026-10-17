@@ -39,10 +39,10 @@ Agent 侧还可以通过 `novelgen tool check quality|simulation|all` 复用同�
 
 ### 3. 编程接口
 
-在 Go 代码中使用验证功能（`internal/rpg` 的确定性校验器）：
+在 Go 代码中使用验证功能（`internal/fiction/rpg` 的确定性校验器）：
 
 ```go
-import "novelgen/internal/rpg"
+import "novelgen/internal/fiction/rpg"
 
 // outline 为已加载的 *rpg.StoryOutline
 result := rpg.NewOutlineValidator(outline).Validate()

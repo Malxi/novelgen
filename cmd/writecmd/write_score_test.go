@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"novelgen/cmd/writecmd"
-	"novelgen/internal/agents"
-	"novelgen/internal/models"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/agents"
 )
 
 func TestDraftReviewScorePercentSupportsLegacyAndPercentScores(t *testing.T) {

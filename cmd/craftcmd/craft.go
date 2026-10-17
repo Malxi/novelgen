@@ -9,15 +9,15 @@ import (
 	"sort"
 	"strings"
 
-	"novelgen/internal/agents"
 	"novelgen/internal/app"
-	"novelgen/internal/logger"
-	"novelgen/internal/logic"
-	"novelgen/internal/models"
-	"novelgen/internal/rpg/dsl"
-	"novelgen/internal/store"
-	"novelgen/internal/toolplane"
-	"novelgen/internal/workerpool"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/agents"
+	"novelgen/internal/fiction/domain/logic"
+	"novelgen/internal/fiction/mutation"
+	"novelgen/internal/fiction/rpg/dsl"
+	"novelgen/internal/platform/logger"
+	"novelgen/internal/platform/store"
+	"novelgen/internal/platform/workerpool"
 
 	"github.com/spf13/cobra"
 )
@@ -1253,7 +1253,7 @@ func saveCraftElements(ctx context.Context, kind store.CraftKind, values interfa
 	// tool/service path will normalize them again; skip the second full quality
 	// pass because craft improve has its own review loop. Unrelated elements in
 	// the same file are preserved by the bulk upsert.
-	_, err := toolplane.NewMutationService(root).UpsertCraftElements(ctx, kind, values, toolplane.MutationOptions{
+	_, err := mutation.NewMutationService(root).UpsertCraftElements(ctx, kind, values, mutation.MutationOptions{
 		Validate: false,
 		Source:   "craft-command",
 	})

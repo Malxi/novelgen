@@ -13,14 +13,14 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"novelgen/internal/agents"
-	"novelgen/internal/logger"
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/quality"
-	"novelgen/internal/rpg"
-	"novelgen/internal/store"
-	"novelgen/internal/workerpool"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/agents"
+	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/fiction/domain/quality"
+	"novelgen/internal/fiction/rpg"
+	"novelgen/internal/platform/logger"
+	"novelgen/internal/platform/store"
+	"novelgen/internal/platform/workerpool"
 )
 
 func runComposeSkeletonReview(cmd *cobra.Command, args []string) error {

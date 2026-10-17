@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"novelgen/internal/rpg/dsl"
-	"novelgen/internal/store"
+	"novelgen/internal/fiction/rpg/dsl"
+	"novelgen/internal/platform/store"
 )
 
 func TestLoadDSLFragments(t *testing.T) {
@@ -62,7 +62,7 @@ func TestLoadDSLFragments(t *testing.T) {
 // chdirRepoRoot switches to the module root so the test can read books/...,
 // independent of the package directory depth. This is the only remaining chdir
 // in the suite: rpg-dsl's whole contract is "run me from the workspace that
-// holds books/", which internal/store cannot express because that workspace is
+// holds books/", which internal/platform/store cannot express because that workspace is
 // not a project.
 func chdirRepoRoot(t *testing.T) {
 	t.Helper()

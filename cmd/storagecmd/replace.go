@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"novelgen/internal/models"
-	"novelgen/internal/store"
-	"novelgen/internal/toolplane"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/mutation"
+	"novelgen/internal/platform/store"
 
 	"github.com/spf13/cobra"
 )
@@ -33,12 +33,12 @@ func runReplace(cmd *cobra.Command, _ []string) error {
 		return fail(cmd, "invalid_path", err)
 	}
 	path = filepath.Clean(path)
-	service := toolplane.NewMutationService(root)
+	service := mutation.NewMutationService(root)
 	ctx := cmd.Context()
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	opts := toolplane.MutationOptions{Validate: true, Source: "storage-replace"}
+	opts := mutation.MutationOptions{Validate: true, Source: "storage-replace"}
 
 	switch {
 	case samePath(path, root.SetupJSON()):

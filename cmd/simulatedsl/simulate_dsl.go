@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/fiction/rpg/dsl"
 )
 
 var simulateDSLCmd = &cobra.Command{

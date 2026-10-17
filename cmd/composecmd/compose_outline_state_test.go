@@ -4,10 +4,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"novelgen/internal/models"
-	"novelgen/internal/quality"
-	"novelgen/internal/rpg"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/quality"
+	"novelgen/internal/fiction/rpg"
+	"novelgen/internal/platform/store"
 	"novelgen/internal/toolplane"
 )
 

@@ -3,11 +3,12 @@ package rpgdsl
 import (
 	"testing"
 
-	"novelgen/internal/rpg"
+	"novelgen/internal/fiction/rpg"
+	rpgproject "novelgen/internal/fiction/rpg/project"
 )
 
 func TestSelectOutlineVolume(t *testing.T) {
-	project := &rpg.NovelgenProject{
+	project := &rpgproject.NovelgenProject{
 		Outline: rpg.StoryOutline{Parts: []rpg.StoryPart{{
 			ID: "part_1",
 			Volumes: []rpg.StoryVolume{
@@ -33,7 +34,7 @@ func TestSelectOutlineVolume(t *testing.T) {
 }
 
 func TestSelectOutlineVolumeRejectsEmptyVolume(t *testing.T) {
-	project := &rpg.NovelgenProject{
+	project := &rpgproject.NovelgenProject{
 		Outline: rpg.StoryOutline{Parts: []rpg.StoryPart{{
 			ID:      "part_1",
 			Volumes: []rpg.StoryVolume{{ID: "volume_1"}},

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"novelgen/internal/rpg/benchmark"
+	"novelgen/internal/fiction/rpg/benchmark"
 )
 
 func main() {

@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"novelgen/internal/rpg"
+	"novelgen/internal/fiction/rpg"
 )
 
 func main() {

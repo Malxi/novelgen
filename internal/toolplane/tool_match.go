@@ -6,8 +6,8 @@ package toolplane
 import (
 	"encoding/json"
 	"fmt"
-	"novelgen/internal/models"
-	"novelgen/internal/utils"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/platform/utils"
 	"strings"
 )
 

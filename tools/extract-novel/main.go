@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"os"
 
-	"novelgen/internal/llm"
-	"novelgen/internal/models"
-	"novelgen/internal/rpg"
-	"novelgen/internal/rpgllm"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/rpg"
+	"novelgen/internal/fiction/rpg/llm"
+	"novelgen/internal/platform/llm"
+	"novelgen/internal/platform/store"
 )
 
 // loadProjectConfig 从项目目录加载 novel.json

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/platform/store"
 )
 
 // testBook returns a project rooted at a temporary directory, so these tests

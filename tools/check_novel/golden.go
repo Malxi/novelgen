@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/fiction/rpg/dsl"
 )
 
 type goldenSpec struct {

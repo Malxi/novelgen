@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/platform/store"
 )
 
 func TestWriteComposeImproveReport(t *testing.T) {

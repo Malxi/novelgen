@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"novelgen/internal/cli"
-	"novelgen/internal/envutil"
-	"novelgen/internal/store"
+	"novelgen/internal/platform/cli"
+	"novelgen/internal/platform/envutil"
+	"novelgen/internal/platform/store"
 
 	"github.com/spf13/cobra"
 )

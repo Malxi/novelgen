@@ -5,10 +5,10 @@ package toolplane
 
 import (
 	"fmt"
-	"novelgen/internal/logic/continuity/recap"
-	"novelgen/internal/models"
-	"novelgen/internal/store"
-	"novelgen/internal/toolcmd"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/contract/toolcmd"
+	"novelgen/internal/fiction/domain/logic/continuity/recap"
+	"novelgen/internal/platform/store"
 	"os"
 	"path/filepath"
 	"sort"
@@ -307,7 +307,7 @@ func queryChapterRepairContext(ctx ToolProjectContext, chapterID, issueCategory 
 
 	warnings := []string{}
 	var check *ToolCheckResult
-	if ctx.dir() == "" {
+	if ctx.Dir() == "" {
 		warnings = append(warnings, "project root missing; chapter quality/simulation check unavailable")
 	} else {
 		var err error

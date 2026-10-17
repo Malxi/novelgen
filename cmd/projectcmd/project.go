@@ -13,12 +13,12 @@ import (
 	"strings"
 	"time"
 
-	"novelgen/internal/agentruntime"
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/platform/agentruntime"
+	"novelgen/internal/platform/store"
+	"novelgen/internal/platform/usage"
 	"novelgen/internal/toolplane"
-	"novelgen/internal/usage"
 
 	"github.com/spf13/cobra"
 )

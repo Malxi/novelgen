@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/platform/store"
 
 	"github.com/spf13/cobra"
 )
@@ -64,7 +64,7 @@ func TestElementExtractorUsesRPGRelevantOutlineFields(t *testing.T) {
 	}
 }
 
-// Craft element merging is covered by internal/store, which now owns the
+// Craft element merging is covered by internal/platform/store, which now owns the
 // read-merge-write of story/craft/*.json (see
 // store.TestWriteJSONMergingKeepsExistingKeys and
 // store.TestLoadElementsToleratesMissingFiles).

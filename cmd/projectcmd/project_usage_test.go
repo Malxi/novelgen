@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"novelgen/internal/store"
-	"novelgen/internal/usage"
+	"novelgen/internal/platform/store"
+	"novelgen/internal/platform/usage"
 )
 
 // useProjectRoot points the ambient project root at dir for the rest of the

@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"novelgen/internal/models"
-	"novelgen/internal/store"
-	"novelgen/internal/testfixtures"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/contract/testfixtures"
+	"novelgen/internal/platform/store"
 )
 
 func regressionOutline() *models.Outline {

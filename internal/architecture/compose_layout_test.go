@@ -12,7 +12,7 @@ import (
 // the core back into a monolith.
 func TestComposeAgentStaysSplitByConcern(t *testing.T) {
 	root := repoRoot(t)
-	dir := filepath.Join(root, "internal", "agents", "compose")
+	dir := filepath.Join(root, "internal", "fiction", "agents", "compose")
 	want := map[string][]string{
 		"compose_agent.go":          {"type ComposeAgent struct", "func NewComposeAgent", "func (a *ComposeAgent) SetProjectRoot"},
 		"compose_agent_sdk.go":      {"func (a *ComposeAgent) GenerateSkeletonWithAgentSDK", "func (a *ComposeAgent) IterateHierarchicalAgentSDK", "func applyAgentSDKVolumePatch"},

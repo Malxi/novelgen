@@ -9,23 +9,23 @@ import (
 	"sync"
 	"time"
 
-	"novelgen/internal/agents"
 	"novelgen/internal/app"
-	novelcont "novelgen/internal/continuity"
-	"novelgen/internal/llm"
-	"novelgen/internal/logger"
-	"novelgen/internal/logic"
-	"novelgen/internal/logic/continuity/recap"
-	"novelgen/internal/logic/style"
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/reviewstore"
-	"novelgen/internal/rpg/dsl"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/agents"
+	"novelgen/internal/fiction/derive"
+	novelcont "novelgen/internal/fiction/domain/continuity"
+	"novelgen/internal/fiction/domain/logic"
+	"novelgen/internal/fiction/domain/logic/continuity/recap"
+	"novelgen/internal/fiction/domain/logic/style"
+	"novelgen/internal/fiction/domain/project"
+	reviewstore "novelgen/internal/fiction/domain/review"
+	"novelgen/internal/fiction/pipeline"
+	"novelgen/internal/fiction/rpg/dsl"
+	"novelgen/internal/platform/llm"
+	"novelgen/internal/platform/logger"
+	"novelgen/internal/platform/store"
+	"novelgen/internal/platform/workerpool"
 	"novelgen/internal/toolplane"
-	"novelgen/internal/workerpool"
-	"novelgen/internal/writepipe"
-	"novelgen/internal/writersdl"
 
 	"github.com/spf13/cobra"
 )
@@ -1803,7 +1803,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		}
 		for round := 1; round <= writeMaxRoundsFlag; round++ {
 			// Check for RPG DSL issues for this chapter
-			chapterRPGIssues := writersdl.GetChapterSpecificSuggestions(rpgDSLIssues, chapter.ID)
+			chapterRPGIssues := derive.GetChapterSpecificSuggestions(rpgDSLIssues, chapter.ID)
 			hasRPGIssues := chapterRPGIssues != ""
 
 			if len(chapterReview.Suggestions) == 0 && !chapterReview.NeedsRevision && !hasRPGIssues {
@@ -1977,15 +1977,15 @@ func refreshWriteRPGDSL(
 	client llm.Client,
 	batchSize int,
 	reason string,
-) (writersdl.WriteRPGDSLResult, error) {
+) (derive.WriteRPGDSLResult, error) {
 	log := logger.GetLogger()
 	log.Info("\n[RPG DSL] Refreshing chapter DSL (%s)...", reason)
-	result, err := writersdl.EmitChapterRPGDSLForProject(ctx, root, filepath.Base(root.Dir()), config, cfg, setup, client, batchSize)
+	result, err := derive.EmitChapterRPGDSLForProject(ctx, root, filepath.Base(root.Dir()), config, cfg, setup, client, batchSize)
 	if err != nil {
 		return result, err
 	}
 	log.Info("[RPG DSL] Output: %s", result.DSLPath)
 	log.Info("[RPG DSL] Batches: %d reused, %d generated", result.ReusedBatches, result.GeneratedBatches)
-	log.Info("[RPG DSL] Issues detected: %d total, %d important", len(result.Issues), len(writersdl.FilterImportantIssues(result.Issues)))
+	log.Info("[RPG DSL] Issues detected: %d total, %d important", len(result.Issues), len(derive.FilterImportantIssues(result.Issues)))
 	return result, nil
 }

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"novelgen/internal/quality"
-	"novelgen/internal/rpg"
+	"novelgen/internal/fiction/domain/quality"
+	"novelgen/internal/fiction/rpg"
 )
 
 func TestOutlineSuggestionToReviewSuggestionUsesReasonAsIssue(t *testing.T) {

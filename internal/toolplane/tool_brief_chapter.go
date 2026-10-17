@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"novelgen/internal/models"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/platform/store"
 )
 
 func makeChapterBrief(chapter models.Chapter, indexOnly bool) ChapterBrief {

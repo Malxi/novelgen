@@ -8,15 +8,16 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"novelgen/internal/agents"
-	"novelgen/internal/llm"
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/rpg"
-	"novelgen/internal/rpg/dsl"
-	"novelgen/internal/store"
-	"novelgen/internal/utils"
-	"novelgen/internal/writersdl"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/agents"
+	"novelgen/internal/fiction/derive"
+	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/fiction/rpg"
+	"novelgen/internal/fiction/rpg/dsl"
+	rpgproject "novelgen/internal/fiction/rpg/project"
+	"novelgen/internal/platform/llm"
+	"novelgen/internal/platform/store"
+	"novelgen/internal/platform/utils"
 )
 
 // rpgDSLCmd represents the rpg-dsl command
@@ -530,15 +531,15 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("加载 craft 元素失败: %w", err)
 	}
-	characters := writersdl.DerefCharacterMap(charModels)
-	locations := writersdl.DerefLocationMap(locModels)
+	characters := derive.DerefCharacterMap(charModels)
+	locations := derive.DerefLocationMap(locModels)
 
 	// 2. 查找章节 .md 文件（优先章节内容，附带 recap 辅助）
 	root, err := project.FindRoot()
 	if err != nil {
 		return fmt.Errorf("查找项目根目录失败: %w", err)
 	}
-	chapterInputs, err := writersdl.FindProjectChapterInputs(root, outline)
+	chapterInputs, err := derive.FindProjectChapterInputs(root, outline)
 	if err != nil {
 		return fmt.Errorf("查找章节文件失败: %w", err)
 	}
@@ -551,7 +552,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 	if len(chapterInputs) == 0 {
 		return fmt.Errorf("未找到符合条件的章节 markdown 文件")
 	}
-	writersdl.SortRPGDSLChapterInputs(chapterInputs)
+	derive.SortRPGDSLChapterInputs(chapterInputs)
 
 	fmt.Printf("📚 找到 %d 个章节 markdown 文件\n", len(chapterInputs))
 
@@ -602,7 +603,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 
 	// 分批转换 (5章/batch), 合并到最终 DSL
 	batchSize := 5
-	batches := writersdl.SplitRPGDSLBatchInputs(chapterInputs, batchSize)
+	batches := derive.SplitRPGDSLBatchInputs(chapterInputs, batchSize)
 	fmt.Printf("📄 %d 个章节，分 %d 批转换 (每批 %d 章)\n", len(chapterInputs), len(batches), batchSize)
 
 	combined := &dsl.DSL{
@@ -616,7 +617,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 	for i, batch := range batches {
 		fmt.Printf("\n📦 Batch %d/%d: %s → %s (%d 章)\n",
 			i+1, len(batches), batch[0].ChapterID, batch[len(batch)-1].ChapterID, len(batch))
-		chapterData, err := writersdl.LoadWriteRPGDSLChapterData(store.At(root).FS(), batch)
+		chapterData, err := derive.LoadWriteRPGDSLChapterData(store.At(root).FS(), batch)
 		if err != nil {
 			return fmt.Errorf("加载批次 %d 章节内容失败: %w", i+1, err)
 		}
@@ -626,7 +627,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("AI 转换批次 %d 失败: %w", i+1, err)
 		}
 
-		dslContent, err = writersdl.EnsureWriteRPGDSLParseable(cmd.Context(), agent, bookName, dslContent)
+		dslContent, err = derive.EnsureWriteRPGDSLParseable(cmd.Context(), agent, bookName, dslContent)
 		if err != nil {
 			return fmt.Errorf("DSL 解析/修复失败 batch %d: %w", i+1, err)
 		}
@@ -635,7 +636,7 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("解析批 %d DSL 失败: %w", i+1, err)
 		}
-		writersdl.MergeWriteRPGDSL(combined, parsed)
+		derive.MergeWriteRPGDSL(combined, parsed)
 		fmt.Printf("  ✓ %d 字符\n", len(dslContent))
 	}
 
@@ -659,13 +660,13 @@ func runConvertChapters(cmd *cobra.Command, args []string) error {
 }
 
 // filterChapterInputs filters chapter inputs by volume/chapter flags.
-func filterChapterInputs(inputs []writersdl.WriteRPGDSLChapterInput, volume int, chapters string, allVolumes bool) []writersdl.WriteRPGDSLChapterInput {
+func filterChapterInputs(inputs []derive.WriteRPGDSLChapterInput, volume int, chapters string, allVolumes bool) []derive.WriteRPGDSLChapterInput {
 	if chapters != "" {
 		chapterSet := make(map[string]bool)
 		for _, ch := range strings.Split(chapters, ",") {
 			chapterSet[strings.TrimSpace(ch)] = true
 		}
-		var filtered []writersdl.WriteRPGDSLChapterInput
+		var filtered []derive.WriteRPGDSLChapterInput
 		for _, input := range inputs {
 			if chapterSet[input.ChapterID] || chapterSet[utils.ExtractChapterNumber(input.ChapterID)] {
 				filtered = append(filtered, input)
@@ -675,7 +676,7 @@ func filterChapterInputs(inputs []writersdl.WriteRPGDSLChapterInput, volume int,
 	}
 	if volume > 0 && !allVolumes {
 		prefix := fmt.Sprintf("P1-V%d-", volume)
-		var filtered []writersdl.WriteRPGDSLChapterInput
+		var filtered []derive.WriteRPGDSLChapterInput
 		for _, input := range inputs {
 			if strings.HasPrefix(input.ChapterID, prefix) || strings.Contains(input.ChapterID, fmt.Sprintf("-V%d-", volume)) {
 				filtered = append(filtered, input)
@@ -692,19 +693,19 @@ func getBookRPGDir(bookName string) string {
 	return store.At(store.BookDir("", bookName)).RPGDir()
 }
 
-func loadNovelgenProject(bookName string) (*rpg.NovelgenProject, error) {
-	return rpg.LoadNovelgenProject(store.BookDir("", bookName))
+func loadNovelgenProject(bookName string) (*rpgproject.NovelgenProject, error) {
+	return rpgproject.LoadNovelgenProject(store.BookDir("", bookName))
 }
 
-func loadNovelgenProjectForConvert(bookName, phase string) (*rpg.NovelgenProject, error) {
+func loadNovelgenProjectForConvert(bookName, phase string) (*rpgproject.NovelgenProject, error) {
 	if phase == "outline" || phase == "setup" {
-		project := &rpg.NovelgenProject{
+		project := &rpgproject.NovelgenProject{
 			Root:        store.At("."),
 			ProjectPath: ".",
 			BookName:    bookName,
-			Characters:  map[string]rpg.NovelgenCharacter{},
-			Items:       map[string]rpg.NovelgenItem{},
-			Locations:   map[string]rpg.NovelgenLocation{},
+			Characters:  map[string]rpgproject.NovelgenCharacter{},
+			Items:       map[string]rpgproject.NovelgenItem{},
+			Locations:   map[string]rpgproject.NovelgenLocation{},
 		}
 		if phase == "outline" {
 			book, err := store.Open(store.BookDir("", bookName))
@@ -724,7 +725,7 @@ func loadNovelgenProjectForConvert(bookName, phase string) (*rpg.NovelgenProject
 	return loadNovelgenProject(bookName)
 }
 
-func selectOutlineVolume(project *rpg.NovelgenProject, volumeIndex int) error {
+func selectOutlineVolume(project *rpgproject.NovelgenProject, volumeIndex int) error {
 	if project == nil {
 		return fmt.Errorf("project is nil")
 	}
@@ -778,7 +779,7 @@ func loadDSLFragments(bookName string) ([]*dsl.DSLFragment, error) {
 			seen[file] = true
 
 			// Determine phase from filename
-			phase := writersdl.InferPhaseFromFilename(filepath.Base(file))
+			phase := derive.InferPhaseFromFilename(filepath.Base(file))
 
 			// Parse DSL
 			content, err := rpgRoot.Read(file)

@@ -1,0 +1,179 @@
+// Package rpgllm holds the LLM-backed RPG extraction adapters. It sits above
+// both internal/fiction/rpg and internal/platform/llm so the deterministic rpg engine stays
+// free of LLM dependencies.
+package rpgllm
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"novelgen/internal/fiction/rpg"
+	"novelgen/internal/platform/llm"
+)
+
+// NovelgenLLMClient 适配 novelgen 的 LLM client
+type NovelgenLLMClient struct {
+	client  llm.Client
+	options *llm.ChatOptions
+}
+
+// NewNovelgenLLMClient 创建基于 novelgen LLM client 的提取器
+func NewNovelgenLLMClient(client llm.Client, options *llm.ChatOptions) *rpg.LLMExtractor {
+	llmClient := &NovelgenLLMClient{
+		client:  client,
+		options: options,
+	}
+	return rpg.NewLLMExtractor(llmClient)
+}
+
+// Complete 实现 rpg.LLMClient 接口
+func (c *NovelgenLLMClient) Complete(ctx context.Context, prompt string, text string) (string, error) {
+	messages := []llm.Message{
+		{
+			Role:    "system",
+			Content: prompt,
+		},
+		{
+			Role:    "user",
+			Content: text,
+		},
+	}
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	resp, err := c.client.ChatCompletion(ctx, messages, c.options)
+	if err != nil {
+		return "", fmt.Errorf("LLM request failed: %w", err)
+	}
+
+	return resp.Content, nil
+}
+
+// ExtractWithNovelgenClient 使用 novelgen LLM client 提取小说实体
+func ExtractWithNovelgenClient(ctx context.Context, client llm.Client, options *llm.ChatOptions, text string) (*rpg.NovelRPGData, error) {
+	extractor := NewNovelgenLLMClient(client, options)
+	return extractor.ExtractFromNovel(ctx, text)
+}
+
+// BatchExtract 批量提取多个文本片段
+func BatchExtract(ctx context.Context, client llm.Client, options *llm.ChatOptions, texts []string) ([]*rpg.NovelRPGData, error) {
+	var results []*rpg.NovelRPGData
+
+	for i, text := range texts {
+		fmt.Printf("Processing chunk %d/%d...\n", i+1, len(texts))
+
+		data, err := ExtractWithNovelgenClient(ctx, client, options, text)
+		if err != nil {
+			return nil, fmt.Errorf("failed to extract chunk %d: %w", i+1, err)
+		}
+
+		results = append(results, data)
+	}
+
+	return results, nil
+}
+
+// MergeExtractResults 合并多个提取结果
+func MergeExtractResults(results []*rpg.NovelRPGData) *rpg.NovelRPGData {
+	merged := &rpg.NovelRPGData{
+		Characters:       make([]*rpg.CharacterTemplate, 0),
+		Items:            make([]*rpg.Item, 0),
+		Skills:           make([]*rpg.Skill, 0),
+		Locations:        make([]*rpg.Map, 0),
+		Events:           make([]*rpg.Event, 0),
+		Quests:           make([]*rpg.Quest, 0),
+		Timeline:         make([]*rpg.TimelineEvent, 0),
+		ValidationIssues: make([]rpg.ValidationIssue, 0),
+	}
+
+	// 使用 map 去重
+	charMap := make(map[string]*rpg.CharacterTemplate)
+	itemMap := make(map[string]*rpg.Item)
+	skillMap := make(map[string]*rpg.Skill)
+	locMap := make(map[string]*rpg.Map)
+	eventMap := make(map[string]*rpg.Event)
+
+	for _, result := range results {
+		for _, char := range result.Characters {
+			charMap[char.Name] = char
+		}
+		for _, item := range result.Items {
+			itemMap[item.Name] = item
+		}
+		for _, skill := range result.Skills {
+			skillMap[skill.Name] = skill
+		}
+		for _, loc := range result.Locations {
+			locMap[loc.Name] = loc
+		}
+		for _, event := range result.Events {
+			eventMap[event.Name] = event
+		}
+		merged.Timeline = append(merged.Timeline, result.Timeline...)
+		merged.ValidationIssues = append(merged.ValidationIssues, result.ValidationIssues...)
+	}
+
+	// 转换回 slice
+	for _, char := range charMap {
+		merged.Characters = append(merged.Characters, char)
+	}
+	for _, item := range itemMap {
+		merged.Items = append(merged.Items, item)
+	}
+	for _, skill := range skillMap {
+		merged.Skills = append(merged.Skills, skill)
+	}
+	for _, loc := range locMap {
+		merged.Locations = append(merged.Locations, loc)
+	}
+	for _, event := range eventMap {
+		merged.Events = append(merged.Events, event)
+	}
+
+	return merged
+}
+
+// ExtractLargeText 处理大文本（自动分块）
+func ExtractLargeText(ctx context.Context, client llm.Client, options *llm.ChatOptions, text string, chunkSize int) (*rpg.NovelRPGData, error) {
+	// 分块
+	chunks := splitTextIntoChunks(text, chunkSize)
+
+	// 批量提取
+	results, err := BatchExtract(ctx, client, options, chunks)
+	if err != nil {
+		return nil, err
+	}
+
+	// 合并结果
+	return MergeExtractResults(results), nil
+}
+
+// splitTextIntoChunks 将文本分割成块
+func splitTextIntoChunks(text string, chunkSize int) []string {
+	var chunks []string
+	lines := strings.Split(text, "\n")
+	// A trailing newline produces an empty final element; dropping it keeps the
+	// concatenated chunks equal to the original text instead of appending an
+	// extra blank line.
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+
+	var currentChunk strings.Builder
+	for _, line := range lines {
+		if currentChunk.Len()+len(line) > chunkSize && currentChunk.Len() > 0 {
+			chunks = append(chunks, currentChunk.String())
+			currentChunk.Reset()
+		}
+		currentChunk.WriteString(line)
+		currentChunk.WriteString("\n")
+	}
+
+	if currentChunk.Len() > 0 {
+		chunks = append(chunks, currentChunk.String())
+	}
+
+	return chunks
+}

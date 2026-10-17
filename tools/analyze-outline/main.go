@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"novelgen/internal/rpg"
+	"novelgen/internal/fiction/rpg"
 )
 
 func main() {
@@ -185,7 +185,7 @@ func printIssueGroup(title string, issues []rpg.AnalysisIssue) {
 	fmt.Println()
 	fmt.Printf("%s (%d)\n", title, len(issues))
 	fmt.Println(strings.Repeat("-", 50))
-	
+
 	for i, issue := range issues {
 		fmt.Printf("\n%d. %s\n", i+1, issue.Message)
 		if issue.Location != "" {

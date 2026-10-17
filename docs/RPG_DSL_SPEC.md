@@ -918,9 +918,9 @@ MVP (Minimum Viable Product) → Core → Enhanced → Advanced
 
 | 任务 | 文件 | 优先级 | 说明 |
 |------|------|--------|------|
-| 1.1 定义 AST 结构 | `internal/rpg/dsl/ast.go` | P0 | 只包含 MVP 必需的块 |
-| 1.2 实现 Parser | `internal/rpg/dsl/parser.go` | P0 | 支持基础语法 |
-| 1.3 实现 Validator | `internal/rpg/dsl/validator.go` | P0 | 基础验证 |
+| 1.1 定义 AST 结构 | `internal/fiction/rpg/dsl/ast.go` | P0 | 只包含 MVP 必需的块 |
+| 1.2 实现 Parser | `internal/fiction/rpg/dsl/parser.go` | P0 | 支持基础语法 |
+| 1.3 实现 Validator | `internal/fiction/rpg/dsl/validator.go` | P0 | 基础验证 |
 | 1.4 单元测试 | `*_test.go` | P0 | 覆盖率 > 80% |
 
 **MVP 包含的块：**
@@ -943,9 +943,9 @@ MVP (Minimum Viable Product) → Core → Enhanced → Advanced
 
 | 任务 | 文件 | 优先级 | 说明 |
 |------|------|--------|------|
-| 2.1 DSL → World 转换器 | `internal/rpg/dsl/converter.go` | P0 | 对接现有 RPG 系统 |
+| 2.1 DSL → World 转换器 | `internal/fiction/rpg/dsl/converter.go` | P0 | 对接现有 RPG 系统 |
 | 2.2 CLI 命令 | `cmd/rpg_dsl.go` | P0 | `novelgen rpg dsl import` |
-| 2.3 AI Skill | `internal/agents/base/skills/compose-dsl/SKILL.md` | P0 | 简化版 Skill |
+| 2.3 AI Skill | `internal/fiction/agents/base/skills/compose-dsl/SKILL.md` | P0 | 简化版 Skill |
 | 2.4 端到端测试 | `tests/dsl_integration_test.go` | P0 | 完整流程测试 |
 
 **MVP 成功标准：**
@@ -964,10 +964,10 @@ MVP (Minimum Viable Product) → Core → Enhanced → Advanced
 
 | 任务 | 文件 | 优先级 | 说明 |
 |------|------|--------|------|
-| 3.1 Hook 系统 | `internal/rpg/dsl/hook.go` | P1 | on_kill, on_damage 等 |
-| 3.2 Counter/Tracker | `internal/rpg/dsl/tracker.go` | P1 | 统计系统 |
-| 3.3 Trigger 系统 | `internal/rpg/dsl/trigger.go` | P1 | 条件触发器 |
-| 3.4 条件表达式 | `internal/rpg/dsl/expression.go` | P1 | 基础条件解析 |
+| 3.1 Hook 系统 | `internal/fiction/rpg/dsl/hook.go` | P1 | on_kill, on_damage 等 |
+| 3.2 Counter/Tracker | `internal/fiction/rpg/dsl/tracker.go` | P1 | 统计系统 |
+| 3.3 Trigger 系统 | `internal/fiction/rpg/dsl/trigger.go` | P1 | 条件触发器 |
+| 3.4 条件表达式 | `internal/fiction/rpg/dsl/expression.go` | P1 | 基础条件解析 |
 
 **支持的 Hook：**
 ```dsl
@@ -982,11 +982,11 @@ hook "on_location_enter" { }
 
 | 任务 | 文件 | 优先级 | 说明 |
 |------|------|--------|------|
-| 4.1 函数注册系统 | `internal/rpg/dsl/functions/registry.go` | P1 | 函数管理 |
-| 4.2 数学函数 | `internal/rpg/dsl/functions/math.go` | P1 | random, min, max |
-| 4.3 逻辑函数 | `internal/rpg/dsl/functions/logic.go` | P1 | and, or, not |
-| 4.4 查询函数 | `internal/rpg/dsl/functions/query.go` | P1 | has_flag, kill_count |
-| 4.5 表达式求值 | `internal/rpg/dsl/evaluator.go` | P1 | 表达式解析 |
+| 4.1 函数注册系统 | `internal/fiction/rpg/dsl/functions/registry.go` | P1 | 函数管理 |
+| 4.2 数学函数 | `internal/fiction/rpg/dsl/functions/math.go` | P1 | random, min, max |
+| 4.3 逻辑函数 | `internal/fiction/rpg/dsl/functions/logic.go` | P1 | and, or, not |
+| 4.4 查询函数 | `internal/fiction/rpg/dsl/functions/query.go` | P1 | has_flag, kill_count |
+| 4.5 表达式求值 | `internal/fiction/rpg/dsl/evaluator.go` | P1 | 表达式解析 |
 
 **Core 阶段成功标准：**
 - [ ] 支持 5+ 种 Hook
@@ -1004,19 +1004,19 @@ hook "on_location_enter" { }
 
 | 任务 | 文件 | 优先级 | 说明 |
 |------|------|--------|------|
-| 5.1 并行事件 | `internal/rpg/dsl/parallel.go` | P2 | parallel objective |
-| 5.2 战斗阶段 | `internal/rpg/dsl/combat_phase.go` | P2 | 多阶段战斗 |
-| 5.3 环境效果 | `internal/rpg/dsl/environment.go` | P2 | 地形、天气影响 |
-| 5.4 NPC AI | `internal/rpg/dsl/npc_ai.go` | P2 | NPC 行为树 |
+| 5.1 并行事件 | `internal/fiction/rpg/dsl/parallel.go` | P2 | parallel objective |
+| 5.2 战斗阶段 | `internal/fiction/rpg/dsl/combat_phase.go` | P2 | 多阶段战斗 |
+| 5.3 环境效果 | `internal/fiction/rpg/dsl/environment.go` | P2 | 地形、天气影响 |
+| 5.4 NPC AI | `internal/fiction/rpg/dsl/npc_ai.go` | P2 | NPC 行为树 |
 
 #### Week 6: 模板 & 复用
 
 | 任务 | 文件 | 优先级 | 说明 |
 |------|------|--------|------|
-| 6.1 模板系统 | `internal/rpg/dsl/template.go` | P2 | 敌人类型模板 |
-| 6.2 模块化 | `internal/rpg/dsl/module.go` | P2 | import 支持 |
+| 6.1 模板系统 | `internal/fiction/rpg/dsl/template.go` | P2 | 敌人类型模板 |
+| 6.2 模块化 | `internal/fiction/rpg/dsl/module.go` | P2 | import 支持 |
 | 6.3 库文件 | `dsl_libs/` | P2 | 预设模板库 |
-| 6.4 AI 优化 | `internal/agents/base/skills/compose-dsl/` | P2 | 进阶 Skill |
+| 6.4 AI 优化 | `internal/fiction/agents/base/skills/compose-dsl/` | P2 | 进阶 Skill |
 
 **Enhanced 成功标准：**
 - [ ] 支持并行事件
@@ -1036,7 +1036,7 @@ hook "on_location_enter" { }
 |------|------|--------|------|
 | 7.1 可视化编辑器 | `webui/dsl_editor/` | P3 | 拖拽式编辑 |
 | 7.2 DSL 调试器 | `cmd/rpg_dsl_debug.go` | P3 | 单步执行 |
-| 7.3 性能分析 | `internal/rpg/dsl/profiler.go` | P3 | 性能优化 |
+| 7.3 性能分析 | `internal/fiction/rpg/dsl/profiler.go` | P3 | 性能优化 |
 | 7.4 文档生成 | `cmd/rpg_dsl_doc.go` | P3 | 自动生成文档 |
 
 **Advanced 成功标准：**
@@ -1121,7 +1121,7 @@ storyline {
 ## 6. 文件结构
 
 ```
-internal/rpg/dsl/
+internal/fiction/rpg/dsl/
 ├── ast.go              # AST 结构定义
 ├── parser.go           # DSL 解析器
 ├── parser_test.go      # 解析器测试
@@ -1136,7 +1136,7 @@ internal/rpg/dsl/
     ├── chapter_001.dsl
     └── full_story.dsl
 
-internal/agents/base/skills/compose-dsl/
+internal/fiction/agents/base/skills/compose-dsl/
 └── SKILL.md            # AI DSL 生成技能
 
 cmd/

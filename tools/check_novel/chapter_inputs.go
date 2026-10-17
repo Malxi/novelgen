@@ -5,17 +5,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"novelgen/internal/rpg"
-	"novelgen/internal/store"
-	"novelgen/internal/writersdl"
+	"novelgen/internal/fiction/derive"
+	"novelgen/internal/fiction/rpg"
+	"novelgen/internal/platform/store"
 )
 
 // findCheckNovelChapterInputs resolves the chapter markdown (and its recap when
 // one exists) for every chapter in the RPG outline read from the book
-// directory. Unlike writersdl.FindProjectChapterInputs it works from an explicit
+// directory. Unlike derive.FindProjectChapterInputs it works from an explicit
 // book path instead of assuming the process working directory is the novel
 // project.
-func findCheckNovelChapterInputs(bookPath string, outline *rpg.StoryOutline) ([]writersdl.WriteRPGDSLChapterInput, error) {
+func findCheckNovelChapterInputs(bookPath string, outline *rpg.StoryOutline) ([]derive.WriteRPGDSLChapterInput, error) {
 	book := store.At(bookPath)
 	chapterFiles := map[string]string{}
 	if outline != nil {
@@ -44,9 +44,9 @@ func findCheckNovelChapterInputs(bookPath string, outline *rpg.StoryOutline) ([]
 		}
 	}
 
-	inputs := make([]writersdl.WriteRPGDSLChapterInput, 0, len(chapterFiles))
+	inputs := make([]derive.WriteRPGDSLChapterInput, 0, len(chapterFiles))
 	for chapterID, chapterPath := range chapterFiles {
-		input := writersdl.WriteRPGDSLChapterInput{
+		input := derive.WriteRPGDSLChapterInput{
 			ChapterID:   chapterID,
 			ChapterPath: chapterPath,
 		}

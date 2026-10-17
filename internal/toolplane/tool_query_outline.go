@@ -5,7 +5,7 @@ package toolplane
 
 import (
 	"fmt"
-	"novelgen/internal/models"
+	"novelgen/internal/contract/story"
 	"strings"
 )
 
