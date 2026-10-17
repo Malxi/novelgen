@@ -441,7 +441,7 @@ func inspectProjectForAgentSDK(root string) projectDoctorReport {
 		}
 	}
 
-	logResp := toolplane.QueryLogs(root, "", "", "", false)
+	logResp := toolplane.QueryLogsAt(projectRoot, "", "", "", false)
 	report.Counts["logs"] = logResp.Count
 	for kind, count := range logKindCounts(logResp) {
 		report.Counts[kind] = count

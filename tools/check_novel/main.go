@@ -91,7 +91,7 @@ type checkNovelAIReport struct {
 func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutputPath string, batchSize int, minSeverity dsl.SeverityLevel, includeDSLHygiene bool, goldenPath string) error {
 	fmt.Printf("寮€濮?AI DSL Benchmark: %s (%s)\n\n", bookName, bookPath)
 
-	adapter, err := agents.LoadNovelgenProject(bookName)
+	adapter, err := agents.LoadNovelgenProjectAt(store.At(bookPath))
 	if err != nil {
 		return fmt.Errorf("鍔犺浇椤圭洰澶辫触: %w", err)
 	}

@@ -16,7 +16,16 @@ import (
 // resolved project directory. It exists so the store-based implementation stays
 // the only one that spells project paths.
 func RunToolCraftSchemaCheck(rootDir, scope, id string) (*ToolCheckResult, error) {
-	return runToolCraftSchemaCheckAt(store.At(rootDir), scope, id)
+	return RunToolCraftSchemaCheckAt(store.At(rootDir), scope, id)
+}
+
+// RunToolCraftSchemaCheckAt runs the craft schema check against an explicit
+// storage root.
+func RunToolCraftSchemaCheckAt(root *store.Root, scope, id string) (*ToolCheckResult, error) {
+	if root == nil {
+		return nil, fmt.Errorf("project root is required")
+	}
+	return runToolCraftSchemaCheckAt(root, scope, id)
 }
 
 func runToolCraftSchemaCheckAt(root *store.Root, scope, id string) (*ToolCheckResult, error) {

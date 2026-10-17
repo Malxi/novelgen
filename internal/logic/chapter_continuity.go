@@ -1,6 +1,9 @@
 package logic
 
-import "novelgen/internal/models"
+import (
+	"novelgen/internal/models"
+	"novelgen/internal/store"
+)
 
 // ChapterContinuityBuilder builds writer-facing continuity snapshots without
 // exposing the legacy StateMatrix type to write-stage callers.
@@ -12,6 +15,14 @@ type ChapterContinuityBuilder struct {
 func NewChapterContinuityBuilder(projectRoot string) *ChapterContinuityBuilder {
 	return &ChapterContinuityBuilder{
 		stateManager: NewStateMatrixManager(projectRoot),
+	}
+}
+
+// NewChapterContinuityBuilderAt creates a continuity builder over an explicit
+// storage root.
+func NewChapterContinuityBuilderAt(root *store.Root) *ChapterContinuityBuilder {
+	return &ChapterContinuityBuilder{
+		stateManager: NewStateMatrixManagerAt(root),
 	}
 }
 

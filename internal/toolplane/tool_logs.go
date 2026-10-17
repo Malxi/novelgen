@@ -18,7 +18,15 @@ import (
 // QueryLogs is the string-root entry point for callers that hold a resolved
 // project directory.
 func QueryLogs(rootDir, queryType, id, name string, includeContent bool) ToolResponse {
-	return queryLogsAt(store.At(rootDir), queryType, id, name, includeContent)
+	return QueryLogsAt(store.At(rootDir), queryType, id, name, includeContent)
+}
+
+// QueryLogsAt queries logs through an explicit storage root.
+func QueryLogsAt(root *store.Root, queryType, id, name string, includeContent bool) ToolResponse {
+	if root == nil {
+		return ToolResponse{OK: false, Section: "logs", Warnings: []string{"project root is required"}}
+	}
+	return queryLogsAt(root, queryType, id, name, includeContent)
 }
 
 func queryLogsAt(root *store.Root, queryType, id, name string, includeContent bool) ToolResponse {

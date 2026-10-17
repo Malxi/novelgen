@@ -21,6 +21,12 @@
 //     Root.Write* / Root.Append / Root.FS(), never by handing a Root-derived path
 //     to os.*. FS is the only seam that touches the storage medium, which is what
 //     makes MemFS a usable backend rather than a promise.
+//
+// Project-level entry points use Backend (backend.go), so a host, in-memory, or
+// remote implementation can be installed once for every command. FS remains a
+// file-semantics interface; a backend that cannot provide atomic rename,
+// exclusive creation, append, and modification times must do so explicitly
+// rather than silently weakening Root's guarantees.
 package store
 
 import (
@@ -43,8 +49,9 @@ var ErrNoProject = errors.New("project root not found (novel.json not found in c
 // what lets tests hand a command a temporary project, and what will let a
 // future backend (a bundle, an archive, a database) replace the filesystem.
 type Root struct {
-	dir string
-	fs  FS
+	dir     string
+	fs      FS
+	mergeMu sync.Mutex
 }
 
 // Open returns a Root for dir without requiring the directory to exist yet.
@@ -81,6 +88,19 @@ func (r *Root) Dir() string {
 		return ""
 	}
 	return r.dir
+}
+
+// HostDir reports the host directory when this Root is backed by the host
+// filesystem. Dir is the project's logical key and may be a synthetic name for
+// an in-memory or remote backend; code that genuinely needs to spawn a process,
+// publish a file to a user, or call an OS-only API must ask for HostDir and
+// handle the "not a host project" case explicitly.
+func (r *Root) HostDir() (string, bool) {
+	if r == nil {
+		return "", false
+	}
+	_, ok := r.fs.(OSFS)
+	return r.dir, ok
 }
 
 // FS returns the filesystem backing this root.
@@ -165,7 +185,7 @@ func Default() (*Root, error) {
 	if root != nil {
 		return root, nil
 	}
-	return LocateCWD()
+	return LocateProject("")
 }
 
 type rootContextKey struct{}

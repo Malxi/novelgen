@@ -45,7 +45,7 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 	}
 	targetWords := ToolPatchFlags.TargetWords
 	if targetWords <= 0 {
-		targetWords = toolChapterTargetWords()
+		targetWords = toolChapterTargetWordsAt(root)
 	}
 	beforeContent, beforePath, err := root.LoadChapterContent(id)
 	if err != nil {
@@ -92,7 +92,7 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 			func() {
 				restoreLogger := SuppressToolRefreshLogs()
 				defer restoreLogger()
-				refresh, err = refreshToolChapterDSLAt(cmd.Context(), root, id, 0)
+				refresh, err = RefreshToolChapterDSL(cmd.Context(), root, id, 0)
 			}()
 			if err != nil {
 				return fmt.Errorf("chapter patch applied but derived RPG DSL refresh failed: %w", err)
@@ -104,7 +104,7 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 			if refresh.CacheDir != "" {
 				files["chapter_dsl_cache"] = refresh.CacheDir
 			}
-			postCheck, err := runToolChapterCheckAt(root, "all", "chapter", id, targetWords)
+			postCheck, err := RunToolChapterCheckWithTargetWordsAt(root, "all", "chapter", id, targetWords)
 			if err != nil {
 				return err
 			}
@@ -113,7 +113,7 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 			addToolCheckMeta(postCheck, "derived_dsl_refreshed", true)
 			check = postCheck
 		} else {
-			postCheck, err := runToolChapterCheckAt(root, "quality", "chapter", id, targetWords)
+			postCheck, err := RunToolChapterCheckWithTargetWordsAt(root, "quality", "chapter", id, targetWords)
 			if err != nil {
 				return err
 			}

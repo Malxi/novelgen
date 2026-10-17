@@ -64,6 +64,7 @@ func TestCommandSurfaceTopLevel(t *testing.T) {
 		"rpg-dsl",
 		"setup",
 		"simulate-dsl",
+		"storage",
 		"tool",
 		"translate",
 		"write",
@@ -89,6 +90,7 @@ func TestCommandSurfaceSubcommands(t *testing.T) {
 		"rpg":     {"bench", "export", "gen", "simulate"},
 		"rpg-dsl": {"check", "convert", "convert-chapters", "export-dsl", "merge", "simulate", "validate"},
 		"setup":   {"check", "gen", "import", "improve", "regen"},
+		"storage": {"list", "projects", "read", "stat", "write"},
 		"tool":    {"check", "patch", "patch-buffer", "query", "refresh"},
 		"write":   {"gen", "improve", "pipeline", "review"},
 	}

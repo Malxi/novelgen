@@ -6,6 +6,8 @@ import (
 
 	"novelgen/internal/agents"
 	"novelgen/internal/models"
+	"novelgen/internal/project"
+	"novelgen/internal/store"
 )
 
 func TestExtractLastNonEmptyLine(t *testing.T) {
@@ -142,7 +144,7 @@ func TestApplyHeuristicTransitionChecksAugmentsReview(t *testing.T) {
 		{ChapterID: "P1-V1-C2"},
 	}}
 
-	ApplyHeuristicTransitionChecks(volume, drafts, review)
+	ApplyHeuristicTransitionChecks(nil, volume, drafts, review)
 
 	if got := review.Reviews[1].CharacterPresence.Issues; !sliceContainsSubstring(got, "Mentor") {
 		t.Fatalf("expected a missing-character issue for Mentor, got %#v", got)
@@ -156,8 +158,42 @@ func TestApplyHeuristicTransitionChecksAugmentsReview(t *testing.T) {
 }
 
 func TestApplyHeuristicTransitionChecksIgnoresNilInputs(t *testing.T) {
-	ApplyHeuristicTransitionChecks(nil, nil, nil)
-	ApplyHeuristicTransitionChecks(&models.Volume{}, nil, &agents.VolumeReview{})
+	ApplyHeuristicTransitionChecks(nil, nil, nil, nil)
+	ApplyHeuristicTransitionChecks(nil, &models.Volume{}, nil, &agents.VolumeReview{})
+}
+
+func TestLoadPreviousRecapJSONUsesInjectedRoot(t *testing.T) {
+	root := store.MemRoot()
+	if err := root.SaveRecap(&models.ChapterRecap{
+		ChapterID:       "P1-V1-C1",
+		LastLine:        "Lin opens the door.",
+		NextOpeningHint: "紧接上一章最后一刻。",
+	}); err != nil {
+		t.Fatalf("SaveRecap: %v", err)
+	}
+
+	ambient := store.MemRoot()
+	store.SetDefault(ambient)
+	defer store.ResetDefault()
+
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1",
+		Volumes: []models.Volume{{
+			ID: "P1-V1",
+			Chapters: []models.Chapter{
+				{ID: "P1-V1-C1", Title: "One"},
+				{ID: "P1-V1-C2", Title: "Two"},
+			},
+		}},
+	}}}
+	book := project.Open(root)
+	got := LoadPreviousRecapJSON(book, outline, &models.Chapter{ID: "P1-V1-C2"})
+	if !strings.Contains(got, "P1-V1-C1") || !strings.Contains(got, "Lin opens the door") {
+		t.Fatalf("recap = %q, want the injected root's recap", got)
+	}
+	if names := ambient.FS().(*store.MemFS).Names(); len(names) != 0 {
+		t.Fatalf("ambient project was touched: %v", names)
+	}
 }
 
 func sliceContainsSubstring(values []string, needle string) bool {

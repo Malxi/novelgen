@@ -8,6 +8,7 @@ import (
 	"novelgen/internal/logic/continuity/character"
 	"novelgen/internal/logic/continuity/transition"
 	"novelgen/internal/models"
+	"novelgen/internal/project"
 )
 
 // ==================== Fix Summary ====================
@@ -52,6 +53,7 @@ type bridgeGenFunc func(suggestions string) (string, error)
 // Order matters: teleport bridge first, then character presence.
 func ApplyImproveFixesDraft(
 	log logger.LoggerInterface,
+	book *project.Book,
 	workerID int,
 	chapter *models.Chapter,
 	outline *models.Outline,
@@ -69,7 +71,7 @@ func ApplyImproveFixesDraft(
 	sum := FixSummary{}
 
 	if teleportEnabled {
-		prevRecap := LoadPreviousRecapStruct(outline, chapter)
+		prevRecap := LoadPreviousRecapStruct(book, outline, chapter)
 		fixed, attempted, attemptsUsed, passed := RunTeleportBridgeAutoFix(log, workerID, chapter, prevRecap, out, suggestions, teleportRetries, teleportGen)
 		sum.TeleportAttempted = attempted
 		sum.TeleportAttempts = attemptsUsed
@@ -95,6 +97,7 @@ func ApplyImproveFixesDraft(
 // ApplyImproveFixesWrite runs enabled minimal-change fixers for write improve.
 func ApplyImproveFixesWrite(
 	log logger.LoggerInterface,
+	book *project.Book,
 	workerID int,
 	chapter *models.Chapter,
 	outline *models.Outline,
@@ -111,7 +114,7 @@ func ApplyImproveFixesWrite(
 	out := original
 	sum := FixSummary{}
 	if teleportEnabled {
-		prevRecap := LoadPreviousRecapStruct(outline, chapter)
+		prevRecap := LoadPreviousRecapStruct(book, outline, chapter)
 		fixed, attempted, attemptsUsed, passed := RunTeleportBridgeAutoFix(log, workerID, chapter, prevRecap, out, suggestions, teleportRetries, teleportGen)
 		sum.TeleportAttempted = attempted
 		sum.TeleportAttempts = attemptsUsed

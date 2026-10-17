@@ -25,12 +25,18 @@ import (
 )
 
 // RunToolChapterCheckWithTargetWords is the string-root entry point used by the
-// write pipeline, which holds a resolved project directory.
+// command edge, which holds a resolved host project directory.
 func RunToolChapterCheckWithTargetWords(rootDir, kind, scope, id string, targetWordsOverride int) (*ToolCheckResult, error) {
-	return runToolChapterCheckAt(store.At(rootDir), kind, scope, id, targetWordsOverride)
+	return RunToolChapterCheckWithTargetWordsAt(store.At(rootDir), kind, scope, id, targetWordsOverride)
 }
 
-func runToolChapterCheckAt(root *store.Root, kind, scope, id string, targetWordsOverride int) (*ToolCheckResult, error) {
+// RunToolChapterCheckWithTargetWordsAt runs the check against an explicit
+// storage root. Pipeline code must use this form; the string-root entry point
+// above exists only for a command edge that already resolved a host directory.
+func RunToolChapterCheckWithTargetWordsAt(root *store.Root, kind, scope, id string, targetWordsOverride int) (*ToolCheckResult, error) {
+	if root == nil {
+		return nil, fmt.Errorf("project root is required")
+	}
 	kind = NormalizeKey(kind)
 	if kind == "" {
 		kind = "quality"
@@ -51,6 +57,9 @@ func runToolChapterCheckAt(root *store.Root, kind, scope, id string, targetWords
 	if id == "" {
 		return nil, fmt.Errorf("--id is required for chapter check")
 	}
+	if err := store.ValidateKeyPart(id); err != nil {
+		return nil, fmt.Errorf("invalid chapter id %q: %w", id, err)
+	}
 
 	outline, err := root.LoadOutline()
 	if err != nil {
@@ -70,17 +79,17 @@ func runToolChapterCheckAt(root *store.Root, kind, scope, id string, targetWords
 	}
 	targetWords := targetWordsOverride
 	if targetWords <= 0 {
-		targetWords = toolChapterTargetWords()
+		targetWords = toolChapterTargetWordsAt(root)
 	}
 	var gate quality.QualityGateResult
 	switch kind {
 	case "quality":
 		gate = RunToolChapterQualityGate(chapter, content, targetWords)
 	case "simulation":
-		gate = runToolChapterSimulationGateAt(root, id)
+		gate = RunToolChapterSimulationGateAt(root, id)
 	case "all":
 		gate = RunToolChapterQualityGate(chapter, content, targetWords)
-		sim := runToolChapterSimulationGateAt(root, id)
+		sim := RunToolChapterSimulationGateAt(root, id)
 		gate.Add(sim.Suggestions...)
 		gate.Dedup()
 		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
@@ -253,8 +262,11 @@ func repeatedChapterTitlePrefix(content, title string) bool {
 	return project.HasRepeatedChapterTitlePrefix(content, title)
 }
 
-func toolChapterTargetWords() int {
-	cfg, err := project.LoadConfig()
+func toolChapterTargetWordsAt(root *store.Root) int {
+	if root == nil {
+		return 2000
+	}
+	cfg, err := root.LoadConfig()
 	if err == nil && cfg.ChapterConfig.TargetWordsPerChapter > 0 {
 		return cfg.ChapterConfig.TargetWordsPerChapter
 	}
@@ -280,10 +292,15 @@ func toolChapterParagraphCount(content string) int {
 // RunToolChapterSimulationGate is the string-root entry point for callers that
 // hold a resolved project directory.
 func RunToolChapterSimulationGate(rootDir, chapterID string) quality.QualityGateResult {
-	return runToolChapterSimulationGateAt(store.At(rootDir), chapterID)
+	return RunToolChapterSimulationGateAt(store.At(rootDir), chapterID)
 }
 
-func runToolChapterSimulationGateAt(root *store.Root, chapterID string) quality.QualityGateResult {
+// RunToolChapterSimulationGateAt is the explicit-root form used by pipeline
+// callers. The string-root entry point above is only for command edges.
+func RunToolChapterSimulationGateAt(root *store.Root, chapterID string) quality.QualityGateResult {
+	if root == nil || store.ValidateKeyPart(chapterID) != nil {
+		return quality.QualityGateResult{}
+	}
 	var gate quality.QualityGateResult
 	if stale, info := toolChapterRPGDSLStale(root, chapterID); stale {
 		gate.Add(quality.QualitySuggestion(

@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"novelgen/internal/models"
-	"novelgen/internal/project"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/store"
 	"novelgen/internal/utils"
 )
 
@@ -63,8 +63,11 @@ func RunOutlineQualityGateWithOptions(setup *models.StorySetup, outline *models.
 	return result
 }
 
-func RunOutlineSimulationGate(setup *models.StorySetup, outline *models.Outline) QualityGateResult {
-	characters, locations, items, organizations, _ := project.LoadAllElements()
+func RunOutlineSimulationGate(root *store.Root, setup *models.StorySetup, outline *models.Outline) QualityGateResult {
+	if root == nil {
+		return RunOutlineSimulationGateWithElements(setup, outline, nil, nil, nil, nil)
+	}
+	characters, locations, items, organizations, _ := root.LoadElements()
 	return RunOutlineSimulationGateWithElements(setup, outline, characters, locations, items, organizations)
 }
 
@@ -91,29 +94,29 @@ func RunOutlineSimulationGateWithElements(
 	return result
 }
 
-func RunOutlineCombinedGate(setup *models.StorySetup, outline *models.Outline) QualityGateResult {
+func RunOutlineCombinedGate(root *store.Root, setup *models.StorySetup, outline *models.Outline) QualityGateResult {
 	quality := RunOutlineQualityGate(setup, outline)
-	simulation := RunOutlineSimulationGate(setup, outline)
+	simulation := RunOutlineSimulationGate(root, setup, outline)
 	quality.Add(simulation.Suggestions...)
 	quality.Dedup()
 	quality.Blocking = HasBlockingSuggestions(quality.Suggestions)
 	return quality
 }
 
-func RunScopedOutlineCombinedGate(setup *models.StorySetup, outline *models.Outline) QualityGateResult {
+func RunScopedOutlineCombinedGate(root *store.Root, setup *models.StorySetup, outline *models.Outline) QualityGateResult {
 	quality := RunScopedOutlineQualityGate(setup, outline)
-	simulation := RunOutlineSimulationGate(setup, outline)
+	simulation := RunOutlineSimulationGate(root, setup, outline)
 	quality.Add(simulation.Suggestions...)
 	quality.Dedup()
 	quality.Blocking = HasBlockingSuggestions(quality.Suggestions)
 	return quality
 }
 
-func RunOutlineCombinedGateForScope(setup *models.StorySetup, outline *models.Outline, scoped bool) QualityGateResult {
+func RunOutlineCombinedGateForScope(root *store.Root, setup *models.StorySetup, outline *models.Outline, scoped bool) QualityGateResult {
 	if scoped {
-		return RunScopedOutlineCombinedGate(setup, outline)
+		return RunScopedOutlineCombinedGate(root, setup, outline)
 	}
-	return RunOutlineCombinedGate(setup, outline)
+	return RunOutlineCombinedGate(root, setup, outline)
 }
 
 func (r *QualityGateResult) Add(suggestions ...models.ReviewSuggestion) {

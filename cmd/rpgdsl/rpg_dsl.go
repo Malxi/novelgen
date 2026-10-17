@@ -699,6 +699,7 @@ func loadNovelgenProject(bookName string) (*rpg.NovelgenProject, error) {
 func loadNovelgenProjectForConvert(bookName, phase string) (*rpg.NovelgenProject, error) {
 	if phase == "outline" || phase == "setup" {
 		project := &rpg.NovelgenProject{
+			Root:        store.At("."),
 			ProjectPath: ".",
 			BookName:    bookName,
 			Characters:  map[string]rpg.NovelgenCharacter{},

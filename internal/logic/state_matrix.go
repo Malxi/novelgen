@@ -14,7 +14,7 @@ import (
 
 // StateMatrixManager handles StateMatrix calculations and operations
 type StateMatrixManager struct {
-	projectRoot        string
+	project            *store.Root
 	setup              *models.StorySetup // cached setup for storyline descriptions
 	useRPGDSL          bool
 	rpgDeltasLoaded    bool
@@ -25,20 +25,34 @@ type StateMatrixManager struct {
 
 // NewStateMatrixManager creates a new StateMatrixManager
 func NewStateMatrixManager(projectRoot string) *StateMatrixManager {
-	return &StateMatrixManager{projectRoot: projectRoot, useRPGDSL: true}
+	if strings.TrimSpace(projectRoot) == "" {
+		return &StateMatrixManager{useRPGDSL: true}
+	}
+	return NewStateMatrixManagerAt(store.At(projectRoot))
 }
 
-// root is the manager's project as a storage handle. The manager keeps the
-// directory string for its "no project configured" check, but every path it
-// derives comes from internal/store.
-func (m *StateMatrixManager) root() *store.Root { return store.At(m.projectRoot) }
+// NewStateMatrixManagerAt creates a state manager over an explicit storage
+// root. Pipeline code should use this constructor so a non-OS backend is not
+// silently replaced by the host filesystem.
+func NewStateMatrixManagerAt(project *store.Root) *StateMatrixManager {
+	return &StateMatrixManager{project: project, useRPGDSL: true}
+}
+
+// root is the manager's project as a storage handle. Every path it derives
+// comes from internal/store.
+func (m *StateMatrixManager) root() *store.Root {
+	if m == nil {
+		return nil
+	}
+	return m.project
+}
 
 // loadSetup loads the story setup from file
 func (m *StateMatrixManager) loadSetup() *models.StorySetup {
 	if m.setup != nil {
 		return m.setup
 	}
-	if m.projectRoot == "" {
+	if m.root() == nil {
 		return nil
 	}
 
@@ -575,7 +589,7 @@ func (m *StateMatrixManager) loadRPGDSLDeltas() map[string][]models.RPGStateDelt
 	m.rpgDeltasLoaded = true
 	m.rpgDeltasByChapter = make(map[string][]models.RPGStateDelta)
 	m.rpgTargetAliases = make(map[string]string)
-	if strings.TrimSpace(m.projectRoot) == "" {
+	if m.root() == nil {
 		return m.rpgDeltasByChapter
 	}
 
@@ -846,7 +860,7 @@ func findProtagonistName(state *models.StateMatrix) string {
 
 // loadElementsIntoState loads generated elements into state matrix
 func (m *StateMatrixManager) loadElementsIntoState(state *models.StateMatrix) {
-	if m.projectRoot == "" {
+	if m.root() == nil {
 		return
 	}
 

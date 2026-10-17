@@ -119,18 +119,15 @@ func runPolish(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create LLM client")
 	}
 
-	// Get project root
-	root := book.Dir()
-
 	// Initialize agents
 	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	writeAgent.SetLanguage(config.Language)
 	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
 	recapAgent.SetLanguage(config.Language)
-	recapStore := recap.NewStore(root)
+	recapStore := recap.NewStoreAt(book.Root)
 
 	// Initialize continuity builder
-	continuityBuilder := logic.NewChapterContinuityBuilder(root)
+	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root)
 
 	// Determine target words per chapter
 	targetWords := config.ChapterConfig.TargetWordsPerChapter
@@ -173,7 +170,7 @@ func runPolish(cmd *cobra.Command, args []string) error {
 		// Generate RPG DSL and detect issues for this volume
 		var rpgDSLIssues []dsl.SimulationIssue
 		log.Info("Generating RPG DSL and detecting issues for volume %s...", volume.ID)
-		result, err := writersdl.EmitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, 10)
+		result, err := writersdl.EmitChapterRPGDSLForProject(ctx, book.Root, filepath.Base(book.Dir()), config, cfg, setup, client, 10)
 		if err != nil {
 			log.Error("Failed to generate RPG DSL: %v", err)
 		} else {

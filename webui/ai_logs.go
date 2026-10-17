@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -78,10 +77,9 @@ func getAICall(c *gin.Context) {
 }
 
 func listStructuredAICalls(projectPath string) ([]AICallSummary, error) {
-	dir := filepath.Join(projectPath, "logs", "ai_calls")
-	entries, err := os.ReadDir(dir)
+	entries, err := listProjectDir(projectPath, "logs/ai_calls")
 	if err != nil {
-		if os.IsNotExist(err) {
+		if isNotExist(err) {
 			return nil, nil
 		}
 		return nil, err
@@ -105,8 +103,8 @@ func readStructuredAICall(projectPath, id string) (*AICallDetail, error) {
 	if !safeLogName(id) {
 		return nil, fmt.Errorf("invalid AI call id")
 	}
-	path := filepath.Join(projectPath, "logs", "ai_calls", id+".json")
-	data, err := os.ReadFile(path)
+	relPath := filepath.ToSlash(filepath.Join("logs", "ai_calls", id+".json"))
+	data, err := readProjectFile(projectPath, relPath)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +140,7 @@ func readStructuredAICall(projectPath, id string) (*AICallDetail, error) {
 		Response:     entry.Response,
 	}
 	if detail.StartedAt.IsZero() {
-		if info, err := os.Stat(path); err == nil {
+		if info, err := statProjectPath(projectPath, relPath); err == nil {
 			detail.StartedAt = info.ModTime()
 		}
 	}
@@ -150,8 +148,8 @@ func readStructuredAICall(projectPath, id string) (*AICallDetail, error) {
 }
 
 func listLegacyAICalls(projectPath string) []AICallSummary {
-	prompts := readLegacyAILogs(filepath.Join(projectPath, "logs", "prompts"), ".md")
-	responses := readLegacyAILogs(filepath.Join(projectPath, "logs", "responses"), ".md")
+	prompts := readLegacyAILogs(projectPath, "logs/prompts", ".md")
+	responses := readLegacyAILogs(projectPath, "logs/responses", ".md")
 	pairs := pairLegacyAILogs(prompts, responses)
 
 	calls := make([]AICallSummary, 0, len(prompts)+len(responses))
@@ -201,17 +199,17 @@ func readLegacyAICall(projectPath, promptName string) (*AICallDetail, error) {
 	if !safeLogName(promptName) || !strings.HasSuffix(promptName, ".md") {
 		return nil, fmt.Errorf("invalid prompt log name")
 	}
-	promptPath := filepath.Join(projectPath, "logs", "prompts", promptName)
-	promptData, err := os.ReadFile(promptPath)
+	promptPath := filepath.ToSlash(filepath.Join("logs", "prompts", promptName))
+	promptData, err := readProjectFile(projectPath, promptPath)
 	if err != nil {
 		return nil, err
 	}
 
-	promptLog, err := legacyAILogFromPath(promptPath)
+	promptLog, err := legacyAILogFromPath(projectPath, promptPath)
 	if err != nil {
 		return nil, err
 	}
-	responses := readLegacyAILogs(filepath.Join(projectPath, "logs", "responses"), ".md")
+	responses := readLegacyAILogs(projectPath, "logs/responses", ".md")
 	pairs := pairLegacyAILogs([]legacyAILog{promptLog}, responses)
 	response := pairs[promptLog.Name]
 
@@ -232,7 +230,7 @@ func readLegacyAICall(projectPath, promptName string) (*AICallDetail, error) {
 		PromptPath:   promptPath,
 	}
 	if response != nil {
-		responseData, _ := os.ReadFile(response.Path)
+		responseData, _ := readProjectFile(projectPath, response.Path)
 		detail.Response = extractAIResponse(string(responseData))
 		detail.ResponsePath = response.Path
 		detail.OutputChars = len(detail.Response)
@@ -244,12 +242,12 @@ func readLegacyResponseOnlyAICall(projectPath, responseName string) (*AICallDeta
 	if !safeLogName(responseName) || !strings.HasSuffix(responseName, ".md") {
 		return nil, fmt.Errorf("invalid response log name")
 	}
-	responsePath := filepath.Join(projectPath, "logs", "responses", responseName)
-	responseData, err := os.ReadFile(responsePath)
+	responsePath := filepath.ToSlash(filepath.Join("logs", "responses", responseName))
+	responseData, err := readProjectFile(projectPath, responsePath)
 	if err != nil {
 		return nil, err
 	}
-	responseLog, err := legacyAILogFromPath(responsePath)
+	responseLog, err := legacyAILogFromPath(projectPath, responsePath)
 	if err != nil {
 		return nil, err
 	}
@@ -269,8 +267,8 @@ func readLegacyResponseOnlyAICall(projectPath, responseName string) (*AICallDeta
 	}, nil
 }
 
-func readLegacyAILogs(dir, suffix string) []legacyAILog {
-	entries, err := os.ReadDir(dir)
+func readLegacyAILogs(projectPath, relDir, suffix string) []legacyAILog {
+	entries, err := listProjectDir(projectPath, relDir)
 	if err != nil {
 		return nil
 	}
@@ -279,7 +277,7 @@ func readLegacyAILogs(dir, suffix string) []legacyAILog {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), suffix) {
 			continue
 		}
-		log, err := legacyAILogFromPath(filepath.Join(dir, entry.Name()))
+		log, err := legacyAILogFromPath(projectPath, filepath.ToSlash(filepath.Join(relDir, entry.Name())))
 		if err != nil {
 			continue
 		}
@@ -291,9 +289,9 @@ func readLegacyAILogs(dir, suffix string) []legacyAILog {
 	return logs
 }
 
-func legacyAILogFromPath(path string) (legacyAILog, error) {
+func legacyAILogFromPath(projectPath, path string) (legacyAILog, error) {
 	name := filepath.Base(path)
-	info, err := os.Stat(path)
+	info, err := statProjectPath(projectPath, path)
 	if err != nil {
 		return legacyAILog{}, err
 	}

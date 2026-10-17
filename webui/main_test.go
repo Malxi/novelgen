@@ -15,7 +15,11 @@ func TestMain(m *testing.M) {
 		runFakeNovelGen()
 		return
 	}
-	os.Exit(m.Run())
+	previousStorage := runStorage
+	runStorage = hostStorageForTests
+	code := m.Run()
+	runStorage = previousStorage
+	os.Exit(code)
 }
 
 func runFakeNovelGen() {

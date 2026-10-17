@@ -47,17 +47,17 @@ func runToolOutlinePatch(cmd *cobra.Command, root *store.Root, target, id string
 	}
 
 	scope := target
-	check, err := RunToolPatchValidationCheck(ctx.Setup, ctx.Outline, scope, id)
+	check, err := RunToolPatchValidationCheckAt(root, ctx.Setup, ctx.Outline, scope, id)
 	if err != nil {
 		return err
 	}
 	addToolCheckMeta(check, "project_root", root.Dir())
-	globalCheck, err := RunToolPatchValidationCheck(ctx.Setup, ctx.Outline, "all", "")
+	globalCheck, err := RunToolPatchValidationCheckAt(root, ctx.Setup, ctx.Outline, "all", "")
 	if err != nil {
 		return err
 	}
 	addToolCheckMeta(globalCheck, "project_root", root.Dir())
-	if newBlocking := newBlockingPatchIssues(beforeOutline, ctx.Setup, globalCheck); len(newBlocking) > 0 {
+	if newBlocking := newBlockingPatchIssues(root, beforeOutline, ctx.Setup, globalCheck); len(newBlocking) > 0 {
 		ctx.Outline = beforeOutline
 		first := newBlocking[0]
 		return fmt.Errorf("patch rejected: global outline check introduced %d new blocking issue(s); first [%s/%s] %s: %s", len(newBlocking), first.Priority, first.Category, first.TargetID, first.Issue)
@@ -107,11 +107,11 @@ func runToolOutlinePatch(cmd *cobra.Command, root *store.Root, target, id string
 	return writeJSON(cmd, result)
 }
 
-func newBlockingPatchIssues(before *models.Outline, setup *models.StorySetup, afterCheck *ToolCheckResult) []models.ReviewSuggestion {
+func newBlockingPatchIssues(root *store.Root, before *models.Outline, setup *models.StorySetup, afterCheck *ToolCheckResult) []models.ReviewSuggestion {
 	if before == nil || setup == nil || afterCheck == nil {
 		return nil
 	}
-	beforeCheck, err := RunToolPatchValidationCheck(setup, before, "all", "")
+	beforeCheck, err := RunToolPatchValidationCheckAt(root, setup, before, "all", "")
 	if err != nil {
 		return nil
 	}

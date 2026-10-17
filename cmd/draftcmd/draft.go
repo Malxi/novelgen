@@ -200,14 +200,12 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 	agent := agents.NewDraftAgent(client, cfg, &config.LLM, setup, outline)
 	agent.SetLanguage(config.Language)
 
-	root := book.Dir()
-
 	// Create state matrix manager
-	stateManager := logic.NewStateMatrixManager(root)
+	stateManager := logic.NewStateMatrixManagerAt(book.Root)
 	// Create recap agent + store (auto-persist recaps for continuity)
 	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
 	recapAgent.SetLanguage(config.Language)
-	recapStore := recap.NewStore(root)
+	recapStore := recap.NewStoreAt(book.Root)
 
 	// Get list of chapters to generate
 	chapters, err := project.SelectChapters(outline, draftChapterFlag, draftVolumeFlag, draftPartFlag, draftAllFlag)
@@ -375,7 +373,7 @@ func runDraftReview(cmd *cobra.Command, args []string) error {
 		}
 
 		// Apply deterministic heuristic checks (best-effort) to catch obvious issues
-		continuity.ApplyHeuristicTransitionChecks(volume, volumeDrafts, review)
+		continuity.ApplyHeuristicTransitionChecks(book, volume, volumeDrafts, review)
 
 		// Save review
 		if err := reviewstore.SaveVolumeReviewAt(book, review); err != nil {
@@ -534,9 +532,7 @@ func getChaptersNeedingImprovement(review *agents.VolumeReview, outline *models.
 func improveChaptersWithAgent(ctx context.Context, book *project.Book, agent *agents.DraftAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, concurrency int) int {
 	log := logger.GetLogger()
 
-	// Get project root for state matrix manager
-	root := book.Dir()
-	stateManager := logic.NewStateMatrixManager(root)
+	stateManager := logic.NewStateMatrixManagerAt(book.Root)
 
 	// Pre-build DSL simulation for enrichment (shared across goroutines)
 	var dslIssues []dsl.SimulationIssue
@@ -606,6 +602,7 @@ func improveChaptersWithAgent(ctx context.Context, book *project.Book, agent *ag
 		knownChars := project.KnownCharacterNames(outline)
 		fixed, sum := continuity.ApplyImproveFixesDraft(
 			log,
+			book,
 			workerID,
 			chapter,
 			outline,

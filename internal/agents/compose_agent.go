@@ -438,7 +438,8 @@ type ImproveProgress struct {
 // ComposeAgent handles AI generation for story outline
 // It wraps BaseAgent to provide type-safe methods
 type ComposeAgent struct {
-	base *BaseAgent
+	base    *BaseAgent
+	project *store.Root
 }
 
 // NewComposeAgent creates a new ComposeAgent
@@ -457,6 +458,14 @@ func NewComposeAgent(client llm.Client, config *llm.Config, projectLLM *models.P
 // SetLanguage sets the output language
 func (a *ComposeAgent) SetLanguage(language string) {
 	a.base.SetLanguage(language)
+}
+
+// SetProjectRoot binds the agent to an explicit project storage root. Agent SDK
+// patch recovery must reload the same project it patched, not the ambient one.
+func (a *ComposeAgent) SetProjectRoot(root *store.Root) {
+	if a != nil {
+		a.project = root
+	}
 }
 
 // SetModelOverride overrides the project model for this agent's chat options.
@@ -1020,7 +1029,7 @@ func (a *ComposeAgent) ImproveVolumeWithAgentSDK(ctx context.Context, input Comp
 		volume := input.Volume
 		if applyOutput.AppliedPatches {
 			var err error
-			volume, err = loadAgentSDKAppliedOutlineVolume(input.Volume, true)
+			volume, err = a.loadAgentSDKAppliedOutlineVolume(input.Volume, true)
 			if err != nil {
 				return ComposeAgentSDKImproveVolumeOutput{}, err
 			}
@@ -1603,7 +1612,7 @@ func (a *ComposeAgent) recoverAppliedVolumeAfterAgentSDKError(original models.Vo
 	if summary.PatchApplies == 0 || summary.ApplyWithoutFollowupCheck > 0 {
 		return ComposeAgentSDKImproveVolumeOutput{}, invokeErr
 	}
-	volume, err := loadAgentSDKAppliedOutlineVolume(original, true)
+	volume, err := a.loadAgentSDKAppliedOutlineVolume(original, true)
 	if err != nil {
 		return ComposeAgentSDKImproveVolumeOutput{}, fmt.Errorf("recover applied Agent SDK outline patch: %w; original error: %v", err, invokeErr)
 	}
@@ -1643,17 +1652,23 @@ func validateAgentSDKApplyOutput(output composeAgentSDKApplyOutput) error {
 	return nil
 }
 
-func loadAgentSDKAppliedOutlineVolume(original models.Volume, requireApplied bool) (models.Volume, error) {
-	root := agentWorkspaceRoot()
-	if strings.TrimSpace(root) == "" {
+func (a *ComposeAgent) loadAgentSDKAppliedOutlineVolume(original models.Volume, requireApplied bool) (models.Volume, error) {
+	storage := a.project
+	if storage == nil {
+		// Compatibility for callers that do not bind a root (standalone tools and
+		// older integrations). CLI pipeline callers set this explicitly.
+		if root := strings.TrimSpace(agentWorkspaceRoot()); root != "" {
+			storage = store.At(root)
+		}
+	}
+	if storage == nil {
 		if requireApplied {
-			return models.Volume{}, fmt.Errorf("agent SDK applied outline patch but workspace root is unknown")
+			return models.Volume{}, fmt.Errorf("agent SDK applied outline patch but project root is unknown")
 		}
 		return original, nil
 	}
-	project := store.At(root)
-	outlinePath := project.OutlineJSON()
-	outline, err := project.LoadOutline()
+	outlinePath := storage.OutlineJSON()
+	outline, err := storage.LoadOutline()
 	if err != nil {
 		if requireApplied {
 			return models.Volume{}, fmt.Errorf("agent SDK applied outline patch but reloading %s failed: %w", outlinePath, err)

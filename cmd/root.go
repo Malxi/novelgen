@@ -56,18 +56,18 @@ func resolveProjectRoot(cmd *cobra.Command, _ []string) error {
 		dir = strings.TrimSpace(envutil.String("NOVELGEN_PROJECT_DIR"))
 	}
 	if dir != "" {
-		root, err := store.Open(dir)
+		root, err := store.OpenProject(dir)
 		if err != nil {
 			return err
 		}
-		if !store.DirExists(root.Dir()) {
+		if hostDir, ok := root.HostDir(); ok && !store.DirExists(hostDir) {
 			return fmt.Errorf("project directory %s does not exist", dir)
 		}
 		store.SetDefault(root)
 		cmd.SetContext(store.WithRoot(cmd.Context(), root))
 		return nil
 	}
-	root, err := store.LocateCWD()
+	root, err := store.LocateProject("")
 	if err != nil {
 		return nil
 	}

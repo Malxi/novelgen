@@ -433,6 +433,29 @@ func TestWebUILayoutMatchesStore(t *testing.T) {
 			t.Fatalf("parse %s: %v", rel, err)
 		}
 		ast.Inspect(file, func(node ast.Node) bool {
+			if literal, ok := node.(*ast.BasicLit); ok && literal.Kind == token.STRING {
+				value, err := strconv.Unquote(literal.Value)
+				if err != nil || value == "" {
+					return true
+				}
+				slashed := strings.ReplaceAll(value, `\`, "/")
+				first, second, hasSep := strings.Cut(slashed, "/")
+				if !hasSep || !layoutPrefixStarts[first] || strings.HasSuffix(slashed, "/") {
+					return true
+				}
+				if first == "logs" {
+					if !logStreamNames[second] && !logStreamFiles[second] {
+						violations = append(violations, fmt.Sprintf(
+							"%s:%d: %q is not a log stream internal/store declares", rel, fset.Position(literal.Pos()).Line, value))
+					}
+					return true
+				}
+				if !allowed[slashed] {
+					violations = append(violations, fmt.Sprintf(
+						"%s:%d: %q is not a project path internal/store produces", rel, fset.Position(literal.Pos()).Line, value))
+				}
+				return true
+			}
 			call, ok := node.(*ast.CallExpr)
 			if !ok || calleeName(call.Fun) != "Join" {
 				return true

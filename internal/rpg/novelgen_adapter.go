@@ -13,6 +13,10 @@ import (
 
 // NovelgenProject novelgen项目结构
 type NovelgenProject struct {
+	// Root is the storage handle for the project. ProjectPath is kept as a
+	// display/compatibility value for callers that construct a project by hand;
+	// project IO must go through Store.
+	Root        *store.Root
 	ProjectPath string
 	BookName    string
 
@@ -104,7 +108,16 @@ func LoadNovelgenProject(bookDir string) (*NovelgenProject, error) {
 	if err != nil {
 		return nil, err
 	}
+	return LoadNovelgenProjectAt(root)
+}
+
+// LoadNovelgenProjectAt loads a project from an explicit storage root.
+func LoadNovelgenProjectAt(root *store.Root) (*NovelgenProject, error) {
+	if root == nil {
+		return nil, fmt.Errorf("project root is required")
+	}
 	project := &NovelgenProject{
+		Root:          root,
 		ProjectPath:   root.Dir(),
 		BookName:      bookNameForProject(root),
 		Characters:    make(map[string]NovelgenCharacter),
@@ -159,11 +172,28 @@ func bookNameForProject(root *store.Root) string {
 
 // loadJSON 加载JSON文件
 func (np *NovelgenProject) loadJSON(path string, v interface{}) error {
-	data, err := os.ReadFile(path)
+	storage := np.Store()
+	if storage == nil {
+		return fmt.Errorf("project storage is not configured")
+	}
+	data, err := storage.Read(path)
 	if err != nil {
 		return err
 	}
 	return json.Unmarshal(utils.StripUTF8BOM(data), v)
+}
+
+// Store returns the project's storage handle. Projects constructed manually
+// (mostly tests and legacy callers) fall back to the host directory in
+// ProjectPath; loaded projects always carry an explicit Root.
+func (np *NovelgenProject) Store() *store.Root {
+	if np == nil {
+		return nil
+	}
+	if np.Root != nil {
+		return np.Root
+	}
+	return store.At(np.ProjectPath)
 }
 
 // ConvertToRPG 转换为RPG世界

@@ -399,21 +399,22 @@ func listProjects(c *gin.Context) {
 	booksDir := projectsRootAbs
 	projects := []ProjectInfo{}
 
-	entries, err := os.ReadDir(booksDir)
+	descriptors, err := listProjectsAt(booksDir)
 	if err != nil {
 		c.JSON(http.StatusOK, APIResponse{Success: true, Data: projects})
 		return
 	}
 
-	for _, entry := range entries {
-		if entry.IsDir() {
-			projectPath := filepath.Join(booksDir, entry.Name())
-			info := loadProjectInfo(projectPath)
-			info.Path = displayProjectPath(projectPath)
-			if info.Exists {
-				projects = append(projects, *info)
-			}
+	for _, descriptor := range descriptors {
+		if !descriptor.Exists {
+			continue
 		}
+		info := projectInfoFromConfig(descriptor.Path, descriptor.Config, descriptor.Name)
+		if len(descriptor.Config) == 0 {
+			info = loadProjectInfo(descriptor.Path)
+		}
+		info.Path = displayProjectPath(descriptor.Path)
+		projects = append(projects, *info)
 	}
 
 	c.JSON(http.StatusOK, APIResponse{Success: true, Data: projects})
@@ -441,34 +442,28 @@ func mustGetwd() string {
 // root, mirroring the previous "../books" scan without depending on the
 // process working directory.
 func firstProjectInBooks() string {
-	entries, err := os.ReadDir(projectsRootAbs)
+	projects, err := listProjectsAt(projectsRootAbs)
 	if err != nil {
 		return ""
 	}
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		candidate := filepath.Join(projectsRootAbs, entry.Name())
-		if _, err := os.Stat(filepath.Join(candidate, "novel.json")); err == nil {
-			return candidate
+	for _, project := range projects {
+		if project.Exists {
+			return project.Path
 		}
 	}
 	return ""
 }
 
 func loadProjectInfo(path string) *ProjectInfo {
-	info := &ProjectInfo{
-		Path:   path,
-		Exists: false,
-	}
-
-	novelJSONPath := filepath.Join(path, "novel.json")
-	data, err := os.ReadFile(novelJSONPath)
+	data, err := readProjectFile(path, "novel.json")
 	if err != nil {
-		return info
+		return &ProjectInfo{Path: path}
 	}
+	return projectInfoFromConfig(path, data, filepath.Base(path))
+}
 
+func projectInfoFromConfig(path string, data []byte, fallbackName string) *ProjectInfo {
+	info := &ProjectInfo{Path: path, Exists: false}
 	var config map[string]interface{}
 	if err := json.Unmarshal(data, &config); err != nil {
 		return info
@@ -477,6 +472,9 @@ func loadProjectInfo(path string) *ProjectInfo {
 	info.Exists = true
 	if name, ok := config["name"].(string); ok {
 		info.Name = name
+	}
+	if info.Name == "" {
+		info.Name = fallbackName
 	}
 	if lang, ok := config["language"].(string); ok {
 		info.Language = lang
@@ -787,7 +785,7 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 
 		// Check if story_setup.json exists
 		setupPath := filepath.Join(projectPath, "story", "setup", "story_setup.json")
-		if _, err := os.Stat(setupPath); err != nil {
+		if _, err := statProjectPath(projectPath, "story/setup/story_setup.json"); err != nil {
 			debugInfo.WriteString(fmt.Sprintf("WARNING: story_setup.json not found at: %s\n", setupPath))
 		} else {
 			debugInfo.WriteString(fmt.Sprintf("story_setup.json found at: %s\n", setupPath))
@@ -795,7 +793,7 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 
 		// Check if novel.json exists
 		novelPath := filepath.Join(projectPath, "novel.json")
-		if _, err := os.Stat(novelPath); err != nil {
+		if _, err := statProjectPath(projectPath, "novel.json"); err != nil {
 			debugInfo.WriteString(fmt.Sprintf("WARNING: novel.json not found at: %s\n", novelPath))
 		} else {
 			debugInfo.WriteString(fmt.Sprintf("novel.json found at: %s\n", novelPath))
@@ -878,8 +876,7 @@ func deleteTask(c *gin.Context) {
 func getOutline(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	outlinePath := filepath.Join(projectPath, "story", "compose", "outline.json")
-	data, err := os.ReadFile(outlinePath)
+	data, err := readProjectFile(projectPath, "story/compose/outline.json")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "Outline not found"})
 		return
@@ -900,7 +897,7 @@ func backupOutline(projectPath string) (string, error) {
 }
 
 func backupFile(projectPath, contentPath string) (string, error) {
-	sourcePath, err := resolveWithinRoot(projectPath, contentPath)
+	sourcePath, err := resolveProjectContentPath(projectPath, contentPath)
 	if err != nil {
 		return "", err
 	}
@@ -908,33 +905,29 @@ func backupFile(projectPath, contentPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
+	if _, err := statProjectPathAt(projectPath, sourcePath); isNotExist(err) {
 		return "", nil
 	}
 
 	backupsDir := filepath.Join(projectPath, filepath.Dir(cleanPath), "backups")
-	if err := os.MkdirAll(backupsDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create backups directory: %w", err)
-	}
-
 	ext := filepath.Ext(cleanPath)
 	base := strings.TrimSuffix(filepath.Base(cleanPath), ext)
 	timestamp := time.Now().Format("20060102_150405")
 	backupFilename := fmt.Sprintf("%s_%s%s", base, timestamp, ext)
 	backupPath := filepath.Join(backupsDir, backupFilename)
 	for suffix := 2; ; suffix++ {
-		if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		if _, err := statProjectPathAt(projectPath, backupPath); isNotExist(err) {
 			break
 		}
 		backupFilename = fmt.Sprintf("%s_%s_%d%s", base, timestamp, suffix, ext)
 		backupPath = filepath.Join(backupsDir, backupFilename)
 	}
 
-	data, err := os.ReadFile(sourcePath)
+	data, err := readProjectFileAt(projectPath, sourcePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read file: %w", err)
 	}
-	if err := os.WriteFile(backupPath, data, 0644); err != nil {
+	if err := writeProjectFileAt(projectPath, backupPath, data); err != nil {
 		return "", fmt.Errorf("failed to write backup: %w", err)
 	}
 
@@ -986,18 +979,18 @@ func fileVersions(projectPath, contentPath string) ([]FileVersion, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := resolveWithinRoot(projectPath, contentPath); err != nil {
+	if _, err := resolveProjectContentPath(projectPath, contentPath); err != nil {
 		return nil, err
 	}
 
 	ext := filepath.Ext(cleanPath)
 	base := strings.TrimSuffix(filepath.Base(cleanPath), ext)
 	backupsDir := filepath.Join(projectPath, filepath.Dir(cleanPath), "backups")
-	if _, err := os.Stat(backupsDir); os.IsNotExist(err) {
+	if _, err := statProjectPathAt(projectPath, backupsDir); isNotExist(err) {
 		return []FileVersion{}, nil
 	}
 
-	entries, err := os.ReadDir(backupsDir)
+	entries, err := listProjectDirAt(projectPath, backupsDir)
 	if err != nil {
 		return nil, err
 	}
@@ -1041,15 +1034,15 @@ func restoreVersion(projectPath, contentPath, filename string) error {
 		return fmt.Errorf("backup does not match target file")
 	}
 
-	targetPath, err := resolveWithinRoot(projectPath, cleanPath)
+	targetPath, err := resolveProjectContentPath(projectPath, cleanPath)
 	if err != nil {
 		return err
 	}
-	backupPath, err := resolveWithinRoot(projectPath, filepath.Join(filepath.Dir(cleanPath), "backups", filename))
+	backupPath, err := resolveProjectContentPath(projectPath, filepath.Join(filepath.Dir(cleanPath), "backups", filename))
 	if err != nil {
 		return err
 	}
-	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+	if _, err := statProjectPathAt(projectPath, backupPath); isNotExist(err) {
 		return fmt.Errorf("backup not found")
 	}
 
@@ -1057,11 +1050,11 @@ func restoreVersion(projectPath, contentPath, filename string) error {
 		return fmt.Errorf("failed to backup current file: %w", err)
 	}
 
-	data, err := os.ReadFile(backupPath)
+	data, err := readProjectFileAt(projectPath, backupPath)
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(targetPath, data, 0644); err != nil {
+	if err := writeProjectFileAt(projectPath, targetPath, data); err != nil {
 		return err
 	}
 	return nil
@@ -1081,8 +1074,7 @@ func versionCreatedAt(base, ext, filename string, fallback time.Time) string {
 func getStorySetup(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	setupPath := filepath.Join(projectPath, "story", "setup", "story_setup.json")
-	data, err := os.ReadFile(setupPath)
+	data, err := readProjectFile(projectPath, "story/setup/story_setup.json")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "Story setup not found"})
 		return
@@ -1100,8 +1092,7 @@ func getStorySetup(c *gin.Context) {
 func getCharacters(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	charactersPath := filepath.Join(projectPath, "story", "craft", "characters.json")
-	data, err := os.ReadFile(charactersPath)
+	data, err := readProjectFile(projectPath, "story/craft/characters.json")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "Characters not found"})
 		return
@@ -1125,8 +1116,7 @@ func getCharacters(c *gin.Context) {
 func getLocations(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	locationsPath := filepath.Join(projectPath, "story", "craft", "locations.json")
-	data, err := os.ReadFile(locationsPath)
+	data, err := readProjectFile(projectPath, "story/craft/locations.json")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "Locations not found"})
 		return
@@ -1150,8 +1140,7 @@ func getLocations(c *gin.Context) {
 func getItems(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	itemsPath := filepath.Join(projectPath, "story", "craft", "items.json")
-	data, err := os.ReadFile(itemsPath)
+	data, err := readProjectFile(projectPath, "story/craft/items.json")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "Items not found"})
 		return
@@ -1175,8 +1164,7 @@ func getItems(c *gin.Context) {
 func getChapters(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	chaptersDir := filepath.Join(projectPath, "chapters")
-	entries, err := os.ReadDir(chaptersDir)
+	entries, err := listProjectDir(projectPath, "chapters")
 	if err != nil {
 		c.JSON(http.StatusOK, APIResponse{Success: true, Data: []map[string]string{}})
 		return
@@ -1203,8 +1191,7 @@ func getChapter(c *gin.Context) {
 	}
 	projectPath := projectPathFromQuery(c)
 
-	chapterPath := filepath.Join(projectPath, "chapters", id+".md")
-	data, err := os.ReadFile(chapterPath)
+	data, err := readProjectFile(projectPath, "chapters/"+id+".md")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "Chapter not found"})
 		return
@@ -1222,8 +1209,7 @@ func getChapter(c *gin.Context) {
 func getDrafts(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	draftsDir := filepath.Join(projectPath, "drafts")
-	entries, err := os.ReadDir(draftsDir)
+	entries, err := listProjectDir(projectPath, "drafts")
 	if err != nil {
 		c.JSON(http.StatusOK, APIResponse{Success: true, Data: []map[string]string{}})
 		return
@@ -1250,8 +1236,7 @@ func getDraft(c *gin.Context) {
 	}
 	projectPath := projectPathFromQuery(c)
 
-	draftPath := filepath.Join(projectPath, "drafts", id+".md")
-	data, err := os.ReadFile(draftPath)
+	data, err := readProjectFile(projectPath, "drafts/"+id+".md")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "Draft not found"})
 		return
@@ -1269,8 +1254,7 @@ func getDraft(c *gin.Context) {
 func getRecaps(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	recapsDir := filepath.Join(projectPath, "story", "recaps")
-	entries, err := os.ReadDir(recapsDir)
+	entries, err := listProjectDir(projectPath, "story/recaps")
 	if err != nil {
 		c.JSON(http.StatusOK, APIResponse{Success: true, Data: []map[string]string{}})
 		return
@@ -1292,8 +1276,7 @@ func getRecaps(c *gin.Context) {
 func getReviews(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	reviewsDir := filepath.Join(projectPath, "story", "reviews")
-	entries, err := os.ReadDir(reviewsDir)
+	entries, err := listProjectDir(projectPath, "story/reviews")
 	if err != nil {
 		c.JSON(http.StatusOK, APIResponse{Success: true, Data: []map[string]string{}})
 		return
@@ -1320,12 +1303,12 @@ func getFile(c *gin.Context) {
 	path := c.Param("path")
 	projectPath := projectPathFromQuery(c)
 
-	fullPath, err := resolveWithinRoot(projectPath, path)
+	fullPath, err := resolveProjectContentPath(projectPath, path)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Invalid path"})
 		return
 	}
-	data, err := os.ReadFile(fullPath)
+	data, err := readProjectFileAt(projectPath, fullPath)
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "File not found"})
 		return
@@ -1360,7 +1343,7 @@ func saveFile(c *gin.Context) {
 		return
 	}
 
-	fullPath, err := resolveWithinRoot(projectPath, path)
+	_, err := resolveProjectContentPath(projectPath, path)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "Invalid path"})
 		return
@@ -1383,13 +1366,7 @@ func saveFile(c *gin.Context) {
 	}
 
 	// Ensure directory exists
-	dir := filepath.Dir(fullPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: err.Error()})
-		return
-	}
-
-	if err := os.WriteFile(fullPath, []byte(req.Content), 0644); err != nil {
+	if err := writeProjectFile(projectPath, cleanPath, []byte(req.Content)); err != nil {
 		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: err.Error()})
 		return
 	}
@@ -1451,8 +1428,7 @@ func openBrowser(url string) {
 func getRPGData(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	rpgPath := filepath.Join(projectPath, "rpg_data.json")
-	data, err := os.ReadFile(rpgPath)
+	data, err := readProjectFile(projectPath, "rpg_data.json")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "RPG data not found"})
 		return
@@ -1470,8 +1446,7 @@ func getRPGData(c *gin.Context) {
 func getRPGCharacters(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	rpgPath := filepath.Join(projectPath, "rpg_data.json")
-	data, err := os.ReadFile(rpgPath)
+	data, err := readProjectFile(projectPath, "rpg_data.json")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "RPG data not found"})
 		return
@@ -1513,8 +1488,7 @@ func getRPGCharacters(c *gin.Context) {
 func getRPGSkills(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	rpgPath := filepath.Join(projectPath, "rpg_data.json")
-	data, err := os.ReadFile(rpgPath)
+	data, err := readProjectFile(projectPath, "rpg_data.json")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "RPG data not found"})
 		return
@@ -1556,8 +1530,7 @@ func getRPGSkills(c *gin.Context) {
 func getRPGItems(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	rpgPath := filepath.Join(projectPath, "rpg_data.json")
-	data, err := os.ReadFile(rpgPath)
+	data, err := readProjectFile(projectPath, "rpg_data.json")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "RPG data not found"})
 		return
@@ -1599,8 +1572,7 @@ func getRPGItems(c *gin.Context) {
 func getRPGClasses(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	rpgPath := filepath.Join(projectPath, "rpg_data.json")
-	data, err := os.ReadFile(rpgPath)
+	data, err := readProjectFile(projectPath, "rpg_data.json")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "RPG data not found"})
 		return
@@ -1642,8 +1614,7 @@ func getRPGClasses(c *gin.Context) {
 func getRPGEvents(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	rpgPath := filepath.Join(projectPath, "rpg_data.json")
-	data, err := os.ReadFile(rpgPath)
+	data, err := readProjectFile(projectPath, "rpg_data.json")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "RPG data not found"})
 		return
@@ -1685,8 +1656,7 @@ func getRPGEvents(c *gin.Context) {
 func getRPGQuests(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	rpgPath := filepath.Join(projectPath, "rpg_data.json")
-	data, err := os.ReadFile(rpgPath)
+	data, err := readProjectFile(projectPath, "rpg_data.json")
 	if err != nil {
 		c.JSON(http.StatusNotFound, APIResponse{Success: false, Error: "RPG data not found"})
 		return
@@ -1728,10 +1698,9 @@ func getRPGQuests(c *gin.Context) {
 func listSimulationReports(c *gin.Context) {
 	projectPath := projectPathFromQuery(c)
 
-	reportsDir := filepath.Join(projectPath, "simulation_reports")
 	reports := []map[string]interface{}{}
 
-	entries, err := os.ReadDir(reportsDir)
+	entries, err := listProjectDir(projectPath, "simulation_reports")
 	if err != nil {
 		// Directory doesn't exist, return empty list
 		c.JSON(http.StatusOK, APIResponse{Success: true, Data: reports})
@@ -1740,8 +1709,7 @@ func listSimulationReports(c *gin.Context) {
 
 	for _, entry := range entries {
 		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
-			filePath := filepath.Join(reportsDir, entry.Name())
-			data, err := os.ReadFile(filePath)
+			data, err := readProjectFile(projectPath, "simulation_reports/"+entry.Name())
 			if err != nil {
 				continue
 			}
@@ -1793,13 +1761,11 @@ func getSimulationReport(c *gin.Context) {
 		reportID + ".json",
 	}
 
-	reportsDir := filepath.Join(projectPath, "simulation_reports")
 	var reportData []byte
 	var err error
 
 	for _, name := range possibleNames {
-		filePath := filepath.Join(reportsDir, name)
-		reportData, err = os.ReadFile(filePath)
+		reportData, err = readProjectFile(projectPath, "simulation_reports/"+name)
 		if err == nil {
 			break
 		}

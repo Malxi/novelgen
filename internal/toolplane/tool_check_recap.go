@@ -16,7 +16,15 @@ import (
 // RunToolRecapCheck is the string-root entry point for callers that hold a
 // resolved project directory.
 func RunToolRecapCheck(rootDir, kind, scope, id string) (*ToolCheckResult, error) {
-	return runToolRecapCheckAt(store.At(rootDir), kind, scope, id)
+	return RunToolRecapCheckAt(store.At(rootDir), kind, scope, id)
+}
+
+// RunToolRecapCheckAt runs the recap check against an explicit storage root.
+func RunToolRecapCheckAt(root *store.Root, kind, scope, id string) (*ToolCheckResult, error) {
+	if root == nil {
+		return nil, fmt.Errorf("project root is required")
+	}
+	return runToolRecapCheckAt(root, kind, scope, id)
 }
 
 func runToolRecapCheckAt(root *store.Root, kind, scope, id string) (*ToolCheckResult, error) {
