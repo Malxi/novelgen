@@ -136,20 +136,26 @@ func RunToolPatch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("patch rejected: %w", err)
 	}
 
-	switch section {
-	case "outline":
-		return runToolOutlinePatch(cmd, root, target, id, patchBytes, apply, warnings)
-	case "craft":
-		return RunToolCraftPatch(cmd, root, target, id, patchBytes, apply, warnings)
-	case "setup":
-		return RunToolSetupPatch(cmd, root, patchBytes, apply, warnings)
-	case "recap":
-		return RunToolRecapPatch(cmd, root, id, patchBytes, apply, warnings)
-	case "chapter":
-		return runToolChapterPatch(cmd, root, id, patchBytes, apply, warnings)
-	default:
-		return fmt.Errorf("unsupported patch section %q", section)
+	result, err := NewMutationService(root).Patch(cmd.Context(), PatchRequest{
+		Section:  section,
+		Target:   target,
+		ID:       id,
+		Mode:     MutationMerge,
+		Patch:    patchBytes,
+		Warnings: warnings,
+		Options: MutationOptions{
+			Apply:          apply,
+			Validate:       true,
+			Mode:           MutationMerge,
+			TargetWords:    ToolPatchFlags.TargetWords,
+			RefreshDerived: ToolPatchFlags.RefreshDerived,
+			Source:         "tool-cli",
+		},
+	})
+	if err != nil {
+		return err
 	}
+	return writeJSON(cmd, result)
 }
 
 func resolveToolPatchTask(root *store.Root, section, target, id, taskID string) (string, string, []byte, []string, error) {

@@ -9,6 +9,7 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
+	"novelgen/internal/toolplane"
 )
 
 // RecapExtractor is the recap-agent surface the write pipeline depends on. Both
@@ -54,7 +55,14 @@ func ExtractAndSaveRecapWithGate(ctx context.Context, recapAgent RecapExtractor,
 		log.Warn("[Worker %d] Recap consistency validation warning for %s: %v", workerID, chapter.ID, reasons)
 	}
 
-	if err := recapStore.Save(recapData); err != nil {
+	root := recapStore.Root()
+	if root == nil {
+		return fmt.Errorf("save recap: recap store has no project root")
+	}
+	if _, err := toolplane.NewMutationService(root).ReplaceRecap(ctx, recapData, toolplane.MutationOptions{
+		Validate: false,
+		Source:   "write-pipeline",
+	}); err != nil {
 		return fmt.Errorf("save recap: %w", err)
 	}
 	return nil

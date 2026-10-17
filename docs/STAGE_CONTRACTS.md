@@ -12,6 +12,16 @@ file in the same change.
 - A stage output is project state. It must be parsed into typed Go data,
   normalized when needed, validated deterministically, and only then written to
   disk.
+- Canonical stage artifacts are written through
+  `internal/toolplane.MutationService` (`setup`, `outline`, `craft`, `chapter`,
+  `recap`, and legacy `draft`). The Agent SDK `tool patch` command is a CLI
+  adapter over the same service; Chat/typed-JSON stages must not call
+  `book.SaveSetup`/`SaveOutline`/`SaveFinalChapter`/`recapStore.Save` directly.
+- A full generation uses `replace`; an incremental Agent repair uses `merge`.
+  Host pipelines that already ran their own quality/repair loop may commit with
+  validation disabled, but normalization, checkpoints and atomic storage still
+  apply. Derived markdown, logs, reports and compose progress snapshots remain
+  outside the canonical mutation boundary.
 - A prompt may request a contract, but Go code owns the contract. Required
   invariants must be enforced by code, tests, or both.
 - Every contract field needs clear producer and consumer ownership. If a field is

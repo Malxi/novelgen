@@ -94,6 +94,7 @@ var toolPlaneConcernFiles = map[string][]string{
 // toolPlaneModuleFiles are the remaining tool plane modules. They are listed so a
 // new file in the package has to be classified here on purpose.
 var toolPlaneModuleFiles = map[string]string{
+	"internal/toolplane/mutation.go":     "shared mutation service used by the CLI tool plane and host pipelines",
 	"internal/toolplane/tool_view.go":    "view levels and context/check budgets",
 	"internal/toolplane/tool_logs.go":    "prompt/response/agent-live log queries",
 	"internal/toolplane/tool_refresh.go": "derived artifact refresh",

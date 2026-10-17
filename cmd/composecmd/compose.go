@@ -411,13 +411,8 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 	quality.LogQualityGateResult("outline", gate)
 
 	// Save outline
-	if err := book.SaveOutline(outline); err != nil {
+	if err := saveOutlineMutation(book, outline); err != nil {
 		return fmt.Errorf("failed to save outline: %w", err)
-	}
-
-	// Create markdown version
-	if _, err := book.SaveOutlineMarkdown(outline); err != nil {
-		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
 	// Print summary
@@ -480,13 +475,8 @@ func runComposeRegen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Save outline
-	if err := book.SaveOutline(outline); err != nil {
+	if err := saveOutlineMutation(book, outline); err != nil {
 		return fmt.Errorf("failed to save outline: %w", err)
-	}
-
-	// Create markdown version
-	if _, err := book.SaveOutlineMarkdown(outline); err != nil {
-		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 
 	fmt.Printf("\n[ok] Outline regenerated and saved to %s\n", outlinePath)
@@ -654,9 +644,9 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	if composeAgentSDKFlag && selectedImprove {
-		err = book.SaveOutlineAt(outlinePath, outline)
+		err = saveOutlineMutationRaw(book, outline)
 	} else {
-		err = book.SaveOutline(outline)
+		err = saveOutlineMutation(book, outline)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to save improved outline: %w", err)
@@ -1358,13 +1348,10 @@ func runComposeSkeletonImprove(cmd *cobra.Command, args []string) error {
 	}
 
 	outlinePath := book.OutlineJSON()
-	if err := book.SaveOutline(improved); err != nil {
+	if err := saveOutlineMutation(book, improved); err != nil {
 		return fmt.Errorf("failed to save improved skeleton outline: %w", err)
 	}
-	mdPath, err := book.SaveOutlineMarkdown(improved)
-	if err != nil {
-		return fmt.Errorf("failed to save outline markdown: %w", err)
-	}
+	mdPath := book.OutlineMarkdown()
 
 	if review != nil {
 		reportPath := book.ComposeFile("skeleton_improve_review.json")
@@ -1520,7 +1507,7 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 							Description: "(自动添加 — 请手动补充描述)",
 						})
 					}
-					if saveErr := book.SaveSetup(&setup); saveErr == nil {
+					if saveErr := saveSetupMutation(book, &setup); saveErr == nil {
 						fmt.Printf("\n  [ok] Auto-patched setup: added %d missing resources\n", len(missingResources))
 					}
 				}
@@ -1562,14 +1549,11 @@ func runComposeNormalize(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := book.SaveOutline(outline); err != nil {
+	if err := saveOutlineMutation(book, outline); err != nil {
 		return fmt.Errorf("failed to write normalized outline: %w", err)
 	}
 
-	mdPath, err := book.SaveOutlineMarkdown(outline)
-	if err != nil {
-		return fmt.Errorf("failed to save outline markdown: %w", err)
-	}
+	mdPath := book.OutlineMarkdown()
 
 	reportPath := book.ComposeFile("outline_normalization_manual.json")
 	if err := book.WriteJSON(reportPath, report); err != nil {
@@ -1842,6 +1826,9 @@ func generateComposePipelineVolumeAgentSDK(book *project.Book, ctx context.Conte
 }
 
 func saveComposePipelineOutline(book *project.Book, outline *models.Outline, outlinePath string) error {
+	if book != nil && outlinePath == book.OutlineJSON() {
+		return saveOutlineMutation(book, outline)
+	}
 	if err := book.SaveOutlineAt(outlinePath, outline); err != nil {
 		return err
 	}
@@ -1849,6 +1836,20 @@ func saveComposePipelineOutline(book *project.Book, outline *models.Outline, out
 		return fmt.Errorf("failed to save outline markdown: %w", err)
 	}
 	return nil
+}
+
+// saveOutlineProgress stores an incremental canonical outline snapshot while
+// hierarchical generation is still running. It deliberately skips
+// normalization, validation and derived markdown; the final commit uses
+// saveOutlineMutation/saveOutlineMutationRaw.
+func saveOutlineProgress(book *project.Book, outline *models.Outline) error {
+	if book == nil {
+		return fmt.Errorf("project is required")
+	}
+	_, err := toolplane.NewMutationService(book.Root).CommitOutlineRaw(context.Background(), outline, toolplane.MutationOptions{
+		Source: "compose-progress",
+	})
+	return err
 }
 
 func outlineVolumePosition(outline *models.Outline, globalVolume int) (int, int, error) {
@@ -1900,7 +1901,7 @@ func applySetupOutlineCrossPatch(book *project.Book, setup *models.StorySetup, o
 			Description: "Auto-added by compose pipeline cross check; refine manually.",
 		})
 	}
-	if err := book.SaveSetup(setup); err != nil {
+	if err := saveSetupMutation(book, setup); err != nil {
 		return 0, issues, warnings, fmt.Errorf("failed to save cross-patched setup: %w", err)
 	}
 	return len(missingResources), issues, warnings, nil
@@ -2159,7 +2160,7 @@ func generateOutlineHierarchical(book *project.Book, setup *models.StorySetup, p
 			fmt.Println("   Starting fresh generation...")
 		} else {
 			resumeMode = true
-			if err := book.SaveOutlineAt(outlinePath, outline); err != nil {
+			if err := saveOutlineProgress(book, outline); err != nil {
 				return nil, fmt.Errorf("failed to migrate legacy progress to outline.json: %w", err)
 			}
 			fmt.Println("[ok] Migrated legacy progress to outline.json")
@@ -2179,7 +2180,7 @@ func generateOutlineHierarchical(book *project.Book, setup *models.StorySetup, p
 
 	// Save callback for incremental saves (used in both fresh and resume modes)
 	onVolumeComplete := func(o *models.Outline, partIdx, volIdx, volumeCount int) {
-		if err := book.SaveOutlineAt(outlinePath, o); err != nil {
+		if err := saveOutlineProgress(book, o); err != nil {
 			logger.GetLogger().Warn("Failed to save outline progress: %v", err)
 		} else {
 			fmt.Printf("💾 outline.json saved (%d volumes completed)\n", volumeCount)
@@ -2211,7 +2212,7 @@ func generateOutlineHierarchical(book *project.Book, setup *models.StorySetup, p
 		applyOutlineNormalization(book, outline, "fresh_skeleton")
 
 		// Save skeleton as initial outline with empty chapter arrays.
-		if err := book.SaveOutlineAt(outlinePath, outline); err != nil {
+		if err := saveOutlineProgress(book, outline); err != nil {
 			logger.GetLogger().Warn("Failed to save initial outline: %v", err)
 		}
 		fmt.Println("💾 Skeleton saved to outline.json")
@@ -2220,7 +2221,7 @@ func generateOutlineHierarchical(book *project.Book, setup *models.StorySetup, p
 		outline, err = agent.GenerateChaptersHierarchical(ctx, *setup, projectConfig.Structure, outline, onVolumeComplete)
 		if err != nil {
 			// Save outline even on error
-			if saveErr := book.SaveOutlineAt(outlinePath, outline); saveErr != nil {
+			if saveErr := saveOutlineProgress(book, outline); saveErr != nil {
 				logger.GetLogger().Warn("Failed to save outline on error: %v", saveErr)
 			}
 			return nil, err
@@ -2236,7 +2237,7 @@ func generateOutlineHierarchical(book *project.Book, setup *models.StorySetup, p
 		outline, err = agent.GenerateChaptersHierarchical(ctx, *setup, projectConfig.Structure, outline, onVolumeComplete)
 		if err != nil {
 			// Save outline even on error
-			if saveErr := book.SaveOutlineAt(outlinePath, outline); saveErr != nil {
+			if saveErr := saveOutlineProgress(book, outline); saveErr != nil {
 				logger.GetLogger().Warn("Failed to save outline on error: %v", saveErr)
 			}
 			return nil, err
@@ -2292,7 +2293,7 @@ func generateOutlineHierarchicalAgentSDK(book *project.Book, setup *models.Story
 			fmt.Println("   Starting fresh generation...")
 		} else {
 			resumeMode = true
-			if err := book.SaveOutlineAt(outlinePath, outline); err != nil {
+			if err := saveOutlineProgress(book, outline); err != nil {
 				return nil, fmt.Errorf("failed to migrate legacy progress to outline.json: %w", err)
 			}
 			fmt.Println("[ok] Migrated legacy progress to outline.json")
@@ -2309,7 +2310,7 @@ func generateOutlineHierarchicalAgentSDK(book *project.Book, setup *models.Story
 	ctx := cli.CommandContext()
 
 	onVolumeComplete := func(o *models.Outline, partIdx, volIdx, volumeCount int) {
-		if err := book.SaveOutlineAt(outlinePath, o); err != nil {
+		if err := saveOutlineProgress(book, o); err != nil {
 			logger.GetLogger().Warn("Failed to save outline progress: %v", err)
 		} else {
 			fmt.Printf("[save] outline.json saved (%d volumes completed)\n", volumeCount)
@@ -2336,7 +2337,7 @@ func generateOutlineHierarchicalAgentSDK(book *project.Book, setup *models.Story
 		outline = &models.Outline{Parts: skeletonOutput.Parts}
 		logic.NewIDManager(outline).AssignIDsToOutline()
 		applyOutlineNormalization(book, outline, "agent_sdk_fresh_skeleton")
-		if err := book.SaveOutlineAt(outlinePath, outline); err != nil {
+		if err := saveOutlineProgress(book, outline); err != nil {
 			logger.GetLogger().Warn("Failed to save initial outline: %v", err)
 		}
 		fmt.Println("[save] Skeleton saved to outline.json")
@@ -2347,7 +2348,7 @@ func generateOutlineHierarchicalAgentSDK(book *project.Book, setup *models.Story
 
 	outline, err = agent.GenerateChaptersHierarchicalAgentSDK(ctx, *setup, projectConfig.Structure, outline, onVolumeComplete)
 	if err != nil {
-		if saveErr := book.SaveOutlineAt(outlinePath, outline); saveErr != nil {
+		if saveErr := saveOutlineProgress(book, outline); saveErr != nil {
 			logger.GetLogger().Warn("Failed to save outline on error: %v", saveErr)
 		}
 		return nil, err
@@ -2736,6 +2737,47 @@ func newComposeAgentForProject(projectConfig *models.ProjectConfig) (*agents.Com
 		return nil, fmt.Errorf("failed to create LLM client")
 	}
 	return agents.NewComposeAgent(client, cfg, &projectConfig.LLM), nil
+}
+
+// saveOutlineMutation commits the canonical outline through the same mutation
+// surface used by the agent tool plane. Compose has already run its own repair
+// loop, so this is a host commit rather than a second quality gate.
+func saveOutlineMutation(book *project.Book, outline *models.Outline) error {
+	if book == nil {
+		return fmt.Errorf("project is required")
+	}
+	_, err := toolplane.NewMutationService(book.Root).ReplaceOutline(context.Background(), outline, toolplane.MutationOptions{
+		Validate: false,
+		Source:   "compose-command",
+	})
+	return err
+}
+
+// saveOutlineMutationRaw commits a scoped Agent SDK outline result without
+// whole-outline normalization or derived markdown. The caller has deliberately
+// preserved unselected volumes and updates markdown separately.
+func saveOutlineMutationRaw(book *project.Book, outline *models.Outline) error {
+	if book == nil {
+		return fmt.Errorf("project is required")
+	}
+	_, err := toolplane.NewMutationService(book.Root).ReplaceOutlineRaw(context.Background(), outline, toolplane.MutationOptions{
+		Validate: false,
+		Source:   "compose-command",
+	})
+	return err
+}
+
+// saveSetupMutation commits setup changes made by the compose pipeline (for
+// example a setup/outline cross patch) through the same service.
+func saveSetupMutation(book *project.Book, setup *models.StorySetup) error {
+	if book == nil {
+		return fmt.Errorf("project is required")
+	}
+	_, err := toolplane.NewMutationService(book.Root).ReplaceSetup(context.Background(), setup, toolplane.MutationOptions{
+		Validate: false,
+		Source:   "compose-command",
+	})
+	return err
 }
 
 // saveReviewResult stores a review report through the project store, so the

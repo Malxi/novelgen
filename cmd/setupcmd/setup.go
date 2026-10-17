@@ -1212,17 +1212,18 @@ func repairSetupWithQualityGate(ctx context.Context, setup *models.StorySetup, p
 }
 
 func saveStorySetup(book *project.Book, setup *models.StorySetup) error {
-	// Create story_setup.json in story/setup/
-	if err := book.SaveSetup(setup); err != nil {
-		return fmt.Errorf("failed to save story_setup.json: %w", err)
+	if book == nil {
+		return fmt.Errorf("project is required")
 	}
-
-	// Create story_setup.md (markdown version for easier editing)
-	if _, err := book.SaveStorySetupMarkdown(setup); err != nil {
-		return fmt.Errorf("failed to save story_setup.md: %w", err)
-	}
-
-	return nil
+	// The setup command already runs its quality repair loop before calling
+	// this helper, so the mutation service commits the generated artifact
+	// without a second full quality pass. It still normalizes, checkpoints and
+	// writes both the canonical JSON and derived markdown through one path.
+	_, err := toolplane.NewMutationService(book.Root).ReplaceSetup(context.Background(), setup, toolplane.MutationOptions{
+		Validate: false,
+		Source:   "setup-command",
+	})
+	return err
 }
 
 // saveSetupCheckpoint snapshots the setup that an Agent SDK run is about to

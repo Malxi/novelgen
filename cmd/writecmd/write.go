@@ -390,7 +390,7 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 		}
 
 		// Save final content
-		if err := book.SaveFinalChapter(chapter, content); err != nil {
+		if err := writepipe.SaveFinalChapter(book, chapter, content); err != nil {
 			log.Error("Failed to save content for chapter %s: %v", chapter.ID, err)
 			errc.Addf("%s: save final chapter failed: %w", chapter.ID, err)
 			return struct{}{}, nil
@@ -1085,7 +1085,7 @@ func improveChaptersWithWriteAgent(ctx context.Context, book *project.Book, agen
 		}
 		if agentApplied && strings.TrimSpace(savedContent) == strings.TrimSpace(content) {
 			log.Info("[Worker %d] Agent patch already saved chapter %s through tool patch chapter --apply", workerID, chapter.ID)
-		} else if err := book.SaveFinalChapter(chapter, content); err != nil {
+		} else if err := writepipe.SaveFinalChapter(book, chapter, content); err != nil {
 			log.Error("[Worker %d] Failed to save improved chapter %s: %v", workerID, chapter.ID, err)
 			errc.Addf("%s: save improved chapter failed: %w", chapter.ID, err)
 			return false, nil
@@ -1162,7 +1162,7 @@ func repairAgentSDKGeneratedChapterPostSave(ctx context.Context, book *project.B
 	}
 	repaired, agentApplied := writepipe.ResolveAgentAppliedChapterContent(log, book, workerID, chapter, currentContent, repaired, true, true)
 	if !agentApplied {
-		if err := book.SaveFinalChapter(chapter, repaired); err != nil {
+		if err := writepipe.SaveFinalChapter(book, chapter, repaired); err != nil {
 			return "", nil, fmt.Errorf("save repaired final chapter: %w", err)
 		}
 		saved, readErr := book.LoadFinalChapterContent(chapter)
@@ -1754,7 +1754,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				errc.Addf("%s: generate failed: %w", chapter.ID, err)
 				continue
 			}
-			if err := book.SaveFinalChapter(chapter, generatedContent); err != nil {
+			if err := writepipe.SaveFinalChapter(book, chapter, generatedContent); err != nil {
 				log.Error("Failed to save chapter %s: %v", chapter.ID, err)
 				errc.Addf("%s: save generated chapter failed: %w", chapter.ID, err)
 				continue
@@ -1938,7 +1938,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 			}
 			if agentApplied && strings.TrimSpace(savedContent) == strings.TrimSpace(improvedContent) {
 				log.Info("Agent patch already saved chapter %s through tool patch chapter --apply", chapter.ID)
-			} else if err := book.SaveFinalChapter(chapter, improvedContent); err != nil {
+			} else if err := writepipe.SaveFinalChapter(book, chapter, improvedContent); err != nil {
 				log.Error("Failed to save improved chapter %s: %v", chapter.ID, err)
 				errc.Addf("%s: save improved chapter failed: %w", chapter.ID, err)
 				break

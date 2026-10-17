@@ -25,12 +25,42 @@ type outlineVolumePatch struct {
 }
 
 func runToolOutlinePatch(cmd *cobra.Command, root *store.Root, target, id string, patchBytes []byte, apply bool, warnings []string) error {
-	ctx := ToolProjectContext{Root: root}
-	if err := ctx.loadSetup(); err != nil {
+	if root == nil {
+		return fmt.Errorf("project root is required")
+	}
+	result, err := runOutlinePatchMutation(root, target, id, patchBytes, MutationOptions{
+		Apply:    apply,
+		Validate: true,
+		Mode:     MutationMerge,
+		Source:   "tool-cli",
+	}, warnings)
+	if err != nil {
 		return err
 	}
-	if err := ctx.loadOutline(); err != nil {
+	return writeJSON(cmd, result)
+}
+
+func runOutlinePatchMutation(root *store.Root, target, id string, patchBytes []byte, opts MutationOptions, warnings []string) (*ToolPatchResult, error) {
+	if root == nil {
+		return nil, fmt.Errorf("project root is required")
+	}
+	opts = opts.normalized()
+	var result *ToolPatchResult
+	err := root.WithMutationLock(func() error {
+		var err error
+		result, err = runOutlinePatchMutationLocked(root, target, id, patchBytes, opts, warnings)
 		return err
+	})
+	return result, err
+}
+
+func runOutlinePatchMutationLocked(root *store.Root, target, id string, patchBytes []byte, opts MutationOptions, warnings []string) (*ToolPatchResult, error) {
+	ctx := ToolProjectContext{Root: root}
+	if err := ctx.loadSetup(); err != nil {
+		return nil, err
+	}
+	if err := ctx.loadOutline(); err != nil {
+		return nil, err
 	}
 
 	beforeOutline := CloneOutline(ctx.Outline)
@@ -43,44 +73,44 @@ func runToolOutlinePatch(cmd *cobra.Command, root *store.Root, target, id string
 		changes, err = ApplyVolumePatch(ctx.Outline, id, patchBytes)
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 	warnings = appendNoChangeWarning(warnings, changes)
 
 	scope := target
 	check, err := RunToolPatchValidationCheckAt(root, ctx.Setup, ctx.Outline, scope, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	addToolCheckMeta(check, "project_root", root.Dir())
 	globalCheck, err := RunToolPatchValidationCheckAt(root, ctx.Setup, ctx.Outline, "all", "")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	addToolCheckMeta(globalCheck, "project_root", root.Dir())
 	if newBlocking := newBlockingPatchIssues(root, beforeOutline, ctx.Setup, globalCheck); len(newBlocking) > 0 {
 		ctx.Outline = beforeOutline
 		first := newBlocking[0]
-		return fmt.Errorf("patch rejected: global outline check introduced %d new blocking issue(s); first [%s/%s] %s: %s", len(newBlocking), first.Priority, first.Category, first.TargetID, first.Issue)
+		return nil, fmt.Errorf("patch rejected: global outline check introduced %d new blocking issue(s); first [%s/%s] %s: %s", len(newBlocking), first.Priority, first.Category, first.TargetID, first.Issue)
 	}
-	if apply && check.Blocking {
+	if opts.Apply && opts.Validate && check.Blocking {
 		ctx.Outline = beforeOutline
-		return fmt.Errorf("patch rejected: quality/simulation check found blocking issues (critical=%d high=%d total=%d)", check.Summary.Critical, check.Summary.High, check.Summary.Total)
+		return nil, fmt.Errorf("patch rejected: quality/simulation check found blocking issues (critical=%d high=%d total=%d)", check.Summary.Critical, check.Summary.High, check.Summary.Total)
 	}
 
 	files := map[string]string{}
-	if apply {
+	if opts.Apply {
 		checkpointPath, err := saveToolCheckpointJSON(root, store.ScopeCompose, "outline", beforeOutline)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		OutlinePath := root.OutlineJSON()
 		if err := root.SaveOutlineAt(OutlinePath, ctx.Outline); err != nil {
-			return fmt.Errorf("failed to save patched outline: %w", err)
+			return nil, fmt.Errorf("failed to save patched outline: %w", err)
 		}
 		mdPath, err := project.Open(root).SaveOutlineMarkdown(ctx.Outline)
 		if err != nil {
-			return fmt.Errorf("failed to save outline markdown: %w", err)
+			return nil, fmt.Errorf("failed to save outline markdown: %w", err)
 		}
 		files["outline"] = OutlinePath
 		files["markdown"] = mdPath
@@ -91,21 +121,120 @@ func runToolOutlinePatch(cmd *cobra.Command, root *store.Root, target, id string
 
 	result := ToolPatchResult{
 		OK:          !check.Blocking,
-		Applied:     apply,
-		DryRun:      !apply,
+		Applied:     opts.Apply,
+		DryRun:      !opts.Apply,
 		Target:      target,
 		ID:          id,
 		Changed:     changes,
 		Check:       check,
 		Files:       files,
 		Warnings:    warnings,
-		NextActions: buildPatchNextActions(apply, check, OutlinePatchPostCheckCommand(target, id)),
+		NextActions: buildPatchNextActions(opts.Apply, check, OutlinePatchPostCheckCommand(target, id)),
 		Meta: map[string]interface{}{
 			"project_root": root.Dir(),
 			"validation":   toolPatchValidationMeta(check),
+			"mode":         string(opts.Mode),
+			"source":       opts.Source,
 		},
 	}
-	return writeJSON(cmd, result)
+	return &result, nil
+}
+
+// runOutlineReplaceMutation commits a complete outline (compose gen/regen).
+// It is the full-artifact counterpart of the incremental volume/chapter patch
+// above. Host pipelines opt out of the second quality pass when they already
+// ran their own repair gate; the CLI patch path always validates.
+func runOutlineReplaceMutation(root *store.Root, outline *models.Outline, opts MutationOptions) (*ToolPatchResult, error) {
+	if root == nil {
+		return nil, fmt.Errorf("project root is required")
+	}
+	opts = opts.normalized()
+	var result *ToolPatchResult
+	err := root.WithMutationLock(func() error {
+		var err error
+		result, err = runOutlineReplaceMutationLocked(root, outline, opts)
+		return err
+	})
+	return result, err
+}
+
+func runOutlineReplaceMutationLocked(root *store.Root, outline *models.Outline, opts MutationOptions) (*ToolPatchResult, error) {
+	setup, err := root.LoadSetup()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load story setup: %w", err)
+	}
+	before := &models.Outline{}
+	exists, err := root.ExistsErr(root.OutlineJSON())
+	if err != nil {
+		return nil, fmt.Errorf("failed to inspect outline: %w", err)
+	}
+	if exists {
+		before, err = root.LoadOutline()
+		if err != nil {
+			return nil, fmt.Errorf("failed to load existing outline: %w", err)
+		}
+	}
+
+	candidate := CloneOutline(outline)
+	if opts.Normalize {
+		models.NormalizeOutline(candidate)
+	}
+
+	var check *ToolCheckResult
+	if opts.Validate {
+		check, err = RunToolPatchValidationCheckAt(root, setup, candidate, "all", "")
+		if err != nil {
+			return nil, err
+		}
+		addToolCheckMeta(check, "project_root", root.Dir())
+		if newBlocking := newBlockingPatchIssues(root, before, setup, check); len(newBlocking) > 0 {
+			first := newBlocking[0]
+			return nil, fmt.Errorf("outline rejected: global check introduced %d new blocking issue(s); first [%s/%s] %s: %s", len(newBlocking), first.Priority, first.Category, first.TargetID, first.Issue)
+		}
+	}
+
+	files := map[string]string{}
+	changes := DiffStructFields("outline", *before, *candidate)
+	if opts.Apply {
+		if exists {
+			checkpointPath, err := saveToolCheckpointJSON(root, store.ScopeCompose, "outline", before)
+			if err != nil {
+				return nil, err
+			}
+			files["checkpoint"] = checkpointPath
+		}
+		outlinePath := root.OutlineJSON()
+		if err := root.SaveOutlineAt(outlinePath, candidate); err != nil {
+			return nil, fmt.Errorf("failed to save outline: %w", err)
+		}
+		if opts.WriteDerived {
+			mdPath, err := project.Open(root).SaveOutlineMarkdown(candidate)
+			if err != nil {
+				return nil, fmt.Errorf("failed to save outline markdown: %w", err)
+			}
+			files["markdown"] = mdPath
+		}
+		files["outline"] = outlinePath
+	}
+
+	ok := !opts.Validate || check == nil || !check.Blocking
+	return &ToolPatchResult{
+		OK:          ok,
+		Applied:     opts.Apply,
+		DryRun:      !opts.Apply,
+		Target:      "outline",
+		ID:          "outline",
+		Changed:     changes,
+		Check:       check,
+		Files:       files,
+		Warnings:    appendNoChangeWarning(nil, changes),
+		NextActions: buildPatchNextActions(opts.Apply, check, "novelgen tool check all --target outline --min-priority medium --max-issues 12"),
+		Meta: map[string]interface{}{
+			"project_root": root.Dir(),
+			"mode":         string(opts.Mode),
+			"source":       opts.Source,
+		},
+	}, nil
 }
 
 func newBlockingPatchIssues(root *store.Root, before *models.Outline, setup *models.StorySetup, afterCheck *ToolCheckResult) []models.ReviewSuggestion {

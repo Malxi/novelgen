@@ -16,6 +16,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/reviewstore"
 	"novelgen/internal/rpg/dsl"
+	"novelgen/internal/toolplane"
 	"novelgen/internal/workerpool"
 
 	"github.com/spf13/cobra"
@@ -279,7 +280,13 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 				log.Warn("[Worker %d] Recap consistency validation warning for %s: %v", workerID, chapter.ID, reasons2)
 				// Still save, but note: minimal fields are present; hint may be weak.
 			}
-			if err := recapStore.Save(recapData); err != nil {
+			root := recapStore.Root()
+			if root == nil {
+				log.Warn("[Worker %d] Failed to save recap for %s: project root is missing", workerID, chapter.ID)
+			} else if _, err := toolplane.NewMutationService(root).ReplaceRecap(ctx, recapData, toolplane.MutationOptions{
+				Validate: false,
+				Source:   "draft-command",
+			}); err != nil {
 				log.Warn("[Worker %d] Failed to save recap for %s: %v", workerID, chapter.ID, err)
 			}
 		} else {
@@ -297,7 +304,13 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 
 // saveDraft saves the generated draft into an explicit project.
 func saveDraft(book *project.Book, chapter *models.Chapter, draft string) error {
-	return book.SaveDraft(chapter, draft)
+	if book == nil {
+		return fmt.Errorf("project is required")
+	}
+	_, err := toolplane.NewMutationService(book.Root).ReplaceDraft(context.Background(), chapter, draft, toolplane.MutationOptions{
+		Source: "draft-command",
+	})
+	return err
 }
 
 // runDraftReview reviews drafts and provides feedback

@@ -1,6 +1,7 @@
 package writepipe
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -11,6 +12,7 @@ import (
 	novelcont "novelgen/internal/continuity"
 	"novelgen/internal/models"
 	"novelgen/internal/project"
+	"novelgen/internal/toolplane"
 )
 
 type WriteErrorCollector struct {
@@ -289,7 +291,18 @@ func SaveFinalChapter(book *project.Book, chapter *models.Chapter, content strin
 	if book == nil {
 		return fmt.Errorf("project is required")
 	}
-	return book.SaveFinalChapter(chapter, content)
+	if chapter == nil {
+		return fmt.Errorf("chapter is nil")
+	}
+	// The write/polish pipelines run their own pre-save checks and post-save
+	// verification. Commit the generated chapter through the same mutation
+	// surface used by `tool patch chapter`, without duplicating that quality
+	// pass here.
+	_, err := toolplane.NewMutationService(book.Root).ReplaceChapterObject(context.Background(), chapter, content, toolplane.MutationOptions{
+		Validate: false,
+		Source:   "write-pipeline",
+	})
+	return err
 }
 
 // ChapterNarrativeUnitsForLog counts the narrative units the project reports

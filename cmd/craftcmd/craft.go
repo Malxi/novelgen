@@ -17,6 +17,7 @@ import (
 	"novelgen/internal/project"
 	"novelgen/internal/rpg/dsl"
 	"novelgen/internal/store"
+	"novelgen/internal/toolplane"
 	"novelgen/internal/workerpool"
 
 	"github.com/spf13/cobra"
@@ -1478,7 +1479,15 @@ func saveCraftElements(kind store.CraftKind, values interface{}) error {
 	if err != nil {
 		return err
 	}
-	return book.WriteJSONMerging(book.CraftFile(kind), values)
+	// The craft command has already normalized the generated elements and the
+	// tool/service path will normalize them again; skip the second full quality
+	// pass because craft improve has its own review loop. Unrelated elements in
+	// the same file are preserved by the bulk upsert.
+	_, err = toolplane.NewMutationService(book.Root).UpsertCraftElements(context.Background(), kind, values, toolplane.MutationOptions{
+		Validate: false,
+		Source:   "craft-command",
+	})
+	return err
 }
 
 func runCraftImprove(cmd *cobra.Command, args []string) error {

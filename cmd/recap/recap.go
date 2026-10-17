@@ -13,6 +13,7 @@ import (
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
 	"novelgen/internal/project"
+	"novelgen/internal/toolplane"
 	"novelgen/internal/workerpool"
 
 	"github.com/spf13/cobra"
@@ -186,7 +187,15 @@ func runRecapGen(cmd *cobra.Command, args []string) error {
 		}
 
 		if !agentApplied {
-			if err := store.Save(recapData); err != nil {
+			root := store.Root()
+			if root == nil {
+				log.Error("[Worker %d] Failed to save recap for %s: project root is missing", workerID, ch.ID)
+				return struct{}{}, nil
+			}
+			if _, err := toolplane.NewMutationService(root).ReplaceRecap(ctx, recapData, toolplane.MutationOptions{
+				Validate: false,
+				Source:   "recap-command",
+			}); err != nil {
 				log.Error("[Worker %d] Failed to save recap for %s: %v", workerID, ch.ID, err)
 				return struct{}{}, nil
 			}

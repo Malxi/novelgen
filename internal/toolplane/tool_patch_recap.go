@@ -16,16 +16,45 @@ import (
 )
 
 func RunToolRecapPatch(cmd *cobra.Command, root *store.Root, id string, patchBytes []byte, apply bool, warnings []string) error {
+	result, err := runRecapMutation(root, id, patchBytes, MutationOptions{
+		Apply:    apply,
+		Validate: true,
+		Mode:     MutationMerge,
+		Source:   "tool-cli",
+	}, warnings)
+	if err != nil {
+		return err
+	}
+	return writeJSON(cmd, result)
+}
+
+func runRecapMutation(root *store.Root, id string, patchBytes []byte, opts MutationOptions, warnings []string) (*ToolPatchResult, error) {
+	if root == nil {
+		return nil, fmt.Errorf("project root is required")
+	}
+	opts = opts.normalized()
+	var result *ToolPatchResult
+	err := root.WithMutationLock(func() error {
+		var err error
+		result, err = runRecapMutationLocked(root, id, patchBytes, opts, warnings)
+		return err
+	})
+	return result, err
+}
+
+func runRecapMutationLocked(root *store.Root, id string, patchBytes []byte, opts MutationOptions, warnings []string) (*ToolPatchResult, error) {
 	var validated models.ChapterRecap
 	if err := decodeStrictToolPatch(patchBytes, &validated); err != nil {
-		return fmt.Errorf("recap patch does not match the recap shape: %w", err)
+		return nil, fmt.Errorf("recap patch does not match the recap shape: %w", err)
 	}
 	recaps := recap.NewStoreAt(root)
 	before, err := recaps.Load(id)
+	exists := true
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("failed to read recap %s: %w", id, err)
+			return nil, fmt.Errorf("failed to read recap %s: %w", id, err)
 		}
+		exists = false
 		before = &models.ChapterRecap{ChapterID: id}
 		warnings = append(warnings, fmt.Sprintf("recap file not found; patch will create %s", id))
 	}
@@ -33,54 +62,73 @@ func RunToolRecapPatch(cmd *cobra.Command, root *store.Root, id string, patchByt
 	if outline, outlineErr := root.LoadOutline(); outlineErr == nil && outline != nil {
 		outlineChapter = outline.GetChapterByID(id)
 	} else if outlineErr != nil && !errors.Is(outlineErr, fs.ErrNotExist) {
-		return fmt.Errorf("failed to load outline while patching recap %s: %w", id, outlineErr)
+		return nil, fmt.Errorf("failed to load outline while patching recap %s: %w", id, outlineErr)
 	}
 
-	merged, err := MergeJSONPatchObject(*before, patchBytes)
-	if err != nil {
-		return err
+	var merged models.ChapterRecap
+	if opts.Mode == MutationReplace {
+		merged = validated
+		if merged.ChapterID == "" {
+			merged.ChapterID = id
+		}
+	} else {
+		merged, err = MergeJSONPatchObject(*before, patchBytes)
+		if err != nil {
+			return nil, err
+		}
 	}
 	patchIdentityWarnings := normalizeRecapPatchIdentity(&merged, id, outlineChapter, patchBytes)
 	warnings = append(warnings, patchIdentityWarnings...)
 	if err := utils.ValidateNoSuspiciousPatchText(merged); err != nil {
-		return fmt.Errorf("recap patch rejected: %w", err)
+		return nil, fmt.Errorf("recap patch rejected: %w", err)
 	}
 
-	check := runToolRecapCheckForValue("all", "chapter", id, &merged, outlineChapter)
-	addToolCheckMeta(check, "project_root", root.Dir())
-	if apply && check.Blocking {
-		return fmt.Errorf("patch rejected: recap check found blocking issues (critical=%d high=%d total=%d)", check.Summary.Critical, check.Summary.High, check.Summary.Total)
+	var check *ToolCheckResult
+	if opts.Validate {
+		check = runToolRecapCheckForValue("all", "chapter", id, &merged, outlineChapter)
+		addToolCheckMeta(check, "project_root", root.Dir())
+		if opts.Apply && check.Blocking {
+			return nil, fmt.Errorf("patch rejected: recap check found blocking issues (critical=%d high=%d total=%d)", check.Summary.Critical, check.Summary.High, check.Summary.Total)
+		}
 	}
 
 	files := map[string]string{}
 	changes := DiffStructFields("recap."+id, *before, merged)
 	warnings = appendNoChangeWarning(warnings, changes)
-	if apply {
-		checkpointPath, err := saveToolCheckpointJSON(root, store.ScopeRecaps, id, before)
-		if err != nil {
-			return err
+	if opts.Apply {
+		checkpointPath := ""
+		if exists {
+			checkpointPath, err = saveToolCheckpointJSON(root, store.ScopeRecaps, id, before)
+			if err != nil {
+				return nil, err
+			}
 		}
 		if err := recaps.Save(&merged); err != nil {
-			return fmt.Errorf("failed to save patched recap: %w", err)
+			return nil, fmt.Errorf("failed to save patched recap: %w", err)
 		}
 		files["recap"] = root.RecapFile(id)
-		files["checkpoint"] = checkpointPath
+		if checkpointPath != "" {
+			files["checkpoint"] = checkpointPath
+		}
 	}
 
+	ok := !opts.Validate || check == nil || !check.Blocking
 	result := ToolPatchResult{
-		OK:          !check.Blocking,
-		Applied:     apply,
-		DryRun:      !apply,
+		OK:          ok,
+		Applied:     opts.Apply,
+		DryRun:      !opts.Apply,
 		Target:      "recap.chapter",
 		ID:          id,
 		Changed:     changes,
 		Check:       check,
 		Files:       files,
 		Warnings:    warnings,
-		NextActions: buildPatchNextActions(apply, check, toolcmd.Check(toolcmd.CheckOptions{Kind: "quality", Target: "recap", Scope: "chapter", ID: id, MinPriority: "low", MaxIssues: 8})),
+		NextActions: buildPatchNextActions(opts.Apply, check, toolcmd.Check(toolcmd.CheckOptions{Kind: "quality", Target: "recap", Scope: "chapter", ID: id, MinPriority: "low", MaxIssues: 8})),
 		Meta: map[string]interface{}{
 			"project_root": root.Dir(),
+			"mode":         string(opts.Mode),
+			"source":       opts.Source,
 		},
 	}
-	return writeJSON(cmd, result)
+	return &result, nil
 }

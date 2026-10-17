@@ -40,6 +40,16 @@ func NewStoreAt(root *store.Root) *Store {
 	return &Store{root: root}
 }
 
+// Root returns the project root backing this recap store. Callers that need to
+// route writes through the project mutation service use it instead of reaching
+// into the store's private field.
+func (s *Store) Root() *store.Root {
+	if s == nil {
+		return nil
+	}
+	return s.root
+}
+
 func (s *Store) Save(recap *models.ChapterRecap) error {
 	if s.root == nil || recap == nil {
 		return nil

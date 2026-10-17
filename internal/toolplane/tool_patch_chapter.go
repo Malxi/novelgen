@@ -3,6 +3,7 @@
 package toolplane
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -20,38 +21,81 @@ type toolChapterPatch struct {
 }
 
 func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchBytes []byte, apply bool, warnings []string) error {
-	outline, err := root.LoadOutline()
+	result, err := runChapterMutation(cmd.Context(), root, id, patchBytes, MutationOptions{
+		Apply:          apply,
+		Validate:       true,
+		Mode:           MutationMerge,
+		TargetWords:    ToolPatchFlags.TargetWords,
+		RefreshDerived: ToolPatchFlags.RefreshDerived,
+		Source:         "tool-cli",
+	}, warnings)
 	if err != nil {
-		return fmt.Errorf("failed to load outline: %w", err)
+		return err
 	}
-	chapter := outline.GetChapterByID(id)
-	if chapter == nil {
-		return fmt.Errorf("chapter %q not found in outline", id)
+	return writeJSON(cmd, result)
+}
+
+func runChapterMutation(ctx context.Context, root *store.Root, id string, patchBytes []byte, opts MutationOptions, warnings []string) (*ToolPatchResult, error) {
+	return runChapterMutationForChapter(ctx, root, id, nil, patchBytes, opts, warnings)
+}
+
+func runChapterMutationForChapter(ctx context.Context, root *store.Root, id string, target *models.Chapter, patchBytes []byte, opts MutationOptions, warnings []string) (*ToolPatchResult, error) {
+	if root == nil {
+		return nil, fmt.Errorf("project root is required")
+	}
+	var result *ToolPatchResult
+	err := root.WithMutationLock(func() error {
+		var err error
+		result, err = runChapterMutationLocked(ctx, root, id, target, patchBytes, opts, warnings)
+		return err
+	})
+	return result, err
+}
+
+func runChapterMutationLocked(ctx context.Context, root *store.Root, id string, target *models.Chapter, patchBytes []byte, opts MutationOptions, warnings []string) (*ToolPatchResult, error) {
+	opts = opts.normalized()
+	var chapter *models.Chapter
+	if target != nil {
+		chapter = target
+		if chapter.ID != "" && chapter.ID != id {
+			return nil, fmt.Errorf("chapter %q does not match target chapter %q", chapter.ID, id)
+		}
+	} else {
+		outline, err := root.LoadOutline()
+		if err != nil {
+			return nil, fmt.Errorf("failed to load outline: %w", err)
+		}
+		chapter = outline.GetChapterByID(id)
+		if chapter == nil {
+			return nil, fmt.Errorf("chapter %q not found in outline", id)
+		}
 	}
 	var patch toolChapterPatch
 	if err := decodeStrictToolPatch(patchBytes, &patch); err != nil {
-		return fmt.Errorf("failed to parse chapter patch: %w", err)
+		return nil, fmt.Errorf("failed to parse chapter patch: %w", err)
 	}
 	if strings.TrimSpace(patch.ID) != "" && strings.TrimSpace(patch.ID) != id {
-		return fmt.Errorf("patch id %q does not match target chapter %q", patch.ID, id)
+		return nil, fmt.Errorf("patch id %q does not match target chapter %q", patch.ID, id)
 	}
 	content := NormalizeChapterPatchContent(chapter, patch.Content)
 	if strings.TrimSpace(content) == "" {
-		return fmt.Errorf("chapter patch content is required")
+		return nil, fmt.Errorf("chapter patch content is required")
 	}
 	if err := utils.ValidateNoSuspiciousPatchText(content); err != nil {
-		return fmt.Errorf("chapter patch rejected: %w", err)
+		return nil, fmt.Errorf("chapter patch rejected: %w", err)
 	}
-	targetWords := ToolPatchFlags.TargetWords
+	targetWords := opts.TargetWords
 	if targetWords <= 0 {
 		targetWords = toolChapterTargetWords(root)
 	}
 	beforeContent, beforePath, err := root.LoadChapterContent(id)
 	if err != nil {
-		return fmt.Errorf("failed to read chapter %s: %w", id, err)
+		return nil, fmt.Errorf("failed to read chapter %s: %w", id, err)
 	}
-	if err := ValidateToolChapterPatchLength(chapter, content, targetWords, beforeContent); err != nil {
-		return fmt.Errorf("chapter patch rejected: %w", err)
+	if opts.Validate {
+		if err := ValidateToolChapterPatchLength(chapter, content, targetWords, beforeContent); err != nil {
+			return nil, fmt.Errorf("chapter patch rejected: %w", err)
+		}
 	}
 
 	changes := []ToolPatchChange{{
@@ -65,38 +109,41 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 		warnings = append(warnings, "chapter content is unchanged")
 	}
 
-	qualityCheck := MakeToolCheckResult("quality", "chapter", "chapter", id, RunToolChapterQualityGate(chapter, content, targetWords))
-	addToolCheckMeta(qualityCheck, "project_root", root.Dir())
-	addToolCheckMeta(qualityCheck, "mode", "pre_apply")
-	addToolCheckMeta(qualityCheck, "target_words", targetWords)
-	if apply && qualityCheck.Blocking {
-		return fmt.Errorf("patch rejected: chapter quality check found blocking issues (critical=%d high=%d total=%d)", qualityCheck.Summary.Critical, qualityCheck.Summary.High, qualityCheck.Summary.Total)
+	var qualityCheck *ToolCheckResult
+	if opts.Validate {
+		qualityCheck = MakeToolCheckResult("quality", "chapter", "chapter", id, RunToolChapterQualityGate(chapter, content, targetWords))
+		addToolCheckMeta(qualityCheck, "project_root", root.Dir())
+		addToolCheckMeta(qualityCheck, "mode", "pre_apply")
+		addToolCheckMeta(qualityCheck, "target_words", targetWords)
+		if opts.Apply && qualityCheck.Blocking {
+			return nil, fmt.Errorf("patch rejected: chapter quality check found blocking issues (critical=%d high=%d total=%d)", qualityCheck.Summary.Critical, qualityCheck.Summary.High, qualityCheck.Summary.Total)
+		}
 	}
 
 	files := map[string]string{}
 	check := qualityCheck
 	refreshedDerived := false
-	nextActions := BuildChapterPatchNextActions(id, apply, false, check)
+	nextActions := BuildChapterPatchNextActions(id, opts.Apply, false, check)
 	postApplyError := ""
-	if apply {
+	if opts.Apply {
 		checkpointPath, err := saveToolChapterPatchCheckpoint(root, id, beforePath, beforeContent)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		path := toolFinalChapterPathForID(root, id)
 		// root.WriteText is the atomic write (sibling temp file + rename), so an
 		// interrupted apply cannot leave a half-written chapter behind.
 		if err := root.WriteText(path, content); err != nil {
-			return fmt.Errorf("failed to save patched chapter: %w", err)
+			return nil, fmt.Errorf("failed to save patched chapter: %w", err)
 		}
 		files["chapter"] = path
 		files["checkpoint"] = checkpointPath
-		if ToolPatchFlags.RefreshDerived {
+		if opts.RefreshDerived {
 			var refresh *toolRefreshResult
 			func() {
 				restoreLogger := SuppressToolRefreshLogs()
 				defer restoreLogger()
-				refresh, err = RefreshToolChapterDSL(cmd.Context(), root, id, 0)
+				refresh, err = RefreshToolChapterDSL(ctx, root, id, 0)
 			}()
 			if err != nil {
 				postApplyError = fmt.Sprintf("derived RPG DSL refresh failed: %v", err)
@@ -140,30 +187,30 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 					addToolCheckMeta(postCheck, "mode", "post_apply_refresh_all")
 					addToolCheckMeta(postCheck, "derived_dsl_refreshed", true)
 					check = postCheck
-					nextActions = BuildChapterPatchNextActions(id, apply, refreshedDerived, check)
+					nextActions = BuildChapterPatchNextActions(id, opts.Apply, refreshedDerived, check)
 				}
 			}
-		} else {
+		} else if opts.Validate {
 			postCheck, err := RunToolChapterCheckWithTargetWordsAt(root, "quality", "chapter", id, targetWords)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			addToolCheckMeta(postCheck, "project_root", root.Dir())
 			addToolCheckMeta(postCheck, "mode", "post_apply_quality")
 			addToolCheckMeta(postCheck, "simulation_requires_derived_dsl_refresh", true)
 			check = postCheck
-			nextActions = BuildChapterPatchNextActions(id, apply, refreshedDerived, check)
+			nextActions = BuildChapterPatchNextActions(id, opts.Apply, refreshedDerived, check)
 		}
 	}
 
 	ok := postApplyError == ""
-	if ok && check != nil {
+	if ok && opts.Validate && check != nil {
 		ok = !check.Blocking
 	}
 	result := ToolPatchResult{
 		OK:          ok,
-		Applied:     apply,
-		DryRun:      !apply,
+		Applied:     opts.Apply,
+		DryRun:      !opts.Apply,
 		Target:      "chapter",
 		ID:          id,
 		Changed:     changes,
@@ -177,12 +224,14 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 			"previous_content_bytes": len(beforeContent),
 			"content_bytes":          len(content),
 			"refresh_derived":        refreshedDerived,
+			"mode":                   string(opts.Mode),
+			"source":                 opts.Source,
 		},
 	}
 	if postApplyError != "" {
 		result.Meta["post_apply_error"] = postApplyError
 	}
-	return writeJSON(cmd, result)
+	return &result, nil
 }
 
 func BuildChapterPatchNextActions(chapterID string, applied bool, refreshedDerived bool, check *ToolCheckResult) []ToolNextAction {

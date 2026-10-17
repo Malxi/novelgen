@@ -21,70 +21,131 @@ type setupStringListPatchItem struct {
 }
 
 func RunToolSetupPatch(cmd *cobra.Command, root *store.Root, patchBytes []byte, apply bool, warnings []string) error {
-	setupPath := root.SetupJSON()
-	setup, err := root.LoadSetup()
-	if err != nil {
-		return fmt.Errorf("failed to load story setup: %w", err)
-	}
-	before := CloneStorySetup(setup)
-	merged, setupPatchWarnings, err := ApplySetupPatchObject(*setup, patchBytes)
+	result, err := runSetupMutation(root, patchBytes, MutationOptions{
+		Apply:    apply,
+		Validate: true,
+		Mode:     MutationMerge,
+		Source:   "tool-cli",
+	}, warnings)
 	if err != nil {
 		return err
 	}
-	warnings = append(warnings, setupPatchWarnings...)
+	return writeJSON(cmd, result)
+}
+
+func runSetupMutation(root *store.Root, patchBytes []byte, opts MutationOptions, warnings []string) (*ToolPatchResult, error) {
+	if root == nil {
+		return nil, fmt.Errorf("project root is required")
+	}
+	var result *ToolPatchResult
+	err := root.WithMutationLock(func() error {
+		var err error
+		result, err = runSetupMutationLocked(root, patchBytes, opts, warnings)
+		return err
+	})
+	return result, err
+}
+
+func runSetupMutationLocked(root *store.Root, patchBytes []byte, opts MutationOptions, warnings []string) (*ToolPatchResult, error) {
+	opts = opts.normalized()
+	setupPath := root.SetupJSON()
+	exists, err := root.ExistsErr(setupPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inspect story setup: %w", err)
+	}
+	before := models.StorySetup{}
+	current := models.StorySetup{}
+	if exists {
+		setup, err := root.LoadSetup()
+		if err != nil {
+			return nil, fmt.Errorf("failed to load story setup: %w", err)
+		}
+		before = CloneStorySetup(setup)
+		current = CloneStorySetup(setup)
+	} else if opts.Mode != MutationReplace {
+		return nil, fmt.Errorf("failed to load story setup: story setup does not exist")
+	}
+
+	var merged models.StorySetup
+	if opts.Mode == MutationReplace {
+		if err := decodeStrictToolPatch(patchBytes, &merged); err != nil {
+			return nil, fmt.Errorf("failed to parse story setup: %w", err)
+		}
+	} else {
+		var setupPatchWarnings []string
+		merged, setupPatchWarnings, err = ApplySetupPatchObject(current, patchBytes)
+		if err != nil {
+			return nil, err
+		}
+		warnings = append(warnings, setupPatchWarnings...)
+	}
 	if err := utils.ValidateNoSuspiciousPatchText(merged); err != nil {
-		return fmt.Errorf("setup patch rejected: %w", err)
+		return nil, fmt.Errorf("setup patch rejected: %w", err)
 	}
 	models.NormalizeStorySetup(&merged)
 
-	check, err := RunToolSetupCheck("all", &merged)
-	if err != nil {
-		return err
-	}
-	addToolCheckMeta(check, "project_root", root.Dir())
-	if apply && check.Blocking {
-		return fmt.Errorf("patch rejected: setup quality/simulation check found blocking issues (critical=%d high=%d total=%d)", check.Summary.Critical, check.Summary.High, check.Summary.Total)
+	var check *ToolCheckResult
+	if opts.Validate {
+		check, err = RunToolSetupCheck("all", &merged)
+		if err != nil {
+			return nil, err
+		}
+		addToolCheckMeta(check, "project_root", root.Dir())
+		if opts.Apply && check.Blocking {
+			return nil, fmt.Errorf("patch rejected: setup quality/simulation check found blocking issues (critical=%d high=%d total=%d)", check.Summary.Critical, check.Summary.High, check.Summary.Total)
+		}
 	}
 
 	files := map[string]string{}
 	changes := DiffStructFields("setup", before, merged)
 	warnings = appendNoChangeWarning(warnings, changes)
-	if apply {
-		checkpointPath, err := saveToolCheckpointJSON(root, store.ScopeSetup, "story_setup", before)
-		if err != nil {
-			return err
+	if opts.Apply {
+		checkpointPath := ""
+		if exists {
+			checkpointPath, err = saveToolCheckpointJSON(root, store.ScopeSetup, "story_setup", before)
+			if err != nil {
+				return nil, err
+			}
 		}
 		// SaveSetup is the store's atomic, normalizing write; the patch plane used
 		// to call models.StorySetup.Save here, which wrote the canonical file with
 		// a plain os.WriteFile and could leave a truncated story_setup.json.
 		if err := root.SaveSetup(&merged); err != nil {
-			return fmt.Errorf("failed to save patched story setup: %w", err)
+			return nil, fmt.Errorf("failed to save patched story setup: %w", err)
 		}
 		mdPath, err := project.Open(root).SaveStorySetupMarkdown(&merged)
 		if err != nil {
-			return fmt.Errorf("failed to save story setup markdown: %w", err)
+			return nil, fmt.Errorf("failed to save story setup markdown: %w", err)
 		}
 		files["setup"] = setupPath
 		files["markdown"] = mdPath
-		files["checkpoint"] = checkpointPath
+		if checkpointPath != "" {
+			files["checkpoint"] = checkpointPath
+		}
 	}
 
+	ok := true
+	if check != nil {
+		ok = !check.Blocking
+	}
 	result := ToolPatchResult{
-		OK:          !check.Blocking,
-		Applied:     apply,
-		DryRun:      !apply,
+		OK:          ok,
+		Applied:     opts.Apply,
+		DryRun:      !opts.Apply,
 		Target:      "setup",
 		ID:          "story_setup",
 		Changed:     changes,
 		Check:       check,
 		Files:       files,
 		Warnings:    warnings,
-		NextActions: buildPatchNextActions(apply, check, "novelgen tool check all --target setup --min-priority medium --max-issues 12"),
+		NextActions: buildPatchNextActions(opts.Apply, check, "novelgen tool check all --target setup --min-priority medium --max-issues 12"),
 		Meta: map[string]interface{}{
 			"project_root": root.Dir(),
+			"mode":         string(opts.Mode),
+			"source":       opts.Source,
 		},
 	}
-	return writeJSON(cmd, result)
+	return &result, nil
 }
 
 func ApplySetupPatchObject(setup models.StorySetup, patchBytes []byte) (models.StorySetup, []string, error) {

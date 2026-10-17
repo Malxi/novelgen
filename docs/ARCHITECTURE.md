@@ -105,6 +105,7 @@ novelgen/
 │   ├── rpgllm/                # LLM 驱动的 RPG 抽取适配（让 rpg 引擎不依赖 llm）
 │   ├── toolplane/             # Agent 工具面（见 §5）；命令面、DTO 与各查询/上下文域分文件
 │   │                          #   tool.go: 命令面 + section/--type 表（help 与报错都由表生成）
+│   │                          #   mutation.go: 共享 MutationService（CLI 与命令层唯一 canonical 写入面）
 │   │                          #   tool_flags.go/tool_types.go: 各命令 flag 与响应/上下文 DTO
 │   │                          #   tool_query_{setup,outline,craft}.go: 查询域；tool_context*.go: 工作流上下文包
 │   │                          #   tool_check_*.go/tool_patch_*.go/tool_brief_*.go: 按 target（setup/outline/craft/chapter/recap）分文件
@@ -203,6 +204,29 @@ SDK Agent **不能直接读写项目文件**。它们只能通过 CLI 的 `tool`
 | `tool refresh [chapter-dsl]` | 重建派生数据 |
 
 这保证了 AGENTS.md 的硬规则：**AI 输出不得直接成为项目状态**。Agent 只能提交 patch，由 [`internal/toolplane/tool_patch.go`](../internal/toolplane/tool_patch.go)（落盘）与 [`internal/toolplane/tool_check.go`](../internal/toolplane/tool_check.go)（校验）负责 merge、保留 ID、normalize、schema/quality/simulation 校验，失败即拒绝，`--apply` 才落盘。
+
+### 5.1 共享 Mutation Service
+
+Agent 产物写入现在有且只有一个归属：`internal/toolplane.MutationService`
+（[`mutation.go`](../internal/toolplane/mutation.go)）。`novelgen tool patch` 是它的
+CLI/进程适配器；Chat/typed-JSON 阶段和写作流水线直接调用它的 typed 方法：
+
+- `ReplaceSetup` / `UpsertCraftElements` / `ReplaceChapter(Object)` /
+  `ReplaceRecap` / `ReplaceDraft` 用于完整对象或批次提交。
+- `ReplaceOutline` 用于 compose 的完整大纲提交；`ReplaceOutlineRaw` 用于
+  scoped Agent SDK 改进，避免把未选中卷也重新 normalize。
+- `CommitOutlineRaw` 用于层级生成过程中对 canonical `outline.json` 的增量
+  progress 快照：只做锁 + 原子 JSON 写，不 normalize、不跑 check、不重写 md。
+- `Patch` 语义通过 `MutationOptions.Mode` 区分 `merge` 与 `replace`。CLI 路径
+  始终校验；命令层已经跑过自己的 quality/repair loop 时以 `Validate:false`
+  提交，仍然经过 normalize、checkpoint 和 store 原子写。
+- 读-改-写由 `store.Root.WithMutationLock` 串行化，避免并发 worker 在
+  craft/outline 上丢失更新。跨进程写入仍需要后端提供 CAS 或项目锁。
+
+canonical 产物（setup/outline/craft/chapter/recap/draft）的命令层直写由
+[`internal/architecture/mutation_ownership_test.go`](../internal/architecture/mutation_ownership_test.go)
+守卫；派生 markdown、日志、评审报告、导出文件、compose 的中间 progress
+快照不属于这条 mutation 边界。
 
 ---
 

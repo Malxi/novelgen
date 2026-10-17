@@ -3,6 +3,10 @@
 `novelgen tool query` provides read-only JSON queries for Claude/agent use.
 `novelgen tool check` provides scoped quality/simulation checks, and
 `novelgen tool patch setup|outline|craft|recap|chapter` applies validated patches through Go.
+The `tool patch` commands are the CLI adapter over
+`internal/toolplane.MutationService`; Chat/typed-JSON pipelines use the same
+service directly, so Agent outputs cannot bypass normalization, checkpoints,
+atomic writes, or the project mutation lock.
 Run commands from a novel project root, or any child directory under a project
 containing `novel.json`.
 
