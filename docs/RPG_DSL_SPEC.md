@@ -945,7 +945,7 @@ MVP (Minimum Viable Product) → Core → Enhanced → Advanced
 |------|------|--------|------|
 | 2.1 DSL → World 转换器 | `internal/rpg/dsl/converter.go` | P0 | 对接现有 RPG 系统 |
 | 2.2 CLI 命令 | `cmd/rpg_dsl.go` | P0 | `novelgen rpg dsl import` |
-| 2.3 AI Skill | `internal/agents/skills/compose-dsl/SKILL.md` | P0 | 简化版 Skill |
+| 2.3 AI Skill | `internal/agents/base/skills/compose-dsl/SKILL.md` | P0 | 简化版 Skill |
 | 2.4 端到端测试 | `tests/dsl_integration_test.go` | P0 | 完整流程测试 |
 
 **MVP 成功标准：**
@@ -1016,7 +1016,7 @@ hook "on_location_enter" { }
 | 6.1 模板系统 | `internal/rpg/dsl/template.go` | P2 | 敌人类型模板 |
 | 6.2 模块化 | `internal/rpg/dsl/module.go` | P2 | import 支持 |
 | 6.3 库文件 | `dsl_libs/` | P2 | 预设模板库 |
-| 6.4 AI 优化 | `internal/agents/skills/compose-dsl/` | P2 | 进阶 Skill |
+| 6.4 AI 优化 | `internal/agents/base/skills/compose-dsl/` | P2 | 进阶 Skill |
 
 **Enhanced 成功标准：**
 - [ ] 支持并行事件
@@ -1136,7 +1136,7 @@ internal/rpg/dsl/
     ├── chapter_001.dsl
     └── full_story.dsl
 
-internal/agents/skills/compose-dsl/
+internal/agents/base/skills/compose-dsl/
 └── SKILL.md            # AI DSL 生成技能
 
 cmd/

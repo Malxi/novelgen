@@ -70,16 +70,20 @@ novelgen/
 │   ├── check_novel/ rpg-check/ rpg-write/ simulate/ visualize/
 │   └── story2rpg/ validate-outline/ deep-analyze/ extract-*/ analyze-outline/
 ├── internal/
-│   ├── agents/                # Agent 层 + 两套技能集
-│   │   ├── agent_base.go      # BaseAgent：prompt 组装 / 调用 / 记账
-│   │   ├── agent_json.go      # JSON 解析与确定性修复
-│   │   ├── agent_evidence.go  # SDK 工具证据校验
-│   │   ├── agent_logging.go   # prompt/response 落盘与 usage 记账
-│   │   ├── setup_agent.go compose_agent.go craft_agent.go
-│   │   ├── write_agent.go recap_agent.go translate_agent.go draft_agent.go
-│   │   ├── chapter_analysis_agent.go chapter_to_dsl_agent.go
-│   │   ├── skill_loader.go    # 加载并 embed internal/agents/skills
-│   │   └── skills/*/SKILL.md  # 38 个 chat 路径阶段 prompt
+│   ├── agents/                # Agent 层：根包只做兼容门面，实现按阶段分目录
+│   │   ├── agents.go          # 旧 API 的 type/var 别名，外部 import 可保持不变
+│   │   ├── base/              # BaseAgent、JSON 修复、证据校验、日志、SDK 参数
+│   │   │   ├── agent_base.go  # prompt 组装 / 调用 / 记账
+│   │   │   ├── agent_json.go agent_evidence.go agent_logging.go
+│   │   │   ├── skill_loader.go
+│   │   │   └── skills/*/SKILL.md  # 38 个 chat 路径阶段 prompt
+│   │   ├── prompt/            # 共享 prompt 长度预算与 review 裁剪
+│   │   ├── review/            # review focus / revision context / review matrix / SDK review DTO
+│   │   ├── shared/            # 跨阶段 DTO（如 NextChapterInfo）
+│   │   ├── setup/ compose/ craft/
+│   │   ├── draft/ write/ recap/ translate/
+│   │   ├── chapter/           # 章节分析 + 章节→DSL
+│   │   └── pipeline/          # 多阶段 AI/RPG 管道
 │   ├── agentruntime/          # Agent SDK 进程运行时
 │   │   ├── process_runtime.go # 通过 stdin/stdout 调用 runner
 │   │   ├── config.go settings.go types.go
@@ -160,7 +164,7 @@ cmd.ExecuteContext(ctx)     // 长流程可在安全点响应取消
 
 ## 4. Agent 层
 
-每个创作阶段是一个 Agent，统一继承 [`internal/agents.BaseAgent`](../internal/agents/agent_base.go)：
+每个创作阶段是一个 Agent，统一继承 [`internal/agents/base.BaseAgent`](../internal/agents/base/agent_base.go)：
 
 - 从 `SKILL.md` 加载 system prompt（支持 `{{language}}` 等模板变量）。
 - 把强类型 input 转成 markdown，追加 output JSON schema 要求。
@@ -187,7 +191,7 @@ prompt/tool allowlist 与写入方式。后续新增阶段应优先把这种差�
 
 | 路径 | 数量 | 用途 |
 | --- | --- | --- |
-| [`internal/agents/skills/`](../internal/agents/skills/) | 38 | chat 路径的阶段 prompt（`setup-gen`、`compose-review`、`craft-characters` …） |
+| [`internal/agents/base/skills/`](../internal/agents/base/skills/) | 38 | chat 路径的阶段 prompt（`setup-gen`、`compose-review`、`craft-characters` …） |
 | [`internal/agentruntime/skills/`](../internal/agentruntime/skills/) | 17 | SDK workflow prompt（`write-chapter-workflow`、`outline-review-workflow`、`novel-tools-core` …） |
 
 SDK skills 会在运行时物化到 `~/.novelgen/agents/skills/`；chat skills 直接读源码树旁的 `skills/` 或内嵌副本。
@@ -309,13 +313,13 @@ AI 分析章节/大纲
 3. **环境根**（`TestAmbientProjectRootUseIsPinned`）：层表里第 5 层及以上的包调用 `store.Default()`/
    `project.Default()`，或调用 `project.LoadConfig/LoadSetup/.../FindRoot` 这类内部会落到 ambient root 的
    便利函数，都会失败，除非该文件在允许清单里（只剩 5 处：`internal/llm/{config,client}.go`、
-   `internal/agents/{agent_base,agent_logging}.go`、`internal/writersdl/write_rpg_dsl.go`）。新代码要显式接收
+   `internal/agents/base/{agent_base,agent_logging}.go`、`internal/writersdl/write_rpg_dsl.go`）。新代码要显式接收
    `*store.Root`；允许清单条目一旦不再命中同样会失败（防止清单腐化）。
 4. **webui 平行副本**（`TestWebUILayoutMatchesStore`）：webui 不能 import 父模块（§8），它手抄的项目相对
    路径若与 store 产出的路径前缀不符即失败，把"改布局要两边一起改"从口头约定变成会失败的测试；`logs/<流名>`
    的第一级还要落在 `store.LogStreamNames()` 声明的集合里，所以改名不会留下一个读空目录的页面。
    跨模块的**记录格式**（不是路径）由 `internal/architecture/schema_test.go` 盯住：它逐个比较
-   `internal/agents.aiCallRecord` 与 `webui.aiCallLogFile` 的 JSON 标签，任一边改名都会失败。
+   `internal/agents/base.aiCallRecord` 与 `webui.aiCallLogFile` 的 JSON 标签，任一边改名都会失败。
 
 任何需要项目内路径的代码都通过 `*store.Root`（或它上面的
 [`internal/project.Book`](../internal/project/project.go)）取得；已持有目录字符串的调用方用 `store.At(dir)`
@@ -385,7 +389,7 @@ chapter check/refresh、`internal/logic` 的 state matrix/continuity、`internal
 1. **文档需持续同步**：本文已重写以匹配现状，请随代码同步维护。
 2. **依赖方向与布局归属已强制**：[`internal/architecture`](../internal/architecture/layers_test.go) 的测试同时约束四件事——① internal 包只能向下依赖（层表 `layer`）；② internal 包不得依赖 `novelgen/cmd/**`；③ `cmd/<group>/` 之间不得互相 import，且命令子包只能由根 `cmd` 包的 `*_register.go` 接线；④ 项目布局字面量只准出现在 `internal/store`（[`layout_test.go`](../internal/architecture/layout_test.go)）。新增 internal 包必须在层表登记，否则测试直接失败。`internal/logger` 因需要写 `logs/` 被放在 store 同一层（第 2 层），其余工具包仍在第 1 层。
 3. **`cmd` 已按组拆完**：`config`/`translate`/`initcmd`/`export`/`recap`/`analyzecmd`/`simulatedsl`/`rpgcmd`/`craftcmd`/`draftcmd`/`setupcmd`/`composecmd`/`writecmd`/`polishcmd`/`projectcmd`/`rpgdsl`/`tool` 都是独立子包；根 `cmd` 包只保留 `root.go`、`registry.go` 与接线文件。
-4. **双执行路径的脚手架已部分收敛**：Agent SDK 调用的公共形状（Bash-only 工具面、`dontAsk` 权限、`RequireSDK`）与 allowlist 去重规则由 [`internal/agents/agent_sdk_params.go`](../internal/agents/agent_sdk_params.go) 统一；章节 check/refresh 命令串（原先手拼二十余处）由 [`internal/toolcmd`](../internal/toolcmd/commands.go) 统一，toolplane 的导航输出与 agents 的指令共用同一构造器；非 ASCII patch 规则与"唯一允许写入"子句抽到 [`agent_sdk_instructions.go`](../internal/agents/agent_sdk_instructions.go)；provider 名称与"是否走 Agent SDK"的判定收敛到 [`internal/models/providers.go`](../internal/models/providers.go) 的 `ProviderXxx` 常量与 `IsAgentSDKProvider`（agents / llm / init / setup 均复用它）。仍各自实现的是各阶段的 tool 命令清单与 patch/check 文案主体、review 结果转换（`toModelReviewResult`），是下一步的收敛目标。
+4. **双执行路径的脚手架已部分收敛**：Agent SDK 调用的公共形状（Bash-only 工具面、`dontAsk` 权限、`RequireSDK`）与 allowlist 去重规则由 [`internal/agents/base/agent_sdk_params.go`](../internal/agents/base/agent_sdk_params.go) 统一；章节 check/refresh 命令串（原先手拼二十余处）由 [`internal/toolcmd`](../internal/toolcmd/commands.go) 统一，toolplane 的导航输出与 agents 的指令共用同一构造器；非 ASCII patch 规则与"唯一允许写入"子句抽到 [`base/agent_sdk_instructions.go`](../internal/agents/base/agent_sdk_instructions.go)；provider 名称与"是否走 Agent SDK"的判定收敛到 [`internal/models/providers.go`](../internal/models/providers.go) 的 `ProviderXxx` 常量与 `IsAgentSDKProvider`（agents / llm / init / setup 均复用它）。仍各自实现的是各阶段的 tool 命令清单与 patch/check 文案主体、review 结果转换（`toModelReviewResult`），是下一步的收敛目标。
 5. **并发已统一（基本完成）**：craft / recap / draft / polish / write / compose 的章节与批次循环已全部改用 [`internal/workerpool`](../internal/workerpool/workerpool.go) 的 `Map`（结果按输入顺序返回，去掉了各处手写的 `WaitGroup+Mutex+channel`）。仅 write 的 best-of 生成/评分子流程仍是自定义 `WaitGroup`，因为它不是“按项独立”的扇出。
 6. **webui 已收敛为单一集成路径**：项目内容通过 `novelgen storage` 命令读取或写回，派生文件与长任务通过 `exec` 调用 CLI；webui 不 import 父 module 的任何包（`boundary_test.go` 强制）。为支持这条路径，`compose normalize` 新增 `--force`（无规范化改动时也重写派生文件），二进制可用 `NOVELGEN_BIN` 指定。
 7. **write/polish 共享逻辑已下沉**：章节上下文加载、生成/改进、post-save 检查与 recap 门禁从 `cmd/writecmd` 抽到 [`internal/writepipe`](../internal/writepipe/)，`polishcmd` 不再依赖 `writecmd`。包内按 `context.go` / `improve.go` / `postsave.go` / `recap.go` 分文件。
@@ -399,7 +403,7 @@ chapter check/refresh、`internal/logic` 的 state matrix/continuity、`internal
 15. **小说 storage 已收敛**：新增 [`internal/store`](../internal/store/)，磁盘布局、原子写、检查点/备份、类型化产物读写都只此一处；`internal/project` 退化为它上面的门面，`cmd/root.go` 负责解析一次根（`--dir` / `NOVELGEN_PROJECT_DIR` / 向上查找）。之前"同一份布局散在 47 个文件里、`compose` 用 cwd 相对路径而 `write` 用向上查找"的不一致已消除——`compose check` 现在在子目录与 `--dir` 两种场景下都可用（原实现要求 cwd 就是项目根）。`internal/models` 现在只保留 `Parse*`/`MarshalForSave` 与**路径入参**的便利读写（不含布局知识），`FindProjectRoot` 移入 store。测试不再靠 `os.Chdir` 定位项目：改为向命令上下文注入 root（`bindProject`）或安装进程默认根（`useProjectRoot`），全仓只剩 `cmd/rpgdsl` 一处 chdir，因为 `rpg-dsl` 的契约本身就是"在含 `books/` 的工作区里运行"，那不是项目根、store 无法表达。
 
    **后续一轮把残留的平行实现也并回 store**（此前本节曾写成"已消除"，实际还有二十余处）：`internal/toolplane` 全部改用 `*store.Root`（含章节正文读取、craft 读写与 checkpoint），`internal/writersdl`（含 `04_chapters.rpg`、批缓存与 manifest 改走原子写）、`internal/logic/state_matrix.go`、`internal/logger`、`internal/agentruntime`、`internal/agents`、`cmd/{export,projectcmd,rpgdsl,writecmd}`、`tools/check_novel`、`internal/rpg/{benchmark,dsl}` 都改为向 store 取路径。这一轮还修掉了三处真实分歧：① 工具面自带一份章节候选文件名（缺数字名回退、多认 `drafts/`），与 write/export 读取的可能是不同文件；② `tool patch chapter --apply` 与 `rpg-dsl` 导出直接 `os.WriteFile`，绕过原子替换；③ `RunToolChapterCheckWithTargetWords` 走 `project.LoadFinalChapterContent`（进程默认根），注入 root 的调用会读到别的项目。剩下的"平行维护"只有 webui（§8 的边界所致）。
-16. **RPG 侧的工作区假设已消除（本轮完成）**：`rpg.LoadNovelgenProject` 以前签名是 `(工作区根, 书名)` 并硬编码 `<工作区>/books/<书名>/story/...`，导致任何不在 `books/<name>` 下的项目（包括 `--dir` 指定的）都加载失败；现在它只接受**项目目录**，路径由 `store` 给出，书名取 `novel.json` 的 `name`（缺失才退回目录名）。调用方（`cmd/rpgcmd`、`cmd/rpgdsl`、`internal/agents/chapter_to_dsl_adapter`、`tools/novelgen-rpg`、`tools/rpg-write`）都只传目录；`internal/rpg/dsl` 的 setup 查找同样改用 store。`cmd/rpgcmd` 仍保留 `<workspace>/output/rpg_data.json` 这份"顺手再存一份"的行为，但只在项目确实位于 `books/<name>` 下时才写，不再往凭空推导的路径写文件。RPG 侧现在也容忍 BOM。
+16. **RPG 侧的工作区假设已消除（本轮完成）**：`rpg.LoadNovelgenProject` 以前签名是 `(工作区根, 书名)` 并硬编码 `<工作区>/books/<书名>/story/...`，导致任何不在 `books/<name>` 下的项目（包括 `--dir` 指定的）都加载失败；现在它只接受**项目目录**，路径由 `store` 给出，书名取 `novel.json` 的 `name`（缺失才退回目录名）。调用方（`cmd/rpgcmd`、`cmd/rpgdsl`、`internal/agents/chapter/chapter_to_dsl_adapter.go`、`tools/novelgen-rpg`、`tools/rpg-write`）都只传目录；`internal/rpg/dsl` 的 setup 查找同样改用 store。`cmd/rpgcmd` 仍保留 `<workspace>/output/rpg_data.json` 这份"顺手再存一份"的行为，但只在项目确实位于 `books/<name>` 下时才写，不再往凭空推导的路径写文件。RPG 侧现在也容忍 BOM。
 17. **仍是两套寻址约定**：项目命令与 `rpg`/`rpg-dsl`/`tools/*` 都按给定目录工作（`rpg-dsl`/`tools/*` 仍以 `<workspace>/books/<name>` 作为**默认**目录，字面量收敛到 `store.BooksDirName`/`store.BookDir`），webui 则自己拼只读路径（见 §8）。`logger` 现在既支持 `SetProjectDir`（host 边界）也支持 `SetProjectRoot`；`cmd/writecmd` 用后者把 `book.Root` 绑定给文件日志，MemFS 项目不会再把日志写到宿主磁盘。`logger.ProjectDir()` 只是"当前项目目录"的兼容缓存；agents/llm 的 agent-home 与 live-log 仍按"logger → `store.Default()` → cwd"的顺序解析（`agentLogRoot`/`agentWorkspaceRoot`/`runtimeWorkspaceRoot`），这是外部进程边界。
 
 18. **storage 抽象的两半（本轮收口）**：布局所有权这一半此前已成立，IO 这一半只做了一半——`FS`/`MemFS` 除了 store 自己的测试以外没有任何使用者，因为项目状态的读写仍在各处走 `os.*`。本轮按 §7 的四条守卫把两半对齐：原子写覆盖 `tool patch setup|outline --apply`（此前走 `models.*.Save`/`project.SavePartialOutline` 的裸 `os.WriteFile`）、派生 markdown、compose 报告与 improve progress；`FS` 补上 `WriteFileExclusive` 与 `OpenAppend`，于是快照/agent 日志/运行日志改用 O_EXCL 抢名（同一秒不再互相覆盖，agent 日志的手写 64 次重试循环删除），writer 自己的 temp+rename 实现并回 store；`MemFS` 补上修改时间与独占创建，三处"比较新旧"的判断（章节 vs DSL、recap vs 章节、章节 vs recap）在内存后端下行为一致。同时把"读不到"从"不存在"里分出来：`LoadChapterContent`/`LoadDraftContent`/`LoadAllDrafts`/`LoadSetupAt` 返回错误，只有 `fs.ErrNotExist` 才表示"没有"，`WriteJSONMerging` 不再把读失败当成空文件合并（那会悄悄丢掉其余键），`BackupFile`/`loadCraftFile` 同理；确实需要"没有就算了"的上下文构造点（continuity/writepipe 的上下文加载、write 流水线的启发式检查）显式忽略错误或记日志。
@@ -413,7 +417,7 @@ chapter check/refresh、`internal/logic` 的 state matrix/continuity、`internal
    `*project.Book`，`cmd/writecmd`、`cmd/draftcmd`、`cmd/polishcmd` 在命令入口解析一次并向下传。
 
 19. **仍未收口的部分（清楚记着）**：
-    - **`logs/ai_calls` 的生产者已补上（本轮）**：`internal/agents.recordAICall` 在每次 AI 调用结束时（成功与失败都算）按 webui 既有的 `aiCallLogFile` schema 写一条 JSON，开关与 markdown prompt/response 日志共用 `NOVELGEN_AGENT_LOGS`；schema 由 `internal/architecture/schema_test.go` 与 webui 读取端逐字段对齐，`logs/ai_calls` 也已进入 `store.LogStreamNames()`，所以 webui 侧的路径与流名都被守卫覆盖。代价是每次调用多落一份 prompt+response（与 markdown 日志重复），关掉日志开关即可完全避免。
+    - **`logs/ai_calls` 的生产者已补上（本轮）**：`internal/agents/base.recordAICall` 在每次 AI 调用结束时（成功与失败都算）按 webui 既有的 `aiCallLogFile` schema 写一条 JSON，开关与 markdown prompt/response 日志共用 `NOVELGEN_AGENT_LOGS`；schema 由 `internal/architecture/schema_test.go` 与 webui 读取端逐字段对齐，`logs/ai_calls` 也已进入 `store.LogStreamNames()`，所以 webui 侧的路径与流名都被守卫覆盖。代价是每次调用多落一份 prompt+response（与 markdown 日志重复），关掉日志开关即可完全避免。
     - 日志流名字本身仍有开放面：webui 只列出它知道的流（现在都在 `store.LogStreamNames()` 里），但流内**文件**的命名约定（`<agent>_<timestamp>.md`、`<id>.json`）没有跨模块校验，只有 store 负责保证唯一性。
     - agent home（`~/.novelgen/agents`、Claude settings、runner 脚手架）不是项目布局，仍直接走 `os.*`；`internal/agentruntime` 与 `internal/llm` 也仍在环境根上取工作区（第 3 条守卫的允许清单）。
     - `FS` 只覆盖"整文件 + 独占创建 + 追加句柄"，没有权限/符号链接语义：`project clone` 这种整树复制、以及 agent-home 操作天生在 seam 之外。`Root.Walk` 提供递归列目录（日志面在用）。

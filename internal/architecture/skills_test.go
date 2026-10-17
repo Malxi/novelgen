@@ -18,7 +18,7 @@ import (
 // call has already started.
 func TestReferencedSkillsExist(t *testing.T) {
 	root := repoRoot(t)
-	chatDir := filepath.Join(root, "internal", "agents", "skills")
+	chatDir := filepath.Join(root, "internal", "agents", "base", "skills")
 	sdkDir := filepath.Join(root, "internal", "agentruntime", "skills")
 
 	chat := referencedSkillFields(t, filepath.Join(root, "internal", "agents"), "Skills")
@@ -89,21 +89,23 @@ func referencedWorkflowLiterals(t *testing.T, dir string) map[string]bool {
 
 func walkSkillSources(t *testing.T, dir string, visit func(*ast.File, *token.FileSet)) {
 	t.Helper()
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("read %s: %v", dir, err)
-	}
 	fset := token.NewFileSet()
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		file, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, 0)
+	err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
-			t.Fatalf("parse %s: %v", name, err)
+			return err
+		}
+		if entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		file, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			return err
 		}
 		visit(file, fset)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk %s: %v", dir, err)
 	}
 }
 
