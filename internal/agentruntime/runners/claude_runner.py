@@ -80,6 +80,7 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
     requested_permission_mode = permission_mode
     tool_allowlist = invocation.get("tool_allowlist") or []
     live_log = LiveLogger(invocation.get("live_log_path"))
+    tool_events: list[Dict[str, Any]] = []
     if tool_allowlist:
         allowed_tools = []
         if permission_mode == "dontAsk":
@@ -130,7 +131,7 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
             options_kwargs[key] = value
 
     if tool_allowlist and "can_use_tool" in accepted:
-        options_kwargs["can_use_tool"] = build_tool_permission_callback(tool_allowlist, live_log, cwd)
+        options_kwargs["can_use_tool"] = build_tool_permission_callback(tool_allowlist, live_log, cwd, tool_events)
     if tool_allowlist and "hooks" in accepted:
         options_kwargs["hooks"] = build_tool_hooks(
             tool_allowlist,
@@ -138,6 +139,7 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
             cwd,
             invocation.get("tool_evidence"),
             user_prompt_driven=user_prompt_driven_flag(invocation),
+            tool_events=tool_events,
         )
 
     schema = invocation.get("output_json_schema")
@@ -226,6 +228,7 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
             "content": text.strip(),
             "model": model or "",
             "usage": usage,
+            "tool_events": tool_events,
         }
 
     try:
@@ -567,7 +570,12 @@ def is_cjk_char(ch: str) -> bool:
 	)
 
 
-def build_tool_permission_callback(allowlist: list[str], live_log: Optional["LiveLogger"] = None, workspace_root: str = ""):
+def build_tool_permission_callback(
+    allowlist: list[str],
+    live_log: Optional["LiveLogger"] = None,
+    workspace_root: str = "",
+    tool_events: Optional[list[Dict[str, Any]]] = None,
+):
     from claude_agent_sdk.types import PermissionResultAllow, PermissionResultDeny  # type: ignore
 
     async def can_use_tool(tool_name: str, tool_input: Dict[str, Any], context: Any):
@@ -576,6 +584,14 @@ def build_tool_permission_callback(allowlist: list[str], live_log: Optional["Liv
         allowed = reason == ""
         if live_log is not None:
             live_log.write("tool_permission", {
+                "tool_name": tool_name,
+                "command": summarize_live_tool_command(command),
+                "allowed": allowed,
+                "reason": reason,
+            })
+        if tool_events is not None:
+            tool_events.append({
+                "source": "permission",
                 "tool_name": tool_name,
                 "command": summarize_live_tool_command(command),
                 "allowed": allowed,
@@ -614,6 +630,7 @@ def build_tool_hooks(
     workspace_root: str = "",
     tool_evidence: Optional[Dict[str, Any]] = None,
     user_prompt_driven: bool = False,
+    tool_events: Optional[list[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     from claude_agent_sdk.types import HookMatcher  # type: ignore
 
@@ -827,6 +844,17 @@ def build_tool_hooks(
                 "reason": reason,
                 "workflow_denial": workflow_denial,
             })
+        if tool_events is not None:
+            tool_events.append({
+                "source": "pre",
+                "hook": "PreToolUse",
+                "tool_name": tool_name,
+                "command": summarize_live_tool_command(command),
+                "allowed": allowed,
+                "reason": reason,
+                "patch_key": patch_key,
+                "patch_apply": patch_apply,
+            })
         if allowed:
             return {
                 "hookSpecificOutput": {
@@ -893,6 +921,16 @@ def build_tool_hooks(
                 "patch_apply": command_uses_apply(command) if patch_key else False,
                 "next_action_names": next_action_names,
                 "next_action_commands": next_action_commands,
+                "duration_ms": duration_ms,
+            })
+        if tool_events is not None:
+            tool_events.append({
+                "source": "post",
+                "hook": "PostToolUse",
+                "tool_name": tool_name,
+                "command": summarize_live_tool_command(command),
+                "patch_key": patch_key,
+                "patch_apply": command_uses_apply(command) if patch_key else False,
                 "duration_ms": duration_ms,
             })
         if check_key and check_key in pending_patch_after_precheck:
@@ -2537,6 +2575,7 @@ def parse_anthropic_response(parsed: Dict[str, Any], model: str) -> Dict[str, An
             "completion_tokens": output_tokens,
             "total_tokens": input_tokens + output_tokens,
         },
+        "tool_events": [],
     }
 
 

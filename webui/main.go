@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -36,6 +37,7 @@ var (
 	clients   = make(map[string]*websocket.Conn)
 	clientsMu sync.RWMutex
 	writesMu  sync.Mutex
+	taskSem   = make(chan struct{}, 4)
 )
 
 // getNovelGenPath returns the path to novelgen executable.
@@ -96,6 +98,7 @@ type Task struct {
 	Error     string    `json:"error,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	cancel    context.CancelFunc
 }
 
 type ProjectInfo struct {
@@ -634,6 +637,8 @@ func createTask(c *gin.Context) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	task.cancel = cancel
 
 	tasksMu.Lock()
 	tasks[task.ID] = task
@@ -641,12 +646,67 @@ func createTask(c *gin.Context) {
 	tasksMu.Unlock()
 
 	// Execute task asynchronously
-	go executeTask(task, req.Command, req.Args)
+	go executeTask(ctx, task, req.Command, req.Args)
 
 	c.JSON(http.StatusOK, APIResponse{Success: true, Data: taskSnapshot})
 }
 
-func executeTask(task *Task, command string, args map[string]interface{}) {
+// buildTaskArgs converts a JSON task request into a deterministic CLI argv.
+// Map iteration order must never leak into the command line: the same request
+// has to produce the same argv for logs, retries and allowlist matching.
+func buildTaskArgs(command string, args map[string]interface{}) []string {
+	cmdArgs := []string{command}
+	subcommand, _ := args["subcommand"].(string)
+	if subcommand != "" {
+		cmdArgs = append(cmdArgs, subcommand)
+	}
+	if positional, ok := args["_positional"].(string); ok && positional != "" {
+		cmdArgs = append(cmdArgs, positional)
+	}
+
+	// Web tasks are non-interactive. compose regen prompts in the terminal when
+	// --prompt is omitted, so provide a default to avoid hanging background jobs.
+	if command == "compose" && subcommand == "regen" {
+		if prompt, ok := args["prompt"].(string); !ok || strings.TrimSpace(prompt) == "" {
+			args["prompt"] = "Regenerate this outline element while preserving continuity and improving motivation, conflict, beats, payoff, and hook."
+		}
+	}
+	// Auto-add --force for compose gen to allow regeneration with backup.
+	if command == "compose" && subcommand == "gen" {
+		cmdArgs = append(cmdArgs, "--force")
+	}
+
+	keys := make([]string, 0, len(args))
+	for key := range args {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		if key == "project_dir" || key == "subcommand" || key == "_positional" {
+			continue
+		}
+		switch value := args[key].(type) {
+		case string:
+			if value != "" {
+				cmdArgs = append(cmdArgs, fmt.Sprintf("--%s", key), value)
+			}
+		case int, int64, float64:
+			cmdArgs = append(cmdArgs, fmt.Sprintf("--%s", key), fmt.Sprintf("%v", value))
+		case bool:
+			if value {
+				cmdArgs = append(cmdArgs, fmt.Sprintf("--%s", key))
+			}
+		}
+	}
+	return cmdArgs
+}
+
+func executeTask(ctx context.Context, task *Task, command string, args map[string]interface{}) {
+	taskSem <- struct{}{}
+	defer func() { <-taskSem }()
+
+	defer task.cancel()
+
 	broadcastTaskUpdate(updateTask(task, func(t *Task) {
 		t.Status = "running"
 		t.Progress = 5
@@ -695,57 +755,7 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 		}
 	}
 
-	// Build command arguments
-	cmdArgs := []string{command}
-
-	// Handle subcommand for compose command
-	if subcommand, ok := args["subcommand"].(string); ok && subcommand != "" {
-		cmdArgs = append(cmdArgs, subcommand)
-	}
-
-	// Handle positional arguments (for commands like 'rpg simulate <chapter_id>')
-	if positional, ok := args["_positional"].(string); ok && positional != "" {
-		cmdArgs = append(cmdArgs, positional)
-	}
-
-	// Web tasks are non-interactive. compose regen prompts in the terminal when
-	// --prompt is omitted, so provide a default to avoid hanging background jobs.
-	if command == "compose" {
-		if subcommand, ok := args["subcommand"].(string); ok && subcommand == "regen" {
-			if prompt, ok := args["prompt"].(string); !ok || strings.TrimSpace(prompt) == "" {
-				args["prompt"] = "Regenerate this outline element while preserving continuity and improving motivation, conflict, beats, payoff, and hook."
-			}
-		}
-	}
-
-	// Auto-add --force for compose gen to allow regeneration with backup
-	if command == "compose" {
-		if subcommand, ok := args["subcommand"].(string); ok && subcommand == "gen" {
-			cmdArgs = append(cmdArgs, "--force")
-		}
-	}
-
-	// Add args based on command type
-	for key, value := range args {
-		// Skip project_dir as it's used for directory switching, not command arg
-		// Skip subcommand as it's already handled above
-		// Skip _positional as it's already handled above
-		if key == "project_dir" || key == "subcommand" || key == "_positional" {
-			continue
-		}
-		switch v := value.(type) {
-		case string:
-			if v != "" {
-				cmdArgs = append(cmdArgs, fmt.Sprintf("--%s", key), v)
-			}
-		case int, int64, float64:
-			cmdArgs = append(cmdArgs, fmt.Sprintf("--%s", key), fmt.Sprintf("%v", v))
-		case bool:
-			if v {
-				cmdArgs = append(cmdArgs, fmt.Sprintf("--%s", key))
-			}
-		}
-	}
+	cmdArgs := buildTaskArgs(command, args)
 
 	// Collect debug info
 	var debugInfo strings.Builder
@@ -770,7 +780,7 @@ func executeTask(task *Task, command string, args map[string]interface{}) {
 	}
 
 	// Build command with working directory
-	cmd := exec.Command(getNovelGenPath(), cmdArgs...)
+	cmd := exec.CommandContext(ctx, getNovelGenPath(), cmdArgs...)
 
 	// Set working directory if project path is provided
 	if projectPath != "" {
@@ -868,6 +878,9 @@ func getTask(c *gin.Context) {
 func deleteTask(c *gin.Context) {
 	id := c.Param("id")
 	tasksMu.Lock()
+	if task, ok := tasks[id]; ok && task.cancel != nil {
+		task.cancel()
+	}
 	delete(tasks, id)
 	tasksMu.Unlock()
 	c.JSON(http.StatusOK, APIResponse{Success: true})
@@ -1365,15 +1378,22 @@ func saveFile(c *gin.Context) {
 		return
 	}
 
-	// Ensure directory exists
-	if err := writeProjectFile(projectPath, cleanPath, []byte(req.Content)); err != nil {
+	canonical := isCanonicalProjectPath(cleanPath)
+	if canonical {
+		err = replaceProjectFile(projectPath, cleanPath, []byte(req.Content))
+	} else {
+		err = writeProjectFile(projectPath, cleanPath, []byte(req.Content))
+	}
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: err.Error()})
 		return
 	}
 
-	if err := syncDerivedFileAfterSave(projectPath, cleanPath); err != nil {
-		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: "Saved file, but failed to sync derived file: " + err.Error()})
-		return
+	if !canonical {
+		if err := syncDerivedFileAfterSave(projectPath, cleanPath); err != nil {
+			c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: "Saved file, but failed to sync derived file: " + err.Error()})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, APIResponse{Success: true, Data: map[string]string{"backup": backupName}})

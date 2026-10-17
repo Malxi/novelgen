@@ -23,7 +23,7 @@ NovelGen 的现代化 Web 界面，提供直观的图形界面来管理小说创
 webui 是独立 Go module（见根 `go.work`），与父 module 的集成遵循固定边界（由 `boundary_test.go` 强制）：
 
 - **读**：通过 `exec` 调用 `novelgen storage projects/stat/read/list`，读取 workspace 项目、项目相对文件和目录，并透传原始 JSON；webui 不直接 `os.ReadFile` 项目内容。
-- **写 / 派生文件 / 长任务**：编辑器保存通过 `novelgen storage write` 写回项目；派生文件和长任务通过 `exec` 调用 `novelgen` 二进制执行。保存 `story/compose/outline.json` 后，webui 会调用 `novelgen compose normalize --force` 重写 `outline.md`，而不是自己渲染派生文件。
+- **写 / 派生文件 / 长任务**：普通文件（笔记、报告）通过 `novelgen storage write` 写回；setup/outline/craft/chapter/recap 等 canonical 产物通过 `novelgen storage replace`，由 CLI 的 `MutationService` 做解析、校验、checkpoint、normalize 和派生文件刷新。派生文件和长任务通过 `exec` 调用 `novelgen` 二进制执行。
 - **禁止**：webui 不得 import `novelgen/cmd/**`，也不得 import `novelgen/internal/**`（`boundary_test.go` 会拒绝任何父 module 的 import）。
 - **替换后端**：`novelgen storage` 内部走 `store.Backend`，因此 OSFS/MemFS/远程后端共享同一套 CLI 命令。
 

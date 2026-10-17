@@ -1357,7 +1357,7 @@ func TestAgentSDKLengthRetrySuggestions(t *testing.T) {
 		!strings.Contains(text, "must not exceed 4050") {
 		t.Fatalf("length retry suggestions missing strict guidance: %s", text)
 	}
-	if !writepipe.IsAgentSDKLengthOvershootError(fmt.Errorf("agent-sdk returned too much content for chapter P1-V1-C1")) {
+	if !writepipe.IsAgentSDKLengthOvershootError(fmt.Errorf("chapter P1-V1-C1: %w", agents.ErrAgentSDKChapterTooLong)) {
 		t.Fatalf("expected overshoot error detection")
 	}
 	if writepipe.IsAgentSDKLengthOvershootError(fmt.Errorf("some other error")) {

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"novelgen/internal/agents"
+	"novelgen/internal/app"
 	novelcont "novelgen/internal/continuity"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
@@ -45,6 +46,20 @@ func ValidateWriteBestOfFlag() error {
 
 func writeMinScorePercent() float64 {
 	return float64(writeMinScoreFlag)
+}
+
+// writeTargetWords resolves the chapter word budget. The flag default is only a
+// fallback: an explicit --words value must win over the project config even
+// when it happens to equal the historical default (2000).
+func writeTargetWords(cmd *cobra.Command, config *models.ProjectConfig) int {
+	targetWords := writeWordsFlag
+	if cmd != nil && cmd.Flags().Changed("words") {
+		return targetWords
+	}
+	if config != nil && config.ChapterConfig.TargetWordsPerChapter > 0 {
+		return config.ChapterConfig.TargetWordsPerChapter
+	}
+	return targetWords
 }
 
 var (
@@ -286,61 +301,40 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	}
 	setupWriteAgentHistoryCutoff(writeAgentHistoryFlag)
 
-	book, err := project.ForCommand(cmd)
+	session, err := app.Open(cmd)
+	if err != nil {
+		return err
+	}
+	book := session.Book()
+	config := session.Config
+	outline, err := session.RequireOutline()
 	if err != nil {
 		return err
 	}
 
-	config, err := book.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
-	}
-
-	// Load story setup
-	setup, err := book.LoadSetup()
-	if err != nil {
-		return fmt.Errorf("failed to load story setup: %w", err)
-	}
-
-	// Load outline
-	outline, err := book.LoadOutline()
-	if err != nil {
-		return fmt.Errorf("failed to load outline: %w", err)
-	}
-
-	// Load LLM config
-	cfg, err := llm.LoadOrCreateConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load LLM config: %w", err)
-	}
-
-	// Create LLM client
-	client := cfg.CreateClient(&config.LLM)
-	if client == nil {
-		return fmt.Errorf("failed to create LLM client")
-	}
-
-	// Use config target words if flag is default (2000)
-	targetWords := writeWordsFlag
-	if targetWords == 2000 && config.ChapterConfig.TargetWordsPerChapter > 0 {
-		targetWords = config.ChapterConfig.TargetWordsPerChapter
-	}
+	targetWords := writeTargetWords(cmd, config)
 
 	// Create write agent
-	agent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
-	agent.SetLanguage(config.Language)
+	agent, err := session.NewWriteAgent()
+	if err != nil {
+		return err
+	}
 
 	setupWriteRunLogging(book.Root, "write gen")
 
 	// Create continuity builder
 	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root)
 	// Create recap agent + store (auto-persist recaps for continuity)
-	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
-	recapAgent.SetLanguage(config.Language)
+	recapAgent, err := session.NewRecapAgent()
+	if err != nil {
+		return err
+	}
 	recapStore := recap.NewStoreAt(book.Root)
 	// Create lightweight best-of scorer (used only when --best-of is enabled)
-	scorer := agents.NewChapterScorerAgent(client, cfg, &config.LLM)
-	scorer.SetLanguage(config.Language)
+	scorer, err := session.NewChapterScorerAgent()
+	if err != nil {
+		return err
+	}
 	var errc writepipe.WriteErrorCollector
 
 	// Get list of chapters to generate
@@ -390,7 +384,7 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 		}
 
 		// Save final content
-		if err := writepipe.SaveFinalChapter(book, chapter, content); err != nil {
+		if err := writepipe.SaveFinalChapter(ctx, book, chapter, content); err != nil {
 			log.Error("Failed to save content for chapter %s: %v", chapter.ID, err)
 			errc.Addf("%s: save final chapter failed: %w", chapter.ID, err)
 			return struct{}{}, nil
@@ -610,11 +604,10 @@ func saveWriteReviewResult(book *project.Book, chapter *models.Chapter, review m
 	if chapter == nil {
 		return fmt.Errorf("chapter is nil")
 	}
-	root, err := store.Default()
-	if err != nil {
-		return err
+	if book == nil {
+		return fmt.Errorf("project is required")
 	}
-	return root.WriteJSON(root.ReviewFile(chapter.ID+"_write_review.json"), review)
+	return book.WriteJSON(book.ReviewFile(chapter.ID+"_write_review.json"), review)
 }
 
 func loadFinalChapterContentsForVolume(book *project.Book, volume *models.Volume) (map[string]string, error) {
@@ -763,49 +756,24 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 	}
 	setupWriteAgentHistoryCutoff(writeAgentHistoryFlag)
 
-	book, err := project.ForCommand(cmd)
+	session, err := app.Open(cmd)
+	if err != nil {
+		return err
+	}
+	book := session.Book()
+	config := session.Config
+	outline, err := session.RequireOutline()
 	if err != nil {
 		return err
 	}
 
-	config, err := book.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
-	}
-
-	// Load story setup
-	setup, err := book.LoadSetup()
-	if err != nil {
-		return fmt.Errorf("failed to load story setup: %w", err)
-	}
-
-	// Load outline
-	outline, err := book.LoadOutline()
-	if err != nil {
-		return fmt.Errorf("failed to load outline: %w", err)
-	}
-
-	// Load LLM config
-	cfg, err := llm.LoadOrCreateConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load LLM config: %w", err)
-	}
-
-	// Create LLM client
-	client := cfg.CreateClient(&config.LLM)
-	if client == nil {
-		return fmt.Errorf("failed to create LLM client")
-	}
-
-	// Use config target words if flag is default (2000)
-	targetWords := writeWordsFlag
-	if targetWords == 2000 && config.ChapterConfig.TargetWordsPerChapter > 0 {
-		targetWords = config.ChapterConfig.TargetWordsPerChapter
-	}
+	targetWords := writeTargetWords(cmd, config)
 
 	// Create write agent
-	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
-	writeAgent.SetLanguage(config.Language)
+	writeAgent, err := session.NewWriteAgent()
+	if err != nil {
+		return err
+	}
 
 	setupWriteRunLogging(book.Root, "write improve")
 	if writeAgentSDKFlag {
@@ -817,12 +785,17 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 
 	// Create continuity builder
 	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root)
-	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
-	recapAgent.SetLanguage(config.Language)
+	recapAgent, err := session.NewRecapAgent()
+	if err != nil {
+		return err
+	}
 	recapStore := recap.NewStoreAt(book.Root)
 
 	// Get volumes to improve
-	volumes := project.VolumesForSelection(outline, writeVolumeFlag, writeChapterFlag)
+	volumes, err := project.VolumesForSelection(outline, writeVolumeFlag, writeChapterFlag)
+	if err != nil {
+		return err
+	}
 	if len(volumes) == 0 {
 		return fmt.Errorf("no volumes found to improve")
 	}
@@ -1085,7 +1058,7 @@ func improveChaptersWithWriteAgent(ctx context.Context, book *project.Book, agen
 		}
 		if agentApplied && strings.TrimSpace(savedContent) == strings.TrimSpace(content) {
 			log.Info("[Worker %d] Agent patch already saved chapter %s through tool patch chapter --apply", workerID, chapter.ID)
-		} else if err := writepipe.SaveFinalChapter(book, chapter, content); err != nil {
+		} else if err := writepipe.SaveFinalChapter(ctx, book, chapter, content); err != nil {
 			log.Error("[Worker %d] Failed to save improved chapter %s: %v", workerID, chapter.ID, err)
 			errc.Addf("%s: save improved chapter failed: %w", chapter.ID, err)
 			return false, nil
@@ -1162,7 +1135,7 @@ func repairAgentSDKGeneratedChapterPostSave(ctx context.Context, book *project.B
 	}
 	repaired, agentApplied := writepipe.ResolveAgentAppliedChapterContent(log, book, workerID, chapter, currentContent, repaired, true, true)
 	if !agentApplied {
-		if err := writepipe.SaveFinalChapter(book, chapter, repaired); err != nil {
+		if err := writepipe.SaveFinalChapter(ctx, book, chapter, repaired); err != nil {
 			return "", nil, fmt.Errorf("save repaired final chapter: %w", err)
 		}
 		saved, readErr := book.LoadFinalChapterContent(chapter)
@@ -1262,49 +1235,24 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
 
-	book, err := project.ForCommand(cmd)
+	session, err := app.Open(cmd)
+	if err != nil {
+		return err
+	}
+	book := session.Book()
+	config := session.Config
+	outline, err := session.RequireOutline()
 	if err != nil {
 		return err
 	}
 
-	config, err := book.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
-	}
-
-	// Load story setup
-	setup, err := book.LoadSetup()
-	if err != nil {
-		return fmt.Errorf("failed to load story setup: %w", err)
-	}
-
-	// Load outline
-	outline, err := book.LoadOutline()
-	if err != nil {
-		return fmt.Errorf("failed to load outline: %w", err)
-	}
-
-	// Load LLM config
-	cfg, err := llm.LoadOrCreateConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load LLM config: %w", err)
-	}
-
-	// Create LLM client
-	client := cfg.CreateClient(&config.LLM)
-	if client == nil {
-		return fmt.Errorf("failed to create LLM client")
-	}
-
-	// Use config target words if flag is default (2000)
-	targetWords := writeWordsFlag
-	if targetWords == 2000 && config.ChapterConfig.TargetWordsPerChapter > 0 {
-		targetWords = config.ChapterConfig.TargetWordsPerChapter
-	}
+	targetWords := writeTargetWords(cmd, config)
 
 	// Create write agent
-	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
-	writeAgent.SetLanguage(config.Language)
+	writeAgent, err := session.NewWriteAgent()
+	if err != nil {
+		return err
+	}
 
 	setupWriteRunLogging(book.Root, "write review")
 	if writeAgentSDKFlag {
@@ -1639,49 +1587,28 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	}
 	setupWriteAgentHistoryCutoff(writeAgentHistoryFlag)
 
-	book, err := project.ForCommand(cmd)
+	session, err := app.Open(cmd)
+	if err != nil {
+		return err
+	}
+	book := session.Book()
+	config := session.Config
+	setup, err := session.RequireSetup()
+	if err != nil {
+		return err
+	}
+	outline, err := session.RequireOutline()
 	if err != nil {
 		return err
 	}
 
-	config, err := book.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
-	}
-
-	// Load story setup
-	setup, err := book.LoadSetup()
-	if err != nil {
-		return fmt.Errorf("failed to load story setup: %w", err)
-	}
-
-	// Load outline
-	outline, err := book.LoadOutline()
-	if err != nil {
-		return fmt.Errorf("failed to load outline: %w", err)
-	}
-
-	// Load LLM config
-	cfg, err := llm.LoadOrCreateConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load LLM config: %w", err)
-	}
-
-	// Create LLM client
-	client := cfg.CreateClient(&config.LLM)
-	if client == nil {
-		return fmt.Errorf("failed to create LLM client")
-	}
-
-	// Use config target words if flag is default (2000)
-	targetWords := writeWordsFlag
-	if targetWords == 2000 && config.ChapterConfig.TargetWordsPerChapter > 0 {
-		targetWords = config.ChapterConfig.TargetWordsPerChapter
-	}
+	targetWords := writeTargetWords(cmd, config)
 
 	// Create write agent
-	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
-	writeAgent.SetLanguage(config.Language)
+	writeAgent, err := session.NewWriteAgent()
+	if err != nil {
+		return err
+	}
 
 	setupWriteRunLogging(book.Root, "write pipeline")
 
@@ -1717,12 +1644,16 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create recap agent for all chapters
-	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
-	recapAgent.SetLanguage(config.Language)
+	recapAgent, err := session.NewRecapAgent()
+	if err != nil {
+		return err
+	}
 	recapStore := recap.NewStoreAt(book.Root)
 	// Create lightweight best-of scorer (used only when --best-of is enabled)
-	scorer := agents.NewChapterScorerAgent(client, cfg, &config.LLM)
-	scorer.SetLanguage(config.Language)
+	scorer, err := session.NewChapterScorerAgent()
+	if err != nil {
+		return err
+	}
 
 	// RPG DSL issues are refreshed after chapter content changes. Running this
 	// before generation would analyze stale or missing chapter files.
@@ -1754,7 +1685,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				errc.Addf("%s: generate failed: %w", chapter.ID, err)
 				continue
 			}
-			if err := writepipe.SaveFinalChapter(book, chapter, generatedContent); err != nil {
+			if err := writepipe.SaveFinalChapter(ctx, book, chapter, generatedContent); err != nil {
 				log.Error("Failed to save chapter %s: %v", chapter.ID, err)
 				errc.Addf("%s: save generated chapter failed: %w", chapter.ID, err)
 				continue
@@ -1855,7 +1786,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		log.Info("Reviewed chapter %s: score %.1f", chapter.ID, reviewResult.OverallScore)
 
 		if writeEmitRPGDSLFlag && writeMaxRoundsFlag > 0 {
-			result, err := refreshWriteRPGDSL(ctx, book.Root, config, cfg, setup, client, writeRPGBatchSizeFlag, "before improvement")
+			result, err := refreshWriteRPGDSL(ctx, book.Root, config, session.LLMConfig, setup, session.Client, writeRPGBatchSizeFlag, "before improvement")
 			if err != nil {
 				log.Error("Failed to refresh RPG DSL before improving chapter %s: %v", chapter.ID, err)
 			} else {
@@ -1938,7 +1869,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 			}
 			if agentApplied && strings.TrimSpace(savedContent) == strings.TrimSpace(improvedContent) {
 				log.Info("Agent patch already saved chapter %s through tool patch chapter --apply", chapter.ID)
-			} else if err := writepipe.SaveFinalChapter(book, chapter, improvedContent); err != nil {
+			} else if err := writepipe.SaveFinalChapter(ctx, book, chapter, improvedContent); err != nil {
 				log.Error("Failed to save improved chapter %s: %v", chapter.ID, err)
 				errc.Addf("%s: save improved chapter failed: %w", chapter.ID, err)
 				break
@@ -2016,7 +1947,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		}
 
 		if writeEmitRPGDSLFlag {
-			result, err := refreshWriteRPGDSL(ctx, book.Root, config, cfg, setup, client, writeRPGBatchSizeFlag, "after final recap")
+			result, err := refreshWriteRPGDSL(ctx, book.Root, config, session.LLMConfig, setup, session.Client, writeRPGBatchSizeFlag, "after final recap")
 			if err != nil {
 				log.Error("Failed to refresh final RPG DSL after chapter %s recap: %v", chapter.ID, err)
 			} else {

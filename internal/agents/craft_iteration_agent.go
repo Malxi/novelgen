@@ -8,6 +8,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 )
 
 // CraftReviewCharactersInput is the input for character review
@@ -146,6 +147,13 @@ func NewCraftIterationAgent(client llm.Client, config *llm.Config, projectLLM *m
 // SetLanguage sets the output language
 func (a *CraftIterationAgent) SetLanguage(language string) {
 	a.base.SetLanguage(language)
+}
+
+// SetProjectRoot binds the agent to an explicit project root.
+func (a *CraftIterationAgent) SetProjectRoot(root *store.Root) {
+	if a != nil && a.base != nil {
+		a.base.SetProjectRoot(root)
+	}
 }
 
 // ReviewCharacters reviews characters and returns improvement suggestions

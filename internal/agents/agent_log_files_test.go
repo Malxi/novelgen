@@ -28,7 +28,7 @@ func TestWriteAgentLogFileDoesNotOverwriteConcurrentWrites(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			path, err := writeAgentLogFile("prompts", "ComposeAgent", "payload")
+			path, err := (&BaseAgent{}).saveLogStream("prompts", "ComposeAgent", "payload")
 			if err != nil {
 				t.Errorf("writeAgentLogFile: %v", err)
 				return
@@ -65,9 +65,9 @@ func TestWriteAgentLogFileCanBeDisabled(t *testing.T) {
 	t.Cleanup(func() { logger.Default().SetProjectDir(prev) })
 
 	t.Setenv(AgentLogsDisabledEnv, "1")
-	path, err := writeAgentLogFile("responses", "WriteAgent", "payload")
+	path, err := (&BaseAgent{}).saveLogStream("responses", "WriteAgent", "payload")
 	if err != nil {
-		t.Fatalf("writeAgentLogFile: %v", err)
+		t.Fatalf("saveLogStream: %v", err)
 	}
 	if path != "" {
 		t.Fatalf("expected no path when logs are disabled, got %q", path)

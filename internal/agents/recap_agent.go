@@ -11,6 +11,7 @@ import (
 	"novelgen/internal/logger"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 )
 
 // RecapExtractInput is the input for recap extraction
@@ -53,6 +54,13 @@ func NewRecapAgent(client llm.Client, config *llm.Config, projectLLM *models.Pro
 // SetLanguage sets the output language
 func (a *RecapAgent) SetLanguage(language string) {
 	a.base.SetLanguage(language)
+}
+
+// SetProjectRoot binds the agent to an explicit project root.
+func (a *RecapAgent) SetProjectRoot(root *store.Root) {
+	if a != nil && a.base != nil {
+		a.base.SetProjectRoot(root)
+	}
 }
 
 // Extract extracts a recap from chapter text

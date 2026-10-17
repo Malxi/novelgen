@@ -162,8 +162,30 @@ func (s *MutationService) UpsertCraftElements(_ context.Context, kind store.Craf
 	}
 	opts = opts.normalized()
 	opts.Apply = true
+	opts.Mode = MutationMerge
+	return runCraftBulkMutation(root, kind, elements, opts, nil, false)
+}
+
+// ReplaceCraftElements replaces one craft file with the supplied complete set of
+// elements. Unlike UpsertCraftElements, elements omitted from values are
+// removed from the file; this is the editor "save whole file" semantic.
+func (s *MutationService) ReplaceCraftElements(_ context.Context, kind store.CraftKind, values interface{}, opts MutationOptions) (*ToolPatchResult, error) {
+	root, err := s.requireRoot()
+	if err != nil {
+		return nil, err
+	}
+	data, err := json.Marshal(values)
+	if err != nil {
+		return nil, fmt.Errorf("encode craft elements: %w", err)
+	}
+	var elements map[string]map[string]interface{}
+	if err := json.Unmarshal(data, &elements); err != nil {
+		return nil, fmt.Errorf("decode craft elements: %w", err)
+	}
+	opts = opts.normalized()
+	opts.Apply = true
 	opts.Mode = MutationReplace
-	return runCraftBulkMutation(root, kind, elements, opts, nil)
+	return runCraftBulkMutation(root, kind, elements, opts, nil, true)
 }
 
 // UpsertCraftElement commits one generated craft element.

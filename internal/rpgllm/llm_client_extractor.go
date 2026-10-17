@@ -28,7 +28,7 @@ func NewNovelgenLLMClient(client llm.Client, options *llm.ChatOptions) *rpg.LLME
 }
 
 // Complete 实现 rpg.LLMClient 接口
-func (c *NovelgenLLMClient) Complete(prompt string, text string) (string, error) {
+func (c *NovelgenLLMClient) Complete(ctx context.Context, prompt string, text string) (string, error) {
 	messages := []llm.Message{
 		{
 			Role:    "system",
@@ -40,7 +40,10 @@ func (c *NovelgenLLMClient) Complete(prompt string, text string) (string, error)
 		},
 	}
 
-	resp, err := c.client.ChatCompletion(context.Background(), messages, c.options)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	resp, err := c.client.ChatCompletion(ctx, messages, c.options)
 	if err != nil {
 		return "", fmt.Errorf("LLM request failed: %w", err)
 	}
@@ -49,19 +52,19 @@ func (c *NovelgenLLMClient) Complete(prompt string, text string) (string, error)
 }
 
 // ExtractWithNovelgenClient 使用 novelgen LLM client 提取小说实体
-func ExtractWithNovelgenClient(client llm.Client, options *llm.ChatOptions, text string) (*rpg.NovelRPGData, error) {
+func ExtractWithNovelgenClient(ctx context.Context, client llm.Client, options *llm.ChatOptions, text string) (*rpg.NovelRPGData, error) {
 	extractor := NewNovelgenLLMClient(client, options)
-	return extractor.ExtractFromNovel(text)
+	return extractor.ExtractFromNovel(ctx, text)
 }
 
 // BatchExtract 批量提取多个文本片段
-func BatchExtract(client llm.Client, options *llm.ChatOptions, texts []string) ([]*rpg.NovelRPGData, error) {
+func BatchExtract(ctx context.Context, client llm.Client, options *llm.ChatOptions, texts []string) ([]*rpg.NovelRPGData, error) {
 	var results []*rpg.NovelRPGData
 
 	for i, text := range texts {
 		fmt.Printf("Processing chunk %d/%d...\n", i+1, len(texts))
 
-		data, err := ExtractWithNovelgenClient(client, options, text)
+		data, err := ExtractWithNovelgenClient(ctx, client, options, text)
 		if err != nil {
 			return nil, fmt.Errorf("failed to extract chunk %d: %w", i+1, err)
 		}
@@ -133,12 +136,12 @@ func MergeExtractResults(results []*rpg.NovelRPGData) *rpg.NovelRPGData {
 }
 
 // ExtractLargeText 处理大文本（自动分块）
-func ExtractLargeText(client llm.Client, options *llm.ChatOptions, text string, chunkSize int) (*rpg.NovelRPGData, error) {
+func ExtractLargeText(ctx context.Context, client llm.Client, options *llm.ChatOptions, text string, chunkSize int) (*rpg.NovelRPGData, error) {
 	// 分块
 	chunks := splitTextIntoChunks(text, chunkSize)
 
 	// 批量提取
-	results, err := BatchExtract(client, options, chunks)
+	results, err := BatchExtract(ctx, client, options, chunks)
 	if err != nil {
 		return nil, err
 	}

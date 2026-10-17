@@ -287,18 +287,21 @@ func buildChapterContentFromOutline(chapter *models.Chapter) string {
 
 // SaveFinalChapter saves the generated final chapter content into an explicit
 // project.
-func SaveFinalChapter(book *project.Book, chapter *models.Chapter, content string) error {
+func SaveFinalChapter(ctx context.Context, book *project.Book, chapter *models.Chapter, content string) error {
 	if book == nil {
 		return fmt.Errorf("project is required")
 	}
 	if chapter == nil {
 		return fmt.Errorf("chapter is nil")
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	// The write/polish pipelines run their own pre-save checks and post-save
 	// verification. Commit the generated chapter through the same mutation
 	// surface used by `tool patch chapter`, without duplicating that quality
 	// pass here.
-	_, err := toolplane.NewMutationService(book.Root).ReplaceChapterObject(context.Background(), chapter, content, toolplane.MutationOptions{
+	_, err := toolplane.NewMutationService(book.Root).ReplaceChapterObject(ctx, chapter, content, toolplane.MutationOptions{
 		Validate: false,
 		Source:   "write-pipeline",
 	})

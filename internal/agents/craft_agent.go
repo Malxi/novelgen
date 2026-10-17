@@ -9,6 +9,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 	"novelgen/internal/utils"
 )
 
@@ -191,6 +192,13 @@ func NewCraftAgent(client llm.Client, config *llm.Config, projectLLM *models.Pro
 // SetLanguage sets the output language
 func (a *CraftAgent) SetLanguage(language string) {
 	a.base.SetLanguage(language)
+}
+
+// SetProjectRoot binds the agent to an explicit project root.
+func (a *CraftAgent) SetProjectRoot(root *store.Root) {
+	if a != nil && a.base != nil {
+		a.base.SetProjectRoot(root)
+	}
 }
 
 // buildStorySetupSummary creates a lightweight summary of StorySetup

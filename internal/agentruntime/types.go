@@ -66,6 +66,22 @@ type Result struct {
 	Usage       Usage        `json:"usage,omitempty"`
 	LiveLogPath string       `json:"live_log_path,omitempty"`
 	LiveSummary *LiveSummary `json:"live_summary,omitempty"`
+	ToolEvents  []ToolEvent  `json:"tool_events,omitempty"`
+}
+
+// ToolEvent is the runner's structured record of one tool-gate/hook event.
+// Go uses it for evidence validation when available, instead of inferring the
+// same facts from the human-readable live JSONL log.
+type ToolEvent struct {
+	Source     string `json:"source,omitempty"`
+	Hook       string `json:"hook,omitempty"`
+	ToolName   string `json:"tool_name,omitempty"`
+	Command    string `json:"command,omitempty"`
+	Allowed    bool   `json:"allowed,omitempty"`
+	Reason     string `json:"reason,omitempty"`
+	PatchKey   string `json:"patch_key,omitempty"`
+	PatchApply bool   `json:"patch_apply,omitempty"`
+	DurationMS int    `json:"duration_ms,omitempty"`
 }
 
 // Usage is provider-independent token usage information.

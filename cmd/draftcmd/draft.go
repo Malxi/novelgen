@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"novelgen/internal/agents"
+	"novelgen/internal/app"
 	"novelgen/internal/continuity"
-	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
 	"novelgen/internal/logic/continuity/recap"
@@ -162,50 +162,27 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
 
-	// Resolve the project this command operates on once, then read everything through it.
-	book, err := project.ForCommand(cmd)
+	session, err := app.Open(cmd)
+	if err != nil {
+		return err
+	}
+	book := session.Book()
+	outline, err := session.RequireOutline()
+	if err != nil {
+		return err
+	}
+	agent, err := session.NewDraftAgent()
 	if err != nil {
 		return err
 	}
 
-	config, err := book.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
-	}
-
-	// Load story setup
-	setup, err := book.LoadSetup()
-	if err != nil {
-		return fmt.Errorf("failed to load story setup: %w", err)
-	}
-
-	// Load outline
-	outline, err := book.LoadOutline()
-	if err != nil {
-		return fmt.Errorf("failed to load outline: %w", err)
-	}
-
-	// Load LLM config
-	cfg, err := llm.LoadOrCreateConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load LLM config: %w", err)
-	}
-
-	// Create LLM client
-	client := cfg.CreateClient(&config.LLM)
-	if client == nil {
-		return fmt.Errorf("failed to create LLM client")
-	}
-
-	// Create draft agent
-	agent := agents.NewDraftAgent(client, cfg, &config.LLM, setup, outline)
-	agent.SetLanguage(config.Language)
-
 	// Create state matrix manager
 	stateManager := logic.NewStateMatrixManagerAt(book.Root)
 	// Create recap agent + store (auto-persist recaps for continuity)
-	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
-	recapAgent.SetLanguage(config.Language)
+	recapAgent, err := session.NewRecapAgent()
+	if err != nil {
+		return err
+	}
 	recapStore := recap.NewStoreAt(book.Root)
 
 	// Get list of chapters to generate
@@ -250,7 +227,7 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 		continuity.PersistOfflineRecap(book, chapter, draft)
 
 		// Save draft
-		if err := saveDraft(book, chapter, draft); err != nil {
+		if err := saveDraft(ctx, book, chapter, draft); err != nil {
 			log.Error("Failed to save draft for chapter %s: %v", chapter.ID, err)
 			return struct{}{}, nil
 		}
@@ -303,11 +280,14 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 }
 
 // saveDraft saves the generated draft into an explicit project.
-func saveDraft(book *project.Book, chapter *models.Chapter, draft string) error {
+func saveDraft(ctx context.Context, book *project.Book, chapter *models.Chapter, draft string) error {
 	if book == nil {
 		return fmt.Errorf("project is required")
 	}
-	_, err := toolplane.NewMutationService(book.Root).ReplaceDraft(context.Background(), chapter, draft, toolplane.MutationOptions{
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	_, err := toolplane.NewMutationService(book.Root).ReplaceDraft(ctx, chapter, draft, toolplane.MutationOptions{
 		Source: "draft-command",
 	})
 	return err
@@ -318,27 +298,14 @@ func runDraftReview(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
 
-	// Resolve the project this command operates on once, then read everything through it.
-	book, err := project.ForCommand(cmd)
+	session, err := app.Open(cmd)
 	if err != nil {
 		return err
 	}
-
-	config, err := book.LoadConfig()
+	book := session.Book()
+	outline, err := session.RequireOutline()
 	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
-	}
-
-	// Load story setup
-	setup, err := book.LoadSetup()
-	if err != nil {
-		return fmt.Errorf("failed to load story setup: %w", err)
-	}
-
-	// Load outline
-	outline, err := book.LoadOutline()
-	if err != nil {
-		return fmt.Errorf("failed to load outline: %w", err)
+		return err
 	}
 
 	// Load drafts
@@ -350,24 +317,17 @@ func runDraftReview(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no drafts found. Run 'novelgen draft gen' first")
 	}
 
-	// Load LLM config
-	cfg, err := llm.LoadOrCreateConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load LLM config: %w", err)
-	}
-
-	// Create LLM client
-	client := cfg.CreateClient(&config.LLM)
-	if client == nil {
-		return fmt.Errorf("failed to create LLM client")
-	}
-
 	// Create draft agent for review
-	agent := agents.NewDraftAgent(client, cfg, &config.LLM, setup, outline)
-	agent.SetLanguage(config.Language)
+	agent, err := session.NewDraftAgent()
+	if err != nil {
+		return err
+	}
 
 	// Get volumes to review
-	volumes := project.VolumesForSelection(outline, draftVolumeFlag, draftChapterFlag)
+	volumes, err := project.VolumesForSelection(outline, draftVolumeFlag, draftChapterFlag)
+	if err != nil {
+		return err
+	}
 	if len(volumes) == 0 {
 		return fmt.Errorf("no volumes found to review")
 	}
@@ -416,47 +376,25 @@ func runDraftImprove(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 	ctx := cmd.Context()
 
-	// Resolve the project this command operates on once, then read everything through it.
-	book, err := project.ForCommand(cmd)
+	session, err := app.Open(cmd)
+	if err != nil {
+		return err
+	}
+	book := session.Book()
+	outline, err := session.RequireOutline()
+	if err != nil {
+		return err
+	}
+	draftAgent, err := session.NewDraftAgent()
 	if err != nil {
 		return err
 	}
 
-	config, err := book.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
-	}
-
-	// Load story setup
-	setup, err := book.LoadSetup()
-	if err != nil {
-		return fmt.Errorf("failed to load story setup: %w", err)
-	}
-
-	// Load outline
-	outline, err := book.LoadOutline()
-	if err != nil {
-		return fmt.Errorf("failed to load outline: %w", err)
-	}
-
-	// Load LLM config
-	cfg, err := llm.LoadOrCreateConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load LLM config: %w", err)
-	}
-
-	// Create LLM client
-	client := cfg.CreateClient(&config.LLM)
-	if client == nil {
-		return fmt.Errorf("failed to create LLM client")
-	}
-
-	// Create draft agent
-	draftAgent := agents.NewDraftAgent(client, cfg, &config.LLM, setup, outline)
-	draftAgent.SetLanguage(config.Language)
-
 	// Get volumes to improve
-	volumes := project.VolumesForSelection(outline, draftVolumeFlag, draftChapterFlag)
+	volumes, err := project.VolumesForSelection(outline, draftVolumeFlag, draftChapterFlag)
+	if err != nil {
+		return err
+	}
 	if len(volumes) == 0 {
 		return fmt.Errorf("no volumes found to improve")
 	}
@@ -637,7 +575,7 @@ func improveChaptersWithAgent(ctx context.Context, book *project.Book, agent *ag
 		log.Info("[Worker %d] Fix summary for %s: %s", workerID, chapter.ID, sum.String())
 
 		// Save improved draft
-		if err := saveDraft(book, chapter, draft); err != nil {
+		if err := saveDraft(ctx, book, chapter, draft); err != nil {
 			log.Error("[Worker %d] Failed to save improved draft for chapter %s: %v", workerID, chapter.ID, err)
 			return false, nil
 		}

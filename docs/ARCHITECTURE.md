@@ -176,6 +176,11 @@ cmd.ExecuteContext(ctx)     // 长流程可在安全点响应取消
 
 运行时选择见 `resolveRuntime`：显式传入 > client 实现的 `Runtime()` > 按 provider（`claude`/`claude_sdk`/`agent`）加载 [`~/.novelgen/agent_config.json`](../internal/agentruntime/config.go)。
 
+命名注意：`XxxWithAgentSDK` 方法表示“使用带项目工具的 workflow prompt”，**不**表示
+“换一个 runtime”。在 Claude provider 下，普通 `Xxx` 方法也可能已经走 SDK runtime；区别在
+prompt/tool allowlist 与写入方式。后续新增阶段应优先把这种差异表达为显式的 mode/options，
+而不是继续增加 `WithAgentSDK` 方法对。
+
 ### 4.2 两套技能集（用途不同，不是重复）
 
 两套技能集**用途不同、名称不重叠**，都通过 `go:embed` 打进二进制：
@@ -423,6 +428,43 @@ chapter check/refresh、`internal/logic` 的 state matrix/continuity、`internal
     `novelgen storage ...` 命令，不再直接 `os.ReadFile` 项目内容；项目发现、CLI `exec` 的工作目录与
     Agent SDK runner 仍需要宿主路径，这是外部进程边界。对象存储后端还必须自行实现
     `Rename`/`OpenAppend`/`ModTime` 以及 `WorkspaceLister`，并让 CLI 子进程指向同一个 backend。
+
+21. **命令级组合根与 canonical 编辑器写入（本轮）**：新增 `internal/app.Session`，由它解析一次
+    `*store.Root`、加载 `novel.json`、按需加载 setup/outline，并构造共享的 LLM client 与 agent；
+    compose/write/craft/draft/polish/recap/translate/export/rpg/analyze 的入口已改为使用它，避免各命令重复
+    `LoadConfig`/`LoadSetup`/`LoadOutline`/`LoadOrCreateConfig`/`CreateClient`。`ComposeAgent`
+    现在由 `Session.NewComposeAgent` 强制绑定显式 root，checkpoint/report 不再走
+    `agentWorkspaceRoot()`。
+
+    新增 `novelgen storage replace`：编辑器保存 canonical 产物（setup/outline/craft/chapter/
+    recap）时，不再直接 `storage write`，而是走同一个 `MutationService`，因此 schema 校验、
+    checkpoint、normalize 与派生 markdown 仍然生效。webui 只对笔记/报告等非 canonical 文件使用
+    `storage write`。`storage replace` 的 craft 路径使用整文件替换语义（被删除的条目会真正删除），
+    与 `UpsertCraftElements` 的保留式合并区分开。
+
+    另外把两处字符串分类收敛为 typed error：章节长度超限使用
+    `agents.ErrAgentSDKChapterTooLong`，runner 进程失败使用 `agentruntime.RunError`
+    （`IsTransient`），compose 的 transient retry 不再依赖 stderr 文案。`internal/architecture`
+    新增了间接 ambient root 与 skill 引用存在性守卫。
+
+    原 4.4k 行的 `compose_agent.go` 已按 concern 拆成 core / sdk / patch / loop /
+    generate / prompt 六个文件，并由 `TestComposeAgentStaysSplitByConcern` 固定文件归属与
+    单文件上限；原 2.8k 行的 `cmd/composecmd/compose.go` 也按 gen / improve / review /
+    pipeline / state / support 拆开，由 `TestComposeCommandStaysSplitByWorkflow` 守卫。
+    `craft` 的四种元素生成/改进循环也合并为泛型 batch runner。
+
+    `store.Root.WithMutationLock` 的锁改为按项目目录注册，因此两个 `store.Open`/`At`
+    句柄指向同一项目时也会串行；`agentruntime.Config.NewRuntimeWithResolver` 允许显式传入
+    provider resolver，不再只能依赖 `internal/llm` 的 init 全局注册。
+
+    `BaseAgent` 现在也持有显式项目 root：SDK 的 `workspace_root`、agent prompt/response 日志、
+    AI-call 记录与 usage 都优先使用绑定 root；`Session.New*Agent` 与命令层的直接构造点会统一
+    调用 `SetProjectRoot`。只有未绑定的旧工具/测试才回退到 ambient 解析。
+
+    runner 现在在结果 JSON 中返回结构化的 `tool_events`（permission / PreToolUse /
+    PostToolUse）。Go 的 tool evidence 校验优先用 `agentruntime.SummarizeToolEvents` 计算
+    query/check/patch 与 denied 计数，live JSONL 只作为旧 runner 的兼容回退，不再要求
+    Go 从人类可读日志里反推工具行为。
 
 ---
 

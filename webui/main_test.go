@@ -63,6 +63,26 @@ func TestSyncDerivedFileAfterSaveRoutesThroughCLI(t *testing.T) {
 	}
 }
 
+func TestBuildTaskArgsIsDeterministic(t *testing.T) {
+	args := map[string]interface{}{
+		"volume":      "2",
+		"prompt":      "tighten",
+		"agent-sdk":   true,
+		"max-rounds":  float64(2),
+		"subcommand":  "improve",
+		"project_dir": "/tmp/book",
+	}
+	first := strings.Join(buildTaskArgs("compose", args), "\x00")
+	second := strings.Join(buildTaskArgs("compose", args), "\x00")
+	if first != second {
+		t.Fatalf("task argv is not deterministic:\n first=%q\nsecond=%q", first, second)
+	}
+	want := "compose\x00improve\x00--agent-sdk\x00--max-rounds\x002\x00--prompt\x00tighten\x00--volume\x002"
+	if first != want {
+		t.Fatalf("task argv = %q, want %q", first, want)
+	}
+}
+
 func TestSyncDerivedFileAfterSaveIgnoresOtherPaths(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("NOVELGEN_BIN", filepath.Join(root, "must-not-run"))

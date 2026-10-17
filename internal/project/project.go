@@ -9,6 +9,7 @@
 package project
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -167,26 +168,34 @@ func KnownCharacterNames(outline *models.Outline) []string {
 // VolumesForSelection resolves the volume/chapter selection flags shared by the
 // draft and write commands: a chapter flag selects its volume, a volume flag
 // selects that volume, and otherwise every volume is returned.
-func VolumesForSelection(outline *models.Outline, volumeFlag, chapterFlag string) []*models.Volume {
+//
+// An explicitly supplied selection that cannot be resolved is an error. Falling
+// back to "all volumes" here would turn a typo such as --volume 999 into a
+// command that rewrites the whole novel.
+func VolumesForSelection(outline *models.Outline, volumeFlag, chapterFlag string) ([]*models.Volume, error) {
 	idManager := logic.NewIDManager(outline)
 
 	if chapterFlag != "" {
 		chapterID, err := idManager.ResolveChapterID(chapterFlag, "", "")
-		if err == nil {
-			_, vol, _ := idManager.GetChapterByID(chapterID)
-			if vol != nil {
-				return []*models.Volume{vol}
-			}
+		if err != nil {
+			return nil, fmt.Errorf("resolve chapter %q: %w", chapterFlag, err)
 		}
+		_, vol, _ := idManager.GetChapterByID(chapterID)
+		if vol == nil {
+			return nil, fmt.Errorf("chapter %q does not belong to a volume", chapterID)
+		}
+		return []*models.Volume{vol}, nil
 	} else if volumeFlag != "" {
 		volumeID, err := idManager.ResolveVolumeID(volumeFlag, "")
-		if err == nil {
-			vol, _ := idManager.GetVolumeByID(volumeID)
-			if vol != nil {
-				return []*models.Volume{vol}
-			}
+		if err != nil {
+			return nil, fmt.Errorf("resolve volume %q: %w", volumeFlag, err)
 		}
+		vol, _ := idManager.GetVolumeByID(volumeID)
+		if vol == nil {
+			return nil, fmt.Errorf("volume %q not found", volumeID)
+		}
+		return []*models.Volume{vol}, nil
 	}
 
-	return idManager.GetAllVolumes()
+	return idManager.GetAllVolumes(), nil
 }

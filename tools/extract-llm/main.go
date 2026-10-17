@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -15,7 +16,7 @@ type SimpleLLMClient struct {
 }
 
 // Complete 调用LLM完成请求
-func (c *SimpleLLMClient) Complete(prompt string, text string) (string, error) {
+func (c *SimpleLLMClient) Complete(ctx context.Context, prompt string, text string) (string, error) {
 	// 这里可以实现实际的LLM调用
 	// 目前使用模拟实现
 	fmt.Println("🤖 正在调用LLM分析文本...")
@@ -201,7 +202,7 @@ func main() {
 
 	// 执行提取
 	fmt.Println("🤖 LLM正在分析小说内容...")
-	data, err := extractor.ExtractFromNovel(string(content))
+	data, err := extractor.ExtractFromNovel(context.Background(), string(content))
 	if err != nil {
 		fmt.Printf("❌ 提取失败: %v\n", err)
 		os.Exit(1)

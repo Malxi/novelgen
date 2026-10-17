@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"novelgen/internal/agents"
+	"novelgen/internal/app"
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
@@ -173,36 +174,35 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN SETUP")
 
-	book, err := setupProject(cmd)
+	session, err := app.Open(cmd)
+	if err != nil {
+		return err
+	}
+	book := session.Book()
+	projectConfig := session.Config
+	logger.Info("Loaded project config: %s", projectConfig.Name)
+	cfg, client, err := session.LoadLLM()
 	if err != nil {
 		return err
 	}
 
-	// Load project config
-	projectConfig, err := book.LoadConfig()
-	if err != nil {
-		logger.Error("Failed to load novel.json: %v", err)
-		return fmt.Errorf("failed to load novel.json: %w", err)
-	}
-	logger.Info("Loaded project config: %s", projectConfig.Name)
-
 	// AI generation mode
 	logger.Info("AI generation mode with prompt: %s", prompt)
 	logger.Info("Using language: %s", projectConfig.Language)
-	setup, err := generateStorySetupWithAI(cmd.Context(), prompt, projectConfig.Language, &projectConfig.LLM)
+	setup, err := generateStorySetupWithAI(cmd.Context(), prompt, projectConfig.Language, &projectConfig.LLM, cfg, client)
 	if err != nil {
 		logger.Error("Failed to generate story setup with AI: %v", err)
 		return fmt.Errorf("failed to generate story setup with AI: %w", err)
 	}
 
-	setup, gate, err := repairSetupWithQualityGate(cmd.Context(), setup, projectConfig, "generation")
+	setup, gate, err := repairSetupWithQualityGate(cmd.Context(), setup, projectConfig, cfg, client, "generation")
 	if err != nil {
 		return err
 	}
 	quality.LogQualityGateResult("setup", gate)
 
 	// Save story setup
-	if err := saveStorySetup(book, setup); err != nil {
+	if err := saveStorySetup(cmd.Context(), book, setup); err != nil {
 		return fmt.Errorf("failed to save story setup: %w", err)
 	}
 
@@ -225,18 +225,17 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	book, err := setupProject(cmd)
+	session, err := app.Open(cmd)
 	if err != nil {
 		return err
 	}
-
-	// Load project config
-	projectConfig, err := book.LoadConfig()
-	if err != nil {
-		logger.Error("Failed to load novel.json: %v", err)
-		return fmt.Errorf("failed to load novel.json: %w", err)
-	}
+	book := session.Book()
+	projectConfig := session.Config
 	logger.Info("Loaded project config: %s", projectConfig.Name)
+	cfg, client, err := session.LoadLLM()
+	if err != nil {
+		return err
+	}
 
 	// Load existing story setup
 	existingSetup, err := book.LoadSetup()
@@ -247,7 +246,7 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded existing story setup")
 
 	if setupAgentSDK {
-		agent, err := newSetupAgentForProject(projectConfig)
+		agent, err := session.NewSetupAgent()
 		if err != nil {
 			return err
 		}
@@ -264,7 +263,7 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 			if _, err := saveSetupCheckpoint(book, existingSetup); err != nil {
 				return fmt.Errorf("failed to checkpoint original story setup: %w", err)
 			}
-			if err := saveStorySetup(book, improved); err != nil {
+			if err := saveStorySetup(cmd.Context(), book, improved); err != nil {
 				return fmt.Errorf("failed to save regenerated story setup: %w", err)
 			}
 		}
@@ -296,20 +295,20 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 
 	// Regenerate story setup
 	logger.Info("Regenerating story setup...")
-	setup, err := generateStorySetupWithAI(cmd.Context(), prompt, projectConfig.Language, &projectConfig.LLM)
+	setup, err := generateStorySetupWithAI(cmd.Context(), prompt, projectConfig.Language, &projectConfig.LLM, cfg, client)
 	if err != nil {
 		logger.Error("Failed to regenerate story setup: %v", err)
 		return fmt.Errorf("failed to regenerate story setup: %w", err)
 	}
 
-	setup, gate, err := repairSetupWithQualityGate(cmd.Context(), setup, projectConfig, "regeneration")
+	setup, gate, err := repairSetupWithQualityGate(cmd.Context(), setup, projectConfig, cfg, client, "regeneration")
 	if err != nil {
 		return err
 	}
 	quality.LogQualityGateResult("setup", gate)
 
 	// Save story setup
-	if err := saveStorySetup(book, setup); err != nil {
+	if err := saveStorySetup(cmd.Context(), book, setup); err != nil {
 		return fmt.Errorf("failed to save story setup: %w", err)
 	}
 
@@ -329,18 +328,17 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	book, err := setupProject(cmd)
+	session, err := app.Open(cmd)
 	if err != nil {
 		return err
 	}
-
-	// Load project config
-	projectConfig, err := book.LoadConfig()
-	if err != nil {
-		logger.Error("Failed to load novel.json: %v", err)
-		return fmt.Errorf("failed to load novel.json: %w", err)
-	}
+	book := session.Book()
+	projectConfig := session.Config
 	logger.Info("Loaded project config: %s", projectConfig.Name)
+	cfg, client, err := session.LoadLLM()
+	if err != nil {
+		return err
+	}
 
 	// Load existing story setup
 	setup, err := book.LoadSetup()
@@ -351,7 +349,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 	logger.Info("Loaded existing story setup")
 
 	// Create LLM client and agent
-	agent, err := newSetupAgentForProject(projectConfig)
+	agent, err := session.NewSetupAgent()
 	if err != nil {
 		return err
 	}
@@ -368,7 +366,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 			if _, err := saveSetupCheckpoint(book, &originalSetup); err != nil {
 				return fmt.Errorf("failed to checkpoint original story setup: %w", err)
 			}
-			if err := saveStorySetup(book, setup); err != nil {
+			if err := saveStorySetup(cmd.Context(), book, setup); err != nil {
 				return fmt.Errorf("failed to save improved story setup: %w", err)
 			}
 		}
@@ -422,14 +420,14 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 		}
 		setup = &improveResult.Setup
 
-		setup, gate, err := repairSetupWithQualityGate(cmd.Context(), setup, projectConfig, "manual improvement")
+		setup, gate, err := repairSetupWithQualityGate(cmd.Context(), setup, projectConfig, cfg, client, "manual improvement")
 		if err != nil {
 			return err
 		}
 		quality.LogQualityGateResult("setup", gate)
 
 		// Save improved setup
-		if err := saveStorySetup(book, setup); err != nil {
+		if err := saveStorySetup(cmd.Context(), book, setup); err != nil {
 			return fmt.Errorf("failed to save improved story setup: %w", err)
 		}
 
@@ -507,14 +505,14 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		setup, gate, err := repairSetupWithQualityGate(cmd.Context(), setup, projectConfig, "auto improvement")
+		setup, gate, err := repairSetupWithQualityGate(cmd.Context(), setup, projectConfig, cfg, client, "auto improvement")
 		if err != nil {
 			return err
 		}
 		quality.LogQualityGateResult("setup", gate)
 
 		// Save improved setup
-		if err := saveStorySetup(book, setup); err != nil {
+		if err := saveStorySetup(cmd.Context(), book, setup); err != nil {
 			return fmt.Errorf("failed to save improved story setup: %w", err)
 		}
 
@@ -529,27 +527,6 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 	fmt.Printf("📖 Premise: %.100s...\n", setup.Premise)
 
 	return nil
-}
-
-func newSetupAgentForProject(projectConfig *models.ProjectConfig) (*agents.SetupAgent, error) {
-	cfg, err := llm.LoadOrCreateConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load LLM config: %w", err)
-	}
-
-	provider, model := cfg.GetActiveModel(&projectConfig.LLM)
-	if provider == nil || model == nil {
-		return nil, fmt.Errorf("failed to get active LLM configuration")
-	}
-
-	client := cfg.CreateClient(&projectConfig.LLM)
-	if client == nil {
-		return nil, fmt.Errorf("failed to create LLM client")
-	}
-
-	agent := agents.NewSetupAgent(client, cfg, &projectConfig.LLM)
-	agent.SetLanguage(projectConfig.Language)
-	return agent, nil
 }
 
 func loadAndCrossCheckSetup(book *project.Book, setup *models.StorySetup) (issues, warnings []string) {
@@ -708,17 +685,12 @@ func runSetupImport(cmd *cobra.Command, args []string) error {
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN SETUP IMPORT")
 
-	book, err := setupProject(cmd)
+	session, err := app.Open(cmd)
 	if err != nil {
 		return err
 	}
-
-	// Load project config
-	projectConfig, err := book.LoadConfig()
-	if err != nil {
-		logger.Error("Failed to load novel.json: %v", err)
-		return fmt.Errorf("failed to load novel.json: %w", err)
-	}
+	book := session.Book()
+	projectConfig := session.Config
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Determine markdown file path
@@ -748,7 +720,7 @@ func runSetupImport(cmd *cobra.Command, args []string) error {
 	}
 
 	// Save story setup
-	if err := saveStorySetup(book, setup); err != nil {
+	if err := saveStorySetup(cmd.Context(), book, setup); err != nil {
 		return fmt.Errorf("failed to save story setup: %w", err)
 	}
 
@@ -1130,13 +1102,7 @@ func fillSetupField(setup *models.StorySetup, section, content string) {
 	}
 }
 
-func generateStorySetupWithAI(ctx context.Context, prompt, language string, projectLLM *models.ProjectLLM) (*models.StorySetup, error) {
-	// Load LLM config
-	cfg, err := llm.LoadOrCreateConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load LLM config: %w", err)
-	}
-
+func generateStorySetupWithAI(ctx context.Context, prompt, language string, projectLLM *models.ProjectLLM, cfg *llm.Config, client llm.Client) (*models.StorySetup, error) {
 	// Use project LLM settings from novel.json
 	if projectLLM.Provider == "" {
 		projectLLM.Provider = models.ProviderOllama
@@ -1158,12 +1124,10 @@ func generateStorySetupWithAI(ctx context.Context, prompt, language string, proj
 	fmt.Printf("Language: %s\n", language)
 	fmt.Println()
 
-	// Create LLM client and agent
-	client := cfg.CreateClient(projectLLM)
-	if client == nil {
-		return nil, fmt.Errorf("failed to create LLM client")
-	}
 	agent := agents.NewSetupAgent(client, cfg, projectLLM)
+	if root, ok := store.FromContext(ctx); ok {
+		agent.SetProjectRoot(root)
+	}
 	agent.SetLanguage(language)
 
 	result, err := agent.Generate(ctx, agents.SetupGenInput{Idea: prompt})
@@ -1173,7 +1137,7 @@ func generateStorySetupWithAI(ctx context.Context, prompt, language string, proj
 	return &result.Setup, nil
 }
 
-func repairSetupWithQualityGate(ctx context.Context, setup *models.StorySetup, projectConfig *models.ProjectConfig, stage string) (*models.StorySetup, quality.QualityGateResult, error) {
+func repairSetupWithQualityGate(ctx context.Context, setup *models.StorySetup, projectConfig *models.ProjectConfig, cfg *llm.Config, client llm.Client, stage string) (*models.StorySetup, quality.QualityGateResult, error) {
 	gate := quality.RunSetupQualityGate(setup)
 	if !gate.Blocking {
 		return setup, gate, nil
@@ -1183,17 +1147,11 @@ func repairSetupWithQualityGate(ctx context.Context, setup *models.StorySetup, p
 	}
 
 	logger.Info("Setup quality gate found blocking issues after %s; running one repair pass", stage)
-	cfg, err := llm.LoadOrCreateConfig()
-	if err != nil {
-		return setup, gate, fmt.Errorf("failed to load LLM config for setup repair: %w", err)
-	}
-	client := cfg.CreateClient(&projectConfig.LLM)
-	if client == nil {
-		return setup, gate, fmt.Errorf("failed to create LLM client for setup repair")
-	}
-
 	agent := agents.NewSetupAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
+	if root, ok := store.FromContext(ctx); ok {
+		agent.SetProjectRoot(root)
+	}
 	review := quality.QualityGateReviewResult("Repair setup quality gate findings before saving project state.", gate)
 	session := agents.NewRevisionSession("setup", fmt.Sprintf("Repair %s quality-gate issues before saving project state.", stage))
 	session.AddReview(1, *review)
@@ -1211,7 +1169,7 @@ func repairSetupWithQualityGate(ctx context.Context, setup *models.StorySetup, p
 	return repaired, finalGate, nil
 }
 
-func saveStorySetup(book *project.Book, setup *models.StorySetup) error {
+func saveStorySetup(ctx context.Context, book *project.Book, setup *models.StorySetup) error {
 	if book == nil {
 		return fmt.Errorf("project is required")
 	}
@@ -1219,7 +1177,10 @@ func saveStorySetup(book *project.Book, setup *models.StorySetup) error {
 	// this helper, so the mutation service commits the generated artifact
 	// without a second full quality pass. It still normalizes, checkpoints and
 	// writes both the canonical JSON and derived markdown through one path.
-	_, err := toolplane.NewMutationService(book.Root).ReplaceSetup(context.Background(), setup, toolplane.MutationOptions{
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	_, err := toolplane.NewMutationService(book.Root).ReplaceSetup(ctx, setup, toolplane.MutationOptions{
 		Validate: false,
 		Source:   "setup-command",
 	})

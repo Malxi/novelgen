@@ -128,6 +128,14 @@ func Exists() bool {
 
 // NewRuntime creates the configured runtime.
 func (c *Config) NewRuntime(name string) (Runtime, error) {
+	return c.NewRuntimeWithResolver(name, providerResolver)
+}
+
+// NewRuntimeWithResolver creates the configured runtime with an explicit
+// provider resolver. Embedders that use agentruntime without importing the LLM
+// config package should use this form instead of relying on init-time global
+// registration.
+func (c *Config) NewRuntimeWithResolver(name string, resolver ProviderResolver) (Runtime, error) {
 	if c == nil {
 		return nil, errors.New("agent runtime config is nil")
 	}
@@ -139,7 +147,7 @@ func (c *Config) NewRuntime(name string) (Runtime, error) {
 	if !ok {
 		return nil, fmt.Errorf("agent runtime %q not found", name)
 	}
-	rc, err := c.resolveProviderRuntime(name, rc)
+	rc, err := c.resolveProviderRuntime(name, rc, resolver)
 	if err != nil {
 		return nil, err
 	}
@@ -157,15 +165,15 @@ func (c *Config) NewRuntime(name string) (Runtime, error) {
 
 // resolveProviderRuntime fills missing runtime credentials from the named LLM
 // provider. Explicit runtime fields always win over provider-derived values.
-func (c *Config) resolveProviderRuntime(name string, rc RuntimeConfig) (RuntimeConfig, error) {
+func (c *Config) resolveProviderRuntime(name string, rc RuntimeConfig, resolver ProviderResolver) (RuntimeConfig, error) {
 	provider := strings.TrimSpace(rc.Provider)
 	if provider == "" {
 		return rc, nil
 	}
-	if providerResolver == nil {
+	if resolver == nil {
 		return rc, fmt.Errorf("agent runtime %q references provider %q, but no LLM provider resolver is registered", name, provider)
 	}
-	creds, err := providerResolver(provider)
+	creds, err := resolver(provider)
 	if err != nil {
 		return rc, fmt.Errorf("agent runtime %q: resolve provider %q: %w", name, provider, err)
 	}

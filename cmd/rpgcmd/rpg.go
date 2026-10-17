@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"novelgen/internal/app"
 	"novelgen/internal/logger"
-	"novelgen/internal/project"
 	"novelgen/internal/rpg"
 	"novelgen/internal/rpg/benchmark"
 	"novelgen/internal/store"
@@ -170,22 +170,18 @@ func runRPGBench(cmd *cobra.Command, args []string) error {
 func runRPGGen(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 
-	// Load project config
-	config, err := project.LoadConfig()
+	session, err := app.Open(cmd)
 	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
+		return err
 	}
+	config := session.Config
 
 	bookName := config.Name
 	if bookName == "" {
 		return fmt.Errorf("book name not set in project config")
 	}
 
-	// Get project root - findProjectRoot returns the book directory
-	bookDir, err := project.FindRoot()
-	if err != nil {
-		return fmt.Errorf("failed to find project root: %w", err)
-	}
+	bookDir := session.Root.Dir()
 
 	log.Info("Loading novelgen project: %s (%s)", bookName, bookDir)
 
@@ -311,21 +307,18 @@ func runRPGSimulate(cmd *cobra.Command, args []string) error {
 
 	targetID := args[0]
 
-	// Load project config
-	config, err := project.LoadConfig()
+	session, err := app.Open(cmd)
 	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
+		return err
 	}
+	config := session.Config
 
 	bookName := config.Name
 	if bookName == "" {
 		return fmt.Errorf("book name not set in project config")
 	}
 
-	bookDir, err := project.FindRoot()
-	if err != nil {
-		return fmt.Errorf("failed to find project root: %w", err)
-	}
+	bookDir := session.Root.Dir()
 
 	log.Info("Loading RPG data for book: %s", bookName)
 
@@ -527,21 +520,18 @@ func simulateVolume(engine *rpg.EnhancedSimulationEngine, volumeID string, bookD
 func runRPGExport(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 
-	// Load project config
-	config, err := project.LoadConfig()
+	session, err := app.Open(cmd)
 	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
+		return err
 	}
+	config := session.Config
 
 	bookName := config.Name
 	if bookName == "" {
 		return fmt.Errorf("book name not set in project config")
 	}
 
-	bookDir, err := project.FindRoot()
-	if err != nil {
-		return fmt.Errorf("failed to find project root: %w", err)
-	}
+	bookDir := session.Root.Dir()
 
 	log.Info("Loading RPG data for export: %s", bookName)
 

@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"novelgen/internal/agents"
+	"novelgen/internal/app"
 	"novelgen/internal/llm"
 	"novelgen/internal/models"
 	"novelgen/internal/store"
@@ -103,33 +104,12 @@ func runAnalyzeChapterAI(cmd *cobra.Command, args []string) error {
 
 // initLLMForAnalysis 初始化LLM客户端
 func initLLMForAnalysis(bookPath string) (llm.Client, *llm.Config, *models.ProjectLLM, error) {
-	// 1. 从 novel.json 读取项目配置
-	projectRoot := store.At(bookPath)
-	novelJSONPath := projectRoot.NovelJSON()
-	var projectLLM *models.ProjectLLM
-
-	if data, err := projectRoot.Read(novelJSONPath); err == nil {
-		var novelConfig struct {
-			LLM struct {
-				Provider string `json:"provider"`
-				Model    string `json:"model"`
-			} `json:"llm"`
-		}
-		if err := json.Unmarshal(data, &novelConfig); err == nil && novelConfig.LLM.Provider != "" {
-			projectLLM = &models.ProjectLLM{
-				Provider: novelConfig.LLM.Provider,
-				Model:    novelConfig.LLM.Model,
-			}
-			fmt.Printf("📚 从 novel.json 读取配置: provider=%s, model=%s\n", projectLLM.Provider, projectLLM.Model)
-		}
+	session, err := app.OpenAt(store.At(bookPath))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("加载项目配置失败: %w", err)
 	}
-
-	if projectLLM == nil {
-		return nil, nil, nil, fmt.Errorf("未在 novel.json 中找到 LLM 配置")
-	}
-
-	// 2. 加载 llm_config.json 获取完整配置（包括 API key）
-	config, err := llm.LoadOrCreateConfig()
+	projectLLM := &session.Config.LLM
+	config, err := session.LoadLLMConfig()
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("加载 LLM 配置失败: %w", err)
 	}
@@ -145,14 +125,12 @@ func initLLMForAnalysis(bookPath string) (llm.Client, *llm.Config, *models.Proje
 
 	fmt.Printf("🔑 使用配置: provider=%s, model=%s, base_url=%s\n", provider.Name, model.Name, provider.BaseURL)
 
-	// 4. 创建客户端
 	client := llm.NewOpenAIClient(&llm.OpenAIConfig{
 		APIKey:  provider.APIKey,
 		BaseURL: provider.BaseURL,
 		Model:   model.Name,
 		Timeout: provider.Timeout,
 	})
-
 	return client, config, projectLLM, nil
 }
 

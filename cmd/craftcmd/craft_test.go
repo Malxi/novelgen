@@ -1,6 +1,7 @@
 package craftcmd
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"strings"
@@ -83,7 +84,7 @@ func TestSaveCraftElementsWritesToProjectStoryCraft(t *testing.T) {
 		store.ResetDefault()
 	})
 
-	if err := saveCraftElements(store.CraftCharacters, map[string]models.Character{
+	if err := saveCraftElements(context.Background(), store.CraftCharacters, map[string]models.Character{
 		"Mira": {Name: "Mira", RoleInStory: "ally"},
 	}); err != nil {
 		t.Fatalf("saveCraftElements: %v", err)

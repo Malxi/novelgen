@@ -172,6 +172,13 @@ func (a *DraftAgent) SetLanguage(language string) {
 	a.base.SetLanguage(language)
 }
 
+// SetProjectRoot binds the agent to an explicit project root.
+func (a *DraftAgent) SetProjectRoot(root *store.Root) {
+	if a != nil && a.base != nil {
+		a.base.SetProjectRoot(root)
+	}
+}
+
 // GenerateDraftWithContext generates a draft chapter with continuity context
 func (a *DraftAgent) GenerateDraftWithContext(ctx context.Context, chapter *models.Chapter, state *models.StateMatrix, targetWords int, contextText string, recap string, nextChapters []*models.Chapter) (string, error) {
 	logger.Section("DRAFT AGENT - Draft Generation with Context")
@@ -314,7 +321,7 @@ func (a *DraftAgent) logDraftContext(chapterID, variant string, input interface{
 	sb.WriteString(output)
 	sb.WriteString("\n```\n")
 
-	root, err := store.Open(agentLogRoot())
+	root, err := a.base.logRoot()
 	if err != nil {
 		return fmt.Errorf("resolve agent log root: %w", err)
 	}

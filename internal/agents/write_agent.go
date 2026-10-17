@@ -3,6 +3,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -243,6 +244,14 @@ func (a *WriteAgent) SetLanguage(language string) {
 	a.base.SetLanguage(language)
 }
 
+// SetProjectRoot binds the agent to the project whose logs and SDK workspace it
+// should use.
+func (a *WriteAgent) SetProjectRoot(root *store.Root) {
+	if a != nil && a.base != nil {
+		a.base.SetProjectRoot(root)
+	}
+}
+
 // GenerateChapter generates final chapter content with continuity
 func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapter, context *ChapterContext, continuity *models.ChapterContinuity, targetWords int) (string, error) {
 	logger.Section("WRITE AGENT - Final Chapter Generation")
@@ -397,8 +406,17 @@ func appendAgentSDKInitialLengthContext(contextText string, targetWords int) str
 	return strings.TrimSpace(contextText) + "\n\n## Agent SDK Length Budget\n\n" + instruction
 }
 
+// ErrAgentSDKChapterTooLong marks a model-output length violation. Callers use
+// errors.Is so a runner message change cannot silently disable the retry path.
+var ErrAgentSDKChapterTooLong = errors.New("agent-sdk returned too much content")
+
+// IsAgentSDKChapterTooLong reports whether err is a length-overshoot failure.
+func IsAgentSDKChapterTooLong(err error) bool {
+	return errors.Is(err, ErrAgentSDKChapterTooLong)
+}
+
 func isAgentSDKWriteLengthOvershootError(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "agent-sdk returned too much content")
+	return IsAgentSDKChapterTooLong(err)
 }
 
 func agentSDKWriteShouldRetryLength(content string, targetWords int) bool {
@@ -1082,7 +1100,7 @@ func (a *WriteAgent) logWriteContext(chapterID, variant string, input interface{
 	sb.WriteString(output)
 	sb.WriteString("\n```\n")
 
-	root, err := store.Open(agentLogRoot())
+	root, err := a.base.logRoot()
 	if err != nil {
 		return fmt.Errorf("resolve agent log root: %w", err)
 	}
@@ -1198,7 +1216,7 @@ func validateAgentSDKWriteTargetLength(chapter *models.Chapter, content string, 
 		if chapter != nil {
 			chapterID = chapter.ID
 		}
-		return fmt.Errorf("agent-sdk returned too much content for chapter %s: got %d narrative units, target %d, hard max %d", chapterID, count, targetWords, hardMax)
+		return fmt.Errorf("%w for chapter %s: got %d narrative units, target %d, hard max %d", ErrAgentSDKChapterTooLong, chapterID, count, targetWords, hardMax)
 	}
 	return nil
 }
@@ -1294,6 +1312,13 @@ func NewChapterScorerAgent(client llm.Client, config *llm.Config, projectLLM *mo
 // SetLanguage sets the output language.
 func (a *ChapterScorerAgent) SetLanguage(language string) {
 	a.base.SetLanguage(language)
+}
+
+// SetProjectRoot binds the agent to an explicit project root.
+func (a *ChapterScorerAgent) SetProjectRoot(root *store.Root) {
+	if a != nil && a.base != nil {
+		a.base.SetProjectRoot(root)
+	}
 }
 
 // ScoreChapter scores one generated chapter copy in a single LLM call.

@@ -7,6 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"novelgen/internal/models"
+	"novelgen/internal/store"
+	"novelgen/internal/testfixtures"
 )
 
 func runStorageCommand(t *testing.T, stdin string, args ...string) (string, error) {
@@ -90,5 +94,62 @@ func TestStorageProjectsAndPathTraversal(t *testing.T) {
 	}
 	if err := json.Unmarshal([]byte(out), &resp); err != nil || resp.OK || resp.Code != "invalid_path" {
 		t.Fatalf("traversal response = %s, %v", out, err)
+	}
+}
+
+func TestStorageReplaceRoutesSetupThroughMutationService(t *testing.T) {
+	dir := t.TempDir()
+	setup := testfixtures.ValidLongFormSetup()
+	data, err := json.Marshal(setup)
+	if err != nil {
+		t.Fatalf("marshal setup: %v", err)
+	}
+
+	out, err := runStorageCommand(t, string(data), "replace", "--project", dir, "--path", "story/setup/story_setup.json")
+	if err != nil {
+		t.Fatalf("replace setup: %v (%s)", err, out)
+	}
+
+	loaded, err := store.At(dir).LoadSetup()
+	if err != nil {
+		t.Fatalf("load replaced setup: %v", err)
+	}
+	if loaded.ProjectName != setup.ProjectName || loaded.Premise != setup.Premise {
+		t.Fatalf("setup was not replaced through the mutation service: %#v", loaded)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "story", "setup", "story_setup.md")); err != nil {
+		t.Fatalf("derived setup markdown missing: %v", err)
+	}
+}
+
+func TestStorageReplaceCraftFileRemovesOmittedElements(t *testing.T) {
+	dir := t.TempDir()
+	root := store.At(dir)
+	if err := root.WriteJSON(root.CraftFile(store.CraftCharacters), map[string]models.Character{
+		"Mira": {Name: "Mira", RoleInStory: "ally"},
+		"Bo":   {Name: "Bo", RoleInStory: "rival"},
+	}); err != nil {
+		t.Fatalf("seed characters: %v", err)
+	}
+	data, err := json.Marshal(map[string]models.Character{
+		"Mira": {Name: "Mira", RoleInStory: "ally"},
+	})
+	if err != nil {
+		t.Fatalf("marshal characters: %v", err)
+	}
+
+	out, err := runStorageCommand(t, string(data), "replace", "--project", dir, "--path", "story/craft/characters.json")
+	if err != nil {
+		t.Fatalf("replace characters: %v (%s)", err, out)
+	}
+	loaded, _, _, _, err := root.LoadElements()
+	if err != nil {
+		t.Fatalf("load characters: %v", err)
+	}
+	if _, ok := loaded["Bo"]; ok {
+		t.Fatalf("craft replace must remove omitted elements, got %#v", loaded)
+	}
+	if _, ok := loaded["Mira"]; !ok {
+		t.Fatalf("craft replace lost the retained element: %#v", loaded)
 	}
 }

@@ -63,15 +63,6 @@ func (b *Book) LoadAllDrafts() (map[string]string, error) {
 	return b.Root.LoadAllDrafts()
 }
 
-// SaveFinalChapter writes a chapter through the ambient project root.
-func SaveFinalChapter(chapter *models.Chapter, content string) error {
-	book, err := Default()
-	if err != nil {
-		return err
-	}
-	return book.SaveFinalChapter(chapter, content)
-}
-
 // LoadFinalChapterContent reads a chapter through the ambient project root.
 func LoadFinalChapterContent(chapter *models.Chapter) (string, error) {
 	book, err := Default()
@@ -88,15 +79,6 @@ func LoadDraftContent(chapterID string) (string, error) {
 		return "", err
 	}
 	return book.LoadDraftContent(chapterID)
-}
-
-// SaveDraft writes a draft through the ambient project root.
-func SaveDraft(chapter *models.Chapter, draft string) error {
-	book, err := Default()
-	if err != nil {
-		return err
-	}
-	return book.SaveDraft(chapter, draft)
 }
 
 // LoadAllDrafts reads every draft through the ambient project root.

@@ -173,7 +173,7 @@ func ResolveAgentAppliedChapterContent(log logger.LoggerInterface, book *project
 }
 
 func IsAgentSDKLengthOvershootError(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "agent-sdk returned too much content")
+	return agents.IsAgentSDKChapterTooLong(err)
 }
 
 func AppendAgentSDKLengthRetrySuggestions(suggestions string, targetWords int) string {

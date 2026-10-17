@@ -31,7 +31,7 @@ func TestCompleteMapsPromptAndTextToMessages(t *testing.T) {
 	client := &fakeLLMClient{response: &llm.ChatResponse{Content: "{}"}}
 	adapter := &NovelgenLLMClient{client: client, options: options}
 
-	content, err := adapter.Complete("system prompt", "user text")
+	content, err := adapter.Complete(context.Background(), "system prompt", "user text")
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestCompleteWrapsClientErrors(t *testing.T) {
 	client := &fakeLLMClient{err: errors.New("boom")}
 	adapter := &NovelgenLLMClient{client: client}
 
-	if _, err := adapter.Complete("p", "t"); err == nil || !strings.Contains(err.Error(), "LLM request failed") {
+	if _, err := adapter.Complete(context.Background(), "p", "t"); err == nil || !strings.Contains(err.Error(), "LLM request failed") {
 		t.Fatalf("error should be wrapped, got %v", err)
 	}
 }

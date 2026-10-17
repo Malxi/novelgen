@@ -7,6 +7,7 @@ import (
 	"novelgen/internal/llm"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
+	"novelgen/internal/store"
 )
 
 // TranslateAgent handles AI translation
@@ -54,8 +55,15 @@ func (a *TranslateAgent) SetLanguage(language string) {
 	}
 }
 
+// SetProjectRoot binds the agent to an explicit project root.
+func (a *TranslateAgent) SetProjectRoot(root *store.Root) {
+	if a != nil && a.base != nil {
+		a.base.SetProjectRoot(root)
+	}
+}
+
 // Translate performs translation using the provided prompts
-func (a *TranslateAgent) Translate(systemPrompt, userPrompt string) (string, error) {
+func (a *TranslateAgent) Translate(ctx context.Context, systemPrompt, userPrompt string) (string, error) {
 	logger.Section("TRANSLATE AGENT - Translation")
 	logger.Info("Source language: %s", a.language)
 
@@ -71,7 +79,10 @@ func (a *TranslateAgent) Translate(systemPrompt, userPrompt string) (string, err
 		{Role: "user", Content: userPrompt},
 	}
 
-	response, err := a.client.ChatCompletion(context.Background(), messages, nil)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	response, err := a.client.ChatCompletion(ctx, messages, nil)
 	if err != nil {
 		return "", fmt.Errorf("translation request failed: %w", err)
 	}

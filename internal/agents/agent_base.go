@@ -28,16 +28,18 @@ type BaseAgent struct {
 	skillLoader   *SkillLoader
 	language      string
 	modelOverride string
+	project       *store.Root
 }
 
 // BaseAgentConfig holds configuration for creating a BaseAgent
 type BaseAgentConfig struct {
-	Name       string
-	Client     llm.Client
-	Runtime    agentruntime.Runtime
-	Config     *llm.Config
-	ProjectLLM *models.ProjectLLM
-	Language   string
+	Name        string
+	Client      llm.Client
+	Runtime     agentruntime.Runtime
+	Config      *llm.Config
+	ProjectLLM  *models.ProjectLLM
+	Language    string
+	ProjectRoot *store.Root
 }
 
 // NewBaseAgent creates a new BaseAgent
@@ -50,7 +52,18 @@ func NewBaseAgent(cfg BaseAgentConfig) *BaseAgent {
 		projectLLM:  cfg.ProjectLLM,
 		skillLoader: NewSkillLoader(resolveSkillsDir()),
 		language:    cfg.Language,
+		project:     cfg.ProjectRoot,
 	}
+}
+
+// SetProjectRoot binds this agent to the project it was constructed for. SDK
+// workspace selection and agent log files must use that root instead of the
+// process's ambient project.
+func (a *BaseAgent) SetProjectRoot(root *store.Root) {
+	if a == nil {
+		return
+	}
+	a.project = root
 }
 
 // SkillsDirEnv overrides where agent skills are read from. Useful when a
@@ -172,14 +185,18 @@ func (a *BaseAgent) ExecuteWithRuntimeResult(ctx context.Context, params InvokeP
 	logger.Info("[%s] Sending request to AI...", a.name)
 	callStartedAt := time.Now()
 	resp, runtimeResult, err := a.invokeAIWithRuntimeResult(ctx, params, messages, options, outputRequirements, output)
+	callKind := "chat"
+	if runtimeResult != nil {
+		callKind = "agent-sdk"
+	}
 	if err != nil {
 		logAgentRuntimeLiveSummary(a.name, runtimeResult)
 		logger.Error("[%s] AI request failed: %v", a.name, err)
-		a.recordUsage(params, "chat", "", llm.Usage{}, time.Since(callStartedAt), err)
+		a.recordUsage(params, callKind, "", llm.Usage{}, time.Since(callStartedAt), err)
 		a.recordAICall(params, "", systemPrompt, userPrompt, "", llm.Usage{}, callStartedAt)
 		return runtimeResult, fmt.Errorf("AI request failed: %w", err)
 	}
-	a.recordUsage(params, "chat", resp.Model, resp.Usage, time.Since(callStartedAt), nil)
+	a.recordUsage(params, callKind, resp.Model, resp.Usage, time.Since(callStartedAt), nil)
 	a.recordAICall(params, resp.Model, systemPrompt, userPrompt, resp.Content, resp.Usage, callStartedAt)
 	if err := validateAgentRuntimeToolEvidence(a.name, params.ToolEvidence, runtimeResult); err != nil {
 		return runtimeResult, err
@@ -228,7 +245,7 @@ func (a *BaseAgent) invokeAIWithRuntimeResult(ctx context.Context, params Invoke
 			Skills:                 append([]string(nil), params.Skills...),
 			SDKSkills:              append([]string(nil), params.SDKSkills...),
 			Language:               utils.GetLanguageName(a.language),
-			WorkspaceRoot:          agentWorkspaceRoot(),
+			WorkspaceRoot:          a.workspaceRoot(),
 			Tools:                  append([]string(nil), params.Tools...),
 			AllowedTools:           append([]string(nil), params.AllowedTools...),
 			PermissionMode:         params.PermissionMode,
@@ -316,6 +333,13 @@ func agentWorkspaceRoot() string {
 		return cwd
 	}
 	return ""
+}
+
+func (a *BaseAgent) workspaceRoot() string {
+	if a != nil && a.project != nil && a.project.Dir() != "" {
+		return a.project.Dir()
+	}
+	return agentWorkspaceRoot()
 }
 
 func resolveRuntime(projectLLM *models.ProjectLLM, provided agentruntime.Runtime, client llm.Client) agentruntime.Runtime {

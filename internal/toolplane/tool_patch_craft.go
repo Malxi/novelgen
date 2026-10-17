@@ -127,7 +127,7 @@ func runCraftMutationLocked(root *store.Root, target, id string, patchBytes []by
 // runCraftBulkMutation upserts a generated batch of elements while preserving
 // unrelated entries in the same craft file. It is the host-pipeline counterpart
 // of the single-element `tool patch craft` command.
-func runCraftBulkMutation(root *store.Root, kind store.CraftKind, elements map[string]map[string]interface{}, opts MutationOptions, warnings []string) (*ToolPatchResult, error) {
+func runCraftBulkMutation(root *store.Root, kind store.CraftKind, elements map[string]map[string]interface{}, opts MutationOptions, warnings []string, replace bool) (*ToolPatchResult, error) {
 	if root == nil {
 		return nil, fmt.Errorf("project root is required")
 	}
@@ -152,14 +152,18 @@ func runCraftBulkMutation(root *store.Root, kind store.CraftKind, elements map[s
 	}
 	var result *ToolPatchResult
 	err := root.WithMutationLock(func() error {
-		values, err := root.LoadCraftRaw(kind)
+		diskValues, err := root.LoadCraftRaw(kind)
 		if err != nil {
 			return err
 		}
-		if values == nil {
+		if diskValues == nil {
+			diskValues = map[string]map[string]interface{}{}
+		}
+		beforeValues := cloneRawCraftMap(diskValues)
+		values := diskValues
+		if replace {
 			values = map[string]map[string]interface{}{}
 		}
-		beforeValues := cloneRawCraftMap(values)
 		target := strings.TrimSuffix(string(kind), "s")
 		var changes []ToolPatchChange
 		keys := make([]string, 0, len(elements))
@@ -184,6 +188,15 @@ func runCraftBulkMutation(root *store.Root, kind store.CraftKind, elements map[s
 			if len(changes) == beforeChangeCount && action == "create" {
 				changes = append(changes, ToolPatchChange{Path: "craft." + target + "." + key, Action: action})
 			}
+		}
+		if replace {
+			for key := range beforeValues {
+				if _, exists := elements[key]; exists {
+					continue
+				}
+				changes = append(changes, ToolPatchChange{Path: "craft." + target + "." + key, Action: "delete"})
+			}
+			sort.Slice(changes, func(i, j int) bool { return changes[i].Path < changes[j].Path })
 		}
 		warnings = appendNoChangeWarning(warnings, changes)
 

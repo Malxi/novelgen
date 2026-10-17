@@ -120,10 +120,11 @@ func (r *ProcessRuntime) Invoke(ctx context.Context, invocation Invocation) (*Re
 	}
 	if runErr != nil {
 		detail := trimRunnerDetail(stderr.String())
+		transient := classifyRunnerFailure(runCtx, runErr, stderr.String())
 		if detail != "" {
-			return nil, fmt.Errorf("agent runner failed: %w: %s", runErr, detail)
+			return nil, &RunError{Err: fmt.Errorf("agent runner failed: %w: %s", runErr, detail), Transient: transient}
 		}
-		return nil, fmt.Errorf("agent runner failed: %w", runErr)
+		return nil, &RunError{Err: fmt.Errorf("agent runner failed: %w", runErr), Transient: transient}
 	}
 
 	var result Result

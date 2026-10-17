@@ -17,6 +17,10 @@ file in the same change.
   `recap`, and legacy `draft`). The Agent SDK `tool patch` command is a CLI
   adapter over the same service; Chat/typed-JSON stages must not call
   `book.SaveSetup`/`SaveOutline`/`SaveFinalChapter`/`recapStore.Save` directly.
+- External editors may submit a complete canonical artifact through
+  `novelgen storage replace`; it parses the artifact, dispatches to
+  `MutationService`, and applies the same validation/checkpoint/normalization
+  rules. `storage write` remains for notes and non-canonical files.
 - A full generation uses `replace`; an incremental Agent repair uses `merge`.
   Host pipelines that already ran their own quality/repair loop may commit with
   validation disabled, but normalization, checkpoints and atomic storage still
@@ -56,7 +60,7 @@ Usage records (observability, not story state):
   record usage never fails the creative stage.
 - Consumer: `novelgen project usage` (`--since`, `--json`) aggregates the log by
   agent, model, and day. The web UI does not read it.
-- Fields: `time`, `agent`, `command`, `kind` (`chat`/`json-repair`), `model`,
+- Fields: `time`, `agent`, `command`, `kind` (`chat`/`agent-sdk`/`json-repair`), `model`,
   `prompt_tokens`, `completion_tokens`, `total_tokens`, `duration_ms`,
   `success`, `error`. Readers must tolerate unknown/missing fields and skip
   unparseable lines.

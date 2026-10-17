@@ -4,10 +4,8 @@ package translate
 import (
 	"fmt"
 
-	"novelgen/internal/agents"
-	"novelgen/internal/llm"
+	"novelgen/internal/app"
 	"novelgen/internal/logger"
-	"novelgen/internal/project"
 
 	"github.com/spf13/cobra"
 )
@@ -56,18 +54,13 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 	logger.SetDefault(logger.New(logger.DebugLevel))
 	logger.Section("NOVELGEN TRANSLATE")
 
-	book, err := project.ForCommand(cmd)
+	session, err := app.Open(cmd)
 	if err != nil {
 		logger.Error("Not a novel project directory (novel.json not found)")
-		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first")
+		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first: %w", err)
 	}
-
-	// Load project config
-	projectConfig, err := book.LoadConfig()
-	if err != nil {
-		logger.Error("Failed to load novel.json: %v", err)
-		return fmt.Errorf("failed to load novel.json: %w", err)
-	}
+	book := session.Book()
+	projectConfig := session.Config
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Read input file
@@ -78,20 +71,10 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 	}
 	logger.Info("Read %d bytes from %s", len(content), inputFile)
 
-	// Create LLM client
-	cfg, err := llm.LoadOrCreateConfig()
+	agent, err := session.NewTranslateAgent()
 	if err != nil {
-		return fmt.Errorf("failed to load LLM config: %w", err)
+		return err
 	}
-
-	client := cfg.CreateClient(&projectConfig.LLM)
-	if client == nil {
-		return fmt.Errorf("failed to create LLM client")
-	}
-
-	agent := agents.NewTranslateAgent(client, cfg, &projectConfig.LLM)
-
-	agent.SetLanguage(projectConfig.Language)
 
 	// Perform translation
 	logger.Info("Translating from %s to %s...", translateSourceLang, translateTargetLang)
@@ -103,7 +86,7 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 	} else {
 		systemPrompt := buildTranslationSystemPrompt()
 		userPrompt := buildTranslationUserPrompt(string(content), translateSourceLang, translateTargetLang)
-		translated, err = agent.Translate(systemPrompt, userPrompt)
+		translated, err = agent.Translate(cmd.Context(), systemPrompt, userPrompt)
 	}
 	if err != nil {
 		logger.Error("Translation failed: %v", err)

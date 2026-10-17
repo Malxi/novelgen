@@ -1,6 +1,7 @@
 package writepipe_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -94,7 +95,7 @@ func TestSaveFinalChapterStripsRepeatedTitleAfterHeading(t *testing.T) {
 	book := memBook(t)
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "第1章：倒计时"}
 	content := "# 第1章：倒计时\n\n第1章：倒计时\n\n李侑醒来时，先闻到潮湿木板的霉味。"
-	if err := writepipe.SaveFinalChapter(book, chapter, content); err != nil {
+	if err := writepipe.SaveFinalChapter(context.Background(), book, chapter, content); err != nil {
 		t.Fatalf("writepipe.SaveFinalChapter() error = %v", err)
 	}
 

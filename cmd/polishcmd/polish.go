@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"novelgen/internal/agents"
-	"novelgen/internal/llm"
+	"novelgen/internal/app"
 	"novelgen/internal/logger"
 	"novelgen/internal/logic"
 	"novelgen/internal/logic/continuity/recap"
@@ -84,46 +84,34 @@ func runPolish(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Load project config
-	book, err := project.ForCommand(cmd)
+	session, err := app.Open(cmd)
+	if err != nil {
+		return err
+	}
+	book := session.Book()
+	config := session.Config
+	outline, err := session.RequireOutline()
+	if err != nil {
+		return err
+	}
+	setup, err := session.RequireSetup()
+	if err != nil {
+		return err
+	}
+	cfg, client, err := session.LoadLLM()
 	if err != nil {
 		return err
 	}
 
-	config, err := book.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
-	}
-
-	// Load outline
-	outline, err := book.LoadOutline()
-	if err != nil {
-		return fmt.Errorf("failed to load outline: %w", err)
-	}
-
-	// Load story setup
-	setup, err := book.LoadSetup()
-	if err != nil {
-		return fmt.Errorf("failed to load story setup: %w", err)
-	}
-
-	// Load LLM config
-	cfg, err := llm.LoadOrCreateConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load LLM config: %w", err)
-	}
-
-	// Create LLM client
-	client := cfg.CreateClient(&config.LLM)
-	if client == nil {
-		return fmt.Errorf("failed to create LLM client")
-	}
-
 	// Initialize agents
-	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
-	writeAgent.SetLanguage(config.Language)
-	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
-	recapAgent.SetLanguage(config.Language)
+	writeAgent, err := session.NewWriteAgent()
+	if err != nil {
+		return err
+	}
+	recapAgent, err := session.NewRecapAgent()
+	if err != nil {
+		return err
+	}
 	recapStore := recap.NewStoreAt(book.Root)
 
 	// Initialize continuity builder
@@ -469,7 +457,7 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, book *proj
 		}
 		if agentApplied && strings.TrimSpace(savedContent) == strings.TrimSpace(content) {
 			log.Info("[Worker %d] Agent patch already saved chapter %s through tool patch chapter --apply", workerID, chapter.ID)
-		} else if err := writepipe.SaveFinalChapter(book, chapter, content); err != nil {
+		} else if err := writepipe.SaveFinalChapter(ctx, book, chapter, content); err != nil {
 			log.Error("[Worker %d] Failed to save chapter %s: %v", workerID, chapter.ID, err)
 			errc.Addf("%s: save polished chapter failed: %w", chapter.ID, err)
 			return false, nil

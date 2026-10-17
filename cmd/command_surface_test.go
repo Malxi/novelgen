@@ -90,7 +90,7 @@ func TestCommandSurfaceSubcommands(t *testing.T) {
 		"rpg":     {"bench", "export", "gen", "simulate"},
 		"rpg-dsl": {"check", "convert", "convert-chapters", "export-dsl", "merge", "simulate", "validate"},
 		"setup":   {"check", "gen", "import", "improve", "regen"},
-		"storage": {"list", "projects", "read", "stat", "write"},
+		"storage": {"list", "projects", "read", "replace", "stat", "write"},
 		"tool":    {"check", "patch", "patch-buffer", "query", "refresh"},
 		"write":   {"gen", "improve", "pipeline", "review"},
 	}

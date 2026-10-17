@@ -86,7 +86,7 @@ func (a *BaseAgent) savePromptsToFile(agentName, systemPrompt, userPrompt string
 	content.WriteString("# USER PROMPT\n\n")
 	content.WriteString(userPrompt)
 
-	path, err := writeAgentLogFile(store.LogPromptsName, agentName, content.String())
+	path, err := a.saveLogStream(store.LogPromptsName, agentName, content.String())
 	if err != nil {
 		return fmt.Errorf("failed to write prompts file: %w", err)
 	}
@@ -108,7 +108,7 @@ func (a *BaseAgent) saveResponseToFile(agentName, response string) error {
 	content.WriteString(response)
 	content.WriteString("\n```\n")
 
-	path, err := writeAgentLogFile(store.LogResponsesName, agentName, content.String())
+	path, err := a.saveLogStream(store.LogResponsesName, agentName, content.String())
 	if err != nil {
 		return fmt.Errorf("failed to write response file: %w", err)
 	}
@@ -118,14 +118,14 @@ func (a *BaseAgent) saveResponseToFile(agentName, response string) error {
 	return nil
 }
 
-// writeAgentLogFile stores one agent log file and returns its path. Name
+// saveLogStream stores one agent log file and returns its path. Name
 // allocation (O_EXCL plus a numeric suffix on collision) lives in internal/store,
 // so concurrent workers writing in the same second cannot overwrite each other.
-func writeAgentLogFile(kind, agentName, content string) (string, error) {
+func (a *BaseAgent) saveLogStream(kind, agentName, content string) (string, error) {
 	if agentLogsDisabled() {
 		return "", nil
 	}
-	root, err := store.Open(agentLogRoot())
+	root, err := a.logRoot()
 	if err != nil {
 		return "", fmt.Errorf("resolve agent log root: %w", err)
 	}
@@ -138,6 +138,13 @@ func writeAgentLogFile(kind, agentName, content string) (string, error) {
 
 func agentLogsDisabled() bool {
 	return envutil.Bool(AgentLogsDisabledEnv, false)
+}
+
+func (a *BaseAgent) logRoot() (*store.Root, error) {
+	if a != nil && a.project != nil && a.project.Dir() != "" {
+		return a.project, nil
+	}
+	return store.Open(agentLogRoot())
 }
 
 // aiCallRecord is one AI call as the web UI's AI-call viewer reads it from
@@ -177,7 +184,7 @@ func (a *BaseAgent) recordAICall(params InvokeParams, model, systemPrompt, userP
 	if agentLogsDisabled() {
 		return
 	}
-	root, err := store.Open(agentLogRoot())
+	root, err := a.logRoot()
 	if err != nil {
 		logger.Debug("[%s] Failed to record AI call: %v", a.name, err)
 		return
@@ -227,7 +234,7 @@ func (a *BaseAgent) recordUsage(params InvokeParams, kind, model string, tokens 
 	if callErr != nil {
 		entry.Error = callErr.Error()
 	}
-	root, err := store.Open(agentLogRoot())
+	root, err := a.logRoot()
 	if err != nil {
 		logger.Debug("[%s] Failed to record usage: %v", a.name, err)
 		return

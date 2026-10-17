@@ -154,6 +154,7 @@ var layer = map[string]int{
 	"internal/continuity":                  8,
 	"internal/reviewstore":                 8,
 	"internal/quality":                     8,
+	"internal/app":                         8,
 	"internal/writersdl":                   8,
 	"internal/toolplane":                   8,
 	"internal/writepipe":                   8,
@@ -195,6 +196,125 @@ func TestInternalImportLayers(t *testing.T) {
 			t.Error(err)
 		}
 	}
+}
+
+// indirectAmbientAllowlist pins the remaining pipeline files that resolve a
+// project/config root without receiving one. These are the files reachable
+// without a project handle (agent logs, provider config, and the refresh
+// helper); everything else must take an explicit *store.Root or *project.Book.
+var indirectAmbientAllowlist = map[string]string{
+	"internal/agents/agent_base.go":       "SDK workspace fallback for callers without a root",
+	"internal/agents/agent_logging.go":    "agent logs have no root parameter yet",
+	"internal/app/session.go":             "composition root resolves global config once",
+	"internal/llm/client.go":              "RuntimeClient workspace root",
+	"internal/llm/config.go":              "provider config path discovery",
+	"internal/toolplane/tool_refresh.go":  "refresh context has no session handle yet",
+	"internal/writersdl/write_rpg_dsl.go": "failure dump only has a book name",
+}
+
+// TestPipelineLayersDoNotResolveAmbientRootIndirectly closes the gap left by
+// TestAmbientProjectRootUseIsPinned: that test only sees literal .Default()
+// calls and a few project helpers. A helper such as agentWorkspaceRoot() or a
+// fresh store.Open(agentWorkspaceRoot()) is just as capable of reading the
+// wrong project, so pipeline layers must not call it without an allowlist
+// entry.
+func TestPipelineLayersDoNotResolveAmbientRootIndirectly(t *testing.T) {
+	root := repoRoot(t)
+	fset := token.NewFileSet()
+	var violations []string
+	hits := map[string]int{}
+
+	for pkgPath, level := range layer {
+		if level < ambientRootLayer {
+			continue
+		}
+		dir := filepath.Join(root, filepath.FromSlash(pkgPath))
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			name := entry.Name()
+			if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+				continue
+			}
+			rel := pkgPath + "/" + name
+			file, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, 0)
+			if err != nil {
+				t.Fatalf("parse %s: %v", rel, err)
+			}
+			_, allowed := indirectAmbientAllowlist[rel]
+			if allowed {
+				hits[rel] = 0
+			}
+			ast.Inspect(file, func(node ast.Node) bool {
+				call, ok := node.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				reason := indirectAmbientCall(call)
+				if reason == "" {
+					return true
+				}
+				if allowed {
+					hits[rel]++
+					return true
+				}
+				violations = append(violations, fmt.Sprintf("%s:%d: %s", rel, fset.Position(call.Pos()).Line, reason))
+				return true
+			})
+		}
+	}
+
+	if len(violations) > 0 {
+		t.Errorf("pipeline layers must not resolve the ambient project/config through helpers:\n  %s",
+			strings.Join(violations, "\n  "))
+	}
+	for rel := range indirectAmbientAllowlist {
+		if hits[rel] == 0 {
+			t.Errorf("indirectAmbientAllowlist entry %q no longer resolves an ambient root; remove it", rel)
+		}
+	}
+}
+
+func indirectAmbientCall(call *ast.CallExpr) string {
+	selector, ok := call.Fun.(*ast.SelectorExpr)
+	if ok {
+		pkg, isIdent := selector.X.(*ast.Ident)
+		if !isIdent {
+			return ""
+		}
+		switch pkg.Name {
+		case "store":
+			switch selector.Sel.Name {
+			case "Default", "Open", "OpenProject", "LocateProject":
+				return "store." + selector.Sel.Name + "() in a pipeline layer"
+			}
+		case "project":
+			switch selector.Sel.Name {
+			case "Default", "FindRoot", "LoadConfig", "LoadStorySetup", "LoadOutline", "LoadAllElements":
+				return "project." + selector.Sel.Name + "() in a pipeline layer"
+			}
+		case "cli":
+			if selector.Sel.Name == "CommandContext" {
+				return "cli.CommandContext() in a pipeline layer"
+			}
+		case "llm":
+			if selector.Sel.Name == "LoadOrCreateConfig" || selector.Sel.Name == "GetConfigPath" {
+				return "llm." + selector.Sel.Name + "() in a pipeline layer"
+			}
+		}
+		return ""
+	}
+	ident, ok := call.Fun.(*ast.Ident)
+	if !ok {
+		return ""
+	}
+	switch ident.Name {
+	case "agentWorkspaceRoot", "agentLogRoot", "runtimeWorkspaceRoot":
+		return ident.Name + "() in a pipeline layer"
+	}
+	return ""
 }
 
 func checkPackageRecursive(t *testing.T, root, dir string) error {

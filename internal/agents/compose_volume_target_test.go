@@ -1694,6 +1694,7 @@ func TestImproveVolumeWithAgentSDKRecoversAppliedPatchAfterMaxTurns(t *testing.T
 		}},
 	}
 	agent := &ComposeAgent{base: &BaseAgent{name: "ComposeAgent", runtime: runtime, config: &llm.Config{}, language: "zh"}}
+	agent.SetProjectRoot(store.At(root))
 	input := ComposeImproveVolumeInput{
 		Part: models.Part{ID: "P1", Title: "第一部", Summary: "测试"},
 		Volume: models.Volume{

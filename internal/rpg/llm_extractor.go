@@ -1,6 +1,7 @@
 package rpg
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -14,7 +15,7 @@ type LLMExtractor struct {
 
 // LLMClient LLM客户端接口
 type LLMClient interface {
-	Complete(prompt string, text string) (string, error)
+	Complete(ctx context.Context, prompt string, text string) (string, error)
 }
 
 // LLMExtractionResult LLM提取结果
@@ -118,13 +119,13 @@ func (le *LLMExtractor) SetPrompt(prompt string) {
 }
 
 // ExtractFromNovel 从小说文本中提取实体
-func (le *LLMExtractor) ExtractFromNovel(text string) (*NovelRPGData, error) {
+func (le *LLMExtractor) ExtractFromNovel(ctx context.Context, text string) (*NovelRPGData, error) {
 	// 分段处理长文本
 	chunks := le.splitText(text, 4000)
 
 	var allResults []LLMExtractionResult
 	for i, chunk := range chunks {
-		result, err := le.extractChunk(chunk, i+1, len(chunks))
+		result, err := le.extractChunk(ctx, chunk, i+1, len(chunks))
 		if err != nil {
 			return nil, fmt.Errorf("提取第%d段失败: %w", i+1, err)
 		}
@@ -139,14 +140,14 @@ func (le *LLMExtractor) ExtractFromNovel(text string) (*NovelRPGData, error) {
 }
 
 // extractChunk 提取单个文本块
-func (le *LLMExtractor) extractChunk(chunk string, chunkNum, totalChunks int) (*LLMExtractionResult, error) {
+func (le *LLMExtractor) extractChunk(ctx context.Context, chunk string, chunkNum, totalChunks int) (*LLMExtractionResult, error) {
 	fullPrompt := fmt.Sprintf(`%s
 
 这是小说的第%d/%d部分，请提取实体：
 
 %s`, le.prompt, chunkNum, totalChunks, chunk)
 
-	response, err := le.client.Complete(fullPrompt, chunk)
+	response, err := le.client.Complete(ctx, fullPrompt, chunk)
 	if err != nil {
 		return nil, err
 	}
@@ -703,7 +704,7 @@ type MockLLMClient struct {
 }
 
 // Complete 模拟完成请求
-func (m *MockLLMClient) Complete(prompt string, text string) (string, error) {
+func (m *MockLLMClient) Complete(ctx context.Context, prompt string, text string) (string, error) {
 	if m.Response != "" {
 		return m.Response, nil
 	}

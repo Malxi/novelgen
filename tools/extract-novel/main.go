@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -133,9 +134,9 @@ func main() {
 	var data *rpg.NovelRPGData
 	if len(content) > *chunkSize {
 		fmt.Println("📄 文本较大，将分块处理...")
-		data, err = rpgllm.ExtractLargeText(client, options, string(content), *chunkSize)
+		data, err = rpgllm.ExtractLargeText(context.Background(), client, options, string(content), *chunkSize)
 	} else {
-		data, err = rpgllm.ExtractWithNovelgenClient(client, options, string(content))
+		data, err = rpgllm.ExtractWithNovelgenClient(context.Background(), client, options, string(content))
 	}
 
 	if err != nil {

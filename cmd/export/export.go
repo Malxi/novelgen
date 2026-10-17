@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"novelgen/internal/app"
 	"novelgen/internal/logger"
 	"novelgen/internal/models"
 	"novelgen/internal/project"
@@ -78,22 +79,18 @@ func NewCommand() *cobra.Command {
 func runExportNovel(cmd *cobra.Command, args []string) error {
 	log := logger.GetLogger()
 
-	// Load project config
-	config, err := project.LoadConfig()
+	session, err := app.Open(cmd)
 	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
+		return err
 	}
-
-	// Load story setup for metadata
-	setup, err := project.LoadStorySetup()
+	config := session.Config
+	setup, err := session.RequireSetup()
 	if err != nil {
-		return fmt.Errorf("failed to load story setup: %w", err)
+		return err
 	}
-
-	// Load outline for chapter order
-	outline, err := project.LoadOutline()
+	outline, err := session.RequireOutline()
 	if err != nil {
-		return fmt.Errorf("failed to load outline: %w", err)
+		return err
 	}
 
 	// Get all chapters in order
@@ -105,7 +102,7 @@ func runExportNovel(cmd *cobra.Command, args []string) error {
 	log.Info("Exporting %d chapters", len(chapters))
 
 	// Build novel content
-	content, err := buildNovelContent(config, setup, outline, chapters, exportFormatFlag)
+	content, err := buildNovelContent(session.Root, config, setup, outline, chapters, exportFormatFlag)
 	if err != nil {
 		return fmt.Errorf("failed to build novel content: %w", err)
 	}
@@ -142,7 +139,7 @@ func runExportNovel(cmd *cobra.Command, args []string) error {
 }
 
 // buildNovelContent compiles all chapters into a single document
-func buildNovelContent(config *models.ProjectConfig, setup *models.StorySetup, outline *models.Outline, chapters []*models.Chapter, format string) (string, error) {
+func buildNovelContent(root *store.Root, config *models.ProjectConfig, setup *models.StorySetup, outline *models.Outline, chapters []*models.Chapter, format string) (string, error) {
 	var sb strings.Builder
 
 	isTXT := format == "txt"
@@ -152,12 +149,6 @@ func buildNovelContent(config *models.ProjectConfig, setup *models.StorySetup, o
 		sb.WriteString(fmt.Sprintf("%s\n\n", setup.ProjectName))
 	} else {
 		sb.WriteString(fmt.Sprintf("# %s\n\n", setup.ProjectName))
-	}
-
-	// Write each chapter
-	root, err := project.FindRoot()
-	if err != nil {
-		return "", err
 	}
 
 	for i, chapter := range chapters {
@@ -256,9 +247,8 @@ func isMarkdownHorizontalRule(trimmed string) bool {
 }
 
 // loadChapterFile loads a chapter file from the chapters directory
-func loadChapterFile(root, chapterID string) (string, error) {
-	project := store.At(root)
-	content, _, err := project.LoadChapterContent(chapterID)
+func loadChapterFile(root *store.Root, chapterID string) (string, error) {
+	content, _, err := root.LoadChapterContent(chapterID)
 	if err != nil {
 		return "", err
 	}

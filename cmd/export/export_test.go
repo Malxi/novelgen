@@ -86,7 +86,7 @@ func TestBuildNovelContentFormats(t *testing.T) {
 	}
 	outline := &models.Outline{}
 
-	markdown, err := buildNovelContent(config, setup, outline, chapters, "md")
+	markdown, err := buildNovelContent(store.At(root), config, setup, outline, chapters, "md")
 	if err != nil {
 		t.Fatalf("markdown build: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestBuildNovelContentFormats(t *testing.T) {
 		t.Fatalf("chapters without a file must be skipped:\n%s", markdown)
 	}
 
-	plain, err := buildNovelContent(config, setup, outline, chapters, "txt")
+	plain, err := buildNovelContent(store.At(root), config, setup, outline, chapters, "txt")
 	if err != nil {
 		t.Fatalf("txt build: %v", err)
 	}

@@ -537,6 +537,22 @@ func TestNewRuntimeProviderErrorIsSurfaced(t *testing.T) {
 	}
 }
 
+func TestResolveProviderRuntimeUsesExplicitResolver(t *testing.T) {
+	cfg := &Config{}
+	resolved, err := cfg.resolveProviderRuntime("runtime", RuntimeConfig{Provider: "demo"}, func(provider string) (ProviderCredentials, error) {
+		if provider != "demo" {
+			t.Fatalf("provider = %q, want demo", provider)
+		}
+		return ProviderCredentials{APIKey: "key", BaseURL: "https://example.test", Model: "model", Timeout: 42}, nil
+	})
+	if err != nil {
+		t.Fatalf("resolve provider: %v", err)
+	}
+	if resolved.APIKey != "key" || resolved.BaseURL != "https://example.test" || resolved.Model != "model" || resolved.Timeout != 42 {
+		t.Fatalf("resolved runtime = %#v", resolved)
+	}
+}
+
 func TestEnsureRuntimeSettingsWritesModelEnv(t *testing.T) {
 	cfg := &Config{AgentHome: t.TempDir()}
 	rc, err := cfg.ensureRuntimeSettings("claude", RuntimeConfig{

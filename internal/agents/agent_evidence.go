@@ -35,10 +35,16 @@ func validateAgentRuntimeToolEvidence(agentName string, requirement ToolEvidence
 		len(requirement.RequiredToolCommands) == 0 {
 		return nil
 	}
-	if result == nil || result.LiveSummary == nil {
-		return fmt.Errorf("%s Agent SDK live summary is required to verify tool execution", agentName)
+	if result == nil {
+		return fmt.Errorf("%s Agent SDK summary is required to verify tool execution", agentName)
 	}
 	summary := result.LiveSummary
+	if structured := agentruntime.SummarizeToolEvents(result.ToolEvents); structured != nil {
+		summary = structured
+	}
+	if summary == nil {
+		return fmt.Errorf("%s Agent SDK live summary is required to verify tool execution", agentName)
+	}
 	if summary.QueryCalls < requirement.MinQueryCalls {
 		return fmt.Errorf("%s Agent SDK tool evidence failed: query calls=%d, want at least %d", agentName, summary.QueryCalls, requirement.MinQueryCalls)
 	}

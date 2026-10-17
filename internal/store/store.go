@@ -49,10 +49,9 @@ var ErrNoProject = errors.New("project root not found (novel.json not found in c
 // what lets tests hand a command a temporary project, and what will let a
 // future backend (a bundle, an archive, a database) replace the filesystem.
 type Root struct {
-	dir        string
-	fs         FS
-	mergeMu    sync.Mutex
-	mutationMu sync.Mutex
+	dir     string
+	fs      FS
+	mergeMu sync.Mutex
 }
 
 // Open returns a Root for dir without requiring the directory to exist yet.
@@ -112,7 +111,13 @@ func (r *Root) FS() FS {
 	return r.fs
 }
 
-// WithMutationLock serializes a read-modify-write mutation on this Root.
+// projectMutationLocks makes the mutation lock follow the project directory, not
+// the Root handle. Callers routinely create another Root via store.Open/At; a
+// per-handle mutex would then silently fail to serialize two writers to the
+// same project.
+var projectMutationLocks sync.Map
+
+// WithMutationLock serializes a read-modify-write mutation on this project.
 //
 // Tool-plane patches load an artifact, merge a proposal into it, validate the
 // result and then write it back. The individual writes are atomic, but without
@@ -127,8 +132,10 @@ func (r *Root) WithMutationLock(fn func() error) error {
 	if fn == nil {
 		return nil
 	}
-	r.mutationMu.Lock()
-	defer r.mutationMu.Unlock()
+	lock, _ := projectMutationLocks.LoadOrStore(filepath.Clean(r.dir), &sync.Mutex{})
+	mu := lock.(*sync.Mutex)
+	mu.Lock()
+	defer mu.Unlock()
 	return fn()
 }
 

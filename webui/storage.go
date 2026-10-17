@@ -154,6 +154,31 @@ func writeProjectFile(project, rel string, data []byte) error {
 	return err
 }
 
+// replaceProjectFile writes a canonical artifact through the CLI mutation
+// service. The editor save is a complete-object replace, not a raw file write,
+// so schema checks, checkpoints and derived files still run.
+func replaceProjectFile(project, rel string, data []byte) error {
+	_, err := storageCall(data, "replace", "--project", project, "--path", rel)
+	return err
+}
+
+// isCanonicalProjectPath reports whether a path is owned by the mutation
+// service. Everything else (notes, reports, exports) remains a plain write.
+func isCanonicalProjectPath(rel string) bool {
+	path := filepath.ToSlash(rel)
+	switch path {
+	case "story/setup/story_setup.json",
+		"story/compose/outline.json",
+		"story/craft/characters.json",
+		"story/craft/locations.json",
+		"story/craft/items.json",
+		"story/craft/organizations.json":
+		return true
+	}
+	return strings.HasPrefix(path, "chapters/") && strings.HasSuffix(path, ".md") ||
+		strings.HasPrefix(path, "story/recaps/") && strings.HasSuffix(path, ".json")
+}
+
 func writeProjectFileAt(project, fullPath string, data []byte) error {
 	rel, err := projectRelative(project, fullPath)
 	if err != nil {

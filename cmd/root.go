@@ -51,6 +51,11 @@ func init() {
 // A missing project is not an error here: `init` creates one, and commands that
 // require an existing project report their own, better error.
 func resolveProjectRoot(cmd *cobra.Command, _ []string) error {
+	// Commands may be executed repeatedly in one process (tests, embedding).
+	// Clear the previous invocation's ambient root before resolving this one so
+	// a "no project here" result cannot silently inherit an older project.
+	store.ResetDefault()
+
 	dir := strings.TrimSpace(projectDirFlag)
 	if dir == "" {
 		dir = strings.TrimSpace(envutil.String("NOVELGEN_PROJECT_DIR"))

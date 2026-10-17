@@ -7,8 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"novelgen/internal/agents"
-	"novelgen/internal/llm"
+	"novelgen/internal/app"
 	"novelgen/internal/logger"
 	"novelgen/internal/logic/continuity/recap"
 	"novelgen/internal/models"
@@ -76,39 +75,22 @@ func runRecapGen(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	book, err := project.ForCommand(cmd)
+	session, err := app.Open(cmd)
+	if err != nil {
+		return err
+	}
+	book := session.Book()
+	outline, err := session.RequireOutline()
 	if err != nil {
 		return err
 	}
 
-	// Load project config
-	config, err := book.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
-	}
-
-	// Load outline
-	outline, err := book.LoadOutline()
-	if err != nil {
-		return fmt.Errorf("failed to load outline: %w", err)
-	}
-
-	// Load LLM config
-	cfg, err := llm.LoadOrCreateConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load LLM config: %w", err)
-	}
-
-	// Create LLM client
-	client := cfg.CreateClient(&config.LLM)
-	if client == nil {
-		return fmt.Errorf("failed to create LLM client")
-	}
-
 	// Recap agent + store
 	store := recap.NewStoreAt(book.Root)
-	agent := agents.NewRecapAgent(client, cfg, &config.LLM)
-	agent.SetLanguage(config.Language)
+	agent, err := session.NewRecapAgent()
+	if err != nil {
+		return err
+	}
 
 	// Chapters to process
 	chapters, err := project.SelectChapters(outline, recapChapterFlag, "", "", recapAllFlag)

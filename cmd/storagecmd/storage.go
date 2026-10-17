@@ -86,11 +86,21 @@ func NewCommand() *cobra.Command {
 		Short: "Write stdin to one project-relative file",
 		RunE:  runWrite,
 	}
-	for _, sub := range []*cobra.Command{projectsCmd, readCmd, listCmd, statCmd, writeCmd} {
+	replaceCmd := &cobra.Command{
+		Use:   "replace",
+		Short: "Replace one canonical artifact through the project mutation service",
+		Long: `Replace one complete canonical artifact (setup, outline, craft, chapter or recap).
+
+Unlike "storage write", this command parses and validates the artifact, writes a
+checkpoint, normalizes it and refreshes derived files through the same mutation
+service that "tool patch" uses.`,
+		RunE: runReplace,
+	}
+	for _, sub := range []*cobra.Command{projectsCmd, readCmd, listCmd, statCmd, writeCmd, replaceCmd} {
 		sub.SilenceUsage = true
 		sub.SilenceErrors = true
 	}
-	cmd.AddCommand(projectsCmd, readCmd, listCmd, statCmd, writeCmd)
+	cmd.AddCommand(projectsCmd, readCmd, listCmd, statCmd, writeCmd, replaceCmd)
 	return cmd
 }
 
