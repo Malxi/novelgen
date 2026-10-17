@@ -56,7 +56,7 @@ func runToolRefreshChapterDSL(cmd *cobra.Command) error {
 	if id == "" {
 		return fmt.Errorf("--id is required for chapter-dsl refresh")
 	}
-	refresh, err := refreshToolChapterDSLAt(cmd.Context(), root, id, ToolRefreshFlags.BatchSize)
+	refresh, err := RefreshToolChapterDSL(cmd.Context(), root, id, ToolRefreshFlags.BatchSize)
 	if err != nil {
 		return err
 	}
@@ -71,13 +71,15 @@ func SuppressToolRefreshLogs() func() {
 	}
 }
 
-// RefreshToolChapterDSL is the string-root entry point used by the write
-// pipeline, which holds a resolved project directory.
-func RefreshToolChapterDSL(ctx context.Context, rootDir, id string, batchSize int) (*toolRefreshResult, error) {
-	return refreshToolChapterDSLAt(ctx, store.At(rootDir), id, batchSize)
-}
-
-func refreshToolChapterDSLAt(ctx context.Context, root *store.Root, id string, batchSize int) (*toolRefreshResult, error) {
+// RefreshToolChapterDSL refreshes the chapter RPG-DSL through an explicit
+// project root, so an in-memory or remote backend is not downgraded to OSFS.
+func RefreshToolChapterDSL(ctx context.Context, root *store.Root, id string, batchSize int) (*toolRefreshResult, error) {
+	if root == nil {
+		return nil, fmt.Errorf("project root is required")
+	}
+	if err := store.ValidateKeyPart(id); err != nil {
+		return nil, fmt.Errorf("invalid chapter id %q: %w", id, err)
+	}
 	config, setup, outline, cfg, client, err := loadToolRefreshProjectState(root)
 	if err != nil {
 		return nil, err
@@ -94,11 +96,11 @@ func refreshToolChapterDSLAt(ctx context.Context, root *store.Root, id string, b
 		batchSize = 10
 	}
 
-	result, err := writersdl.EmitChapterRPGDSLForProject(ctx, root.Dir(), filepath.Base(root.Dir()), config, cfg, setup, client, batchSize, id)
+	result, err := writersdl.EmitChapterRPGDSLForProject(ctx, root, filepath.Base(root.Dir()), config, cfg, setup, client, batchSize, id)
 	if err != nil {
 		return nil, err
 	}
-	gate := runToolChapterSimulationGateAt(root, id)
+	gate := RunToolChapterSimulationGateAt(root, id)
 	check := MakeToolCheckResult("simulation", "chapter", "chapter", id, gate)
 	refresh := toolRefreshResult{
 		OK:               check == nil || !check.Blocking,

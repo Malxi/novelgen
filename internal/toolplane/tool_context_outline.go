@@ -29,7 +29,7 @@ func queryOutlineRepairContext(ctx ToolProjectContext, id, category string) Tool
 
 func QueryOutlineGlobalRepairContext(ctx ToolProjectContext, category string) ToolResponse {
 	category = NormalizeKey(category)
-	check, err := RunToolOutlineCheck("all", ctx.Setup, ctx.Outline, "all", "")
+	check, err := RunToolOutlineCheckAt(ctx.Root, "all", ctx.Setup, ctx.Outline, "all", "")
 	if err != nil {
 		return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{err.Error()}}
 	}
@@ -81,7 +81,7 @@ func queryOutlineVolumeRepairContext(ctx ToolProjectContext, volumeID, category 
 		return ToolResponse{OK: false, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline volume not found: %q", volumeID)}}
 	}
 	target := volumes[targetIndex]
-	check, err := RunToolOutlineCheck("all", ctx.Setup, ctx.Outline, "volume", target.Volume.ID)
+	check, err := RunToolOutlineCheckAt(ctx.Root, "all", ctx.Setup, ctx.Outline, "volume", target.Volume.ID)
 	if err != nil {
 		return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{err.Error()}}
 	}
@@ -146,7 +146,7 @@ func queryOutlineChapterRepairContext(ctx ToolProjectContext, chapterID, categor
 	}
 	target := chapters[targetIndex]
 	volumeID := target.Path.VolumeID
-	check, err := RunToolOutlineCheck("all", ctx.Setup, ctx.Outline, "chapter", target.Chapter.ID)
+	check, err := RunToolOutlineCheckAt(ctx.Root, "all", ctx.Setup, ctx.Outline, "chapter", target.Chapter.ID)
 	if err != nil {
 		return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{err.Error()}}
 	}

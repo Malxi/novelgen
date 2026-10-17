@@ -86,7 +86,7 @@ func LoadChapterContext(book *project.Book, outline *models.Outline, targetChapt
 		return context
 	}
 
-	if recapJSON := novelcont.LoadPreviousRecapJSON(outline, targetChapter); strings.TrimSpace(recapJSON) != "" {
+	if recapJSON := novelcont.LoadPreviousRecapJSON(book, outline, targetChapter); strings.TrimSpace(recapJSON) != "" {
 		context.Recap = recapJSON
 	} else if draftRecap := novelcont.LoadPreviousDraftRecap(book, outline, targetChapter); strings.TrimSpace(draftRecap) != "" {
 		context.Recap = draftRecap

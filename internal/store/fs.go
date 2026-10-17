@@ -211,14 +211,36 @@ func (r *Root) Append(path string, data []byte, perm os.FileMode) error {
 
 // Exists reports whether a project path exists.
 func (r *Root) Exists(path string) bool {
-	_, err := r.FS().Stat(path)
+	_, err := r.Stat(path)
 	return err == nil
+}
+
+// ExistsErr is Exists with the backend error preserved. Use it when a failed
+// read must not be mistaken for "artifact absent" (for example on a remote
+// backend with transient errors).
+func (r *Root) ExistsErr(path string) (bool, error) {
+	_, err := r.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	return false, err
+}
+
+// Stat returns file information for a project path without collapsing a
+// permission or backend failure into "missing". Callers that need to
+// distinguish "not there yet" from "could not read it" should use this method
+// and check errors.Is(err, fs.ErrNotExist) themselves.
+func (r *Root) Stat(path string) (os.FileInfo, error) {
+	return r.FS().Stat(path)
 }
 
 // Remove deletes a project file. A missing file is not an error, matching the
 // best-effort cleanup callers used to write by hand.
 func (r *Root) Remove(path string) error {
-	if err := r.FS().Remove(path); err != nil && !os.IsNotExist(err) {
+	if err := r.FS().Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
 	return nil

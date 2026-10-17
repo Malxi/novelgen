@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"novelgen/internal/llm"
+	"novelgen/internal/models"
 	"novelgen/internal/store"
 	"novelgen/internal/writersdl"
 )
@@ -164,5 +166,68 @@ func TestEmitWriteRPGDSLRunsOnAnInMemoryProject(t *testing.T) {
 	// that), but it must have stored the batch cache through the seam.
 	if cachedFiles == 0 {
 		t.Fatalf("no batch cache files in MemFS: %v", memFS.Names())
+	}
+}
+
+// TestEmitChapterRPGDSLForProjectUsesInjectedRoot covers the wrapper that the
+// CLI and tool refresh call. It used to load outline/craft through the ambient
+// project, so a MemFS root still read host state.
+func TestEmitChapterRPGDSLForProjectUsesInjectedRoot(t *testing.T) {
+	root := store.MemRoot()
+	config := &models.ProjectConfig{Name: "Memory Book", Language: "en"}
+	setup := &models.StorySetup{ProjectName: "Memory Book"}
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1",
+		Volumes: []models.Volume{{
+			ID:       "P1-V1",
+			Chapters: []models.Chapter{{ID: "P1-V1-C1", Title: "One"}},
+		}},
+	}}}
+	if err := root.SaveSetup(setup); err != nil {
+		t.Fatalf("SaveSetup: %v", err)
+	}
+	if err := root.SaveOutline(outline); err != nil {
+		t.Fatalf("SaveOutline: %v", err)
+	}
+	chapterPath := root.ChapterFile("P1-V1-C1")
+	if err := root.WriteText(chapterPath, "# One\n\nprose\n"); err != nil {
+		t.Fatalf("seed chapter: %v", err)
+	}
+
+	chapters := []writersdl.WriteRPGDSLChapterInput{{ChapterID: "P1-V1-C1", ChapterPath: chapterPath}}
+	manifest, err := writersdl.BuildWriteRPGDSLBatchManifest(root.FS(), "Memory Book", 0, 10, chapters, root.RPGChapterBatchCacheDir())
+	if err != nil {
+		t.Fatalf("BuildWriteRPGDSLBatchManifest: %v", err)
+	}
+	cached := `storyline {
+  chapter "Chapter 1" {
+    id = "P1-V1-C1"
+    objective "one" {
+      step 1 {
+        description = "a"
+      }
+    }
+  }
+}`
+	if err := writersdl.SaveWriteRPGDSLBatchToCache(root.FS(), manifest, cached); err != nil {
+		t.Fatalf("SaveWriteRPGDSLBatchToCache: %v", err)
+	}
+
+	ambient := store.MemRoot()
+	store.SetDefault(ambient)
+	defer store.ResetDefault()
+
+	result, err := writersdl.EmitChapterRPGDSLForProject(context.Background(), root, "Memory Book", config, &llm.Config{}, setup, nil, 10)
+	if err != nil {
+		t.Fatalf("EmitChapterRPGDSLForProject: %v", err)
+	}
+	if result.DSLPath != root.RPGChaptersDSL() {
+		t.Fatalf("DSLPath = %q, want %q", result.DSLPath, root.RPGChaptersDSL())
+	}
+	if _, ok := root.FS().(*store.MemFS).File(result.DSLPath); !ok {
+		t.Fatalf("merged DSL was not written to MemFS: %v", root.FS().(*store.MemFS).Names())
+	}
+	if names := ambient.FS().(*store.MemFS).Names(); len(names) != 0 {
+		t.Fatalf("ambient project was touched: %v", names)
 	}
 }

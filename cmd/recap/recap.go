@@ -75,14 +75,19 @@ func runRecapGen(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	book, err := project.ForCommand(cmd)
+	if err != nil {
+		return err
+	}
+
 	// Load project config
-	config, err := project.LoadConfig()
+	config, err := book.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load project config: %w", err)
 	}
 
 	// Load outline
-	outline, err := project.LoadOutline()
+	outline, err := book.LoadOutline()
 	if err != nil {
 		return fmt.Errorf("failed to load outline: %w", err)
 	}
@@ -100,11 +105,7 @@ func runRecapGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Recap agent + store
-	root, err := project.FindRoot()
-	if err != nil {
-		return fmt.Errorf("failed to find project root: %w", err)
-	}
-	store := recap.NewStore(root)
+	store := recap.NewStoreAt(book.Root)
 	agent := agents.NewRecapAgent(client, cfg, &config.LLM)
 	agent.SetLanguage(config.Language)
 

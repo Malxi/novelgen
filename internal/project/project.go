@@ -65,7 +65,7 @@ func CommandDir(cmd *cobra.Command) (*store.Root, error) {
 	if root, err := store.Default(); err == nil {
 		return root, nil
 	}
-	return store.Open(".")
+	return store.OpenProject(".")
 }
 
 // FindRoot walks up from the current working directory until it finds the

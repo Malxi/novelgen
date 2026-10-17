@@ -311,7 +311,7 @@ func queryChapterRepairContext(ctx ToolProjectContext, chapterID, issueCategory 
 		warnings = append(warnings, "project root missing; chapter quality/simulation check unavailable")
 	} else {
 		var err error
-		check, err = runToolChapterCheckAt(ctx.Root, "all", "chapter", target.Chapter.ID, 0)
+		check, err = RunToolChapterCheckWithTargetWordsAt(ctx.Root, "all", "chapter", target.Chapter.ID, 0)
 		if err != nil {
 			warnings = append(warnings, "chapter check unavailable: "+err.Error())
 		} else if err := ApplyToolCheckIssueFilters(check, "low", ChapterRepairIssueCategoryFilter(issueCategory), 12); err != nil {

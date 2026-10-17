@@ -31,6 +31,17 @@ var ambientRootAllowlist = map[string]string{
 	"internal/writersdl/write_rpg_dsl.go": "the failure dump only has a book name to work with",
 }
 
+// ambientProjectHelpers are the project package's convenience loaders. They
+// resolve store.Default internally, so an AST check for .Default() alone misses
+// them even though they cause the same wrong-project bug.
+var ambientProjectHelpers = map[string]bool{
+	"LoadConfig":      true,
+	"LoadStorySetup":  true,
+	"LoadOutline":     true,
+	"LoadAllElements": true,
+	"FindRoot":        true,
+}
+
 // TestAmbientProjectRootUseIsPinned keeps new pipeline code from reaching for the
 // process-wide project root. store.Default / project.Default are fine at the
 // edges (a command entry point, the project facade), and they are what make the
@@ -74,6 +85,15 @@ func TestAmbientProjectRootUseIsPinned(t *testing.T) {
 				}
 				selector, ok := call.Fun.(*ast.SelectorExpr)
 				if !ok || selector.Sel.Name != "Default" {
+					if !ok {
+						return true
+					}
+					pkg, isIdent := selector.X.(*ast.Ident)
+					if !isIdent || pkg.Name != "project" || !ambientProjectHelpers[selector.Sel.Name] {
+						return true
+					}
+					hits = append(hits, fmt.Sprintf("%s:%d: project.%s() in a pipeline layer; take an explicit *store.Root/project.Book instead",
+						rel, fset.Position(call.Pos()).Line, selector.Sel.Name))
 					return true
 				}
 				pkg, ok := selector.X.(*ast.Ident)

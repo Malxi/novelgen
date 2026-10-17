@@ -40,6 +40,39 @@ func TestRecoverAgentAppliedChapterContentAfterErrorUsesSavedPatch(t *testing.T)
 	}
 }
 
+func TestLoadChapterContextUsesInjectedRoot(t *testing.T) {
+	root := store.MemRoot()
+	book := project.Open(root)
+	if err := book.SaveChapterContent("P1-V1-C1", "# One\n\nLin opens the door."); err != nil {
+		t.Fatalf("SaveChapterContent: %v", err)
+	}
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1",
+		Volumes: []models.Volume{{
+			ID: "P1-V1",
+			Chapters: []models.Chapter{
+				{ID: "P1-V1-C1", Title: "One"},
+				{ID: "P1-V1-C2", Title: "Two"},
+			},
+		}},
+	}}}
+
+	ambient := store.MemRoot()
+	store.SetDefault(ambient)
+	defer store.ResetDefault()
+
+	ctx := writepipe.LoadChapterContext(book, outline, &models.Chapter{ID: "P1-V1-C2"}, 1)
+	if len(ctx.Previous) != 1 || ctx.Previous[0].Chapter.ID != "P1-V1-C1" {
+		t.Fatalf("previous chapters = %#v, want the MemFS chapter", ctx.Previous)
+	}
+	if !root.Exists(root.RecapFile("P1-V1-C1")) {
+		t.Fatalf("offline recap was not persisted to MemFS: %v", root.FS().(*store.MemFS).Names())
+	}
+	if names := ambient.FS().(*store.MemFS).Names(); len(names) != 0 {
+		t.Fatalf("ambient project was touched: %v", names)
+	}
+}
+
 func TestRecoverAgentAppliedChapterContentAfterErrorRejectsOvershoot(t *testing.T) {
 	t.Parallel()
 

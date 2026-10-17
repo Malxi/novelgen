@@ -123,8 +123,17 @@ func CheckQuality(projectRoot string, chapterID string) (ok bool, issues []strin
 	if projectRoot == "" || chapterID == "" {
 		return false, []string{"projectRoot/chapterID 为空"}, []string{"确保运行环境能定位项目根目录并生成 story/recaps"}
 	}
+	return CheckQualityAt(store.At(projectRoot), chapterID)
+}
 
-	store := NewStoreAt(store.At(projectRoot))
+// CheckQualityAt is the explicit-root form of CheckQuality.
+func CheckQualityAt(root *store.Root, chapterID string) (ok bool, issues []string, suggestions []string) {
+	chapterID = strings.TrimSpace(chapterID)
+	if root == nil || chapterID == "" {
+		return false, []string{"projectRoot/chapterID 为空"}, []string{"确保运行环境能定位项目根目录并生成 story/recaps"}
+	}
+
+	store := NewStoreAt(root)
 	p := store.Path(chapterID)
 	recap, err := store.Load(chapterID)
 	if err != nil {

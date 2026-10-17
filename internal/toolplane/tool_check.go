@@ -423,7 +423,7 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 		return writeJSON(cmd, result)
 	}
 	if target == "chapter" {
-		result, err := runToolChapterCheckAt(root, kind, ToolCheckFlags.Scope, ToolCheckFlags.ID, ToolCheckFlags.TargetWords)
+		result, err := RunToolChapterCheckWithTargetWordsAt(root, kind, ToolCheckFlags.Scope, ToolCheckFlags.ID, ToolCheckFlags.TargetWords)
 		if err != nil {
 			return err
 		}
@@ -459,7 +459,7 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := RunToolOutlineCheck(kind, ctx.Setup, ctx.Outline, ToolCheckFlags.Scope, ToolCheckFlags.ID)
+	result, err := RunToolOutlineCheckAt(root, kind, ctx.Setup, ctx.Outline, ToolCheckFlags.Scope, ToolCheckFlags.ID)
 	if err != nil {
 		return err
 	}

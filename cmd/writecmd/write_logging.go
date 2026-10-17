@@ -9,9 +9,9 @@ import (
 	"novelgen/internal/store"
 )
 
-func setupWriteRunLogging(projectRoot, label string) {
+func setupWriteRunLogging(projectRoot *store.Root, label string) {
 	log := logger.Default()
-	log.SetProjectDir(projectRoot)
+	log.SetProjectRoot(projectRoot)
 	if err := log.EnableFileLogging(); err != nil {
 		logger.Warn("Failed to enable file logging: %v", err)
 		return
@@ -21,15 +21,15 @@ func setupWriteRunLogging(projectRoot, label string) {
 	logger.Info("Command: %s", strings.Join(os.Args, " "))
 	logger.Info("Run label: %s", label)
 	logger.Info("Working dir: %s", cwd)
-	logger.Info("Project root: %s", projectRoot)
+	logger.Info("Project root: %s", projectRoot.Dir())
 	logger.Info("Log file: %s", log.LogFilePath())
-	logger.Info("Prompt logs: %s", store.At(projectRoot).LogFile("prompts"))
-	logger.Info("Response logs: %s", store.At(projectRoot).LogFile("responses"))
+	logger.Info("Prompt logs: %s", projectRoot.LogFile("prompts"))
+	logger.Info("Response logs: %s", projectRoot.LogFile("responses"))
 }
 
-func finalChapterPath(projectRoot string, chapter *models.Chapter) string {
+func finalChapterPath(projectRoot *store.Root, chapter *models.Chapter) string {
 	if chapter == nil {
-		return store.At(projectRoot).ChaptersDir()
+		return projectRoot.ChaptersDir()
 	}
-	return store.At(projectRoot).ChapterFile(chapter.ID)
+	return projectRoot.ChapterFile(chapter.ID)
 }

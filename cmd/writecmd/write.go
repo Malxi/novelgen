@@ -330,15 +330,14 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 	agent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	agent.SetLanguage(config.Language)
 
-	root := book.Dir()
-	setupWriteRunLogging(root, "write gen")
+	setupWriteRunLogging(book.Root, "write gen")
 
 	// Create continuity builder
-	continuityBuilder := logic.NewChapterContinuityBuilder(root)
+	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root)
 	// Create recap agent + store (auto-persist recaps for continuity)
 	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
 	recapAgent.SetLanguage(config.Language)
-	recapStore := recap.NewStore(root)
+	recapStore := recap.NewStoreAt(book.Root)
 	// Create lightweight best-of scorer (used only when --best-of is enabled)
 	scorer := agents.NewChapterScorerAgent(client, cfg, &config.LLM)
 	scorer.SetLanguage(config.Language)
@@ -808,8 +807,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	writeAgent.SetLanguage(config.Language)
 
-	root := book.Dir()
-	setupWriteRunLogging(root, "write improve")
+	setupWriteRunLogging(book.Root, "write improve")
 	if writeAgentSDKFlag {
 		log.Info("Chapter improvement will use Agent SDK; Go still validates and saves final markdown")
 	}
@@ -818,10 +816,10 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create continuity builder
-	continuityBuilder := logic.NewChapterContinuityBuilder(root)
+	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root)
 	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
 	recapAgent.SetLanguage(config.Language)
-	recapStore := recap.NewStore(root)
+	recapStore := recap.NewStoreAt(book.Root)
 
 	// Get volumes to improve
 	volumes := project.VolumesForSelection(outline, writeVolumeFlag, writeChapterFlag)
@@ -1052,6 +1050,7 @@ func improveChaptersWithWriteAgent(ctx context.Context, book *project.Book, agen
 		knownChars := project.KnownCharacterNames(outline)
 		fixed, sum := novelcont.ApplyImproveFixesWrite(
 			log,
+			book,
 			workerID,
 			chapter,
 			outline,
@@ -1307,14 +1306,13 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	writeAgent.SetLanguage(config.Language)
 
-	root := book.Dir()
-	setupWriteRunLogging(root, "write review")
+	setupWriteRunLogging(book.Root, "write review")
 	if writeAgentSDKFlag {
 		log.Info("Chapter review will use Agent SDK; Go still saves review JSON")
 	}
 
 	// Create continuity builder
-	continuityBuilder := logic.NewChapterContinuityBuilder(root)
+	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root)
 
 	// Get chapters to review based on flags
 	chaptersToReview := getChaptersToReview(outline, writeChapterFlag, writeVolumeFlag, writePartFlag, writeAllFlag)
@@ -1451,7 +1449,7 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 				for chapterID, content := range volumeContents[volumeID] {
 					contentByID[chapterID] = content
 				}
-				novelcont.ApplyHeuristicTransitionChecks(volume, contentByID, review)
+				novelcont.ApplyHeuristicTransitionChecks(book, volume, contentByID, review)
 				applyHumanizeChecksToVolume(book, volume, contentByID, review)
 			}
 		}
@@ -1613,7 +1611,7 @@ func reviewVolumeWithWriteAgent(ctx context.Context, book *project.Book, writeAg
 	}
 
 	// Save volume review
-	novelcont.ApplyHeuristicTransitionChecks(volume, volumeContents, volumeReview)
+	novelcont.ApplyHeuristicTransitionChecks(book, volume, volumeContents, volumeReview)
 	applyHumanizeChecksToVolume(book, volume, volumeContents, volumeReview)
 	if err := reviewstore.SaveVolumeReviewAt(book, volumeReview); err != nil {
 		return fmt.Errorf("failed to save review for volume %s: %w", volume.ID, err)
@@ -1685,11 +1683,10 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	writeAgent := agents.NewWriteAgent(client, cfg, &config.LLM, setup, outline)
 	writeAgent.SetLanguage(config.Language)
 
-	root := book.Dir()
-	setupWriteRunLogging(root, "write pipeline")
+	setupWriteRunLogging(book.Root, "write pipeline")
 
 	// Create continuity builder
-	continuityBuilder := logic.NewChapterContinuityBuilder(root)
+	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root)
 
 	// Get chapters to process
 	chaptersToProcess := getChaptersToReview(outline, writeChapterFlag, writeVolumeFlag, writePartFlag, writeAllFlag)
@@ -1699,7 +1696,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 
 	log.Info("=== WRITE PIPELINE ===")
 	log.Info("Processing %d chapter(s)", len(chaptersToProcess))
-	log.Info("RPG DSL export: enabled=%t batch_size=%d output=%s", writeEmitRPGDSLFlag, writeRPGBatchSizeFlag, store.At(root).RPGChaptersDSL())
+	log.Info("RPG DSL export: enabled=%t batch_size=%d output=%s", writeEmitRPGDSLFlag, writeRPGBatchSizeFlag, book.RPGChaptersDSL())
 	minScorePercent := writeMinScorePercent()
 	log.Info("Minimum acceptable score: %.0f/100", minScorePercent)
 	if WriteBestOfFlag > 1 {
@@ -1722,7 +1719,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	// Create recap agent for all chapters
 	recapAgent := agents.NewRecapAgent(client, cfg, &config.LLM)
 	recapAgent.SetLanguage(config.Language)
-	recapStore := recap.NewStore(root)
+	recapStore := recap.NewStoreAt(book.Root)
 	// Create lightweight best-of scorer (used only when --best-of is enabled)
 	scorer := agents.NewChapterScorerAgent(client, cfg, &config.LLM)
 	scorer.SetLanguage(config.Language)
@@ -1771,9 +1768,9 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 			if strings.TrimSpace(content) == "" {
 				content = generatedContent
 			}
-			log.Info("Generated chapter output: %s", finalChapterPath(root, chapter))
+			log.Info("Generated chapter output: %s", finalChapterPath(book.Root, chapter))
 		} else {
-			log.Info("Chapter %s already exists, using: %s", chapter.ID, finalChapterPath(root, chapter))
+			log.Info("Chapter %s already exists, using: %s", chapter.ID, finalChapterPath(book.Root, chapter))
 		}
 
 		// Step 2: Review chapter
@@ -1811,9 +1808,9 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		volumeID := getVolumeIDFromChapter(chapter.ID)
 		volume := outline.GetVolumeByID(volumeID)
 		var volumeReview *agents.VolumeReview
-		reviewPath := store.At(root).VolumeReviewFile(volumeID)
+		reviewPath := book.VolumeReviewFile(volumeID)
 		var existingReview agents.VolumeReview
-		if err := store.At(root).ReadJSON(reviewPath, &existingReview); err == nil {
+		if err := book.ReadJSON(reviewPath, &existingReview); err == nil {
 			volumeReview = &existingReview
 		}
 		if volumeReview == nil {
@@ -1843,7 +1840,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				log.Warn("Failed to load chapter contents for volume %s; skipping heuristic checks: %v", volume.ID, err)
 			} else {
-				novelcont.ApplyHeuristicTransitionChecks(volume, volumeContents, volumeReview)
+				novelcont.ApplyHeuristicTransitionChecks(book, volume, volumeContents, volumeReview)
 				applyHumanizeChecksToVolume(book, volume, volumeContents, volumeReview)
 				if updated := findDraftReview(volumeReview, chapter.ID); updated != nil {
 					draftReview = *updated
@@ -1858,7 +1855,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		log.Info("Reviewed chapter %s: score %.1f", chapter.ID, reviewResult.OverallScore)
 
 		if writeEmitRPGDSLFlag && writeMaxRoundsFlag > 0 {
-			result, err := refreshWriteRPGDSL(ctx, root, config, cfg, setup, client, writeRPGBatchSizeFlag, "before improvement")
+			result, err := refreshWriteRPGDSL(ctx, book.Root, config, cfg, setup, client, writeRPGBatchSizeFlag, "before improvement")
 			if err != nil {
 				log.Error("Failed to refresh RPG DSL before improving chapter %s: %v", chapter.ID, err)
 			} else {
@@ -1907,6 +1904,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 
 			fixedContent, sum := novelcont.ApplyImproveFixesWrite(
 				log,
+				book,
 				0,
 				chapter,
 				outline,
@@ -1958,7 +1956,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				}
 			}
 			currentContent = improvedContent
-			log.Info("Improved chapter output: %s", finalChapterPath(root, chapter))
+			log.Info("Improved chapter output: %s", finalChapterPath(book.Root, chapter))
 
 			// Re-review after improvement (if not last round)
 			if round < writeMaxRoundsFlag {
@@ -1988,7 +1986,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 					if err != nil {
 						log.Warn("Failed to load chapter contents for volume %s; skipping heuristic checks: %v", volume.ID, err)
 					} else {
-						novelcont.ApplyHeuristicTransitionChecks(volume, volumeContents, volumeReview)
+						novelcont.ApplyHeuristicTransitionChecks(book, volume, volumeContents, volumeReview)
 						applyHumanizeChecksToVolume(book, volume, volumeContents, volumeReview)
 						if updated := findDraftReview(volumeReview, chapter.ID); updated != nil {
 							chapterReview = updated
@@ -2014,11 +2012,11 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 			log.Error("Failed to generate/save recap for chapter %s: %v", chapter.ID, err)
 			errc.Addf("%s: final recap failed: %w", chapter.ID, err)
 		} else {
-			log.Info("Recap output: %s", store.At(root).RecapFile(chapter.ID))
+			log.Info("Recap output: %s", book.RecapFile(chapter.ID))
 		}
 
 		if writeEmitRPGDSLFlag {
-			result, err := refreshWriteRPGDSL(ctx, root, config, cfg, setup, client, writeRPGBatchSizeFlag, "after final recap")
+			result, err := refreshWriteRPGDSL(ctx, book.Root, config, cfg, setup, client, writeRPGBatchSizeFlag, "after final recap")
 			if err != nil {
 				log.Error("Failed to refresh final RPG DSL after chapter %s recap: %v", chapter.ID, err)
 			} else {
@@ -2041,7 +2039,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 
 func refreshWriteRPGDSL(
 	ctx context.Context,
-	root string,
+	root *store.Root,
 	config *models.ProjectConfig,
 	cfg *llm.Config,
 	setup *models.StorySetup,
@@ -2051,7 +2049,7 @@ func refreshWriteRPGDSL(
 ) (writersdl.WriteRPGDSLResult, error) {
 	log := logger.GetLogger()
 	log.Info("\n[RPG DSL] Refreshing chapter DSL (%s)...", reason)
-	result, err := writersdl.EmitChapterRPGDSLForProject(ctx, root, filepath.Base(root), config, cfg, setup, client, batchSize)
+	result, err := writersdl.EmitChapterRPGDSLForProject(ctx, root, filepath.Base(root.Dir()), config, cfg, setup, client, batchSize)
 	if err != nil {
 		return result, err
 	}

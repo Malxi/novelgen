@@ -118,3 +118,48 @@ func TestToolPlaneRunsOnAnInMemoryProject(t *testing.T) {
 		t.Fatal("MemFS recorded no files at all; the seam test is not exercising anything")
 	}
 }
+
+// TestToolChapterCheckUsesInjectedRoot pins the fix for the string-root path:
+// a check called with a MemFS root must load its config from that root, not
+// from the process-wide ambient project.
+func TestToolChapterCheckUsesInjectedRoot(t *testing.T) {
+	root := store.MemRoot()
+	if err := root.SaveConfig(&models.ProjectConfig{
+		Name:          "Memory Check",
+		ChapterConfig: models.ChapterConfig{TargetWordsPerChapter: 800},
+	}); err != nil {
+		t.Fatalf("SaveConfig: %v", err)
+	}
+	if err := root.SaveSetup(testfixtures.ValidLongFormSetup()); err != nil {
+		t.Fatalf("SaveSetup: %v", err)
+	}
+	if err := root.SaveOutline(validToolPatchTestOutline()); err != nil {
+		t.Fatalf("SaveOutline: %v", err)
+	}
+	if err := root.SaveChapterContent("P1-V1-C1", "# Opening\n\nLin enters the mine."); err != nil {
+		t.Fatalf("SaveChapterContent: %v", err)
+	}
+
+	ambient := store.MemRoot()
+	if err := ambient.SaveConfig(&models.ProjectConfig{
+		Name:          "Ambient",
+		ChapterConfig: models.ChapterConfig{TargetWordsPerChapter: 5000},
+	}); err != nil {
+		t.Fatalf("ambient SaveConfig: %v", err)
+	}
+	store.SetDefault(ambient)
+	defer store.ResetDefault()
+
+	result, err := toolplane.RunToolChapterCheckWithTargetWordsAt(root, "quality", "chapter", "P1-V1-C1", 0)
+	if err != nil {
+		t.Fatalf("RunToolChapterCheckWithTargetWordsAt: %v", err)
+	}
+	if got, _ := result.Meta["target_words"].(int); got != 800 {
+		t.Fatalf("target_words = %v, want 800 from the injected root", result.Meta["target_words"])
+	}
+	for _, name := range ambient.FS().(*store.MemFS).Names() {
+		if strings.TrimPrefix(name, "/") != filepath.ToSlash(ambient.NovelJSON()) {
+			t.Fatalf("ambient project was touched: %v", ambient.FS().(*store.MemFS).Names())
+		}
+	}
+}

@@ -97,15 +97,15 @@ func LoadPreviousDraftRecap(book *project.Book, outline *models.Outline, targetC
 	if strings.TrimSpace(draft) == "" {
 		return ""
 	}
-	return TryExtractRecap(prev, draft)
+	return TryExtractRecap(book, prev, draft)
 }
 
 // ==================== Recap Helpers ====================
 
 // LoadPreviousRecapStruct loads a structured recap for the immediately previous chapter (best-effort).
 // It prefers persisted recap JSON from story/recaps; if missing, it returns nil.
-func LoadPreviousRecapStruct(outline *models.Outline, targetChapter *models.Chapter) *models.ChapterRecap {
-	if outline == nil || targetChapter == nil {
+func LoadPreviousRecapStruct(book *project.Book, outline *models.Outline, targetChapter *models.Chapter) *models.ChapterRecap {
+	if book == nil || outline == nil || targetChapter == nil {
 		return nil
 	}
 
@@ -122,11 +122,7 @@ func LoadPreviousRecapStruct(outline *models.Outline, targetChapter *models.Chap
 	}
 
 	prev := all[idx-1]
-	root, err := project.FindRoot()
-	if err != nil || strings.TrimSpace(root) == "" {
-		return nil
-	}
-	store := recap.NewStore(root)
+	store := recap.NewStoreAt(book.Root)
 	r, err := store.Load(prev.ID)
 	if err != nil {
 		return nil
@@ -136,8 +132,8 @@ func LoadPreviousRecapStruct(outline *models.Outline, targetChapter *models.Chap
 
 // LoadPreviousRecapJSON returns the previous chapter recap as compact JSON (best-effort).
 // This is convenient for prompts that expect the canonical recap block.
-func LoadPreviousRecapJSON(outline *models.Outline, targetChapter *models.Chapter) string {
-	r := LoadPreviousRecapStruct(outline, targetChapter)
+func LoadPreviousRecapJSON(book *project.Book, outline *models.Outline, targetChapter *models.Chapter) string {
+	r := LoadPreviousRecapStruct(book, outline, targetChapter)
 	if r == nil {
 		return ""
 	}
@@ -151,8 +147,8 @@ func LoadPreviousRecapJSON(outline *models.Outline, targetChapter *models.Chapte
 // TryExtractRecap attempts to extract a compact, high-signal recap from a chapter
 // draft text. This is a best-effort helper: if it fails, we simply return "" and
 // generation proceeds with the existing full-context approach.
-func TryExtractRecap(ch *models.Chapter, draft string) string {
-	if ch == nil {
+func TryExtractRecap(book *project.Book, ch *models.Chapter, draft string) string {
+	if book == nil || ch == nil {
 		return ""
 	}
 	text := strings.TrimSpace(draft)
@@ -163,13 +159,10 @@ func TryExtractRecap(ch *models.Chapter, draft string) string {
 	// Best-effort continuity recap strategy:
 	// 1) Prefer a persisted recap JSON for this chapter (if it exists).
 	// 2) Fallback to a minimal offline recap derived from outline + last line.
-	root, err := project.FindRoot()
-	if err == nil {
-		store := recap.NewStore(root)
-		if saved, err := store.Load(ch.ID); err == nil && saved != nil {
-			if b, err := json.MarshalIndent(saved, "", "  "); err == nil {
-				return string(b)
-			}
+	store := recap.NewStoreAt(book.Root)
+	if saved, err := store.Load(ch.ID); err == nil && saved != nil {
+		if b, err := json.MarshalIndent(saved, "", "  "); err == nil {
+			return string(b)
 		}
 	}
 
@@ -321,12 +314,10 @@ func RecapGateFeedback(reasons []string, r *models.ChapterRecap) string {
 // 2) feed concrete fix suggestions into draft improve / write improve flows
 //
 // Best-effort: it never returns an error; it only augments review in-place.
-func ApplyHeuristicTransitionChecks(volume *models.Volume, drafts map[string]string, review *agents.VolumeReview) {
+func ApplyHeuristicTransitionChecks(book *project.Book, volume *models.Volume, drafts map[string]string, review *agents.VolumeReview) {
 	if volume == nil || review == nil {
 		return
 	}
-
-	root, _ := project.FindRoot()
 
 	// Map chapter ID -> recap (for prev chapter)
 	idToRecap := map[string]*models.ChapterRecap{}
@@ -370,8 +361,8 @@ func ApplyHeuristicTransitionChecks(volume *models.Volume, drafts map[string]str
 		}
 
 		// Recap quality gate (persisted recap existence + minimal fields)
-		if r.RecapQuality.Score == 0 && strings.TrimSpace(root) != "" {
-			if ok, issues, sugs := recap.CheckQuality(root, cur.ID); !ok {
+		if r.RecapQuality.Score == 0 && book != nil {
+			if ok, issues, sugs := recap.CheckQualityAt(book.Root, cur.ID); !ok {
 				r.RecapQuality.Score = 4
 				for _, it := range issues {
 					if it != "" && !ContainsStr(r.RecapQuality.Issues, it) {

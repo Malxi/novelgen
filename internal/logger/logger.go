@@ -43,6 +43,7 @@ type Logger struct {
 	output     io.Writer
 	file       io.WriteCloser
 	projectDir string
+	project    *store.Root
 	logFile    string
 }
 
@@ -73,6 +74,18 @@ func (l *Logger) SetProjectDir(dir string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.projectDir = dir
+	l.project = nil
+}
+
+// SetProjectRoot binds file logging to an explicit storage root. Unlike
+// SetProjectDir, this keeps a MemFS/remote backend intact.
+func (l *Logger) SetProjectRoot(root *store.Root) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.project = root
+	if root != nil {
+		l.projectDir = root.Dir()
+	}
 }
 
 // SetLevel sets the log level
@@ -87,14 +100,17 @@ func (l *Logger) EnableFileLogging() error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if l.projectDir == "" {
+	root := l.project
+	if root == nil && l.projectDir != "" {
+		root = store.At(l.projectDir)
+	}
+	if root == nil {
 		return fmt.Errorf("project directory not set")
 	}
 
 	// The log directory is part of the project layout, so it comes from
 	// internal/store rather than being spelled here. logger sits at the store
 	// layer in internal/architecture/layers_test.go for exactly this reason.
-	root := store.At(l.projectDir)
 	logFile := filepath.Join(root.LogsDir(), fmt.Sprintf("novelgen_%s.log", time.Now().Format("20060102_150405")))
 	// Root.OpenAppend is the store's streaming write: the run log has to keep one
 	// handle open for the whole process, which a whole-file write cannot express.
@@ -102,7 +118,7 @@ func (l *Logger) EnableFileLogging() error {
 	if err != nil {
 		return fmt.Errorf("failed to open log file: %w", err)
 	}
-	if info, statErr := root.FS().Stat(logFile); statErr == nil && info.Size() == 0 {
+	if info, statErr := root.Stat(logFile); statErr == nil && info.Size() == 0 {
 		if _, err := file.Write([]byte{0xEF, 0xBB, 0xBF}); err != nil {
 			file.Close()
 			return fmt.Errorf("failed to write UTF-8 BOM: %w", err)

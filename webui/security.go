@@ -321,6 +321,12 @@ func resolveProjectDir(requested string) (string, error) {
 	}
 	resolved, err := filepath.EvalSymlinks(abs)
 	if err != nil {
+		// Logical project keys (remote/MemFS backends) are not host paths. Let
+		// the storage command validate the key; host paths still go through the
+		// allowlist below.
+		if _, statErr := statProjectPath(requested, "novel.json"); statErr == nil {
+			return requested, nil
+		}
 		return "", fmt.Errorf("project path not found: %w", err)
 	}
 	for _, root := range allowedProjectRoots {

@@ -513,7 +513,21 @@ novelgen tool refresh chapter-dsl --id P1-V1-C1
 
 每个 section 可用的 `--type`、patch 的 section/`--target` 组合、`--patch-buffer` 与 `--task` 的用法都写在 `novelgen tool <subcommand> --help` 里；完整契约见 [docs/AGENT_TOOLS.md](docs/AGENT_TOOLS.md)。
 
-### 14. RPG / 分析类命令（Go 自有的确定性工具）
+### 14. `novelgen storage` - 项目存储读写接口
+
+供 Web UI 和脚本按项目相对路径访问内容；命令内部走当前 storage backend，不要求调用方知道磁盘布局：
+
+```bash
+novelgen storage projects --root ../books
+novelgen storage read --project ../books/mine --path story/compose/outline.json
+novelgen storage list --project ../books/mine --path chapters
+novelgen storage stat --project ../books/mine --path novel.json
+printf '{"parts":[]}' | novelgen storage write --project ../books/mine --path story/compose/outline.json
+```
+
+命令输出单行 JSON；读取失败会带 `code=not_found|unreadable|invalid_path|storage_error`，便于 Web UI 区分“文件不存在”和“读取失败”。
+
+### 15. RPG / 分析类命令（Go 自有的确定性工具）
 
 `novelgen rpg`（生成/模拟/导出 RPG 数据）、`novelgen rpg-dsl`（校验、合并、转换、导出分阶段 DSL）、`novelgen simulate-dsl`（DSL 模拟器）、`novelgen analyze-ai-rpg` / `analyze-chapter-ai`（AI 章节分析）属于确定性或分析基础设施，不参与 Agent SDK 创作流水线；详见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 

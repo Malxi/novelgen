@@ -42,6 +42,12 @@ func (r *Root) WriteJSON(path string, value any) error {
 // cannot be read or parsed is an error: merging into an assumed-empty object
 // would silently drop every key the caller did not mention.
 func (r *Root) WriteJSONMerging(path string, value any) error {
+	// Read-merge-write is not a backend transaction, but serializing it on this
+	// Root prevents two in-process callers from silently dropping each other's
+	// keys. Cross-process concurrency still needs a backend with CAS/transactions.
+	r.mergeMu.Lock()
+	defer r.mergeMu.Unlock()
+
 	var existing []byte
 	data, err := r.Read(path)
 	if err == nil {
@@ -270,6 +276,9 @@ func (r *Root) LoadCraftRaw(kind CraftKind) (map[string]map[string]any, error) {
 // empty when the chapter has not been written yet; a chapter file that exists
 // but cannot be read is reported as an error instead of as "not written".
 func (r *Root) LoadChapterContent(chapterID string) (string, string, error) {
+	if err := ValidateKeyPart(chapterID); err != nil {
+		return "", "", fmt.Errorf("invalid chapter id %q: %w", chapterID, err)
+	}
 	for _, path := range r.ChapterCandidates(chapterID) {
 		data, err := r.Read(path)
 		if err == nil {
@@ -284,14 +293,17 @@ func (r *Root) LoadChapterContent(chapterID string) (string, string, error) {
 
 // SaveChapterContent writes chapters/chapter-<id>.md.
 func (r *Root) SaveChapterContent(chapterID, content string) error {
-	if strings.TrimSpace(chapterID) == "" {
-		return errors.New("chapter id is required")
+	if err := ValidateKeyPart(chapterID); err != nil {
+		return fmt.Errorf("invalid chapter id %q: %w", chapterID, err)
 	}
 	return r.Write(r.ChapterFile(chapterID), []byte(content), FileMode)
 }
 
 // LoadDraftContent returns drafts/<chapterID>.md, or "" when it is missing.
 func (r *Root) LoadDraftContent(chapterID string) (string, error) {
+	if err := ValidateKeyPart(chapterID); err != nil {
+		return "", fmt.Errorf("invalid chapter id %q: %w", chapterID, err)
+	}
 	data, err := r.Read(r.DraftFile(chapterID))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -304,8 +316,8 @@ func (r *Root) LoadDraftContent(chapterID string) (string, error) {
 
 // SaveDraftContent writes drafts/<chapterID>.md.
 func (r *Root) SaveDraftContent(chapterID, content string) error {
-	if strings.TrimSpace(chapterID) == "" {
-		return errors.New("chapter id is required")
+	if err := ValidateKeyPart(chapterID); err != nil {
+		return fmt.Errorf("invalid chapter id %q: %w", chapterID, err)
 	}
 	return r.Write(r.DraftFile(chapterID), []byte(content), FileMode)
 }
@@ -338,6 +350,9 @@ func (r *Root) LoadAllDrafts() (map[string]string, error) {
 
 // LoadRecap reads story/recaps/<chapterID>.json.
 func (r *Root) LoadRecap(chapterID string) (*models.ChapterRecap, error) {
+	if err := ValidateKeyPart(chapterID); err != nil {
+		return nil, fmt.Errorf("invalid recap chapter id %q: %w", chapterID, err)
+	}
 	var recap models.ChapterRecap
 	if err := r.ReadJSON(r.RecapFile(chapterID), &recap); err != nil {
 		return nil, err
@@ -350,8 +365,8 @@ func (r *Root) SaveRecap(recap *models.ChapterRecap) error {
 	if recap == nil {
 		return errors.New("cannot save nil recap")
 	}
-	if strings.TrimSpace(recap.ChapterID) == "" {
-		return errors.New("recap chapter id is required")
+	if err := ValidateKeyPart(recap.ChapterID); err != nil {
+		return fmt.Errorf("invalid recap chapter id %q: %w", recap.ChapterID, err)
 	}
 	return r.WriteJSON(r.RecapFile(recap.ChapterID), recap)
 }

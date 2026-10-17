@@ -331,7 +331,13 @@ func appendNoChangeWarning(warnings []string, changes []ToolPatchChange) []strin
 }
 
 func RunToolPatchValidationCheck(setup *models.StorySetup, outline *models.Outline, scope, id string) (*ToolCheckResult, error) {
-	return RunToolOutlineCheck("all", setup, outline, scope, id)
+	return RunToolPatchValidationCheckAt(nil, setup, outline, scope, id)
+}
+
+// RunToolPatchValidationCheckAt validates a patch against an explicit project
+// root so outline simulation uses the same craft elements as the project.
+func RunToolPatchValidationCheckAt(root *store.Root, setup *models.StorySetup, outline *models.Outline, scope, id string) (*ToolCheckResult, error) {
+	return RunToolOutlineCheckAt(root, "all", setup, outline, scope, id)
 }
 
 func toolPatchValidationMeta(check *ToolCheckResult) map[string]interface{} {

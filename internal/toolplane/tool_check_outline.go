@@ -9,6 +9,7 @@ import (
 
 	"novelgen/internal/models"
 	"novelgen/internal/quality"
+	"novelgen/internal/store"
 )
 
 func RunToolSetupCheck(kind string, setup *models.StorySetup) (*ToolCheckResult, error) {
@@ -30,7 +31,15 @@ func RunToolSetupCheck(kind string, setup *models.StorySetup) (*ToolCheckResult,
 	return MakeToolCheckResult(kind, "setup", "all", "", gate), nil
 }
 
+// RunToolOutlineCheck is the model-only compatibility form. It has no project
+// root, so simulation runs without craft elements; callers that can reach the
+// project should use RunToolOutlineCheckAt.
 func RunToolOutlineCheck(kind string, setup *models.StorySetup, outline *models.Outline, scope, id string) (*ToolCheckResult, error) {
+	return RunToolOutlineCheckAt(nil, kind, setup, outline, scope, id)
+}
+
+// RunToolOutlineCheckAt runs the outline check against an explicit storage root.
+func RunToolOutlineCheckAt(root *store.Root, kind string, setup *models.StorySetup, outline *models.Outline, scope, id string) (*ToolCheckResult, error) {
 	scope = normalizeToolScope(scope)
 	id = strings.TrimSpace(id)
 	if scope != "all" && id == "" {
@@ -49,14 +58,14 @@ func RunToolOutlineCheck(kind string, setup *models.StorySetup, outline *models.
 			gate = quality.RunScopedOutlineQualityGate(setup, outline)
 		}
 	case "simulation":
-		gate = quality.RunOutlineSimulationGate(setup, outline)
+		gate = quality.RunOutlineSimulationGate(root, setup, outline)
 	case "all":
 		if scope == "all" {
 			gate = quality.RunOutlineQualityGate(setup, scoped)
 		} else {
 			gate = quality.RunScopedOutlineQualityGate(setup, outline)
 		}
-		sim := quality.RunOutlineSimulationGate(setup, outline)
+		sim := quality.RunOutlineSimulationGate(root, setup, outline)
 		gate.Add(sim.Suggestions...)
 		gate.Dedup()
 		gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)

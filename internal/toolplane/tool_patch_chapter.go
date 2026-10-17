@@ -96,7 +96,7 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 			func() {
 				restoreLogger := SuppressToolRefreshLogs()
 				defer restoreLogger()
-				refresh, err = refreshToolChapterDSLAt(cmd.Context(), root, id, 0)
+				refresh, err = RefreshToolChapterDSL(cmd.Context(), root, id, 0)
 			}()
 			if err != nil {
 				postApplyError = fmt.Sprintf("derived RPG DSL refresh failed: %v", err)
@@ -144,7 +144,7 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 				}
 			}
 		} else {
-			postCheck, err := runToolChapterCheckAt(root, "quality", "chapter", id, targetWords)
+			postCheck, err := RunToolChapterCheckWithTargetWordsAt(root, "quality", "chapter", id, targetWords)
 			if err != nil {
 				return err
 			}

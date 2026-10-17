@@ -1424,7 +1424,7 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 		}
 		quality.LogQualityGateResult("outline", quality.RunOutlineQualityGate(setupForGate, checkOutline))
 		if strings.TrimSpace(composeCheckSuggestionsOut) != "" {
-			gate := quality.RunOutlineCombinedGateForScope(setupForGate, checkOutline, false)
+			gate := quality.RunOutlineCombinedGateForScope(book.Root, setupForGate, checkOutline, false)
 			report := quality.QualityGateReviewResult("Deterministic outline check suggestions.", gate)
 			if err := saveReviewResult(book, composeCheckSuggestionsOut, *report); err != nil {
 				return err
@@ -2906,7 +2906,7 @@ func iterateOutlineImprovementAgentSDK(book *project.Book, outline *models.Outli
 	beforeOutline := toolplane.CloneOutline(outline)
 	applyOutlineNormalization(book, outline, "pre_agent_sdk_improve")
 
-	preGate := quality.RunOutlineCombinedGateForScope(setup, outline, scoped)
+	preGate := quality.RunOutlineCombinedGateForScope(book.Root, setup, outline, scoped)
 	var seedReview *models.ReviewResult
 	if len(preGate.Suggestions) > 0 {
 		seedReview = quality.QualityGateReviewResult("Pre-check issues for targeted Agent SDK outline improvement.", preGate)
@@ -2937,7 +2937,7 @@ func iterateOutlineImprovementAgentSDK(book *project.Book, outline *models.Outli
 	*outline = *improvedOutline
 
 	if review != nil {
-		gate := quality.RunOutlineCombinedGateForScope(setup, improvedOutline, scoped)
+		gate := quality.RunOutlineCombinedGateForScope(book.Root, setup, improvedOutline, scoped)
 		if len(gate.Suggestions) > 0 {
 			review.Suggestions = append(review.Suggestions, gate.Suggestions...)
 			logger.Info("Quality/simulation gate added %d suggestion(s) to Agent SDK review", len(gate.Suggestions))
@@ -2954,7 +2954,7 @@ func iterateOutlineImprovementAgentSDK(book *project.Book, outline *models.Outli
 				improvedOutline = repairOutput
 				applyOutlineNormalization(book, improvedOutline, "post_agent_sdk_repair")
 				*outline = *improvedOutline
-				repairGate := quality.RunOutlineCombinedGateForScope(setup, improvedOutline, scoped)
+				repairGate := quality.RunOutlineCombinedGateForScope(book.Root, setup, improvedOutline, scoped)
 				remaining := quality.FilterMediumOrHigherOutlineTargetSuggestions(repairGate.Suggestions)
 				if len(remaining) > 0 {
 					logger.Warn("Agent SDK repair completed, but %d targetable medium-or-higher quality/simulation issue(s) remain", len(remaining))

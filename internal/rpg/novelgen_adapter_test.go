@@ -4,6 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"novelgen/internal/models"
+	"novelgen/internal/store"
 )
 
 // TestLoadNovelgenProjectFromPlainProjectDir pins the fix for the RPG tools'
@@ -45,6 +48,41 @@ func TestLoadNovelgenProjectFromPlainProjectDir(t *testing.T) {
 	}
 	if len(project.Outline.Parts) != 1 {
 		t.Fatalf("outline parts = %d, want 1", len(project.Outline.Parts))
+	}
+}
+
+func TestLoadNovelgenProjectAtReadsMemFS(t *testing.T) {
+	root := store.MemRoot()
+	if err := root.SaveConfig(&models.ProjectConfig{Name: "Memory Book"}); err != nil {
+		t.Fatalf("SaveConfig: %v", err)
+	}
+	if err := root.SaveOutline(&models.Outline{Parts: []models.Part{{ID: "P1"}}}); err != nil {
+		t.Fatalf("SaveOutline: %v", err)
+	}
+	if err := root.WriteJSON(root.CraftFile(store.CraftCharacters), map[string]map[string]interface{}{
+		"Lin": {"name": "Lin", "role_in_story": "protagonist"},
+	}); err != nil {
+		t.Fatalf("Save characters: %v", err)
+	}
+	if err := root.WriteJSON(root.CraftFile(store.CraftItems), map[string]map[string]interface{}{}); err != nil {
+		t.Fatalf("Save items: %v", err)
+	}
+	if err := root.WriteJSON(root.CraftFile(store.CraftLocations), map[string]map[string]interface{}{}); err != nil {
+		t.Fatalf("Save locations: %v", err)
+	}
+
+	project, err := LoadNovelgenProjectAt(root)
+	if err != nil {
+		t.Fatalf("LoadNovelgenProjectAt: %v", err)
+	}
+	if project.Root != root {
+		t.Fatalf("project root = %p, want %p", project.Root, root)
+	}
+	if project.BookName != "Memory Book" {
+		t.Fatalf("book name = %q, want Memory Book", project.BookName)
+	}
+	if _, ok := project.Characters["Lin"]; !ok {
+		t.Fatalf("characters = %#v, want Lin", project.Characters)
 	}
 }
 
