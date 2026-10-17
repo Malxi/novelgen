@@ -20,14 +20,14 @@ import (
 // silently emptying the AI-call page.
 func TestAICallLogSchemaMatchesWebUI(t *testing.T) {
 	repo := repoRoot(t)
-	writer := jsonFieldTypes(t, filepath.Join(repo, "internal", "agents", "agent_logging.go"), "aiCallRecord")
+	writer := jsonFieldTypes(t, filepath.Join(repo, "internal", "agents", "base", "agent_logging.go"), "aiCallRecord")
 	reader := jsonFieldTypes(t, filepath.Join(repo, "webui", "main.go"), "aiCallLogFile")
 
 	for _, path := range missingPaths(reader, writer) {
-		t.Errorf("the web UI reader expects %q but internal/agents.aiCallRecord never sets it; keep the two structs in step", path)
+		t.Errorf("the web UI reader expects %q but internal/agents/base.aiCallRecord never sets it; keep the two structs in step", path)
 	}
 	for _, path := range missingPaths(writer, reader) {
-		t.Errorf("internal/agents.aiCallRecord records %q but webui.aiCallLogFile does not decode it; keep the two structs in step", path)
+		t.Errorf("internal/agents/base.aiCallRecord records %q but webui.aiCallLogFile does not decode it; keep the two structs in step", path)
 	}
 	// A matching tag is not enough: a field the reader decodes as time.Time but
 	// the writer emits as a string fails at runtime, where nothing sees it.
@@ -36,7 +36,7 @@ func TestAICallLogSchemaMatchesWebUI(t *testing.T) {
 		if !ok || writerType == readerType {
 			continue
 		}
-		t.Errorf("%s: internal/agents writes %s but webui decodes it as %s", path, writerType, readerType)
+		t.Errorf("%s: internal/agents/base writes %s but webui decodes it as %s", path, writerType, readerType)
 	}
 	if len(writer) == 0 {
 		t.Fatalf("no JSON tags found for aiCallRecord; the schema test is not checking anything")

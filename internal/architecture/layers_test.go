@@ -24,11 +24,11 @@ const ambientRootLayer = 5
 // pipeline layer. New callers must take an explicit *store.Root instead; the
 // entries below are the remaining ones that have no root parameter to use yet.
 var ambientRootAllowlist = map[string]string{
-	"internal/llm/config.go":              "provider/config resolution is reached without a project handle",
-	"internal/llm/client.go":              "resolves the SDK workspace root; no root parameter on the client",
-	"internal/agents/agent_base.go":       "skill directory lookup with no root parameter",
-	"internal/agents/agent_logging.go":    "agent log root falls back to the ambient project",
-	"internal/writersdl/write_rpg_dsl.go": "the failure dump only has a book name to work with",
+	"internal/llm/config.go":                "provider/config resolution is reached without a project handle",
+	"internal/llm/client.go":                "resolves the SDK workspace root; no root parameter on the client",
+	"internal/agents/base/agent_base.go":    "skill directory lookup with no root parameter",
+	"internal/agents/base/agent_logging.go": "agent log root falls back to the ambient project",
+	"internal/writersdl/write_rpg_dsl.go":   "the failure dump only has a book name to work with",
 }
 
 // ambientProjectHelpers are the project package's convenience loaders. They
@@ -150,14 +150,29 @@ var layer = map[string]int{
 	"internal/agentruntime":                5,
 	"internal/llm":                         6,
 	"internal/agents":                      7,
-	"internal/rpgllm":                      7,
-	"internal/continuity":                  8,
-	"internal/reviewstore":                 8,
-	"internal/quality":                     8,
-	"internal/app":                         8,
-	"internal/writersdl":                   8,
-	"internal/toolplane":                   8,
-	"internal/writepipe":                   8,
+	// Agent stages share the pipeline layer; base owns execution and is
+	// imported by every stage, while prompt/review/shared are leaves.
+	"internal/agents/base":      7,
+	"internal/agents/chapter":   7,
+	"internal/agents/compose":   7,
+	"internal/agents/craft":     7,
+	"internal/agents/draft":     7,
+	"internal/agents/pipeline":  7,
+	"internal/agents/prompt":    1,
+	"internal/agents/recap":     7,
+	"internal/agents/review":    2,
+	"internal/agents/setup":     7,
+	"internal/agents/shared":    1,
+	"internal/agents/translate": 7,
+	"internal/agents/write":     7,
+	"internal/rpgllm":           7,
+	"internal/continuity":       8,
+	"internal/reviewstore":      8,
+	"internal/quality":          8,
+	"internal/app":              8,
+	"internal/writersdl":        8,
+	"internal/toolplane":        8,
+	"internal/writepipe":        8,
 }
 
 func repoRoot(t *testing.T) string {
@@ -203,13 +218,13 @@ func TestInternalImportLayers(t *testing.T) {
 // without a project handle (agent logs, provider config, and the refresh
 // helper); everything else must take an explicit *store.Root or *project.Book.
 var indirectAmbientAllowlist = map[string]string{
-	"internal/agents/agent_base.go":       "SDK workspace fallback for callers without a root",
-	"internal/agents/agent_logging.go":    "agent logs have no root parameter yet",
-	"internal/app/session.go":             "composition root resolves global config once",
-	"internal/llm/client.go":              "RuntimeClient workspace root",
-	"internal/llm/config.go":              "provider config path discovery",
-	"internal/toolplane/tool_refresh.go":  "refresh context has no session handle yet",
-	"internal/writersdl/write_rpg_dsl.go": "failure dump only has a book name",
+	"internal/agents/base/agent_base.go":    "SDK workspace fallback for callers without a root",
+	"internal/agents/base/agent_logging.go": "agent logs have no root parameter yet",
+	"internal/app/session.go":               "composition root resolves global config once",
+	"internal/llm/client.go":                "RuntimeClient workspace root",
+	"internal/llm/config.go":                "provider config path discovery",
+	"internal/toolplane/tool_refresh.go":    "refresh context has no session handle yet",
+	"internal/writersdl/write_rpg_dsl.go":   "failure dump only has a book name",
 }
 
 // TestPipelineLayersDoNotResolveAmbientRootIndirectly closes the gap left by

@@ -33,12 +33,12 @@ Tests exist in `cmd/`, `internal/models/`, `internal/logic/`, and `internal/rpg/
 - LLM integration is in `internal/llm/`:
   - `config.go` loads or creates `llm_config.json` (local) or `~/.novelgen/llm_config.json` (global) and selects provider/model.
   - `client.go` implements an OpenAI-compatible chat client plus a `RuntimeClient` wrapper and retry logic.
-- AI workflow logic is organized under `internal/agents/`, each agent handling a pipeline stage (setup/compose/craft/draft/write/recap/translate). Agents are constructed directly (no registry).
-- `internal/agents/BaseAgent` (split across `agent_base.go`, `agent_json.go`, `agent_evidence.go`, `agent_logging.go`) has **two execution backends**:
+- AI workflow logic is organized under `internal/agents/`, one subpackage per stage (`setup`, `compose`, `craft`, `draft`, `write`, `recap`, `translate`, `chapter`, `pipeline`) plus shared `base`, `prompt`, `review`, and `shared` packages. The root `internal/agents` package is a compatibility facade; new code should import the stage package it actually needs.
+- `internal/agents/base.BaseAgent` (split across `agent_base.go`, `agent_json.go`, `agent_evidence.go`, `agent_logging.go`) has **two execution backends**:
   1. the OpenAI-compatible chat client (`internal/llm`), and
   2. the Claude **Agent SDK process runtime** (`internal/agentruntime` → `runners/claude_runner.py`). Major stages (setup/compose/craft/write/recap/translate) require the SDK backend (`RequireSDK: true`).
 - There are **two disjoint skill trees**, both embedded with `go:embed`:
-  - `internal/agents/skills/<skill>/SKILL.md` — stage prompts for the chat/typed-JSON path (`BaseAgent.Execute` loads these).
+  - `internal/agents/base/skills/<skill>/SKILL.md` — stage prompts for the chat/typed-JSON path (`BaseAgent.Execute` loads these).
   - `internal/agentruntime/skills/<skill>/SKILL.md` — SDK workflow prompts, materialized to `~/.novelgen/agents/skills`.
   - (`.agents/skills/` and `.trae/skills/` are external dev-editor skills, unrelated to the runtime.)
 - SDK agents may not read or write project files directly. Project facts are read/patched only through the CLI's `tool` subcommand (package `internal/toolplane`, wired from `cmd/tool_register.go`: `tool.go` is the command surface, `tool_query_*.go` the query sections, `tool_context*.go` the workflow context bundles, `tool_check_*.go`/`tool_patch_*.go`/`tool_brief_*.go` one file per target (setup/outline/craft/chapter/recap), and `mutation.go` the shared canonical write service): `tool query|check|patch|patch-buffer|refresh`. Patches are dry-run by default; Go merges, normalizes and validates before `--apply` writes. Chat/typed-JSON stages call the same `MutationService` directly instead of calling `book.Save*` on Agent output.
@@ -75,8 +75,8 @@ Tests exist in `cmd/`, `internal/models/`, `internal/logic/`, and `internal/rpg/
 
 ### New or changed agent stage
 
-- Add or update the agent in `internal/agents/`.
-- Add or update its skill under `internal/agents/skills/` (chat path) **and/or** `internal/agentruntime/skills/` (SDK path). These are separate trees; updating one does not update the other.
+- Add or update the agent in its stage package under `internal/agents/<stage>/`.
+- Add or update its skill under `internal/agents/base/skills/` (chat path) **and/or** `internal/agentruntime/skills/` (SDK path). These are separate trees; updating one does not update the other.
 - Define input/output structs close to the agent or in `internal/models` when shared.
 - Route all LLM calls through `BaseAgent.Execute` unless there is a clear reason not to. Note the two backends (chat client vs Agent SDK runtime) and whether the stage sets `RequireSDK`.
 - Validate outputs before writing files.

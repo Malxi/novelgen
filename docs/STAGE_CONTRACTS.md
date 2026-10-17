@@ -55,7 +55,7 @@ Project root:
 
 Usage records (observability, not story state):
 
-- Producer: `internal/agents.BaseAgent` appends one line per chat call and per
+- Producer: `internal/agents/base.BaseAgent` appends one line per chat call and per
   JSON-repair call, including failures. It is written best-effort; a failure to
   record usage never fails the creative stage.
 - Consumer: `novelgen project usage` (`--since`, `--json`) aggregates the log by
@@ -168,7 +168,7 @@ Change checklist:
 Producer:
 
 - `cmd/setup.go`
-- `internal/agents/setup_agent.go`
+- `internal/agents/setup/setup_agent.go`
 - Skills: `setup-gen`, `setup-improve`, `setup-review`
 
 Inputs:
@@ -296,7 +296,7 @@ Change checklist:
 Producer:
 
 - `cmd/compose.go`
-- `internal/agents/compose_agent.go`
+- `internal/agents/compose/compose_agent.go`
 - Skills: `compose-gen`, `compose-skeleton`, `compose-skeleton-review`,
   `compose-skeleton-improve`, `compose-chapters`, `compose-regen`,
   `compose-review`, `compose-improve`, `compose-improve-volume`
@@ -434,8 +434,8 @@ Change checklist:
 Producer:
 
 - `cmd/craft.go`
-- `internal/agents/craft_agent.go`
-- `internal/agents/craft_iteration_agent.go`
+- `internal/agents/craft/craft_agent.go`
+- `internal/agents/craft/craft_iteration_agent.go`
 - Skills: `craft-characters`, `craft-locations`, `craft-items`, and matching
   review/improve skills
 
@@ -536,7 +536,7 @@ Change checklist:
 Producer:
 
 - `cmd/write.go`
-- `internal/agents/write_agent.go`
+- `internal/agents/write/write_agent.go`
 - Skills: `write-generate`, `write-review`, `write-improve`, `volume-review`,
   `chapter-score`
 - Agent SDK workflow skills: `write-chapter-workflow` for
@@ -722,7 +722,7 @@ Change checklist:
 Producer:
 
 - `cmd/recap_cmd.go`
-- `internal/agents/recap_agent.go`
+- `internal/agents/recap/recap_agent.go`
 - `cmd/write.go` through `write pipeline`
 - Skill: `recap-extract`
 - Agent SDK workflow skill: `recap-extract-workflow` when `recap gen --agent-sdk`
@@ -787,7 +787,7 @@ Producer:
 
 - `cmd/rpg_dsl.go`
 - `cmd/write.go` when `--emit-rpg-dsl` is enabled
-- `internal/agents/chapter_to_dsl_agent.go`
+- `internal/agents/chapter/chapter_to_dsl_agent.go`
 - RPG adapters and converters under `internal/rpg/`
 
 Inputs:
@@ -870,7 +870,7 @@ Change checklist:
 Producer:
 
 - `cmd/draft.go`
-- `internal/agents/draft_agent.go`
+- `internal/agents/draft/draft_agent.go`
 - Skills: `draft-generate`, `draft-review`, `draft-improve`
 
 Outputs:

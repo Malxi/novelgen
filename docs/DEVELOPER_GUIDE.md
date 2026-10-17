@@ -55,7 +55,7 @@ cd my_novel
 novelgen/
 ├── cmd/                    # CLI 命令
 ├── internal/               # 内部包
-│   ├── agents/             # AI Agent
+│   ├── agents/             # AI Agent（根包兼容门面 + 按阶段拆分的子包）
 │   ├── llm/                # LLM 客户端
 │   ├── models/             # 数据模型
 │   ├── rpg/                # RPG 系统
@@ -130,31 +130,37 @@ func RegisterAllCommands(rootCmd *cobra.Command) {
 #### 步骤 1: 创建 Agent
 
 ```go
-// internal/agents/my_agent.go
-package agents
+// internal/agents/mystage/agent.go
+package mystage
 
-type MyAgent struct {
-    *BaseAgent
+import agentbase "novelgen/internal/agents/base"
+
+type Agent struct {
+    base *agentbase.BaseAgent
 }
 
-func NewMyAgent(client *llm.Client, config *llm.Config, model string) *MyAgent {
-    return &MyAgent{
-        BaseAgent: NewBaseAgent(client, config, model),
+func NewAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM) *Agent {
+    return &Agent{
+        base: agentbase.NewBaseAgent(agentbase.BaseAgentConfig{
+            Name:       "MyAgent",
+            Client:     client,
+            Config:     config,
+            ProjectLLM: projectLLM,
+            Language:   "zh",
+        }),
     }
 }
 
-func (a *MyAgent) Execute(ctx context.Context, input MyInput) (*MyOutput, error) {
-    // 构建提示词
-    prompt := a.buildPrompt(input)
-    
-    // 调用 LLM
-    response, err := a.client.Chat(ctx, prompt)
-    if err != nil {
+func (a *Agent) Execute(ctx context.Context, input MyInput) (*MyOutput, error) {
+    // BaseAgent 负责 prompt 组装、后端选择、JSON 解析与日志记账。
+    params := agentbase.InvokeParams{
+        Skills:  []string{"my-skill"},
+        Command: "run my stage",
+    }
+    var output MyOutput
+    if err := a.base.Execute(ctx, params, input, &output); err != nil {
         return nil, err
     }
-    
-    // 解析响应
-    output := a.parseResponse(response)
     return &output, nil
 }
 ```
@@ -164,7 +170,7 @@ func (a *MyAgent) Execute(ctx context.Context, input MyInput) (*MyOutput, error)
 ```go
 // cmd/mycommand.go
 func runMyCommand(cmd *cobra.Command, args []string) error {
-    agent := agents.NewMyAgent(client, config, model)
+    agent := mystage.NewAgent(client, config, projectLLM)
     output, err := agent.Execute(ctx, input)
     // ...
 }
