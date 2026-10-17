@@ -15,15 +15,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"novelgen/internal/agents"
-	"novelgen/internal/llm"
-	"novelgen/internal/logger"
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/quality"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/agents"
+	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/fiction/domain/quality"
+	"novelgen/internal/platform/llm"
+	"novelgen/internal/platform/logger"
+	"novelgen/internal/platform/store"
+	"novelgen/internal/platform/utils"
 	"novelgen/internal/toolplane"
-	"novelgen/internal/utils"
 )
 
 func runComposeImprove(cmd *cobra.Command, args []string) error {

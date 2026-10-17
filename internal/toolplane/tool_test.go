@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"novelgen/internal/models"
+	"novelgen/internal/contract/story"
 	"novelgen/internal/toolplane"
 
 	"github.com/spf13/cobra"

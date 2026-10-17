@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"novelgen/internal/rpg"
+	"novelgen/internal/fiction/rpg"
 )
 
 func main() {

@@ -12,15 +12,15 @@ import (
 	"strings"
 	"testing"
 
-	"novelgen/internal/store"
+	"novelgen/internal/platform/store"
 )
 
 // layoutOwner is the package allowed to spell project directories. Every other
-// package asks its *store.Root (or internal/project.Book) for a path.
-const layoutOwner = "internal/store"
+// package asks its *store.Root (or internal/fiction/domain/project.Book) for a path.
+const layoutOwner = "internal/platform/store"
 
 // layoutDirs are the top-level project directories whose names belong to
-// internal/store. The user-global config directory ("$HOME/.novelgen") shares a
+// internal/platform/store. The user-global config directory ("$HOME/.novelgen") shares a
 // name with the project-local agent work directory but is not project layout, so
 // it is deliberately not in this list.
 var layoutDirs = map[string]bool{
@@ -30,7 +30,7 @@ var layoutDirs = map[string]bool{
 	"logs":     true,
 }
 
-// layoutFileNames are the artifact file names that only internal/store may
+// layoutFileNames are the artifact file names that only internal/platform/store may
 // spell. The directory rule above cannot see them, which is how
 // `filepath.Join(root, "novel.json")` and a second copy of "characters.json"
 // survived the first cleanup. "llm_config.json" is deliberately absent: the same
@@ -55,7 +55,7 @@ func layoutFileNames() map[string]bool {
 }
 
 // TestProjectLayoutIsSpelledOnlyInStore pins the storage ownership rule from
-// AGENTS.md: internal/store owns the on-disk layout, and no other package may
+// AGENTS.md: internal/platform/store owns the on-disk layout, and no other package may
 // re-derive "story/...", "chapters/...", "drafts/..." or "logs/..." itself.
 //
 // Without this guard the rule decayed silently: the agent tool plane had grown
@@ -63,7 +63,7 @@ func layoutFileNames() map[string]bool {
 // the write pipeline and export use.
 //
 // webui is exempt from this rule because webui/boundary_test.go forbids it from
-// importing the parent module at all, so it cannot use internal/store; it
+// importing the parent module at all, so it cannot use internal/platform/store; it
 // maintains its own read-only copy of the layout by design, which
 // TestWebUILayoutMatchesStore checks against the paths store produces.
 func TestProjectLayoutIsSpelledOnlyInStore(t *testing.T) {
@@ -99,7 +99,7 @@ func TestProjectLayoutIsSpelledOnlyInStore(t *testing.T) {
 	})
 
 	if len(violations) > 0 {
-		t.Errorf("project layout must be spelled only in internal/store; use a *store.Root path method instead:\n  %s",
+		t.Errorf("project layout must be spelled only in internal/platform/store; use a *store.Root path method instead:\n  %s",
 			strings.Join(violations, "\n  "))
 	}
 }
@@ -299,7 +299,7 @@ func TestProjectIOGoesThroughStore(t *testing.T) {
 	})
 
 	if len(violations) > 0 {
-		t.Errorf("project state must be read and written through internal/store:\n  %s",
+		t.Errorf("project state must be read and written through internal/platform/store:\n  %s",
 			strings.Join(violations, "\n  "))
 	}
 	// An entry that no longer excuses anything is stale documentation, so it has
@@ -402,7 +402,7 @@ func storeRelativePaths() map[string]bool {
 }
 
 // TestWebUILayoutMatchesStore keeps the web UI's hand-rolled copy of the layout
-// honest. webui cannot import internal/store (webui/boundary_test.go forbids it),
+// honest. webui cannot import internal/platform/store (webui/boundary_test.go forbids it),
 // so it re-derives the read-only paths by hand — a copy no compiler checks. This
 // test walks its path joins and requires every chain that starts with a layout
 // directory to be a prefix of a path store produces.
@@ -446,13 +446,13 @@ func TestWebUILayoutMatchesStore(t *testing.T) {
 				if first == "logs" {
 					if !logStreamNames[second] && !logStreamFiles[second] {
 						violations = append(violations, fmt.Sprintf(
-							"%s:%d: %q is not a log stream internal/store declares", rel, fset.Position(literal.Pos()).Line, value))
+							"%s:%d: %q is not a log stream internal/platform/store declares", rel, fset.Position(literal.Pos()).Line, value))
 					}
 					return true
 				}
 				if !allowed[slashed] {
 					violations = append(violations, fmt.Sprintf(
-						"%s:%d: %q is not a project path internal/store produces", rel, fset.Position(literal.Pos()).Line, value))
+						"%s:%d: %q is not a project path internal/platform/store produces", rel, fset.Position(literal.Pos()).Line, value))
 				}
 				return true
 			}
@@ -470,21 +470,21 @@ func TestWebUILayoutMatchesStore(t *testing.T) {
 				// web UI reading a directory the CLI stopped writing.
 				if len(chain) > 1 && !logStreamNames[chain[1]] && !logStreamFiles[chain[1]] {
 					violations = append(violations, fmt.Sprintf(
-						"%s:%d: %q is not a log stream internal/store declares", rel, fset.Position(call.Pos()).Line, chain[1]))
+						"%s:%d: %q is not a log stream internal/platform/store declares", rel, fset.Position(call.Pos()).Line, chain[1]))
 				}
 				return true
 			}
 			joined := strings.Join(chain, "/")
 			if !allowed[joined] {
 				violations = append(violations, fmt.Sprintf(
-					"%s:%d: %q is not a project path internal/store produces", rel, fset.Position(call.Pos()).Line, joined))
+					"%s:%d: %q is not a project path internal/platform/store produces", rel, fset.Position(call.Pos()).Line, joined))
 			}
 			return true
 		})
 	}
 
 	if len(violations) > 0 {
-		t.Errorf("the web UI's copy of the project layout drifted from internal/store:\n  %s",
+		t.Errorf("the web UI's copy of the project layout drifted from internal/platform/store:\n  %s",
 			strings.Join(violations, "\n  "))
 	}
 }

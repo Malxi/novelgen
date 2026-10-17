@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"novelgen/internal/models"
-	"novelgen/internal/store"
-	"novelgen/internal/testfixtures"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/contract/testfixtures"
+	"novelgen/internal/platform/store"
 	"novelgen/internal/toolplane"
 
 	"github.com/spf13/cobra"
@@ -18,7 +18,7 @@ import (
 // buffer — work on a project that exists only inside a store.MemFS.
 //
 // This is the assertion the seam exists for. Before project IO was routed through
-// internal/store, these paths called os.* on the paths store handed out, so an
+// internal/platform/store, these paths called os.* on the paths store handed out, so an
 // in-memory project was unreachable and every tool-plane fixture had to be built
 // on disk.
 func TestToolPlaneRunsOnAnInMemoryProject(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"novelgen/internal/rpg"
+	"novelgen/internal/fiction/rpg"
 )
 
 // SimpleLLMClient 简单的LLM客户端实现

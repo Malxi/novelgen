@@ -4,7 +4,7 @@ package toolplane
 
 import (
 	"fmt"
-	"novelgen/internal/toolcmd"
+	"novelgen/internal/contract/toolcmd"
 	"strings"
 )
 

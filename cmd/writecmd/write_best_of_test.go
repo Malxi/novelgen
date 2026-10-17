@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"novelgen/cmd/writecmd"
-	"novelgen/internal/agents"
-	"novelgen/internal/llm"
-	"novelgen/internal/logger"
-	"novelgen/internal/models"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/agents"
+	"novelgen/internal/platform/llm"
+	"novelgen/internal/platform/logger"
 )
 
 type bestOfFakeClient struct {

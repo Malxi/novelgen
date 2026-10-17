@@ -57,8 +57,8 @@ func TestAgentSDKWriteDocsDeclareFocusedRepairAndInfoGrowth(t *testing.T) {
 	files := []string{
 		"../docs/AGENT_TOOLS.md",
 		"../docs/STAGE_CONTRACTS.md",
-		"../internal/agentruntime/skills/write-improve-workflow/SKILL.md",
-		"../internal/agentruntime/skills/write-chapter-workflow/SKILL.md",
+		"../internal/platform/agentruntime/skills/write-improve-workflow/SKILL.md",
+		"../internal/platform/agentruntime/skills/write-chapter-workflow/SKILL.md",
 	}
 	for _, path := range files {
 		data, err := os.ReadFile(path)
@@ -90,7 +90,7 @@ func TestAgentSDKWriteDocsDeclareFocusedRepairAndInfoGrowth(t *testing.T) {
 		}
 	}
 
-	data, err = os.ReadFile("../internal/agentruntime/skills/write-improve-workflow/SKILL.md")
+	data, err = os.ReadFile("../internal/platform/agentruntime/skills/write-improve-workflow/SKILL.md")
 	if err != nil {
 		t.Fatalf("read write-improve-workflow skill: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestAgentSDKWriteDocsDeclareFocusedRepairAndInfoGrowth(t *testing.T) {
 func TestAgentToolsDocsDeclareAgentLiveSummaryContract(t *testing.T) {
 	files := []string{
 		"../docs/AGENT_TOOLS.md",
-		"../internal/agentruntime/skills/novel-tools-core/SKILL.md",
+		"../internal/platform/agentruntime/skills/novel-tools-core/SKILL.md",
 	}
 	for _, path := range files {
 		data, err := os.ReadFile(path)

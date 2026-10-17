@@ -7,18 +7,19 @@ import (
 	"reflect"
 	"strings"
 
-	"novelgen/internal/agents"
 	"novelgen/internal/app"
-	"novelgen/internal/llm"
-	"novelgen/internal/logger"
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/quality"
-	"novelgen/internal/rpg"
-	"novelgen/internal/rpg/dsl"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/agents"
+	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/fiction/domain/quality"
+	"novelgen/internal/fiction/mutation"
+	"novelgen/internal/fiction/rpg"
+	"novelgen/internal/fiction/rpg/dsl"
+	"novelgen/internal/platform/llm"
+	"novelgen/internal/platform/logger"
+	"novelgen/internal/platform/store"
+	"novelgen/internal/platform/utils"
 	"novelgen/internal/toolplane"
-	"novelgen/internal/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -1180,7 +1181,7 @@ func saveStorySetup(ctx context.Context, book *project.Book, setup *models.Story
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, err := toolplane.NewMutationService(book.Root).ReplaceSetup(ctx, setup, toolplane.MutationOptions{
+	_, err := mutation.NewMutationService(book.Root).ReplaceSetup(ctx, setup, mutation.MutationOptions{
 		Validate: false,
 		Source:   "setup-command",
 	})

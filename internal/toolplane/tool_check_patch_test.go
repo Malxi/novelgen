@@ -11,15 +11,15 @@ import (
 	"time"
 
 	"novelgen/cmd/writecmd"
-	"novelgen/internal/agents"
-	"novelgen/internal/logic/continuity/recap"
-	"novelgen/internal/models"
-	"novelgen/internal/quality"
-	rpgdsl "novelgen/internal/rpg/dsl"
-	"novelgen/internal/store"
-	"novelgen/internal/testfixtures"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/contract/testfixtures"
+	"novelgen/internal/fiction/agents"
+	"novelgen/internal/fiction/domain/logic/continuity/recap"
+	"novelgen/internal/fiction/domain/quality"
+	"novelgen/internal/fiction/pipeline"
+	rpgdsl "novelgen/internal/fiction/rpg/dsl"
+	"novelgen/internal/platform/store"
 	"novelgen/internal/toolplane"
-	"novelgen/internal/writepipe"
 
 	"github.com/spf13/cobra"
 )

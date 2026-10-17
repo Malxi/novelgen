@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"novelgen/internal/models"
+	"novelgen/internal/contract/story"
 )
 
 func TestRetryAgentSDKImproveWithResume(t *testing.T) {

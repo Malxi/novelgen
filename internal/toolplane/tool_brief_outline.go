@@ -3,7 +3,7 @@
 package toolplane
 
 import (
-	"novelgen/internal/models"
+	"novelgen/internal/contract/story"
 )
 
 func briefOutlineResults(results interface{}, indexOnly bool) interface{} {

@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"novelgen/internal/agentruntime"
-	"novelgen/internal/llm"
-	"novelgen/internal/utils"
+	"novelgen/internal/platform/agentruntime"
+	"novelgen/internal/platform/llm"
+	"novelgen/internal/platform/utils"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -138,7 +138,7 @@ var configAgentCmd = &cobra.Command{
 			runtime.Command = "python"
 		}
 		if len(runtime.Args) == 0 {
-			runtime.Args = []string{"internal/agentruntime/runners/claude_runner.py"}
+			runtime.Args = []string{"internal/platform/agentruntime/runners/claude_runner.py"}
 		}
 		if runtime.Timeout == 0 {
 			runtime.Timeout = 120

@@ -9,11 +9,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"novelgen/internal/agents"
-	"novelgen/internal/llm"
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/agents"
+	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/platform/llm"
+	"novelgen/internal/platform/store"
 )
 
 // Session is an explicit project view plus the dependencies derived from it.

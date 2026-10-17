@@ -7,9 +7,9 @@ import (
 	"sync"
 	"testing"
 
-	"novelgen/internal/models"
-	"novelgen/internal/store"
-	"novelgen/internal/testfixtures"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/contract/testfixtures"
+	"novelgen/internal/platform/store"
 	"novelgen/internal/toolplane"
 )
 

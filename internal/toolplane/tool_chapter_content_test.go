@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"novelgen/internal/models"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/platform/store"
 )
 
 // chapterContentContext builds the context a chapter query reads through, with

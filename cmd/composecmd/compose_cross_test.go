@@ -3,9 +3,9 @@ package composecmd
 import (
 	"testing"
 
-	"novelgen/internal/models"
-	"novelgen/internal/quality"
-	"novelgen/internal/rpg"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/quality"
+	"novelgen/internal/fiction/rpg"
 )
 
 func TestValidateSetupOutlineCrossAcceptsFactionAliases(t *testing.T) {

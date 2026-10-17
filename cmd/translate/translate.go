@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"novelgen/internal/app"
-	"novelgen/internal/logger"
+	"novelgen/internal/platform/logger"
 
 	"github.com/spf13/cobra"
 )

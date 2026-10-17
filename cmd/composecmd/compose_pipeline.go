@@ -12,12 +12,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"novelgen/internal/logger"
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/quality"
-	"novelgen/internal/rpg"
-	"novelgen/internal/toolplane"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/fiction/domain/quality"
+	"novelgen/internal/fiction/mutation"
+	"novelgen/internal/fiction/rpg"
+	"novelgen/internal/platform/logger"
 )
 
 func runComposePipeline(cmd *cobra.Command, args []string) error {
@@ -172,7 +172,7 @@ func saveOutlineProgress(ctx context.Context, book *project.Book, outline *model
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, err := toolplane.NewMutationService(book.Root).CommitOutlineRaw(ctx, outline, toolplane.MutationOptions{
+	_, err := mutation.NewMutationService(book.Root).CommitOutlineRaw(ctx, outline, mutation.MutationOptions{
 		Source: "compose-progress",
 	})
 	return err

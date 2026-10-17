@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"novelgen/internal/app"
-	"novelgen/internal/logger"
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/platform/logger"
+	"novelgen/internal/platform/store"
 
 	"github.com/spf13/cobra"
 )

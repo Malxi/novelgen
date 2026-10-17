@@ -4,8 +4,8 @@ package toolplane
 
 import (
 	"fmt"
-	"novelgen/internal/models"
-	"novelgen/internal/toolcmd"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/contract/toolcmd"
 	"strings"
 )
 

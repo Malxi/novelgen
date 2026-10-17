@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/cobra"
-	"novelgen/internal/project"
+	"novelgen/internal/fiction/domain/project"
 	"strings"
 	"time"
 )
@@ -273,7 +273,7 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 	root := book.Root
 
 	ctx := ToolProjectContext{Root: root}
-	if err := ctx.load(section); err != nil {
+	if err := ctx.Load(section); err != nil {
 		return err
 	}
 

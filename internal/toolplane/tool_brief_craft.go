@@ -5,7 +5,7 @@ package toolplane
 import (
 	"encoding/json"
 	"fmt"
-	"novelgen/internal/toolcmd"
+	"novelgen/internal/contract/toolcmd"
 	"sort"
 )
 

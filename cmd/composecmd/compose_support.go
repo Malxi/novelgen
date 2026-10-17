@@ -10,10 +10,10 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 
-	"novelgen/internal/agentruntime"
-	"novelgen/internal/logger"
-	"novelgen/internal/models"
-	"novelgen/internal/quality"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/quality"
+	"novelgen/internal/platform/agentruntime"
+	"novelgen/internal/platform/logger"
 	"novelgen/internal/toolplane"
 )
 

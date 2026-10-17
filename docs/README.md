@@ -103,7 +103,7 @@
 ### AI Agent
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) §4.2 - Agent 系统
-- `internal/agents/` - 源码和注释
+- `internal/fiction/agents/` - 源码和注释
 
 ### RPG-DSL
 
@@ -114,17 +114,17 @@
 ### 约束系统
 
 - [RPG_WRITE_USAGE.md](RPG_WRITE_USAGE.md) - 约束使用指南
-- `internal/rpg/constraint_system.go` - 源码
+- `internal/fiction/rpg/constraint_system.go` - 源码
 
 ### 基准测试
 
-- `internal/rpg/benchmark/` - 基准测试源码
+- `internal/fiction/rpg/benchmark/` - 基准测试源码
 - [ARCHITECTURE.md](ARCHITECTURE.md) §7.1 - 基准测试系统
 
 ### 连续性检查
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) §4.5 - 连续性系统
-- `internal/logic/continuity/` - 源码
+- `internal/fiction/domain/logic/continuity/` - 源码
 
 ---
 

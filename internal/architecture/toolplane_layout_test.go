@@ -42,8 +42,7 @@ var toolPlaneCommands = []string{
 // parts in their own file.
 var toolPlaneConcernFiles = map[string][]string{
 	// Shared models and helpers.
-	"internal/toolplane/tool_types.go":     {"ToolResponse", "OutlinePath", "ToolNextAction", "StorySetupBrief", "ChapterBrief"},
-	"internal/toolplane/tool_loader.go":    {"ToolProjectContext"},
+	"internal/toolplane/tool_types.go":     {"ToolResponse", "OutlinePath", "StorySetupBrief", "ChapterBrief"},
 	"internal/toolplane/tool_match.go":     {"flattenChapters", "collectVolumeEntities", "chapterEntityReasons", "textMatches"},
 	"internal/toolplane/tool_normalize.go": {"NormalizeKey", "normalizeContextType", "normalizeSetupType", "normalizeEntityType"},
 	"internal/toolplane/tool_flags.go":     {"ToolCheckFlags", "ToolPatchFlags", "ToolPatchBufferFlags", "ToolRefreshFlags"},
@@ -62,24 +61,8 @@ var toolPlaneConcernFiles = map[string][]string{
 	"internal/toolplane/tool_context_recap.go":   {"queryRecapRepairContext", "buildRecapRepairNextActions"},
 	"internal/toolplane/tool_mystery.go":         {"CollectOutlineMysteryThreads", "FirstPatchableOutlineMysteryThread"},
 
-	// Checks, one file per target.
-	"internal/toolplane/tool_check.go":            {"ToolCheckResult", "runToolCheck", "ApplyToolCheckIssueFilters", "MakeToolCheckResult"},
-	"internal/toolplane/tool_check_navigation.go": {"ToolIssueNavigation", "toolFocusedCheckCommand"},
-	"internal/toolplane/tool_check_outline.go":    {"RunToolSetupCheck", "RunToolOutlineCheck", "scopedOutline"},
-	"internal/toolplane/tool_check_craft.go":      {"RunToolCraftSchemaCheck", "validateCraftQualityObject"},
-	"internal/toolplane/tool_check_recap.go":      {"RunToolRecapCheck", "validateRecapForToolCheck"},
-	"internal/toolplane/tool_check_chapter.go":    {"RunToolChapterCheckWithTargetWords", "RunToolChapterSimulationGate", "BuildChapterSimulationSignalDiagnostic"},
-
 	// Patches, one file per section.
-	"internal/toolplane/tool_patch.go":         {"RunToolPatch", "ToolPatchResult", "ToolPatchChange", "MergeJSONPatchObject"},
-	"internal/toolplane/tool_patch_buffer.go":  {"RunToolPatchBuffer", "LoadToolPatchBuffer"},
-	"internal/toolplane/tool_patch_outline.go": {"runToolOutlinePatch", "ApplyChapterPatch", "ApplyVolumePatch"},
-	"internal/toolplane/tool_patch_craft.go":   {"RunToolCraftPatch", "ApplyCraftElementPatch", "NormalizeCraftPatchObject"},
-	"internal/toolplane/tool_patch_setup.go":   {"RunToolSetupPatch", "ApplySetupPatchObject"},
-	"internal/toolplane/tool_patch_recap.go":   {"RunToolRecapPatch"},
-	"internal/toolplane/tool_patch_chapter.go": {"runToolChapterPatch", "ValidateToolChapterPatchLength"},
-	"internal/toolplane/tool_diff.go":          {"DiffStructFields", "structJSONMap"},
-	"internal/toolplane/tool_snapshot.go":      {"CloneOutline", "CloneStorySetup", "saveToolCheckpointJSON"},
+	"internal/toolplane/tool_patch_buffer.go": {"RunToolPatchBuffer", "LoadToolPatchBuffer"},
 
 	// Brief projections, one file per section.
 	"internal/toolplane/tool_brief.go":         {"briefToolResults", "indexToolResults", "clipToolStrings"},
@@ -94,10 +77,14 @@ var toolPlaneConcernFiles = map[string][]string{
 // toolPlaneModuleFiles are the remaining tool plane modules. They are listed so a
 // new file in the package has to be classified here on purpose.
 var toolPlaneModuleFiles = map[string]string{
-	"internal/toolplane/mutation.go":     "shared mutation service used by the CLI tool plane and host pipelines",
-	"internal/toolplane/tool_view.go":    "view levels and context/check budgets",
-	"internal/toolplane/tool_logs.go":    "prompt/response/agent-live log queries",
-	"internal/toolplane/tool_refresh.go": "derived artifact refresh",
+	"internal/toolplane/mutation_aliases.go":    "compatibility aliases over the fiction/mutation service",
+	"internal/toolplane/tool_patch_cli.go":      "CLI adapter over the fiction/mutation service",
+	"internal/toolplane/tool_patch_adapters.go": "per-section adapters over the fiction/mutation service",
+	"internal/toolplane/check_aliases.go":       "compatibility aliases over the fiction/check engine",
+	"internal/toolplane/tool_check_cli.go":      "CLI adapter over the fiction/check engine",
+	"internal/toolplane/tool_view.go":           "view levels and context/check budgets",
+	"internal/toolplane/tool_logs.go":           "prompt/response/agent-live log queries",
+	"internal/toolplane/tool_refresh_cli.go":    "CLI adapter over the fiction/refresh engine",
 }
 
 // TestToolPlaneStaysSplitByConcern pins the internal/toolplane file layout.

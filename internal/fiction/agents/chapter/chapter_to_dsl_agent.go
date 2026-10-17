@@ -1,0 +1,395 @@
+package chapter
+
+import (
+	"context"
+	"fmt"
+	agentbase "novelgen/internal/fiction/agents/base"
+	"sort"
+	"strings"
+
+	"novelgen/internal/contract/story"
+	"novelgen/internal/platform/llm"
+	"novelgen/internal/platform/logger"
+)
+
+// ChapterToDSLInput is the input for converting chapters to DSL
+type ChapterToDSLInput struct {
+	BookName   string                      `json:"book_name" md:"book_name" desc:"Book name"`
+	StorySetup models.StorySetup           `json:"story_setup" md:"story_setup" desc:"Story setup with premise, genres, themes"`
+	SetupHints ChapterToDSLSetupHints      `json:"setup_dsl_hints" md:"setup_dsl_hints" desc:"Machine-friendly setup resource and progression IDs to reuse in chapter state_delta output"`
+	Characters map[string]models.Character `json:"characters" md:"characters" desc:"Characters from craft"`
+	Locations  map[string]models.Location  `json:"locations" md:"locations" desc:"Locations from craft"`
+	Chapters   []ChapterData               `json:"chapters" md:"chapters" desc:"Chapter full text with optional recap data"`
+}
+
+type ChapterToDSLSetupHints struct {
+	Resources   []ChapterToDSLResourceHint    `json:"resources,omitempty"`
+	Progression []ChapterToDSLProgressionHint `json:"progression,omitempty"`
+}
+
+type ChapterToDSLResourceHint struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Category string `json:"category,omitempty"`
+	Scarcity string `json:"scarcity,omitempty"`
+}
+
+type ChapterToDSLProgressionHint struct {
+	SystemID     string   `json:"system_id"`
+	SystemName   string   `json:"system_name"`
+	MaxLevel     int      `json:"max_level,omitempty"`
+	Requirements []string `json:"requirements,omitempty"`
+}
+
+// ChapterData represents a chapter's full text plus optional recap summary.
+type ChapterData struct {
+	ChapterID string        `json:"chapter_id"`
+	Title     string        `json:"title"`
+	Content   string        `json:"content,omitempty" md:"content" desc:"Full chapter markdown text; primary source for DSL extraction"`
+	Location  string        `json:"location,omitempty"`
+	Time      string        `json:"time,omitempty"`
+	Present   []string      `json:"present,omitempty"`
+	PlotBeats []string      `json:"plot_beats,omitempty"`
+	Recap     *ChapterRecap `json:"recap,omitempty" md:"recap" desc:"Optional structured recap; use only as support, never as replacement for content"`
+}
+
+type ChapterRecap struct {
+	ChapterID       string   `json:"chapter_id,omitempty"`
+	Title           string   `json:"title,omitempty"`
+	Location        string   `json:"location,omitempty"`
+	Time            string   `json:"time,omitempty"`
+	Present         []string `json:"present,omitempty"`
+	PlotBeats       []string `json:"plot_beats,omitempty"`
+	LastLine        string   `json:"last_line,omitempty"`
+	NextOpeningHint string   `json:"next_opening_hint,omitempty"`
+}
+
+// ChapterToDSLOutput is the output containing the DSL content
+type ChapterToDSLOutput struct {
+	DSLContent string `json:"dsl_content" md:"dsl_content" desc:"Generated RPG-DSL code"`
+}
+
+// ChapterToDSLRepairInput is the input for repairing invalid DSL
+type ChapterToDSLRepairInput struct {
+	BookName     string `json:"book_name" md:"book_name" desc:"Book name"`
+	ParseError   string `json:"parse_error" md:"parse_error" desc:"Parser error message"`
+	InvalidDSL   string `json:"invalid_dsl" md:"invalid_dsl" desc:"Invalid DSL content to repair"`
+	LanguageHint string `json:"language_hint" md:"language_hint" desc:"Language hint for text fields"`
+}
+
+// ChapterToDSLAgent converts novelgen chapters to RPG-DSL format
+type ChapterToDSLAgent struct {
+	base      *agentbase.BaseAgent
+	setup     *models.StorySetup
+	requireAI bool
+}
+
+// NewChapterToDSLAgent creates a new ChapterToDSLAgent
+func NewChapterToDSLAgent(client llm.Client, config *llm.Config, projectLLM *models.ProjectLLM, setup *models.StorySetup) *ChapterToDSLAgent {
+	// 如果没有提供 projectLLM，则从 config 创建
+	if projectLLM == nil && config != nil {
+		projectLLM = &models.ProjectLLM{
+			Provider: config.DefaultProvider,
+			Model:    config.DefaultModel,
+		}
+	}
+
+	base := agentbase.NewBaseAgent(agentbase.BaseAgentConfig{
+		Name:       "ChapterToDSLAgent",
+		Client:     client,
+		Config:     config,
+		ProjectLLM: projectLLM,
+		Language:   "zh",
+	})
+
+	return &ChapterToDSLAgent{
+		base:      base,
+		setup:     setup,
+		requireAI: false,
+	}
+}
+
+// SetLanguage sets the output language
+func (a *ChapterToDSLAgent) SetLanguage(language string) {
+	a.base.SetLanguage(language)
+}
+
+// SetRequireAI toggles strict mode: if true, conversion must succeed via AI.
+func (a *ChapterToDSLAgent) SetRequireAI(requireAI bool) {
+	a.requireAI = requireAI
+}
+
+// ConvertChapterData converts already-loaded full chapter data to DSL format.
+func (a *ChapterToDSLAgent) ConvertChapterData(ctx context.Context, bookName string, characters map[string]models.Character, locations map[string]models.Location, chapters []ChapterData) (string, error) {
+	if len(chapters) == 0 {
+		return "", fmt.Errorf("no valid chapters found")
+	}
+
+	sort.Slice(chapters, func(i, j int) bool {
+		return chapters[i].ChapterID < chapters[j].ChapterID
+	})
+
+	logger.Info("Loaded %d chapters", len(chapters))
+
+	// If LLM is not configured, use rule-based conversion
+	if a.base.Config() == nil {
+		if a.requireAI {
+			return "", fmt.Errorf("LLM not configured and requireAI=true")
+		}
+		logger.Info("LLM not configured, using rule-based conversion")
+		return a.convertChaptersRuleBased(bookName, characters, locations, chapters)
+	}
+
+	// Prepare input
+	input := ChapterToDSLInput{
+		BookName:   bookName,
+		StorySetup: derefStorySetup(a.setup),
+		SetupHints: buildChapterToDSLSetupHints(a.setup),
+		Characters: characters,
+		Locations:  locations,
+		Chapters:   chapters,
+	}
+
+	// Execute conversion
+	var output ChapterToDSLOutput
+	params := agentbase.InvokeParams{
+		Skills:  []string{"chapter-to-dsl"},
+		Command: "convert chapters to RPG-DSL format",
+	}
+
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		if a.requireAI {
+			return "", fmt.Errorf("AI conversion failed: %w", err)
+		}
+		logger.Warn("AI conversion failed: %v", err)
+		logger.Info("Falling back to rule-based conversion")
+		return a.convertChaptersRuleBased(bookName, characters, locations, chapters)
+	}
+
+	logger.Info("✓ Generated DSL content (%d characters)", len(output.DSLContent))
+
+	return output.DSLContent, nil
+}
+
+func buildChapterToDSLSetupHints(setup *models.StorySetup) ChapterToDSLSetupHints {
+	if setup == nil {
+		return ChapterToDSLSetupHints{}
+	}
+	hints := ChapterToDSLSetupHints{}
+	for i, res := range setup.WorldResources {
+		name := strings.TrimSpace(res.Name)
+		if name == "" {
+			name = fmt.Sprintf("resource_%02d", i+1)
+		}
+		hints.Resources = append(hints.Resources, ChapterToDSLResourceHint{
+			ID:       fmt.Sprintf("resource_%02d", i+1),
+			Name:     name,
+			Category: strings.TrimSpace(res.Category),
+			Scarcity: strings.TrimSpace(res.Scarcity),
+		})
+	}
+	for i, premise := range setup.Premises {
+		systemID := fmt.Sprintf("progression_%02d", i+1)
+		if asciiID := asciiSafeHintID(premise.Name); asciiID != "" {
+			systemID = asciiID
+		}
+		hint := ChapterToDSLProgressionHint{
+			SystemID:   systemID,
+			SystemName: strings.TrimSpace(premise.Name),
+		}
+		for _, stage := range premise.Progression {
+			if stage.Level > hint.MaxLevel {
+				hint.MaxLevel = stage.Level
+			}
+			if req := strings.TrimSpace(stage.Requirements); req != "" {
+				hint.Requirements = append(hint.Requirements, fmt.Sprintf("L%d: %s", stage.Level, req))
+			}
+		}
+		hints.Progression = append(hints.Progression, hint)
+	}
+	return hints
+}
+
+func derefStorySetup(setup *models.StorySetup) models.StorySetup {
+	if setup == nil {
+		return models.StorySetup{}
+	}
+	return *setup
+}
+
+func asciiSafeHintID(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	var b strings.Builder
+	lastUnderscore := false
+	for _, r := range value {
+		ok := r >= 'a' && r <= 'z' || r >= '0' && r <= '9'
+		if ok {
+			b.WriteRune(r)
+			lastUnderscore = false
+			continue
+		}
+		if !lastUnderscore && b.Len() > 0 {
+			b.WriteByte('_')
+			lastUnderscore = true
+		}
+	}
+	return strings.Trim(b.String(), "_")
+}
+
+// RepairDSL asks AI to repair an invalid DSL string into parser-compatible DSL.
+func (a *ChapterToDSLAgent) RepairDSL(ctx context.Context, bookName, parseErr, invalidDSL string) (string, error) {
+	if a.base.Config() == nil {
+		return "", fmt.Errorf("LLM not configured")
+	}
+
+	input := ChapterToDSLRepairInput{
+		BookName:     bookName,
+		ParseError:   parseErr,
+		InvalidDSL:   invalidDSL,
+		LanguageHint: a.base.Language(),
+	}
+
+	var output ChapterToDSLOutput
+	params := agentbase.InvokeParams{
+		Skills:  []string{"chapter-to-dsl-repair"},
+		Command: "repair invalid RPG-DSL to valid parser-compatible DSL",
+	}
+
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return "", err
+	}
+	return output.DSLContent, nil
+}
+
+// convertChaptersRuleBased performs rule-based conversion without LLM
+func (a *ChapterToDSLAgent) convertChaptersRuleBased(bookName string, characters map[string]models.Character, locations map[string]models.Location, chapters []ChapterData) (string, error) {
+	logger.Info("Performing rule-based DSL conversion")
+
+	var dsl strings.Builder
+
+	// Generate metadata
+	dsl.WriteString(fmt.Sprintf("# %s Outline DSL\n", bookName))
+	dsl.WriteString("# Generated from chapter recaps\n\n")
+	dsl.WriteString("metadata {\n")
+	dsl.WriteString(fmt.Sprintf("  title = \"%s\"\n", bookName))
+	dsl.WriteString("  dsl_version = \"0.2.0\"\n")
+	dsl.WriteString("  source = \"novelgen_outline\"\n")
+	dsl.WriteString("}\n\n")
+
+	// Generate characters section
+	if len(characters) > 0 {
+		dsl.WriteString("characters {\n")
+		for id, char := range characters {
+			dsl.WriteString(fmt.Sprintf("  npc \"%s\" {\n", char.Name))
+			dsl.WriteString(fmt.Sprintf("    id = \"%s\"\n", id))
+			dsl.WriteString(fmt.Sprintf("    name = \"%s\"\n", char.Name))
+			if char.Appearance != "" {
+				dsl.WriteString(fmt.Sprintf("    description = \"%s\"\n", escapeDSLString(char.Appearance)))
+			}
+			if char.RoleInStory != "" {
+				dsl.WriteString(fmt.Sprintf("    role = \"%s\"\n", char.RoleInStory))
+			}
+			dsl.WriteString("    __placeholder__ = false\n")
+			dsl.WriteString("  }\n")
+		}
+		dsl.WriteString("}\n\n")
+	}
+
+	// Generate world section
+	if len(locations) > 0 {
+		dsl.WriteString("world {\n")
+		for id, loc := range locations {
+			dsl.WriteString(fmt.Sprintf("  location \"%s\" {\n", loc.Name))
+			dsl.WriteString(fmt.Sprintf("    id = \"%s\"\n", id))
+			dsl.WriteString(fmt.Sprintf("    name = \"%s\"\n", loc.Name))
+			if loc.Description != "" {
+				dsl.WriteString(fmt.Sprintf("    description = \"%s\"\n", escapeDSLString(loc.Description)))
+			}
+			dsl.WriteString("    __placeholder__ = false\n")
+			dsl.WriteString("  }\n")
+		}
+		dsl.WriteString("}\n\n")
+	}
+
+	// Generate storyline section
+	dsl.WriteString("storyline {\n")
+	for _, chapter := range chapters {
+		dsl.WriteString(fmt.Sprintf("  chapter \"%s\" {\n", chapter.Title))
+		dsl.WriteString(fmt.Sprintf("    id = \"%s\"\n", chapter.ChapterID))
+		dsl.WriteString("\n")
+		dsl.WriteString("    objective \"主要剧情\" {\n")
+
+		// Convert plot beats to steps
+		for i, beat := range chapter.PlotBeats {
+			if i >= 10 { // Limit steps
+				break
+			}
+			dsl.WriteString(fmt.Sprintf("      step %d {\n", i+1))
+			dsl.WriteString(fmt.Sprintf("        description = \"%s\"\n", escapeDSLString(beat)))
+			dsl.WriteString("        event {\n")
+			dsl.WriteString(fmt.Sprintf("          type = \"%s\"\n", detectEventType(beat)))
+			dsl.WriteString("        }\n")
+			dsl.WriteString("      }\n")
+		}
+
+		dsl.WriteString("    }\n")
+		dsl.WriteString("  }\n")
+	}
+	dsl.WriteString("}\n")
+
+	return dsl.String(), nil
+}
+
+// detectEventType determines the event type from beat content
+func detectEventType(beat string) string {
+	beatLower := strings.ToLower(beat)
+
+	// Combat keywords
+	if strings.Contains(beatLower, "杀") || strings.Contains(beatLower, "战") ||
+		strings.Contains(beatLower, "打") || strings.Contains(beatLower, "斗") ||
+		strings.Contains(beatLower, "攻击") || strings.Contains(beatLower, "战斗") {
+		return "combat"
+	}
+
+	// Location/movement keywords
+	if strings.Contains(beatLower, "去") || strings.Contains(beatLower, "来到") ||
+		strings.Contains(beatLower, "进入") || strings.Contains(beatLower, "离开") ||
+		strings.Contains(beatLower, "到达") || strings.Contains(beatLower, "前往") {
+		return "location"
+	}
+
+	// Acquire keywords
+	if strings.Contains(beatLower, "获得") || strings.Contains(beatLower, "得到") ||
+		strings.Contains(beatLower, "找到") || strings.Contains(beatLower, "发现") ||
+		strings.Contains(beatLower, "拿到") || strings.Contains(beatLower, "取") {
+		return "acquire"
+	}
+
+	// Knowledge keywords
+	if strings.Contains(beatLower, "知道") || strings.Contains(beatLower, "了解") ||
+		strings.Contains(beatLower, "得知") || strings.Contains(beatLower, "明白") ||
+		strings.Contains(beatLower, "领悟") || strings.Contains(beatLower, "学习") {
+		return "knowledge"
+	}
+
+	// Relationship keywords
+	if strings.Contains(beatLower, "认识") || strings.Contains(beatLower, "结交") ||
+		strings.Contains(beatLower, "相遇") || strings.Contains(beatLower, "对话") ||
+		strings.Contains(beatLower, "交流") {
+		return "relationship"
+	}
+
+	// Default
+	return "status"
+}
+
+// escapeDSLString escapes strings for DSL output
+func escapeDSLString(s string) string {
+	s = strings.ReplaceAll(s, "\"", "\\\"")
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\r", "")
+	if len(s) > 200 {
+		s = s[:200] + "..."
+	}
+	return s
+}

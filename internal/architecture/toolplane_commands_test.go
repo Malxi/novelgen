@@ -14,10 +14,10 @@ import (
 // toolCommandScopes are the packages that hold `novelgen tool ...` strings: the
 // tool plane that returns them, the agents that hand them to the SDK workflow,
 // the runtime that summarizes them, and the CLI.
-var toolCommandScopes = []string{"internal/toolplane", "internal/agents", "internal/agentruntime", "cmd"}
+var toolCommandScopes = []string{"internal/toolplane", "internal/fiction/agents", "internal/platform/agentruntime", "cmd"}
 
 // toolCommandFlagOrder is the canonical flag order of the tool plane commands,
-// the same order internal/toolcmd emits. Flag order is part of the contract: the
+// the same order internal/contract/toolcmd emits. Flag order is part of the contract: the
 // SDK runner matches a command against the workflow allowlist by canonical
 // suffix, so a command that spells the same flags in a different order is
 // denied, not normalized. Quoting is not part of the contract — the runner
@@ -31,7 +31,7 @@ var toolCommandFlagOrder = map[string][]string{
 }
 
 // TestToolCommandsUseCanonicalFlagOrder checks every `novelgen tool ...` string
-// that is still written by hand. Commands built by internal/toolcmd cannot drift
+// that is still written by hand. Commands built by internal/contract/toolcmd cannot drift
 // — the builder owns their order — but the literals in prompt text, allowlists
 // and documentation examples can, and an unknown flag, a misspelled subcommand
 // or two flags in the wrong order is exactly the drift that makes an agent run

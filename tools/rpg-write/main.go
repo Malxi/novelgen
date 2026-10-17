@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"novelgen/internal/logger"
-	"novelgen/internal/rpg"
-	"novelgen/internal/store"
+	"novelgen/internal/fiction/rpg"
+	rpgproject "novelgen/internal/fiction/rpg/project"
+	"novelgen/internal/platform/logger"
+	"novelgen/internal/platform/store"
 )
 
 func main() {
@@ -29,7 +30,7 @@ func main() {
 	logger.Info("Project Path: %s", *projectPath)
 
 	// 加载RPG项目
-	project, err := rpg.LoadNovelgenProject(store.BookDir(*projectPath, *bookName))
+	project, err := rpgproject.LoadNovelgenProject(store.BookDir(*projectPath, *bookName))
 	if err != nil {
 		logger.Error("Failed to load RPG project: %v", err)
 		logger.Info("Make sure the book exists with craft data (characters.json, items.json, locations.json)")

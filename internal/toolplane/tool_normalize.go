@@ -4,21 +4,13 @@
 package toolplane
 
 import (
-	"fmt"
 	"strings"
 
-	"novelgen/internal/utils"
+	"novelgen/internal/platform/utils"
 )
 
 func StringMapValue(value map[string]interface{}, key string) string {
-	if value == nil {
-		return ""
-	}
-	raw, ok := value[key]
-	if !ok || raw == nil {
-		return ""
-	}
-	return strings.TrimSpace(fmt.Sprint(raw))
+	return utils.StringMapValue(value, key)
 }
 
 func RepairToolLookupText(value string) (string, bool) {
@@ -28,7 +20,7 @@ func RepairToolLookupText(value string) (string, bool) {
 }
 
 func NormalizeKey(value string) string {
-	return strings.ToLower(strings.TrimSpace(value))
+	return utils.NormalizeKey(value)
 }
 
 func normalizeContextType(value string) string {

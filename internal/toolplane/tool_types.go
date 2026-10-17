@@ -4,7 +4,7 @@
 package toolplane
 
 import (
-	"novelgen/internal/models"
+	"novelgen/internal/contract/story"
 	"time"
 )
 
@@ -206,14 +206,6 @@ type ChapterRepairContext struct {
 	Workflow               map[string]interface{} `json:"workflow,omitempty"`
 	NextActions            []ToolNextAction       `json:"next_actions,omitempty"`
 	Stats                  map[string]int         `json:"stats,omitempty"`
-}
-
-type ToolNextAction struct {
-	Step    int    `json:"step"`
-	Action  string `json:"action"`
-	Purpose string `json:"purpose,omitempty"`
-	Command string `json:"command,omitempty"`
-	When    string `json:"when,omitempty"`
 }
 
 type simulationRepairHint struct {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"novelgen/internal/store"
+	"novelgen/internal/platform/store"
 
 	"github.com/spf13/cobra"
 )

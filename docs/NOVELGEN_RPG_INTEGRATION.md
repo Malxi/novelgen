@@ -24,7 +24,7 @@ novelgen/
 │       │   │   └── outline.json
 │       │   └── ...
 │       └── rpg_data.json       # 生成的 RPG 数据
-├── internal/rpg/               # RPG 系统核心
+├── internal/fiction/rpg/               # RPG 系统核心
 │   ├── novelgen_adapter.go     # novelgen 集成适配器
 │   ├── simulation.go           # 剧情推演引擎
 │   └── ...
@@ -55,7 +55,7 @@ package main
 
 import (
     "fmt"
-    "novelgen/internal/rpg"
+    "novelgen/internal/fiction/rpg"
 )
 
 func main() {

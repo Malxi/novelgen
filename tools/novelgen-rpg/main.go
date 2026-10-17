@@ -6,8 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"novelgen/internal/rpg"
-	"novelgen/internal/store"
+	"novelgen/internal/fiction/rpg"
+	rpgproject "novelgen/internal/fiction/rpg/project"
+	"novelgen/internal/platform/store"
 )
 
 func main() {
@@ -36,7 +37,7 @@ func main() {
 	fmt.Printf("正在加载 novelgen 项目: %s/%s\n", *projectPath, *bookName)
 
 	// 加载 novelgen 项目
-	project, err := rpg.LoadNovelgenProject(store.BookDir(*projectPath, *bookName))
+	project, err := rpgproject.LoadNovelgenProject(store.BookDir(*projectPath, *bookName))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "错误: 加载项目失败: %v\n", err)
 		os.Exit(1)

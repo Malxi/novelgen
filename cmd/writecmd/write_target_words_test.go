@@ -3,7 +3,7 @@ package writecmd
 import (
 	"testing"
 
-	"novelgen/internal/models"
+	"novelgen/internal/contract/story"
 
 	"github.com/spf13/cobra"
 )

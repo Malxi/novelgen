@@ -8,11 +8,12 @@ import (
 	"path/filepath"
 
 	"novelgen/internal/app"
-	"novelgen/internal/logger"
-	"novelgen/internal/rpg"
-	"novelgen/internal/rpg/benchmark"
-	"novelgen/internal/store"
-	"novelgen/internal/utils"
+	"novelgen/internal/fiction/rpg"
+	"novelgen/internal/fiction/rpg/benchmark"
+	rpgproject "novelgen/internal/fiction/rpg/project"
+	"novelgen/internal/platform/logger"
+	"novelgen/internal/platform/store"
+	"novelgen/internal/platform/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -186,7 +187,7 @@ func runRPGGen(cmd *cobra.Command, args []string) error {
 	log.Info("Loading novelgen project: %s (%s)", bookName, bookDir)
 
 	// Load novelgen project
-	project, err := rpg.LoadNovelgenProject(bookDir)
+	project, err := rpgproject.LoadNovelgenProject(bookDir)
 	if err != nil {
 		return fmt.Errorf("failed to load project: %w", err)
 	}
@@ -337,7 +338,7 @@ func runRPGSimulate(cmd *cobra.Command, args []string) error {
 
 		// Generate RPG data on the fly from project (simpler and more reliable)
 		fmt.Println("Loading RPG data from project...")
-		project, err := rpg.LoadNovelgenProject(bookDir)
+		project, err := rpgproject.LoadNovelgenProject(bookDir)
 		if err != nil {
 			return fmt.Errorf("failed to load project: %w", err)
 		}
@@ -352,7 +353,7 @@ func runRPGSimulate(cmd *cobra.Command, args []string) error {
 	} else {
 		// Generate RPG data on the fly
 		fmt.Println("RPG data not found, generating from novel elements...")
-		project, err := rpg.LoadNovelgenProject(bookDir)
+		project, err := rpgproject.LoadNovelgenProject(bookDir)
 		if err != nil {
 			return fmt.Errorf("failed to load project: %w", err)
 		}
@@ -536,7 +537,7 @@ func runRPGExport(cmd *cobra.Command, args []string) error {
 	log.Info("Loading RPG data for export: %s", bookName)
 
 	// Load or generate RPG world
-	project, err := rpg.LoadNovelgenProject(bookDir)
+	project, err := rpgproject.LoadNovelgenProject(bookDir)
 	if err != nil {
 		return fmt.Errorf("failed to load project: %w", err)
 	}

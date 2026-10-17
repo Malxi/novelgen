@@ -11,12 +11,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"novelgen/internal/agents"
 	"novelgen/internal/app"
-	"novelgen/internal/llm"
-	"novelgen/internal/models"
-	"novelgen/internal/store"
-	"novelgen/internal/utils"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/agents"
+	"novelgen/internal/platform/llm"
+	"novelgen/internal/platform/store"
+	"novelgen/internal/platform/utils"
 )
 
 var analyzeAIRPGCmd = &cobra.Command{

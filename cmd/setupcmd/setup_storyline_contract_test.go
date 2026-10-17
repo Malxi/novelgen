@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"novelgen/internal/models"
-	"novelgen/internal/project"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/project"
 )
 
 func TestParseStorySetupMarkdownPreservesStorylineContractHints(t *testing.T) {

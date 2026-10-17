@@ -4,9 +4,9 @@ package toolplane
 
 import (
 	"fmt"
-	"novelgen/internal/logic/continuity/recap"
-	"novelgen/internal/models"
-	"novelgen/internal/toolcmd"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/contract/toolcmd"
+	"novelgen/internal/fiction/domain/logic/continuity/recap"
 	"strings"
 )
 

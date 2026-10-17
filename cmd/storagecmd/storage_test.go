@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"novelgen/internal/models"
-	"novelgen/internal/store"
-	"novelgen/internal/testfixtures"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/contract/testfixtures"
+	"novelgen/internal/platform/store"
 )
 
 func runStorageCommand(t *testing.T, stdin string, args ...string) (string, error) {

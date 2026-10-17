@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"novelgen/internal/agents"
-	"novelgen/internal/llm"
-	"novelgen/internal/rpg/dsl"
-	"novelgen/internal/store"
-	"novelgen/internal/writersdl"
+	"novelgen/internal/fiction/agents"
+	"novelgen/internal/fiction/derive"
+	"novelgen/internal/fiction/rpg/dsl"
+	"novelgen/internal/platform/llm"
+	"novelgen/internal/platform/store"
 )
 
 func main() {
@@ -136,7 +136,7 @@ func runAIDSLCheck(ctx context.Context, bookName, bookPath, outputPath, jsonOutp
 		return fmt.Errorf("鍒涘缓 rpg 鐩綍澶辫触: %w", err)
 	}
 
-	_, dslData, err := writersdl.EmitWriteRPGDSL(ctx, writersdl.WriteRPGDSLEmitInput{
+	_, dslData, err := derive.EmitWriteRPGDSL(ctx, derive.WriteRPGDSLEmitInput{
 		BookName:   bookName,
 		FS:         book.FS(),
 		CacheDir:   book.RPGChapterBatchCacheDir(),

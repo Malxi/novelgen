@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"novelgen/internal/project"
-	"novelgen/internal/store"
-	"novelgen/internal/utils"
+	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/platform/store"
+	"novelgen/internal/platform/utils"
 )
 
 func RunToolPatchBuffer(cmd *cobra.Command, args []string) error {

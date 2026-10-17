@@ -1,7 +1,7 @@
 package setupcmd
 
 import (
-	"novelgen/internal/models"
+	"novelgen/internal/contract/story"
 	"novelgen/internal/toolplane"
 )
 

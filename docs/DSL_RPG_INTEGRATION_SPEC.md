@@ -119,7 +119,7 @@ DSL → RPG World 转换器 (dsl/converter.go)
 | **Hook Manager** | `dsl/hook_enhanced.go` | 事件 Hook、计数器、里程碑 |
 | **Evaluator** | `dsl/functions_enhanced.go` | 表达式求值、50+ 函数 |
 | **Logger** | `dsl/logger.go` | 执行日志、性能统计 |
-| **Adapter** | `internal/rpg/dsl_adapter.go` | Novelgen ↔ DSL-RPG 桥接 |
+| **Adapter** | `internal/fiction/rpg/dsl_adapter.go` | Novelgen ↔ DSL-RPG 桥接 |
 
 ---
 
@@ -503,7 +503,7 @@ novelgen-rpg analyze -b fire-galaxy
 package main
 
 import (
-    "novelgen/internal/rpg/dsl"
+    "novelgen/internal/fiction/rpg/dsl"
 )
 
 func main() {
@@ -607,7 +607,7 @@ event "难度检查" {
 ### 6.1 向后兼容
 
 ```go
-// internal/rpg/dsl_adapter.go
+// internal/fiction/rpg/dsl_adapter.go
 
 // NovelgenToDSL 将旧版 novelgen 项目转换为 DSL
 func NovelgenToDSL(project *NovelgenProject) (*dsl.DSL, error) {
@@ -671,7 +671,7 @@ diff <(novelgen-rpg export-old -b mine) <(novelgen-rpg export-dsl -b mine)
 
 ### Phase 2: 集成层（进行中）
 
-- [ ] `internal/rpg/dsl_adapter.go` - Novelgen ↔ DSL 桥接
+- [ ] `internal/fiction/rpg/dsl_adapter.go` - Novelgen ↔ DSL 桥接
 - [ ] CLI 命令集成
 - [ ] 向后兼容层
 
@@ -754,7 +754,7 @@ novelgen-rpg validate -b my-novel
 
 ```
 # 核心 DSL 实现（已完成）
-internal/rpg/dsl/
+internal/fiction/rpg/dsl/
 ├── ast.go                 # AST 定义
 ├── parser.go              # 基础解析器
 ├── parser_enhanced.go     # 增强解析器 ✅
@@ -769,7 +769,7 @@ internal/rpg/dsl/
 └── enhanced_test.go       # 测试套件 ✅
 
 # 集成层（待实现）
-internal/rpg/
+internal/fiction/rpg/
 └── dsl_adapter.go         # Novelgen ↔ DSL 桥接
 
 # CLI

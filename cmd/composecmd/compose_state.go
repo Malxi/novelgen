@@ -10,13 +10,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"novelgen/internal/agents"
 	"novelgen/internal/app"
-	"novelgen/internal/logger"
-	"novelgen/internal/models"
-	"novelgen/internal/project"
-	"novelgen/internal/store"
-	"novelgen/internal/toolplane"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/agents"
+	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/fiction/mutation"
+	"novelgen/internal/platform/logger"
+	"novelgen/internal/platform/store"
 )
 
 // composeProject resolves the project a compose command operates on. Compose used
@@ -79,7 +79,7 @@ func saveOutlineMutation(ctx context.Context, book *project.Book, outline *model
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, err := toolplane.NewMutationService(book.Root).ReplaceOutline(ctx, outline, toolplane.MutationOptions{
+	_, err := mutation.NewMutationService(book.Root).ReplaceOutline(ctx, outline, mutation.MutationOptions{
 		Validate: false,
 		Source:   "compose-command",
 	})
@@ -96,7 +96,7 @@ func saveOutlineMutationRaw(ctx context.Context, book *project.Book, outline *mo
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, err := toolplane.NewMutationService(book.Root).ReplaceOutlineRaw(ctx, outline, toolplane.MutationOptions{
+	_, err := mutation.NewMutationService(book.Root).ReplaceOutlineRaw(ctx, outline, mutation.MutationOptions{
 		Validate: false,
 		Source:   "compose-command",
 	})
@@ -112,7 +112,7 @@ func saveSetupMutation(ctx context.Context, book *project.Book, setup *models.St
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, err := toolplane.NewMutationService(book.Root).ReplaceSetup(ctx, setup, toolplane.MutationOptions{
+	_, err := mutation.NewMutationService(book.Root).ReplaceSetup(ctx, setup, mutation.MutationOptions{
 		Validate: false,
 		Source:   "compose-command",
 	})

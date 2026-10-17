@@ -6,8 +6,8 @@ package toolplane
 import (
 	"strings"
 
-	"novelgen/internal/models"
-	"novelgen/internal/toolcmd"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/contract/toolcmd"
 )
 
 func briefContextResults(results interface{}, indexOnly bool) interface{} {

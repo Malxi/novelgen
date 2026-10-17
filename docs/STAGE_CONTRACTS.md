@@ -13,7 +13,7 @@ file in the same change.
   normalized when needed, validated deterministically, and only then written to
   disk.
 - Canonical stage artifacts are written through
-  `internal/toolplane.MutationService` (`setup`, `outline`, `craft`, `chapter`,
+  `internal/fiction/mutation.MutationService` (`setup`, `outline`, `craft`, `chapter`,
   `recap`, and legacy `draft`). The Agent SDK `tool patch` command is a CLI
   adapter over the same service; Chat/typed-JSON stages must not call
   `book.SaveSetup`/`SaveOutline`/`SaveFinalChapter`/`recapStore.Save` directly.
@@ -55,7 +55,7 @@ Project root:
 
 Usage records (observability, not story state):
 
-- Producer: `internal/agents/base.BaseAgent` appends one line per chat call and per
+- Producer: `internal/fiction/agents/base.BaseAgent` appends one line per chat call and per
   JSON-repair call, including failures. It is written best-effort; a failure to
   record usage never fails the creative stage.
 - Consumer: `novelgen project usage` (`--since`, `--json`) aggregates the log by
@@ -168,7 +168,7 @@ Change checklist:
 Producer:
 
 - `cmd/setup.go`
-- `internal/agents/setup/setup_agent.go`
+- `internal/fiction/agents/setup/setup_agent.go`
 - Skills: `setup-gen`, `setup-improve`, `setup-review`
 
 Inputs:
@@ -296,7 +296,7 @@ Change checklist:
 Producer:
 
 - `cmd/compose.go`
-- `internal/agents/compose/compose_agent.go`
+- `internal/fiction/agents/compose/compose_agent.go`
 - Skills: `compose-gen`, `compose-skeleton`, `compose-skeleton-review`,
   `compose-skeleton-improve`, `compose-chapters`, `compose-regen`,
   `compose-review`, `compose-improve`, `compose-improve-volume`
@@ -423,7 +423,7 @@ Consumers:
 Change checklist:
 
 - Update compose skills and output validation together.
-- Update `internal/models/outline_normalizer.go` or add normalization when
+- Update `internal/contract/story/outline_normalizer.go` or add normalization when
   introducing fields that can drift.
 - Update write continuity builders, write context builders, and RPG converters for any field
   that affects continuity or simulation.
@@ -434,8 +434,8 @@ Change checklist:
 Producer:
 
 - `cmd/craft.go`
-- `internal/agents/craft/craft_agent.go`
-- `internal/agents/craft/craft_iteration_agent.go`
+- `internal/fiction/agents/craft/craft_agent.go`
+- `internal/fiction/agents/craft/craft_iteration_agent.go`
 - Skills: `craft-characters`, `craft-locations`, `craft-items`, and matching
   review/improve skills
 
@@ -536,7 +536,7 @@ Change checklist:
 Producer:
 
 - `cmd/write.go`
-- `internal/agents/write/write_agent.go`
+- `internal/fiction/agents/write/write_agent.go`
 - Skills: `write-generate`, `write-review`, `write-improve`, `volume-review`,
   `chapter-score`
 - Agent SDK workflow skills: `write-chapter-workflow` for
@@ -722,7 +722,7 @@ Change checklist:
 Producer:
 
 - `cmd/recap_cmd.go`
-- `internal/agents/recap/recap_agent.go`
+- `internal/fiction/agents/recap/recap_agent.go`
 - `cmd/write.go` through `write pipeline`
 - Skill: `recap-extract`
 - Agent SDK workflow skill: `recap-extract-workflow` when `recap gen --agent-sdk`
@@ -787,8 +787,8 @@ Producer:
 
 - `cmd/rpg_dsl.go`
 - `cmd/write.go` when `--emit-rpg-dsl` is enabled
-- `internal/agents/chapter/chapter_to_dsl_agent.go`
-- RPG adapters and converters under `internal/rpg/`
+- `internal/fiction/agents/chapter/chapter_to_dsl_agent.go`
+- RPG adapters and converters under `internal/fiction/rpg/`
 
 Inputs:
 
@@ -810,12 +810,12 @@ Outputs:
 
 Core packages:
 
-- `internal/rpg/dsl/ast.go`
-- `internal/rpg/dsl/parser*.go`
-- `internal/rpg/dsl/validator.go`
-- `internal/rpg/dsl/converter.go`
-- `internal/rpg/dsl/simulator.go`
-- `internal/rpg/dsl/merger.go`
+- `internal/fiction/rpg/dsl/ast.go`
+- `internal/fiction/rpg/dsl/parser*.go`
+- `internal/fiction/rpg/dsl/validator.go`
+- `internal/fiction/rpg/dsl/converter.go`
+- `internal/fiction/rpg/dsl/simulator.go`
+- `internal/fiction/rpg/dsl/merger.go`
 
 Required invariants:
 
@@ -870,7 +870,7 @@ Change checklist:
 Producer:
 
 - `cmd/draft.go`
-- `internal/agents/draft/draft_agent.go`
+- `internal/fiction/agents/draft/draft_agent.go`
 - Skills: `draft-generate`, `draft-review`, `draft-improve`
 
 Outputs:
@@ -884,7 +884,7 @@ Contract status:
 - Do not introduce new persistent dependencies on `drafts/` without documenting
   why final chapters cannot be used.
 - `drafts/` is resolved inside the project root like every other artifact
-  (through `internal/store`), so running the legacy draft command from a
+  (through `internal/platform/store`), so running the legacy draft command from a
   subdirectory writes into the project instead of scattering `drafts/` next to
   the working directory.
 

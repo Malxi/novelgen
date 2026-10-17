@@ -190,7 +190,7 @@ world {
 ## DSL 合并算法
 
 ```go
-// internal/rpg/dsl/merger.go
+// internal/fiction/rpg/dsl/merger.go
 
 package dsl
 

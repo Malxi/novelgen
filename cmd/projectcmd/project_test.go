@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"novelgen/internal/agentruntime"
-	"novelgen/internal/models"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/platform/agentruntime"
+	"novelgen/internal/platform/store"
 )
 
 func TestCloneProjectSkipsLogsByDefaultAndWritesManifest(t *testing.T) {

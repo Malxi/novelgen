@@ -5,7 +5,7 @@ package toolplane
 
 import (
 	"fmt"
-	"novelgen/internal/store"
+	"novelgen/internal/platform/store"
 	"sort"
 	"strings"
 )

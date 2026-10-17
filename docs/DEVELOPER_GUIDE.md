@@ -130,10 +130,10 @@ func RegisterAllCommands(rootCmd *cobra.Command) {
 #### 步骤 1: 创建 Agent
 
 ```go
-// internal/agents/mystage/agent.go
+// internal/fiction/agents/mystage/agent.go
 package mystage
 
-import agentbase "novelgen/internal/agents/base"
+import agentbase "novelgen/internal/fiction/agents/base"
 
 type Agent struct {
     base *agentbase.BaseAgent
@@ -181,7 +181,7 @@ func runMyCommand(cmd *cobra.Command, args []string) error {
 #### 步骤 1: 定义 AST
 
 ```go
-// internal/rpg/dsl/ast.go
+// internal/fiction/rpg/dsl/ast.go
 type MyBlock struct {
     Name     string
     ID       string
@@ -192,7 +192,7 @@ type MyBlock struct {
 #### 步骤 2: 实现 Parser
 
 ```go
-// internal/rpg/dsl/parser.go
+// internal/fiction/rpg/dsl/parser.go
 func (p *Parser) parseMyBlock() (*MyBlock, error) {
     // 解析逻辑
     block := &MyBlock{
@@ -206,7 +206,7 @@ func (p *Parser) parseMyBlock() (*MyBlock, error) {
 #### 步骤 3: 实现 Validator
 
 ```go
-// internal/rpg/dsl/validator.go
+// internal/fiction/rpg/dsl/validator.go
 func (v *Validator) validateMyBlock(block *MyBlock) error {
     if block.ID == "" {
         return fmt.Errorf("my block must have an ID")
@@ -218,7 +218,7 @@ func (v *Validator) validateMyBlock(block *MyBlock) error {
 #### 步骤 4: 实现 Converter
 
 ```go
-// internal/rpg/dsl/converter.go
+// internal/fiction/rpg/dsl/converter.go
 func (c *Converter) convertMyBlock(block *MyBlock) error {
     // 转换为 RPG World 对象
     return nil
@@ -257,7 +257,7 @@ if errors.Is(err, ErrInvalidDSL) {
 ### 4.3 日志记录
 
 ```go
-import "novelgen/internal/logger"
+import "novelgen/internal/platform/logger"
 
 // 使用结构化日志
 logger.Info("Parsing DSL file", "file", filename, "lines", lineCount)
@@ -272,7 +272,7 @@ logger.Error("Failed to parse", "error", err, "line", lineNum)
 ### 5.1 单元测试
 
 ```go
-// internal/rpg/dsl/parser_test.go
+// internal/fiction/rpg/dsl/parser_test.go
 package dsl
 
 import (
@@ -302,7 +302,7 @@ metadata {
 ### 5.2 基准测试
 
 ```go
-// internal/rpg/benchmark/benchmark_test.go
+// internal/fiction/rpg/benchmark/benchmark_test.go
 package benchmark
 
 import (
@@ -327,10 +327,10 @@ func BenchmarkSimulate(b *testing.B) {
 go test ./...
 
 # 运行特定包测试
-go test ./internal/rpg/dsl/...
+go test ./internal/fiction/rpg/dsl/...
 
 # 运行基准测试
-go test -bench=. ./internal/rpg/benchmark/...
+go test -bench=. ./internal/fiction/rpg/benchmark/...
 
 # 生成覆盖率报告
 go test -coverprofile=coverage.out ./...
@@ -450,7 +450,7 @@ func processBatch(chapters []Chapter, batchSize int) error {
 ### 8.1 添加新的 LLM 提供商
 
 ```go
-// internal/llm/provider/my_provider.go
+// internal/platform/llm/provider/my_provider.go
 package provider
 
 type MyProvider struct {
@@ -477,7 +477,7 @@ func init() {
 ### 8.2 添加新的约束类型
 
 ```go
-// internal/rpg/constraint_system.go
+// internal/fiction/rpg/constraint_system.go
 type EmotionalConstraint struct {
     MinIntensity float64
     MaxIntensity float64
@@ -502,7 +502,7 @@ func (cs *ConstraintSystem) validateEmotionalConstraint(chapterID, content strin
 ### 8.3 添加新的模拟事件
 
 ```go
-// internal/rpg/simulation.go
+// internal/fiction/rpg/simulation.go
 func (se *SimulationEngine) simulatePuzzleObjective(step SimulationStep, objective QuestObjective) SimulationStep {
     step.Type = "puzzle"
     step.Description = "解谜完成"

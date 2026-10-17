@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"novelgen/internal/models"
-	"novelgen/internal/store"
+	"novelgen/internal/contract/story"
+	"novelgen/internal/platform/store"
 )
 
 // useProjectRoot points the ambient project root at dir for the rest of the
-// test. Export resolves chapters through internal/project, so a test injects a
+// test. Export resolves chapters through internal/fiction/domain/project, so a test injects a
 // root instead of chdir-ing the process into a fixture.
 func useProjectRoot(t *testing.T, dir string) {
 	t.Helper()

@@ -18,15 +18,15 @@ import (
 // call has already started.
 func TestReferencedSkillsExist(t *testing.T) {
 	root := repoRoot(t)
-	chatDir := filepath.Join(root, "internal", "agents", "base", "skills")
-	sdkDir := filepath.Join(root, "internal", "agentruntime", "skills")
+	chatDir := filepath.Join(root, "internal", "fiction", "agents", "base", "skills")
+	sdkDir := filepath.Join(root, "internal", "platform", "agentruntime", "skills")
 
-	chat := referencedSkillFields(t, filepath.Join(root, "internal", "agents"), "Skills")
-	sdk := referencedSkillFields(t, filepath.Join(root, "internal", "agents"), "SDKSkills")
-	for name := range referencedWorkflowLiterals(t, filepath.Join(root, "internal", "agents")) {
+	chat := referencedSkillFields(t, filepath.Join(root, "internal", "fiction", "agents"), "Skills")
+	sdk := referencedSkillFields(t, filepath.Join(root, "internal", "fiction", "agents"), "SDKSkills")
+	for name := range referencedWorkflowLiterals(t, filepath.Join(root, "internal", "fiction", "agents")) {
 		sdk[name] = true
 	}
-	for name := range referencedWorkflowLiterals(t, filepath.Join(root, "internal", "agentruntime")) {
+	for name := range referencedWorkflowLiterals(t, filepath.Join(root, "internal", "platform", "agentruntime")) {
 		sdk[name] = true
 	}
 

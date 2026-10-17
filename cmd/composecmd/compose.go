@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"novelgen/internal/agents"
+	"novelgen/internal/fiction/agents"
 )
 
 var (
