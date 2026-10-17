@@ -36,6 +36,16 @@ func ApplyToolView(resp *ToolResponse, view string) {
 	}
 }
 
+// ValidateToolView rejects typos instead of silently falling back to brief.
+func ValidateToolView(view string) error {
+	switch NormalizeKey(view) {
+	case "", "brief", "summary", "full", "raw", "index", "list":
+		return nil
+	default:
+		return fmt.Errorf("unsupported --view %q; valid views: index, brief, full", view)
+	}
+}
+
 func FieldsRequestScenes(rawFields string) bool {
 	for _, field := range parseToolFields(rawFields) {
 		if field == "scenes" || strings.HasPrefix(field, "scenes.") {
@@ -321,6 +331,7 @@ func ApplyToolFields(resp *ToolResponse, rawFields string) {
 	projected, ok := projectToolFields(resp.Results, fields)
 	if !ok {
 		resp.Warnings = append(resp.Warnings, fmt.Sprintf("no requested fields found: %s", strings.Join(fields, ",")))
+		return
 	}
 	resp.Results = projected
 	if resp.Meta == nil {

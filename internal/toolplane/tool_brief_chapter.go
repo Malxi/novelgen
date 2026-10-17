@@ -14,16 +14,16 @@ func makeChapterBrief(chapter models.Chapter, indexOnly bool) ChapterBrief {
 	brief := ChapterBrief{
 		ID:           chapter.ID,
 		Title:        chapter.Title,
-		Summary:      clipToolString(chapter.Summary, 500),
-		Characters:   chapter.Characters,
-		Location:     chapter.Location,
-		StateChange:  clipToolString(chapter.StateChange, 180),
 		EventCount:   len(chapter.Events),
 		AdvanceCount: len(chapter.StorylineAdvances),
 	}
 	if indexOnly {
 		return brief
 	}
+	brief.Summary = clipToolString(chapter.Summary, 500)
+	brief.Characters = chapter.Characters
+	brief.Location = chapter.Location
+	brief.StateChange = clipToolString(chapter.StateChange, 180)
 	brief.OpeningBeat = clipToolString(chapter.OpeningBeat, 180)
 	brief.ClosingBeat = clipToolString(chapter.ClosingBeat, 180)
 	brief.Conflict = clipToolString(chapter.Conflict, 220)
@@ -36,6 +36,20 @@ func makeChapterBrief(chapter models.Chapter, indexOnly bool) ChapterBrief {
 		brief.Events = append(brief.Events, makeEventBrief(event))
 	}
 	return brief
+}
+
+// makeChapterNavigationBrief is the middle ground used inside volume/part
+// briefs: enough summary to choose a chapter without pulling every event.
+func makeChapterNavigationBrief(chapter models.Chapter) ChapterBrief {
+	return ChapterBrief{
+		ID:           chapter.ID,
+		Title:        chapter.Title,
+		Summary:      clipToolString(chapter.Summary, 200),
+		Characters:   firstNStrings(chapter.Characters, 6),
+		Location:     clipToolString(chapter.Location, 80),
+		EventCount:   len(chapter.Events),
+		AdvanceCount: len(chapter.StorylineAdvances),
+	}
 }
 
 func makeEventBrief(event models.Event) EventBrief {
@@ -90,10 +104,12 @@ func briefChapterResults(results interface{}, indexOnly bool) interface{} {
 	out := make([]map[string]interface{}, 0, len(values))
 	for _, hit := range values {
 		item := map[string]interface{}{
-			"id":      hit.ID,
-			"title":   hit.Title,
-			"summary": hit.Summary,
-			"path":    hit.Path,
+			"id":    hit.ID,
+			"title": hit.Title,
+			"path":  hit.Path,
+		}
+		if !indexOnly && hit.Summary != "" {
+			item["summary"] = hit.Summary
 		}
 		if len(hit.Reasons) > 0 {
 			item["reasons"] = hit.Reasons
@@ -104,6 +120,13 @@ func briefChapterResults(results interface{}, indexOnly bool) interface{} {
 		}
 		if hit.ContentPath != "" && !indexOnly {
 			item["content_path"] = hit.ContentPath
+		}
+		// --content is an explicit opt-in, so keep the prose in the default
+		// brief view. The SDK runner denies --view full, which used to make the
+		// documented `tool query chapter --content --view brief` return only a
+		// path the agent is not allowed to read.
+		if hit.Content != "" && !indexOnly {
+			item["content"] = hit.Content
 		}
 		out = append(out, item)
 	}

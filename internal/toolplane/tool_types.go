@@ -395,21 +395,27 @@ type worldResourceBrief struct {
 }
 
 type OutlineBrief struct {
-	Parts      []PartBrief            `json:"parts,omitempty"`
-	Navigation map[string]interface{} `json:"navigation,omitempty"`
+	PartCount    int                    `json:"part_count,omitempty"`
+	VolumeCount  int                    `json:"volume_count,omitempty"`
+	ChapterCount int                    `json:"chapter_count,omitempty"`
+	Parts        []PartBrief            `json:"parts,omitempty"`
+	Navigation   map[string]interface{} `json:"navigation,omitempty"`
 }
 
 type PartBrief struct {
-	ID      string        `json:"id,omitempty"`
-	Title   string        `json:"title,omitempty"`
-	Summary string        `json:"summary,omitempty"`
-	Volumes []VolumeBrief `json:"volumes,omitempty"`
+	ID           string        `json:"id,omitempty"`
+	Title        string        `json:"title,omitempty"`
+	Summary      string        `json:"summary,omitempty"`
+	VolumeCount  int           `json:"volume_count,omitempty"`
+	ChapterCount int           `json:"chapter_count,omitempty"`
+	Volumes      []VolumeBrief `json:"volumes,omitempty"`
 }
 
 type VolumeBrief struct {
 	ID             string                       `json:"id,omitempty"`
 	Title          string                       `json:"title,omitempty"`
 	Summary        string                       `json:"summary,omitempty"`
+	ChapterCount   int                          `json:"chapter_count,omitempty"`
 	PayoffContract *models.VolumePayoffContract `json:"payoff_contract,omitempty"`
 	Chapters       []ChapterBrief               `json:"chapters,omitempty"`
 	Navigation     map[string]interface{}       `json:"navigation,omitempty"`

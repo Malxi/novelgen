@@ -47,6 +47,8 @@ func RunToolSetupPatch(cmd *cobra.Command, root *store.Root, patchBytes []byte, 
 	}
 
 	files := map[string]string{}
+	changes := DiffStructFields("setup", before, merged)
+	warnings = appendNoChangeWarning(warnings, changes)
 	if apply {
 		checkpointPath, err := saveToolCheckpointJSON(root, store.ScopeSetup, "story_setup", before)
 		if err != nil {
@@ -73,7 +75,7 @@ func RunToolSetupPatch(cmd *cobra.Command, root *store.Root, patchBytes []byte, 
 		DryRun:      !apply,
 		Target:      "setup",
 		ID:          "story_setup",
-		Changed:     DiffStructFields("setup", before, merged),
+		Changed:     changes,
 		Check:       check,
 		Files:       files,
 		Warnings:    warnings,
@@ -89,6 +91,12 @@ func ApplySetupPatchObject(setup models.StorySetup, patchBytes []byte) (models.S
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(patchBytes, &raw); err != nil {
 		return setup, nil, fmt.Errorf("failed to parse setup patch JSON: %w", err)
+	}
+	if len(raw) == 0 {
+		return setup, nil, fmt.Errorf("setup patch must contain at least one field")
+	}
+	if err := validateSetupPatchKeys(raw); err != nil {
+		return setup, nil, err
 	}
 	scalarPatch := make(map[string]json.RawMessage, len(raw))
 	for key, value := range raw {
@@ -144,35 +152,35 @@ func ApplySetupPatchObject(setup models.StorySetup, patchBytes []byte) (models.S
 		upserted = append(upserted, "rules_patch")
 	}
 	if value, ok := raw["core_cast"]; ok {
-		merged.CoreCast, err = upsertSetupPatchItems(merged.CoreCast, value, setupCoreCastPatchKey, "core_cast")
+		merged.CoreCast, err = upsertSetupPatchItems(merged.CoreCast, value, setupCoreCastPatchKeys, "core_cast")
 		if err != nil {
 			return setup, nil, err
 		}
 		upserted = append(upserted, "core_cast")
 	}
 	if value, ok := raw["storylines"]; ok {
-		merged.Storylines, err = upsertSetupPatchItems(merged.Storylines, value, func(item models.Storyline) string { return item.Name }, "storylines")
+		merged.Storylines, err = upsertSetupPatchItems(merged.Storylines, value, func(item models.Storyline) []string { return setupNamePatchKeys(item.Name) }, "storylines")
 		if err != nil {
 			return setup, nil, err
 		}
 		upserted = append(upserted, "storylines")
 	}
 	if value, ok := raw["premises"]; ok {
-		merged.Premises, err = upsertSetupPatchItems(merged.Premises, value, func(item models.Premise) string { return item.Name }, "premises")
+		merged.Premises, err = upsertSetupPatchItems(merged.Premises, value, func(item models.Premise) []string { return setupNamePatchKeys(item.Name) }, "premises")
 		if err != nil {
 			return setup, nil, err
 		}
 		upserted = append(upserted, "premises")
 	}
 	if value, ok := raw["world_timeline"]; ok {
-		merged.WorldTimeline, err = upsertSetupPatchItems(merged.WorldTimeline, value, setupTimelinePatchKey, "world_timeline")
+		merged.WorldTimeline, err = upsertSetupPatchItems(merged.WorldTimeline, value, setupTimelinePatchKeys, "world_timeline")
 		if err != nil {
 			return setup, nil, err
 		}
 		upserted = append(upserted, "world_timeline")
 	}
 	if value, ok := raw["world_resources"]; ok {
-		merged.WorldResources, err = upsertSetupPatchItems(merged.WorldResources, value, func(item models.WorldResource) string { return item.Name }, "world_resources")
+		merged.WorldResources, err = upsertSetupPatchItems(merged.WorldResources, value, func(item models.WorldResource) []string { return setupNamePatchKeys(item.Name) }, "world_resources")
 		if err != nil {
 			return setup, nil, err
 		}
@@ -200,6 +208,28 @@ func ApplySetupPatchObject(setup models.StorySetup, patchBytes []byte) (models.S
 	return merged, warnings, nil
 }
 
+func validateSetupPatchKeys(raw map[string]json.RawMessage) error {
+	allowed := structJSONFields(models.StorySetup{})
+	allowed["rules_patch"] = true
+	allowed["genres_patch"] = true
+	if err := unknownPatchFieldsError("setup", raw, allowed); err != nil {
+		return err
+	}
+	if value, ok := raw["long_form_plan"]; ok && !isJSONNull(value) {
+		var plan models.LongFormPlan
+		if err := decodeStrictToolPatch(value, &plan); err != nil {
+			return fmt.Errorf("setup patch long_form_plan does not match the schema: %w", err)
+		}
+	}
+	if value, ok := raw["writing_style"]; ok && !isJSONNull(value) {
+		var style models.WritingStyle
+		if err := decodeStrictToolPatch(value, &style); err != nil {
+			return fmt.Errorf("setup patch writing_style does not match the schema: %w", err)
+		}
+	}
+	return nil
+}
+
 func upsertSetupStringList(existing []string, patchRaw json.RawMessage, path string) ([]string, error) {
 	if isJSONNull(patchRaw) {
 		return nil, nil
@@ -215,9 +245,17 @@ func applySetupStringListPatch(existing []string, patchRaw json.RawMessage, path
 	if isJSONNull(patchRaw) {
 		return existing, nil
 	}
-	var items []setupStringListPatchItem
-	if err := json.Unmarshal(patchRaw, &items); err != nil {
+	var rawItems []json.RawMessage
+	if err := json.Unmarshal(patchRaw, &rawItems); err != nil {
 		return nil, fmt.Errorf("setup patch %s must be an array of {index,value}: %w", path, err)
+	}
+	items := make([]setupStringListPatchItem, 0, len(rawItems))
+	for _, rawItem := range rawItems {
+		var item setupStringListPatchItem
+		if err := decodeStrictToolPatch(rawItem, &item); err != nil {
+			return nil, fmt.Errorf("setup patch %s item does not match {index,value}: %w", path, err)
+		}
+		items = append(items, item)
 	}
 	out := append([]string(nil), existing...)
 	for _, item := range items {
@@ -358,7 +396,7 @@ func isJSONNull(raw json.RawMessage) bool {
 	return strings.EqualFold(strings.TrimSpace(string(raw)), "null")
 }
 
-func upsertSetupPatchItems[T any](existing []T, patchRaw json.RawMessage, keyFn func(T) string, path string) ([]T, error) {
+func upsertSetupPatchItems[T any](existing []T, patchRaw json.RawMessage, keyFns func(T) []string, path string) ([]T, error) {
 	var raws []json.RawMessage
 	if err := json.Unmarshal(patchRaw, &raws); err != nil {
 		return nil, fmt.Errorf("setup patch %s must be an array of objects: %w", path, err)
@@ -366,49 +404,85 @@ func upsertSetupPatchItems[T any](existing []T, patchRaw json.RawMessage, keyFn 
 	out := append([]T(nil), existing...)
 	for _, raw := range raws {
 		var item T
-		if err := json.Unmarshal(raw, &item); err != nil {
+		if err := decodeStrictToolPatch(raw, &item); err != nil {
 			return nil, fmt.Errorf("setup patch %s item does not match schema: %w", path, err)
 		}
-		key := normalizeSetupPatchKey(keyFn(item))
-		if key == "" {
+		itemKeys := keyFns(item)
+		if len(itemKeys) == 0 {
+			return nil, fmt.Errorf("setup patch %s item needs a stable key (name, id, year+event, or related_mystery)", path)
+		}
+		match := -1
+		for _, patchKey := range itemKeys {
+			if patchKey == "" {
+				continue
+			}
+			matches := make([]int, 0, 1)
+			for i := range out {
+				if setupPatchItemHasKey(out[i], keyFns, patchKey) {
+					matches = append(matches, i)
+				}
+			}
+			if strings.HasPrefix(patchKey, "year:") && len(matches) > 1 {
+				return nil, fmt.Errorf("setup patch %s year %q matches multiple timeline entries; include event or related_mystery to disambiguate", path, strings.TrimPrefix(patchKey, "year:"))
+			}
+			if len(matches) > 0 {
+				match = matches[0]
+				break
+			}
+		}
+		if match < 0 {
 			out = append(out, item)
 			continue
 		}
-		found := false
-		for i := range out {
-			if normalizeSetupPatchKey(keyFn(out[i])) != key {
-				continue
-			}
-			merged, err := MergeJSONPatchObject(out[i], raw)
-			if err != nil {
-				return nil, fmt.Errorf("setup patch %s item %q does not match schema: %w", path, keyFn(item), err)
-			}
-			out[i] = merged
-			found = true
-			break
+		merged, err := MergeJSONPatchObject(out[match], raw)
+		if err != nil {
+			return nil, fmt.Errorf("setup patch %s item does not match schema: %w", path, err)
 		}
-		if !found {
-			out = append(out, item)
-		}
+		out[match] = merged
 	}
 	return out, nil
 }
 
-func setupCoreCastPatchKey(item models.CoreCastSeed) string {
-	if strings.TrimSpace(item.ID) != "" {
-		return "id:" + item.ID
+func setupPatchItemHasKey[T any](item T, keyFns func(T) []string, want string) bool {
+	for _, key := range keyFns(item) {
+		if key == want {
+			return true
+		}
 	}
-	return "name:" + item.Name
+	return false
 }
 
-func setupTimelinePatchKey(item models.WorldTimelineEntry) string {
+func setupNamePatchKeys(name string) []string {
+	key := normalizeSetupPatchKey(name)
+	if key == "" {
+		return nil
+	}
+	return []string{"name:" + key}
+}
+
+func setupCoreCastPatchKeys(item models.CoreCastSeed) []string {
+	keys := make([]string, 0, 2)
+	if id := strings.TrimSpace(item.ID); id != "" {
+		keys = append(keys, "id:"+normalizeSetupPatchKey(id))
+	}
+	if name := normalizeSetupPatchKey(item.Name); name != "" {
+		keys = append(keys, "name:"+name)
+	}
+	return keys
+}
+
+func setupTimelinePatchKeys(item models.WorldTimelineEntry) []string {
+	keys := make([]string, 0, 3)
 	if strings.TrimSpace(item.RelatedMystery) != "" {
-		return "mystery:" + item.RelatedMystery
+		keys = append(keys, "mystery:"+normalizeSetupPatchKey(item.RelatedMystery))
 	}
 	if strings.TrimSpace(item.Year) != "" || strings.TrimSpace(item.Event) != "" {
-		return "time:" + item.Year + "|" + item.Event
+		keys = append(keys, "time:"+normalizeSetupPatchKey(item.Year)+"|"+normalizeSetupPatchKey(item.Event))
 	}
-	return ""
+	if strings.TrimSpace(item.Year) != "" {
+		keys = append(keys, "year:"+normalizeSetupPatchKey(item.Year))
+	}
+	return keys
 }
 
 func normalizeSetupPatchKey(key string) string {

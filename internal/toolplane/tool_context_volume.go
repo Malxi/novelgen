@@ -28,7 +28,7 @@ func queryOutlineVolumeContext(ctx ToolProjectContext, id, name string) ToolResp
 		}
 	}
 	if targetIndex < 0 {
-		return ToolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline volume not found: id=%q name=%q", id, name)}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline volume not found: id=%q name=%q", id, name)}}
 	}
 
 	target := volumes[targetIndex]

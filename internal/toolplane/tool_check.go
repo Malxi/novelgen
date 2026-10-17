@@ -13,6 +13,7 @@ import (
 	"novelgen/internal/models"
 	"novelgen/internal/project"
 	"novelgen/internal/quality"
+	"novelgen/internal/toolcmd"
 )
 
 type ToolCheckResult struct {
@@ -25,6 +26,7 @@ type ToolCheckResult struct {
 	Score    float64                   `json:"score"`
 	Summary  ToolCheckSummary          `json:"summary"`
 	Issues   []models.ReviewSuggestion `json:"issues,omitempty"`
+	Warnings []string                  `json:"warnings,omitempty"`
 	Meta     map[string]interface{}    `json:"meta,omitempty"`
 }
 
@@ -43,6 +45,7 @@ type toolCheckResultJSON struct {
 	Score       float64                `json:"score"`
 	Summary     ToolCheckSummary       `json:"summary"`
 	Issues      []toolCheckIssue       `json:"issues,omitempty"`
+	Warnings    []string               `json:"warnings,omitempty"`
 	NextActions []ToolNextAction       `json:"next_actions,omitempty"`
 	Meta        map[string]interface{} `json:"meta,omitempty"`
 }
@@ -66,6 +69,7 @@ func (r ToolCheckResult) MarshalJSON() ([]byte, error) {
 		Score:       r.Score,
 		Summary:     r.Summary,
 		Issues:      toolCheckIssuesForJSON(r),
+		Warnings:    r.Warnings,
 		NextActions: toolCheckNextActions(r),
 		Meta:        toolCheckMetaForJSON(r),
 	})
@@ -89,6 +93,21 @@ func toolCheckMetaForJSON(result ToolCheckResult) map[string]interface{} {
 
 func toolCheckNextActions(result ToolCheckResult) []ToolNextAction {
 	if len(result.Issues) == 0 {
+		if toolCheckFilterNoMatches(result) {
+			command := toolcmd.Check(toolcmd.CheckOptions{
+				Kind:        result.Kind,
+				Target:      result.Target,
+				Scope:       result.Scope,
+				ID:          result.ID,
+				TargetWords: ToolCheckResultTargetWords(result),
+			})
+			return []ToolNextAction{{
+				Step:    1,
+				Action:  "fix_check_filter",
+				Command: command,
+				Purpose: fmt.Sprintf("No issues matched the current --category/--min-priority filter, but the unfiltered check reported %d issue(s). Widen the filter or rerun the unfiltered check before returning final JSON.", result.Summary.Total),
+			}}
+		}
 		return []ToolNextAction{{
 			Step:    1,
 			Action:  "return_final_json",
@@ -376,11 +395,16 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 	}
 	root := book.Root
 	if target == "craft" {
-		result, err := runToolCraftSchemaCheckAt(root, ToolCheckFlags.Scope, ToolCheckFlags.ID)
+		scope, err := resolveCraftCheckScope(root, ToolCheckFlags.Scope, ToolCheckFlags.ID)
+		if err != nil {
+			return err
+		}
+		result, err := runToolCraftSchemaCheckAt(root, scope, ToolCheckFlags.ID)
 		if err != nil {
 			return err
 		}
 		addToolCheckMeta(result, "project_root", root.Dir())
+		applyToolCheckFlagWarnings(result, target)
 		if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 			return err
 		}
@@ -392,6 +416,7 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		addToolCheckMeta(result, "project_root", root.Dir())
+		applyToolCheckFlagWarnings(result, target)
 		if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 			return err
 		}
@@ -403,6 +428,7 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		addToolCheckMeta(result, "project_root", root.Dir())
+		applyToolCheckFlagWarnings(result, target)
 		if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 			return err
 		}
@@ -418,6 +444,7 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		addToolCheckMeta(result, "project_root", root.Dir())
+		applyToolCheckFlagWarnings(result, target)
 		if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 			return err
 		}
@@ -436,7 +463,8 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	addToolCheckMeta(result, "project_root", root)
+	addToolCheckMeta(result, "project_root", root.Dir())
+	applyToolCheckFlagWarnings(result, target)
 	if err := ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
 		return err
 	}
@@ -487,8 +515,21 @@ func ApplyToolCheckIssueFilters(result *ToolCheckResult, minPriority string, cat
 		"max_issues":      maxIssues,
 		"original_issues": original,
 		"returned_issues": len(filtered),
+		"no_matches":      original > 0 && len(filtered) == 0,
 	}
 	return nil
+}
+
+func toolCheckFilterNoMatches(result ToolCheckResult) bool {
+	if result.Meta == nil {
+		return false
+	}
+	filter, ok := result.Meta["issue_filter"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	noMatches, _ := filter["no_matches"].(bool)
+	return noMatches
 }
 
 func parseToolCheckCategories(raw string) map[string]bool {
@@ -606,4 +647,30 @@ func addToolCheckMeta(result *ToolCheckResult, key string, value interface{}) {
 		result.Meta = map[string]interface{}{}
 	}
 	result.Meta[key] = value
+}
+
+func applyToolCheckFlagWarnings(result *ToolCheckResult, target string) {
+	if result == nil {
+		return
+	}
+	add := func(message string) {
+		result.Warnings = append(result.Warnings, message)
+	}
+	target = NormalizeKey(target)
+	switch target {
+	case "setup":
+		if scope := normalizeToolScope(ToolCheckFlags.Scope); scope != "all" {
+			add(fmt.Sprintf("--scope %q is not used by setup checks and was ignored", ToolCheckFlags.Scope))
+		}
+		if strings.TrimSpace(ToolCheckFlags.ID) != "" {
+			add("--id is not used by setup checks and was ignored")
+		}
+	case "outline":
+		if normalizeToolScope(ToolCheckFlags.Scope) == "all" && strings.TrimSpace(ToolCheckFlags.ID) != "" {
+			add("--id is ignored when outline scope is all")
+		}
+	}
+	if target != "chapter" && ToolCheckFlags.TargetWords > 0 {
+		add("--target-words is only used by chapter checks and was ignored")
+	}
 }

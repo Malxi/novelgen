@@ -19,13 +19,21 @@ func briefOutlineResults(results interface{}, indexOnly bool) interface{} {
 				"novelgen tool query outline --type events --chapter-id <chapter_id>",
 			},
 		}}
+		out.PartCount = len(values.Parts)
 		for _, part := range values.Parts {
 			out.Parts = append(out.Parts, makePartBrief(part, indexOnly))
+			out.VolumeCount += len(part.Volumes)
+			for _, volume := range part.Volumes {
+				out.ChapterCount += len(volume.Chapters)
+			}
 		}
 		return out
 	case []OutlineHit:
 		out := make([]OutlineHit, 0, len(values))
 		for _, hit := range values {
+			if indexOnly {
+				hit.Summary = ""
+			}
 			hit.Object = briefOutlineObject(hit.Object, indexOnly)
 			out = append(out, hit)
 		}
@@ -46,7 +54,7 @@ func briefOutlineObject(value interface{}, indexOnly bool) interface{} {
 	case models.Part:
 		return makePartBrief(typed, indexOnly)
 	case models.Volume:
-		return makeVolumeBrief(typed, indexOnly)
+		return makeVolumeBrief(typed, indexOnly, true)
 	case models.Chapter:
 		return makeChapterBrief(typed, indexOnly)
 	case *models.Part:
@@ -55,7 +63,7 @@ func briefOutlineObject(value interface{}, indexOnly bool) interface{} {
 		}
 	case *models.Volume:
 		if typed != nil {
-			return makeVolumeBrief(*typed, indexOnly)
+			return makeVolumeBrief(*typed, indexOnly, true)
 		}
 	case *models.Chapter:
 		if typed != nil {
@@ -66,18 +74,26 @@ func briefOutlineObject(value interface{}, indexOnly bool) interface{} {
 }
 
 func makePartBrief(part models.Part, indexOnly bool) PartBrief {
-	brief := PartBrief{ID: part.ID, Title: part.Title, Summary: clipToolString(part.Summary, 500)}
+	brief := PartBrief{
+		ID:          part.ID,
+		Title:       part.Title,
+		VolumeCount: len(part.Volumes),
+	}
+	if !indexOnly {
+		brief.Summary = clipToolString(part.Summary, 500)
+	}
 	for _, volume := range part.Volumes {
-		brief.Volumes = append(brief.Volumes, makeVolumeBrief(volume, indexOnly))
+		brief.ChapterCount += len(volume.Chapters)
+		brief.Volumes = append(brief.Volumes, makeVolumeBrief(volume, indexOnly, !indexOnly))
 	}
 	return brief
 }
 
-func makeVolumeBrief(volume models.Volume, indexOnly bool) VolumeBrief {
+func makeVolumeBrief(volume models.Volume, indexOnly bool, includeChapters bool) VolumeBrief {
 	brief := VolumeBrief{
-		ID:      volume.ID,
-		Title:   volume.Title,
-		Summary: clipToolString(volume.Summary, 700),
+		ID:           volume.ID,
+		Title:        volume.Title,
+		ChapterCount: len(volume.Chapters),
 		Navigation: map[string]interface{}{
 			"chapter_queries": []string{
 				"novelgen tool query outline --type chapter --id <chapter_id>",
@@ -85,11 +101,21 @@ func makeVolumeBrief(volume models.Volume, indexOnly bool) VolumeBrief {
 			},
 		},
 	}
-	if !indexOnly && !volume.PayoffContract.IsZero() {
-		brief.PayoffContract = volume.PayoffContract
+	if !indexOnly {
+		brief.Summary = clipToolString(volume.Summary, 700)
+		if !volume.PayoffContract.IsZero() {
+			brief.PayoffContract = volume.PayoffContract
+		}
+	}
+	if !includeChapters {
+		return brief
 	}
 	for _, chapter := range volume.Chapters {
-		brief.Chapters = append(brief.Chapters, makeChapterBrief(chapter, true))
+		if indexOnly {
+			brief.Chapters = append(brief.Chapters, makeChapterBrief(chapter, true))
+		} else {
+			brief.Chapters = append(brief.Chapters, makeChapterNavigationBrief(chapter))
+		}
 	}
 	return brief
 }

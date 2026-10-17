@@ -166,3 +166,73 @@ func prefixedReasons(prefix string, reasons []string) []string {
 	}
 	return out
 }
+
+// appendToolQueryFlagWarnings keeps filters from being silently ignored. A
+// model that passes --name to `outline --type all` should be told to use
+// refs/events instead of receiving the entire outline as if the filter ran.
+func appendToolQueryFlagWarnings(resp *ToolResponse, section, queryType, id, name, chapterID, volumeID string) {
+	if resp == nil {
+		return
+	}
+	add := func(message string) {
+		resp.Warnings = append(resp.Warnings, message)
+	}
+	contentUsed := section == "logs" || (section == "chapter" && queryType != "events" && queryType != "refs")
+	if ToolQueryFlags.IncludeContent && !contentUsed {
+		add("--content is only used by chapter records and logs and was ignored")
+	}
+	entityUsed := (section == "outline" && (queryType == "refs" || queryType == "events")) ||
+		(section == "chapter" && (queryType == "refs" || queryType == "events" ||
+			(strings.TrimSpace(id) == "" && (queryType == "" || queryType == "all"))))
+	if strings.TrimSpace(ToolQueryFlags.EntityType) != "" && !entityUsed {
+		add("--entity-type is only used by outline/chapter refs or events queries and was ignored")
+	}
+	eventScopeUsed := (section == "outline" || section == "chapter") && queryType == "events"
+	if strings.TrimSpace(chapterID) != "" && !eventScopeUsed {
+		add("--chapter-id is only used by event queries and was ignored")
+	}
+	if strings.TrimSpace(volumeID) != "" && !eventScopeUsed {
+		add("--volume-id is only used by event queries and was ignored")
+	}
+	if strings.TrimSpace(id) != "" {
+		switch section {
+		case "story-setup":
+			add("--id is not used by story-setup queries and was ignored")
+		case "craft":
+			add("--id is not used by craft queries; use --name")
+		case "outline":
+			if queryType == "refs" || queryType == "events" {
+				add("--id is ignored for outline refs/events; use --chapter-id/--volume-id or --entity-type/--name")
+			}
+		case "context":
+			if queryType == "outline-global-repair" {
+				add("--id is not used by outline-global-repair and was ignored")
+			}
+		}
+	}
+	if strings.TrimSpace(name) == "" {
+		return
+	}
+	switch section {
+	case "story-setup":
+		if queryType == "" || queryType == "all" || queryType == "index" || queryType == "long-form-plan" {
+			add("--name is ignored for this story-setup --type; use --type search or an object type (storyline/premise/core-cast/resource/timeline/rules)")
+		}
+	case "outline":
+		if queryType != "refs" && queryType != "events" {
+			add("--name is only used by outline refs/events queries and was ignored")
+		}
+	case "craft":
+		if queryType == "" || queryType == "all" {
+			add("--name is ignored for craft --type all; use --type character|item|location|organization")
+		}
+	case "chapter":
+		if strings.TrimSpace(id) != "" && queryType != "events" {
+			add("--name is ignored when --id selects a chapter record")
+		}
+	case "context":
+		if (queryType == "outline-volume" && strings.TrimSpace(id) != "") || queryType == "recap-repair" || queryType == "chapter-write" {
+			add("--name is ignored for this context type")
+		}
+	}
+}

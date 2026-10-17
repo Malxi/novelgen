@@ -114,9 +114,19 @@ func applyToolLimit(resp *ToolResponse, limit int) {
 		return
 	}
 	var values []json.RawMessage
-	if err := json.Unmarshal(data, &values); err != nil || len(values) <= limit {
+	if err := json.Unmarshal(data, &values); err != nil {
+		resp.Warnings = append(resp.Warnings, "results are object-shaped; --limit only applies to list results, so it was ignored")
 		return
 	}
+	if len(values) <= limit {
+		return
+	}
+	total := len(values)
 	resp.Results = values[:limit]
-	resp.Warnings = append(resp.Warnings, fmt.Sprintf("results truncated to --limit=%d", limit))
+	resp.Count = limit
+	if resp.Meta == nil {
+		resp.Meta = map[string]interface{}{}
+	}
+	resp.Meta["total_count"] = total
+	resp.Warnings = append(resp.Warnings, fmt.Sprintf("results truncated from %d to --limit=%d", total, limit))
 }

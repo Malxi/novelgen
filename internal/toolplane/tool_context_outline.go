@@ -78,7 +78,7 @@ func queryOutlineVolumeRepairContext(ctx ToolProjectContext, volumeID, category 
 		}
 	}
 	if targetIndex < 0 {
-		return ToolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline volume not found: %q", volumeID)}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline volume not found: %q", volumeID)}}
 	}
 	target := volumes[targetIndex]
 	check, err := RunToolOutlineCheck("all", ctx.Setup, ctx.Outline, "volume", target.Volume.ID)
@@ -142,7 +142,7 @@ func queryOutlineChapterRepairContext(ctx ToolProjectContext, chapterID, categor
 		}
 	}
 	if targetIndex < 0 {
-		return ToolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
 	}
 	target := chapters[targetIndex]
 	volumeID := target.Path.VolumeID
@@ -605,15 +605,12 @@ func buildOutlineFocusedCheckQuery(scope, id, category string, maxIssues int) st
 	if scope == "" {
 		scope = "volume"
 	}
-	args := []string{
-		"novelgen tool check all --target outline --scope",
-		scope,
-		"--id",
-		fmt.Sprintf("%q", id),
-	}
-	if strings.TrimSpace(category) != "" {
-		args = append(args, "--category", categoryOrAll(category))
-	}
-	args = append(args, "--min-priority", "low", "--max-issues", fmt.Sprintf("%d", maxIssues))
-	return strings.Join(args, " ")
+	return toolcmd.Check(toolcmd.CheckOptions{
+		Target:      "outline",
+		Scope:       scope,
+		ID:          id,
+		Category:    category,
+		MinPriority: "low",
+		MaxIssues:   maxIssues,
+	})
 }

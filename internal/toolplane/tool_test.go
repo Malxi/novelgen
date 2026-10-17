@@ -306,7 +306,7 @@ func TestToolQueryAgentLiveLogsRedactsPatchBufferStdinCommands(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
 		t.Fatal(err)
 	}
-	rawCommand := `printf '%s' 'SECRET_CHAPTER_BODY 很长的正文' | novelgen tool patch-buffer append --id "P1-V1-C1-draft" --stdin`
+	rawCommand := `printf '%s' 'SECRET_CHAPTER_BODY 很长的正文' | novelgen tool patch-buffer append --id 'P1-V1-C1-draft' --stdin`
 	line, err := json.Marshal(map[string]interface{}{
 		"event":   "tool_hook",
 		"hook":    "PreToolUse",
@@ -317,7 +317,7 @@ func TestToolQueryAgentLiveLogsRedactsPatchBufferStdinCommands(t *testing.T) {
 		t.Fatal(err)
 	}
 	content := string(line) + "\n" +
-		`{"event":"tool_hook","command":"printf '%s' 'SECRET_CHAPTER_BODY truncated' | novelgen tool patch-buffer append --id \"P1-V1-C1-draft\" --stdin` + "\n" +
+		`{"event":"tool_hook","command":"printf '%s' 'SECRET_CHAPTER_BODY truncated' | novelgen tool patch-buffer append --id 'P1-V1-C1-draft' --stdin` + "\n" +
 		`{"event":"final","model":"deepseek-v4-flash"}`
 	if err := os.WriteFile(logPath, []byte(content), 0644); err != nil {
 		t.Fatal(err)
@@ -360,7 +360,7 @@ func TestToolQueryAgentLiveLogsIncludesStructuredSummary(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
 		t.Fatal(err)
 	}
-	rawCommand := `printf '%s' 'SECRET_CHAPTER_BODY long chapter body' | novelgen tool patch-buffer append --id "P1-V1-C1-draft" --stdin`
+	rawCommand := `printf '%s' 'SECRET_CHAPTER_BODY long chapter body' | novelgen tool patch-buffer append --id 'P1-V1-C1-draft' --stdin`
 	records := []map[string]interface{}{
 		{
 			"event":             "start",
@@ -377,7 +377,7 @@ func TestToolQueryAgentLiveLogsIncludesStructuredSummary(t *testing.T) {
 		{
 			"event":   "tool_hook",
 			"hook":    "PreToolUse",
-			"command": `novelgen tool check all --target chapter --scope chapter --id "P1-V1-C1" --max-issues 8`,
+			"command": `novelgen tool check all --target chapter --scope chapter --id 'P1-V1-C1' --max-issues 8`,
 			"allowed": true,
 		},
 		{
@@ -784,11 +784,11 @@ func TestToolContextOutlineVolumeIndexViewKeepsRouteOnly(t *testing.T) {
 			},
 			Events: []toolplane.EventHitBrief{{Event: toolplane.EventBrief{Details: strings.Repeat("large event ", 80)}}},
 			Navigation: map[string]interface{}{
-				"patch_query":            `novelgen tool patch outline --target volume --id "P1-V1"`,
+				"patch_query":            `novelgen tool patch outline --target volume --id 'P1-V1'`,
 				"patch_shape":            map[string]interface{}{"changed_chapters": []map[string]string{{"id": "<chapter_id>"}}},
-				"post_patch_check_query": `novelgen tool check all --target outline --scope volume --id "P1-V1"`,
+				"post_patch_check_query": `novelgen tool check all --target outline --scope volume --id 'P1-V1'`,
 			},
-			NextActions: []toolplane.ToolNextAction{{Step: 1, Action: "query_brief_context", Command: `novelgen tool query context --type outline-volume --id "P1-V1" --view brief`}},
+			NextActions: []toolplane.ToolNextAction{{Step: 1, Action: "query_brief_context", Command: `novelgen tool query context --type outline-volume --id 'P1-V1' --view brief`}},
 			Stats:       map[string]int{"chapter_count": 8, "event_count": 20, "character_count": 21, "item_count": 21, "location_count": 21, "storyline_count": 12},
 		},
 	}
@@ -911,17 +911,17 @@ func TestToolContextOutlineGlobalRepairMysteriesProvidesPatchableThread(t *testi
 		t.Fatalf("mystery threads = %#v", bundle.MysteryThreads)
 	}
 	if len(bundle.IssueContext) == 0 ||
-		bundle.IssueContext[0].PatchQuery != `novelgen tool patch outline --target volume --id "P1-V1"` ||
+		bundle.IssueContext[0].PatchQuery != `novelgen tool patch outline --target volume --id 'P1-V1'` ||
 		bundle.IssueContext[0].PatchShape == nil ||
 		bundle.IssueContext[0].PostPatchCheckQuery == "" {
 		t.Fatalf("mystery issue should be patchable: %#v", bundle.IssueContext)
 	}
 	if bundle.PatchTask == nil ||
-		bundle.PatchTask.PatchQuery != `novelgen tool patch outline --target volume --id "P1-V1"` ||
+		bundle.PatchTask.PatchQuery != `novelgen tool patch outline --target volume --id 'P1-V1'` ||
 		bundle.PatchTask.TaskID != `outline-global-repair:mysteries` ||
 		bundle.PatchTask.PatchShape == nil ||
 		!strings.Contains(bundle.PatchTask.DryRunCommand, `--task 'outline-global-repair:mysteries'`) ||
-		!strings.Contains(bundle.PatchTask.DryRunCommand, `novelgen tool patch outline --target volume --id "P1-V1"`) ||
+		!strings.Contains(bundle.PatchTask.DryRunCommand, `novelgen tool patch outline --target volume --id 'P1-V1'`) ||
 		!strings.Contains(bundle.PatchTask.ApplyCommand, `--apply`) ||
 		bundle.PatchTask.PostPatchCheckQuery == "" ||
 		bundle.PatchTask.StdinRequired ||
@@ -1011,7 +1011,7 @@ func TestToolViewIndexKeepsBriefActionForPatchableOutlineGlobalRepair(t *testing
 			IssueContext: []toolplane.OutlineRepairIssue{{
 				Category:           "faction_tier",
 				TargetID:           "zerg",
-				RepairContextQuery: "novelgen tool query story-setup --type search --name \"zerg\" --view brief",
+				RepairContextQuery: "novelgen tool query story-setup --type search --name 'zerg' --view brief",
 				PatchQuery:         "novelgen tool patch setup",
 				PatchShape:         map[string]interface{}{"premises": []map[string]string{{"category": "zerg"}}},
 			}},
@@ -1265,10 +1265,10 @@ func TestToolQueryContextOutlineRepairChapterBundlesPatchNavigation(t *testing.T
 	if len(result.NextActions) < 4 || result.NextActions[2].Action != "patch_dry_run" {
 		t.Fatalf("missing outline repair next actions: %+v", result.NextActions)
 	}
-	if got := fmt.Sprint(result.Navigation["patch_query"]); got != `novelgen tool patch outline --target volume --id "P1-V1"` {
+	if got := fmt.Sprint(result.Navigation["patch_query"]); got != `novelgen tool patch outline --target volume --id 'P1-V1'` {
 		t.Fatalf("patch_query = %q", got)
 	}
-	if got := fmt.Sprint(result.Workflow["post_patch_check_query"]); got != `novelgen tool check all --target outline --scope volume --id "P1-V1" --min-priority low --max-issues 12` {
+	if got := fmt.Sprint(result.Workflow["post_patch_check_query"]); got != `novelgen tool check all --target outline --scope volume --id 'P1-V1' --min-priority low --max-issues 12` {
 		t.Fatalf("post_patch_check_query = %q", got)
 	}
 	current, ok := result.Current.(toolplane.ChapterBrief)
@@ -1313,7 +1313,7 @@ func TestToolQueryContextOutlineRepairVolumeBundlesPatchNavigation(t *testing.T)
 	if result.Scope != "volume" || result.ID != "P1-V1" {
 		t.Fatalf("unexpected repair identity: %+v", result)
 	}
-	if got := fmt.Sprint(result.Navigation["patch_query"]); got != `novelgen tool patch outline --target volume --id "P1-V1"` {
+	if got := fmt.Sprint(result.Navigation["patch_query"]); got != `novelgen tool patch outline --target volume --id 'P1-V1'` {
 		t.Fatalf("patch_query = %q", got)
 	}
 	if result.Workflow == nil {
@@ -1953,8 +1953,8 @@ func TestToolContextIndexViewKeepsExecutionRouteOnly(t *testing.T) {
 			ExistingChapterExcerpt: map[string]string{"opening": strings.Repeat("large prose ", 80)},
 			EntityIndex:            toolplane.OutlineVolumeEntities{Characters: []string{"Mira"}, Items: []string{"Signal Key"}, Locations: []string{"Camp"}},
 			Events:                 []toolplane.EventHitBrief{{Event: toolplane.EventBrief{Details: strings.Repeat("large event ", 80)}}},
-			Navigation:             map[string]interface{}{"patch_query": `novelgen tool patch chapter --id "P1-V1-C1"`},
-			Workflow:               map[string]interface{}{"post_repair_check_query": `novelgen tool check all --target chapter --scope chapter --id "P1-V1-C1"`},
+			Navigation:             map[string]interface{}{"patch_query": `novelgen tool patch chapter --id 'P1-V1-C1'`},
+			Workflow:               map[string]interface{}{"post_repair_check_query": `novelgen tool check all --target chapter --scope chapter --id 'P1-V1-C1'`},
 			NextActions:            []toolplane.ToolNextAction{{Step: 1, Action: "use_current_repair_bundle"}},
 			Stats:                  map[string]int{"check_issues": 2},
 		},
@@ -2002,7 +2002,7 @@ func TestToolContextIndexCleanChapterRepairStopsWithoutBrief(t *testing.T) {
 				ID:      "P1-V1-C1",
 				Summary: toolplane.ToolCheckSummary{Total: 0},
 			},
-			Navigation: map[string]interface{}{"patch_query": `novelgen tool patch chapter --id "P1-V1-C1"`},
+			Navigation: map[string]interface{}{"patch_query": `novelgen tool patch chapter --id 'P1-V1-C1'`},
 			NextActions: []toolplane.ToolNextAction{{
 				Step:   1,
 				Action: "use_current_repair_bundle",
@@ -2053,7 +2053,7 @@ func TestToolContextIndexStaleChapterRepairRefreshesBeforeBrief(t *testing.T) {
 					Priority: models.PriorityHigh,
 				}},
 			},
-			Navigation: map[string]interface{}{"patch_query": `novelgen tool patch chapter --id "P1-V1-C1"`},
+			Navigation: map[string]interface{}{"patch_query": `novelgen tool patch chapter --id 'P1-V1-C1'`},
 			NextActions: []toolplane.ToolNextAction{{
 				Step:   1,
 				Action: "use_current_repair_bundle",
@@ -2099,7 +2099,7 @@ func TestToolContextIndexCleanOutlineRepairStopsWithoutBrief(t *testing.T) {
 				ID:      "P1-V1-C1",
 				Summary: toolplane.ToolCheckSummary{Total: 0},
 			},
-			Navigation: map[string]interface{}{"patch_query": `novelgen tool patch outline --target volume --id "P1-V1"`},
+			Navigation: map[string]interface{}{"patch_query": `novelgen tool patch outline --target volume --id 'P1-V1'`},
 			NextActions: []toolplane.ToolNextAction{{
 				Step:   1,
 				Action: "use_current_repair_bundle",
@@ -2143,7 +2143,7 @@ func TestToolContextIndexCleanRecapRepairStopsWithoutBrief(t *testing.T) {
 				ID:      "P1-V1-C1",
 				Summary: toolplane.ToolCheckSummary{Total: 0},
 			},
-			Navigation: map[string]interface{}{"patch_query": `novelgen tool patch recap --id "P1-V1-C1"`},
+			Navigation: map[string]interface{}{"patch_query": `novelgen tool patch recap --id 'P1-V1-C1'`},
 			NextActions: []toolplane.ToolNextAction{{
 				Step:   1,
 				Action: "use_current_context",
@@ -2253,23 +2253,23 @@ func TestToolContextOutlineRepairIndexViewKeepsPatchRouteOnly(t *testing.T) {
 				Issue:               strings.Repeat("large issue detail ", 80),
 				Suggestion:          strings.Repeat("large suggestion ", 80),
 				Priority:            models.PriorityHigh,
-				FocusedCheckQuery:   `novelgen tool check all --target outline --scope chapter --id "P1-V1-C2"`,
-				RepairContextQuery:  `novelgen tool query context --type outline-repair --id "P1-V1-C2" --name "logic" --view brief`,
-				PatchQuery:          `novelgen tool patch outline --target volume --id "P1-V1"`,
+				FocusedCheckQuery:   `novelgen tool check all --target outline --scope chapter --id 'P1-V1-C2'`,
+				RepairContextQuery:  `novelgen tool query context --type outline-repair --id 'P1-V1-C2' --name 'logic' --view brief`,
+				PatchQuery:          `novelgen tool patch outline --target volume --id 'P1-V1'`,
 				PatchShape:          map[string]interface{}{"changed_chapters": []map[string]string{{"id": "P1-V1-C2"}}},
-				PostPatchCheckQuery: `novelgen tool check all --target outline --scope volume --id "P1-V1"`,
+				PostPatchCheckQuery: `novelgen tool check all --target outline --scope volume --id 'P1-V1'`,
 				Evidence:            map[string]interface{}{"summary": strings.Repeat("large evidence ", 80)},
 			}},
 			Current: toolplane.ChapterBrief{ID: "P1-V1-C2", Summary: strings.Repeat("large current ", 80)},
 			Events:  []toolplane.EventHitBrief{{Event: toolplane.EventBrief{Details: strings.Repeat("large event ", 80)}}},
 			Navigation: map[string]interface{}{
-				"patch_query": `novelgen tool patch outline --target volume --id "P1-V1"`,
+				"patch_query": `novelgen tool patch outline --target volume --id 'P1-V1'`,
 				"patch_shape": map[string]interface{}{"changed_chapters": []map[string]string{{"id": "P1-V1-C2"}}},
 			},
 			Workflow: map[string]interface{}{
-				"patch_query":            `novelgen tool patch outline --target volume --id "P1-V1"`,
+				"patch_query":            `novelgen tool patch outline --target volume --id 'P1-V1'`,
 				"patch_shape":            map[string]interface{}{"changed_chapters": []map[string]string{{"id": "P1-V1-C2"}}},
-				"post_patch_check_query": `novelgen tool check all --target outline --scope volume --id "P1-V1"`,
+				"post_patch_check_query": `novelgen tool check all --target outline --scope volume --id 'P1-V1'`,
 			},
 			NextActions: []toolplane.ToolNextAction{{Step: 1, Action: "use_current_repair_bundle"}},
 			Stats:       map[string]int{"returned_issues": 1},
@@ -2315,15 +2315,15 @@ func TestToolContextRecapRepairIndexViewKeepsPatchRouteOnly(t *testing.T) {
 			Outline:        toolplane.ChapterBrief{ID: "P1-V1-C2", Summary: strings.Repeat("large outline ", 80)},
 			ChapterExcerpt: map[string]string{"opening": strings.Repeat("large prose ", 80)},
 			Navigation: map[string]interface{}{
-				"patch_query":               `novelgen tool patch recap --id "P1-V1-C2"`,
+				"patch_query":               `novelgen tool patch recap --id 'P1-V1-C2'`,
 				"patch_shape":               map[string]interface{}{"location": "<scene anchor>", "last_line": "<final visible line>"},
-				"focused_check_query":       `novelgen tool check quality --target recap --scope chapter --id "P1-V1-C2"`,
+				"focused_check_query":       `novelgen tool check quality --target recap --scope chapter --id 'P1-V1-C2'`,
 				"external_regenerate_query": `novelgen recap gen --agent-sdk --chapter "P1-V1-C2" --source chapters`,
 			},
 			Workflow: map[string]interface{}{
-				"patch_query":           `novelgen tool patch recap --id "P1-V1-C2"`,
+				"patch_query":           `novelgen tool patch recap --id 'P1-V1-C2'`,
 				"patch_shape":           map[string]interface{}{"location": "<scene anchor>", "last_line": "<final visible line>"},
-				"post_save_check_query": `novelgen tool check quality --target recap --scope chapter --id "P1-V1-C2"`,
+				"post_save_check_query": `novelgen tool check quality --target recap --scope chapter --id 'P1-V1-C2'`,
 			},
 			NextActions: []toolplane.ToolNextAction{{Step: 1, Action: "use_current_context"}},
 			Stats:       map[string]int{"returned_issues": 1},
@@ -2363,10 +2363,10 @@ func TestToolContextCraftElementIndexViewKeepsPatchRouteOnly(t *testing.T) {
 			RelevantChapters: []map[string]string{{"id": "P1-V1-C2", "summary": strings.Repeat("large chapter ", 80)}},
 			Events:           []toolplane.EventHitBrief{{Event: toolplane.EventBrief{Details: strings.Repeat("large event ", 80)}}},
 			Navigation: map[string]interface{}{
-				"schema_check_query":     `novelgen tool check schema --target craft --scope character --id "Mira"`,
-				"patch_query":            `novelgen tool patch craft --target character --id "Mira"`,
+				"schema_check_query":     `novelgen tool check schema --target craft --scope character --id 'Mira'`,
+				"patch_query":            `novelgen tool patch craft --target character --id 'Mira'`,
 				"patch_shape":            map[string]interface{}{"<field_to_change>": "<new value>"},
-				"post_patch_check_query": `novelgen tool check schema --target craft --scope character --id "Mira"`,
+				"post_patch_check_query": `novelgen tool check schema --target craft --scope character --id 'Mira'`,
 			},
 			NextActions: []toolplane.ToolNextAction{{Step: 1, Action: "use_current_context"}},
 			Stats:       map[string]int{"existing_craft": 1, "outline_refs": 8, "events": 4},
@@ -2412,7 +2412,7 @@ func TestToolCraftIndexViewOmitsFullObjects(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(data)
-	for _, want := range []string{`"key":"Lin"`, `"name":"Lin"`, `"role_in_story":"protagonist`, `tool query craft --type character --name \"Lin\" --view brief`} {
+	for _, want := range []string{`"key":"Lin"`, `"name":"Lin"`, `"role_in_story":"protagonist`, `tool query craft --type character --name 'Lin' --view brief`} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("craft index missing %q: %s", want, text)
 		}

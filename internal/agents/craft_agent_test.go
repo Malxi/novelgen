@@ -29,7 +29,7 @@ func TestNormalizeGeneratedOrganizationsKeepsRequestedNames(t *testing.T) {
 }
 
 func TestCraftAgentSDKParamsAllowCharacterPatchOnly(t *testing.T) {
-	required := []string{`novelgen tool query context --type craft-character --name "林野" --view brief`}
+	required := []string{`novelgen tool query context --type craft-character --name '林野' --view brief`}
 	params := craftAgentSDKParams("generate", "craft-character-workflow", "character", 16, false, []string{"林野"}, required)
 	if !params.RequireSDK {
 		t.Fatalf("RequireSDK = false")
@@ -38,9 +38,9 @@ func TestCraftAgentSDKParamsAllowCharacterPatchOnly(t *testing.T) {
 		t.Fatalf("SDKSkills = %#v", params.SDKSkills)
 	}
 	if len(params.ToolAllowlist) != 3 ||
-		params.ToolAllowlist[0] != `novelgen tool query context --type craft-character --name "林野" --view brief` ||
-		params.ToolAllowlist[1] != `novelgen tool check schema --target craft --scope character --id "林野"` ||
-		!strings.HasPrefix(params.ToolAllowlist[2], "novelgen tool patch craft --target character --id ") {
+		params.ToolAllowlist[0] != `novelgen tool query context --type craft-character --name '林野' --view brief` ||
+		params.ToolAllowlist[1] != `novelgen tool check schema --target craft --scope character --id '林野'` ||
+		!strings.HasPrefix(params.ToolAllowlist[2], "novelgen tool patch craft --target character --id '林野'") {
 		t.Fatalf("ToolAllowlist = %#v", params.ToolAllowlist)
 	}
 	for _, item := range params.ToolAllowlist {
@@ -57,12 +57,12 @@ func TestCraftAgentSDKParamsAllowCharacterPatchOnly(t *testing.T) {
 }
 
 func TestCraftAgentSDKParamsCanAllowCharacterPatchApplyExplicitly(t *testing.T) {
-	required := []string{`novelgen tool query context --type craft-character --name "林野" --view brief`}
+	required := []string{`novelgen tool query context --type craft-character --name '林野' --view brief`}
 	params := craftAgentSDKParams("generate", "craft-character-workflow", "character", 16, true, []string{"林野"}, required)
 	if len(params.ToolAllowlist) != 3 ||
-		params.ToolAllowlist[0] != `novelgen tool query context --type craft-character --name "林野" --view brief` ||
-		params.ToolAllowlist[1] != `novelgen tool check schema --target craft --scope character --id "林野"` ||
-		!strings.HasPrefix(params.ToolAllowlist[2], "novelgen tool patch craft --target character --id ") ||
+		params.ToolAllowlist[0] != `novelgen tool query context --type craft-character --name '林野' --view brief` ||
+		params.ToolAllowlist[1] != `novelgen tool check schema --target craft --scope character --id '林野'` ||
+		!strings.HasPrefix(params.ToolAllowlist[2], "novelgen tool patch craft --target character --id '林野'") ||
 		!strings.Contains(params.ToolAllowlist[2], " --apply") {
 		t.Fatalf("ToolAllowlist = %#v", params.ToolAllowlist)
 	}
@@ -73,40 +73,40 @@ func TestCraftAgentSDKParamsCanAllowCharacterPatchApplyExplicitly(t *testing.T) 
 }
 
 func TestCraftAgentSDKParamsCanAllowElementPatchTargets(t *testing.T) {
-	itemParams := craftAgentSDKParams("generate", "craft-element-workflow", "item", 16, false, []string{"Star Core"}, []string{`novelgen tool query context --type craft-item --name "Star Core" --view brief`})
+	itemParams := craftAgentSDKParams("generate", "craft-element-workflow", "item", 16, false, []string{"Star Core"}, []string{`novelgen tool query context --type craft-item --name 'Star Core' --view brief`})
 	if len(itemParams.ToolAllowlist) != 3 ||
-		itemParams.ToolAllowlist[2] != `novelgen tool patch craft --target item --id "Star Core"` {
+		itemParams.ToolAllowlist[2] != `novelgen tool patch craft --target item --id 'Star Core'` {
 		t.Fatalf("item ToolAllowlist = %#v", itemParams.ToolAllowlist)
 	}
 
-	locationParams := craftAgentSDKParams("generate", "craft-element-workflow", "location", 16, true, []string{"Mine"}, []string{`novelgen tool query context --type craft-location --name "Mine" --view brief`})
+	locationParams := craftAgentSDKParams("generate", "craft-element-workflow", "location", 16, true, []string{"Mine"}, []string{`novelgen tool query context --type craft-location --name 'Mine' --view brief`})
 	if len(locationParams.ToolAllowlist) != 3 ||
-		locationParams.ToolAllowlist[1] != `novelgen tool check schema --target craft --scope location --id "Mine"` ||
-		locationParams.ToolAllowlist[2] != `novelgen tool patch craft --target location --id "Mine" --apply` {
+		locationParams.ToolAllowlist[1] != `novelgen tool check schema --target craft --scope location --id 'Mine'` ||
+		locationParams.ToolAllowlist[2] != `novelgen tool patch craft --target location --id 'Mine' --apply` {
 		t.Fatalf("location ToolAllowlist = %#v", locationParams.ToolAllowlist)
 	}
 	if locationParams.ToolEvidence.MinPatchApplyCalls != 1 || !locationParams.ToolEvidence.RequirePatchApplyFollowupCheck {
 		t.Fatalf("location ToolEvidence = %#v", locationParams.ToolEvidence)
 	}
 
-	orgParams := craftAgentSDKParams("generate", "craft-element-workflow", "organization", 16, false, []string{"Iron Hive"}, []string{`novelgen tool query context --type craft-organization --name "Iron Hive" --view brief`})
+	orgParams := craftAgentSDKParams("generate", "craft-element-workflow", "organization", 16, false, []string{"Iron Hive"}, []string{`novelgen tool query context --type craft-organization --name 'Iron Hive' --view brief`})
 	if len(orgParams.SDKSkills) != 2 || orgParams.SDKSkills[1] != "craft-element-workflow" ||
-		orgParams.ToolAllowlist[2] != `novelgen tool patch craft --target organization --id "Iron Hive"` {
+		orgParams.ToolAllowlist[2] != `novelgen tool patch craft --target organization --id 'Iron Hive'` {
 		t.Fatalf("organization params = %+v", orgParams)
 	}
 }
 
 func TestCraftAgentSDKToolAllowlistDeduplicatesQueries(t *testing.T) {
 	got := craftAgentSDKToolAllowlist("character", []string{"林野", "林野", ""}, []string{
-		`novelgen tool query context --type craft-character --name "林野" --view brief`,
-		`novelgen tool query context --type craft-character --name "林野" --view brief`,
+		`novelgen tool query context --type craft-character --name '林野' --view brief`,
+		`novelgen tool query context --type craft-character --name '林野' --view brief`,
 	}, false)
 	if len(got) != 3 {
 		t.Fatalf("allowlist = %#v, want 3 entries", got)
 	}
-	if got[0] != `novelgen tool query context --type craft-character --name "林野" --view brief` ||
-		got[1] != `novelgen tool check schema --target craft --scope character --id "林野"` ||
-		!strings.HasPrefix(got[2], "novelgen tool patch craft --target character --id ") {
+	if got[0] != `novelgen tool query context --type craft-character --name '林野' --view brief` ||
+		got[1] != `novelgen tool check schema --target craft --scope character --id '林野'` ||
+		!strings.HasPrefix(got[2], "novelgen tool patch craft --target character --id '林野'") {
 		t.Fatalf("allowlist = %#v", got)
 	}
 }
@@ -118,7 +118,7 @@ func TestBuildCraftAgentSDKCharactersPromptInputUsesRequiredQueries(t *testing.T
 	}
 	joined := strings.Join(got.RequiredQueries, "\n")
 	for _, want := range []string{
-		`novelgen tool query context --type craft-character --name "林野" --view brief`,
+		`novelgen tool query context --type craft-character --name '林野' --view brief`,
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("required query %q missing from %#v", want, got.RequiredQueries)
@@ -165,7 +165,7 @@ func TestBuildCraftAgentSDKElementsPromptInputUsesItemQueries(t *testing.T) {
 	}
 	joined := strings.Join(got.RequiredQueries, "\n")
 	for _, want := range []string{
-		`novelgen tool query context --type craft-item --name "Star Core" --view brief`,
+		`novelgen tool query context --type craft-item --name 'Star Core' --view brief`,
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("required query %q missing from %#v", want, got.RequiredQueries)
@@ -185,7 +185,7 @@ func TestBuildCraftAgentSDKElementsPromptInputUsesOrganizationQueries(t *testing
 	got := buildCraftAgentSDKElementsPromptInput("organization", "organizations", []string{"Iron Hive"}, "", false)
 	joined := strings.Join(got.RequiredQueries, "\n")
 	for _, want := range []string{
-		`novelgen tool query context --type craft-organization --name "Iron Hive" --view brief`,
+		`novelgen tool query context --type craft-organization --name 'Iron Hive' --view brief`,
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("required query %q missing from %#v", want, got.RequiredQueries)

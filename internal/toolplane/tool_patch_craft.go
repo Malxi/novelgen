@@ -38,6 +38,7 @@ func RunToolCraftPatch(cmd *cobra.Command, root *store.Root, target, id string, 
 	if err != nil {
 		return err
 	}
+	warnings = appendNoChangeWarning(warnings, changes)
 
 	gate := quality.QualityGateResult{}
 	validateCraftSchemaObject(&gate, target, key, values[key])
@@ -50,6 +51,9 @@ func RunToolCraftPatch(cmd *cobra.Command, root *store.Root, target, id string, 
 	addToolCheckMeta(check, "project_root", root.Dir())
 
 	files := map[string]string{}
+	if apply && check.Blocking {
+		return fmt.Errorf("patch rejected: craft schema check found blocking issues (critical=%d high=%d total=%d)", check.Summary.Critical, check.Summary.High, check.Summary.Total)
+	}
 	if apply {
 		base := strings.TrimSuffix(filename, filepath.Ext(filename))
 		checkpointPath, err := saveToolCheckpointJSON(root, store.ScopeCraft, base, beforeValues)
@@ -65,7 +69,7 @@ func RunToolCraftPatch(cmd *cobra.Command, root *store.Root, target, id string, 
 	}
 
 	result := ToolPatchResult{
-		OK:          true,
+		OK:          !check.Blocking,
 		Applied:     apply,
 		DryRun:      !apply,
 		Target:      "craft." + target,

@@ -31,7 +31,7 @@ func queryChapterWriteContext(ctx ToolProjectContext, chapterID string) ToolResp
 		}
 	}
 	if targetIndex < 0 {
-		return ToolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
 	}
 
 	target := chapters[targetIndex]
@@ -288,7 +288,7 @@ func queryChapterRepairContext(ctx ToolProjectContext, chapterID, issueCategory 
 		}
 	}
 	if targetIndex < 0 {
-		return ToolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
 	}
 
 	target := chapters[targetIndex]

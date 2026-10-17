@@ -64,7 +64,7 @@ func TestComposeAdjacentVolumeQueryAllowlistExcludesTarget(t *testing.T) {
 	outline := adjacentTestOutline()
 	got := composeAdjacentVolumeQueryAllowlist(outline, "P1-V2")
 	joined := strings.Join(got, "\n")
-	if strings.Contains(joined, `--id "P1-V2"`) {
+	if strings.Contains(joined, `--id 'P1-V2'`) {
 		t.Fatalf("target volume must not be included in adjacent allowlist: %s", joined)
 	}
 }

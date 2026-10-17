@@ -19,8 +19,13 @@ func RunToolCraftSchemaCheck(rootDir, scope, id string) (*ToolCheckResult, error
 	return runToolCraftSchemaCheckAt(store.At(rootDir), scope, id)
 }
 
+var allCraftCheckScopes = []string{"character", "item", "location", "organization"}
+
 func runToolCraftSchemaCheckAt(root *store.Root, scope, id string) (*ToolCheckResult, error) {
 	scope = normalizeCraftPatchTarget(scope)
+	if scope == "all" {
+		return runToolCraftSchemaCheckAllAt(root)
+	}
 	if scope == "" {
 		return nil, fmt.Errorf("--scope is required for craft schema check (character/item/location/organization)")
 	}
@@ -67,6 +72,56 @@ func runToolCraftSchemaCheckAt(root *store.Root, scope, id string) (*ToolCheckRe
 	}
 	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
 	return MakeToolCheckResult("schema", "craft", scope, "", gate), nil
+}
+
+func runToolCraftSchemaCheckAllAt(root *store.Root) (*ToolCheckResult, error) {
+	gate := quality.QualityGateResult{}
+	for _, scope := range allCraftCheckScopes {
+		result, err := runToolCraftSchemaCheckAt(root, scope, "")
+		if err != nil {
+			return nil, err
+		}
+		gate.Suggestions = append(gate.Suggestions, result.Issues...)
+	}
+	gate.Dedup()
+	gate.Blocking = quality.HasBlockingSuggestions(gate.Suggestions)
+	return MakeToolCheckResult("schema", "craft", "all", "", gate), nil
+}
+
+// resolveCraftCheckScope keeps `tool check schema --target craft` usable without
+// forcing the agent to guess --scope. An exact element id/name is resolved
+// across all four craft kinds; a missing id checks every collection.
+func resolveCraftCheckScope(root *store.Root, scope, id string) (string, error) {
+	scope = normalizeCraftPatchTarget(scope)
+	if scope != "" && scope != "all" {
+		return scope, nil
+	}
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return "all", nil
+	}
+	var matches []string
+	for _, kind := range allCraftCheckScopes {
+		filename, err := craftPatchFilename(kind)
+		if err != nil {
+			return "", err
+		}
+		values, err := loadRawCraftMap(root, filename)
+		if err != nil {
+			return "", err
+		}
+		if _, ok := resolveCraftPatchKey(values, id); ok {
+			matches = append(matches, kind)
+		}
+	}
+	switch len(matches) {
+	case 1:
+		return matches[0], nil
+	case 0:
+		return "", fmt.Errorf("craft element %q not found in any craft kind; valid scopes: %s", id, strings.Join(allCraftCheckScopes, ", "))
+	default:
+		return "", fmt.Errorf("craft element %q exists in multiple kinds (%s); pass --scope explicitly", id, strings.Join(matches, ", "))
+	}
 }
 
 func validateCraftSchemaObject(gate *quality.QualityGateResult, scope, key string, value map[string]interface{}) {

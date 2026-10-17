@@ -3,7 +3,6 @@
 package toolplane
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -30,7 +29,7 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 		return fmt.Errorf("chapter %q not found in outline", id)
 	}
 	var patch toolChapterPatch
-	if err := json.Unmarshal(patchBytes, &patch); err != nil {
+	if err := decodeStrictToolPatch(patchBytes, &patch); err != nil {
 		return fmt.Errorf("failed to parse chapter patch: %w", err)
 	}
 	if strings.TrimSpace(patch.ID) != "" && strings.TrimSpace(patch.ID) != id {
@@ -45,7 +44,7 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 	}
 	targetWords := ToolPatchFlags.TargetWords
 	if targetWords <= 0 {
-		targetWords = toolChapterTargetWords()
+		targetWords = toolChapterTargetWords(root)
 	}
 	beforeContent, beforePath, err := root.LoadChapterContent(id)
 	if err != nil {
@@ -62,6 +61,9 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 	if beforePath == "" {
 		changes[0].Action = "create"
 	}
+	if beforePath != "" && content == beforeContent {
+		warnings = append(warnings, "chapter content is unchanged")
+	}
 
 	qualityCheck := MakeToolCheckResult("quality", "chapter", "chapter", id, RunToolChapterQualityGate(chapter, content, targetWords))
 	addToolCheckMeta(qualityCheck, "project_root", root.Dir())
@@ -74,6 +76,8 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 	files := map[string]string{}
 	check := qualityCheck
 	refreshedDerived := false
+	nextActions := BuildChapterPatchNextActions(id, apply, false, check)
+	postApplyError := ""
 	if apply {
 		checkpointPath, err := saveToolChapterPatchCheckpoint(root, id, beforePath, beforeContent)
 		if err != nil {
@@ -95,23 +99,50 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 				refresh, err = refreshToolChapterDSLAt(cmd.Context(), root, id, 0)
 			}()
 			if err != nil {
-				return fmt.Errorf("chapter patch applied but derived RPG DSL refresh failed: %w", err)
+				postApplyError = fmt.Sprintf("derived RPG DSL refresh failed: %v", err)
+				warnings = append(warnings, "chapter patch applied but "+postApplyError)
+				nextActions = []ToolNextAction{
+					{
+						Step:    1,
+						Action:  "retry_refresh_derived",
+						Command: toolcmd.ChapterDSLRefresh(id),
+						Purpose: "The chapter was written, but derived RPG DSL refresh failed; retry the refresh before simulation checks.",
+					},
+					{
+						Step:    2,
+						Action:  "post_refresh_check",
+						Command: toolcmd.ChapterCheck(id, toolcmd.ChapterCheckOptions{MinPriority: "low", MaxIssues: 12}),
+						Purpose: "Run the all check after a successful refresh.",
+					},
+				}
+				check = nil
+			} else {
+				refreshedDerived = true
+				if refresh.DSLPath != "" {
+					files["chapter_dsl"] = refresh.DSLPath
+				}
+				if refresh.CacheDir != "" {
+					files["chapter_dsl_cache"] = refresh.CacheDir
+				}
+				postCheck, postErr := runToolChapterCheckAt(root, "all", "chapter", id, targetWords)
+				if postErr != nil {
+					postApplyError = fmt.Sprintf("post-refresh check failed: %v", postErr)
+					warnings = append(warnings, "chapter patch applied and DSL refreshed but "+postApplyError)
+					check = nil
+					nextActions = []ToolNextAction{{
+						Step:    1,
+						Action:  "post_refresh_check",
+						Command: toolcmd.ChapterCheck(id, toolcmd.ChapterCheckOptions{MinPriority: "low", MaxIssues: 12}),
+						Purpose: "The chapter and DSL were written; rerun the focused all check because the automatic post-refresh check failed to run.",
+					}}
+				} else {
+					addToolCheckMeta(postCheck, "project_root", root.Dir())
+					addToolCheckMeta(postCheck, "mode", "post_apply_refresh_all")
+					addToolCheckMeta(postCheck, "derived_dsl_refreshed", true)
+					check = postCheck
+					nextActions = BuildChapterPatchNextActions(id, apply, refreshedDerived, check)
+				}
 			}
-			refreshedDerived = true
-			if refresh.DSLPath != "" {
-				files["chapter_dsl"] = refresh.DSLPath
-			}
-			if refresh.CacheDir != "" {
-				files["chapter_dsl_cache"] = refresh.CacheDir
-			}
-			postCheck, err := runToolChapterCheckAt(root, "all", "chapter", id, targetWords)
-			if err != nil {
-				return err
-			}
-			addToolCheckMeta(postCheck, "project_root", root.Dir())
-			addToolCheckMeta(postCheck, "mode", "post_apply_refresh_all")
-			addToolCheckMeta(postCheck, "derived_dsl_refreshed", true)
-			check = postCheck
 		} else {
 			postCheck, err := runToolChapterCheckAt(root, "quality", "chapter", id, targetWords)
 			if err != nil {
@@ -121,11 +152,16 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 			addToolCheckMeta(postCheck, "mode", "post_apply_quality")
 			addToolCheckMeta(postCheck, "simulation_requires_derived_dsl_refresh", true)
 			check = postCheck
+			nextActions = BuildChapterPatchNextActions(id, apply, refreshedDerived, check)
 		}
 	}
 
+	ok := postApplyError == ""
+	if ok && check != nil {
+		ok = !check.Blocking
+	}
 	result := ToolPatchResult{
-		OK:          !check.Blocking,
+		OK:          ok,
 		Applied:     apply,
 		DryRun:      !apply,
 		Target:      "chapter",
@@ -134,14 +170,17 @@ func runToolChapterPatch(cmd *cobra.Command, root *store.Root, id string, patchB
 		Check:       check,
 		Files:       files,
 		Warnings:    warnings,
-		NextActions: BuildChapterPatchNextActions(id, apply, refreshedDerived, check),
+		NextActions: nextActions,
 		Meta: map[string]interface{}{
-			"project_root":           root,
+			"project_root":           root.Dir(),
 			"previous_content_path":  beforePath,
 			"previous_content_bytes": len(beforeContent),
 			"content_bytes":          len(content),
 			"refresh_derived":        refreshedDerived,
 		},
+	}
+	if postApplyError != "" {
+		result.Meta["post_apply_error"] = postApplyError
 	}
 	return writeJSON(cmd, result)
 }

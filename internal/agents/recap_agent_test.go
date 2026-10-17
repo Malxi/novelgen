@@ -179,9 +179,9 @@ func TestRecapAgentExtractWithAgentSDKApplyAllowsValidatedPatchTools(t *testing.
 		t.Fatalf("PermissionMode = %q", runtime.invocation.PermissionMode)
 	}
 	if got := runtime.invocation.ToolAllowlist; !containsAllStrings(got,
-		`novelgen tool query context --type recap-repair --id "P1-V1-C1" --view brief`,
-		`novelgen tool check quality --target recap --scope chapter --id "P1-V1-C1" --min-priority low --max-issues 8`,
-		`novelgen tool patch recap --id "P1-V1-C1" --apply`) {
+		`novelgen tool query context --type recap-repair --id 'P1-V1-C1' --view brief`,
+		`novelgen tool check quality --target recap --scope chapter --id 'P1-V1-C1' --min-priority low --max-issues 8`,
+		`novelgen tool patch recap --id 'P1-V1-C1' --apply`) {
 		t.Fatalf("ToolAllowlist = %#v", got)
 	}
 	if !strings.Contains(runtime.invocation.UserPrompt, "tool query context --type recap-repair") ||

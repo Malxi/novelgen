@@ -323,10 +323,10 @@ func TestToolCheckResultJSONAddsIssueNavigation(t *testing.T) {
 	if !strings.Contains(nav["focused_check_query"].(string), "--category logic") {
 		t.Fatalf("missing focused check query: %#v", nav["focused_check_query"])
 	}
-	if !strings.Contains(nav["repair_route_query"].(string), `outline-repair --id "P1-V1-C3" --name "logic" --view index`) {
+	if !strings.Contains(nav["repair_route_query"].(string), `outline-repair --id 'P1-V1-C3' --name 'logic' --view index`) {
 		t.Fatalf("missing repair route query: %#v", nav["repair_route_query"])
 	}
-	if !strings.Contains(nav["repair_context_query"].(string), `outline-repair --id "P1-V1-C3" --name "logic"`) {
+	if !strings.Contains(nav["repair_context_query"].(string), `outline-repair --id 'P1-V1-C3' --name 'logic'`) {
 		t.Fatalf("missing repair context query: %#v", nav["repair_context_query"])
 	}
 	if !strings.Contains(nav["patch_query"].(string), "--target volume") {
@@ -350,7 +350,7 @@ func TestToolCheckResultJSONAddsIssueNavigation(t *testing.T) {
 	if len(decoded.NextActions) < 4 ||
 		decoded.NextActions[0].Action != "repair_first_patchable_issue" ||
 		decoded.NextActions[1].Action != "query_repair_route" ||
-		!strings.Contains(decoded.NextActions[1].Command, `outline-repair --id "P1-V1-C3" --name "logic" --view index`) {
+		!strings.Contains(decoded.NextActions[1].Command, `outline-repair --id 'P1-V1-C3' --name 'logic' --view index`) {
 		t.Fatalf("unexpected check next_actions: %#v", decoded.NextActions)
 	}
 	budget, ok := decoded.Meta["check_budget"].(map[string]interface{})
@@ -424,7 +424,7 @@ func TestToolCheckResultJSONRoutesGlobalOutlineIssueConservatively(t *testing.T)
 	if nav["target_kind"] != "outline.global" {
 		t.Fatalf("unexpected global navigation: %#v", nav)
 	}
-	if nav["repair_route_query"] != `novelgen tool query context --type outline-global-repair --name "mysteries" --view index` {
+	if nav["repair_route_query"] != `novelgen tool query context --type outline-global-repair --name 'mysteries' --view index` {
 		t.Fatalf("global outline route should stay index-sized: %#v", nav)
 	}
 	if _, ok := nav["repair_context_query"]; ok {
@@ -435,7 +435,7 @@ func TestToolCheckResultJSONRoutesGlobalOutlineIssueConservatively(t *testing.T)
 	}
 	if len(decoded.NextActions) < 4 ||
 		decoded.NextActions[1].Action != "query_repair_route" ||
-		decoded.NextActions[1].Command != `novelgen tool query context --type outline-global-repair --name "mysteries" --view index` ||
+		decoded.NextActions[1].Command != `novelgen tool query context --type outline-global-repair --name 'mysteries' --view index` ||
 		decoded.NextActions[2].Action != "focused_recheck" ||
 		decoded.NextActions[3].Action != "return_final_json" {
 		t.Fatalf("unexpected global next_actions: %#v", decoded.NextActions)
@@ -482,7 +482,7 @@ func TestToolCheckResultJSONPrefersPatchableIssueForNextActions(t *testing.T) {
 		decoded.NextActions[0].When != "Selected category: faction_tier" {
 		t.Fatalf("first action should identify selected patchable issue: %#v", decoded.NextActions[0])
 	}
-	if !strings.Contains(decoded.NextActions[1].Command, `story-setup --type search --name "zerg" --view index`) ||
+	if !strings.Contains(decoded.NextActions[1].Command, `story-setup --type search --name 'zerg' --view index`) ||
 		decoded.NextActions[3].Command != "novelgen tool patch setup" ||
 		!strings.Contains(decoded.NextActions[4].Command, "tool check all --target outline --category faction_tier") {
 		t.Fatalf("next_actions should route to setup patch: %#v", decoded.NextActions)
@@ -496,14 +496,14 @@ func TestToolIssueNavigationRoutesVolumeRedundancyToChangedEvents(t *testing.T) 
 		Issue:    "event type repeated",
 		Priority: models.PriorityMedium,
 	}, 0)
-	if got := fmt.Sprint(nav["patch_query"]); got != `novelgen tool patch outline --target volume --id "P1-V1"` {
+	if got := fmt.Sprint(nav["patch_query"]); got != `novelgen tool patch outline --target volume --id 'P1-V1'` {
 		t.Fatalf("patch query = %q", got)
 	}
 	detailQueries, ok := nav["detail_queries"].([]string)
 	if !ok {
 		t.Fatalf("detail_queries type = %T", nav["detail_queries"])
 	}
-	if !containsString(detailQueries, `novelgen tool query outline --type events --volume-id "P1-V1" --fields event_index,chapter_id,type,action,actor,target,target_type,details,result --view brief`) {
+	if !containsString(detailQueries, `novelgen tool query outline --type events --volume-id 'P1-V1' --fields event_index,chapter_id,type,action,actor,target,target_type,details,result --view brief`) {
 		t.Fatalf("detail_queries missing volume events query: %#v", detailQueries)
 	}
 	shape, ok := nav["patch_shape"].(map[string]interface{})
@@ -593,8 +593,8 @@ func TestToolCheckResultJSONPrefersHigherPriorityPatchableIssue(t *testing.T) {
 		decoded.NextActions[0].When != "Selected category: logic" {
 		t.Fatalf("first action should identify higher-priority patchable issue: %#v", decoded.NextActions[0])
 	}
-	if !strings.Contains(decoded.NextActions[1].Command, `outline-repair --id "P1-V1-C3" --name "logic" --view index`) ||
-		!strings.Contains(decoded.NextActions[3].Command, `tool patch outline --target volume --id "P1-V1"`) {
+	if !strings.Contains(decoded.NextActions[1].Command, `outline-repair --id 'P1-V1-C3' --name 'logic' --view index`) ||
+		!strings.Contains(decoded.NextActions[3].Command, `tool patch outline --target volume --id 'P1-V1'`) {
 		t.Fatalf("next_actions should route to the higher-priority chapter patch: %#v", decoded.NextActions)
 	}
 }
@@ -669,8 +669,8 @@ func TestToolCheckResultJSONRoutesFactionTierIssueThroughSetupNavigation(t *test
 	if nav["target_kind"] != "setup.faction_tier" {
 		t.Fatalf("unexpected faction tier navigation: %#v", nav)
 	}
-	if !strings.Contains(nav["repair_route_query"].(string), `story-setup --type search --name "zerg" --view index`) ||
-		!strings.Contains(nav["repair_context_query"].(string), `story-setup --type search --name "zerg" --view brief`) {
+	if !strings.Contains(nav["repair_route_query"].(string), `story-setup --type search --name 'zerg' --view index`) ||
+		!strings.Contains(nav["repair_context_query"].(string), `story-setup --type search --name 'zerg' --view brief`) {
 		t.Fatalf("faction tier should route through setup search: %#v", nav)
 	}
 	if nav["patch_query"] != "novelgen tool patch setup" {
@@ -720,9 +720,9 @@ func TestToolCheckCraftSchemaJSONAddsNavigation(t *testing.T) {
 	if !strings.Contains(text, "tool query craft") ||
 		!strings.Contains(text, "tool query context --type craft-character") ||
 		!strings.Contains(text, `repair_route_query`) ||
-		!strings.Contains(text, `craft-character --name \"林野\" --view index`) ||
+		!strings.Contains(text, `craft-character --name '林野' --view index`) ||
 		!strings.Contains(text, `repair_context_query`) ||
-		!strings.Contains(text, `craft-character --name \"林野\" --view brief`) ||
+		!strings.Contains(text, `craft-character --name '林野' --view brief`) ||
 		!strings.Contains(string(data), "tool patch craft") ||
 		!strings.Contains(string(data), "tool check schema") {
 		t.Fatalf("craft navigation missing: %s", text)
@@ -751,9 +751,9 @@ func TestToolCheckRecapJSONAddsNavigation(t *testing.T) {
 	if !strings.Contains(text, "tool check quality --target recap") ||
 		!strings.Contains(text, "tool query context --type recap-repair") ||
 		!strings.Contains(text, `repair_route_query`) ||
-		!strings.Contains(text, `recap-repair --id \"P1-V1-C1\" --view index`) ||
+		!strings.Contains(text, `recap-repair --id 'P1-V1-C1' --view index`) ||
 		!strings.Contains(text, `repair_context_query`) ||
-		!strings.Contains(text, `recap-repair --id \"P1-V1-C1\" --view brief`) ||
+		!strings.Contains(text, `recap-repair --id 'P1-V1-C1' --view brief`) ||
 		!strings.Contains(text, "novelgen recap gen --chapter") {
 		t.Fatalf("recap navigation missing: %s", text)
 	}
@@ -781,7 +781,7 @@ func TestToolCheckSetupJSONAddsRouteNavigation(t *testing.T) {
 	for _, want := range []string{
 		`tool query story-setup --view index`,
 		`tool query story-setup --view brief`,
-		`story-setup --type search --name \"premise\" --view index`,
+		`story-setup --type search --name 'premise' --view index`,
 		`repair_route_query`,
 		`repair_context_query`,
 		`tool patch setup`,
@@ -826,7 +826,7 @@ func TestToolCheckSetupJSONRoutesIndexedStorylineByTargetName(t *testing.T) {
 	if nav["target_kind"] != "setup.storyline" {
 		t.Fatalf("unexpected indexed storyline navigation: %#v", nav)
 	}
-	if !strings.Contains(nav["repair_route_query"].(string), `story-setup --type storyline --name "Signal War" --view index`) ||
+	if !strings.Contains(nav["repair_route_query"].(string), `story-setup --type storyline --name 'Signal War' --view index`) ||
 		strings.Contains(nav["repair_route_query"].(string), "storylines[0]") {
 		t.Fatalf("storyline route should use target_name, not index: %#v", nav)
 	}
@@ -868,7 +868,7 @@ func TestToolCheckOutlineGlobalIssueRoutesThroughGlobalRepairContext(t *testing.
 	}
 	text := string(data)
 	for _, want := range []string{
-		`context --type outline-global-repair --name \"structure\" --view index`,
+		`context --type outline-global-repair --name 'structure' --view index`,
 		`repair_route_query`,
 		`classification_rule`,
 		`return_final_json`,
@@ -878,7 +878,7 @@ func TestToolCheckOutlineGlobalIssueRoutesThroughGlobalRepairContext(t *testing.
 		}
 	}
 	for _, forbidden := range []string{
-		`context --type outline-global-repair --name \"structure\" --view brief`,
+		`context --type outline-global-repair --name 'structure' --view brief`,
 		`repair_context_query`,
 		`tool query outline --view index`,
 		`tool query story-setup --view index`,
@@ -920,7 +920,7 @@ func TestToolCheckSetupJSONRoutesIndexedPremiseByTargetName(t *testing.T) {
 	if nav["target_kind"] != "setup.premise" {
 		t.Fatalf("unexpected indexed premise navigation: %#v", nav)
 	}
-	if !strings.Contains(nav["repair_route_query"].(string), `story-setup --type premise --name "虫族阶层与天敌体系" --view index`) ||
+	if !strings.Contains(nav["repair_route_query"].(string), `story-setup --type premise --name '虫族阶层与天敌体系' --view index`) ||
 		strings.Contains(nav["repair_route_query"].(string), "premises[6]") {
 		t.Fatalf("premise route should use target_name, not index: %#v", nav)
 	}
@@ -963,7 +963,7 @@ func TestToolCheckSetupJSONRoutesIndexedRuleToPatchField(t *testing.T) {
 	if nav["target_kind"] != "setup.rule" {
 		t.Fatalf("unexpected indexed rule navigation: %#v", nav)
 	}
-	if !strings.Contains(nav["repair_route_query"].(string), `story-setup --type search --name "rules[4]" --view index`) {
+	if !strings.Contains(nav["repair_route_query"].(string), `story-setup --type search --name 'rules[4]' --view index`) {
 		t.Fatalf("rule route should stay focused on target id: %#v", nav)
 	}
 	shape := nav["patch_shape"].(map[string]interface{})
@@ -1150,8 +1150,8 @@ func TestToolChapterCheckNavigationPreservesTargetWordsOverride(t *testing.T) {
 	}
 	text := string(data)
 	for _, want := range []string{
-		`tool check all --target chapter --scope chapter --id \"P1-V1-C1\" --category length --min-priority low --max-issues 8 --target-words 800`,
-		`tool patch chapter --id \"P1-V1-C1\" --target-words 800`,
+		`tool check all --target chapter --scope chapter --id 'P1-V1-C1' --category length --min-priority low --max-issues 8 --target-words 800`,
+		`tool patch chapter --id 'P1-V1-C1' --target-words 800`,
 		`write improve --agent-sdk --chapter \"P1-V1-C1\" --max-rounds 1 --words 800`,
 	} {
 		if !strings.Contains(text, want) {
@@ -1189,8 +1189,8 @@ func TestToolCheckChapterJSONAddsNavigation(t *testing.T) {
 	}
 	text := string(data)
 	if !strings.Contains(text, "tool query context --type chapter-write") ||
-		!strings.Contains(text, `tool query context --type chapter-repair --id \"P1-V1-C1\" --name \"style\" --view index`) ||
-		!strings.Contains(text, `tool query context --type chapter-repair --id \"P1-V1-C1\" --name \"style\" --view brief`) ||
+		!strings.Contains(text, `tool query context --type chapter-repair --id 'P1-V1-C1' --name 'style' --view index`) ||
+		!strings.Contains(text, `tool query context --type chapter-repair --id 'P1-V1-C1' --name 'style' --view brief`) ||
 		!strings.Contains(text, "tool check quality --target chapter") ||
 		!strings.Contains(text, "tool check simulation --target chapter") ||
 		!strings.Contains(text, "write improve --agent-sdk") {
@@ -1640,9 +1640,9 @@ func TestToolPatchChapterDryRunAndApply(t *testing.T) {
 	}
 	if len(applyResult.NextActions) != 2 ||
 		applyResult.NextActions[0].Action != "refresh_derived_dsl" ||
-		!strings.Contains(applyResult.NextActions[0].Command, `tool refresh chapter-dsl --id "P1-V1-C1"`) ||
+		!strings.Contains(applyResult.NextActions[0].Command, `tool refresh chapter-dsl --id 'P1-V1-C1'`) ||
 		applyResult.NextActions[1].Action != "post_refresh_check" ||
-		!strings.Contains(applyResult.NextActions[1].Command, `tool check all --target chapter --scope chapter --id "P1-V1-C1"`) {
+		!strings.Contains(applyResult.NextActions[1].Command, `tool check all --target chapter --scope chapter --id 'P1-V1-C1'`) {
 		t.Fatalf("apply should return refresh/check next actions: %#v", applyResult.NextActions)
 	}
 	data, err := os.ReadFile(chapterPath)
@@ -1745,7 +1745,7 @@ func TestBuildChapterPatchNextActionsAfterRefreshDerived(t *testing.T) {
 	blocking := &toolplane.ToolCheckResult{Blocking: true}
 	actions = toolplane.BuildChapterPatchNextActions("P1-V1-C1", true, true, blocking)
 	if len(actions) != 1 || actions[0].Action != "repair_remaining_issues" ||
-		!strings.Contains(actions[0].Command, `tool check all --target chapter --scope chapter --id "P1-V1-C1"`) {
+		!strings.Contains(actions[0].Command, `tool check all --target chapter --scope chapter --id 'P1-V1-C1'`) {
 		t.Fatalf("refreshed blocking patch should route to repair check: %#v", actions)
 	}
 }
@@ -2004,10 +2004,10 @@ func TestRunToolOutlineCheckUsesGlobalSimulationContextForScopedMysteries(t *tes
 }
 
 func TestOutlinePatchPostCheckCommandScopesTarget(t *testing.T) {
-	if got := toolplane.OutlinePatchPostCheckCommand("volume", "P1-V1"); got != `novelgen tool check all --target outline --scope volume --id "P1-V1" --min-priority medium --max-issues 12` {
+	if got := toolplane.OutlinePatchPostCheckCommand("volume", "P1-V1"); got != `novelgen tool check all --target outline --scope volume --id 'P1-V1' --min-priority medium --max-issues 12` {
 		t.Fatalf("volume post check = %q", got)
 	}
-	if got := toolplane.OutlinePatchPostCheckCommand("chapter", "P1-V1-C1"); got != `novelgen tool check all --target outline --scope chapter --id "P1-V1-C1" --min-priority low --max-issues 8` {
+	if got := toolplane.OutlinePatchPostCheckCommand("chapter", "P1-V1-C1"); got != `novelgen tool check all --target outline --scope chapter --id 'P1-V1-C1' --min-priority low --max-issues 8` {
 		t.Fatalf("chapter post check = %q", got)
 	}
 	if got := toolplane.OutlinePatchPostCheckCommand("all", ""); got != "" {
@@ -2366,7 +2366,7 @@ func TestRunToolCraftPatchApplyWritesFileAndCheckpoint(t *testing.T) {
 	result := decodeToolPatchResult(t, out.String())
 	if len(result.NextActions) != 1 ||
 		result.NextActions[0].Action != "post_apply_check" ||
-		!strings.Contains(result.NextActions[0].Command, `tool check schema --target craft --scope character --id "Lin"`) {
+		!strings.Contains(result.NextActions[0].Command, `tool check schema --target craft --scope character --id 'Lin'`) {
 		t.Fatalf("craft apply should return schema check next action: %#v", result.NextActions)
 	}
 
@@ -2626,7 +2626,7 @@ func TestRunToolRecapPatchApplyWritesValidatedFileAndCheckpoint(t *testing.T) {
 	result := decodeToolPatchResult(t, output)
 	if len(result.NextActions) != 1 ||
 		result.NextActions[0].Action != "post_apply_check" ||
-		!strings.Contains(result.NextActions[0].Command, `tool check quality --target recap --scope chapter --id "P1-V1-C1"`) {
+		!strings.Contains(result.NextActions[0].Command, `tool check quality --target recap --scope chapter --id 'P1-V1-C1'`) {
 		t.Fatalf("recap apply should return recap check next action: %#v", result.NextActions)
 	}
 }

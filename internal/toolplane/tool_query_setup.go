@@ -51,21 +51,59 @@ func setupIndexResponse(setup *models.StorySetup) ToolResponse {
 	if setup == nil {
 		return ToolResponse{OK: true, Count: 0, Results: nil}
 	}
+	coreCast := make([]coreCastBrief, 0, len(setup.CoreCast))
+	for _, item := range setup.CoreCast {
+		coreCast = append(coreCast, coreCastBrief{
+			ID:         item.ID,
+			Name:       item.Name,
+			Role:       item.Role,
+			Importance: item.Importance,
+			EntryPhase: item.EntryPhase,
+		})
+	}
+	storylines := make([]storylineBrief, 0, len(setup.Storylines))
+	for _, item := range setup.Storylines {
+		storylines = append(storylines, storylineBrief{
+			Name:       item.Name,
+			Type:       item.Type,
+			Importance: item.Importance,
+			Scope:      item.Scope,
+		})
+	}
+	premises := make([]premiseBrief, 0, len(setup.Premises))
+	for _, item := range setup.Premises {
+		premises = append(premises, premiseBrief{Name: item.Name, Category: item.Category})
+	}
+	timeline := make([]worldTimelineBrief, 0, len(setup.WorldTimeline))
+	for _, item := range setup.WorldTimeline {
+		timeline = append(timeline, worldTimelineBrief{
+			Year:  item.Year,
+			Event: clipToolString(item.Event, 100),
+		})
+	}
+	resources := make([]worldResourceBrief, 0, len(setup.WorldResources))
+	for _, item := range setup.WorldResources {
+		resources = append(resources, worldResourceBrief{
+			Name:     item.Name,
+			Category: item.Category,
+			Scarcity: item.Scarcity,
+		})
+	}
 	index := map[string]interface{}{
 		"project_name":    setup.ProjectName,
 		"genres":          setup.Genres,
-		"premise":         setup.Premise,
-		"theme":           setup.Theme,
-		"rules":           setup.Rules,
+		"premise":         clipToolString(setup.Premise, 240),
+		"theme":           clipToolString(setup.Theme, 200),
+		"rules_count":     len(setup.Rules),
 		"target_audience": setup.TargetAudience,
 		"tone":            setup.Tone,
 		"pov_style":       setup.POVStyle,
-		"core_cast":       setup.CoreCast,
-		"storylines":      setup.Storylines,
-		"premises":        setup.Premises,
-		"world_timeline":  setup.WorldTimeline,
-		"world_resources": setup.WorldResources,
-		"long_form_plan":  setup.LongFormPlan,
+		"core_cast":       coreCast,
+		"storylines":      storylines,
+		"premises":        premises,
+		"world_timeline":  timeline,
+		"world_resources": resources,
+		"long_form_plan":  makeLongFormPlanBrief(setup.LongFormPlan, true),
 		"core_cast_count": len(setup.CoreCast),
 		"storyline_count": len(setup.Storylines),
 		"premise_count":   len(setup.Premises),
@@ -223,6 +261,9 @@ func queryStorySetupSearch(setup *models.StorySetup, name string) ToolResponse {
 	if resourceTotal > len(result.WorldResources) {
 		warnings = append(warnings, fmt.Sprintf("world_resources truncated from %d to %d", resourceTotal, len(result.WorldResources)))
 	}
+	if total == 0 {
+		warnings = append(warnings, fmt.Sprintf("no story-setup entries matched %q", name))
+	}
 	return ToolResponse{OK: true, Section: "story-setup", Count: total, Results: result, Warnings: warnings}
 }
 
@@ -233,7 +274,11 @@ func querySetupSlice[T any](kind, name string, values []T, nameOf func(T) string
 			hits = append(hits, value)
 		}
 	}
-	return ToolResponse{OK: true, Section: "craft", Count: len(hits), Results: hits}
+	warnings := []string{}
+	if strings.TrimSpace(name) != "" && len(hits) == 0 {
+		warnings = append(warnings, fmt.Sprintf("%s %q not found in story setup", kind, name))
+	}
+	return ToolResponse{OK: true, Section: "craft", Count: len(hits), Results: hits, Warnings: warnings}
 }
 
 func briefStorySetupForElementContext(setup *models.StorySetup, target, name string) interface{} {

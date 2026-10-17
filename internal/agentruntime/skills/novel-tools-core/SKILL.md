@@ -21,10 +21,12 @@ description: Common Novelgen Agent SDK tool rules. Project facts may only be que
 ## Query And Check
 
 - `tool query` 和 `tool check` 是只读操作；优先使用 context bundle。
+- `--view index` 只给路由信息（id/title/count），不会携带章节 summary；需要事实时再升级到 `--view brief`。`--limit` 只作用于列表结果，对象结果会返回 warning。
+- `tool check schema --target craft --id "<name>"` 会从 craft 文件中推断类型；不传 scope/id 时检查全部四类 craft。`tool check --target recap --id "<chapter_id>"` 默认使用 chapter scope。
 - 有 `navigation`、`workflow`、`next_actions` 时按最小下一步执行。
 - 单章修复任务优先使用 `novelgen tool query context --type chapter-repair --id "<chapter_id>" --view brief`。
 - 章节生成任务只能使用 `novelgen tool query context --type chapter-write --id "<chapter_id>" --fields path,navigation,stats,warnings --view brief`；正文事实来自调用方 typed input，不要再查询普通 brief/full 或已保存章节正文。
-- 只有章节 review/improve/repair 等明确需要检查已有草稿的任务，才使用 `novelgen tool query chapter --id "<chapter_id>" --content --view brief`；不要用 shell 读 `chapters/` 文件。
+- 只有章节 review/improve/repair 等明确需要检查已有草稿的任务，才使用 `novelgen tool query chapter --id "<chapter_id>" --content --view brief`；brief 现在会返回 `content` 和 `content_path`，不要用 shell 读 `chapters/` 文件。`tool query chapter --type events --id "<chapter_id>"` 也按章节过滤事件。
 - 不要一次扫描完整 setup、outline 或所有章节。
 - 有 `meta.context_budget` 或 `check_budget` 时必须遵守；不要违反 `avoid`。
 - `tool check all` 合并 deterministic quality 和 simulation；outline/setup simulation 由 Go 内存模型执行，不调用 LLM，不依赖 `story/rpg/01_outline.rpg`。
@@ -39,7 +41,7 @@ description: Common Novelgen Agent SDK tool rules. Project facts may only be que
 
 ## Patch And Apply
 
-- `tool patch ...` 默认 dry-run；Go 负责 merge、保留 ID、normalize、schema/quality/simulation 校验，失败即拒绝。
+- `tool patch ...` 默认 dry-run；Go 负责 merge、保留 ID、normalize、schema/quality/simulation 校验，失败即拒绝。typed patch 会拒绝未知字段；空对象会被拒绝；`changed` 为空时会返回 no-change warning，不能当作写入成功。
 - 不要运行 Python、Node、PowerShell 或 help 命令来编码 JSON；`--patch-json` 只用于很短的 ASCII-only patch。
 - 长章节正文不要放进一个巨大的 `--text` 参数；优先使用 `patch-buffer clear`，再用 `printf '%s' '<content chunk>' | novelgen tool patch-buffer append --id "<chapter_id>-draft" --stdin` 分块追加，最后用 `tool patch chapter --patch-buffer` dry-run/apply。
 - 只有当前 workflow 明确允许 apply，例如 `apply_patches=true` 且 allowlist 允许时，才可以使用 `--apply`。

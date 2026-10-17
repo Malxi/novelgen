@@ -27,7 +27,7 @@ func queryRecapRepairContext(ctx ToolProjectContext, chapterID string) ToolRespo
 		}
 	}
 	if !found {
-		return ToolResponse{OK: true, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
+		return ToolResponse{OK: false, Section: "context", Count: 0, Results: nil, Warnings: []string{fmt.Sprintf("outline chapter not found: %q", chapterID)}}
 	}
 
 	check, err := runToolRecapCheckAt(ctx.Root, "quality", "chapter", target.Chapter.ID)

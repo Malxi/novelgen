@@ -70,7 +70,7 @@ func runToolChapterCheckAt(root *store.Root, kind, scope, id string, targetWords
 	}
 	targetWords := targetWordsOverride
 	if targetWords <= 0 {
-		targetWords = toolChapterTargetWords()
+		targetWords = toolChapterTargetWords(root)
 	}
 	var gate quality.QualityGateResult
 	switch kind {
@@ -253,8 +253,11 @@ func repeatedChapterTitlePrefix(content, title string) bool {
 	return project.HasRepeatedChapterTitlePrefix(content, title)
 }
 
-func toolChapterTargetWords() int {
-	cfg, err := project.LoadConfig()
+func toolChapterTargetWords(root *store.Root) int {
+	if root == nil {
+		return 2000
+	}
+	cfg, err := root.LoadConfig()
 	if err == nil && cfg.ChapterConfig.TargetWordsPerChapter > 0 {
 		return cfg.ChapterConfig.TargetWordsPerChapter
 	}

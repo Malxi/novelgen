@@ -98,7 +98,7 @@ func TestValidateAgentRuntimeToolEvidenceRequiresSpecificCommand(t *testing.T) {
 		CheckCalls:        1,
 		AllowedToolCommands: []string{
 			`novelgen tool query context --type outline-volume --id P1-V1 --view index`,
-			`novelgen tool check all --target outline --scope chapter --id "P1-V1-C2" --category logic --min-priority low --max-issues 8`,
+			`novelgen tool check all --target outline --scope chapter --id 'P1-V1-C2' --category logic --min-priority low --max-issues 8`,
 		},
 	}}
 
@@ -106,7 +106,7 @@ func TestValidateAgentRuntimeToolEvidenceRequiresSpecificCommand(t *testing.T) {
 		MinContextQueryCalls: 1,
 		MinCheckCalls:        1,
 		RequiredToolCommands: []string{
-			`novelgen tool check all --target outline --scope chapter --id "P1-V1-C2" --category logic`,
+			`novelgen tool check all --target outline --scope chapter --id 'P1-V1-C2' --category logic`,
 		},
 	}, result)
 	if err != nil {
@@ -115,7 +115,7 @@ func TestValidateAgentRuntimeToolEvidenceRequiresSpecificCommand(t *testing.T) {
 
 	err = validateAgentRuntimeToolEvidence("TestAgent", ToolEvidenceRequirement{
 		RequiredToolCommands: []string{
-			`novelgen tool check all --target outline --scope chapter --id "P1-V1-C2" --category transition`,
+			`novelgen tool check all --target outline --scope chapter --id 'P1-V1-C2' --category transition`,
 		},
 	}, result)
 	if err == nil || !strings.Contains(err.Error(), "required tool command not observed") {
@@ -511,7 +511,7 @@ func TestBaseAgentExecuteVerifiesRuntimeToolEvidence(t *testing.T) {
 		PatchApplies:              1,
 		ToolDenied:                1,
 		ApplyWithoutFollowupCheck: 0,
-		DeniedToolCommands:        []string{`novelgen tool patch outline --target volume --id "P1-V1" --apply`},
+		DeniedToolCommands:        []string{`novelgen tool patch outline --target volume --id 'P1-V1' --apply`},
 	}
 	err = agent.Execute(context.Background(), InvokeParams{
 		Command: "return a test object",
@@ -533,7 +533,7 @@ func TestBaseAgentExecuteVerifiesRuntimeToolEvidence(t *testing.T) {
 		PatchApplies:              1,
 		ToolDenied:                1,
 		ApplyWithoutFollowupCheck: 0,
-		DeniedToolCommands:        []string{`novelgen tool patch outline --target volume --id "P1-V1"`},
+		DeniedToolCommands:        []string{`novelgen tool patch outline --target volume --id 'P1-V1'`},
 	}
 	err = agent.Execute(context.Background(), InvokeParams{
 		Command: "return a test object",
@@ -555,7 +555,7 @@ func TestBaseAgentExecuteVerifiesRuntimeToolEvidence(t *testing.T) {
 		PatchApplies:              1,
 		ToolDenied:                1,
 		ApplyWithoutFollowupCheck: 0,
-		DeniedToolCommands:        []string{`novelgen tool patch-buffer clear --id "P1-V1-C1-draft"`},
+		DeniedToolCommands:        []string{`novelgen tool patch-buffer clear --id 'P1-V1-C1-draft'`},
 	}
 	err = agent.Execute(context.Background(), InvokeParams{
 		Command: "return a test object",
@@ -621,7 +621,7 @@ func TestBaseAgentExecuteVerifiesRuntimeToolEvidence(t *testing.T) {
 		PatchApplies:              1,
 		ToolDenied:                1,
 		ApplyWithoutFollowupCheck: 0,
-		DeniedToolCommands:        []string{`novelgen tool query chapter --id "P1-V1-C1" --content --view full`},
+		DeniedToolCommands:        []string{`novelgen tool query chapter --id 'P1-V1-C1' --content --view full`},
 	}
 	err = agent.Execute(context.Background(), InvokeParams{
 		Command: "return a test object",
@@ -643,7 +643,7 @@ func TestBaseAgentExecuteVerifiesRuntimeToolEvidence(t *testing.T) {
 		PatchApplies:              1,
 		ToolDenied:                1,
 		ApplyWithoutFollowupCheck: 0,
-		DeniedToolCommands:        []string{`novelgen tool query chapter --id "P1-V1-C1" --content --view brief`},
+		DeniedToolCommands:        []string{`novelgen tool query chapter --id 'P1-V1-C1' --content --view brief`},
 	}
 	err = agent.Execute(context.Background(), InvokeParams{
 		Command: "return a test object",
@@ -665,7 +665,7 @@ func TestBaseAgentExecuteVerifiesRuntimeToolEvidence(t *testing.T) {
 		PatchApplies:              1,
 		ToolDenied:                1,
 		ApplyWithoutFollowupCheck: 0,
-		DeniedToolCommands:        []string{`novelgen tool refresh chapter-dsl --id "P1-V1-C1"`},
+		DeniedToolCommands:        []string{`novelgen tool refresh chapter-dsl --id 'P1-V1-C1'`},
 	}
 	err = agent.Execute(context.Background(), InvokeParams{
 		Command: "return a test object",
@@ -687,7 +687,7 @@ func TestBaseAgentExecuteVerifiesRuntimeToolEvidence(t *testing.T) {
 		PatchApplies:              1,
 		ToolDenied:                1,
 		ApplyWithoutFollowupCheck: 0,
-		DeniedToolCommands:        []string{`novelgen tool query context --type chapter-repair --id "P1-V1-C1" --name "logic" --view brief`},
+		DeniedToolCommands:        []string{`novelgen tool query context --type chapter-repair --id 'P1-V1-C1' --name 'logic' --view brief`},
 	}
 	err = agent.Execute(context.Background(), InvokeParams{
 		Command: "return a test object",
@@ -730,7 +730,7 @@ func TestBaseAgentExecuteVerifiesRuntimeToolEvidence(t *testing.T) {
 		CheckCalls:                 1,
 		ToolDenied:                 1,
 		ApplyWithoutFollowupCheck:  0,
-		WorkflowDeniedToolCommands: []string{`novelgen tool patch outline --target volume --id "P1-V3"`},
+		WorkflowDeniedToolCommands: []string{`novelgen tool patch outline --target volume --id 'P1-V3'`},
 	}
 	err = agent.Execute(context.Background(), InvokeParams{
 		Command: "return a test object",
@@ -750,7 +750,7 @@ func TestBaseAgentExecuteVerifiesRuntimeToolEvidence(t *testing.T) {
 		ToolDenied:        1,
 		DenialsResolved:   true,
 		DeniedToolCommands: []string{
-			`novelgen tool query outline --type chapter --id "P1-V3-C1" --fields chapter_payoff --view brief`,
+			`novelgen tool query outline --type chapter --id 'P1-V3-C1' --fields chapter_payoff --view brief`,
 		},
 	}
 	err = agent.Execute(context.Background(), InvokeParams{

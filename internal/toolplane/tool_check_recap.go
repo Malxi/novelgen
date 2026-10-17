@@ -70,7 +70,7 @@ func runToolRecapCheckForValue(kind, scope, id string, recapData *models.Chapter
 
 func normalizeRecapCheckScope(scope string) string {
 	switch NormalizeKey(scope) {
-	case "", "chapter", "chap":
+	case "", "all", "chapter", "chap":
 		return "chapter"
 	default:
 		return NormalizeKey(scope)

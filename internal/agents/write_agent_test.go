@@ -464,26 +464,26 @@ func TestWriteAgentImproveWithAgentSDKUsesFocusedWorkflow(t *testing.T) {
 		t.Fatalf("SDKSkills = %#v", got)
 	}
 	if got := runtime.invocation.ToolAllowlist; !containsAllStrings(got,
-		`novelgen tool query context --type chapter-write --id "P1-V1-C1" --view index`,
-		`novelgen tool query context --type chapter-write --id "P1-V1-C1" --view brief`,
-		`novelgen tool query context --type chapter-write --id "P1-V1-C1" --fields existing_chapter_excerpt --view brief`,
-		`novelgen tool query context --type chapter-repair --id "P1-V1-C1"`,
+		`novelgen tool query context --type chapter-write --id 'P1-V1-C1' --view index`,
+		`novelgen tool query context --type chapter-write --id 'P1-V1-C1' --view brief`,
+		`novelgen tool query context --type chapter-write --id 'P1-V1-C1' --fields existing_chapter_excerpt --view brief`,
+		`novelgen tool query context --type chapter-repair --id 'P1-V1-C1'`,
 		"novelgen tool query context --type craft-character",
 		"novelgen tool query context --type craft-item",
 		"novelgen tool query context --type craft-location",
 		"novelgen tool query logs --view index",
 		"novelgen tool query logs --id",
-		`novelgen tool query chapter --id "P1-V1-C1" --view brief`,
-		`novelgen tool query chapter --id "P1-V1-C1" --content`,
-		`novelgen tool query chapter --id "P1-V1-C1" --content --view brief`,
-		`novelgen tool query outline --type chapter --id "P1-V1-C1" --view brief`,
-		`novelgen tool check quality --target chapter --scope chapter --id "P1-V1-C1" --max-issues 8`,
-		`novelgen tool check simulation --target chapter --scope chapter --id "P1-V1-C1" --max-issues 8`,
-		`novelgen tool check all --target chapter --scope chapter --id "P1-V1-C1" --min-priority low --max-issues 12`,
-		`novelgen tool refresh chapter-dsl --id "P1-V1-C1"`,
-		`novelgen tool patch-buffer --id "P1-V1-C1-draft"`,
-		`novelgen tool patch chapter --id "P1-V1-C1"`,
-		`novelgen tool patch chapter --id "P1-V1-C1" --patch-buffer "P1-V1-C1-draft"`) {
+		`novelgen tool query chapter --id 'P1-V1-C1' --view brief`,
+		`novelgen tool query chapter --id 'P1-V1-C1' --content`,
+		`novelgen tool query chapter --id 'P1-V1-C1' --content --view brief`,
+		`novelgen tool query outline --type chapter --id 'P1-V1-C1' --view brief`,
+		`novelgen tool check quality --target chapter --scope chapter --id 'P1-V1-C1' --max-issues 8`,
+		`novelgen tool check simulation --target chapter --scope chapter --id 'P1-V1-C1' --max-issues 8`,
+		`novelgen tool check all --target chapter --scope chapter --id 'P1-V1-C1' --min-priority low --max-issues 12`,
+		`novelgen tool refresh chapter-dsl --id 'P1-V1-C1'`,
+		`novelgen tool patch-buffer --id 'P1-V1-C1-draft'`,
+		`novelgen tool patch chapter --id 'P1-V1-C1'`,
+		`novelgen tool patch chapter --id 'P1-V1-C1' --patch-buffer 'P1-V1-C1-draft'`) {
 		t.Fatalf("ToolAllowlist = %#v", got)
 	}
 	if containsAllStrings(runtime.invocation.ToolAllowlist, "novelgen tool query") ||
@@ -513,7 +513,7 @@ func TestWriteAgentImproveWithAgentSDKApplyAllowsValidatedChapterApply(t *testin
 			CheckCalls:          1,
 			PatchCalls:          2,
 			PatchApplies:        1,
-			AllowedToolCommands: []string{`novelgen tool patch chapter --id "P1-V1-C1" --patch-buffer "P1-V1-C1-draft" --apply --refresh-derived`},
+			AllowedToolCommands: []string{`novelgen tool patch chapter --id 'P1-V1-C1' --patch-buffer 'P1-V1-C1-draft' --apply --refresh-derived`},
 		},
 	}
 	agent := &WriteAgent{
@@ -536,30 +536,30 @@ func TestWriteAgentImproveWithAgentSDKApplyAllowsValidatedChapterApply(t *testin
 		t.Fatalf("GenerateChapterWithSuggestionsAgentSDK() error = %v", err)
 	}
 	if got := runtime.invocation.ToolAllowlist; !containsAllStrings(got,
-		`novelgen tool query context --type chapter-write --id "P1-V1-C1" --view index`,
-		`novelgen tool query context --type chapter-write --id "P1-V1-C1" --view brief`,
-		`novelgen tool query context --type chapter-write --id "P1-V1-C1" --fields existing_chapter_excerpt --view brief`,
-		`novelgen tool query context --type chapter-repair --id "P1-V1-C1"`,
+		`novelgen tool query context --type chapter-write --id 'P1-V1-C1' --view index`,
+		`novelgen tool query context --type chapter-write --id 'P1-V1-C1' --view brief`,
+		`novelgen tool query context --type chapter-write --id 'P1-V1-C1' --fields existing_chapter_excerpt --view brief`,
+		`novelgen tool query context --type chapter-repair --id 'P1-V1-C1'`,
 		"novelgen tool query context --type craft-character",
 		"novelgen tool query context --type craft-item",
 		"novelgen tool query context --type craft-location",
 		"novelgen tool query logs --type responses --view brief",
 		"novelgen tool query logs --id",
-		`novelgen tool query chapter --id "P1-V1-C1" --view brief`,
-		`novelgen tool query chapter --id "P1-V1-C1" --content`,
-		`novelgen tool query chapter --id "P1-V1-C1" --content --view brief`,
-		`novelgen tool query outline --type chapter --id "P1-V1-C1" --view brief`,
-		`novelgen tool patch-buffer --id "P1-V1-C1-draft"`,
-		`novelgen tool refresh chapter-dsl --id "P1-V1-C1"`,
-		`novelgen tool patch chapter --id "P1-V1-C1"`,
-		`novelgen tool patch chapter --id "P1-V1-C1" --patch-buffer "P1-V1-C1-draft"`,
-		`novelgen tool patch chapter --id "P1-V1-C1" --apply --refresh-derived`,
-		`novelgen tool patch chapter --id "P1-V1-C1" --patch-buffer "P1-V1-C1-draft" --apply --refresh-derived`) {
+		`novelgen tool query chapter --id 'P1-V1-C1' --view brief`,
+		`novelgen tool query chapter --id 'P1-V1-C1' --content`,
+		`novelgen tool query chapter --id 'P1-V1-C1' --content --view brief`,
+		`novelgen tool query outline --type chapter --id 'P1-V1-C1' --view brief`,
+		`novelgen tool patch-buffer --id 'P1-V1-C1-draft'`,
+		`novelgen tool refresh chapter-dsl --id 'P1-V1-C1'`,
+		`novelgen tool patch chapter --id 'P1-V1-C1'`,
+		`novelgen tool patch chapter --id 'P1-V1-C1' --patch-buffer 'P1-V1-C1-draft'`,
+		`novelgen tool patch chapter --id 'P1-V1-C1' --apply --refresh-derived`,
+		`novelgen tool patch chapter --id 'P1-V1-C1' --patch-buffer 'P1-V1-C1-draft' --apply --refresh-derived`) {
 		t.Fatalf("ToolAllowlist = %#v, want chapter apply patch", got)
 	}
 	if containsAllStrings(runtime.invocation.ToolAllowlist,
-		`novelgen tool patch chapter --id "P1-V1-C1" --apply`,
-		`novelgen tool patch chapter --id "P1-V1-C1" --patch-buffer "P1-V1-C1-draft" --apply`) {
+		`novelgen tool patch chapter --id 'P1-V1-C1' --apply`,
+		`novelgen tool patch chapter --id 'P1-V1-C1' --patch-buffer 'P1-V1-C1-draft' --apply`) {
 		t.Fatalf("ToolAllowlist should not allow chapter apply without --refresh-derived: %#v", runtime.invocation.ToolAllowlist)
 	}
 	if !strings.Contains(runtime.invocation.UserPrompt, "Apply Patches") || !strings.Contains(runtime.invocation.UserPrompt, "true") {
@@ -591,7 +591,7 @@ func TestWriteAgentImproveWithAgentSDKApplyAllowsCleanNoop(t *testing.T) {
 			CheckCalls:          0,
 			PatchCalls:          0,
 			PatchApplies:        0,
-			AllowedToolCommands: []string{`novelgen tool query context --type chapter-repair --id "P1-V1-C1" --view brief`},
+			AllowedToolCommands: []string{`novelgen tool query context --type chapter-repair --id 'P1-V1-C1' --view brief`},
 		},
 	}
 	agent := &WriteAgent{
@@ -625,7 +625,7 @@ func TestWriteAgentImproveWithAgentSDKApplyRequiresRefreshDerivedEvidence(t *tes
 			PatchCalls:                2,
 			PatchApplies:              1,
 			ApplyWithoutFollowupCheck: 1,
-			AllowedToolCommands:       []string{`novelgen tool patch chapter --id "P1-V1-C1" --patch-buffer "P1-V1-C1-draft" --apply`},
+			AllowedToolCommands:       []string{`novelgen tool patch chapter --id 'P1-V1-C1' --patch-buffer 'P1-V1-C1-draft' --apply`},
 		},
 	}
 	agent := &WriteAgent{
@@ -654,7 +654,7 @@ func TestWriteAgentImproveWithAgentSDKApplyRejectsDeniedTools(t *testing.T) {
 			CheckCalls:          1,
 			PatchCalls:          2,
 			PatchApplies:        1,
-			AllowedToolCommands: []string{`novelgen tool patch chapter --id "P1-V1-C1" --apply --refresh-derived`},
+			AllowedToolCommands: []string{`novelgen tool patch chapter --id 'P1-V1-C1' --apply --refresh-derived`},
 			ToolDenied:          1,
 			DeniedToolCommands:  []string{`type story\compose\outline.json`},
 		},
@@ -750,19 +750,19 @@ func TestWriteAgentReviewWithAgentSDKUsesFocusedReadOnlyWorkflow(t *testing.T) {
 		t.Fatalf("SDKSkills = %#v", got)
 	}
 	if got := runtime.invocation.ToolAllowlist; !containsAllStrings(got,
-		`novelgen tool query context --type chapter-write --id "P1-V1-C1" --view index`,
-		`novelgen tool query context --type chapter-write --id "P1-V1-C1" --view brief`,
-		`novelgen tool query context --type chapter-repair --id "P1-V1-C1"`,
+		`novelgen tool query context --type chapter-write --id 'P1-V1-C1' --view index`,
+		`novelgen tool query context --type chapter-write --id 'P1-V1-C1' --view brief`,
+		`novelgen tool query context --type chapter-repair --id 'P1-V1-C1'`,
 		"novelgen tool query context --type craft-character",
 		"novelgen tool query context --type craft-item",
 		"novelgen tool query context --type craft-location",
 		"novelgen tool query logs --type prompts --view index",
 		"novelgen tool query logs --id",
-		`novelgen tool check quality --target chapter --scope chapter --id "P1-V1-C1" --max-issues 8 --target-words 2000`,
-		`novelgen tool check simulation --target chapter --scope chapter --id "P1-V1-C1" --max-issues 8`,
-		`novelgen tool check all --target chapter --scope chapter --id "P1-V1-C1" --max-issues 8 --target-words 2000`,
-		`novelgen tool check all --target outline --scope chapter --id "P1-V1-C1" --max-issues 8`,
-		`novelgen tool refresh chapter-dsl --id "P1-V1-C1"`) {
+		`novelgen tool check quality --target chapter --scope chapter --id 'P1-V1-C1' --max-issues 8 --target-words 2000`,
+		`novelgen tool check simulation --target chapter --scope chapter --id 'P1-V1-C1' --max-issues 8`,
+		`novelgen tool check all --target chapter --scope chapter --id 'P1-V1-C1' --max-issues 8 --target-words 2000`,
+		`novelgen tool check all --target outline --scope chapter --id 'P1-V1-C1' --max-issues 8`,
+		`novelgen tool refresh chapter-dsl --id 'P1-V1-C1'`) {
 		t.Fatalf("ToolAllowlist = %#v", got)
 	}
 	if strings.Contains(strings.Join(runtime.invocation.ToolAllowlist, " "), "patch") {
@@ -781,7 +781,7 @@ func TestWriteAgentReviewWithAgentSDKUsesFocusedReadOnlyWorkflow(t *testing.T) {
 		!strings.Contains(runtime.invocation.UserPrompt, "length_review_rule=trust_these_counts") {
 		t.Fatalf("UserPrompt did not include deterministic chapter stats: %s", runtime.invocation.UserPrompt)
 	}
-	if !strings.Contains(runtime.invocation.UserPrompt, `novelgen tool check all --target chapter --scope chapter --id "P1-V1-C1" --max-issues 8 --target-words 2000`) ||
+	if !strings.Contains(runtime.invocation.UserPrompt, `novelgen tool check all --target chapter --scope chapter --id 'P1-V1-C1' --max-issues 8 --target-words 2000`) ||
 		!strings.Contains(runtime.invocation.UserPrompt, "target_words=2000") ||
 		!strings.Contains(runtime.invocation.UserPrompt, "Do not run alternate check command shapes") {
 		t.Fatalf("UserPrompt did not include exact review check command: %s", runtime.invocation.UserPrompt)
@@ -869,15 +869,15 @@ func TestWriteAgentSDKParamsDeclareToolEvidence(t *testing.T) {
 		t.Fatalf("improve command missing initial length budget: %q", improveWithBudget.Command)
 	}
 	if !containsAllStrings(improveWithBudget.ToolAllowlist,
-		`novelgen tool check all --target chapter --scope chapter --id "P1-V1-C1" --min-priority low --max-issues 12 --target-words 800`,
-		`novelgen tool patch chapter --id "P1-V1-C1" --patch-buffer "P1-V1-C1-draft" --target-words 800`,
+		`novelgen tool check all --target chapter --scope chapter --id 'P1-V1-C1' --min-priority low --max-issues 12 --target-words 800`,
+		`novelgen tool patch chapter --id 'P1-V1-C1' --patch-buffer 'P1-V1-C1-draft' --target-words 800`,
 	) {
 		t.Fatalf("improve target-word allowlist missing focused commands: %#v", improveWithBudget.ToolAllowlist)
 	}
 	if containsAllStrings(improveWithBudget.ToolAllowlist,
-		`novelgen tool check all --target chapter --scope chapter --id "P1-V1-C1" --min-priority low --max-issues 12`,
+		`novelgen tool check all --target chapter --scope chapter --id 'P1-V1-C1' --min-priority low --max-issues 12`,
 	) || containsAllStrings(improveWithBudget.ToolAllowlist,
-		`novelgen tool patch chapter --id "P1-V1-C1" --patch-buffer "P1-V1-C1-draft"`,
+		`novelgen tool patch chapter --id 'P1-V1-C1' --patch-buffer 'P1-V1-C1-draft'`,
 	) {
 		t.Fatalf("improve target-word allowlist should not include no-target chapter check/patch commands: %#v", improveWithBudget.ToolAllowlist)
 	}
@@ -892,9 +892,9 @@ func TestWriteAgentSDKParamsDeclareToolEvidence(t *testing.T) {
 		t.Fatalf("improve apply target-word command missing patch flag rule: %q", improveApplyWithBudget.Command)
 	}
 	if !containsAllStrings(improveApplyWithBudget.ToolAllowlist,
-		`novelgen tool patch chapter --id "P1-V1-C1" --patch-buffer "P1-V1-C1-draft" --apply --refresh-derived --target-words 800`,
+		`novelgen tool patch chapter --id 'P1-V1-C1' --patch-buffer 'P1-V1-C1-draft' --apply --refresh-derived --target-words 800`,
 	) || containsAllStrings(improveApplyWithBudget.ToolAllowlist,
-		`novelgen tool patch chapter --id "P1-V1-C1" --patch-buffer "P1-V1-C1-draft" --apply --refresh-derived`,
+		`novelgen tool patch chapter --id 'P1-V1-C1' --patch-buffer 'P1-V1-C1-draft' --apply --refresh-derived`,
 	) {
 		t.Fatalf("improve apply target-word allowlist = %#v", improveApplyWithBudget.ToolAllowlist)
 	}
@@ -905,8 +905,8 @@ func TestWriteAgentSDKParamsDeclareToolEvidence(t *testing.T) {
 	reviewWithBudget := writeReviewAgentSDKParams("review", "P1-V1-C1", 800)
 	if !strings.Contains(reviewWithBudget.Command, "target_words=800") ||
 		!containsAllStrings(reviewWithBudget.ToolAllowlist,
-			`novelgen tool check all --target chapter --scope chapter --id "P1-V1-C1" --max-issues 8 --target-words 800`,
-			`novelgen tool check quality --target chapter --scope chapter --id "P1-V1-C1" --max-issues 8 --target-words 800`,
+			`novelgen tool check all --target chapter --scope chapter --id 'P1-V1-C1' --max-issues 8 --target-words 800`,
+			`novelgen tool check quality --target chapter --scope chapter --id 'P1-V1-C1' --max-issues 8 --target-words 800`,
 		) {
 		t.Fatalf("review target-word params missing budgeted checks: command=%q allowlist=%#v", reviewWithBudget.Command, reviewWithBudget.ToolAllowlist)
 	}

@@ -192,12 +192,12 @@ func PatchChapter(chapterID string) string {
 // PatchBufferAppend builds the stdin-piped form used for long chapter prose:
 // `novelgen tool patch-buffer append --id <id> --stdin`.
 func PatchBufferAppend(bufferID string) string {
-	return prefix + "patch-buffer append --id " + strconv.Quote(bufferID) + " --stdin"
+	return prefix + "patch-buffer append --id " + SingleQuote(bufferID) + " --stdin"
 }
 
 // ChapterDSLRefresh builds `novelgen tool refresh chapter-dsl --id <id>`.
 func ChapterDSLRefresh(chapterID string) string {
-	return prefix + "refresh chapter-dsl --id " + strconv.Quote(chapterID)
+	return prefix + "refresh chapter-dsl --id " + SingleQuote(chapterID)
 }
 
 // SingleQuote quotes a value as one POSIX shell argument, so an agent can paste
@@ -227,7 +227,7 @@ func writeFlag(b *strings.Builder, name, value string, quoted bool) {
 	b.WriteString(name)
 	b.WriteString(" ")
 	if quoted {
-		b.WriteString(strconv.Quote(value))
+		b.WriteString(SingleQuote(value))
 		return
 	}
 	b.WriteString(value)

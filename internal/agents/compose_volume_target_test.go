@@ -535,7 +535,7 @@ func TestBuildAgentSDKImproveVolumePromptInputUsesTargetQueries(t *testing.T) {
 	if got.TargetVolumeID != "P1-V2" || got.ChapterCount != 2 {
 		t.Fatalf("target payload = %#v", got)
 	}
-	if len(got.RequiredQueries) != 1 || got.RequiredQueries[0] != "novelgen tool query context --type outline-volume --id \"P1-V2\" --view index" {
+	if len(got.RequiredQueries) != 1 || got.RequiredQueries[0] != "novelgen tool query context --type outline-volume --id 'P1-V2' --view index" {
 		t.Fatalf("required queries = %#v", got.RequiredQueries)
 	}
 	if got.ReviewResult.Suggestions[0].Issue != "fix me" {
@@ -579,20 +579,20 @@ func TestBuildAgentSDKImproveVolumePromptInputAddsChapterNavigation(t *testing.T
 	}
 	joined := strings.Join(nav.DetailQueries, "\n")
 	for _, want := range []string{
-		`novelgen tool query outline --type chapter --id "P1-V2-C1" --view brief`,
-		`novelgen tool query outline --type events --chapter-id "P1-V2-C1" --fields result,details,target,target_type,actor,action --view brief`,
+		`novelgen tool query outline --type chapter --id 'P1-V2-C1' --view brief`,
+		`novelgen tool query outline --type events --chapter-id 'P1-V2-C1' --fields result,details,target,target_type,actor,action --view brief`,
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("detail query %q missing from %#v", want, nav.DetailQueries)
 		}
 	}
-	if !strings.Contains(nav.FocusedCheckQuery, `--scope chapter --id "P1-V2-C1" --category state_anchor`) {
+	if !strings.Contains(nav.FocusedCheckQuery, `--scope chapter --id 'P1-V2-C1' --category state_anchor`) {
 		t.Fatalf("focused check query = %q", nav.FocusedCheckQuery)
 	}
-	if !strings.Contains(nav.RepairRouteQuery, `outline-repair --id "P1-V2-C1" --name "state_anchor" --view index`) {
+	if !strings.Contains(nav.RepairRouteQuery, `outline-repair --id 'P1-V2-C1' --name 'state_anchor' --view index`) {
 		t.Fatalf("repair route query = %q", nav.RepairRouteQuery)
 	}
-	if !strings.Contains(nav.RepairContextQuery, `outline-repair --id "P1-V2-C1" --name "state_anchor"`) {
+	if !strings.Contains(nav.RepairContextQuery, `outline-repair --id 'P1-V2-C1' --name 'state_anchor'`) {
 		t.Fatalf("repair context query = %q", nav.RepairContextQuery)
 	}
 	if nav.PatchShape == nil {
@@ -850,7 +850,7 @@ func TestBuildAgentSDKChaptersPromptInputUsesTargetQueries(t *testing.T) {
 	if len(got.RequiredQueries) != 1 {
 		t.Fatalf("required queries = %#v", got.RequiredQueries)
 	}
-	if got.RequiredQueries[0] != "novelgen tool query context --type outline-volume --id \"P1-V2\" --view brief" {
+	if got.RequiredQueries[0] != "novelgen tool query context --type outline-volume --id 'P1-V2' --view brief" {
 		t.Fatalf("required query = %#v", got.RequiredQueries)
 	}
 }
@@ -893,15 +893,15 @@ func TestComposeAgentSDKParamsAllowApplyOnlyWhenRequested(t *testing.T) {
 		t.Fatalf("dry-run ToolAllowlist should not allow apply: %#v", dryRun.ToolAllowlist)
 	}
 	if !containsString(dryRun.ToolAllowlist, "outline-repair --id P1-V1-C1 --name") ||
-		!containsString(dryRun.ToolAllowlist, "tool check all --target outline --scope volume --id \"P1-V1\"") ||
-		!containsExactString(dryRun.ToolAllowlist, `novelgen tool patch outline --target volume --id "P1-V1"`) {
+		!containsString(dryRun.ToolAllowlist, "tool check all --target outline --scope volume --id 'P1-V1'") ||
+		!containsExactString(dryRun.ToolAllowlist, `novelgen tool patch outline --target volume --id 'P1-V1'`) {
 		t.Fatalf("dry-run ToolAllowlist missing target-local entries: %#v", dryRun.ToolAllowlist)
 	}
 	if containsExactString(dryRun.ToolAllowlist, `novelgen tool query context --type outline-volume --id P1-V1`) {
 		t.Fatalf("no-task dry-run should not allow broad same-volume context beyond required index: %#v", dryRun.ToolAllowlist)
 	}
-	if containsExactString(dryRun.ToolAllowlist, `novelgen tool query outline --type chapter --id "P1-V1-C1"`) ||
-		containsExactString(dryRun.ToolAllowlist, `novelgen tool query outline --type events --chapter-id "P1-V1-C1"`) {
+	if containsExactString(dryRun.ToolAllowlist, `novelgen tool query outline --type chapter --id 'P1-V1-C1'`) ||
+		containsExactString(dryRun.ToolAllowlist, `novelgen tool query outline --type events --chapter-id 'P1-V1-C1'`) {
 		t.Fatalf("dry-run ToolAllowlist should not allow direct chapter/event detail without issue navigation: %#v", dryRun.ToolAllowlist)
 	}
 	if containsExactString(dryRun.ToolAllowlist, "novelgen tool query") || containsExactString(dryRun.ToolAllowlist, "novelgen tool check") {
@@ -909,7 +909,7 @@ func TestComposeAgentSDKParamsAllowApplyOnlyWhenRequested(t *testing.T) {
 	}
 
 	apply := composeAgentSDKParams("review", "outline-improve-volume-workflow", 28, composeImproveToolAllowlist(volume, promptInput, true))
-	if !containsExactString(apply.ToolAllowlist, `novelgen tool patch outline --target volume --id "P1-V1" --apply`) {
+	if !containsExactString(apply.ToolAllowlist, `novelgen tool patch outline --target volume --id 'P1-V1' --apply`) {
 		t.Fatalf("apply ToolAllowlist = %#v", apply.ToolAllowlist)
 	}
 }
@@ -957,11 +957,11 @@ func TestComposeOutlineReviewAgentSDKUsesReadOnlyWorkflow(t *testing.T) {
 	if !containsExactString(invocation.ToolAllowlist, "novelgen tool query outline --type all --view index") {
 		t.Fatalf("whole-outline review allowlist missing index query: %#v", invocation.ToolAllowlist)
 	}
-	if !containsExactString(invocation.ToolAllowlist, `novelgen tool query outline --type volume --id "P1-V1" --view brief`) {
+	if !containsExactString(invocation.ToolAllowlist, `novelgen tool query outline --type volume --id 'P1-V1' --view brief`) {
 		t.Fatalf("review allowlist missing volume brief: %#v", invocation.ToolAllowlist)
 	}
-	if !containsExactString(invocation.ToolAllowlist, `novelgen tool query outline --type chapter --id "P1-V1-C2" --view brief`) ||
-		!containsExactString(invocation.ToolAllowlist, `novelgen tool query outline --type events --chapter-id "P1-V1-C1" --view brief`) {
+	if !containsExactString(invocation.ToolAllowlist, `novelgen tool query outline --type chapter --id 'P1-V1-C2' --view brief`) ||
+		!containsExactString(invocation.ToolAllowlist, `novelgen tool query outline --type events --chapter-id 'P1-V1-C1' --view brief`) {
 		t.Fatalf("review allowlist missing chapter-level reads: %#v", invocation.ToolAllowlist)
 	}
 	if invocation.ToolEvidence.MinQueryCalls != 1 || !invocation.ToolEvidence.RequireNoDeniedTools {
@@ -1022,7 +1022,7 @@ func TestComposeOutlineReviewAgentSDKScopedVolume(t *testing.T) {
 		Content: `{"overall_score": 90, "summary": "ok"}`,
 		LiveSummary: &agentruntime.LiveSummary{
 			QueryCalls:          1,
-			AllowedToolCommands: []string{"novelgen tool query context --type outline-volume --id P1-V2 --view index"},
+			AllowedToolCommands: []string{"novelgen tool query context --type outline-volume --id 'P1-V2' --view index"},
 		},
 	}}
 	agent := &ComposeAgent{base: &BaseAgent{name: "ComposeAgent", runtime: runtime, config: &llm.Config{}, language: "zh"}}
@@ -1031,17 +1031,17 @@ func TestComposeOutlineReviewAgentSDKScopedVolume(t *testing.T) {
 		t.Fatalf("ReviewOutlineWithAgentSDK() error = %v", err)
 	}
 	joined := strings.Join(runtime.invocation.ToolAllowlist, "\n")
-	if !strings.Contains(joined, `novelgen tool query outline --type volume --id "P1-V1" --view brief`) {
+	if !strings.Contains(joined, `novelgen tool query outline --type volume --id 'P1-V1' --view brief`) {
 		t.Fatalf("scoped review allowlist must include adjacent volume reads: %#v", runtime.invocation.ToolAllowlist)
 	}
 	if strings.Contains(joined, "P1-V4") {
 		t.Fatalf("scoped review allowlist must not include non-adjacent volumes: %#v", runtime.invocation.ToolAllowlist)
 	}
-	if !containsExactString(runtime.invocation.ToolAllowlist, `novelgen tool query outline --type volume --id "P1-V2" --view brief`) {
+	if !containsExactString(runtime.invocation.ToolAllowlist, `novelgen tool query outline --type volume --id 'P1-V2' --view brief`) {
 		t.Fatalf("scoped review allowlist missing target volume: %#v", runtime.invocation.ToolAllowlist)
 	}
 	if len(runtime.invocation.ToolEvidence.RequiredToolCommands) != 1 ||
-		runtime.invocation.ToolEvidence.RequiredToolCommands[0] != "novelgen tool query context --type outline-volume --id \"P1-V2\" --view index" {
+		runtime.invocation.ToolEvidence.RequiredToolCommands[0] != "novelgen tool query context --type outline-volume --id 'P1-V2' --view index" {
 		t.Fatalf("scoped required tool commands = %#v", runtime.invocation.ToolEvidence.RequiredToolCommands)
 	}
 }
@@ -1098,11 +1098,11 @@ func TestComposeImproveToolAllowlistIncludesSuggestionNavigation(t *testing.T) {
 		ReviewResult: composeAgentSDKPromptReviewResult{Suggestions: []composeAgentSDKPromptReviewSuggestion{{
 			Navigation: &composeAgentSDKSuggestionNavigation{
 				DetailQueries: []string{
-					`novelgen tool query outline --type chapter --id "P1-V2-C1" --view brief`,
+					`novelgen tool query outline --type chapter --id 'P1-V2-C1' --view brief`,
 				},
-				FocusedCheckQuery:  `novelgen tool check all --target outline --scope chapter --id "P1-V2-C1" --category logic --min-priority low --max-issues 8`,
-				RepairRouteQuery:   `novelgen tool query context --type outline-repair --id "P1-V2-C1" --name "logic" --view index`,
-				RepairContextQuery: `novelgen tool query context --type outline-repair --id "P1-V2-C1" --name "logic" --view brief`,
+				FocusedCheckQuery:  `novelgen tool check all --target outline --scope chapter --id 'P1-V2-C1' --category logic --min-priority low --max-issues 8`,
+				RepairRouteQuery:   `novelgen tool query context --type outline-repair --id 'P1-V2-C1' --name 'logic' --view index`,
+				RepairContextQuery: `novelgen tool query context --type outline-repair --id 'P1-V2-C1' --name 'logic' --view brief`,
 			},
 		}}},
 	}
@@ -1110,12 +1110,12 @@ func TestComposeImproveToolAllowlistIncludesSuggestionNavigation(t *testing.T) {
 	got := composeImproveToolAllowlist(volume, promptInput, false)
 	for _, want := range []string{
 		`novelgen tool query context --type outline-volume --id P1-V2 --view index`,
-		`novelgen tool query context --type outline-volume --id "P1-V2"`,
-		`novelgen tool query outline --type chapter --id "P1-V2-C1" --view brief`,
-		`novelgen tool check all --target outline --scope chapter --id "P1-V2-C1" --category logic --min-priority low --max-issues 8`,
-		`novelgen tool query context --type outline-repair --id "P1-V2-C1" --name "logic" --view index`,
-		`novelgen tool query context --type outline-repair --id "P1-V2-C1" --name "logic" --view brief`,
-		`novelgen tool patch outline --target volume --id "P1-V2"`,
+		`novelgen tool query context --type outline-volume --id 'P1-V2'`,
+		`novelgen tool query outline --type chapter --id 'P1-V2-C1' --view brief`,
+		`novelgen tool check all --target outline --scope chapter --id 'P1-V2-C1' --category logic --min-priority low --max-issues 8`,
+		`novelgen tool query context --type outline-repair --id 'P1-V2-C1' --name 'logic' --view index`,
+		`novelgen tool query context --type outline-repair --id 'P1-V2-C1' --name 'logic' --view brief`,
+		`novelgen tool patch outline --target volume --id 'P1-V2'`,
 	} {
 		if !containsExactString(got, want) {
 			t.Fatalf("allowlist missing %q: %#v", want, got)
@@ -1133,29 +1133,29 @@ func TestComposeImproveToolAllowlistAllowsVolumeBriefForCleanAndFocusedTasks(t *
 	}
 
 	cleanProbe := composeImproveToolAllowlist(volume, base, true)
-	if containsExactString(cleanProbe, `novelgen tool query context --type outline-volume --id "P1-V2"`) {
+	if containsExactString(cleanProbe, `novelgen tool query context --type outline-volume --id 'P1-V2'`) {
 		t.Fatalf("clean probe should not allow broad same-volume brief/full query: %#v", cleanProbe)
 	}
-	if !containsExactString(cleanProbe, `novelgen tool query context --type outline-volume --id "P1-V2" --view brief`) {
+	if !containsExactString(cleanProbe, `novelgen tool query context --type outline-volume --id 'P1-V2' --view brief`) {
 		t.Fatalf("clean probe should allow exact same-volume brief query: %#v", cleanProbe)
 	}
 
 	withPrompt := base
 	withPrompt.UserPrompt = "加强第二卷的敌方压迫感"
 	focused := composeImproveToolAllowlist(volume, withPrompt, true)
-	if !containsExactString(focused, `novelgen tool query context --type outline-volume --id "P1-V2"`) {
+	if !containsExactString(focused, `novelgen tool query context --type outline-volume --id 'P1-V2'`) {
 		t.Fatalf("focused task should allow same-volume detail query: %#v", focused)
 	}
-	if !containsExactString(focused, `novelgen tool query outline --type volume --id "P1-V2"`) {
+	if !containsExactString(focused, `novelgen tool query outline --type volume --id 'P1-V2'`) {
 		t.Fatalf("focused task should allow same-volume outline volume query: %#v", focused)
 	}
-	if !containsExactString(focused, `novelgen tool query outline --type events --volume-id "P1-V2" --view brief`) {
+	if !containsExactString(focused, `novelgen tool query outline --type events --volume-id 'P1-V2' --view brief`) {
 		t.Fatalf("focused task should allow same-volume events query: %#v", focused)
 	}
-	if !containsExactString(focused, `novelgen tool query outline --type chapter --id "P1-V2-C1" --view brief`) {
+	if !containsExactString(focused, `novelgen tool query outline --type chapter --id 'P1-V2-C1' --view brief`) {
 		t.Fatalf("focused task should allow target-volume chapter brief query: %#v", focused)
 	}
-	if !containsExactString(focused, `novelgen tool query outline --type events --chapter-id "P1-V2-C1" --view brief`) {
+	if !containsExactString(focused, `novelgen tool query outline --type events --chapter-id 'P1-V2-C1' --view brief`) {
 		t.Fatalf("focused task should allow target-volume chapter events query: %#v", focused)
 	}
 
@@ -1163,15 +1163,15 @@ func TestComposeImproveToolAllowlistAllowsVolumeBriefForCleanAndFocusedTasks(t *
 	cleanPrompt.UserPrompt = scopeComposeAgentSDKVolumeUserPrompt("如果 check 返回 0 issue，不要为了润色而改写", "P1-V2", "Target")
 	cleanPrompt.ForceIssueRepair = true
 	cleanScoped := composeImproveToolAllowlist(volume, cleanPrompt, true)
-	if containsExactString(cleanScoped, `novelgen tool query context --type outline-volume --id "P1-V2"`) ||
-		containsExactString(cleanScoped, `novelgen tool query outline --type volume --id "P1-V2"`) ||
-		containsExactString(cleanScoped, `novelgen tool query outline --type chapter --id "P1-V2-C1" --view brief`) {
+	if containsExactString(cleanScoped, `novelgen tool query context --type outline-volume --id 'P1-V2'`) ||
+		containsExactString(cleanScoped, `novelgen tool query outline --type volume --id 'P1-V2'`) ||
+		containsExactString(cleanScoped, `novelgen tool query outline --type chapter --id 'P1-V2-C1' --view brief`) {
 		t.Fatalf("clean-probe prompt should not allow exploratory detail queries: %#v", cleanScoped)
 	}
-	if !containsExactString(cleanScoped, `novelgen tool query context --type outline-volume --id "P1-V2" --view brief`) {
+	if !containsExactString(cleanScoped, `novelgen tool query context --type outline-volume --id 'P1-V2' --view brief`) {
 		t.Fatalf("clean-probe prompt should allow exact same-volume brief query: %#v", cleanScoped)
 	}
-	if !containsExactString(cleanScoped, `novelgen tool check all --target outline --scope volume --id "P1-V2"`) {
+	if !containsExactString(cleanScoped, `novelgen tool check all --target outline --scope volume --id 'P1-V2'`) {
 		t.Fatalf("clean-probe prompt should still allow target volume check: %#v", cleanScoped)
 	}
 }
@@ -1195,15 +1195,15 @@ func TestComposeImproveToolAllowlistIncludesAdjacentChaptersForFocusedSuggestion
 
 	got := composeImproveToolAllowlist(volume, promptInput, true)
 	for _, want := range []string{
-		`novelgen tool query outline --type chapter --id "P1-V2-C1" --view brief`,
-		`novelgen tool query outline --type chapter --id "P1-V2-C2" --view brief`,
-		`novelgen tool query outline --type chapter --id "P1-V2-C3" --view brief`,
+		`novelgen tool query outline --type chapter --id 'P1-V2-C1' --view brief`,
+		`novelgen tool query outline --type chapter --id 'P1-V2-C2' --view brief`,
+		`novelgen tool query outline --type chapter --id 'P1-V2-C3' --view brief`,
 	} {
 		if !containsExactString(got, want) {
 			t.Fatalf("adjacent allowlist missing %q: %#v", want, got)
 		}
 	}
-	if containsExactString(got, `novelgen tool query outline --type chapter --id "P1-V2-C4" --view brief`) {
+	if containsExactString(got, `novelgen tool query outline --type chapter --id 'P1-V2-C4' --view brief`) {
 		t.Fatalf("adjacent allowlist should not include unrelated chapter detail: %#v", got)
 	}
 }
@@ -1226,11 +1226,11 @@ func TestComposeImproveToolAllowlistAllowsWholeVolumeDetailsForVolumeSuggestion(
 
 	got := composeImproveToolAllowlist(volume, promptInput, true)
 	for _, want := range []string{
-		`novelgen tool query outline --type events --volume-id "P1-V2" --view brief`,
-		`novelgen tool query outline --type chapter --id "P1-V2-C1" --view brief`,
-		`novelgen tool query outline --type events --chapter-id "P1-V2-C1" --view brief`,
-		`novelgen tool query outline --type chapter --id "P1-V2-C2" --view brief`,
-		`novelgen tool query outline --type events --chapter-id "P1-V2-C2" --view brief`,
+		`novelgen tool query outline --type events --volume-id 'P1-V2' --view brief`,
+		`novelgen tool query outline --type chapter --id 'P1-V2-C1' --view brief`,
+		`novelgen tool query outline --type events --chapter-id 'P1-V2-C1' --view brief`,
+		`novelgen tool query outline --type chapter --id 'P1-V2-C2' --view brief`,
+		`novelgen tool query outline --type events --chapter-id 'P1-V2-C2' --view brief`,
 	} {
 		if !containsExactString(got, want) {
 			t.Fatalf("volume-level allowlist missing %q: %#v", want, got)
@@ -1254,10 +1254,10 @@ func TestComposeImproveToolAllowlistNarrowsBoundaryPromptDetails(t *testing.T) {
 
 	got := composeImproveToolAllowlist(volume, promptInput, true)
 	for _, want := range []string{
-		`novelgen tool query outline --type chapter --id "P1-V2-C1" --view brief`,
-		`novelgen tool query outline --type events --chapter-id "P1-V2-C1" --view brief`,
-		`novelgen tool query outline --type chapter --id "P1-V2-C3" --view brief`,
-		`novelgen tool query outline --type events --chapter-id "P1-V2-C3" --view brief`,
+		`novelgen tool query outline --type chapter --id 'P1-V2-C1' --view brief`,
+		`novelgen tool query outline --type events --chapter-id 'P1-V2-C1' --view brief`,
+		`novelgen tool query outline --type chapter --id 'P1-V2-C3' --view brief`,
+		`novelgen tool query outline --type events --chapter-id 'P1-V2-C3' --view brief`,
 		`novelgen tool query outline --type refs --entity-type character --name`,
 		`novelgen tool query outline --type refs --entity-type item --name`,
 		`novelgen tool query outline --type refs --entity-type location --name`,
@@ -1273,15 +1273,15 @@ func TestComposeImproveToolAllowlistNarrowsBoundaryPromptDetails(t *testing.T) {
 		}
 	}
 	for _, unwanted := range []string{
-		`novelgen tool query outline --type chapter --id "P1-V2-C2" --view brief`,
-		`novelgen tool query outline --type events --chapter-id "P1-V2-C2" --view brief`,
-		`novelgen tool query outline --type events --chapter-id "P1-V2-C2" --fields result,details,target,target_type,actor,action --view brief`,
+		`novelgen tool query outline --type chapter --id 'P1-V2-C2' --view brief`,
+		`novelgen tool query outline --type events --chapter-id 'P1-V2-C2' --view brief`,
+		`novelgen tool query outline --type events --chapter-id 'P1-V2-C2' --fields result,details,target,target_type,actor,action --view brief`,
 	} {
 		if containsExactString(got, unwanted) {
 			t.Fatalf("boundary allowlist should not include middle chapter detail %q: %#v", unwanted, got)
 		}
 	}
-	if !containsExactString(got, `novelgen tool check all --target outline --scope chapter --id "P1-V2-C2"`) {
+	if !containsExactString(got, `novelgen tool check all --target outline --scope chapter --id 'P1-V2-C2'`) {
 		t.Fatalf("chapter checks should remain available for explicit check routing: %#v", got)
 	}
 }
@@ -1301,10 +1301,10 @@ func TestComposeImproveToolAllowlistKeepsAllDetailsForWholeVolumePrompt(t *testi
 
 	got := composeImproveToolAllowlist(volume, promptInput, true)
 	for _, want := range []string{
-		`novelgen tool query outline --type chapter --id "P1-V2-C1" --view brief`,
-		`novelgen tool query outline --type chapter --id "P1-V2-C2" --view brief`,
-		`novelgen tool query outline --type events --chapter-id "P1-V2-C1" --view brief`,
-		`novelgen tool query outline --type events --chapter-id "P1-V2-C2" --view brief`,
+		`novelgen tool query outline --type chapter --id 'P1-V2-C1' --view brief`,
+		`novelgen tool query outline --type chapter --id 'P1-V2-C2' --view brief`,
+		`novelgen tool query outline --type events --chapter-id 'P1-V2-C1' --view brief`,
+		`novelgen tool query outline --type events --chapter-id 'P1-V2-C2' --view brief`,
 	} {
 		if !containsExactString(got, want) {
 			t.Fatalf("whole-volume prompt should keep all chapter detail %q: %#v", want, got)
@@ -1346,8 +1346,8 @@ func TestBuildAgentSDKImproveVolumePromptInputRequiresFocusedChecks(t *testing.T
 	text := strings.Join(got.Instructions, "\n")
 	for _, want := range []string{
 		"Required focused checks before final JSON",
-		`novelgen tool check all --target outline --scope chapter --id "P1-V1-C2" --category logic --min-priority low --max-issues 8`,
-		`novelgen tool check all --target outline --scope chapter --id "P1-V1-C2" --category transition --min-priority low --max-issues 8`,
+		`novelgen tool check all --target outline --scope chapter --id 'P1-V1-C2' --category logic --min-priority low --max-issues 8`,
+		`novelgen tool check all --target outline --scope chapter --id 'P1-V1-C2' --category transition --min-priority low --max-issues 8`,
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("required focused check instruction missing %q:\n%s", want, text)
@@ -1357,8 +1357,8 @@ func TestBuildAgentSDKImproveVolumePromptInputRequiresFocusedChecks(t *testing.T
 	if len(evidence.RequiredToolCommands) != 2 {
 		t.Fatalf("required tool commands = %#v", evidence.RequiredToolCommands)
 	}
-	if !containsExactString(evidence.RequiredToolCommands, `novelgen tool check all --target outline --scope chapter --id "P1-V1-C2" --category logic --min-priority low --max-issues 8`) ||
-		!containsExactString(evidence.RequiredToolCommands, `novelgen tool check all --target outline --scope chapter --id "P1-V1-C2" --category transition --min-priority low --max-issues 8`) {
+	if !containsExactString(evidence.RequiredToolCommands, `novelgen tool check all --target outline --scope chapter --id 'P1-V1-C2' --category logic --min-priority low --max-issues 8`) ||
+		!containsExactString(evidence.RequiredToolCommands, `novelgen tool check all --target outline --scope chapter --id 'P1-V1-C2' --category transition --min-priority low --max-issues 8`) {
 		t.Fatalf("required tool commands missing focused checks: %#v", evidence.RequiredToolCommands)
 	}
 }
@@ -1453,8 +1453,8 @@ func TestBuildComposeAgentSDKGlobalNavigationRoutesFactionTierToSetupPatch(t *te
 	if !ok || len(premises) != 1 || premises[0]["category"] != "zerg" {
 		t.Fatalf("patch shape should name the target faction category: %#v", nav.PatchShape)
 	}
-	if !containsExactString(nav.DetailQueries, `novelgen tool query story-setup --type search --name "zerg" --view index`) ||
-		!containsExactString(nav.DetailQueries, `novelgen tool query story-setup --type search --name "zerg" --view brief`) {
+	if !containsExactString(nav.DetailQueries, `novelgen tool query story-setup --type search --name 'zerg' --view index`) ||
+		!containsExactString(nav.DetailQueries, `novelgen tool query story-setup --type search --name 'zerg' --view brief`) {
 		t.Fatalf("expected focused story-setup queries, got %#v", nav.DetailQueries)
 	}
 	if strings.Contains(nav.RepairContextQuery, "outline --view") {
@@ -1570,7 +1570,7 @@ func TestRepairGlobalIssuesWithAgentSDKUsesGlobalWorkflowAndEvidence(t *testing.
 	}
 	runtime.result.LiveSummary.ApplyWithoutFollowupCheck = 0
 	runtime.result.LiveSummary.AllowedToolCommands = []string{
-		`novelgen tool check all --target outline --scope volume --id "P1-V1" --min-priority medium --max-issues 12`,
+		`novelgen tool check all --target outline --scope volume --id 'P1-V1' --min-priority medium --max-issues 12`,
 	}
 	if _, err := agent.RepairGlobalIssuesWithAgentSDK(context.Background(), review, true); err == nil || !strings.Contains(err.Error(), "required tool command not observed") {
 		t.Fatalf("expected exact post-patch check evidence error, got %v", err)

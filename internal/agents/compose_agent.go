@@ -552,7 +552,7 @@ func composeImproveVolumeToolAllowlist(volume models.Volume, promptInput compose
 	}
 	patchTool := "novelgen tool patch outline --target volume"
 	if volumeID != "" {
-		patchTool += fmt.Sprintf(" --id %q", volumeID)
+		patchTool += " --id " + toolcmd.SingleQuote(volumeID)
 	}
 	if applyPatches {
 		patchTool += " --apply"

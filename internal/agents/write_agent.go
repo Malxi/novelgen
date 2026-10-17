@@ -746,7 +746,7 @@ func writeImproveToolAllowlist(chapterID string, applyPatches bool, targetWords 
 			toolcmd.Check(toolcmd.CheckOptions{Target: "outline", Scope: "chapter", ID: chapterID, MaxIssues: 8}),
 			toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "simulation", MaxIssues: 8}),
 			toolcmd.ChapterDSLRefresh(chapterID),
-			fmt.Sprintf("novelgen tool patch-buffer --id %q", bufferID),
+			"novelgen tool patch-buffer --id "+toolcmd.SingleQuote(bufferID),
 		)
 		if targetWordCount > 0 {
 			allowlist = append(allowlist,

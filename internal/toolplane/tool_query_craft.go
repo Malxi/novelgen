@@ -76,7 +76,11 @@ func queryNamedElement[T any](kind, name string, values map[string]*T) ToolRespo
 	sort.Slice(hits, func(i, j int) bool {
 		return fmt.Sprint(hits[i]["key"]) < fmt.Sprint(hits[j]["key"])
 	})
-	return ToolResponse{OK: true, Section: "story-setup", Count: len(hits), Results: hits}
+	warnings := []string{}
+	if strings.TrimSpace(name) != "" && len(hits) == 0 {
+		warnings = append(warnings, fmt.Sprintf("%s %q not found", kind, name))
+	}
+	return ToolResponse{OK: true, Section: "story-setup", Count: len(hits), Results: hits, Warnings: warnings}
 }
 
 func rawObjectMatches(key string, value map[string]interface{}, name string) bool {
@@ -103,7 +107,11 @@ func queryNamedRawElement(kind, name string, values map[string]map[string]interf
 	sort.Slice(hits, func(i, j int) bool {
 		return fmt.Sprint(hits[i]["key"]) < fmt.Sprint(hits[j]["key"])
 	})
-	return ToolResponse{OK: true, Section: "craft", Count: len(hits), Results: hits}
+	warnings := []string{}
+	if strings.TrimSpace(name) != "" && len(hits) == 0 {
+		warnings = append(warnings, fmt.Sprintf("%s %q not found", kind, name))
+	}
+	return ToolResponse{OK: true, Section: "craft", Count: len(hits), Results: hits, Warnings: warnings}
 }
 
 func compactCraftObject(raw map[string]interface{}) map[string]interface{} {

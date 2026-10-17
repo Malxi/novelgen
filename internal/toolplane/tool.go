@@ -78,14 +78,15 @@ var toolQuerySectionTypes = map[string][]string{
 // accepts.
 func toolQueryLongHelp() string {
 	var b strings.Builder
-	b.WriteString("Query novel project data as JSON.\n\nSections and the --type values they accept (an omitted --type uses the first value):\n")
+	b.WriteString("Query novel project data as JSON.\n\nSections and the --type values they accept (an omitted --type uses the section default; logs defaults to all kinds):\n")
 	for _, section := range toolQuerySections {
 		fmt.Fprintf(&b, "  %-12s %s -- %s\n",
 			section,
 			strings.Join(toolQuerySectionTypes[section], "|"),
 			toolQuerySectionSummary[section])
 	}
-	b.WriteString("\n--view index|brief|full, --fields, --limit and exact --id/--name narrow the output.")
+	b.WriteString("\n--view index is route-only (ids/titles/counts); brief is the default; full is for one precise object.")
+	b.WriteString("\n--fields projects fields, --limit applies to list results, and exact --id/--name narrows the target.")
 	return b.String()
 }
 
@@ -177,7 +178,8 @@ setup target checks story/setup/story_setup.json.
 outline target supports scoped all/volume/chapter checks.
 chapter target checks saved final chapter markdown and can simulate existing RPG DSL without invoking LLM.
 recap target checks story/recaps/<chapter_id>.json continuity anchors.
-schema validates typed craft objects and saved recap JSON already in project state.`,
+schema validates typed craft objects and saved recap JSON already in project state.
+craft checks infer the craft kind from --id, or check all four kinds when no scope/id is given; recap defaults to chapter scope.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runToolCheck,
 }
@@ -203,7 +205,9 @@ section is patched:
 
 Patch JSON comes from stdin, from --patch-json (short ASCII-only patches) or from
 a --patch-buffer filled by ` + "`tool patch-buffer`" + `. --task reuses the patch
-shape of a validated outline repair task instead.`,
+shape of a validated outline repair task instead. Use only one patch source.
+Typed patches reject unknown fields; an empty patch object is rejected, and a
+patch that changes nothing returns "warnings" with an empty "changed" list.`,
 	Args: cobra.ExactArgs(1),
 	RunE: RunToolPatch,
 }
@@ -250,8 +254,12 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unsupported query section %q; valid sections: %s",
 			args[0], strings.Join(toolQuerySections, ", "))
 	}
+	if err := ValidateToolView(ToolQueryFlags.View); err != nil {
+		return err
+	}
 	queryType := NormalizeKey(ToolQueryFlags.Type)
-	if canonical := canonicalToolQueryType(section, queryType); canonical != "" && !toolQueryTypeKnown(section, canonical) {
+	canonicalType := canonicalToolQueryType(section, queryType)
+	if canonicalType != "" && !toolQueryTypeKnown(section, canonicalType) {
 		return unknownToolQueryTypeError(section, ToolQueryFlags.Type)
 	}
 	queryID, idRepaired := RepairToolLookupText(ToolQueryFlags.ID)
@@ -296,11 +304,23 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 	if volumeIDRepaired {
 		resp.Warnings = append(resp.Warnings, fmt.Sprintf("repaired possible mojibake in --volume-id from %q to %q", ToolQueryFlags.VolumeID, queryVolumeID))
 	}
+	appendToolQueryFlagWarnings(&resp, section, canonicalType, queryID, queryName, queryChapterID, queryVolumeID)
+	if ToolQueryFlags.IncludeContent && normalizeToolView(ToolQueryFlags.View) == "index" {
+		resp.Warnings = append(resp.Warnings, "--content is omitted in index view; use --view brief to include chapter/log content")
+	}
 
 	resp.Section = section
+	if canonicalType == "" {
+		switch section {
+		case "story-setup", "outline", "craft", "chapter", "logs":
+			canonicalType = "all"
+		default:
+			canonicalType = queryType
+		}
+	}
 	resp.Query = map[string]string{
 		"section":     section,
-		"type":        queryType,
+		"type":        canonicalType,
 		"id":          queryID,
 		"name":        queryName,
 		"entity_type": ToolQueryFlags.EntityType,
@@ -338,14 +358,14 @@ func init() {
 	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.ChapterID, "chapter-id", "", "Limit event queries to a chapter ID")
 	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.VolumeID, "volume-id", "", "Limit event queries to a volume ID")
 	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.View, "view", "brief",
-		"Output detail level: index (ids and counts), brief (default), or full (one precise object)")
+		"Output detail level: index (route ids/counts), brief (default), or full (one precise object)")
 	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Fields, "fields", "", "Comma-separated JSON fields to return from each result, e.g. storyline_advances,chapter_payoff,conflict")
-	ToolQueryCmd.Flags().BoolVar(&ToolQueryFlags.IncludeContent, "content", false, "Include chapter text content when available")
-	ToolQueryCmd.Flags().IntVar(&ToolQueryFlags.Limit, "limit", 0, "Maximum number of results to return")
+	ToolQueryCmd.Flags().BoolVar(&ToolQueryFlags.IncludeContent, "content", false, "Include chapter/log text content when available (brief view keeps it)")
+	ToolQueryCmd.Flags().IntVar(&ToolQueryFlags.Limit, "limit", 0, "Maximum list results; object-shaped results return a warning instead")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Target, "target", "outline",
 		"Check target: outline, setup, craft, chapter, or recap; craft requires kind schema")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Scope, "scope", "all",
-		"Scope within the target: outline all|volume|chapter, craft character|item|location|organization, chapter chapter, recap chapter")
+		"Scope within the target: outline all|volume|chapter, craft character|item|location|organization (inferred from --id when omitted), chapter chapter, recap chapter (default)")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.ID, "id", "", "Volume/chapter ID, craft element name, final chapter ID, or recap chapter ID for scoped checks")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.MinPriority, "min-priority", "", "Only return issues at or above priority: low, medium, high, critical")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Category, "category", "", "Only return issues in comma-separated categories, e.g. logic,plot,structure")

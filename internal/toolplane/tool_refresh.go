@@ -78,7 +78,7 @@ func RefreshToolChapterDSL(ctx context.Context, rootDir, id string, batchSize in
 }
 
 func refreshToolChapterDSLAt(ctx context.Context, root *store.Root, id string, batchSize int) (*toolRefreshResult, error) {
-	config, setup, outline, cfg, client, err := loadToolRefreshProjectState()
+	config, setup, outline, cfg, client, err := loadToolRefreshProjectState(root)
 	if err != nil {
 		return nil, err
 	}
@@ -122,16 +122,19 @@ func refreshToolChapterDSLAt(ctx context.Context, root *store.Root, id string, b
 	return &refresh, nil
 }
 
-func loadToolRefreshProjectState() (*models.ProjectConfig, *models.StorySetup, *models.Outline, *llm.Config, llm.Client, error) {
-	config, err := project.LoadConfig()
+func loadToolRefreshProjectState(root *store.Root) (*models.ProjectConfig, *models.StorySetup, *models.Outline, *llm.Config, llm.Client, error) {
+	if root == nil {
+		return nil, nil, nil, nil, nil, fmt.Errorf("project root is required")
+	}
+	config, err := root.LoadConfig()
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("load project config: %w", err)
 	}
-	setup, err := project.LoadStorySetup()
+	setup, err := root.LoadSetup()
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("load story setup: %w", err)
 	}
-	outline, err := project.LoadOutline()
+	outline, err := root.LoadOutline()
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("load outline: %w", err)
 	}

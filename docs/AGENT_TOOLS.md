@@ -80,11 +80,18 @@ available, run the recap minimal/consistency/title check, checkpoint the old
 recap, and save only when `--apply` is present and no blocking issue remains.
 Use `--view brief|index|full` to control output size. The default is `brief`.
 Agents should use `index`/`brief` for navigation and only use `full` for a
-precise small object.
+precise small object. `index` is route-only: outline index lists parts and
+volumes with counts (query a volume to get its chapter ids), chapter index keeps
+ids/titles/counts, and craft index keeps keys plus detail queries. `--limit`
+applies to list-shaped results; when the result is an object the tool returns a
+warning instead of silently ignoring the limit. A truncated list reports the
+returned count in `count` and the untruncated total in `meta.total_count`.
+Unknown `--view` values are rejected with the valid values.
 
 `--type` values per query section (`novelgen tool query --help` prints the same
-table). An omitted `--type` uses the first value. A `--type` outside the table is
-rejected with the valid list, so a typo tells the agent how to correct itself:
+table). An omitted `--type` uses the section default (normally its first value;
+`logs` defaults to all log kinds). A `--type` outside the table is rejected with
+the valid list, so a typo tells the agent how to correct itself:
 
 | Section | `--type` values |
 | --- | --- |
@@ -107,12 +114,16 @@ patch shape. `tool check` accepts kind `quality|simulation|all|schema`; `schema`
 applies to `--target craft` and `--target recap` only.
 
 Use `--fields a,b,c` to project only selected JSON fields from each result while
-preserving navigation keys such as `id`, `title`, and `path`. Prefer this over
-shell pipes like `Select-String` or `grep`.
+preserving navigation keys such as `id`, `title`, and `path`. If no requested
+field exists, the warning is returned and the original results are preserved.
+Prefer this over shell pipes like `Select-String` or `grep`.
 For history-aware continuation, use `tool query logs --view index` first. The
 logs query returns only relative log ids, agent names, sizes, mtimes, and
 detail queries in index mode. It returns capped content only when `--content`
 is paired with an exact `--id`; do not read `logs/` with shell commands.
+For chapter prose, `tool query chapter --id <chapter_id> --content` returns the
+manuscript in the default `brief` view (`content` plus `content_path`). The
+`index` view remains route-only and omits content.
 For Agent SDK runs, prefer
 `novelgen tool query logs --view index --limit 5` before
 opening prompt/response logs. `agent-live` index/brief results include a
@@ -202,6 +213,9 @@ novelgen tool query chapter --type events --chapter-id chap_001
 ```
 
 The `reasons` field explains why a chapter matched.
+For `tool query chapter --type events`, `--id <chapter_id>` is treated as the
+chapter to filter (the same as `--chapter-id`). `--type refs` does not accept
+`--id`; use `--entity-type`/`--name` without an id.
 
 ## Context
 
@@ -310,7 +324,9 @@ novelgen tool check all --target outline --scope volume --id P1-V1 --category lo
 novelgen tool check quality --target chapter --scope chapter --id P1-V1-C1 --max-issues 8
 novelgen tool check simulation --target chapter --scope chapter --id P1-V1-C1 --max-issues 8
 novelgen tool check schema --target craft --scope character --id "Lin"
+novelgen tool check schema --target craft --id "Lin"
 novelgen tool check quality --target recap --scope chapter --id P1-V1-C1
+novelgen tool check quality --target recap --id P1-V1-C1
 ```
 
 `quality` runs deterministic structure/direct rules. `simulation` runs the
@@ -327,14 +343,23 @@ objects against the typed Go schema and text/metadata safety rules. After an age
 blocking issue before returning. `--target recap` validates saved
 `story/recaps/<chapter_id>.json` continuity anchors. Minimal recap failures are
 blocking; `next_opening_hint` consistency issues are non-blocking warnings.
+`tool check schema --target craft` can infer the craft kind from `--id`; without
+an id or scope it checks all four craft files and returns `scope="all"`.
+`tool check --target recap` defaults to the only supported scope, `chapter`, so
+`--id` is sufficient in normal use.
 Use `--min-priority`, `--category`, and `--max-issues` to keep agent-facing
 check output focused; the summary still reports the full issue counts.
+If a filter hides every issue while `summary.total` is non-zero, `next_actions`
+returns `fix_check_filter` with an unfiltered check command instead of
+`return_final_json`.
 Check responses include top-level `next_actions` and `meta.check_budget`. If no
 issues are returned, follow `return_final_json` and stop querying. If issues are
 returned, repair one issue at a time using the first returned issue's
 `navigation.repair_route_query` before any broader context query; only call
 `repair_context_query`, patch dry-run, or focused recheck when those commands
 are listed by `next_actions` or `issues[].navigation`.
+Top-level `warnings` reports flags that were ignored for the selected target
+(for example `--scope` on a setup check or `--target-words` on an outline check).
 For chapter simulation issues caused by stale or missing derived RPG DSL,
 top-level `next_actions` starts with `refresh_derived_dsl`. Run that refresh and
 the returned `post_refresh_check` before querying repair context or patching
@@ -413,6 +438,12 @@ existing `pressure`, `clever_move`, `reward`, and other nested fields. Arrays
 still replace unless a tool documents special upsert behavior, so patch
 `events`, `storyline_advances`, `resource_ledger`, and similar lists only when
 you are intentionally replacing the complete list.
+Typed patches (setup, outline, recap, chapter) reject unknown field names with
+the valid field list; this catches typos such as `sumary` or `premised`. Craft
+patches intentionally preserve unknown raw fields. An empty patch object is
+rejected, and a patch that produces no changes returns a warning instead of a
+silent success. Pass only one patch source: `--task`, `--patch-buffer`, or
+`--patch-json`.
 
 For recap patches, do not include `chapter_id` or rely on a patched `title`.
 Go fixes `chapter_id` from `--id` and fixes `title` from the outline chapter
@@ -438,6 +469,10 @@ the check is non-blocking and writes are explicitly allowed; after `--apply`,
 run the returned `refresh_derived_dsl` command and then `post_refresh_check`.
 Chapter simulation checks should be trusted only after the derived chapter RPG
 DSL has been refreshed from the changed prose.
+If `--refresh-derived` fails after the chapter write, the command returns JSON
+with `applied=true`, `ok=false`, `meta.post_apply_error`, and
+`retry_refresh_derived` / `post_refresh_check` next actions instead of only a
+plain error. Retry the refresh before re-applying the chapter.
 
 Setup patches merge a JSON object into `story/setup/story_setup.json`; they do
 not require `--id`. Applied patches write a checkpoint under
@@ -447,9 +482,11 @@ for high-level contract fields such as `theme`, `rules`, `storylines`,
 chapter-scale outline or detailed craft cards into setup.
 For object arrays, setup patch uses keyed upsert semantics rather than whole
 array replacement: `storylines`, `premises`, and `world_resources` match by
-`name`, `core_cast` matches by `id` then `name`, and `world_timeline` matches
-by `related_mystery` or `year|event`. Agents should submit only the few array
-items they need to add or update.
+`name`, `core_cast` matches by `id` then falls back to `name`, and
+`world_timeline` matches by `related_mystery`, then `year|event`, then a unique
+`year`. A partial timeline patch such as `{"year":"100","impact":"new"}`
+updates the existing year match rather than appending a blank-event duplicate.
+Agents should submit only the few array items they need to add or update.
 String arrays such as `rules`, `genres`, and the list fields inside
 `long_form_plan`/`writing_style` append and deduplicate. `long_form_plan` and
 `writing_style` are field-merged, so a patch may safely provide only

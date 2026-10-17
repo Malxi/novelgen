@@ -3,7 +3,9 @@
 package toolplane
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"novelgen/internal/toolcmd"
 
 	"github.com/spf13/cobra"
@@ -14,15 +16,24 @@ import (
 )
 
 func RunToolRecapPatch(cmd *cobra.Command, root *store.Root, id string, patchBytes []byte, apply bool, warnings []string) error {
+	var validated models.ChapterRecap
+	if err := decodeStrictToolPatch(patchBytes, &validated); err != nil {
+		return fmt.Errorf("recap patch does not match the recap shape: %w", err)
+	}
 	recaps := recap.NewStoreAt(root)
 	before, err := recaps.Load(id)
 	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("failed to read recap %s: %w", id, err)
+		}
 		before = &models.ChapterRecap{ChapterID: id}
 		warnings = append(warnings, fmt.Sprintf("recap file not found; patch will create %s", id))
 	}
 	var outlineChapter *models.Chapter
-	if outline, err := root.LoadOutline(); err == nil && outline != nil {
+	if outline, outlineErr := root.LoadOutline(); outlineErr == nil && outline != nil {
 		outlineChapter = outline.GetChapterByID(id)
+	} else if outlineErr != nil && !errors.Is(outlineErr, fs.ErrNotExist) {
+		return fmt.Errorf("failed to load outline while patching recap %s: %w", id, outlineErr)
 	}
 
 	merged, err := MergeJSONPatchObject(*before, patchBytes)
@@ -42,6 +53,8 @@ func RunToolRecapPatch(cmd *cobra.Command, root *store.Root, id string, patchByt
 	}
 
 	files := map[string]string{}
+	changes := DiffStructFields("recap."+id, *before, merged)
+	warnings = appendNoChangeWarning(warnings, changes)
 	if apply {
 		checkpointPath, err := saveToolCheckpointJSON(root, store.ScopeRecaps, id, before)
 		if err != nil {
@@ -60,7 +73,7 @@ func RunToolRecapPatch(cmd *cobra.Command, root *store.Root, id string, patchByt
 		DryRun:      !apply,
 		Target:      "recap.chapter",
 		ID:          id,
-		Changed:     DiffStructFields("recap."+id, *before, merged),
+		Changed:     changes,
 		Check:       check,
 		Files:       files,
 		Warnings:    warnings,

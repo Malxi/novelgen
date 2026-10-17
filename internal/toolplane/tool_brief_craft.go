@@ -29,10 +29,30 @@ func briefCraftResults(results interface{}, indexOnly bool) interface{} {
 			}
 			return out
 		}
-		return results
+		out := map[string]interface{}{}
+		for section, value := range typed {
+			out[section] = briefCraftCollection(value)
+		}
+		return out
 	default:
 		return results
 	}
+}
+
+func briefCraftCollection(value interface{}) interface{} {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return value
+	}
+	var raw map[string]map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return value
+	}
+	out := make(map[string]interface{}, len(raw))
+	for key, object := range raw {
+		out[key] = compactCraftObject(object)
+	}
+	return out
 }
 
 func briefCraftHit(hit map[string]interface{}) map[string]interface{} {

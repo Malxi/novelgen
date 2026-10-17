@@ -45,6 +45,7 @@ func runToolOutlinePatch(cmd *cobra.Command, root *store.Root, target, id string
 	if err != nil {
 		return err
 	}
+	warnings = appendNoChangeWarning(warnings, changes)
 
 	scope := target
 	check, err := RunToolPatchValidationCheck(ctx.Setup, ctx.Outline, scope, id)
@@ -169,6 +170,10 @@ func ApplyChapterPatch(outline *models.Outline, chapterID string, patchBytes []b
 	if chapter == nil {
 		return nil, fmt.Errorf("chapter %q not found", chapterID)
 	}
+	var validated models.Chapter
+	if err := decodeStrictToolPatch(patchBytes, &validated); err != nil {
+		return nil, fmt.Errorf("chapter patch does not match the chapter shape: %w", err)
+	}
 	var probe struct {
 		ID string `json:"id"`
 	}
@@ -204,8 +209,8 @@ func ApplyVolumePatch(outline *models.Outline, volumeID string, patchBytes []byt
 		return nil, fmt.Errorf("volume patch must use changed_chapters; replacing chapters is not allowed")
 	}
 	var patch outlineVolumePatch
-	if err := json.Unmarshal(patchBytes, &patch); err != nil {
-		return nil, fmt.Errorf("failed to parse volume patch: %w", err)
+	if err := decodeStrictToolPatch(patchBytes, &patch); err != nil {
+		return nil, fmt.Errorf("volume patch does not match the volume shape: %w", err)
 	}
 	if strings.TrimSpace(patch.ID) != "" && patch.ID != volume.ID {
 		return nil, fmt.Errorf("patch id %q does not match target volume %q", patch.ID, volume.ID)
@@ -224,6 +229,10 @@ func ApplyVolumePatch(outline *models.Outline, volumeID string, patchBytes []byt
 	changes := DiffStructFields("outline.volume."+volumeID, before, *volume)
 
 	for _, rawChapter := range patch.ChangedChapters {
+		var validatedChapter models.Chapter
+		if err := decodeStrictToolPatch(rawChapter, &validatedChapter); err != nil {
+			return nil, fmt.Errorf("changed_chapters item does not match the chapter shape: %w", err)
+		}
 		var probe struct {
 			ID string `json:"id"`
 		}
@@ -303,6 +312,10 @@ func applyVolumeEventPatch(volume *models.Volume, volumeID string, rawEvent json
 	patchBytes, err := json.Marshal(patchFields)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode changed event patch: %w", err)
+	}
+	var validatedEvent models.Event
+	if err := decodeStrictToolPatch(patchBytes, &validatedEvent); err != nil {
+		return nil, fmt.Errorf("changed_events item does not match the event shape: %w", err)
 	}
 	for chapterIdx := range volume.Chapters {
 		if volume.Chapters[chapterIdx].ID != chapterID {

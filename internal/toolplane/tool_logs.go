@@ -101,7 +101,17 @@ func queryLogsAt(root *store.Root, queryType, id, name string, includeContent bo
 			"novelgen tool query logs --id <relative_log_path> --content --view brief",
 		},
 	}
-	return ToolResponse{OK: true, Section: "logs", Count: len(hits), Results: hits, Meta: meta}
+	warnings := []string{}
+	if len(hits) == 0 {
+		if id != "" {
+			warnings = append(warnings, fmt.Sprintf("log %q not found", id))
+		} else if kindFilter != "" {
+			warnings = append(warnings, fmt.Sprintf("no logs matched type %q", kindFilter))
+		} else if name != "" {
+			warnings = append(warnings, "no logs matched the name filter")
+		}
+	}
+	return ToolResponse{OK: true, Section: "logs", Count: len(hits), Results: hits, Warnings: warnings, Meta: meta}
 }
 
 func logHistoryCutoff() (time.Time, bool) {

@@ -34,6 +34,14 @@ func queryOutline(ctx ToolProjectContext, queryType, id, entityType, name, chapt
 
 func queryChapterSection(ctx ToolProjectContext, queryType, id, entityType, name, chapterID, volumeID string, includeContent bool) ToolResponse {
 	if strings.TrimSpace(id) != "" {
+		switch normalizeChapterType(queryType) {
+		case "events":
+			return QueryEvents(ctx.Outline, id, volumeID, entityType, name)
+		case "refs":
+			return ToolResponse{OK: false, Section: "chapter", Count: 0, Warnings: []string{
+				"--type refs does not accept --id; query refs with --entity-type/--name, or omit --type to read the chapter record",
+			}}
+		}
 		return queryChapter(ctx, id, includeContent)
 	}
 	switch normalizeChapterType(queryType) {
@@ -53,6 +61,7 @@ func queryChapterSection(ctx ToolProjectContext, queryType, id, entityType, name
 
 func queryAllChapters(ctx ToolProjectContext, includeContent bool) ToolResponse {
 	chapters := make([]chapterHit, 0)
+	warnings := []string{}
 	for _, item := range flattenChapters(ctx.Outline) {
 		hit := chapterHit{
 			ID:      item.Chapter.ID,
@@ -67,10 +76,16 @@ func queryAllChapters(ctx ToolProjectContext, includeContent bool) ToolResponse 
 				return ToolResponse{OK: false, Section: "chapter", Count: 0, Warnings: []string{err.Error()}}
 			}
 			hit.Content, hit.ContentPath = content, path
+			if path == "" {
+				warnings = append(warnings, fmt.Sprintf("chapter %s has no saved manuscript", item.Chapter.ID))
+			}
 		}
 		chapters = append(chapters, hit)
 	}
-	return ToolResponse{OK: true, Section: "chapter", Count: len(chapters), Results: chapters}
+	if len(chapters) == 0 {
+		warnings = append(warnings, "outline has no chapters")
+	}
+	return ToolResponse{OK: true, Section: "chapter", Count: len(chapters), Results: chapters, Warnings: warnings}
 }
 
 func QueryOutlineNode(outline *models.Outline, nodeType, id string) ToolResponse {
@@ -97,7 +112,11 @@ func QueryOutlineNode(outline *models.Outline, nodeType, id string) ToolResponse
 			}
 		}
 	}
-	return ToolResponse{OK: true, Section: "outline", Count: len(hits), Results: hits}
+	warnings := []string{}
+	if strings.TrimSpace(id) != "" && len(hits) == 0 {
+		warnings = append(warnings, fmt.Sprintf("%s %q not found in outline", nodeType, id))
+	}
+	return ToolResponse{OK: true, Section: "outline", Count: len(hits), Results: hits, Warnings: warnings}
 }
 
 func queryChapter(ctx ToolProjectContext, id string, includeContent bool) ToolResponse {
@@ -115,16 +134,20 @@ func queryChapter(ctx ToolProjectContext, id string, includeContent bool) ToolRe
 			Path:    chapter.Path,
 			Outline: chapter.Chapter,
 		}
+		warnings := []string{}
 		if includeContent {
 			content, path, err := ctx.Root.LoadChapterContent(chapter.Chapter.ID)
 			if err != nil {
 				return ToolResponse{OK: false, Count: 0, Warnings: []string{err.Error()}}
 			}
 			hit.Content, hit.ContentPath = content, path
+			if path == "" {
+				warnings = append(warnings, fmt.Sprintf("chapter %s has no saved manuscript", chapter.Chapter.ID))
+			}
 		}
-		return ToolResponse{OK: true, Count: 1, Results: []chapterHit{hit}}
+		return ToolResponse{OK: true, Count: 1, Results: []chapterHit{hit}, Warnings: warnings}
 	}
-	return ToolResponse{OK: true, Count: 0, Results: []chapterHit{}}
+	return ToolResponse{OK: true, Count: 0, Results: []chapterHit{}, Warnings: []string{fmt.Sprintf("chapter %q not found in outline", id)}}
 }
 
 func QueryOutlineRefs(outline *models.Outline, entityType, name string, chaptersOnly bool) ToolResponse {
@@ -154,6 +177,7 @@ func queryChaptersByEntity(ctx ToolProjectContext, entityType, name string, incl
 	outlineResp := QueryOutlineRefs(ctx.Outline, entityType, name, true)
 	outlineHits, _ := outlineResp.Results.([]OutlineHit)
 	chapters := make([]chapterHit, 0, len(outlineHits))
+	warnings := []string{}
 	for _, hit := range outlineHits {
 		chapter := ctx.Outline.GetChapterByID(hit.ID)
 		chapterHit := chapterHit{
@@ -170,10 +194,16 @@ func queryChaptersByEntity(ctx ToolProjectContext, entityType, name string, incl
 				return ToolResponse{OK: false, Count: 0, Warnings: []string{err.Error()}}
 			}
 			chapterHit.Content, chapterHit.ContentPath = content, path
+			if path == "" {
+				warnings = append(warnings, fmt.Sprintf("chapter %s has no saved manuscript", hit.ID))
+			}
 		}
 		chapters = append(chapters, chapterHit)
 	}
-	return ToolResponse{OK: true, Count: len(chapters), Results: chapters}
+	if len(chapters) == 0 && (strings.TrimSpace(entityType) != "" || strings.TrimSpace(name) != "") {
+		warnings = append(warnings, fmt.Sprintf("no chapters matched entity_type=%q name=%q", entityType, name))
+	}
+	return ToolResponse{OK: true, Count: len(chapters), Results: chapters, Warnings: warnings}
 }
 
 func queryStorylines(ctx ToolProjectContext, name string) ToolResponse {
@@ -254,5 +284,9 @@ func QueryEvents(outline *models.Outline, chapterID, volumeID, entityType, name 
 			})
 		}
 	}
-	return ToolResponse{OK: true, Count: len(hits), Results: hits}
+	warnings := []string{}
+	if len(hits) == 0 && (strings.TrimSpace(chapterID) != "" || strings.TrimSpace(volumeID) != "" || strings.TrimSpace(entityType) != "" || strings.TrimSpace(name) != "") {
+		warnings = append(warnings, "no events matched the requested filters")
+	}
+	return ToolResponse{OK: true, Count: len(hits), Results: hits, Warnings: warnings}
 }
