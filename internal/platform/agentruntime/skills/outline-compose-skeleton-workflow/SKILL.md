@@ -11,6 +11,10 @@ description: 查询 story setup，生成 parts/volumes 大纲骨架 JSON，不�
 
 - 先运行调用方给出的 `required_queries`。
 - 至少查询 `novelgen tool query story-setup --view brief`。
+- 如果卷级冲突明显是“受压 → 反击 → 升级”的重复模板，可以调用一次
+  `novelgen tool query ideas --type law --genre <genre> --mode wild --count 5 --seed <seed>`。
+  选一条能映射为卷级承诺的句子，回答其 `must_answer`，拒绝 `forbidden_explanations`；
+  只改变冲突引擎或兑现方式，不改变 setup 的根规则和用户承诺。
 - 如果调用方允许历史续写，先用 `novelgen tool query logs --view index` 查看可用历史，再只读取最相关的日志摘要。
 - 最终只输出调用方 schema 要求的 JSON。
 

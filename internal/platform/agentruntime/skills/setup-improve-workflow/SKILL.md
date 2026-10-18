@@ -17,6 +17,7 @@ description: 使用 novelgen 查询、检查、patch 工具审查并改进 story
 - 一次只运行一个 `novelgen tool ...` 命令。
 - 只能使用：
   - `novelgen tool query story-setup ...`
+  - `novelgen tool query ideas --type law|axiom|event ...`（只在 setup 明显套路化、需要一条可合理化的反常公理时使用；优先 `law`）
   - `novelgen tool check all --target setup ...`
   - `novelgen tool patch setup ...`
 - 只有输入 `apply_patches=true` 时，才允许在同一个 patch dry-run 成功后使用 `--apply`。
@@ -27,7 +28,11 @@ description: 使用 novelgen 查询、检查、patch 工具审查并改进 story
 2. 如果 check 返回 issues，按 `target_id` 或 `category` 定点查询：
    - `novelgen tool query story-setup --type search --name "<keyword>" --view brief`
    - `novelgen tool check all --target setup --category <category> --min-priority low --max-issues 12`
-3. 不要查询 outline、craft、chapter、recap 或 RPG 文件；不要把 outline/craft 细节硬塞进 setup。setup 只保存项目级承诺、规则、主循环、核心角色种子、故事线、资源和世界约束。
+3. 如果 setup 的核心规则、主线冲突或爽点引擎明显公式化，可以查询一次
+   `novelgen tool query ideas --type law --genre <genre> --mode wild --count 5 --seed <seed>`。
+   把返回的句子当作结构性约束：写出 3-5 条 canon 事实，回答全部 `must_answer`，拒绝
+   `forbidden_explanations`，并让它产生至少三类不同性质的卷级冲突。不要把它写成传说、梦或氛围描写。
+4. 不要查询 outline、craft、chapter、recap 或 RPG 文件；不要把 outline/craft 细节硬塞进 setup。setup 只保存项目级承诺、规则、主循环、核心角色种子、故事线、资源和世界约束。
 
 ## Patch 规则
 

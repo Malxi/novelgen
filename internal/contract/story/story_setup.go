@@ -2,7 +2,10 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
+	"strconv"
 	"strings"
+	"unicode"
 )
 
 // StorySetup represents the story configuration
@@ -56,6 +59,111 @@ type LongFormPlan struct {
 	VolumePattern    []string `json:"volume_pattern,omitempty" prompt:"Volume Pattern" desc:"Reusable volume blueprint beats such as hook, pressure, exploit, win, reward, next gate"`
 	MidpointMutation string   `json:"midpoint_mutation,omitempty" prompt:"Midpoint Mutation" desc:"How the serial changes after the initial loop would otherwise become stale"`
 	EndgamePromise   string   `json:"endgame_promise,omitempty" prompt:"Endgame Promise" desc:"The far-horizon payoff or final larger game"`
+}
+
+// UnmarshalJSON tolerates the scalar/list shapes weaker models commonly emit
+// for long_form_plan. The canonical schema remains int/[]string, but a model
+// that writes "300" or "a\nb" should not lose an otherwise usable setup during
+// JSON parsing.
+func (p *LongFormPlan) UnmarshalJSON(data []byte) error {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	plan := LongFormPlan{}
+	var err error
+	if plan.TargetChapters, err = decodeSetupInt(raw["target_chapters"]); err != nil {
+		return fmt.Errorf("long_form_plan.target_chapters: %w", err)
+	}
+	if plan.TargetVolumes, err = decodeSetupInt(raw["target_volumes"]); err != nil {
+		return fmt.Errorf("long_form_plan.target_volumes: %w", err)
+	}
+	plan.MainLoop = decodeSetupString(raw["main_loop"])
+	plan.EscalationLadder = decodeSetupStringList(raw["escalation_ladder"])
+	plan.ReaderPromises = decodeSetupStringList(raw["reader_promises"])
+	plan.PayoffCadence = decodeSetupString(raw["payoff_cadence"])
+	plan.VolumePattern = decodeSetupStringList(raw["volume_pattern"])
+	plan.MidpointMutation = decodeSetupString(raw["midpoint_mutation"])
+	plan.EndgamePromise = decodeSetupString(raw["endgame_promise"])
+	*p = plan
+	return nil
+}
+
+func decodeSetupInt(raw json.RawMessage) (int, error) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return 0, nil
+	}
+	var value int
+	if err := json.Unmarshal(raw, &value); err == nil {
+		return value, nil
+	}
+	var text string
+	if err := json.Unmarshal(raw, &text); err != nil {
+		return 0, fmt.Errorf("expected integer or numeric string")
+	}
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return 0, nil
+	}
+	digits := make([]rune, 0, len(text))
+	for _, r := range text {
+		if unicode.IsDigit(r) {
+			digits = append(digits, r)
+			continue
+		}
+		if len(digits) > 0 {
+			break
+		}
+	}
+	if len(digits) == 0 {
+		return 0, fmt.Errorf("no integer found in %q", text)
+	}
+	value, err := strconv.Atoi(string(digits))
+	if err != nil {
+		return 0, fmt.Errorf("invalid integer %q", text)
+	}
+	return value, nil
+}
+
+func decodeSetupString(raw json.RawMessage) string {
+	if len(raw) == 0 || string(raw) == "null" {
+		return ""
+	}
+	var text string
+	if err := json.Unmarshal(raw, &text); err == nil {
+		return strings.TrimSpace(text)
+	}
+	var value interface{}
+	if err := json.Unmarshal(raw, &value); err == nil {
+		return strings.TrimSpace(fmt.Sprint(value))
+	}
+	return ""
+}
+
+func decodeSetupStringList(raw json.RawMessage) []string {
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil
+	}
+	var values []string
+	if err := json.Unmarshal(raw, &values); err == nil {
+		return nonEmptyStrings(values)
+	}
+	var text string
+	if err := json.Unmarshal(raw, &text); err == nil {
+		parts := strings.FieldsFunc(text, func(r rune) bool {
+			return r == '\n' || r == ',' || r == '，' || r == ';' || r == '；' || r == '、'
+		})
+		return nonEmptyStrings(parts)
+	}
+	var generic []interface{}
+	if err := json.Unmarshal(raw, &generic); err == nil {
+		values = make([]string, 0, len(generic))
+		for _, value := range generic {
+			values = append(values, fmt.Sprint(value))
+		}
+		return nonEmptyStrings(values)
+	}
+	return nil
 }
 
 // IsZero reports whether the plan carries user-visible long-form guidance.

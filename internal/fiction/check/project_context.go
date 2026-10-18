@@ -60,6 +60,10 @@ func (c *ProjectContext) Load(kind string) error {
 		return c.LoadElements()
 	case "logs", "log":
 		return nil
+	case "ideas":
+		// Ideas are generated from vocabulary and a seed; they do not depend on
+		// project artifacts and are intentionally usable before setup exists.
+		return nil
 	default:
 		return fmt.Errorf("unsupported query section %q", kind)
 	}

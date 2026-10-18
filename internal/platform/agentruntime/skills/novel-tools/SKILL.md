@@ -13,6 +13,7 @@ description: Novelgen 项目查询、检查和受控 patch 工具的使用规则
 - `novelgen tool query outline`：查询大纲、卷、章节、角色/物品/地点关联章节。
 - `novelgen tool query craft`：查询角色、物品、地点、组织 craft。
 - `novelgen tool query chapter`：查询章节正文或章节上下文。
+- `novelgen tool query ideas`：生成可复现的随机挑衅，用于 setup/outline 发散。
 - `novelgen tool check ...`：运行 schema、quality、simulation 检查。
 - `novelgen tool patch ...`：dry-run 或受控 apply patch。
 

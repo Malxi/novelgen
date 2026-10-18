@@ -148,6 +148,7 @@ var layer = map[string]int{
 	"internal/fiction/domain/logic/continuity/transition": 3,
 	"internal/fiction/domain/logic/style":                 3,
 	"internal/fiction/domain/craft":                       3,
+	"internal/fiction/domain/creativity":                  3,
 	"internal/fiction/domain/quality":                     3,
 	"internal/fiction/domain/project":                     4,
 	"internal/fiction/check":                              5,

@@ -51,6 +51,7 @@ var toolPlaneConcernFiles = map[string][]string{
 	"internal/toolplane/tool_query_setup.go":   {"QueryStorySetup", "queryStorySetupSearch"},
 	"internal/toolplane/tool_query_outline.go": {"QueryOutlineNode", "QueryOutlineRefs", "QueryEvents", "queryChapter"},
 	"internal/toolplane/tool_query_craft.go":   {"QueryCraft", "queryNamedElement"},
+	"internal/toolplane/tool_query_ideas.go":   {"QueryIdeas"},
 
 	// Workflow context bundles.
 	"internal/toolplane/tool_context.go":         {"QueryContext"},
@@ -72,6 +73,7 @@ var toolPlaneConcernFiles = map[string][]string{
 	"internal/toolplane/tool_brief_context.go": {"briefContextResults", "indexContextResults", "toolCheckIndex"},
 	"internal/toolplane/tool_brief_chapter.go": {"briefChapterResults", "makeChapterBrief", "loadChapterExcerptForTool"},
 	"internal/toolplane/tool_brief_recap.go":   {"makeRecapBrief", "recapUsableForChapter"},
+	"internal/toolplane/tool_brief_ideas.go":   {"briefIdeaResults"},
 }
 
 // toolPlaneModuleFiles are the remaining tool plane modules. They are listed so a

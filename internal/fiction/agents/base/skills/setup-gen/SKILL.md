@@ -10,6 +10,84 @@
 
 ## Storyline Texture Guidance
 
+## Creative Provocation Guidance
+
+When the input contains `creative_provocation`, treat it as a binding creative
+constraint, not as decorative lore, a faction name, or a throwaway omen.
+
+The goal is to produce an "unexpected but inevitable" setup: one genuinely
+strange axiom that has been rationalized until the rest of the world can follow
+ordinary logic.
+
+- Make the sentence carry structural work in the world. It must become an
+  enforceable rule, institution, inheritance mechanism, economic exchange, or
+  historical event that changes what characters can do.
+- Answer every item in `must_answer`. Do not skip the questions about who
+  enforces the rule, who benefits, who pays, what violation looks like, how an
+  ordinary person's day changes, and whether it can support several distinct
+  volume-level conflicts.
+- Before fixing the explanation, write down the three most obvious or generic
+  ways this sentence could be rationalized. Reject all three. The chosen
+  explanation must change at least one of the following from the obvious
+  version: who benefits, who pays, who enforces the rule, or what the apparent
+  rule is actually being used to conceal.
+- Never explain it with any item in `forbidden_explanations`. In particular, do
+  not reduce it to a dream, hallucination, legend, metaphor, coincidence,
+  unreliable narrator, or "ancient mysterious power".
+- Turn the sentence into 3-5 durable canon facts before inventing proper nouns.
+  Those facts should appear in `premise`, `rules`, `premises`, `world_timeline`,
+  `storylines`, or `core_cast` where they do the most work.
+- Use at most one impossible axiom for the whole world. Everything else should
+  be derived from it through normal incentives, institutions, costs, and
+  history. Do not add a second unrelated impossibility just to look stranger.
+- Respect `axiom_budget=1` and follow `derivation_steps` in order. Each new
+  rule must name the earlier fact it follows from; if it only works by adding
+  another magical rule, delete it.
+- Reject the candidate when any `reject_if` condition is true, especially
+  "needs a second magic rule", "institution has no beneficiary or budget",
+  "ordinary people can bypass it at zero cost", and "the twist has no planted
+  clue".
+- Give the axiom a practical consequence. If it cannot change how people work,
+  marry, inherit, travel, litigate, worship, or bury their dead, it is not yet a
+  world rule.
+- Plant 2-3 clues that make later reveals feel fair. A good clue looks ordinary
+  before the reveal and unavoidable afterward.
+- Design the rule so it yields at least three different kinds of volume-level
+  conflict, not three repetitions of the same conflict with new names.
+
+If the user's `idea` is specific, preserve its explicit genre, protagonist,
+relationship, or premise promises. Use the provocation as pressure inside that
+idea rather than replacing the user's intent. If the two cannot coexist, adapt
+the sentence's structural function to the user's idea and explain the change
+through world-internal causality.
+
+## Creative Scenario Guidance
+
+When the input contains `creative_scenario`, it is a fixed causal skeleton, not
+a random sentence:
+
+- `scarcity` is what everyone spends, steals, measures, and runs out of.
+- `hazard` + `hazard_cycle` is what periodically closes the action window.
+- `objective` is what the factions are actually competing for.
+- `enforcer` is the institution that runs the competition and profits from it.
+- `mobility` is the unit that can still move during the hazard.
+- `mecha_role` is a separate structural role for 机甲. Keep it distinct from
+  `mobility`; do not replace the mecha with a drone or a generic vehicle.
+- `threat` is attracted by `threat_signal`; `countermeasure` reduces that risk
+  only by sacrificing some `scarcity`.
+- `cost` is what losers actually lose, and `twist` explains where the real
+  profit goes.
+
+Do not replace these roles with new magic rules. Expand them into names,
+history, factions, rules, core cast, storylines, and resources. Every one of the
+six elements must keep a structural role from `element_roles`; a noun mentioned
+once in a description is not enough. The `causal_chain` must remain valid in the
+final setup.
+
+If the scenario card conflicts with the user's explicit idea, preserve the
+user's promise and adapt the card at the level of role function, not by adding
+an unrelated exception.
+
 ## Setup Compactness Guidance
 
 Story setup is a compact contract, not an encyclopedia. Keep the generated

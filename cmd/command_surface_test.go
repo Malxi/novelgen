@@ -89,7 +89,7 @@ func TestCommandSurfaceSubcommands(t *testing.T) {
 		"recap":   {"gen"},
 		"rpg":     {"bench", "export", "gen", "simulate"},
 		"rpg-dsl": {"check", "convert", "convert-chapters", "export-dsl", "merge", "simulate", "validate"},
-		"setup":   {"check", "gen", "import", "improve", "regen"},
+		"setup":   {"check", "explore", "gen", "import", "improve", "regen"},
 		"storage": {"list", "projects", "read", "replace", "stat", "write"},
 		"tool":    {"check", "patch", "patch-buffer", "query", "refresh"},
 		"write":   {"gen", "improve", "pipeline", "review"},
@@ -112,6 +112,8 @@ func TestCommandSurfaceKeyFlags(t *testing.T) {
 	}{
 		{[]string{"craft", "gen"}, []string{"agent-sdk", "agent-apply"}},
 		{[]string{"craft", "improve"}, []string{"agent-sdk", "agent-apply"}},
+		{[]string{"setup", "gen"}, []string{"agent-sdk", "random", "random-seed", "random-level", "random-mode", "random-genre", "scenario", "scenario-seed", "scenario-genre", "scenario-index"}},
+		{[]string{"setup", "explore"}, []string{"agent-sdk", "count", "seed", "level", "mode", "random-genre", "apply-best", "strict", "scenario", "select", "plan-only", "predict", "predict-limit"}},
 		{[]string{"setup", "regen"}, []string{"agent-sdk", "agent-apply"}},
 		{[]string{"setup", "improve"}, []string{"agent-sdk", "agent-apply"}},
 		{[]string{"write", "improve"}, []string{"agent-sdk", "agent-apply"}},

@@ -39,6 +39,8 @@ func TestLayoutPaths(t *testing.T) {
 		{"LLMConfigJSON", root.LLMConfigJSON(), "book/llm_config.json"},
 		{"SetupJSON", root.SetupJSON(), "book/story/setup/story_setup.json"},
 		{"SetupMarkdown", root.SetupMarkdown(), "book/story/setup/story_setup.md"},
+		{"SetupExploreDir", root.SetupExploreDir(42), "book/story/setup/explore/42"},
+		{"SetupExploreFile", root.SetupExploreFile(42, "candidate-01.json"), "book/story/setup/explore/42/candidate-01.json"},
 		{"OutlineJSON", root.OutlineJSON(), "book/story/compose/outline.json"},
 		{"OutlineMarkdown", root.OutlineMarkdown(), "book/story/compose/outline.md"},
 		{"ComposeFile", root.ComposeFile("outline_iter_3.json"), "book/story/compose/outline_iter_3.json"},

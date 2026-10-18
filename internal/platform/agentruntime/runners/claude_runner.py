@@ -1676,6 +1676,8 @@ def stop_after_required_queries_enabled(allowlist: list[str]) -> bool:
 def is_prefix_allowlist_entry(item: str) -> bool:
     if item.startswith("novelgen tool query context --type ") and " --view " not in item:
         return True
+    if item.startswith("novelgen tool query ideas"):
+        return True
     if item in story_setup_query_type_prefixes():
         return True
     if item == "novelgen tool check all --target setup --category":
@@ -2350,6 +2352,11 @@ def broad_allowed_tool_prefixes(normalized_allowlist: list[str]) -> list[str]:
             prefixes.append(item)
     for item in normalized_allowlist:
         if item.startswith("novelgen tool query context --type ") and " --view " not in item:
+            prefix = item
+            if prefix not in prefixes:
+                prefixes.append(prefix)
+    for item in normalized_allowlist:
+        if item.startswith("novelgen tool query ideas"):
             prefix = item
             if prefix not in prefixes:
                 prefixes.append(prefix)

@@ -10,8 +10,8 @@ atomic writes, or the project mutation lock.
 Run commands from a novel project root, or any child directory under a project
 containing `novel.json`.
 
-The command is organized by six query sections (`story-setup`, `outline`, `craft`,
-`chapter`, `context`, `logs`):
+The command is organized by seven query sections (`story-setup`, `outline`, `craft`,
+`chapter`, `context`, `ideas`, `logs`):
 
 ```bash
 novelgen tool query story-setup [flags]
@@ -28,6 +28,8 @@ novelgen tool query context --type outline-global-repair [--name <issue_category
 novelgen tool query context --type recap-repair --id <chapter_id>
 novelgen tool query context --type chapter-write --id <chapter_id>
 novelgen tool query context --type chapter-repair --id <chapter_id> [--name <issue_category>]
+novelgen tool query ideas --type axiom --genre 仙侠 --mode wild --seed 42 --count 5
+novelgen tool query ideas --type scenario --genre 科幻 --seed 12 --count 3
 novelgen tool query logs --type prompts|responses|agent-live [--name <agent>] [--view index|brief]
 novelgen tool query logs --id <relative_log_path> --content --view brief
 novelgen tool check quality|simulation|all --target setup
@@ -104,6 +106,7 @@ the valid list, so a typo tells the agent how to correct itself:
 | `craft` | `all`, `character`, `item`, `location`, `organization` |
 | `chapter` | `all`, `refs`, `events` |
 | `context` | `craft-character`, `craft-item`, `craft-location`, `craft-organization`, `outline-volume`, `outline-repair`, `outline-global-repair`, `recap-repair`, `chapter-write`, `chapter-repair` |
+| `ideas` | `provocation`, `axiom`, `event`, `law`, `scenario`, `name` |
 | `logs` | `prompts`, `responses`, `agent-live` |
 
 `tool patch` takes the section as its positional argument and `--target` selects
@@ -314,6 +317,57 @@ check, target outline facts, saved chapter opening/closing excerpt, entity
 index, quality/simulation/all check commands, and the `write improve
 --agent-sdk` repair command. Use it instead of manually combining full chapter
 content, full outline, and RPG files.
+
+## Ideas
+
+`ideas` returns deterministic "structured nonsense" provocations for setup and
+outline ideation. It does not read or write project state, so it can also be
+used before a project has a setup.
+
+```bash
+novelgen tool query ideas --type axiom --genre 仙侠 --mode wild --seed 42 --count 5
+novelgen tool query ideas --type law --genre 仙侠 --mode wild --seed 42 --count 5
+novelgen tool query ideas --type law --genre 科幻 --mode grounded --seed 12 --count 5
+novelgen tool query ideas --type scenario --genre 科幻 --seed 12 --count 3
+novelgen tool query ideas --type event --genre 都市 --seed 7 --count 3
+novelgen tool query ideas --type law --genre 都市 --seed 7 --count 3
+novelgen tool query ideas --type name --genre 悬疑 --mode balanced --count 3
+```
+
+Each result contains a `sentence`, the structural `required_role`, questions the
+agent must answer, `axiom_budget`, `derivation_steps`, `reject_if`, forbidden
+explanations, and an output contract. Treat the
+sentence as a constraint, not as a finished premise:
+
+- Keep exactly one unexplained axiom (`axiom_budget=1`).
+- Follow `derivation_steps` in order: mechanism -> ordinary consequence ->
+  institution -> incentive -> failure mode -> conflicts -> reveal.
+- Do not add a second magic rule to explain the first; if a rule needs one,
+  reject the candidate.
+- Reject the candidate when any `reject_if` condition is true.
+- Turn it into 3-5 world-internal canon facts.
+- Name who enforces it, who benefits, who pays, and what violation looks like.
+- Reject dream, hallucination, legend, metaphor, and coincidence explanations.
+- Write down the three most obvious interpretations and reject them before
+  choosing one. A rationalization that lands on the first generic idea is a
+  failed draw, even when it is internally consistent.
+- Keep at most one impossible axiom per world; derive everything else through
+  ordinary logic.
+- Return 2-3 clues that can be planted before the reveal.
+
+The response `meta.seed` and `meta.replay_command` make a draw reproducible.
+`--mode wild` favors stranger subjects; `--mode safe` restricts the grammar to
+more institutional combinations. `--mode grounded` is the hard-SF/engineering
+profile: it samples physical and economic constraints such as wormhole tides,
+fuel decay, reactor heat signatures, ion storms, and salvage rights instead of
+magical conservation laws. The tool is an ideation aid: a human or a review
+agent must still reject results that cannot produce several distinct
+volume-level conflicts.
+
+`--type scenario` returns a `ScenarioCard` with fixed causal roles (`arena`,
+`scarcity`, `hazard`, `objective`, `enforcer`, `mobility`, `mecha_role`,
+`threat`, `cost`, `twist`). Treat every role as binding and expand it into
+setup; do not replace the scarcity or hazard with a new magic rule.
 
 ## Check
 

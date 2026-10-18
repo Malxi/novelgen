@@ -559,6 +559,16 @@ class ClaudeRunnerTests(unittest.IsolatedAsyncioTestCase):
             {"command": "novelgen tool patch-buffer append --id P1-V1-C1-draft --text '# Opening' ; Get-Content story\\compose\\outline.json"},
             ["novelgen tool patch chapter"],
         ))
+        self.assertTrue(runner.is_allowed_tool_call(
+            "Bash",
+            {"command": "novelgen tool query ideas --type axiom --genre 仙侠 --mode wild --seed 42 --count 5"},
+            ["novelgen tool query ideas --type axiom"],
+        ))
+        self.assertFalse(runner.is_allowed_tool_call(
+            "Bash",
+            {"command": "novelgen tool query ideas --type event --genre 都市 --seed 7 --count 5"},
+            ["novelgen tool query ideas --type axiom"],
+        ))
 
     def test_scoped_chapter_patch_allowlist_restricts_patch_buffer_id(self):
         runner = load_runner()

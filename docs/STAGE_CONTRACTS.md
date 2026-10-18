@@ -1,6 +1,6 @@
 # Novelgen Stage Contracts
 
-Last updated: 2026-08-16
+Last updated: 2026-10-17
 
 This document defines the persistent data contracts between Novelgen workflow
 stages. Treat these contracts as part of the public behavior of the repository:
@@ -41,6 +41,8 @@ Project root:
 
 - `novel.json`: `models.ProjectConfig`
 - `story/setup/story_setup.json`: `models.StorySetup`
+- `story/setup/explore/<seed>/`: derived setup exploration candidates and
+  `report.json`; never loaded as canonical setup
 - `story/compose/outline.json`: `models.Outline`
 - `story/craft/characters.json`: `map[string]models.Character`
 - `story/craft/locations.json`: `map[string]models.Location`
@@ -175,6 +177,33 @@ Inputs:
 
 - `novel.json`
 - User idea, imported markdown, or existing `story_setup.json`
+- Optional prompt-only `creative_provocation` for `setup gen --random`: a
+  deterministic structured-nonsense sentence plus `required_role`,
+  `must_answer`, `forbidden_explanations`, and `output_contract`. The
+  provocation itself is not persisted in `story_setup.json`; its consequences
+  must appear as durable setup facts. The contract requires the model to name
+  and reject the three most obvious interpretations before choosing the canon
+  explanation.
+- `setup explore` draws one provocation per candidate, writes full candidate
+  JSON under `story/setup/explore/<seed>/`, runs the deterministic setup gate
+  and setup reviewer, and ranks by reviewer score minus generic-trope hits.
+  Unless `--strict=false`, it also runs `setup-causal-review`, which rejects a
+  candidate when it finds more than one unexplained axiom, orphan rules,
+  institutions without a beneficiary/budget/enforcement path, zero-cost
+  bypasses, or unseeded twists. Rejected candidates are written and shown but
+  are sorted after valid candidates, and `--apply-best` will not select one.
+  It leaves `story_setup.json` unchanged unless `--apply-best` is set; that path
+  checkpoints the old setup first and then uses the canonical setup save path.
+- `setup gen --agent-sdk` uses the SDK workflow `setup-generate-workflow`;
+  `setup explore --agent-sdk` uses the same generator and the SDK
+  `setup-review-workflow` and `setup-causal-review` skills for each candidate.
+  All three SDK workflows return typed JSON to Go, which owns normalization,
+  quality gates, checkpoints, and writes.
+- `setup gen --scenario` injects a `creativity.ScenarioCard` with fixed causal
+  roles (`arena`, `scarcity`, `hazard`, `objective`, `enforcer`, `mobility`,
+  `mecha_role`, `threat`, `cost`, `twist`). Go checks that all six elements are
+  structurally present after generation and runs one coverage repair pass if a
+  role is missing.
 
 Outputs:
 
@@ -240,6 +269,13 @@ Required invariants:
   or `setup import` only when a user requests a prose style or provides a
   reference passage. Older projects may omit it and consumers must fall back to
   `Tone`, `Tense`, and `POVStyle`.
+- When `creative_provocation` is present, setup generation must turn its
+  sentence into an enforceable world rule, institution, exchange, or historical
+  event; answer the supplied `must_answer` questions; reject every supplied
+  `forbidden_explanation`; and derive at least three distinct volume-level
+  conflict families from the same axiom. The setup keeps at most one unrelated
+  impossible axiom. Explicit user idea constraints take precedence over the
+  provocation's surface wording.
 - `WritingStyle.ReferenceExcerpt` is a style signal only. It is not story canon:
   downstream stages must not import its plot, characters, places, terminology,
   or world facts into generated project state.

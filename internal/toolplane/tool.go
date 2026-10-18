@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"novelgen/internal/fiction/domain/project"
+	"novelgen/internal/platform/store"
 	"strings"
 	"time"
 )
@@ -26,6 +27,12 @@ var ToolQueryFlags struct {
 	Fields         string
 	IncludeContent bool
 	Limit          int
+	Genre          string
+	Level          string
+	Mode           string
+	Seed           int64
+	Count          int
+	Select         int
 }
 
 var ToolProcessStartedAt = time.Now()
@@ -43,7 +50,7 @@ commands can mutate project state only when explicitly called with --apply.`,
 // source for the command's Use line, its long help and the "section is
 // required" error, so a new section cannot be added to one and forgotten in the
 // others.
-var toolQuerySections = []string{"story-setup", "outline", "craft", "chapter", "context", "logs"}
+var toolQuerySections = []string{"story-setup", "outline", "craft", "chapter", "context", "ideas", "logs"}
 
 // toolQuerySectionSummary describes what each section returns, for the long
 // help.
@@ -53,6 +60,7 @@ var toolQuerySectionSummary = map[string]string{
 	"craft":       "Crafted characters, items, locations, organizations",
 	"chapter":     "Chapter outline records and manuscript text",
 	"context":     "Compact workflow-specific context bundles",
+	"ideas":       "Deterministic random provocations for setup and outline ideation",
 	"logs":        "Prompt, response, and agent-live log indexes",
 }
 
@@ -70,7 +78,8 @@ var toolQuerySectionTypes = map[string][]string{
 		"outline-volume", "outline-repair", "outline-global-repair",
 		"recap-repair", "chapter-write", "chapter-repair",
 	},
-	"logs": {"prompts", "responses", "agent-live"},
+	"ideas": {"provocation", "axiom", "event", "law", "scenario", "name"},
+	"logs":  {"prompts", "responses", "agent-live"},
 }
 
 // toolQueryLongHelp renders the section list and the per-section --type values
@@ -100,6 +109,8 @@ func toolQuerySectionAlias(section string) string {
 		return "chapter"
 	case "log":
 		return "logs"
+	case "idea", "random":
+		return "ideas"
 	default:
 		return section
 	}
@@ -118,6 +129,8 @@ func canonicalToolQueryType(section, queryType string) string {
 		return normalizeChapterType(queryType)
 	case "context":
 		return normalizeContextType(queryType)
+	case "ideas":
+		return NormalizeKey(queryType)
 	case "logs":
 		return NormalizeLogKind(queryType)
 	default:
@@ -155,6 +168,7 @@ var ToolQueryCmd = &cobra.Command{
   novelgen tool query outline --type events --entity-type item --name "Star Core"
   novelgen tool query craft --type character --name Lin
   novelgen tool query context --type craft-character --name Lin
+  novelgen tool query ideas --type axiom --genre 仙侠 --mode wild --seed 42 --count 5
   novelgen tool query logs --view index
   novelgen tool query chapter --id chap_001 --content
   novelgen tool query chapter --entity-type location --name "Mine"`,
@@ -267,17 +281,23 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 	queryChapterID, chapterIDRepaired := RepairToolLookupText(ToolQueryFlags.ChapterID)
 	queryVolumeID, volumeIDRepaired := RepairToolLookupText(ToolQueryFlags.VolumeID)
 	book, err := project.ForCommand(cmd)
-	if err != nil {
+	if err != nil && section != "ideas" {
 		return err
 	}
-	root := book.Root
+	var root *store.Root
+	if book != nil {
+		root = book.Root
+	}
 
 	ctx := ToolProjectContext{Root: root}
-	if err := ctx.Load(section); err != nil {
-		return err
+	if section != "ideas" {
+		if err := ctx.Load(section); err != nil {
+			return err
+		}
 	}
 
 	var resp ToolResponse
+	var queryErr error
 	switch section {
 	case "story-setup":
 		resp = QueryStorySetup(ctx, queryType, queryName)
@@ -289,6 +309,11 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 		resp = queryChapterSection(ctx, queryType, queryID, ToolQueryFlags.EntityType, queryName, queryChapterID, queryVolumeID, ToolQueryFlags.IncludeContent)
 	case "context":
 		resp = QueryContext(ctx, queryType, queryID, queryName)
+	case "ideas":
+		resp, queryErr = QueryIdeas(queryType, ToolQueryFlags.Genre, ToolQueryFlags.Level, ToolQueryFlags.Mode, ToolQueryFlags.Seed, ToolQueryFlags.Count, ToolQueryFlags.Select)
+		if queryErr != nil {
+			return queryErr
+		}
 	case "logs":
 		resp = queryLogsAt(root, queryType, queryID, queryName, ToolQueryFlags.IncludeContent)
 	}
@@ -314,6 +339,8 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 		switch section {
 		case "story-setup", "outline", "craft", "chapter", "logs":
 			canonicalType = "all"
+		case "ideas":
+			canonicalType = "provocation"
 		default:
 			canonicalType = queryType
 		}
@@ -327,11 +354,29 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 		"chapter_id":  queryChapterID,
 		"volume_id":   queryVolumeID,
 		"fields":      ToolQueryFlags.Fields,
+		"genre":       ToolQueryFlags.Genre,
+		"level":       ToolQueryFlags.Level,
+		"mode":        ToolQueryFlags.Mode,
+		"seed":        fmt.Sprintf("%d", ToolQueryFlags.Seed),
+		"count":       fmt.Sprintf("%d", ToolQueryFlags.Count),
+		"select":      fmt.Sprintf("%d", ToolQueryFlags.Select),
+	}
+	if section == "ideas" {
+		for _, key := range []string{"genre", "level", "mode"} {
+			if value, ok := resp.Meta[key].(string); ok && value != "" {
+				resp.Query[key] = value
+			}
+		}
+		if seed, ok := resp.Meta["seed"].(int64); ok {
+			resp.Query["seed"] = fmt.Sprintf("%d", seed)
+		}
 	}
 	if resp.Meta == nil {
 		resp.Meta = map[string]interface{}{}
 	}
-	resp.Meta["project_root"] = root.Dir()
+	if root != nil {
+		resp.Meta["project_root"] = root.Dir()
+	}
 	ApplyToolView(&resp, ToolQueryFlags.View)
 	ApplyToolFields(&resp, ToolQueryFlags.Fields)
 	applyToolLimit(&resp, ToolQueryFlags.Limit)
@@ -362,6 +407,12 @@ func init() {
 	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Fields, "fields", "", "Comma-separated JSON fields to return from each result, e.g. storyline_advances,chapter_payoff,conflict")
 	ToolQueryCmd.Flags().BoolVar(&ToolQueryFlags.IncludeContent, "content", false, "Include chapter/log text content when available (brief view keeps it)")
 	ToolQueryCmd.Flags().IntVar(&ToolQueryFlags.Limit, "limit", 0, "Maximum list results; object-shaped results return a warning instead")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Genre, "genre", "", "Genre hint for --type ideas: 仙侠, 都市, 悬疑, 科幻, or 通用")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Level, "level", "axiom", "Ideas level: axiom (local rule), event (history), law (systemic world law), or name (proper noun)")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Mode, "mode", "balanced", "Ideas exploration mode: safe, balanced, wild, or grounded (hard-SF constraints)")
+	ToolQueryCmd.Flags().Int64Var(&ToolQueryFlags.Seed, "seed", 0, "Ideas random seed; 0 picks and reports a fresh reproducible seed")
+	ToolQueryCmd.Flags().IntVar(&ToolQueryFlags.Count, "count", 5, "Ideas count (maximum 20)")
+	ToolQueryCmd.Flags().IntVar(&ToolQueryFlags.Select, "select", 0, "Scenario cards: select this many diverse cards from a larger draw (0 = return all)")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Target, "target", "outline",
 		"Check target: outline, setup, craft, chapter, or recap; craft requires kind schema")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Scope, "scope", "all",

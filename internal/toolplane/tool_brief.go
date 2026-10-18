@@ -20,6 +20,8 @@ func briefToolResults(section string, results interface{}) interface{} {
 		return briefCraftResults(results, false)
 	case "context":
 		return briefContextResults(results, false)
+	case "ideas":
+		return briefIdeaResults(results, false)
 	case "logs", "log":
 		return briefLogResults(results, false)
 	default:
@@ -39,6 +41,8 @@ func indexToolResults(section string, results interface{}) interface{} {
 		return briefCraftResults(results, true)
 	case "context":
 		return briefContextResults(results, true)
+	case "ideas":
+		return briefIdeaResults(results, true)
 	case "logs", "log":
 		return briefLogResults(results, true)
 	default:

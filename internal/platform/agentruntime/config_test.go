@@ -109,7 +109,8 @@ func TestNewProcessRuntimeMaterializesEmbeddedClaudeRunner(t *testing.T) {
 		"outline-compose-skeleton-workflow", "outline-compose-volume-workflow",
 		"outline-global-repair-workflow", "outline-improve-volume-workflow", "outline-review-workflow",
 		"craft-character-workflow", "craft-element-workflow", "recap-extract-workflow",
-		"setup-improve-workflow", "write-chapter-workflow", "write-review-workflow",
+		"setup-improve-workflow", "setup-generate-workflow", "setup-review-workflow", "setup-causal-review", "scenario-predict",
+		"write-chapter-workflow", "write-review-workflow",
 		"write-improve-workflow", "translate-workflow",
 	} {
 		if _, err := os.Stat(filepath.Join(skillsDir, skill, "SKILL.md")); err != nil {
@@ -131,6 +132,10 @@ func TestNewProcessRuntimeMaterializesEmbeddedClaudeRunner(t *testing.T) {
 	assertSkillContains(t, skillsDir, "write-review-workflow", "summary.total=0", "不要再查询 outline/events/craft", "不要运行 `echo`", "tool check all --target chapter --scope chapter")
 	assertSkillContains(t, skillsDir, "write-improve-workflow", "chapter-repair", "tool check all --target chapter", "chapter-write", "tool patch chapter")
 	assertSkillContains(t, skillsDir, "translate-workflow", "Translate Workflow", "Do not call tools", "translation")
+	assertSkillContains(t, skillsDir, "setup-generate-workflow", "setup-generate-workflow", "axiom_budget=1", "derivation_steps")
+	assertSkillContains(t, skillsDir, "setup-review-workflow", "overall_score", "long_form_plan")
+	assertSkillContains(t, skillsDir, "setup-causal-review", "orphan_rules", "zero_cost_bypasses", "unseeded_twists")
+	assertSkillContains(t, skillsDir, "scenario-predict", "predictability", "obvious_developments")
 }
 
 func TestConfigNormalizeSanitizesModelNames(t *testing.T) {

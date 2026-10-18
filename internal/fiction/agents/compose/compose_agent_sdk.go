@@ -126,7 +126,12 @@ func composeAgentSDKParams(command, workflowSkill string, maxTurns int, toolAllo
 	if maxTurns <= 0 {
 		maxTurns = 12
 	}
-	toolAllowlist = append(append([]string(nil), toolAllowlist...), agentbase.AgentSDKLogToolAllowlist()...)
+	toolAllowlist = append(append([]string(nil), toolAllowlist...),
+		"novelgen tool query ideas --type axiom",
+		"novelgen tool query ideas --type event",
+		"novelgen tool query ideas --type law",
+	)
+	toolAllowlist = append(toolAllowlist, agentbase.AgentSDKLogToolAllowlist()...)
 	return agentbase.AgentSDKToolParams(
 		[]string{"novel-tools-core", workflowSkill},
 		command,

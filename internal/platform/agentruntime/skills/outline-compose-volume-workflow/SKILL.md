@@ -11,6 +11,10 @@ description: 查询 story setup、当前 outline、目标 volume 上下文，生
 
 - 先运行调用方给出的 `required_queries`。
 - 查询 story setup、当前 outline、目标 volume、前序上下文和必要实体。
+- 如果本卷的冲突、代价或兑现方式与前卷高度相似，可以调用一次
+  `novelgen tool query ideas --type law --genre <genre> --mode wild --count 5 --seed <seed>`。
+  把一条句子合理化成本卷的矛盾制度、信息差或兑现规则，回答全部 `must_answer`；
+  不得用它推翻 setup、卷目标或已发生事实。
 - 只生成目标 volume 的 chapters，不改其他 part/volume。
 - 生成后运行调用方允许的 focused outline check；如果 check 指出 blocking/high 问题，先在返回 JSON 中修正。
 - 如果调用方允许历史续写，先用 `novelgen tool query logs --view index` 查看历史，再读取最相关的 brief/content。

@@ -6,6 +6,7 @@ import (
 	agentbase "novelgen/internal/fiction/agents/base"
 	"novelgen/internal/fiction/agents/prompt"
 	"novelgen/internal/fiction/agents/review"
+	"novelgen/internal/fiction/domain/creativity"
 	"strings"
 
 	"novelgen/internal/contract/story"
@@ -17,7 +18,9 @@ import (
 
 // SetupGenInput is the input for setup generation
 type SetupGenInput struct {
-	Idea string `json:"idea" md:"idea" desc:"User's story idea or concept"`
+	Idea                string                   `json:"idea" md:"idea" desc:"User's story idea or concept"`
+	CreativeProvocation *creativity.Provocation  `json:"creative_provocation,omitempty" md:"creative_provocation,omitempty" desc:"Optional deterministic structured-nonsense constraint that must be rationalized into world canon"`
+	CreativeScenario    *creativity.ScenarioCard `json:"creative_scenario,omitempty" md:"creative_scenario,omitempty" desc:"Optional fixed causal scenario card. Treat every field as a binding role and expand it into setup without changing the causal chain"`
 }
 
 // SetupGenOutput is the output for setup generation
@@ -45,6 +48,94 @@ type SetupReviewInput struct {
 // SetupReviewOutput is the output for setup review
 type SetupReviewOutput struct {
 	Result models.ReviewResult `json:"result" md:"result" desc:"Review result with scores and suggestions"`
+}
+
+// SetupCausalReviewInput asks a strict reviewer whether the generated setup is
+// one axiom plus derived consequences, rather than a pile of unrelated cool
+// rules added to explain the provocation.
+type SetupCausalReviewInput struct {
+	Idea          string                   `json:"idea" md:"idea" desc:"Original user idea or constraints"`
+	Provocation   creativity.Provocation   `json:"provocation" md:"provocation" desc:"Original structured-nonsense constraint"`
+	Scenario      *creativity.ScenarioCard `json:"creative_scenario,omitempty" md:"creative_scenario,omitempty" desc:"Optional fixed causal Scenario Card to audit"`
+	ExistingSetup models.StorySetup        `json:"existing_setup" md:"existing_setup" desc:"Generated setup to audit"`
+}
+
+// SetupCausalReviewOutput is diagnosis-only; it does not rewrite the setup.
+type SetupCausalReviewOutput struct {
+	AxiomCount         int      `json:"axiom_count" md:"axiom_count" desc:"Number of independent unexplained magic rules; must be 1"`
+	OrphanRules        []string `json:"orphan_rules,omitempty" md:"orphan_rules" desc:"Rules that cannot be derived from the axiom plus normal incentives"`
+	MissingBeneficiary []string `json:"missing_beneficiary,omitempty" md:"missing_beneficiary" desc:"Institutions with no beneficiary, budget, or enforcement capacity"`
+	ZeroCostBypasses   []string `json:"zero_cost_bypasses,omitempty" md:"zero_cost_bypasses" desc:"Rules an ordinary person can ignore at zero cost"`
+	UnseededTwists     []string `json:"unseeded_twists,omitempty" md:"unseeded_twists" desc:"Reveals with no earlier canon fact or clue"`
+	Verdict            string   `json:"verdict" md:"verdict" desc:"keep or reject"`
+	Summary            string   `json:"summary" md:"summary" desc:"Short diagnosis under 300 characters"`
+}
+
+// ScenarioPredictionInput asks a cheap predictor to imagine the most obvious
+// developments of a Scenario Card. The output is used to rerank cards before
+// full setup generation.
+type ScenarioPredictionInput struct {
+	Idea     string                  `json:"idea" md:"idea" desc:"Original user idea or constraints"`
+	Scenario creativity.ScenarioCard `json:"creative_scenario" md:"creative_scenario" desc:"Scenario Card to predict"`
+}
+
+// ScenarioPredictionOutput is a card-level novelty estimate.
+type ScenarioPredictionOutput struct {
+	Predictability      int      `json:"predictability" md:"predictability" desc:"0-100; higher means the card strongly implies familiar developments"`
+	Novelty             int      `json:"novelty" md:"novelty" desc:"0-100; higher means less predictable"`
+	ObviousDevelopments []string `json:"obvious_developments,omitempty" md:"obvious_developments" desc:"3-5 developments a generic model would predict"`
+	Summary             string   `json:"summary" md:"summary" desc:"Short explanation under 200 characters"`
+}
+
+// NormalizedNovelty returns the novelty implied by predictability when the
+// model omits the explicit novelty field.
+func (o ScenarioPredictionOutput) NormalizedNovelty() int {
+	if o.Novelty > 0 {
+		return clampScenarioScore(o.Novelty)
+	}
+	return 100 - clampScenarioScore(o.Predictability)
+}
+
+func clampScenarioScore(value int) int {
+	if value < 0 {
+		return 0
+	}
+	if value > 100 {
+		return 100
+	}
+	return value
+}
+
+// Rejected reports whether the candidate fails the causal contract.
+func (r SetupCausalReviewOutput) Rejected() bool {
+	verdict := strings.ToLower(strings.TrimSpace(r.Verdict))
+	if verdict == "reject" || verdict == "fail" || verdict == "invalid" {
+		return true
+	}
+	return r.AxiomCount > 1 ||
+		len(r.OrphanRules) > 0 ||
+		len(r.MissingBeneficiary) > 0 ||
+		len(r.ZeroCostBypasses) > 0 ||
+		len(r.UnseededTwists) > 0
+}
+
+// Issues flattens the diagnosis into short strings for candidate reports.
+func (r SetupCausalReviewOutput) Issues() []string {
+	issues := make([]string, 0,
+		len(r.OrphanRules)+len(r.MissingBeneficiary)+len(r.ZeroCostBypasses)+len(r.UnseededTwists))
+	for _, item := range r.OrphanRules {
+		issues = append(issues, "orphan_rule: "+item)
+	}
+	for _, item := range r.MissingBeneficiary {
+		issues = append(issues, "missing_beneficiary: "+item)
+	}
+	for _, item := range r.ZeroCostBypasses {
+		issues = append(issues, "zero_cost_bypass: "+item)
+	}
+	for _, item := range r.UnseededTwists {
+		issues = append(issues, "unseeded_twist: "+item)
+	}
+	return issues
 }
 
 // SetupAgentSDKImproveInput is the compact prompt payload for the SDK workflow.
@@ -108,6 +199,9 @@ func (a *SetupAgent) SetProjectRoot(root *store.Root) {
 func (a *SetupAgent) Generate(ctx context.Context, input SetupGenInput) (SetupGenOutput, error) {
 	logger.Section("SETUP AGENT - Story Setup Generation")
 	logger.Info("Idea: %s", input.Idea)
+	if input.CreativeProvocation != nil {
+		logger.Info("Creative provocation [%s]: %s", input.CreativeProvocation.ID, input.CreativeProvocation.Sentence)
+	}
 	logger.Info("Language: %s", a.base.Language())
 
 	var output SetupGenOutput
@@ -129,6 +223,34 @@ func (a *SetupAgent) Generate(ctx context.Context, input SetupGenInput) (SetupGe
 	logger.Info("Theme: %s", output.Setup.Theme)
 	logger.Info("Tone: %s", output.Setup.Tone)
 
+	return output, nil
+}
+
+// GenerateWithAgentSDK generates a setup through the Agent SDK runtime. The
+// SDK workflow has no project tools: its only job is to turn the idea and the
+// optional provocation into a typed setup JSON, which Go normalizes and
+// validates before the caller writes anything.
+func (a *SetupAgent) GenerateWithAgentSDK(ctx context.Context, input SetupGenInput) (SetupGenOutput, error) {
+	logger.Section("SETUP AGENT SDK - Story Setup Generation")
+	logger.Info("Idea: %s", input.Idea)
+	if input.CreativeProvocation != nil {
+		logger.Info("Creative provocation [%s]: %s", input.CreativeProvocation.ID, input.CreativeProvocation.Sentence)
+	}
+	logger.Info("Language: %s", a.base.Language())
+
+	var output SetupGenOutput
+	params := agentbase.InvokeParams{
+		SDKSkills:      []string{"setup-generate-workflow"},
+		PermissionMode: "dontAsk",
+		RequireSDK:     true,
+		MaxTurns:       8,
+		Timeout:        600,
+		Command:        "generate a story setup from the idea and creative provocation",
+	}
+	if err := a.base.Execute(ctx, params, input, &output.Setup); err != nil {
+		return SetupGenOutput{}, err
+	}
+	a.normalizeSetup(&output.Setup)
 	return output, nil
 }
 
@@ -214,6 +336,123 @@ func (a *SetupAgent) Review(ctx context.Context, input SetupReviewInput) (SetupR
 	return output, nil
 }
 
+// ReviewWithAgentSDK runs the general setup attractiveness/compactness review
+// through the Agent SDK skill tree.
+func (a *SetupAgent) ReviewWithAgentSDK(ctx context.Context, input SetupReviewInput) (SetupReviewOutput, error) {
+	logger.Section("SETUP AGENT SDK - Story Setup Review")
+	logger.Info("Project: %s", input.ExistingSetup.ProjectName)
+
+	var output SetupReviewOutput
+	params := agentbase.InvokeParams{
+		SDKSkills:      []string{"setup-review-workflow"},
+		PermissionMode: "dontAsk",
+		RequireSDK:     true,
+		MaxTurns:       6,
+		Timeout:        300,
+		Command:        "review the story setup and provide improvement suggestions",
+	}
+	if err := a.base.Execute(ctx, params, input, &output.Result); err != nil {
+		return SetupReviewOutput{}, err
+	}
+	return output, nil
+}
+
+// ReviewCausality runs the strict one-axiom / derivation audit used by
+// `setup explore`. It is a separate pass from the general setup review because
+// a setup can score well on attractiveness and compactness while still being a
+// pile of unrelated exceptions.
+func (a *SetupAgent) ReviewCausality(ctx context.Context, input SetupCausalReviewInput) (SetupCausalReviewOutput, error) {
+	logger.Section("SETUP AGENT - Causal Review")
+	logger.Info("Provocation: %s", input.Provocation.Sentence)
+	if input.Scenario != nil {
+		logger.Info("Scenario: %s", input.Scenario.PremiseKernel)
+	}
+	logger.Info("Idea: %s", input.Idea)
+
+	var output SetupCausalReviewOutput
+	params := agentbase.InvokeParams{
+		Skills:  []string{"setup-causal-review"},
+		Command: "audit whether the setup derives from one axiom without orphan rules",
+	}
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return SetupCausalReviewOutput{}, err
+	}
+	output.Verdict = strings.TrimSpace(output.Verdict)
+	output.Summary = strings.TrimSpace(output.Summary)
+	if output.Verdict == "" && output.Summary == "" && output.AxiomCount == 0 && len(output.Issues()) == 0 {
+		return SetupCausalReviewOutput{}, fmt.Errorf("causal review returned no diagnosis")
+	}
+	return output, nil
+}
+
+// ReviewCausalityWithAgentSDK runs the same strict audit through the Agent SDK
+// skill tree, so `setup explore --agent-sdk` does not silently fall back to the
+// chat backend for its causal reviewer.
+func (a *SetupAgent) ReviewCausalityWithAgentSDK(ctx context.Context, input SetupCausalReviewInput) (SetupCausalReviewOutput, error) {
+	logger.Section("SETUP AGENT SDK - Causal Review")
+	logger.Info("Provocation: %s", input.Provocation.Sentence)
+	if input.Scenario != nil {
+		logger.Info("Scenario: %s", input.Scenario.PremiseKernel)
+	}
+	logger.Info("Idea: %s", input.Idea)
+
+	var output SetupCausalReviewOutput
+	params := agentbase.InvokeParams{
+		SDKSkills:      []string{"setup-causal-review"},
+		PermissionMode: "dontAsk",
+		RequireSDK:     true,
+		MaxTurns:       4,
+		Timeout:        300,
+		Command:        "audit whether the setup derives from one axiom without orphan rules",
+	}
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return SetupCausalReviewOutput{}, err
+	}
+	output.Verdict = strings.TrimSpace(output.Verdict)
+	output.Summary = strings.TrimSpace(output.Summary)
+	if output.Verdict == "" && output.Summary == "" && output.AxiomCount == 0 && len(output.Issues()) == 0 {
+		return SetupCausalReviewOutput{}, fmt.Errorf("causal review returned no diagnosis")
+	}
+	return output, nil
+}
+
+// PredictScenario asks the chat backend for the obvious developments of a card.
+func (a *SetupAgent) PredictScenario(ctx context.Context, input ScenarioPredictionInput) (ScenarioPredictionOutput, error) {
+	var output ScenarioPredictionOutput
+	params := agentbase.InvokeParams{
+		Skills:  []string{"scenario-predict"},
+		Command: "predict the most obvious developments of this Scenario Card",
+	}
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return ScenarioPredictionOutput{}, err
+	}
+	if output.Summary == "" && len(output.ObviousDevelopments) == 0 {
+		return ScenarioPredictionOutput{}, fmt.Errorf("scenario predictor returned no diagnosis")
+	}
+	return output, nil
+}
+
+// PredictScenarioWithAgentSDK is the SDK equivalent used by exploration with
+// --agent-sdk.
+func (a *SetupAgent) PredictScenarioWithAgentSDK(ctx context.Context, input ScenarioPredictionInput) (ScenarioPredictionOutput, error) {
+	var output ScenarioPredictionOutput
+	params := agentbase.InvokeParams{
+		SDKSkills:      []string{"scenario-predict"},
+		PermissionMode: "dontAsk",
+		RequireSDK:     true,
+		MaxTurns:       4,
+		Timeout:        300,
+		Command:        "predict the most obvious developments of this Scenario Card",
+	}
+	if err := a.base.Execute(ctx, params, input, &output); err != nil {
+		return ScenarioPredictionOutput{}, err
+	}
+	if output.Summary == "" && len(output.ObviousDevelopments) == 0 {
+		return ScenarioPredictionOutput{}, fmt.Errorf("scenario predictor returned no diagnosis")
+	}
+	return output, nil
+}
+
 func setupAgentSDKParams(applyPatches bool) agentbase.InvokeParams {
 	patchTool := "novelgen tool patch setup"
 	if applyPatches {
@@ -232,6 +471,9 @@ func setupAgentSDKParams(applyPatches bool) agentbase.InvokeParams {
 		"novelgen tool query story-setup --type premise",
 		"novelgen tool query story-setup --type resource",
 		"novelgen tool query story-setup --type timeline",
+		"novelgen tool query ideas --type axiom",
+		"novelgen tool query ideas --type event",
+		"novelgen tool query ideas --type law",
 		"novelgen tool check all --target setup --min-priority medium --max-issues 12",
 		"novelgen tool check all --target setup --category",
 		patchTool,

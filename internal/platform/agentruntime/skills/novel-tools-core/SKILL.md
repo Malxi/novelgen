@@ -14,6 +14,7 @@ description: Common Novelgen Agent SDK tool rules. Project facts may only be que
 - 如果 Windows 下只读 `query`/`check` 结果明显乱码，可重试一次 runtime 允许的 UTF-8 PowerShell 包装；不要把 PowerShell 用于 patch、正文、JSON、文件读取或编码辅助。
 - 不要添加 `2>&1`、`>`、`<`、`| grep`、`Out-File`、`Get-Content`、`Select-String`、`cat` 或 `type`。
 - `tool query context` 的形态是：`novelgen tool query context --type <context-type> ...`。
+- `tool query ideas` 生成随机的“结构化废话”，用于 setup/outline 构思；它是只读的，不依赖已有 setup。把每条结果当作必须合理化的约束，而不是成品设定。
 - `tool check` 的形态是：`novelgen tool check <quality|simulation|all> --target <target> ...`。不要省略 check kind。
 - 中文或非 ASCII patch JSON 优先走 stdin；允许的管道只有两种：把 compact JSON 传给 patch 工具：`printf '%s' '<compact-json>' | novelgen tool patch ...`；或把长章节正文分块传给 patch buffer：`printf '%s' '<content chunk>' | novelgen tool patch-buffer append --id "<chapter_id>-draft" --stdin`。
 - 输出过大时使用 `--view index|brief`、`--limit`、`--fields` 或精确 ID/name；默认不要使用 `--view full`。
@@ -21,6 +22,7 @@ description: Common Novelgen Agent SDK tool rules. Project facts may only be que
 ## Query And Check
 
 - `tool query` 和 `tool check` 是只读操作；优先使用 context bundle。
+- 需要打破套路时可运行 `novelgen tool query ideas --type axiom|event|law|name --genre <genre> --count <n> --mode wild --seed <seed>`。`law` 生成“什么被守恒/转移”的系统性世界法则，优先用于 setup。逐条回答 `must_answer`，拒绝 `forbidden_explanations`，并遵守 `output_contract`。
 - `--view index` 只给路由信息（id/title/count），不会携带章节 summary；需要事实时再升级到 `--view brief`。`--limit` 只作用于列表结果，对象结果会返回 warning。
 - `tool check schema --target craft --id "<name>"` 会从 craft 文件中推断类型；不传 scope/id 时检查全部四类 craft。`tool check --target recap --id "<chapter_id>"` 默认使用 chapter scope。
 - 有 `navigation`、`workflow`、`next_actions` 时按最小下一步执行。

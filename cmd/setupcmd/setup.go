@@ -10,6 +10,7 @@ import (
 	"novelgen/internal/app"
 	"novelgen/internal/contract/story"
 	"novelgen/internal/fiction/agents"
+	"novelgen/internal/fiction/domain/creativity"
 	"novelgen/internal/fiction/domain/project"
 	"novelgen/internal/fiction/domain/quality"
 	"novelgen/internal/fiction/mutation"
@@ -31,6 +32,16 @@ var (
 	setupForceImprove  bool
 	setupAgentSDK      bool
 	setupAgentApply    bool
+	setupGenAgentSDK   bool
+	setupRandom        bool
+	setupRandomSeed    int64
+	setupRandomLevel   string
+	setupRandomMode    string
+	setupRandomGenre   string
+	setupScenario      bool
+	setupScenarioSeed  int64
+	setupScenarioGenre string
+	setupScenarioIndex int
 )
 
 var setupCmd = &cobra.Command{
@@ -49,6 +60,7 @@ This command generates story/setup/story_setup.json containing:
 
 Subcommands:
   gen     - Generate story setup using AI from a prompt
+  explore - Generate and rank several provocation-driven setup candidates
   regen   - Regenerate story setup with optional guidance
   improve - Improve existing story setup through AI review
   import  - Import story setup from markdown file`,
@@ -61,7 +73,9 @@ var setupGenCmd = &cobra.Command{
 
 Examples:
   novelgen setup gen "一个关于太空探险的故事"
-  novelgen setup gen "赛博朋克背景下的侦探故事"`,
+  novelgen setup gen "赛博朋克背景下的侦探故事"
+  novelgen setup gen --agent-sdk "一个关于太空探险的故事"
+  novelgen setup gen --random --random-genre 仙侠 --random-mode wild --random-seed 42 "一个关于宗门继承的故事"`,
 	Args: cobra.ExactArgs(1),
 	RunE: runSetupGen,
 }
@@ -148,6 +162,18 @@ func init() {
 	setupRegenCmd.Flags().BoolVar(&setupAgentSDK, "agent-sdk", false, "Use Claude Agent SDK workflow with setup query/check/patch tools")
 	setupRegenCmd.Flags().BoolVar(&setupAgentApply, "agent-apply", false, "With --agent-sdk, let the agent write setup through validated patch tools")
 
+	// Random provocation flags
+	setupGenCmd.Flags().BoolVar(&setupRandom, "random", false, "Inject one deterministic structured-nonsense constraint into setup generation")
+	setupGenCmd.Flags().BoolVar(&setupScenario, "scenario", false, "Inject one deterministic causal Scenario Card into setup generation")
+	setupGenCmd.Flags().BoolVar(&setupGenAgentSDK, "agent-sdk", false, "Generate the setup through the Agent SDK runtime")
+	setupGenCmd.Flags().Int64Var(&setupRandomSeed, "random-seed", 0, "Seed for --random; 0 picks and reports a replayable seed")
+	setupGenCmd.Flags().StringVar(&setupRandomLevel, "random-level", creativity.LevelAxiom, "Random constraint level: axiom, event, law, or name")
+	setupGenCmd.Flags().StringVar(&setupRandomMode, "random-mode", creativity.ModeBalanced, "Random exploration mode: safe, balanced, wild, or grounded")
+	setupGenCmd.Flags().StringVar(&setupRandomGenre, "random-genre", "", "Genre hint for --random: 仙侠, 都市, 悬疑, 科幻, or 通用")
+	setupGenCmd.Flags().Int64Var(&setupScenarioSeed, "scenario-seed", 0, "Seed for --scenario; 0 picks and reports a replayable seed")
+	setupGenCmd.Flags().StringVar(&setupScenarioGenre, "scenario-genre", "科幻", "Genre hint for --scenario (currently 科幻)")
+	setupGenCmd.Flags().IntVar(&setupScenarioIndex, "scenario-index", 1, "1-based card index from the scenario draw")
+
 	// Improve flags
 	setupImproveCmd.Flags().IntVar(&setupMaxRounds, "max-rounds", 1, "Maximum improvement rounds")
 	setupImproveCmd.Flags().StringVar(&setupImprovePrompt, "prompt", "", "Manual improvement guidance (if provided, uses manual mode)")
@@ -190,7 +216,27 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 	// AI generation mode
 	logger.Info("AI generation mode with prompt: %s", prompt)
 	logger.Info("Using language: %s", projectConfig.Language)
-	setup, err := generateStorySetupWithAI(cmd.Context(), prompt, projectConfig.Language, &projectConfig.LLM, cfg, client)
+	if setupRandom && setupScenario {
+		return fmt.Errorf("--random and --scenario are mutually exclusive")
+	}
+	provocation, err := drawSetupProvocation(setupRandom, setupRandomSeed, setupRandomLevel, setupRandomMode, setupRandomGenre)
+	if err != nil {
+		return err
+	}
+	scenario, err := drawSetupScenario(setupScenario, setupScenarioSeed, setupScenarioGenre, setupScenarioIndex)
+	if err != nil {
+		return err
+	}
+	if provocation != nil {
+		fmt.Printf("Random provocation [%s, seed=%d]: %s\n", provocation.ID, provocation.Seed, provocation.Sentence)
+		fmt.Printf("Replay with: --random --random-seed %d --random-level %s --random-mode %s --random-genre %s\n\n",
+			provocation.Seed, provocation.Level, provocation.Mode, provocation.Genre)
+	}
+	if scenario != nil {
+		fmt.Printf("Scenario card [%s, seed=%d]: %s\n", scenario.ID, scenario.Seed, scenario.PremiseKernel)
+		fmt.Printf("Replay with: --scenario --scenario-seed %d --scenario-genre %s\n\n", scenario.Seed, scenario.Genre)
+	}
+	setup, err := generateStorySetupWithAI(cmd.Context(), prompt, projectConfig.Language, &projectConfig.LLM, cfg, client, provocation, scenario, setupGenAgentSDK)
 	if err != nil {
 		logger.Error("Failed to generate story setup with AI: %v", err)
 		return fmt.Errorf("failed to generate story setup with AI: %w", err)
@@ -199,6 +245,13 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 	setup, gate, err := repairSetupWithQualityGate(cmd.Context(), setup, projectConfig, cfg, client, "generation")
 	if err != nil {
 		return err
+	}
+	if scenario != nil {
+		setup, err = repairSetupWithScenarioCoverage(cmd.Context(), setup, scenario, projectConfig, cfg, client, "generation")
+		if err != nil {
+			return err
+		}
+		gate = quality.RunSetupQualityGate(setup)
 	}
 	quality.LogQualityGateResult("setup", gate)
 
@@ -296,7 +349,7 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 
 	// Regenerate story setup
 	logger.Info("Regenerating story setup...")
-	setup, err := generateStorySetupWithAI(cmd.Context(), prompt, projectConfig.Language, &projectConfig.LLM, cfg, client)
+	setup, err := generateStorySetupWithAI(cmd.Context(), prompt, projectConfig.Language, &projectConfig.LLM, cfg, client, nil, nil, false)
 	if err != nil {
 		logger.Error("Failed to regenerate story setup: %v", err)
 		return fmt.Errorf("failed to regenerate story setup: %w", err)
@@ -1103,7 +1156,52 @@ func fillSetupField(setup *models.StorySetup, section, content string) {
 	}
 }
 
-func generateStorySetupWithAI(ctx context.Context, prompt, language string, projectLLM *models.ProjectLLM, cfg *llm.Config, client llm.Client) (*models.StorySetup, error) {
+func drawSetupProvocation(enabled bool, seed int64, level, mode, genre string) (*creativity.Provocation, error) {
+	if !enabled {
+		return nil, nil
+	}
+	result, err := creativity.Generate(creativity.Request{
+		Level: level,
+		Genre: genre,
+		Mode:  mode,
+		Seed:  seed,
+		Count: 1,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("draw random setup provocation: %w", err)
+	}
+	if len(result.Provocations) == 0 {
+		return nil, fmt.Errorf("draw random setup provocation: no result for seed %d", result.Seed)
+	}
+	return &result.Provocations[0], nil
+}
+
+func drawSetupScenario(enabled bool, seed int64, genre string, index int) (*creativity.ScenarioCard, error) {
+	if !enabled {
+		return nil, nil
+	}
+	if index <= 0 {
+		index = 1
+	}
+	result, err := creativity.GenerateScenarios(creativity.ScenarioRequest{
+		Genre: genre,
+		Seed:  seed,
+		Count: index,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("draw setup scenario: %w", err)
+	}
+	if len(result.Cards) < index {
+		return nil, fmt.Errorf("draw setup scenario: no result for seed %d", result.Seed)
+	}
+	card := result.Cards[index-1]
+	if err := card.Validate(); err != nil {
+		return nil, fmt.Errorf("draw setup scenario: %w", err)
+	}
+	return &card, nil
+}
+
+func generateStorySetupWithAI(ctx context.Context, prompt, language string, projectLLM *models.ProjectLLM, cfg *llm.Config, client llm.Client, provocation *creativity.Provocation, scenario *creativity.ScenarioCard, useSDK bool) (*models.StorySetup, error) {
 	// Use project LLM settings from novel.json
 	if projectLLM.Provider == "" {
 		projectLLM.Provider = models.ProviderOllama
@@ -1131,7 +1229,20 @@ func generateStorySetupWithAI(ctx context.Context, prompt, language string, proj
 	}
 	agent.SetLanguage(language)
 
-	result, err := agent.Generate(ctx, agents.SetupGenInput{Idea: prompt})
+	input := agents.SetupGenInput{
+		Idea:                prompt,
+		CreativeProvocation: provocation,
+		CreativeScenario:    scenario,
+	}
+	var (
+		result agents.SetupGenOutput
+		err    error
+	)
+	if useSDK {
+		result, err = agent.GenerateWithAgentSDK(ctx, input)
+	} else {
+		result, err = agent.Generate(ctx, input)
+	}
 	if err != nil {
 		return nil, err
 	}

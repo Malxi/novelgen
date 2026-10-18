@@ -24,7 +24,7 @@ var toolCommandScopes = []string{"internal/toolplane", "internal/fiction/agents"
 // strips quotes before comparing.
 var toolCommandFlagOrder = map[string][]string{
 	"check":        {"--target", "--scope", "--id", "--category", "--min-priority", "--max-issues", "--target-words"},
-	"query":        {"--type", "--id", "--chapter-id", "--volume-id", "--entity-type", "--name", "--fields", "--content", "--view", "--limit"},
+	"query":        {"--type", "--genre", "--level", "--mode", "--seed", "--count", "--select", "--id", "--chapter-id", "--volume-id", "--entity-type", "--name", "--fields", "--content", "--view", "--limit"},
 	"patch":        {"--target", "--id", "--patch-json", "--patch-buffer", "--task", "--apply", "--refresh-derived", "--target-words"},
 	"patch-buffer": {"--id", "--text", "--stdin", "--max-chars"},
 	"refresh":      {"--id", "--batch-size"},

@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,6 +29,7 @@ const (
 	backupsName           = "backups"
 	setupJSONName         = "story_setup.json"
 	setupMarkdownName     = "story_setup.md"
+	setupExploreDirName   = "explore"
 	outlineJSONName       = "outline.json"
 	outlineMarkdownName   = "outline.md"
 	cacheDirName          = "cache"
@@ -119,6 +121,17 @@ func (r *Root) SetupJSON() string { return filepath.Join(r.SetupDir(), setupJSON
 
 // SetupMarkdown is story/setup/story_setup.md, the human-readable rendering.
 func (r *Root) SetupMarkdown() string { return filepath.Join(r.SetupDir(), setupMarkdownName) }
+
+// SetupExploreDir is story/setup/explore/<seed>, a derived directory for
+// multi-candidate setup experiments. It is never loaded as canonical setup.
+func (r *Root) SetupExploreDir(seed int64) string {
+	return filepath.Join(r.SetupDir(), setupExploreDirName, strconv.FormatInt(seed, 10))
+}
+
+// SetupExploreFile names one derived file inside a setup exploration run.
+func (r *Root) SetupExploreFile(seed int64, name string) string {
+	return filepath.Join(r.SetupExploreDir(seed), name)
+}
 
 // ComposeDir is story/compose.
 func (r *Root) ComposeDir() string { return filepath.Join(r.StoryDir(), composeDirName) }

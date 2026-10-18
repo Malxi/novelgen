@@ -110,6 +110,7 @@ novelgen init my_novel --genre "科幻" --chapter 20
 
 **子命令：**
 - `gen <prompt>` - 使用 AI 从提示生成故事设定
+- `explore <prompt>` - 一次生成多个“反常公理”驱动的设定候选并排序
 - `regen [--prompt]` - 重新生成故事设定
 - `improve [--max-rounds]` - 改进现有故事设定
 - `import [markdown_file]` - 从 Markdown 导入故事设定
@@ -117,6 +118,13 @@ novelgen init my_novel --genre "科幻" --chapter 20
 **示例：**
 ```bash
 novelgen setup gen "一个关于太空探险的故事"
+novelgen setup gen --agent-sdk "一个关于太空探险的故事"
+novelgen setup gen --random --random-genre 仙侠 --random-mode wild --random-seed 42 "一个关于宗门继承的故事"
+novelgen setup explore "一个关于宗门继承的故事" --random-genre 仙侠 --count 5 --mode wild
+novelgen setup explore "一个关于宗门继承的故事" --agent-sdk
+novelgen setup explore "一个关于宗门继承的故事" --strict=false   # 跳过因果审查，仅用于对比
+novelgen tool query ideas --type scenario --genre 科幻 --seed 12 --count 3
+novelgen setup gen --scenario --scenario-seed 12 --scenario-genre 科幻 "一个星际大逃杀故事"
 novelgen setup regen --prompt "增加更多悬疑元素"
 novelgen setup improve --max-rounds 2
 novelgen setup import story/setup/story_setup.md
@@ -552,6 +560,9 @@ novelgen init my_novel --genre "科幻" --chapter 20
 
 # 2. 创建故事设定
 novelgen setup gen "一个关于太空探险的故事"
+
+# 或者先让代码抽一条可复现的“反常公理”，再交给 AI 合理化
+novelgen setup gen --random --random-genre 仙侠 --random-mode wild --random-seed 42 "一个关于宗门继承的故事"
 
 # 3. 生成大纲
 novelgen compose gen

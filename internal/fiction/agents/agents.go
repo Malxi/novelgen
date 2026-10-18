@@ -67,6 +67,10 @@ type (
 	SetupGenOutput             = setup.SetupGenOutput
 	SetupImproveInput          = setup.SetupImproveInput
 	SetupImproveOutput         = setup.SetupImproveOutput
+	SetupCausalReviewInput     = setup.SetupCausalReviewInput
+	SetupCausalReviewOutput    = setup.SetupCausalReviewOutput
+	ScenarioPredictionInput    = setup.ScenarioPredictionInput
+	ScenarioPredictionOutput   = setup.ScenarioPredictionOutput
 	SetupReviewInput           = setup.SetupReviewInput
 	SetupReviewOutput          = setup.SetupReviewOutput
 )
