@@ -42,6 +42,12 @@ import (
 // behavior, so it is kept stable.
 var ErrNoProject = errors.New("project root not found (novel.json not found in current or parent directories)")
 
+// ErrNilRoot is returned when an operation reaches a missing project root.
+// A nil Root must fail closed: silently falling back to the host filesystem
+// would turn an omitted dependency into reads or writes in the process working
+// directory.
+var ErrNilRoot = errors.New("project root is nil")
+
 // Root is a handle to one novel project directory.
 //
 // A Root never consults the process working directory: every path it produces
@@ -105,8 +111,8 @@ func (r *Root) HostDir() (string, bool) {
 
 // FS returns the filesystem backing this root.
 func (r *Root) FS() FS {
-	if r == nil {
-		return OSFS{}
+	if r == nil || r.fs == nil {
+		return invalidFS{}
 	}
 	return r.fs
 }

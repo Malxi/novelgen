@@ -154,7 +154,7 @@ func runSetupExplore(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	projectConfig := session.Config
+	projectConfig := session.Config()
 	cfg, client, err := session.LoadLLM()
 	if err != nil {
 		return err
@@ -314,7 +314,7 @@ func runSetupExplore(cmd *cobra.Command, args []string) error {
 		selected = len(plan.Selected)
 		fmt.Printf("Scenario plan: considered=%d selected=%d seed=%d\n", considered, selected, scenarioResult.Seed)
 		if setupExplorePlanOnly {
-			planPath, err := writeScenarioPlan(book.Root, scenarioResult.Seed, plan)
+			planPath, err := writeScenarioPlan(book.Root(), scenarioResult.Seed, plan)
 			if err != nil {
 				return err
 			}
@@ -366,19 +366,19 @@ func runSetupExplore(cmd *cobra.Command, args []string) error {
 	sortSetupExploreCandidates(candidates)
 
 	for i := range candidates {
-		path, err := writeSetupExploreCandidate(book.Root, reportDrawn.Seed, candidates[i])
+		path, err := writeSetupExploreCandidate(book.Root(), reportDrawn.Seed, candidates[i])
 		if err != nil {
 			return err
 		}
 		candidates[i].Path = path
 	}
 	report := buildSetupExploreReport(args[0], reportDrawn, candidates, warnings, setupExploreStrict, scenarioMode, considered, selected)
-	reportPath := book.Root.SetupExploreFile(reportDrawn.Seed, "report.json")
+	reportPath := book.Root().SetupExploreFile(reportDrawn.Seed, "report.json")
 	reportData, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal setup exploration report: %w", err)
 	}
-	if err := book.Root.Write(reportPath, reportData, store.FileMode); err != nil {
+	if err := book.Root().Write(reportPath, reportData, store.FileMode); err != nil {
 		return fmt.Errorf("write setup exploration report: %w", err)
 	}
 
@@ -406,7 +406,7 @@ func runSetupExplore(cmd *cobra.Command, args []string) error {
 			fmt.Printf("   causal issues: %s\n", summarizeCausalIssues(candidate.CausalIssues, 3))
 		}
 	}
-	fmt.Printf("\nCandidates: %s\nReport: %s\n", book.Root.SetupExploreDir(reportDrawn.Seed), reportPath)
+	fmt.Printf("\nCandidates: %s\nReport: %s\n", book.Root().SetupExploreDir(reportDrawn.Seed), reportPath)
 
 	if setupExploreApplyBest {
 		var best *setupExploreCandidate
@@ -419,7 +419,7 @@ func runSetupExplore(cmd *cobra.Command, args []string) error {
 		if best == nil {
 			return fmt.Errorf("all candidates were rejected by causal review; use --strict=false or a different seed")
 		}
-		if book.Root.HasSetup() {
+		if book.Root().HasSetup() {
 			existing, err := book.LoadSetup()
 			if err != nil {
 				return fmt.Errorf("load existing setup before apply-best: %w", err)

@@ -17,7 +17,7 @@ func BuildAgentSDKChapterCheckSuggestions(book *project.Book, chapter *models.Ch
 	if book == nil || chapter == nil || strings.TrimSpace(chapter.ID) == "" {
 		return ""
 	}
-	result, err := check.RunToolChapterCheckWithTargetWordsAt(book.Root, "all", "chapter", chapter.ID, targetWords)
+	result, err := check.RunToolChapterCheckWithTargetWordsAt(book.Root(), "all", "chapter", chapter.ID, targetWords)
 	if err != nil {
 		return fmt.Sprintf("## Agent SDK Chapter Check\n\nCould not run focused chapter check before improvement: %v", err)
 	}
@@ -54,12 +54,12 @@ func RunAgentSDKChapterPostSaveCheck(ctx context.Context, book *project.Book, ch
 		return nil, fmt.Errorf("project is required")
 	}
 	restoreLogger := refresh.SuppressLogs()
-	_, refreshErr := refresh.RefreshChapterDSL(ctx, book.Root, chapter.ID, 0)
+	_, refreshErr := refresh.RefreshChapterDSL(ctx, book.Root(), chapter.ID, 0)
 	restoreLogger()
 	if refreshErr != nil {
 		return nil, fmt.Errorf("refresh chapter RPG DSL before post-save check: %w", refreshErr)
 	}
-	result, err := check.RunToolChapterCheckWithTargetWordsAt(book.Root, "all", "chapter", chapter.ID, targetWords)
+	result, err := check.RunToolChapterCheckWithTargetWordsAt(book.Root(), "all", "chapter", chapter.ID, targetWords)
 	if err != nil {
 		return nil, err
 	}

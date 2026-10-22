@@ -24,12 +24,64 @@ import (
 // project layer: which legacy file name a chapter may live under, and how a
 // chapter body is normalized before it is stored.
 type Book struct {
-	*store.Root
+	root *store.Root
 }
 
 // Open wraps a storage root as a project view.
 func Open(root *store.Root) *Book {
-	return &Book{Root: root}
+	return &Book{root: root}
+}
+
+// Root returns the explicit storage root behind the project facade. Low-level
+// path and file operations remain available through this escape hatch, but they
+// are no longer promoted as project-domain methods.
+func (b *Book) Root() *store.Root {
+	if b == nil {
+		return nil
+	}
+	return b.root
+}
+
+// LoadConfig loads novel.json through the book's project root.
+func (b *Book) LoadConfig() (*models.ProjectConfig, error) {
+	root := b.Root()
+	if root == nil {
+		return nil, store.ErrNilRoot
+	}
+	return root.LoadConfig()
+}
+
+// LoadSetup loads the canonical story setup through the book's project root.
+func (b *Book) LoadSetup() (*models.StorySetup, error) {
+	root := b.Root()
+	if root == nil {
+		return nil, store.ErrNilRoot
+	}
+	return root.LoadSetup()
+}
+
+// LoadOutline loads the canonical outline through the book's project root.
+func (b *Book) LoadOutline() (*models.Outline, error) {
+	root := b.Root()
+	if root == nil {
+		return nil, store.ErrNilRoot
+	}
+	return root.LoadOutline()
+}
+
+// LoadElements loads the four craft element files through the book's root.
+func (b *Book) LoadElements() (
+	map[string]*models.Character,
+	map[string]*models.Location,
+	map[string]*models.Item,
+	map[string]*models.Organization,
+	error,
+) {
+	root := b.Root()
+	if root == nil {
+		return nil, nil, nil, nil, store.ErrNilRoot
+	}
+	return root.LoadElements()
 }
 
 // Default returns the ambient project view, resolving the project root from the

@@ -7,6 +7,7 @@ import (
 
 	"novelgen/internal/contract/story"
 	"novelgen/internal/fiction/domain/logic"
+	"novelgen/internal/platform/store"
 )
 
 // ChapterFileName returns the canonical final-chapter filename for a chapter ID
@@ -21,7 +22,10 @@ func (b *Book) SaveFinalChapter(chapter *models.Chapter, content string) error {
 	if chapter == nil {
 		return fmt.Errorf("chapter is nil")
 	}
-	return b.SaveChapterContent(chapter.ID, NormalizeChapterContent(chapter, content))
+	if b == nil || b.root == nil {
+		return store.ErrNilRoot
+	}
+	return b.root.SaveChapterContent(chapter.ID, NormalizeChapterContent(chapter, content))
 }
 
 // LoadFinalChapterContent reads a chapter's final markdown, trying the full-id
@@ -32,7 +36,10 @@ func (b *Book) LoadFinalChapterContent(chapter *models.Chapter) (string, error) 
 	if chapter == nil {
 		return "", nil
 	}
-	content, _, err := b.LoadChapterContent(chapter.ID)
+	if b == nil || b.root == nil {
+		return "", store.ErrNilRoot
+	}
+	content, _, err := b.root.LoadChapterContent(chapter.ID)
 	if err != nil {
 		return "", err
 	}
@@ -41,7 +48,10 @@ func (b *Book) LoadFinalChapterContent(chapter *models.Chapter) (string, error) 
 
 // LoadDraftContent reads drafts/<chapterID>.md, returning "" when missing.
 func (b *Book) LoadDraftContent(chapterID string) (string, error) {
-	return b.Root.LoadDraftContent(chapterID)
+	if b == nil || b.root == nil {
+		return "", store.ErrNilRoot
+	}
+	return b.root.LoadDraftContent(chapterID)
 }
 
 // SaveDraft writes drafts/<chapterID>.md with a markdown title header.
@@ -54,13 +64,19 @@ func (b *Book) SaveDraft(chapter *models.Chapter, draft string) error {
 	if chapter == nil {
 		return fmt.Errorf("chapter is nil")
 	}
+	if b == nil || b.root == nil {
+		return store.ErrNilRoot
+	}
 	content := fmt.Sprintf("# %s\n\n%s\n", chapter.Title, draft)
-	return b.SaveDraftContent(chapter.ID, content)
+	return b.root.SaveDraftContent(chapter.ID, content)
 }
 
 // LoadAllDrafts returns every drafts/*.md keyed by chapter ID.
 func (b *Book) LoadAllDrafts() (map[string]string, error) {
-	return b.Root.LoadAllDrafts()
+	if b == nil || b.root == nil {
+		return nil, store.ErrNilRoot
+	}
+	return b.root.LoadAllDrafts()
 }
 
 // LoadFinalChapterContent reads a chapter through the ambient project root.

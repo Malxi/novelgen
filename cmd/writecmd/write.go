@@ -306,7 +306,7 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	config := session.Config
+	config := session.Config()
 	outline, err := session.RequireOutline()
 	if err != nil {
 		return err
@@ -320,16 +320,16 @@ func runWriteGen(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	setupWriteRunLogging(book.Root, "write gen")
+	setupWriteRunLogging(book.Root(), "write gen")
 
 	// Create continuity builder
-	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root)
+	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root())
 	// Create recap agent + store (auto-persist recaps for continuity)
 	recapAgent, err := session.NewRecapAgent()
 	if err != nil {
 		return err
 	}
-	recapStore := recap.NewStoreAt(book.Root)
+	recapStore := recap.NewStoreAt(book.Root())
 	// Create lightweight best-of scorer (used only when --best-of is enabled)
 	scorer, err := session.NewChapterScorerAgent()
 	if err != nil {
@@ -607,7 +607,7 @@ func saveWriteReviewResult(book *project.Book, chapter *models.Chapter, review m
 	if book == nil {
 		return fmt.Errorf("project is required")
 	}
-	return book.WriteJSON(book.ReviewFile(chapter.ID+"_write_review.json"), review)
+	return book.Root().WriteJSON(book.Root().ReviewFile(chapter.ID+"_write_review.json"), review)
 }
 
 func loadFinalChapterContentsForVolume(book *project.Book, volume *models.Volume) (map[string]string, error) {
@@ -761,7 +761,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	config := session.Config
+	config := session.Config()
 	outline, err := session.RequireOutline()
 	if err != nil {
 		return err
@@ -775,7 +775,7 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	setupWriteRunLogging(book.Root, "write improve")
+	setupWriteRunLogging(book.Root(), "write improve")
 	if writeAgentSDKFlag {
 		log.Info("Chapter improvement will use Agent SDK; Go still validates and saves final markdown")
 	}
@@ -784,12 +784,12 @@ func runWriteImprove(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create continuity builder
-	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root)
+	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root())
 	recapAgent, err := session.NewRecapAgent()
 	if err != nil {
 		return err
 	}
-	recapStore := recap.NewStoreAt(book.Root)
+	recapStore := recap.NewStoreAt(book.Root())
 
 	// Get volumes to improve
 	volumes, err := project.VolumesForSelection(outline, writeVolumeFlag, writeChapterFlag)
@@ -1240,7 +1240,7 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	config := session.Config
+	config := session.Config()
 	outline, err := session.RequireOutline()
 	if err != nil {
 		return err
@@ -1254,13 +1254,13 @@ func runWriteReview(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	setupWriteRunLogging(book.Root, "write review")
+	setupWriteRunLogging(book.Root(), "write review")
 	if writeAgentSDKFlag {
 		log.Info("Chapter review will use Agent SDK; Go still saves review JSON")
 	}
 
 	// Create continuity builder
-	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root)
+	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root())
 
 	// Get chapters to review based on flags
 	chaptersToReview := getChaptersToReview(outline, writeChapterFlag, writeVolumeFlag, writePartFlag, writeAllFlag)
@@ -1592,7 +1592,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	config := session.Config
+	config := session.Config()
 	setup, err := session.RequireSetup()
 	if err != nil {
 		return err
@@ -1610,10 +1610,10 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	setupWriteRunLogging(book.Root, "write pipeline")
+	setupWriteRunLogging(book.Root(), "write pipeline")
 
 	// Create continuity builder
-	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root)
+	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root())
 
 	// Get chapters to process
 	chaptersToProcess := getChaptersToReview(outline, writeChapterFlag, writeVolumeFlag, writePartFlag, writeAllFlag)
@@ -1623,7 +1623,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 
 	log.Info("=== WRITE PIPELINE ===")
 	log.Info("Processing %d chapter(s)", len(chaptersToProcess))
-	log.Info("RPG DSL export: enabled=%t batch_size=%d output=%s", writeEmitRPGDSLFlag, writeRPGBatchSizeFlag, book.RPGChaptersDSL())
+	log.Info("RPG DSL export: enabled=%t batch_size=%d output=%s", writeEmitRPGDSLFlag, writeRPGBatchSizeFlag, book.Root().RPGChaptersDSL())
 	minScorePercent := writeMinScorePercent()
 	log.Info("Minimum acceptable score: %.0f/100", minScorePercent)
 	if WriteBestOfFlag > 1 {
@@ -1648,7 +1648,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	recapStore := recap.NewStoreAt(book.Root)
+	recapStore := recap.NewStoreAt(book.Root())
 	// Create lightweight best-of scorer (used only when --best-of is enabled)
 	scorer, err := session.NewChapterScorerAgent()
 	if err != nil {
@@ -1699,9 +1699,9 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 			if strings.TrimSpace(content) == "" {
 				content = generatedContent
 			}
-			log.Info("Generated chapter output: %s", finalChapterPath(book.Root, chapter))
+			log.Info("Generated chapter output: %s", finalChapterPath(book.Root(), chapter))
 		} else {
-			log.Info("Chapter %s already exists, using: %s", chapter.ID, finalChapterPath(book.Root, chapter))
+			log.Info("Chapter %s already exists, using: %s", chapter.ID, finalChapterPath(book.Root(), chapter))
 		}
 
 		// Step 2: Review chapter
@@ -1739,9 +1739,9 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		volumeID := getVolumeIDFromChapter(chapter.ID)
 		volume := outline.GetVolumeByID(volumeID)
 		var volumeReview *agents.VolumeReview
-		reviewPath := book.VolumeReviewFile(volumeID)
+		reviewPath := book.Root().VolumeReviewFile(volumeID)
 		var existingReview agents.VolumeReview
-		if err := book.ReadJSON(reviewPath, &existingReview); err == nil {
+		if err := book.Root().ReadJSON(reviewPath, &existingReview); err == nil {
 			volumeReview = &existingReview
 		}
 		if volumeReview == nil {
@@ -1786,7 +1786,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 		log.Info("Reviewed chapter %s: score %.1f", chapter.ID, reviewResult.OverallScore)
 
 		if writeEmitRPGDSLFlag && writeMaxRoundsFlag > 0 {
-			result, err := refreshWriteRPGDSL(ctx, book.Root, config, session.LLMConfig, setup, session.Client, writeRPGBatchSizeFlag, "before improvement")
+			result, err := refreshWriteRPGDSL(ctx, book.Root(), config, session.LLMConfig(), setup, session.Client(), writeRPGBatchSizeFlag, "before improvement")
 			if err != nil {
 				log.Error("Failed to refresh RPG DSL before improving chapter %s: %v", chapter.ID, err)
 			} else {
@@ -1887,7 +1887,7 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 				}
 			}
 			currentContent = improvedContent
-			log.Info("Improved chapter output: %s", finalChapterPath(book.Root, chapter))
+			log.Info("Improved chapter output: %s", finalChapterPath(book.Root(), chapter))
 
 			// Re-review after improvement (if not last round)
 			if round < writeMaxRoundsFlag {
@@ -1943,11 +1943,11 @@ func runWritePipeline(cmd *cobra.Command, args []string) error {
 			log.Error("Failed to generate/save recap for chapter %s: %v", chapter.ID, err)
 			errc.Addf("%s: final recap failed: %w", chapter.ID, err)
 		} else {
-			log.Info("Recap output: %s", book.RecapFile(chapter.ID))
+			log.Info("Recap output: %s", book.Root().RecapFile(chapter.ID))
 		}
 
 		if writeEmitRPGDSLFlag {
-			result, err := refreshWriteRPGDSL(ctx, book.Root, config, session.LLMConfig, setup, session.Client, writeRPGBatchSizeFlag, "after final recap")
+			result, err := refreshWriteRPGDSL(ctx, book.Root(), config, session.LLMConfig(), setup, session.Client(), writeRPGBatchSizeFlag, "after final recap")
 			if err != nil {
 				log.Error("Failed to refresh final RPG DSL after chapter %s recap: %v", chapter.ID, err)
 			} else {

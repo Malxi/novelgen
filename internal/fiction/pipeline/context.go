@@ -52,7 +52,7 @@ func loadChapterContent(book *project.Book, chapterID string) string {
 	// Best-effort context: an unreadable chapter degrades to the draft fallback
 	// rather than failing the run. The paths that act on the value (chapter
 	// checks, patch before-state, post-save recovery) handle the error.
-	if content, _, err := book.LoadChapterContent(chapterID); err == nil && content != "" {
+	if content, _, err := book.Root().LoadChapterContent(chapterID); err == nil && content != "" {
 		return content
 	}
 	draft, _ := book.LoadDraftContent(chapterID)
@@ -301,7 +301,7 @@ func SaveFinalChapter(ctx context.Context, book *project.Book, chapter *models.C
 	// verification. Commit the generated chapter through the same mutation
 	// surface used by `tool patch chapter`, without duplicating that quality
 	// pass here.
-	_, err := mutation.NewMutationService(book.Root).ReplaceChapterObject(ctx, chapter, content, mutation.MutationOptions{
+	_, err := mutation.NewMutationService(book.Root()).ReplaceChapterObject(ctx, chapter, content, mutation.MutationOptions{
 		Validate: false,
 		Source:   "write-pipeline",
 	})

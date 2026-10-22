@@ -288,7 +288,7 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 	}
 	var root *store.Root
 	if book != nil {
-		root = book.Root
+		root = book.Root()
 	}
 
 	ctx := ToolProjectContext{Root: root}

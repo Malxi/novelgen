@@ -48,7 +48,7 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	root := book.Root
+	root := book.Root()
 	if target == "craft" {
 		scope, err := resolveCraftCheckScope(root, ToolCheckFlags.Scope, ToolCheckFlags.ID)
 		if err != nil {

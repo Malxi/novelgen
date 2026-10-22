@@ -36,7 +36,7 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	projectConfig := session.Config
+	projectConfig := session.Config()
 	setup, err := session.RequireSetup()
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 	}
 
 	ctx := cmd.Context()
-	outlinePath := book.OutlineJSON()
+	outlinePath := book.Root().OutlineJSON()
 	outline, err := ensureComposePipelineSkeleton(book, ctx, agent, setup, projectConfig, outlinePath, composeAgentSDKFlag)
 	if err != nil {
 		return err
@@ -149,10 +149,10 @@ func runComposePipeline(cmd *cobra.Command, args []string) error {
 }
 
 func saveComposePipelineOutline(ctx context.Context, book *project.Book, outline *models.Outline, outlinePath string) error {
-	if book != nil && outlinePath == book.OutlineJSON() {
+	if book != nil && outlinePath == book.Root().OutlineJSON() {
 		return saveOutlineMutation(ctx, book, outline)
 	}
-	if err := book.SaveOutlineAt(outlinePath, outline); err != nil {
+	if err := book.Root().SaveOutlineAt(outlinePath, outline); err != nil {
 		return err
 	}
 	if _, err := book.SaveOutlineMarkdown(outline); err != nil {
@@ -172,7 +172,7 @@ func saveOutlineProgress(ctx context.Context, book *project.Book, outline *model
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, err := mutation.NewMutationService(book.Root).CommitOutlineRaw(ctx, outline, mutation.MutationOptions{
+	_, err := mutation.NewMutationService(book.Root()).CommitOutlineRaw(ctx, outline, mutation.MutationOptions{
 		Source: "compose-progress",
 	})
 	return err

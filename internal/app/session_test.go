@@ -7,6 +7,28 @@ import (
 	"novelgen/internal/platform/store"
 )
 
+func TestNewAtRequiresRootAndConfig(t *testing.T) {
+	t.Parallel()
+
+	root := store.MemRoot()
+	if _, err := NewAt(nil, &models.ProjectConfig{}); err == nil {
+		t.Fatal("NewAt accepted a nil root")
+	}
+	if _, err := NewAt(root, nil); err == nil {
+		t.Fatal("NewAt accepted a nil config")
+	}
+	session, err := NewAt(root, &models.ProjectConfig{Name: "explicit"})
+	if err != nil {
+		t.Fatalf("NewAt: %v", err)
+	}
+	if session.Root() != root {
+		t.Fatal("session did not retain the explicit root")
+	}
+	if session.Config() == nil || session.Config().Name != "explicit" {
+		t.Fatalf("session config = %+v", session.Config())
+	}
+}
+
 func TestSessionUsesExplicitRootForLazyArtifacts(t *testing.T) {
 	root, err := store.Open(t.TempDir())
 	if err != nil {
@@ -43,8 +65,8 @@ func TestSessionUsesExplicitRootForLazyArtifacts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open session: %v", err)
 	}
-	if session.Config.Name != "explicit" {
-		t.Fatalf("session config = %q, want explicit", session.Config.Name)
+	if session.Config().Name != "explicit" {
+		t.Fatalf("session config = %q, want explicit", session.Config().Name)
 	}
 	setup, err := session.RequireSetup()
 	if err != nil {

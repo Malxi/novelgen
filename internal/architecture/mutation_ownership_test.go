@@ -18,11 +18,11 @@ import (
 func TestAgentArtifactWritesUseMutationService(t *testing.T) {
 	root := repoRoot(t)
 	checks := map[string][]string{
-		"cmd/setupcmd/setup.go":                {"book.SaveSetup("},
-		"cmd/composecmd/compose.go":            {"book.SaveSetup(", "book.SaveOutline("},
-		"cmd/craftcmd/craft.go":                {"WriteJSONMerging("},
-		"cmd/writecmd/write.go":                {"book.SaveFinalChapter("},
-		"cmd/polishcmd/polish.go":              {"book.SaveFinalChapter("},
+		"cmd/setupcmd/setup.go":                {"book.Root().SaveSetup("},
+		"cmd/composecmd/compose.go":            {"book.Root().SaveSetup(", "book.Root().SaveOutline("},
+		"cmd/craftcmd/craft.go":                {"book.Root().WriteJSONMerging("},
+		"cmd/writecmd/write.go":                {"book.SaveFinalChapter(", "book.Root().SaveChapterContent("},
+		"cmd/polishcmd/polish.go":              {"book.SaveFinalChapter(", "book.Root().SaveChapterContent("},
 		"cmd/recap/recap.go":                   {"store.Save("},
 		"cmd/draftcmd/draft.go":                {"book.SaveDraft(", "recapStore.Save("},
 		"internal/fiction/pipeline/context.go": {"book.SaveFinalChapter("},

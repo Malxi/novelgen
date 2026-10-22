@@ -403,7 +403,7 @@ chapter check/refresh、`internal/fiction/domain/logic` 的 state matrix/continu
 
    **后续一轮把残留的平行实现也并回 store**（此前本节曾写成"已消除"，实际还有二十余处）：`internal/toolplane` 全部改用 `*store.Root`（含章节正文读取、craft 读写与 checkpoint），`internal/fiction/derive`（含 `04_chapters.rpg`、批缓存与 manifest 改走原子写）、`internal/fiction/domain/logic/state_matrix.go`、`internal/platform/logger`、`internal/platform/agentruntime`、`internal/fiction/agents`、`cmd/{export,projectcmd,rpgdsl,writecmd}`、`tools/check_novel`、`internal/fiction/rpg/{benchmark,dsl}` 都改为向 store 取路径。这一轮还修掉了三处真实分歧：① 工具面自带一份章节候选文件名（缺数字名回退、多认 `drafts/`），与 write/export 读取的可能是不同文件；② `tool patch chapter --apply` 与 `rpg-dsl` 导出直接 `os.WriteFile`，绕过原子替换；③ `RunToolChapterCheckWithTargetWords` 走 `project.LoadFinalChapterContent`（进程默认根），注入 root 的调用会读到别的项目。剩下的"平行维护"只有 webui（§8 的边界所致）。
 16. **RPG 侧的工作区假设已消除（本轮完成）**：`rpg.LoadNovelgenProject` 以前签名是 `(工作区根, 书名)` 并硬编码 `<工作区>/books/<书名>/story/...`，导致任何不在 `books/<name>` 下的项目（包括 `--dir` 指定的）都加载失败；现在它只接受**项目目录**，路径由 `store` 给出，书名取 `novel.json` 的 `name`（缺失才退回目录名）。调用方（`cmd/rpgcmd`、`cmd/rpgdsl`、`internal/fiction/agents/chapter/chapter_to_dsl_adapter.go`、`tools/novelgen-rpg`、`tools/rpg-write`）都只传目录；`internal/fiction/rpg/dsl` 的 setup 查找同样改用 store。`cmd/rpgcmd` 仍保留 `<workspace>/output/rpg_data.json` 这份"顺手再存一份"的行为，但只在项目确实位于 `books/<name>` 下时才写，不再往凭空推导的路径写文件。RPG 侧现在也容忍 BOM。
-17. **仍是两套寻址约定**：项目命令与 `rpg`/`rpg-dsl`/`tools/*` 都按给定目录工作（`rpg-dsl`/`tools/*` 仍以 `<workspace>/books/<name>` 作为**默认**目录，字面量收敛到 `store.BooksDirName`/`store.BookDir`），webui 则自己拼只读路径（见 §8）。`logger` 现在既支持 `SetProjectDir`（host 边界）也支持 `SetProjectRoot`；`cmd/writecmd` 用后者把 `book.Root` 绑定给文件日志，MemFS 项目不会再把日志写到宿主磁盘。`logger.ProjectDir()` 只是"当前项目目录"的兼容缓存；agents/llm 的 agent-home 与 live-log 仍按"logger → `store.Default()` → cwd"的顺序解析（`agentLogRoot`/`agentWorkspaceRoot`/`runtimeWorkspaceRoot`），这是外部进程边界。
+17. **仍是两套寻址约定**：项目命令与 `rpg`/`rpg-dsl`/`tools/*` 都按给定目录工作（`rpg-dsl`/`tools/*` 仍以 `<workspace>/books/<name>` 作为**默认**目录，字面量收敛到 `store.BooksDirName`/`store.BookDir`），webui 则自己拼只读路径（见 §8）。`logger` 现在既支持 `SetProjectDir`（host 边界）也支持 `SetProjectRoot`；`cmd/writecmd` 用后者把 `book.Root()` 绑定给文件日志，MemFS 项目不会再把日志写到宿主磁盘。`logger.ProjectDir()` 只是"当前项目目录"的兼容缓存；agents/llm 的 agent-home 与 live-log 仍按"logger → `store.Default()` → cwd"的顺序解析（`agentLogRoot`/`agentWorkspaceRoot`/`runtimeWorkspaceRoot`），这是外部进程边界。
 
 18. **storage 抽象的两半（本轮收口）**：布局所有权这一半此前已成立，IO 这一半只做了一半——`FS`/`MemFS` 除了 store 自己的测试以外没有任何使用者，因为项目状态的读写仍在各处走 `os.*`。本轮按 §7 的四条守卫把两半对齐：原子写覆盖 `tool patch setup|outline --apply`（此前走 `models.*.Save`/`project.SavePartialOutline` 的裸 `os.WriteFile`）、派生 markdown、compose 报告与 improve progress；`FS` 补上 `WriteFileExclusive` 与 `OpenAppend`，于是快照/agent 日志/运行日志改用 O_EXCL 抢名（同一秒不再互相覆盖，agent 日志的手写 64 次重试循环删除），writer 自己的 temp+rename 实现并回 store；`MemFS` 补上修改时间与独占创建，三处"比较新旧"的判断（章节 vs DSL、recap vs 章节、章节 vs recap）在内存后端下行为一致。同时把"读不到"从"不存在"里分出来：`LoadChapterContent`/`LoadDraftContent`/`LoadAllDrafts`/`LoadSetupAt` 返回错误，只有 `fs.ErrNotExist` 才表示"没有"，`WriteJSONMerging` 不再把读失败当成空文件合并（那会悄悄丢掉其余键），`BackupFile`/`loadCraftFile` 同理；确实需要"没有就算了"的上下文构造点（continuity/writepipe 的上下文加载、write 流水线的启发式检查）显式忽略错误或记日志。
 
@@ -427,7 +427,8 @@ chapter check/refresh、`internal/fiction/domain/logic` 的 state matrix/continu
     不再把 `*store.Root` 降级成 `Dir()` 再重建 OSFS；`writepipe` 的 post-save check、离线 recap 落盘、
     章节上下文都有 MemFS 端到端用例（并断言 ambient 项目没有被触碰）。`Root.Stat`/`ExistsErr` 保留
     "缺失 vs 读取失败"的区别，`ValidateKeyPart` 拒绝会逃出项目的 chapter/draft/recap key。
-    `TestFSContract` 用同一组断言覆盖 OSFS 与 MemFS。webui 的读取/编辑器保存已改走
+    `TestFSContract` 用同一组断言覆盖 OSFS 与 MemFS。`nil *store.Root` 现在通过失败型
+    `FS` 返回 `ErrNilRoot`，不会退化成 `OSFS` 后误读写进程工作目录。webui 的读取/编辑器保存已改走
     `novelgen storage ...` 命令，不再直接 `os.ReadFile` 项目内容；项目发现、CLI `exec` 的工作目录与
     Agent SDK runner 仍需要宿主路径，这是外部进程边界。对象存储后端还必须自行实现
     `Rename`/`OpenAppend`/`ModTime` 以及 `WorkspaceLister`，并让 CLI 子进程指向同一个 backend。
@@ -438,6 +439,12 @@ chapter check/refresh、`internal/fiction/domain/logic` 的 state matrix/continu
     `LoadConfig`/`LoadSetup`/`LoadOutline`/`LoadOrCreateConfig`/`CreateClient`。`ComposeAgent`
     现在由 `Session.NewComposeAgent` 强制绑定显式 root，checkpoint/report 不再走
     `agentWorkspaceRoot()`。
+
+    `Session` 的内部状态已经私有化，只能通过 `Open`/`OpenAt`/`NewAt` 建立 root/config
+    不变量；lazy setup/outline 与 LLM 初始化的缓存也有互斥保护。`project.Book` 改为组合
+    `*store.Root`，不再通过嵌入把所有低层存储方法提升成项目门面 API；需要路径或整文件读写时
+    必须显式调用 `Book.Root()`，而 `LoadConfig`/`LoadSetup`/`LoadOutline`/`LoadElements` 和章节/
+    draft 语义仍由 `Book` 提供。
 
     新增 `novelgen storage replace`：编辑器保存 canonical 产物（setup/outline/craft/chapter/
     recap）时，不再直接 `storage write`，而是走同一个 `MutationService`，因此 schema 校验、

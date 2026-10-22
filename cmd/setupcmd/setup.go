@@ -206,7 +206,7 @@ func runSetupGen(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	projectConfig := session.Config
+	projectConfig := session.Config()
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 	cfg, client, err := session.LoadLLM()
 	if err != nil {
@@ -284,7 +284,7 @@ func runSetupRegen(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	projectConfig := session.Config
+	projectConfig := session.Config()
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 	cfg, client, err := session.LoadLLM()
 	if err != nil {
@@ -387,7 +387,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	projectConfig := session.Config
+	projectConfig := session.Config()
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 	cfg, client, err := session.LoadLLM()
 	if err != nil {
@@ -584,7 +584,7 @@ func runSetupImprove(cmd *cobra.Command, args []string) error {
 }
 
 func loadAndCrossCheckSetup(book *project.Book, setup *models.StorySetup) (issues, warnings []string) {
-	data, err := book.Read(book.OutlineJSON())
+	data, err := book.Root().Read(book.Root().OutlineJSON())
 	if err != nil {
 		return nil, nil // no outline yet, skip
 	}
@@ -744,18 +744,18 @@ func runSetupImport(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	projectConfig := session.Config
+	projectConfig := session.Config()
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Determine markdown file path
-	mdPath := book.SetupMarkdown()
+	mdPath := book.Root().SetupMarkdown()
 	if len(args) > 0 {
-		mdPath = book.ResolvePath(args[0])
+		mdPath = book.Root().ResolvePath(args[0])
 	}
 	logger.Info("Importing from: %s", mdPath)
 
 	// Read markdown file
-	mdContent, err := book.Read(mdPath)
+	mdContent, err := book.Root().Read(mdPath)
 	if err != nil {
 		logger.Error("Failed to read markdown file: %v", err)
 		return fmt.Errorf("failed to read markdown file %s: %w", mdPath, err)
@@ -1292,7 +1292,7 @@ func saveStorySetup(ctx context.Context, book *project.Book, setup *models.Story
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, err := mutation.NewMutationService(book.Root).ReplaceSetup(ctx, setup, mutation.MutationOptions{
+	_, err := mutation.NewMutationService(book.Root()).ReplaceSetup(ctx, setup, mutation.MutationOptions{
 		Validate: false,
 		Source:   "setup-command",
 	})
@@ -1309,7 +1309,7 @@ func saveSetupCheckpoint(book *project.Book, setup *models.StorySetup) (string, 
 	if err != nil {
 		return "", err
 	}
-	return book.SaveCheckpoint(store.ScopeSetup, "story_setup", ".json", data)
+	return book.Root().SaveCheckpoint(store.ScopeSetup, "story_setup", ".json", data)
 }
 
 // setupProject resolves the project a setup command operates on.
@@ -1499,12 +1499,12 @@ func runSetupCheck(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	setupPath := book.SetupJSON()
-	if !book.HasSetup() {
+	setupPath := book.Root().SetupJSON()
+	if !book.Root().HasSetup() {
 		return fmt.Errorf("story setup not found at %s", setupPath)
 	}
 
-	data, err := book.Read(setupPath)
+	data, err := book.Root().Read(setupPath)
 	if err != nil {
 		return fmt.Errorf("failed to read setup: %w", err)
 	}

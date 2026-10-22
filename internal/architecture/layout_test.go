@@ -318,7 +318,7 @@ func isHostIOCall(selector *ast.SelectorExpr) bool {
 }
 
 // storePathIn reports where an expression gets a project path from: a store path
-// method (root.ChapterFile(…), book.OutlineJSON()) or an inline Root
+// method (root.ChapterFile(…), book.Root().OutlineJSON()) or an inline Root
 // (store.At(dir), store.Open(dir)).
 func storePathIn(expr ast.Expr) (string, bool) {
 	found := ""

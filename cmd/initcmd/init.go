@@ -63,7 +63,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	book := project.Open(target)
 
 	// Check if novel.json already exists
-	if book.HasConfig() {
+	if book.Root().HasConfig() {
 		logger.Error("A novel project already exists in this directory (novel.json found)")
 		return fmt.Errorf("a novel project already exists in this directory (novel.json found)")
 	}
@@ -115,7 +115,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	// Save novel.json
-	if err := book.SaveConfig(config); err != nil {
+	if err := book.Root().SaveConfig(config); err != nil {
 		return fmt.Errorf("failed to save novel.json: %w", err)
 	}
 
@@ -134,23 +134,23 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 func createProjectStructure(book *project.Book, config *models.ProjectConfig) error {
 	dirs := []string{
-		book.SetupDir(),
-		book.ComposeDir(),
-		book.CraftDir(),
-		book.ReviewsDir(),
-		book.ChaptersDir(),
-		book.DraftsDir(),
-		book.LogsDir(),
+		book.Root().SetupDir(),
+		book.Root().ComposeDir(),
+		book.Root().CraftDir(),
+		book.Root().ReviewsDir(),
+		book.Root().ChaptersDir(),
+		book.Root().DraftsDir(),
+		book.Root().LogsDir(),
 	}
 
 	for _, dir := range dirs {
-		if err := book.MkdirAll(dir, store.DirMode); err != nil {
+		if err := book.Root().MkdirAll(dir, store.DirMode); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
 
 	// Create placeholder story_setup.md
-	mdPath := book.SetupMarkdown()
+	mdPath := book.Root().SetupMarkdown()
 	placeholder := fmt.Sprintf(`# %s
 
 ## Story Setup
@@ -186,7 +186,7 @@ None
 		"- 未分类",
 	)
 
-	if err := book.WriteText(mdPath, placeholder); err != nil {
+	if err := book.Root().WriteText(mdPath, placeholder); err != nil {
 		return fmt.Errorf("failed to create story_setup.md: %w", err)
 	}
 

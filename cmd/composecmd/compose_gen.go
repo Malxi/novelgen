@@ -35,15 +35,15 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	projectConfig := session.Config
+	projectConfig := session.Config()
 	cfg, client, err := session.LoadLLM()
 	if err != nil {
 		return err
 	}
 
 	// Check if story_setup.json exists
-	setupPath := book.SetupJSON()
-	if !book.HasSetup() {
+	setupPath := book.Root().SetupJSON()
+	if !book.Root().HasSetup() {
 		return fmt.Errorf("story setup not found at %s. Run 'novelgen setup gen' first", setupPath)
 	}
 
@@ -55,9 +55,9 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 
 	// Check if outline already exists. Hierarchical generation can resume from
 	// an incomplete outline.json whose later volumes still have empty chapters.
-	outlinePath := book.OutlineJSON()
-	if book.HasOutline() {
-		if !composeForceGenFlag && !composeOneShotFlag && canResumeOutlineGeneration(book.Root, outlinePath, projectConfig.Structure) {
+	outlinePath := book.Root().OutlineJSON()
+	if book.Root().HasOutline() {
+		if !composeForceGenFlag && !composeOneShotFlag && canResumeOutlineGeneration(book.Root(), outlinePath, projectConfig.Structure) {
 			logger.Info("Found incomplete outline at %s; resuming chapter generation", outlinePath)
 		} else if !composeForceGenFlag {
 			return fmt.Errorf("outline already exists at %s. Use 'novelgen compose regen' to regenerate, 'novelgen compose improve' to improve, or add --force to regenerate with backup", outlinePath)
@@ -65,13 +65,13 @@ func runComposeGen(cmd *cobra.Command, args []string) error {
 
 			// Backup existing outline
 			logger.Info("Outline exists, creating backup...")
-			backupPath, err := book.BackupFile(store.ScopeCompose, outlinePath, "outline")
+			backupPath, err := book.Root().BackupFile(store.ScopeCompose, outlinePath, "outline")
 			if err != nil {
 				return fmt.Errorf("failed to backup outline: %w", err)
 			}
 
 			// Also backup markdown if exists
-			_, _ = book.BackupFile(store.ScopeCompose, book.OutlineMarkdown(), "outline")
+			_, _ = book.Root().BackupFile(store.ScopeCompose, book.Root().OutlineMarkdown(), "outline")
 
 			logger.Info("Outline backed up to: %s", backupPath)
 			fmt.Printf("\n📦 Existing outline backed up to: %s\n\n", backupPath)
@@ -151,15 +151,15 @@ func runComposeRegen(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	projectConfig := session.Config
+	projectConfig := session.Config()
 	cfg, client, err := session.LoadLLM()
 	if err != nil {
 		return err
 	}
 
 	// Check if story_setup.json exists
-	setupPath := book.SetupJSON()
-	if !book.HasSetup() {
+	setupPath := book.Root().SetupJSON()
+	if !book.Root().HasSetup() {
 		return fmt.Errorf("story setup not found at %s. Run 'novelgen setup gen' first", setupPath)
 	}
 
@@ -170,7 +170,7 @@ func runComposeRegen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load existing outline
-	outlinePath := book.OutlineJSON()
+	outlinePath := book.Root().OutlineJSON()
 	outline, err := session.RequireOutline()
 	if err != nil {
 		return err
@@ -195,8 +195,8 @@ func runComposeRegen(cmd *cobra.Command, args []string) error {
 }
 
 func ensureComposePipelineSkeleton(book *project.Book, ctx context.Context, agent *agents.ComposeAgent, setup *models.StorySetup, projectConfig *models.ProjectConfig, outlinePath string, useAgentSDK bool) (*models.Outline, error) {
-	if book.Exists(outlinePath) {
-		outline, err := book.LoadOutlineAt(outlinePath)
+	if book.Root().Exists(outlinePath) {
+		outline, err := book.Root().LoadOutlineAt(outlinePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load existing outline: %w", err)
 		}
@@ -204,9 +204,9 @@ func ensureComposePipelineSkeleton(book *project.Book, ctx context.Context, agen
 		return outline, nil
 	}
 
-	legacyProgressPath := book.ComposeFile("outline_progress.json")
-	if book.Exists(legacyProgressPath) {
-		outline, err := loadPartialOutline(book.Root, legacyProgressPath)
+	legacyProgressPath := book.Root().ComposeFile("outline_progress.json")
+	if book.Root().Exists(legacyProgressPath) {
+		outline, err := loadPartialOutline(book.Root(), legacyProgressPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load legacy outline progress: %w", err)
 		}
@@ -362,16 +362,16 @@ func generateOutlineHierarchical(ctx context.Context, book *project.Book, setup 
 		projectConfig.Structure.TotalChapters())
 	fmt.Println()
 
-	outlinePath := book.OutlineJSON()
-	legacyProgressPath := book.ComposeFile("outline_progress.json")
+	outlinePath := book.Root().OutlineJSON()
+	legacyProgressPath := book.Root().ComposeFile("outline_progress.json")
 
 	var outline *models.Outline
 	var resumeMode bool
 	var err error
 
-	if book.Exists(outlinePath) && !composeForceGenFlag {
+	if book.Root().Exists(outlinePath) && !composeForceGenFlag {
 		fmt.Println("📂 Found existing outline.json. Resuming empty-volume chapter generation...")
-		outline, err = loadPartialOutline(book.Root, outlinePath)
+		outline, err = loadPartialOutline(book.Root(), outlinePath)
 		if err != nil {
 			fmt.Printf("⚠️  Failed to load outline: %v\n", err)
 			fmt.Println("   Starting fresh generation...")
@@ -380,9 +380,9 @@ func generateOutlineHierarchical(ctx context.Context, book *project.Book, setup 
 			fmt.Println("[ok] Resumed from outline.json")
 			printProgressStatus(outline, projectConfig.Structure)
 		}
-	} else if book.Exists(legacyProgressPath) && !composeForceGenFlag {
+	} else if book.Root().Exists(legacyProgressPath) && !composeForceGenFlag {
 		fmt.Println("📂 Found legacy outline_progress.json. Migrating to outline.json and resuming...")
-		outline, err = loadPartialOutline(book.Root, legacyProgressPath)
+		outline, err = loadPartialOutline(book.Root(), legacyProgressPath)
 		if err != nil {
 			fmt.Printf("⚠️  Failed to load legacy progress: %v\n", err)
 			fmt.Println("   Starting fresh generation...")
@@ -399,7 +399,7 @@ func generateOutlineHierarchical(ctx context.Context, book *project.Book, setup 
 	// Create agent
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
-	agent.SetProjectRoot(book.Root)
+	agent.SetProjectRoot(book.Root())
 
 	// Save callback for incremental saves (used in both fresh and resume modes)
 	onVolumeComplete := func(o *models.Outline, partIdx, volIdx, volumeCount int) {
@@ -450,7 +450,7 @@ func generateOutlineHierarchical(ctx context.Context, book *project.Book, setup 
 			return nil, err
 		}
 
-		_ = book.Remove(legacyProgressPath)
+		_ = book.Root().Remove(legacyProgressPath)
 		fmt.Println("\n[ok] Generation complete! outline.json is the canonical state.")
 	} else {
 		// Resume generation - continue from where we left off
@@ -466,7 +466,7 @@ func generateOutlineHierarchical(ctx context.Context, book *project.Book, setup 
 			return nil, err
 		}
 
-		_ = book.Remove(legacyProgressPath)
+		_ = book.Root().Remove(legacyProgressPath)
 		fmt.Println("\n[ok] Generation complete! outline.json is the canonical state.")
 	}
 
@@ -488,15 +488,15 @@ func generateOutlineHierarchicalAgentSDK(ctx context.Context, book *project.Book
 	fmt.Println("Mode: Claude Agent SDK with read-only novelgen tool queries")
 	fmt.Println()
 
-	outlinePath := book.OutlineJSON()
-	legacyProgressPath := book.ComposeFile("outline_progress.json")
+	outlinePath := book.Root().OutlineJSON()
+	legacyProgressPath := book.Root().ComposeFile("outline_progress.json")
 
 	var outline *models.Outline
 	var resumeMode bool
 	var err error
-	if book.Exists(outlinePath) && !composeForceGenFlag {
+	if book.Root().Exists(outlinePath) && !composeForceGenFlag {
 		fmt.Println("[resume] Found existing outline.json. Resuming empty-volume Agent SDK chapter generation...")
-		outline, err = loadPartialOutline(book.Root, outlinePath)
+		outline, err = loadPartialOutline(book.Root(), outlinePath)
 		if err != nil {
 			fmt.Printf("[warn] Failed to load outline: %v\n", err)
 			fmt.Println("   Starting fresh generation...")
@@ -505,9 +505,9 @@ func generateOutlineHierarchicalAgentSDK(ctx context.Context, book *project.Book
 			fmt.Println("[ok] Resumed from outline.json")
 			printProgressStatus(outline, projectConfig.Structure)
 		}
-	} else if book.Exists(legacyProgressPath) && !composeForceGenFlag {
+	} else if book.Root().Exists(legacyProgressPath) && !composeForceGenFlag {
 		fmt.Println("[resume] Found legacy outline_progress.json. Migrating to outline.json and resuming...")
-		outline, err = loadPartialOutline(book.Root, legacyProgressPath)
+		outline, err = loadPartialOutline(book.Root(), legacyProgressPath)
 		if err != nil {
 			fmt.Printf("[warn] Failed to load legacy progress: %v\n", err)
 			fmt.Println("   Starting fresh generation...")
@@ -523,7 +523,7 @@ func generateOutlineHierarchicalAgentSDK(ctx context.Context, book *project.Book
 
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
-	agent.SetProjectRoot(book.Root)
+	agent.SetProjectRoot(book.Root())
 	onVolumeComplete := func(o *models.Outline, partIdx, volIdx, volumeCount int) {
 		if err := saveOutlineProgress(ctx, book, o); err != nil {
 			logger.GetLogger().Warn("Failed to save outline progress: %v", err)
@@ -569,7 +569,7 @@ func generateOutlineHierarchicalAgentSDK(ctx context.Context, book *project.Book
 		return nil, err
 	}
 
-	_ = book.Remove(legacyProgressPath)
+	_ = book.Root().Remove(legacyProgressPath)
 	fmt.Println("\n[ok] Agent SDK generation complete. outline.json is the canonical state.")
 	return outline, nil
 }

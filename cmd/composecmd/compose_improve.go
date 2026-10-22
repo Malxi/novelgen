@@ -39,15 +39,15 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	projectConfig := session.Config
+	projectConfig := session.Config()
 	cfg, client, err := session.LoadLLM()
 	if err != nil {
 		return err
 	}
 
 	// Check if story_setup.json exists
-	setupPath := book.SetupJSON()
-	if !book.HasSetup() {
+	setupPath := book.Root().SetupJSON()
+	if !book.Root().HasSetup() {
 		return fmt.Errorf("story setup not found at %s. Run 'novelgen setup gen' first", setupPath)
 	}
 
@@ -58,7 +58,7 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load existing outline
-	outlinePath := book.OutlineJSON()
+	outlinePath := book.Root().OutlineJSON()
 	outline, err := session.RequireOutline()
 	if err != nil {
 		return err
@@ -112,10 +112,10 @@ func runComposeImprove(cmd *cobra.Command, args []string) error {
 		// A fresh run (no resume checkpoint) starts an empty improvement report.
 		// A resume run keeps the existing report file so already-completed
 		// volumes are not re-appended after a transient failure.
-		progressPath := book.ComposeFile("outline_improve_progress.json")
-		keepReport := resumeProgressMatchesRun(book.Root, progressPath, improveOutline, composeMaxRoundsFlag)
+		progressPath := book.Root().ComposeFile("outline_improve_progress.json")
+		keepReport := resumeProgressMatchesRun(book.Root(), progressPath, improveOutline, composeMaxRoundsFlag)
 		if !keepReport {
-			_ = book.Remove(book.ComposeFile("outline_improve_report.jsonl"))
+			_ = book.Root().Remove(book.Root().ComposeFile("outline_improve_report.jsonl"))
 		}
 		agentSDKForceImprove := composeForceImproveFlag || selectedImprove
 		var suggestions []models.ReviewSuggestion
@@ -240,7 +240,7 @@ func loadReviewSuggestionReports(book *project.Book, raw string) ([]models.Revie
 		if path == "" {
 			continue
 		}
-		data, err := book.Read(path)
+		data, err := book.Root().Read(path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read suggestion report %s: %w", path, err)
 		}
@@ -294,7 +294,7 @@ func repairAgentSDKWithTransientRetry(book *project.Book, repair func() (*models
 	}
 	// The repair pass's checkpoint (iteration 0) is only removed on success;
 	// clear it on permanent failure so the next invocation starts clean.
-	if removeErr := book.Remove(book.ComposeFile("outline_improve_progress.json")); removeErr != nil {
+	if removeErr := book.Root().Remove(book.Root().ComposeFile("outline_improve_progress.json")); removeErr != nil {
 		logger.Warn("Failed to remove stale Agent SDK repair checkpoint: %v", removeErr)
 	}
 	return nil, lastErr
@@ -377,7 +377,7 @@ func loadComposeImproveReportEntries(root *store.Root, path string) ([]agents.Co
 // by the Agent SDK improvement run into a Markdown file under logs/. Pass a
 // negative remainingGateIssues when no gate result is available.
 func writeComposeImproveReport(book *project.Book, remainingGateIssues int) error {
-	entries, err := loadComposeImproveReportEntries(book.Root, book.ComposeFile("outline_improve_report.jsonl"))
+	entries, err := loadComposeImproveReportEntries(book.Root(), book.Root().ComposeFile("outline_improve_report.jsonl"))
 	if err != nil {
 		return err
 	}
@@ -385,7 +385,7 @@ func writeComposeImproveReport(book *project.Book, remainingGateIssues int) erro
 		return nil
 	}
 	now := time.Now()
-	reportPath := book.LogFile(fmt.Sprintf("compose_improve_report_%s.md", now.Format("20060102_150405")))
+	reportPath := book.Root().LogFile(fmt.Sprintf("compose_improve_report_%s.md", now.Format("20060102_150405")))
 
 	var builder strings.Builder
 	builder.WriteString("# Compose Improve 报告\n\n")
@@ -414,7 +414,7 @@ func writeComposeImproveReport(book *project.Book, remainingGateIssues int) erro
 		fmt.Fprintf(&builder, "## 门禁修复后\n\n- 剩余中高优问题: %d\n", remainingGateIssues)
 	}
 
-	if err := book.WriteText(reportPath, builder.String()); err != nil {
+	if err := book.Root().WriteText(reportPath, builder.String()); err != nil {
 		return err
 	}
 	logger.Info("Compose improve report written: %s", reportPath)
@@ -435,7 +435,7 @@ func repairOutlineWithQualityGate(book *project.Book, ctx context.Context, outli
 	logger.Info("Outline quality gate found blocking issues after %s; running one bounded repair pass", stage)
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
-	agent.SetProjectRoot(book.Root)
+	agent.SetProjectRoot(book.Root())
 	review := quality.QualityGateReviewResult("Repair outline quality gate findings before saving project state.", gate)
 	repaired, err := agent.RepairByReview(ctx, outline, review, setup)
 	if err != nil {
@@ -471,7 +471,7 @@ func repairOutlineWithQualityGateAgentSDK(book *project.Book, ctx context.Contex
 	}
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
-	agent.SetProjectRoot(book.Root)
+	agent.SetProjectRoot(book.Root())
 	review := quality.QualityGateReviewResult("Repair outline quality gate findings before saving project state.", repairGate)
 	repaired, err := agent.RepairByReviewAgentSDK(ctx, outline, review, setup, agentApply, crossOutline, composeCrossVolumeAllFlag)
 	if err != nil {
@@ -486,7 +486,7 @@ func repairOutlineGlobalIssuesAgentSDK(book *project.Book, ctx context.Context, 
 	logger.Info("Outline quality gate found patchable global issues after %s; running one Agent SDK global repair pass", stage)
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
-	agent.SetProjectRoot(book.Root)
+	agent.SetProjectRoot(book.Root())
 	review := quality.QualityGateReviewResult("Repair patchable global outline quality findings before saving project state.", gate)
 	if _, err := agent.RepairGlobalIssuesWithAgentSDK(ctx, *review, true); err != nil {
 		return outline, gate, fmt.Errorf("global outline quality gate Agent SDK repair failed: %w", err)
@@ -522,7 +522,7 @@ func iterateOutlineImprovement(ctx context.Context, book *project.Book, outline 
 	// Create compose agent
 	agent := agents.NewComposeAgent(client, cfg, &projectConfig.LLM)
 	agent.SetLanguage(projectConfig.Language)
-	agent.SetProjectRoot(book.Root)
+	agent.SetProjectRoot(book.Root())
 
 	applyOutlineNormalization(book, outline, "pre_improve")
 
@@ -576,8 +576,8 @@ func iterateOutlineImprovement(ctx context.Context, book *project.Book, outline 
 	}
 
 	// Save intermediate result
-	outlinePath := book.ComposeFile(fmt.Sprintf("outline_iter_%d.json", maxIterations))
-	if err := book.SaveOutlineAt(outlinePath, outline); err != nil {
+	outlinePath := book.Root().ComposeFile(fmt.Sprintf("outline_iter_%d.json", maxIterations))
+	if err := book.Root().SaveOutlineAt(outlinePath, outline); err != nil {
 		logger.Error("Failed to save intermediate outline: %v", err)
 	} else {
 		logger.Info("Saved intermediate outline to %s", outlinePath)
@@ -601,7 +601,7 @@ func iterateOutlineImprovementAgentSDK(ctx context.Context, book *project.Book, 
 		logger.Info("Agent apply enabled: SDK may write outline patches through validated tool apply")
 	}
 
-	agent, err := newComposeAgentForProject(book.Root, projectConfig)
+	agent, err := newComposeAgentForProject(book.Root(), projectConfig)
 	if err != nil {
 		return err
 	}
@@ -613,7 +613,7 @@ func iterateOutlineImprovementAgentSDK(ctx context.Context, book *project.Book, 
 	beforeOutline := toolplane.CloneOutline(outline)
 	applyOutlineNormalization(book, outline, "pre_agent_sdk_improve")
 
-	preGate := quality.RunOutlineCombinedGateForScope(book.Root, setup, outline, scoped)
+	preGate := quality.RunOutlineCombinedGateForScope(book.Root(), setup, outline, scoped)
 	var seedReview *models.ReviewResult
 	if len(preGate.Suggestions) > 0 {
 		seedReview = quality.QualityGateReviewResult("Pre-check issues for targeted Agent SDK outline improvement.", preGate)
@@ -644,7 +644,7 @@ func iterateOutlineImprovementAgentSDK(ctx context.Context, book *project.Book, 
 	*outline = *improvedOutline
 
 	if review != nil {
-		gate := quality.RunOutlineCombinedGateForScope(book.Root, setup, improvedOutline, scoped)
+		gate := quality.RunOutlineCombinedGateForScope(book.Root(), setup, improvedOutline, scoped)
 		if len(gate.Suggestions) > 0 {
 			review.Suggestions = append(review.Suggestions, gate.Suggestions...)
 			logger.Info("Quality/simulation gate added %d suggestion(s) to Agent SDK review", len(gate.Suggestions))
@@ -661,7 +661,7 @@ func iterateOutlineImprovementAgentSDK(ctx context.Context, book *project.Book, 
 				improvedOutline = repairOutput
 				applyOutlineNormalization(book, improvedOutline, "post_agent_sdk_repair")
 				*outline = *improvedOutline
-				repairGate := quality.RunOutlineCombinedGateForScope(book.Root, setup, improvedOutline, scoped)
+				repairGate := quality.RunOutlineCombinedGateForScope(book.Root(), setup, improvedOutline, scoped)
 				remaining := quality.FilterMediumOrHigherOutlineTargetSuggestions(repairGate.Suggestions)
 				if len(remaining) > 0 {
 					logger.Warn("Agent SDK repair completed, but %d targetable medium-or-higher quality/simulation issue(s) remain", len(remaining))
@@ -677,8 +677,8 @@ func iterateOutlineImprovementAgentSDK(ctx context.Context, book *project.Book, 
 	if outlinesSemanticallyEqual(beforeOutline, outline) {
 		logger.Info("Agent SDK iteration made no effective outline changes; skipping intermediate outline_iter_%d.json", maxIterations)
 	} else {
-		outlinePath := book.ComposeFile(fmt.Sprintf("outline_iter_%d.json", maxIterations))
-		if err := book.SaveOutlineAt(outlinePath, outline); err != nil {
+		outlinePath := book.Root().ComposeFile(fmt.Sprintf("outline_iter_%d.json", maxIterations))
+		if err := book.Root().SaveOutlineAt(outlinePath, outline); err != nil {
 			logger.Error("Failed to save intermediate outline: %v", err)
 		} else {
 			logger.Info("Saved intermediate outline to %s", outlinePath)
@@ -761,8 +761,8 @@ func applyOutlineNormalization(book *project.Book, outline *models.Outline, stag
 	}
 
 	logger.Info("Outline normalizer applied %d changes at %s", len(report.Changes), stage)
-	reportPath := book.ComposeFile(fmt.Sprintf("outline_normalization_%s.json", stage))
-	if err := book.WriteJSON(reportPath, report); err != nil {
+	reportPath := book.Root().ComposeFile(fmt.Sprintf("outline_normalization_%s.json", stage))
+	if err := book.Root().WriteJSON(reportPath, report); err != nil {
 		logger.Warn("Failed to save outline normalization report: %v", err)
 	}
 }

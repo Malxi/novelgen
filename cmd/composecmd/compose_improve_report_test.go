@@ -16,14 +16,14 @@ func TestWriteComposeImproveReport(t *testing.T) {
 	book := newComposeTestBook(t)
 
 	entry := `{"iteration":1,"volume_id":"P1-V1","volume_title":"第一卷：外门修仙","score":76,"changed":true,"summary":"补齐 payoff_contract 与开场节拍","remaining_medium_plus":3}` + "\n"
-	if err := book.WriteText(book.ComposeFile("outline_improve_report.jsonl"), entry); err != nil {
+	if err := book.Root().WriteText(book.Root().ComposeFile("outline_improve_report.jsonl"), entry); err != nil {
 		t.Fatal(err)
 	}
 
 	if err := writeComposeImproveReport(book, 5); err != nil {
 		t.Fatalf("writeComposeImproveReport() error: %v", err)
 	}
-	reports, err := filepath.Glob(book.LogFile("compose_improve_report_*.md"))
+	reports, err := filepath.Glob(book.Root().LogFile("compose_improve_report_*.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestWriteComposeImproveReportEmpty(t *testing.T) {
 	if err := writeComposeImproveReport(book, -1); err != nil {
 		t.Fatalf("empty report should not error: %v", err)
 	}
-	reports, _ := filepath.Glob(book.LogFile("compose_improve_report_*.md"))
+	reports, _ := filepath.Glob(book.Root().LogFile("compose_improve_report_*.md"))
 	if len(reports) != 0 {
 		t.Fatalf("empty report should not create a file, got %d", len(reports))
 	}
