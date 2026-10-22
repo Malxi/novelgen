@@ -43,7 +43,9 @@ var ToolCmd = &cobra.Command{
 	Long: `Project tools for agents.
 
 Query and check commands return JSON and never mutate project state. Patch
-commands can mutate project state only when explicitly called with --apply.`,
+commands can mutate project state only when explicitly called with --apply.
+Skill commands expose the bundled agent skill catalog and load one skill body
+on demand.`,
 }
 
 // toolQuerySections lists the query sections in help order. It is the single
@@ -444,6 +446,7 @@ func init() {
 	ToolCmd.AddCommand(ToolPatchCmd)
 	ToolCmd.AddCommand(ToolPatchBufferCmd)
 	ToolCmd.AddCommand(ToolRefreshCmd)
+	ToolCmd.AddCommand(ToolSkillCmd)
 }
 
 // NewCommand returns the novelgen tool command tree.

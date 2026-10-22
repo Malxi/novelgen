@@ -1,6 +1,8 @@
 package store
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"path/filepath"
 	"strconv"
@@ -35,6 +37,7 @@ const (
 	cacheDirName          = "cache"
 	chapterBatchesDirName = "chapter_batches"
 	agentPatchDirName     = "agent-patches"
+	agentGoalPlanDirName  = "goal-plans"
 )
 
 // CraftKind identifies one of the four craft element files.
@@ -223,8 +226,8 @@ func (r *Root) RPGChapterBatchCacheDir() string {
 }
 
 // AgentWorkDirName is the project-local scratch directory the CLI owns: agent
-// patch buffers today. It never holds story state, and it is what `project
-// clone` skips so a new sandbox starts with clean agent scratch.
+// patch buffers and goal plans. It never holds story state, and it is what
+// `project clone` skips so a new sandbox starts with clean agent scratch.
 const AgentWorkDirName = ".novelgen"
 
 // AgentWorkDir is the project-local agent scratch directory.
@@ -233,6 +236,14 @@ func (r *Root) AgentWorkDir() string { return filepath.Join(r.Dir(), AgentWorkDi
 // AgentPatchDir is where `tool patch-buffer` keeps its temporary buffers.
 func (r *Root) AgentPatchDir() string {
 	return filepath.Join(r.AgentWorkDir(), agentPatchDirName)
+}
+
+// AgentGoalPlanFile is the scratch location for one goal session's visible
+// todo list. The session id is hashed so arbitrary SDK session titles cannot
+// escape the project scratch directory.
+func (r *Root) AgentGoalPlanFile(sessionID string) string {
+	sum := sha256.Sum256([]byte(strings.TrimSpace(sessionID)))
+	return filepath.Join(r.AgentWorkDir(), agentGoalPlanDirName, hex.EncodeToString(sum[:8])+".json")
 }
 
 // RelPath renders a project path relative to the project directory with forward

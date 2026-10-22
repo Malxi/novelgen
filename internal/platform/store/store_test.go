@@ -60,6 +60,7 @@ func TestLayoutPaths(t *testing.T) {
 		{"LogFile", root.LogFile("agent-live"), "book/logs/agent-live"},
 		{"AgentWorkDir", root.AgentWorkDir(), "book/.novelgen"},
 		{"AgentPatchDir", root.AgentPatchDir(), "book/.novelgen/agent-patches"},
+		{"AgentGoalPlanFile", root.AgentGoalPlanFile("session-1"), "book/.novelgen/goal-plans/84097828fc31a8c8.json"},
 	}
 	for _, tc := range cases {
 		tc := tc

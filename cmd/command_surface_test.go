@@ -49,6 +49,7 @@ func TestCommandSurfaceTopLevel(t *testing.T) {
 
 	got := childNames(root)
 	want := []string{
+		"agent",
 		"analyze-ai-rpg",
 		"analyze-chapter-ai",
 		"compose",
@@ -80,6 +81,7 @@ func TestCommandSurfaceTopLevel(t *testing.T) {
 func TestCommandSurfaceSubcommands(t *testing.T) {
 	root := fullCommandTree()
 	want := map[string][]string{
+		"agent":   {"run"},
 		"compose": {"check", "gen", "improve", "normalize", "pipeline", "regen", "review", "skeleton-improve", "skeleton-review"},
 		"config":  {"agent", "set", "show"},
 		"craft":   {"gen", "improve"},
@@ -91,7 +93,7 @@ func TestCommandSurfaceSubcommands(t *testing.T) {
 		"rpg-dsl": {"check", "convert", "convert-chapters", "export-dsl", "merge", "simulate", "validate"},
 		"setup":   {"check", "explore", "gen", "import", "improve", "regen"},
 		"storage": {"list", "projects", "read", "replace", "stat", "write"},
-		"tool":    {"check", "patch", "patch-buffer", "query", "refresh"},
+		"tool":    {"check", "patch", "patch-buffer", "query", "refresh", "skill"},
 		"write":   {"gen", "improve", "pipeline", "review"},
 	}
 	for name, expected := range want {
@@ -111,6 +113,7 @@ func TestCommandSurfaceKeyFlags(t *testing.T) {
 		flags []string
 	}{
 		{[]string{"craft", "gen"}, []string{"agent-sdk", "agent-apply"}},
+		{[]string{"agent", "run"}, []string{"json", "max-attempts", "max-turns", "resume", "runtime", "skill", "timeout", "write"}},
 		{[]string{"craft", "improve"}, []string{"agent-sdk", "agent-apply"}},
 		{[]string{"setup", "gen"}, []string{"agent-sdk", "random", "random-seed", "random-level", "random-mode", "random-genre", "scenario", "scenario-seed", "scenario-genre", "scenario-index"}},
 		{[]string{"setup", "explore"}, []string{"agent-sdk", "count", "seed", "level", "mode", "random-genre", "apply-best", "strict", "scenario", "select", "plan-only", "predict", "predict-limit"}},

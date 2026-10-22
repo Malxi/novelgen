@@ -27,14 +27,21 @@ class FakeOptions:
     cli_path: str = ""
     output_format: dict | None = None
     can_use_tool: object | None = None
+    tools: list[str] | None = None
+    allowed_tools: list[str] | None = None
+    mcp_servers: dict | None = None
+    strict_mcp_config: bool = False
+    resume: str | None = None
+    permission_mode: str | None = None
 
 
 class FakeMessage:
-    def __init__(self, content=None, result=None, structured_output=None, usage=None):
+    def __init__(self, content=None, result=None, structured_output=None, usage=None, session_id=None):
         self.content = content
         self.result = result
         self.structured_output = structured_output
         self.usage = usage
+        self.session_id = session_id
 
 
 class ClaudeRunnerTests(unittest.IsolatedAsyncioTestCase):
@@ -46,6 +53,234 @@ class ClaudeRunnerTests(unittest.IsolatedAsyncioTestCase):
             ["novelgen tool patch outline --target volume --id --apply"],
         )
         self.assertIn("placeholder", reason)
+
+    def test_goal_agent_allowlist_supports_skill_discovery_and_broad_project_tools(self):
+        runner = load_runner()
+        read_only = [
+            "novelgen tool skill",
+            "novelgen tool query",
+            "novelgen tool check",
+        ]
+        for command in (
+            "novelgen tool skill list",
+            "novelgen tool skill read chapter-repair",
+            "novelgen tool query context --type chapter-repair --id P1-V1-C1 --view brief",
+            "novelgen tool check all --target chapter --scope chapter --id P1-V1-C1",
+        ):
+            self.assertEqual(
+                runner.tool_call_denial_reason("Bash", {"command": command}, read_only),
+                "",
+                command,
+            )
+        self.assertIn(
+            "Denied --apply",
+            runner.tool_call_denial_reason(
+                "Bash",
+                {"command": "novelgen tool patch chapter --id P1-V1-C1 --patch-buffer P1-V1-C1-draft --apply --refresh-derived"},
+                read_only,
+            ),
+        )
+
+        writable = read_only + [
+            "novelgen tool patch chapter",
+            "novelgen tool patch chapter --apply --refresh-derived",
+            "novelgen tool patch-buffer",
+        ]
+        self.assertEqual(
+            runner.tool_call_denial_reason(
+                "Bash",
+                {"command": "novelgen tool patch chapter --id P1-V1-C1 --patch-buffer P1-V1-C1-draft --apply --refresh-derived"},
+                writable,
+            ),
+            "",
+        )
+
+    async def test_native_goal_tools_use_typed_mcp_and_session_resume(self):
+        runner = load_runner()
+        from claude_agent_sdk import create_sdk_mcp_server as real_create_sdk_mcp_server
+        from claude_agent_sdk import tool as real_tool
+
+        fake_sdk = types.ModuleType("claude_agent_sdk")
+
+        async def fake_query(prompt, options):
+            self.assertEqual(options.tools, [])
+            self.assertEqual(options.permission_mode, "dontAsk")
+            self.assertTrue(options.strict_mcp_config)
+            self.assertEqual(options.resume, "previous-session")
+            self.assertIn("novelgen", options.mcp_servers)
+            self.assertIn("mcp__novelgen__skill_list", options.allowed_tools)
+            self.assertIn("mcp__novelgen__project_query", options.allowed_tools)
+            self.assertNotIn("mcp__novelgen__project_patch", options.allowed_tools)
+            yield FakeMessage(
+                structured_output={"status": "completed", "summary": "done"},
+                session_id="next-session",
+            )
+
+        fake_sdk.ClaudeAgentOptions = FakeOptions
+        fake_sdk.query = fake_query
+        fake_sdk.create_sdk_mcp_server = real_create_sdk_mcp_server
+        fake_sdk.tool = real_tool
+        previous = sys.modules.get("claude_agent_sdk")
+        sys.modules["claude_agent_sdk"] = fake_sdk
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                result = await runner.run_with_claude_agent_sdk({
+                    "agent_name": "GoalAgent",
+                    "command": "complete goal",
+                    "user_prompt": "Do it.",
+                    "system_prompt": "System.",
+                    "workspace_root": tmp,
+                    "live_log_path": os.path.join(tmp, "live.jsonl"),
+                    "native_tools": {"enabled": True, "allow_write": False},
+                    "resume_session_id": "previous-session",
+                    "output_json_schema": {"type": "object"},
+                    "options": {"model": "sonnet", "max_turns": 4},
+                })
+                self.assertEqual(result["session_id"], "next-session")
+                self.assertEqual(json.loads(result["content"])["status"], "completed")
+                self.assertFalse(result["plan_updated"])
+                with open(os.path.join(tmp, "live.jsonl"), "r", encoding="utf-8") as f:
+                    records = [json.loads(line) for line in f]
+                self.assertTrue(records[0]["native_tools"])
+                self.assertIn("mcp__novelgen__skill_list", records[0]["native_tool_names"])
+                self.assertEqual(records[0]["resume_session_id"], "previous-session")
+        finally:
+            if previous is None:
+                sys.modules.pop("claude_agent_sdk", None)
+            else:
+                sys.modules["claude_agent_sdk"] = previous
+
+    def test_native_read_only_policy_omits_write_tools(self):
+        runner = load_runner()
+        read_only, read_names = runner.build_native_novelgen_server(
+            {"enabled": True, "allow_write": False},
+            runner.LiveLogger(None),
+            [],
+            "",
+        )
+        self.assertIsNotNone(read_only)
+        self.assertNotIn("mcp__novelgen__project_patch", read_names)
+        self.assertNotIn("mcp__novelgen__project_refresh", read_names)
+
+        writable, write_names = runner.build_native_novelgen_server(
+            {"enabled": True, "allow_write": True},
+            runner.LiveLogger(None),
+            [],
+            "",
+        )
+        self.assertIsNotNone(writable)
+        self.assertIn("mcp__novelgen__project_patch", write_names)
+        self.assertIn("mcp__novelgen__project_refresh", write_names)
+        self.assertIn("mcp__novelgen__patch_buffer_append", write_names)
+        self.assertIn("mcp__novelgen__plan_update", write_names)
+
+    async def test_native_tool_handlers_route_cli_and_enforce_dry_run(self):
+        runner = load_runner()
+        calls = []
+
+        async def fake_cli(args, _workspace_root, stdin_text=None):
+            calls.append((list(args), stdin_text))
+            return '{"ok":true}'
+
+        runner.run_native_cli = fake_cli
+        events = []
+        native_state = {"plan": [], "buffer_versions": {}}
+        tools = runner.build_native_novelgen_tools(
+            {"enabled": True, "allow_write": True},
+            runner.LiveLogger(None),
+            events,
+            "",
+            native_state,
+        )
+        by_name = {tool.name: tool for tool in tools}
+
+        plan_result = await by_name["plan_update"].handler({
+            "items": [
+                {"id": "inspect", "text": "Inspect chapter", "status": "completed"},
+                {"id": "repair", "text": "Repair chapter", "status": "in_progress"},
+            ],
+        })
+        self.assertNotIn("isError", plan_result)
+        self.assertEqual(native_state["plan"][1]["status"], "in_progress")
+        self.assertTrue(native_state["plan_updated"])
+
+        query_result = await by_name["project_query"].handler({
+            "section": "outline",
+            "id": "P1-V1",
+            "view": "brief",
+        })
+        self.assertIn('{"ok":true}', query_result["content"][0]["text"])
+        self.assertEqual(calls[-1][0], ["tool", "query", "outline", "--id", "P1-V1", "--view", "brief"])
+
+        patch = {"summary": "tightened"}
+        rejected = await by_name["project_patch"].handler({
+            "section": "outline",
+            "target": "volume",
+            "id": "P1-V1",
+            "patch": patch,
+            "apply": True,
+        })
+        self.assertTrue(rejected.get("isError"))
+        self.assertIn("apply=false", rejected["content"][0]["text"])
+
+        rejected_refresh = await by_name["project_patch"].handler({
+            "section": "chapter",
+            "id": "P1-V1-C1",
+            "patch": {"content": "new"},
+            "apply": False,
+            "refresh_derived": True,
+        })
+        self.assertTrue(rejected_refresh.get("isError"))
+        self.assertIn("apply=true", rejected_refresh["content"][0]["text"])
+
+        dry_run = await by_name["project_patch"].handler({
+            "section": "outline",
+            "target": "volume",
+            "id": "P1-V1",
+            "patch": patch,
+            "apply": False,
+        })
+        self.assertNotIn("isError", dry_run)
+        self.assertEqual(calls[-1][1], '{"summary":"tightened"}')
+
+        applied = await by_name["project_patch"].handler({
+            "section": "outline",
+            "target": "volume",
+            "id": "P1-V1",
+            "patch": patch,
+            "apply": True,
+        })
+        self.assertNotIn("isError", applied)
+        self.assertIn("--apply", calls[-1][0])
+        self.assertTrue(any(event.get("patch_apply") for event in events))
+
+        buffer_id = "P1-V1-C1-draft"
+        appended = await by_name["patch_buffer_append"].handler({
+            "buffer_id": buffer_id,
+            "text": "chapter text",
+        })
+        self.assertNotIn("isError", appended)
+        self.assertEqual(native_state["buffer_versions"][buffer_id], 1)
+
+        buffer_dry_run = await by_name["project_patch"].handler({
+            "section": "chapter",
+            "id": "P1-V1-C1",
+            "patch_buffer": buffer_id,
+            "apply": False,
+        })
+        self.assertNotIn("isError", buffer_dry_run)
+        await by_name["patch_buffer_append"].handler({
+            "buffer_id": buffer_id,
+            "text": " changed after dry-run",
+        })
+        stale_apply = await by_name["project_patch"].handler({
+            "section": "chapter",
+            "id": "P1-V1-C1",
+            "patch_buffer": buffer_id,
+            "apply": True,
+        })
+        self.assertTrue(stale_apply.get("isError"))
+        self.assertIn("apply=false", stale_apply["content"][0]["text"])
 
     async def test_live_log_records_stream_messages_and_final_output(self):
         runner = load_runner()

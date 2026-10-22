@@ -102,8 +102,9 @@
 
 ### AI Agent
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) §4.2 - Agent 系统
+- [ARCHITECTURE.md](ARCHITECTURE.md) §4.2-4.3 - Agent 系统与 goal agent
 - `internal/fiction/agents/` - 源码和注释
+- `internal/app/agent_goal.go` / `cmd/agentcmd` - 目标级自主 agent
 
 ### RPG-DSL
 

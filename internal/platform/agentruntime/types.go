@@ -24,6 +24,9 @@ type Invocation struct {
 	RequireSDK             bool                   `json:"require_sdk,omitempty"`
 	ToolAllowlist          []string               `json:"tool_allowlist,omitempty"`
 	LiveLogPath            string                 `json:"live_log_path,omitempty"`
+	NativeTools            *NativeToolPolicy      `json:"native_tools,omitempty"`
+	ResumeSessionID        string                 `json:"resume_session_id,omitempty"`
+	InitialPlan            []PlanItem             `json:"initial_plan,omitempty"`
 	SystemPrompt           string                 `json:"system_prompt"`
 	UserPrompt             string                 `json:"user_prompt"`
 	UserPromptDriven       bool                   `json:"user_prompt_driven,omitempty"`
@@ -34,6 +37,14 @@ type Invocation struct {
 	ToolEvidence           ToolEvidence           `json:"tool_evidence,omitempty"`
 	Options                Options                `json:"options,omitempty"`
 	Metadata               map[string]string      `json:"metadata,omitempty"`
+}
+
+// NativeToolPolicy asks the SDK runner to expose the project capability tools
+// as typed MCP tools instead of a Bash command allowlist. The runner falls back
+// to ToolAllowlist when the installed SDK cannot host an in-process MCP server.
+type NativeToolPolicy struct {
+	Enabled    bool `json:"enabled"`
+	AllowWrite bool `json:"allow_write"`
 }
 
 // ToolEvidence is the in-flight evidence contract passed to the SDK runner.
@@ -63,10 +74,20 @@ type Options struct {
 type Result struct {
 	Content     string       `json:"content"`
 	Model       string       `json:"model,omitempty"`
+	SessionID   string       `json:"session_id,omitempty"`
+	Plan        []PlanItem   `json:"plan,omitempty"`
+	PlanUpdated bool         `json:"plan_updated,omitempty"`
 	Usage       Usage        `json:"usage,omitempty"`
 	LiveLogPath string       `json:"live_log_path,omitempty"`
 	LiveSummary *LiveSummary `json:"live_summary,omitempty"`
 	ToolEvents  []ToolEvent  `json:"tool_events,omitempty"`
+}
+
+// PlanItem is the visible todo item maintained by a goal agent.
+type PlanItem struct {
+	ID     string `json:"id"`
+	Text   string `json:"text"`
+	Status string `json:"status"`
 }
 
 // ToolEvent is the runner's structured record of one tool-gate/hook event.
