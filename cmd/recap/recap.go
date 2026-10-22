@@ -86,7 +86,7 @@ func runRecapGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Recap agent + store
-	store := recap.NewStoreAt(book.Root)
+	store := recap.NewStoreAt(book.Root())
 	agent, err := session.NewRecapAgent()
 	if err != nil {
 		return err

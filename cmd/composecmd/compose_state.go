@@ -38,7 +38,7 @@ func openComposeSession(cmd *cobra.Command) (*app.Session, error) {
 		logger.Error("Not a novel project directory (novel.json not found)")
 		return nil, fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init' first: %w", err)
 	}
-	logger.Info("Loaded project config: %s", session.Config.Name)
+	logger.Info("Loaded project config: %s", session.Config().Name)
 	return session, nil
 }
 
@@ -48,7 +48,7 @@ func loadComposeProjectState(cmd *cobra.Command) (*project.Book, *models.Project
 		logger.Error("Not a novel project directory (novel.json not found)")
 		return nil, nil, nil, nil, err
 	}
-	logger.Info("Loaded project config: %s", session.Config.Name)
+	logger.Info("Loaded project config: %s", session.Config().Name)
 
 	setup, err := session.RequireSetup()
 	if err != nil {
@@ -59,14 +59,18 @@ func loadComposeProjectState(cmd *cobra.Command) (*project.Book, *models.Project
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	return session.Book(), session.Config, setup, outline, nil
+	return session.Book(), session.Config(), setup, outline, nil
 }
 
 func newComposeAgentForProject(root *store.Root, projectConfig *models.ProjectConfig) (*agents.ComposeAgent, error) {
 	if root == nil || projectConfig == nil {
 		return nil, fmt.Errorf("project root and config are required")
 	}
-	return (&app.Session{Root: root, Config: projectConfig}).NewComposeAgent()
+	session, err := app.NewAt(root, projectConfig)
+	if err != nil {
+		return nil, err
+	}
+	return session.NewComposeAgent()
 }
 
 // saveOutlineMutation commits the canonical outline through the same mutation
@@ -79,7 +83,7 @@ func saveOutlineMutation(ctx context.Context, book *project.Book, outline *model
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, err := mutation.NewMutationService(book.Root).ReplaceOutline(ctx, outline, mutation.MutationOptions{
+	_, err := mutation.NewMutationService(book.Root()).ReplaceOutline(ctx, outline, mutation.MutationOptions{
 		Validate: false,
 		Source:   "compose-command",
 	})
@@ -96,7 +100,7 @@ func saveOutlineMutationRaw(ctx context.Context, book *project.Book, outline *mo
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, err := mutation.NewMutationService(book.Root).ReplaceOutlineRaw(ctx, outline, mutation.MutationOptions{
+	_, err := mutation.NewMutationService(book.Root()).ReplaceOutlineRaw(ctx, outline, mutation.MutationOptions{
 		Validate: false,
 		Source:   "compose-command",
 	})
@@ -112,7 +116,7 @@ func saveSetupMutation(ctx context.Context, book *project.Book, setup *models.St
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, err := mutation.NewMutationService(book.Root).ReplaceSetup(ctx, setup, mutation.MutationOptions{
+	_, err := mutation.NewMutationService(book.Root()).ReplaceSetup(ctx, setup, mutation.MutationOptions{
 		Validate: false,
 		Source:   "compose-command",
 	})
@@ -122,14 +126,14 @@ func saveSetupMutation(ctx context.Context, book *project.Book, setup *models.St
 // backupOutlineFiles copies outline.json (and outline.md when present) into
 // story/compose/backups before an improvement pass overwrites them.
 func backupOutlineFiles(book *project.Book) error {
-	backupPath, err := book.BackupFile(store.ScopeCompose, book.OutlineJSON(), "outline")
+	backupPath, err := book.Root().BackupFile(store.ScopeCompose, book.Root().OutlineJSON(), "outline")
 	if err != nil {
 		return fmt.Errorf("failed to backup outline: %w", err)
 	}
 	if backupPath == "" {
 		return fmt.Errorf("failed to read outline for backup: %w", os.ErrNotExist)
 	}
-	if _, err := book.BackupFile(store.ScopeCompose, book.OutlineMarkdown(), "outline"); err != nil {
+	if _, err := book.Root().BackupFile(store.ScopeCompose, book.Root().OutlineMarkdown(), "outline"); err != nil {
 		return fmt.Errorf("failed to backup outline markdown: %w", err)
 	}
 

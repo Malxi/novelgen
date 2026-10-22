@@ -18,7 +18,7 @@ import (
 func memBook(t *testing.T) *project.Book {
 	t.Helper()
 	book := project.Open(store.MemRoot())
-	if err := book.SaveConfig(&models.ProjectConfig{Name: "Recovery Test"}); err != nil {
+	if err := book.Root().SaveConfig(&models.ProjectConfig{Name: "Recovery Test"}); err != nil {
 		t.Fatalf("SaveConfig: %v", err)
 	}
 	return book
@@ -31,7 +31,7 @@ func TestRecoverAgentAppliedChapterContentAfterErrorUsesSavedPatch(t *testing.T)
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening"}
 	previous := "# Opening\n\nold draft"
 	saved := "# Opening\n\n" + strings.Repeat("Lin repairs the scene. ", 80)
-	if err := book.SaveChapterContent(chapter.ID, saved); err != nil {
+	if err := book.Root().SaveChapterContent(chapter.ID, saved); err != nil {
 		t.Fatalf("SaveChapterContent: %v", err)
 	}
 
@@ -44,7 +44,7 @@ func TestRecoverAgentAppliedChapterContentAfterErrorUsesSavedPatch(t *testing.T)
 func TestLoadChapterContextUsesInjectedRoot(t *testing.T) {
 	root := store.MemRoot()
 	book := project.Open(root)
-	if err := book.SaveChapterContent("P1-V1-C1", "# One\n\nLin opens the door."); err != nil {
+	if err := book.Root().SaveChapterContent("P1-V1-C1", "# One\n\nLin opens the door."); err != nil {
 		t.Fatalf("SaveChapterContent: %v", err)
 	}
 	outline := &models.Outline{Parts: []models.Part{{
@@ -80,7 +80,7 @@ func TestRecoverAgentAppliedChapterContentAfterErrorRejectsOvershoot(t *testing.
 	book := memBook(t)
 	chapter := &models.Chapter{ID: "P1-V1-C1", Title: "Opening"}
 	saved := "# Opening\n\n" + strings.Repeat("word ", 500)
-	if err := book.SaveChapterContent(chapter.ID, saved); err != nil {
+	if err := book.Root().SaveChapterContent(chapter.ID, saved); err != nil {
 		t.Fatalf("SaveChapterContent: %v", err)
 	}
 
@@ -99,7 +99,7 @@ func TestSaveFinalChapterStripsRepeatedTitleAfterHeading(t *testing.T) {
 		t.Fatalf("writepipe.SaveFinalChapter() error = %v", err)
 	}
 
-	got, _, err := book.LoadChapterContent(chapter.ID)
+	got, _, err := book.Root().LoadChapterContent(chapter.ID)
 	if err != nil {
 		t.Fatalf("LoadChapterContent: %v", err)
 	}

@@ -18,13 +18,13 @@ func SaveVolumeReviewAt(book *project.Book, review *models.VolumeReview) error {
 	if review == nil {
 		return fmt.Errorf("cannot save nil volume review")
 	}
-	return book.WriteJSON(book.VolumeReviewFile(review.VolumeID), review)
+	return book.Root().WriteJSON(book.Root().VolumeReviewFile(review.VolumeID), review)
 }
 
 // LoadVolumeReviewAt reads a volume review under an explicit project root.
 func LoadVolumeReviewAt(book *project.Book, volumeID string) (*models.VolumeReview, error) {
 	var review models.VolumeReview
-	if err := book.ReadJSON(book.VolumeReviewFile(volumeID), &review); err != nil {
+	if err := book.Root().ReadJSON(book.Root().VolumeReviewFile(volumeID), &review); err != nil {
 		return nil, err
 	}
 	return &review, nil

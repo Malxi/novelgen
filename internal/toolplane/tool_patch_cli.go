@@ -85,7 +85,7 @@ func RunToolPatch(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	root := book.Root
+	root := book.Root()
 	var patchBytes []byte
 	if taskID != "" {
 		resolvedTarget, resolvedID, resolvedPatchBytes, taskWarnings, err := resolveToolPatchTask(root, section, target, id, taskID)

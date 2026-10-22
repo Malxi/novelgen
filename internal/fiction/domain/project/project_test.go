@@ -1,12 +1,28 @@
 package project
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"novelgen/internal/platform/store"
 )
+
+func TestBookKeepsRootExplicit(t *testing.T) {
+	t.Parallel()
+
+	root := store.MemRoot()
+	book := Open(root)
+	if book.Root() != root {
+		t.Fatal("Book.Root did not return the explicit root")
+	}
+
+	var missing *Book
+	if _, err := missing.LoadSetup(); !errors.Is(err, store.ErrNilRoot) {
+		t.Fatalf("nil Book.LoadSetup = %v, want ErrNilRoot", err)
+	}
+}
 
 // openBook returns the project view for a fixture directory. Tests hold an
 // explicit root instead of switching the process working directory, which is

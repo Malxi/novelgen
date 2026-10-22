@@ -56,7 +56,7 @@ func runComposeSkeletonImprove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--max-rounds must be at least 1")
 	}
 
-	agent, err := newComposeAgentForProject(book.Root, projectConfig)
+	agent, err := newComposeAgentForProject(book.Root(), projectConfig)
 	if err != nil {
 		return err
 	}
@@ -72,14 +72,14 @@ func runComposeSkeletonImprove(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	outlinePath := book.OutlineJSON()
+	outlinePath := book.Root().OutlineJSON()
 	if err := saveOutlineMutation(cmd.Context(), book, improved); err != nil {
 		return fmt.Errorf("failed to save improved skeleton outline: %w", err)
 	}
-	mdPath := book.OutlineMarkdown()
+	mdPath := book.Root().OutlineMarkdown()
 
 	if review != nil {
-		reportPath := book.ComposeFile("skeleton_improve_review.json")
+		reportPath := book.Root().ComposeFile("skeleton_improve_review.json")
 		if err := saveReviewResult(book, reportPath, *review); err != nil {
 			return err
 		}

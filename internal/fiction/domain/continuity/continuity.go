@@ -121,7 +121,7 @@ func LoadPreviousRecapStruct(book *project.Book, outline *models.Outline, target
 	}
 
 	prev := all[idx-1]
-	store := recap.NewStoreAt(book.Root)
+	store := recap.NewStoreAt(book.Root())
 	r, err := store.Load(prev.ID)
 	if err != nil {
 		return nil
@@ -158,7 +158,7 @@ func TryExtractRecap(book *project.Book, ch *models.Chapter, draft string) strin
 	// Best-effort continuity recap strategy:
 	// 1) Prefer a persisted recap JSON for this chapter (if it exists).
 	// 2) Fallback to a minimal offline recap derived from outline + last line.
-	store := recap.NewStoreAt(book.Root)
+	store := recap.NewStoreAt(book.Root())
 	if saved, err := store.Load(ch.ID); err == nil && saved != nil {
 		if b, err := json.MarshalIndent(saved, "", "  "); err == nil {
 			return string(b)
@@ -214,7 +214,7 @@ func PersistOfflineRecap(book *project.Book, ch *models.Chapter, text string) {
 	if clean == "" {
 		return
 	}
-	store := recap.NewStoreAt(book.Root)
+	store := recap.NewStoreAt(book.Root())
 	_ = store.Save(BuildOfflineRecap(ch, clean))
 }
 
@@ -230,7 +230,7 @@ func PersistOfflineRecapIfMissing(book *project.Book, ch *models.Chapter, text s
 	if clean == "" {
 		return
 	}
-	store := recap.NewStoreAt(book.Root)
+	store := recap.NewStoreAt(book.Root())
 	if saved, err := store.Load(ch.ID); err == nil && saved != nil {
 		return
 	}
@@ -361,7 +361,7 @@ func ApplyHeuristicTransitionChecks(book *project.Book, volume *models.Volume, d
 
 		// Recap quality gate (persisted recap existence + minimal fields)
 		if r.RecapQuality.Score == 0 && book != nil {
-			if ok, issues, sugs := recap.CheckQualityAt(book.Root, cur.ID); !ok {
+			if ok, issues, sugs := recap.CheckQualityAt(book.Root(), cur.ID); !ok {
 				r.RecapQuality.Score = 4
 				for _, it := range issues {
 					if it != "" && !ContainsStr(r.RecapQuality.Issues, it) {

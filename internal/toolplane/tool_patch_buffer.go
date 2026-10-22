@@ -29,7 +29,7 @@ func RunToolPatchBuffer(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	root := book.Root
+	root := book.Root()
 	path, err := ToolPatchBufferPath(root, id)
 	if err != nil {
 		return err

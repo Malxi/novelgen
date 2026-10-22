@@ -89,7 +89,7 @@ func runPolish(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	config := session.Config
+	config := session.Config()
 	outline, err := session.RequireOutline()
 	if err != nil {
 		return err
@@ -112,10 +112,10 @@ func runPolish(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	recapStore := recap.NewStoreAt(book.Root)
+	recapStore := recap.NewStoreAt(book.Root())
 
 	// Initialize continuity builder
-	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root)
+	continuityBuilder := logic.NewChapterContinuityBuilderAt(book.Root())
 
 	// Determine target words per chapter
 	targetWords := config.ChapterConfig.TargetWordsPerChapter
@@ -158,7 +158,7 @@ func runPolish(cmd *cobra.Command, args []string) error {
 		// Generate RPG DSL and detect issues for this volume
 		var rpgDSLIssues []dsl.SimulationIssue
 		log.Info("Generating RPG DSL and detecting issues for volume %s...", volume.ID)
-		result, err := derive.EmitChapterRPGDSLForProject(ctx, book.Root, filepath.Base(book.Dir()), config, cfg, setup, client, 10)
+		result, err := derive.EmitChapterRPGDSLForProject(ctx, book.Root(), filepath.Base(book.Root().Dir()), config, cfg, setup, client, 10)
 		if err != nil {
 			log.Error("Failed to generate RPG DSL: %v", err)
 		} else {

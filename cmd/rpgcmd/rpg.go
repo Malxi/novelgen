@@ -175,14 +175,14 @@ func runRPGGen(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	config := session.Config
+	config := session.Config()
 
 	bookName := config.Name
 	if bookName == "" {
 		return fmt.Errorf("book name not set in project config")
 	}
 
-	bookDir := session.Root.Dir()
+	bookDir := session.Root().Dir()
 
 	log.Info("Loading novelgen project: %s (%s)", bookName, bookDir)
 
@@ -312,14 +312,14 @@ func runRPGSimulate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	config := session.Config
+	config := session.Config()
 
 	bookName := config.Name
 	if bookName == "" {
 		return fmt.Errorf("book name not set in project config")
 	}
 
-	bookDir := session.Root.Dir()
+	bookDir := session.Root().Dir()
 
 	log.Info("Loading RPG data for book: %s", bookName)
 
@@ -525,14 +525,14 @@ func runRPGExport(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	config := session.Config
+	config := session.Config()
 
 	bookName := config.Name
 	if bookName == "" {
 		return fmt.Errorf("book name not set in project config")
 	}
 
-	bookDir := session.Root.Dir()
+	bookDir := session.Root().Dir()
 
 	log.Info("Loading RPG data for export: %s", bookName)
 

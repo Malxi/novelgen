@@ -39,6 +39,33 @@ type FS interface {
 // OSFS is the host filesystem.
 type OSFS struct{}
 
+// invalidFS preserves error propagation for a missing Root. Root.FS has no
+// error return, so returning a failing implementation is safer than exposing
+// OSFS and letting a nil dependency act on the working directory.
+type invalidFS struct{}
+
+func (invalidFS) ReadFile(string) ([]byte, error) { return nil, ErrNilRoot }
+
+func (invalidFS) WriteFile(string, []byte, os.FileMode) error { return ErrNilRoot }
+
+func (invalidFS) WriteFileExclusive(string, []byte, os.FileMode) error { return ErrNilRoot }
+
+func (invalidFS) AppendFile(string, []byte, os.FileMode) error { return ErrNilRoot }
+
+func (invalidFS) OpenAppend(string, os.FileMode) (io.WriteCloser, error) {
+	return nil, ErrNilRoot
+}
+
+func (invalidFS) MkdirAll(string, os.FileMode) error { return ErrNilRoot }
+
+func (invalidFS) ReadDir(string) ([]os.DirEntry, error) { return nil, ErrNilRoot }
+
+func (invalidFS) Stat(string) (os.FileInfo, error) { return nil, ErrNilRoot }
+
+func (invalidFS) Remove(string) error { return ErrNilRoot }
+
+func (invalidFS) Rename(string, string) error { return ErrNilRoot }
+
 func (OSFS) ReadFile(name string) ([]byte, error) { return os.ReadFile(name) }
 
 func (OSFS) WriteFile(name string, data []byte, perm os.FileMode) error {

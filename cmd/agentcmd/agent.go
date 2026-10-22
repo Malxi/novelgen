@@ -80,7 +80,7 @@ func runAgentGoal(cmd *cobra.Command, args []string) error {
 	goal := strings.TrimSpace(strings.Join(args, " "))
 	report, err := app.RunAgentGoal(cmd.Context(), app.AgentGoalOptions{
 		Goal:          goal,
-		Root:          session.Root,
+		Root:          session.Root(),
 		AllowedSkills: agentRunSkills,
 		AllowWrite:    agentRunWrite,
 		MaxTurns:      agentRunMaxTurns,
@@ -89,7 +89,7 @@ func runAgentGoal(cmd *cobra.Command, args []string) error {
 		Model:         agentRunModel,
 		RuntimeName:   agentRunRuntime,
 		ResumeSession: agentRunResume,
-		Language:      session.Config.Language,
+		Language:      session.Config().Language,
 	})
 	if err != nil {
 		if report != nil {

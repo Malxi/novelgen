@@ -60,11 +60,11 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("not a novel project directory (novel.json not found). Run 'novelgen init <book_name>' first: %w", err)
 	}
 	book := session.Book()
-	projectConfig := session.Config
+	projectConfig := session.Config()
 	logger.Info("Loaded project config: %s", projectConfig.Name)
 
 	// Read input file
-	content, err := book.Read(book.ResolvePath(inputFile))
+	content, err := book.Root().Read(book.Root().ResolvePath(inputFile))
 	if err != nil {
 		logger.Error("Failed to read input file: %v", err)
 		return fmt.Errorf("failed to read input file %s: %w", inputFile, err)
@@ -95,7 +95,7 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 
 	// Output result
 	if translateOutputFile != "" {
-		if err := book.WriteText(book.ResolvePath(translateOutputFile), translated); err != nil {
+		if err := book.Root().WriteText(book.Root().ResolvePath(translateOutputFile), translated); err != nil {
 			logger.Error("Failed to write output file: %v", err)
 			return fmt.Errorf("failed to write output file: %w", err)
 		}

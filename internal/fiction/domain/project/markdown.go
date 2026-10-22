@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"novelgen/internal/contract/story"
+	"novelgen/internal/platform/store"
 )
 
 // StorySetupMarkdown renders story_setup.md from a typed StorySetup.
@@ -86,8 +87,11 @@ func (b *Book) SaveStorySetupMarkdown(setup *models.StorySetup) (string, error) 
 	if setup == nil {
 		return "", fmt.Errorf("cannot render nil story setup")
 	}
-	path := b.SetupMarkdown()
-	if err := b.WriteText(path, StorySetupMarkdown(setup)); err != nil {
+	if b == nil || b.root == nil {
+		return "", store.ErrNilRoot
+	}
+	path := b.root.SetupMarkdown()
+	if err := b.root.WriteText(path, StorySetupMarkdown(setup)); err != nil {
 		return "", err
 	}
 	return path, nil
@@ -98,8 +102,11 @@ func (b *Book) SaveOutlineMarkdown(outline *models.Outline) (string, error) {
 	if outline == nil {
 		return "", fmt.Errorf("cannot render nil outline")
 	}
-	path := b.OutlineMarkdown()
-	if err := b.WriteText(path, OutlineMarkdown(outline)); err != nil {
+	if b == nil || b.root == nil {
+		return "", store.ErrNilRoot
+	}
+	path := b.root.OutlineMarkdown()
+	if err := b.root.WriteText(path, OutlineMarkdown(outline)); err != nil {
 		return "", err
 	}
 	return path, nil

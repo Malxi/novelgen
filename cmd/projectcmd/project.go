@@ -109,7 +109,7 @@ func runProjectUsage(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	entries, err := usageRoot.ReadUsage()
+	entries, err := usageRoot.Root().ReadUsage()
 	if err != nil {
 		return fmt.Errorf("read usage log: %w", err)
 	}
@@ -132,8 +132,8 @@ func runProjectUsage(cmd *cobra.Command, args []string) error {
 	}
 
 	out := cmd.OutOrStdout()
-	fmt.Fprintf(out, "LLM usage for %s\n", usageRoot.Dir())
-	fmt.Fprintf(out, "Log: %s\n", usageRoot.UsageLog())
+	fmt.Fprintf(out, "LLM usage for %s\n", usageRoot.Root().Dir())
+	fmt.Fprintf(out, "Log: %s\n", usageRoot.Root().UsageLog())
 	if summary.Calls == 0 {
 		fmt.Fprintln(out, "No usage recorded yet. Run a command that calls the model first.")
 		return nil

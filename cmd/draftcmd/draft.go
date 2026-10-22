@@ -177,13 +177,13 @@ func runDraftGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create state matrix manager
-	stateManager := logic.NewStateMatrixManagerAt(book.Root)
+	stateManager := logic.NewStateMatrixManagerAt(book.Root())
 	// Create recap agent + store (auto-persist recaps for continuity)
 	recapAgent, err := session.NewRecapAgent()
 	if err != nil {
 		return err
 	}
-	recapStore := recap.NewStoreAt(book.Root)
+	recapStore := recap.NewStoreAt(book.Root())
 
 	// Get list of chapters to generate
 	chapters, err := project.SelectChapters(outline, draftChapterFlag, draftVolumeFlag, draftPartFlag, draftAllFlag)
@@ -287,7 +287,7 @@ func saveDraft(ctx context.Context, book *project.Book, chapter *models.Chapter,
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, err := mutation.NewMutationService(book.Root).ReplaceDraft(ctx, chapter, draft, mutation.MutationOptions{
+	_, err := mutation.NewMutationService(book.Root()).ReplaceDraft(ctx, chapter, draft, mutation.MutationOptions{
 		Source: "draft-command",
 	})
 	return err
@@ -483,7 +483,7 @@ func getChaptersNeedingImprovement(review *agents.VolumeReview, outline *models.
 func improveChaptersWithAgent(ctx context.Context, book *project.Book, agent *agents.DraftAgent, chapters []*models.Chapter, reviews []agents.DraftReview, outline *models.Outline, concurrency int) int {
 	log := logger.GetLogger()
 
-	stateManager := logic.NewStateMatrixManagerAt(book.Root)
+	stateManager := logic.NewStateMatrixManagerAt(book.Root())
 
 	// Pre-build DSL simulation for enrichment (shared across goroutines)
 	var dslIssues []dsl.SimulationIssue

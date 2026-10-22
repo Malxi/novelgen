@@ -32,7 +32,7 @@ func runComposeSkeletonReview(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	agent, err := newComposeAgentForProject(book.Root, projectConfig)
+	agent, err := newComposeAgentForProject(book.Root(), projectConfig)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func runComposeSkeletonReview(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("skeleton review failed: %w", err)
 	}
 
-	reportPath := book.ComposeFile("skeleton_review.json")
+	reportPath := book.Root().ComposeFile("skeleton_review.json")
 	if err := saveReviewResult(book, reportPath, review.Result); err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func runComposeReview(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	agent, err := newComposeAgentForProject(book.Root, projectConfig)
+	agent, err := newComposeAgentForProject(book.Root(), projectConfig)
 	if err != nil {
 		return err
 	}
@@ -123,9 +123,9 @@ func runComposeReview(cmd *cobra.Command, args []string) error {
 
 	reportPath := strings.TrimSpace(composeReviewOutFlag)
 	if reportPath == "" {
-		reportPath = book.ComposeFile("outline_review.json")
+		reportPath = book.Root().ComposeFile("outline_review.json")
 	} else {
-		reportPath = book.ResolvePath(reportPath)
+		reportPath = book.Root().ResolvePath(reportPath)
 	}
 	if err := saveReviewResult(book, reportPath, review); err != nil {
 		return err
@@ -208,7 +208,7 @@ func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
 
 	results, _ := workerpool.Map(cmd.Context(), parallel, specs, func(ctx context.Context, _ int, spec runSpec) (runResult, error) {
 		model, focus := spec.model, spec.focus
-		agent, aerr := newComposeAgentForProject(book.Root, projectConfig)
+		agent, aerr := newComposeAgentForProject(book.Root(), projectConfig)
 		if aerr != nil {
 			return runResult{model: model, focus: focus, err: aerr}, nil
 		}
@@ -279,12 +279,12 @@ func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
 	fmt.Printf("主题分布: %v\n", themeCount)
 
 	// 输出目录: story/reviews/matrix_<timestamp>/
-	outDir := book.ReviewFile(fmt.Sprintf("matrix_%s", time.Now().Format("20060102_150405")))
+	outDir := book.Root().ReviewFile(fmt.Sprintf("matrix_%s", time.Now().Format("20060102_150405")))
 
 	// 保存全部建议
 	allPath := filepath.Join(outDir, "all_suggestions.json")
 	if data, err := json.MarshalIndent(allSugs, "", "  "); err == nil {
-		if err := book.Write(allPath, data, store.FileMode); err != nil {
+		if err := book.Root().Write(allPath, data, store.FileMode); err != nil {
 			return err
 		}
 	}
@@ -302,7 +302,7 @@ func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
 
 	samplePath := filepath.Join(outDir, fmt.Sprintf("sampled_%d.json", len(sampled)))
 	if data, err := json.MarshalIndent(sampled, "", "  "); err == nil {
-		if err := book.Write(samplePath, data, store.FileMode); err != nil {
+		if err := book.Root().Write(samplePath, data, store.FileMode); err != nil {
 			return err
 		}
 	}
@@ -310,7 +310,7 @@ func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
 	// 合理化 prompt
 	rp := agents.BuildRationalizePrompt(sampled)
 	rpPath := filepath.Join(outDir, "rationalize_prompt.txt")
-	if err := book.WriteText(rpPath, rp); err != nil {
+	if err := book.Root().WriteText(rpPath, rp); err != nil {
 		return err
 	}
 
@@ -331,7 +331,7 @@ func runComposeReviewMatrix(cmd *cobra.Command, args []string) error {
 		sampleThemes[primary]++
 	}
 	fmt.Fprintf(&rb, "抽样主题覆盖: %v\n", sampleThemes)
-	if err := book.WriteText(reportPath, rb.String()); err != nil {
+	if err := book.Root().WriteText(reportPath, rb.String()); err != nil {
 		return err
 	}
 
@@ -359,7 +359,7 @@ func runComposeCrossVolumeReview(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--to-volume %d must be >= --from-volume %d", toIdx, fromIdx)
 	}
 
-	agent, err := newComposeAgentForProject(book.Root, projectConfig)
+	agent, err := newComposeAgentForProject(book.Root(), projectConfig)
 	if err != nil {
 		return err
 	}
@@ -393,9 +393,9 @@ func runComposeCrossVolumeReview(cmd *cobra.Command, args []string) error {
 
 	reportPath := strings.TrimSpace(composeReviewOutFlag)
 	if reportPath == "" {
-		reportPath = book.ReviewFile("cross_volume_review.json")
+		reportPath = book.Root().ReviewFile("cross_volume_review.json")
 	} else {
-		reportPath = book.ResolvePath(reportPath)
+		reportPath = book.Root().ResolvePath(reportPath)
 	}
 	if err := saveReviewResult(book, reportPath, review); err != nil {
 		return err
@@ -433,12 +433,12 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	outlinePath := book.OutlineJSON()
-	if !book.HasOutline() {
+	outlinePath := book.Root().OutlineJSON()
+	if !book.Root().HasOutline() {
 		return fmt.Errorf("outline not found at %s. Run 'novelgen compose gen' first", outlinePath)
 	}
 
-	data, err := book.Read(outlinePath)
+	data, err := book.Root().Read(outlinePath)
 	if err != nil {
 		return fmt.Errorf("failed to read outline: %w", err)
 	}
@@ -470,7 +470,7 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 		}
 		quality.LogQualityGateResult("outline", quality.RunOutlineQualityGate(setupForGate, checkOutline))
 		if strings.TrimSpace(composeCheckSuggestionsOut) != "" {
-			gate := quality.RunOutlineCombinedGateForScope(book.Root, setupForGate, checkOutline, false)
+			gate := quality.RunOutlineCombinedGateForScope(book.Root(), setupForGate, checkOutline, false)
 			report := quality.QualityGateReviewResult("Deterministic outline check suggestions.", gate)
 			if err := saveReviewResult(book, composeCheckSuggestionsOut, *report); err != nil {
 				return err
@@ -533,8 +533,8 @@ func runComposeCheck(cmd *cobra.Command, args []string) error {
 	fmt.Printf("\n%s\n", result.Summary)
 
 	// Cross-module: verify outline consistency with story setup
-	setupPath := book.SetupJSON()
-	if setupData, err := book.Read(setupPath); err == nil {
+	setupPath := book.Root().SetupJSON()
+	if setupData, err := book.Root().Read(setupPath); err == nil {
 		var setup models.StorySetup
 		if json.Unmarshal(setupData, &setup) == nil {
 			crossIssues, crossWarnings := quality.ValidateSetupOutlineCross(&setup, &storyOutline)
@@ -593,7 +593,7 @@ func runComposeNormalize(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	book := session.Book()
-	outlinePath := book.OutlineJSON()
+	outlinePath := book.Root().OutlineJSON()
 	outline, err := session.RequireOutline()
 	if err != nil {
 		return err
@@ -613,10 +613,10 @@ func runComposeNormalize(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to write normalized outline: %w", err)
 	}
 
-	mdPath := book.OutlineMarkdown()
+	mdPath := book.Root().OutlineMarkdown()
 
-	reportPath := book.ComposeFile("outline_normalization_manual.json")
-	if err := book.WriteJSON(reportPath, report); err != nil {
+	reportPath := book.Root().ComposeFile("outline_normalization_manual.json")
+	if err := book.Root().WriteJSON(reportPath, report); err != nil {
 		return fmt.Errorf("failed to marshal normalization report: %w", err)
 	}
 
@@ -633,7 +633,7 @@ func runComposeNormalize(cmd *cobra.Command, args []string) error {
 // saveReviewResult stores a review report through the project store, so the
 // report is written atomically and its parent directory is created for us.
 func saveReviewResult(book *project.Book, path string, result models.ReviewResult) error {
-	if err := book.WriteJSON(path, result); err != nil {
+	if err := book.Root().WriteJSON(path, result); err != nil {
 		return fmt.Errorf("failed to write review result to %s: %w", path, err)
 	}
 	return nil

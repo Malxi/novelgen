@@ -171,7 +171,7 @@ func runCraftGen(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	config := session.Config
+	config := session.Config()
 	setup, err := session.RequireSetup()
 	if err != nil {
 		return err
@@ -233,7 +233,7 @@ func runCraftGen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load already generated elements to skip
-	generated := loadGeneratedElements(session.Root)
+	generated := loadGeneratedElements(session.Root())
 
 	// Filter out already generated elements
 	elementsToGenerate := filterUnGenerated(elements, generated)
@@ -260,7 +260,7 @@ func runCraftGen(cmd *cobra.Command, args []string) error {
 	// Create craft agent
 	agent := agents.NewCraftAgent(client, cfg, &config.LLM, setup, generationOutline)
 	agent.SetLanguage(config.Language)
-	agent.SetProjectRoot(session.Root)
+	agent.SetProjectRoot(session.Root())
 
 	// Generate elements in batches
 	batchSize := craftBatchFlag
@@ -1271,7 +1271,7 @@ func runCraftImprove(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	config := session.Config
+	config := session.Config()
 	setup, err := session.RequireSetup()
 	if err != nil {
 		return err
@@ -1282,7 +1282,7 @@ func runCraftImprove(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load existing elements
-	charModels, locModels, itemModels, orgModels, err := session.Root.LoadElements()
+	charModels, locModels, itemModels, orgModels, err := session.Root().LoadElements()
 	if err != nil {
 		return fmt.Errorf("failed to load elements: %w", err)
 	}
@@ -1295,7 +1295,7 @@ func runCraftImprove(cmd *cobra.Command, args []string) error {
 	// Create iteration agent
 	agent := agents.NewCraftIterationAgent(client, cfg, &config.LLM, setup, outline)
 	agent.SetLanguage(config.Language)
-	agent.SetProjectRoot(session.Root)
+	agent.SetProjectRoot(session.Root())
 
 	threshold := 80.0
 	maxRounds := craftMaxRoundsFlag
@@ -1322,7 +1322,7 @@ func runCraftImprove(cmd *cobra.Command, args []string) error {
 	if craftAgentSDKFlag {
 		sdkAgent := agents.NewCraftAgent(client, cfg, &config.LLM, setup, outline)
 		sdkAgent.SetLanguage(config.Language)
-		sdkAgent.SetProjectRoot(session.Root)
+		sdkAgent.SetProjectRoot(session.Root())
 		batchSize := craftBatchFlag
 		if batchSize <= 0 {
 			batchSize = 1

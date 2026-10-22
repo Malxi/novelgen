@@ -37,7 +37,7 @@ func runToolRefreshChapterDSL(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	root := book.Root
+	root := book.Root()
 	id := strings.TrimSpace(ToolRefreshFlags.ID)
 	if id == "" {
 		return fmt.Errorf("--id is required for chapter-dsl refresh")

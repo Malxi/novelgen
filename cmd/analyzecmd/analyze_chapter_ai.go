@@ -108,7 +108,7 @@ func initLLMForAnalysis(bookPath string) (llm.Client, *llm.Config, *models.Proje
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("加载项目配置失败: %w", err)
 	}
-	projectLLM := &session.Config.LLM
+	projectLLM := &session.Config().LLM
 	config, err := session.LoadLLMConfig()
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("加载 LLM 配置失败: %w", err)

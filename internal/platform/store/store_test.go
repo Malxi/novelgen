@@ -444,6 +444,21 @@ func TestRootContextAndDefault(t *testing.T) {
 	}
 }
 
+func TestNilRootFailsClosed(t *testing.T) {
+	t.Parallel()
+
+	var root *store.Root
+	if err := root.WriteText(root.SetupJSON(), "must not be written"); !errors.Is(err, store.ErrNilRoot) {
+		t.Fatalf("WriteText on nil root = %v, want ErrNilRoot", err)
+	}
+	if _, err := root.Read(root.SetupJSON()); !errors.Is(err, store.ErrNilRoot) {
+		t.Fatalf("Read on nil root = %v, want ErrNilRoot", err)
+	}
+	if _, ok := root.FS().(store.OSFS); ok {
+		t.Fatal("nil root must not expose the host filesystem")
+	}
+}
+
 func TestReadJSONToleratesBOM(t *testing.T) {
 	t.Parallel()
 

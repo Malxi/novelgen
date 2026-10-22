@@ -83,7 +83,7 @@ func runExportNovel(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	config := session.Config
+	config := session.Config()
 	setup, err := session.RequireSetup()
 	if err != nil {
 		return err
@@ -102,7 +102,7 @@ func runExportNovel(cmd *cobra.Command, args []string) error {
 	log.Info("Exporting %d chapters", len(chapters))
 
 	// Build novel content
-	content, err := buildNovelContent(session.Root, config, setup, outline, chapters, exportFormatFlag)
+	content, err := buildNovelContent(session.Root(), config, setup, outline, chapters, exportFormatFlag)
 	if err != nil {
 		return fmt.Errorf("failed to build novel content: %w", err)
 	}
