@@ -69,6 +69,37 @@ Usage records (observability, not story state):
 - Old projects simply have no `logs/usage.jsonl`; every consumer must treat a
   missing file as "no usage recorded yet".
 
+Goal agent result (ephemeral command output, not persisted project state):
+
+- Producer: `novelgen agent run` (`internal/app.RunAgentGoal`) invokes the
+  Agent SDK with a goal, the embedded skill catalog, and a read/write tool
+  policy. The model returns `status`, `summary`, `skills_used`,
+  `changed_targets`, `verification`, and `remaining_issues`.
+- Runtime metadata: the runner also returns `session_id` from the SDK result.
+  Go includes it in the goal report so a later `agent run --resume <id>` can
+  continue the same conversation. Older runtimes that omit it simply produce an
+  empty optional field.
+- Plan metadata: native `plan_update` calls maintain a todo list inside the
+  runner. The latest `[{id,text,status}]` list is returned with the goal result
+  and included in the CLI report/live log. It is observability state, not project
+  state and not evidence that the goal was completed. Go persists it under the
+  project `.novelgen` scratch keyed by a hash of the session id and injects it
+  again for `--resume`.
+- Consumer: Go validates the report before returning success. A completed
+  report must have a summary, name only allowed skills, and must not claim a
+  changed target without an observed `tool patch ... --apply`. Any patch apply
+  requires at least one follow-up check and no pending apply without a matching
+  check. Read-only sessions cannot report changed targets.
+- Write authority: `--write` grants the validated patch/patch-buffer/refresh
+  tool families. With native MCP support the model receives typed
+  `project_patch`/`project_refresh` tools; otherwise it receives the broad Bash
+  allowlist. Long prose may use `patch_buffer_append` followed by
+  `project_patch.patch_buffer`; the buffer version must match between dry-run and
+  apply. The absence of `--write` is read-only either way.
+- Old projects need no migration: the result is not written to project layout.
+  Usage is appended to the existing `logs/usage.jsonl` ledger as an
+  `agent-sdk` record with agent `GoalAgent`.
+
 Review suggestion reports:
 
 - `story/compose/outline_review.json` (optional): `models.ReviewResult` produced

@@ -30,7 +30,8 @@ It provides a structured workflow to guide you from initial idea to complete nov
   3. compose  - Generate story outline (parts -> volumes -> chapters)
   4. craft    - Create detailed world elements (characters, locations, items)
   5. write    - Generate, review, improve, recap, and emit RPG DSL for final chapters
-  6. export   - Export the completed novel to various formats
+  6. agent    - Run a goal-level autonomous agent with skills and project tools
+  7. export   - Export the completed novel to various formats
 
 Legacy note: draft commands still exist for old projects, but the recommended
 workflow writes final chapters directly with "novelgen write pipeline".

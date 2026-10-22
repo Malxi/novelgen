@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime as _datetime
+import hashlib
 import inspect
 import json
 import posixpath
@@ -79,9 +80,38 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
     requested_allowed_tools = list(allowed_tools or [])
     requested_permission_mode = permission_mode
     tool_allowlist = invocation.get("tool_allowlist") or []
+    native_tools = invocation.get("native_tools") or {}
     live_log = LiveLogger(invocation.get("live_log_path"))
     tool_events: list[Dict[str, Any]] = []
-    if tool_allowlist:
+    native_server = None
+    native_tool_names: list[str] = []
+    native_fallback_reason = ""
+    initial_plan = invocation.get("initial_plan")
+    if not isinstance(initial_plan, list):
+        initial_plan = []
+    native_session_state: Dict[str, Any] = {"plan": initial_plan, "plan_updated": False, "buffer_versions": {}}
+    if native_tools.get("enabled") and "mcp_servers" in accepted:
+        try:
+            native_server, native_tool_names = build_native_novelgen_server(
+                native_tools,
+                live_log,
+                tool_events,
+                cwd or "",
+                native_session_state,
+            )
+        except Exception as exc:  # noqa: BLE001 - fall back to the Bash gate.
+            native_fallback_reason = f"{type(exc).__name__}: {exc}"
+            live_log.write("native_tools_fallback", {"reason": native_fallback_reason})
+    elif native_tools.get("enabled"):
+        native_fallback_reason = "installed Claude Agent SDK does not support mcp_servers"
+        live_log.write("native_tools_fallback", {"reason": native_fallback_reason})
+
+    if native_server is not None:
+        allowed_tools = list(native_tool_names)
+        tools = []
+        permission_mode = "dontAsk"
+        tool_allowlist = []
+    elif tool_allowlist:
         allowed_tools = []
         if permission_mode == "dontAsk":
             permission_mode = "default"
@@ -127,8 +157,21 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
         "allowed_tools": allowed_tools,
         "permission_mode": permission_mode,
     }.items():
+        if key == "tools" and native_server is not None:
+            options_kwargs["tools"] = []
+            continue
         if key in accepted and value not in (None, "", []):
             options_kwargs[key] = value
+
+    if native_server is not None:
+        options_kwargs["mcp_servers"] = {"novelgen": native_server}
+        options_kwargs["allowed_tools"] = native_tool_names
+        if "strict_mcp_config" in accepted:
+            options_kwargs["strict_mcp_config"] = True
+
+    resume_session_id = str(invocation.get("resume_session_id") or "").strip()
+    if resume_session_id and "resume" in accepted:
+        options_kwargs["resume"] = resume_session_id
 
     if tool_allowlist and "can_use_tool" in accepted:
         options_kwargs["can_use_tool"] = build_tool_permission_callback(tool_allowlist, live_log, cwd, tool_events)
@@ -166,6 +209,7 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
     assistant_text = ""
     final_result: Optional[str] = None
     final_structured: Any = None
+    session_id = ""
     usage: Dict[str, int] = {}
     live_log.write("start", {
         "agent_name": invocation.get("agent_name", ""),
@@ -182,8 +226,12 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
         "permission_mode": permission_mode or "",
         "requested_allowed_tools": requested_allowed_tools,
         "requested_permission_mode": requested_permission_mode or "",
-        "tool_gate": "can_use_tool+hooks" if tool_allowlist else "sdk_options",
+        "tool_gate": "native_mcp" if native_server is not None else ("can_use_tool+hooks" if tool_allowlist else "sdk_options"),
         "tool_allowlist": tool_allowlist,
+        "native_tools": bool(native_server is not None),
+        "native_tool_names": native_tool_names,
+        "native_tools_fallback_reason": native_fallback_reason,
+        "resume_session_id": resume_session_id,
         "sdk_output_format": "output_format" in options_kwargs,
         "sdk_output_format_schema_mode": output_format_schema_mode,
         "sdk_output_format_skipped_reason": output_format_skipped_reason,
@@ -196,7 +244,7 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
     runner_deadline = agent_runner_deadline(invocation)
 
     async def consume() -> Dict[str, Any]:
-        nonlocal assistant_text, final_result, final_structured, usage
+        nonlocal assistant_text, final_result, final_structured, usage, session_id
         async for message in query(prompt=sdk_prompt, options=options):
             structured = extract_message_value(message, "structured_output")
             if structured is not None:
@@ -213,6 +261,9 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
             message_usage = extract_message_value(message, "usage")
             if message_usage:
                 usage = normalize_usage(message_usage)
+            message_session_id = extract_message_value(message, "session_id")
+            if message_session_id:
+                session_id = str(message_session_id)
             live_log.write("message", summarize_live_message(message, message_text, structured, result, message_usage))
 
         if final_structured is not None:
@@ -222,11 +273,14 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
         else:
             text = assistant_text
         text = repair_text_encoding(text)
-        live_log.write("final", {"content": text.strip(), "model": model or "", "usage": usage})
+        live_log.write("final", {"content": text.strip(), "model": model or "", "usage": usage, "session_id": session_id})
 
         return {
             "content": text.strip(),
             "model": model or "",
+            "session_id": session_id,
+            "plan": native_session_state.get("plan", []),
+            "plan_updated": bool(native_session_state.get("plan_updated")),
             "usage": usage,
             "tool_events": tool_events,
         }
@@ -448,6 +502,523 @@ def user_prompt_driven_flag(invocation: Dict[str, Any]) -> bool:
     if isinstance(explicit, bool):
         return explicit
     return bool((invocation.get("user_prompt") or "").strip())
+
+
+def append_optional_arg(args: list[str], flag: str, value: Any) -> None:
+    if value is None or value == "" or value is False or value == 0:
+        return
+    if value is True:
+        args.append(flag)
+        return
+    args.extend([flag, str(value)])
+
+
+async def run_native_cli(args: list[str], workspace_root: str, stdin_text: Optional[str] = None) -> str:
+    """Run one novelgen tool command as the transport behind a typed MCP tool."""
+    cli_path = os.getenv("NOVELGEN_CLI_PATH") or shutil.which("novelgen")
+    if not cli_path:
+        raise RuntimeError("NOVELGEN_CLI_PATH is not set and novelgen was not found on PATH")
+    proc = await asyncio.create_subprocess_exec(
+        cli_path,
+        *args,
+        cwd=workspace_root or None,
+        env=os.environ.copy(),
+        stdin=asyncio.subprocess.PIPE if stdin_text is not None else asyncio.subprocess.DEVNULL,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate(
+        input=stdin_text.encode("utf-8") if stdin_text is not None else None
+    )
+    out = stdout.decode("utf-8", errors="replace").strip()
+    err = stderr.decode("utf-8", errors="replace").strip()
+    if proc.returncode != 0:
+        detail = err or out or f"exit code {proc.returncode}"
+        raise RuntimeError(detail)
+    return out
+
+
+def build_native_novelgen_server(
+    policy: Dict[str, Any],
+    live_log: "LiveLogger",
+    tool_events: list[Dict[str, Any]],
+    workspace_root: str,
+    native_state: Optional[Dict[str, Any]] = None,
+):
+    """Build an in-process MCP server exposing typed Novelgen project tools.
+
+    The tools are still backed by the CLI, but the model sees JSON schemas and
+    never has to construct shell command strings. Write tools are omitted when
+    the session is read-only.
+    """
+    from claude_agent_sdk import create_sdk_mcp_server  # type: ignore
+
+    registered = build_native_novelgen_tools(policy, live_log, tool_events, workspace_root, native_state)
+    server = create_sdk_mcp_server("novelgen", tools=registered)
+    names: list[str] = []
+    for tool_def in registered:
+        names.append(tool_def.name)
+        names.append(f"mcp__novelgen__{tool_def.name}")
+    return server, names
+
+
+def build_native_novelgen_tools(
+    policy: Dict[str, Any],
+    live_log: "LiveLogger",
+    tool_events: list[Dict[str, Any]],
+    workspace_root: str,
+    native_state: Optional[Dict[str, Any]] = None,
+):
+    from claude_agent_sdk import tool  # type: ignore
+
+    allow_write = bool(policy.get("allow_write"))
+    patch_dry_runs: Dict[str, str] = {}
+    if native_state is None:
+        native_state = {"plan": [], "buffer_versions": {}}
+    native_state.setdefault("plan", [])
+    native_state.setdefault("buffer_versions", {})
+
+    async def execute_tool(
+        name: str,
+        cli_args: list[str],
+        stdin_text: Optional[str] = None,
+        patch_key: str = "",
+        patch_apply: bool = False,
+    ) -> tuple[Dict[str, Any], bool]:
+        summary = summarize_live_tool_command(" ".join(cli_args))
+        started_at = _time.monotonic()
+        tool_events.append({
+            "source": "pre",
+            "hook": "PreToolUse",
+            "tool_name": name,
+            "command": summary,
+            "allowed": True,
+            "patch_key": patch_key,
+            "patch_apply": patch_apply,
+        })
+        live_log.write("tool_hook", {
+            "hook": "PreToolUse",
+            "tool_name": name,
+            "command": summary,
+            "allowed": True,
+            "patch_key": patch_key,
+            "patch_apply": patch_apply,
+            "transport": "native_mcp",
+        })
+        try:
+            text = await run_native_cli(cli_args, workspace_root, stdin_text)
+            ok = True
+        except Exception as exc:  # noqa: BLE001 - tool failures are model-visible.
+            text = f"{type(exc).__name__}: {exc}"
+            ok = False
+        duration_ms = int((_time.monotonic() - started_at) * 1000)
+        tool_events.append({
+            "source": "post",
+            "hook": "PostToolUse",
+            "tool_name": name,
+            "command": summary,
+            "patch_key": patch_key,
+            "patch_apply": patch_apply,
+            "duration_ms": duration_ms,
+        })
+        live_log.write("tool_hook", {
+            "hook": "PostToolUse",
+            "tool_name": name,
+            "command": summary,
+            "patch_key": patch_key,
+            "patch_apply": patch_apply,
+            "duration_ms": duration_ms,
+            "transport": "native_mcp",
+        })
+        payload: Dict[str, Any] = {"content": [{"type": "text", "text": text}]}
+        if not ok:
+            payload["isError"] = True
+        return payload, ok
+
+    @tool(
+        "plan_get",
+        "Read the current visible goal plan.",
+        {"type": "object", "properties": {}, "additionalProperties": False},
+    )
+    async def plan_get(_args: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "content": [{
+                "type": "text",
+                "text": json.dumps({"plan": native_state.get("plan", [])}, ensure_ascii=False),
+            }]
+        }
+
+    @tool(
+        "plan_update",
+        "Replace the visible goal plan with the current todo list.",
+        {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string"},
+                            "text": {"type": "string"},
+                            "status": {
+                                "type": "string",
+                                "enum": ["pending", "in_progress", "completed", "blocked"],
+                            },
+                        },
+                        "required": ["text", "status"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["items"],
+            "additionalProperties": False,
+        },
+    )
+    async def plan_update(args: Dict[str, Any]) -> Dict[str, Any]:
+        items = args.get("items")
+        if not isinstance(items, list):
+            return {"content": [{"type": "text", "text": "plan_update requires items array"}], "isError": True}
+        if len(items) > 30:
+            return {"content": [{"type": "text", "text": "plan_update supports at most 30 items"}], "isError": True}
+        normalized: list[Dict[str, str]] = []
+        seen: set[str] = set()
+        for index, item in enumerate(items):
+            if not isinstance(item, dict):
+                return {"content": [{"type": "text", "text": "plan items must be objects"}], "isError": True}
+            text = str(item.get("text") or "").strip()
+            status = str(item.get("status") or "pending").strip().lower()
+            item_id = str(item.get("id") or f"step-{index + 1}").strip()
+            if not text:
+                return {"content": [{"type": "text", "text": "plan item text is required"}], "isError": True}
+            if status not in ("pending", "in_progress", "completed", "blocked"):
+                return {"content": [{"type": "text", "text": f"unsupported plan status {status}"}], "isError": True}
+            if item_id in seen:
+                return {"content": [{"type": "text", "text": f"duplicate plan item id {item_id}"}], "isError": True}
+            seen.add(item_id)
+            normalized.append({"id": item_id, "text": text, "status": status})
+        native_state["plan"] = normalized
+        native_state["plan_updated"] = True
+        live_log.write("plan", {"items": normalized})
+        return {
+            "content": [{
+                "type": "text",
+                "text": json.dumps({"plan": normalized}, ensure_ascii=False),
+            }]
+        }
+
+    @tool(
+        "skill_list",
+        "List the available Novelgen agent skills and their descriptions.",
+        {"type": "object", "properties": {}, "additionalProperties": False},
+    )
+    async def skill_list(_args: Dict[str, Any]) -> Dict[str, Any]:
+        payload, _ = await execute_tool("skill_list", ["tool", "skill", "list"])
+        return payload
+
+    @tool(
+        "skill_read",
+        "Read the full SKILL.md body for one Novelgen skill.",
+        {
+            "type": "object",
+            "properties": {"name": {"type": "string", "description": "Exact skill name"}},
+            "required": ["name"],
+            "additionalProperties": False,
+        },
+    )
+    async def skill_read(args: Dict[str, Any]) -> Dict[str, Any]:
+        name = str(args.get("name") or "").strip()
+        if not name:
+            return {"content": [{"type": "text", "text": "skill_read requires name"}], "isError": True}
+        payload, _ = await execute_tool("skill_read", ["tool", "skill", "read", name])
+        return payload
+
+    @tool(
+        "project_query",
+        "Query project facts as JSON. Use index/brief views first and exact ids for detail.",
+        {
+            "type": "object",
+            "properties": {
+                "section": {
+                    "type": "string",
+                    "enum": ["story-setup", "outline", "craft", "chapter", "context", "ideas", "logs"],
+                },
+                "type": {"type": "string"},
+                "id": {"type": "string"},
+                "name": {"type": "string"},
+                "entity_type": {"type": "string"},
+                "chapter_id": {"type": "string"},
+                "volume_id": {"type": "string"},
+                "view": {"type": "string", "enum": ["index", "brief", "full"]},
+                "fields": {"type": "string"},
+                "include_content": {"type": "boolean"},
+                "limit": {"type": "integer"},
+                "genre": {"type": "string"},
+                "level": {"type": "string"},
+                "mode": {"type": "string"},
+                "seed": {"type": "integer"},
+                "count": {"type": "integer"},
+                "select": {"type": "integer"},
+            },
+            "required": ["section"],
+            "additionalProperties": False,
+        },
+    )
+    async def project_query(args: Dict[str, Any]) -> Dict[str, Any]:
+        section = str(args.get("section") or "").strip()
+        if not section:
+            return {"content": [{"type": "text", "text": "project_query requires section"}], "isError": True}
+        cli_args = ["tool", "query", section]
+        for key, flag in (
+            ("type", "--type"),
+            ("id", "--id"),
+            ("name", "--name"),
+            ("entity_type", "--entity-type"),
+            ("chapter_id", "--chapter-id"),
+            ("volume_id", "--volume-id"),
+            ("view", "--view"),
+            ("fields", "--fields"),
+            ("limit", "--limit"),
+            ("genre", "--genre"),
+            ("level", "--level"),
+            ("mode", "--mode"),
+            ("seed", "--seed"),
+            ("count", "--count"),
+            ("select", "--select"),
+        ):
+            append_optional_arg(cli_args, flag, args.get(key))
+        if args.get("include_content"):
+            cli_args.append("--content")
+        payload, _ = await execute_tool("project_query", cli_args)
+        return payload
+
+    @tool(
+        "project_check",
+        "Run deterministic quality, simulation, schema, or all checks for one project target.",
+        {
+            "type": "object",
+            "properties": {
+                "kind": {"type": "string", "enum": ["quality", "simulation", "all", "schema"]},
+                "target": {"type": "string", "enum": ["setup", "outline", "craft", "chapter", "recap"]},
+                "scope": {"type": "string"},
+                "id": {"type": "string"},
+                "min_priority": {"type": "string"},
+                "category": {"type": "string"},
+                "max_issues": {"type": "integer"},
+                "target_words": {"type": "integer"},
+            },
+            "required": ["kind", "target"],
+            "additionalProperties": False,
+        },
+    )
+    async def project_check(args: Dict[str, Any]) -> Dict[str, Any]:
+        kind = str(args.get("kind") or "").strip()
+        target = str(args.get("target") or "").strip()
+        if not kind or not target:
+            return {"content": [{"type": "text", "text": "project_check requires kind and target"}], "isError": True}
+        cli_args = ["tool", "check", kind, "--target", target]
+        for key, flag in (
+            ("scope", "--scope"),
+            ("id", "--id"),
+            ("min_priority", "--min-priority"),
+            ("category", "--category"),
+            ("max_issues", "--max-issues"),
+            ("target_words", "--target-words"),
+        ):
+            append_optional_arg(cli_args, flag, args.get(key))
+        payload, _ = await execute_tool("project_check", cli_args)
+        return payload
+
+    if allow_write:
+        @tool(
+            "patch_buffer_clear",
+            "Clear one Novelgen-managed patch buffer.",
+            {
+                "type": "object",
+                "properties": {"buffer_id": {"type": "string"}},
+                "required": ["buffer_id"],
+                "additionalProperties": False,
+            },
+        )
+        async def patch_buffer_clear(args: Dict[str, Any]) -> Dict[str, Any]:
+            buffer_id = str(args.get("buffer_id") or "").strip()
+            if not buffer_id:
+                return {"content": [{"type": "text", "text": "patch_buffer_clear requires buffer_id"}], "isError": True}
+            payload, ok = await execute_tool(
+                "patch_buffer_clear",
+                ["tool", "patch-buffer", "clear", "--id", buffer_id],
+            )
+            if ok:
+                native_state["buffer_versions"][buffer_id] = int(native_state["buffer_versions"].get(buffer_id, 0)) + 1
+            return payload
+
+        @tool(
+            "patch_buffer_append",
+            "Append a text chunk to one Novelgen-managed patch buffer.",
+            {
+                "type": "object",
+                "properties": {
+                    "buffer_id": {"type": "string"},
+                    "text": {"type": "string"},
+                },
+                "required": ["buffer_id", "text"],
+                "additionalProperties": False,
+            },
+        )
+        async def patch_buffer_append(args: Dict[str, Any]) -> Dict[str, Any]:
+            buffer_id = str(args.get("buffer_id") or "").strip()
+            text = args.get("text")
+            if not buffer_id or not isinstance(text, str):
+                return {"content": [{"type": "text", "text": "patch_buffer_append requires buffer_id and text"}], "isError": True}
+            payload, ok = await execute_tool(
+                "patch_buffer_append",
+                ["tool", "patch-buffer", "append", "--id", buffer_id, "--stdin"],
+                stdin_text=text,
+            )
+            if ok:
+                native_state["buffer_versions"][buffer_id] = int(native_state["buffer_versions"].get(buffer_id, 0)) + 1
+            return payload
+
+        @tool(
+            "patch_buffer_show",
+            "Show a bounded preview of one Novelgen-managed patch buffer.",
+            {
+                "type": "object",
+                "properties": {
+                    "buffer_id": {"type": "string"},
+                    "max_chars": {"type": "integer"},
+                },
+                "required": ["buffer_id"],
+                "additionalProperties": False,
+            },
+        )
+        async def patch_buffer_show(args: Dict[str, Any]) -> Dict[str, Any]:
+            buffer_id = str(args.get("buffer_id") or "").strip()
+            if not buffer_id:
+                return {"content": [{"type": "text", "text": "patch_buffer_show requires buffer_id"}], "isError": True}
+            cli_args = ["tool", "patch-buffer", "show", "--id", buffer_id]
+            append_optional_arg(cli_args, "--max-chars", args.get("max_chars"))
+            payload, _ = await execute_tool("patch_buffer_show", cli_args)
+            return payload
+
+        @tool(
+            "project_patch",
+            "Dry-run or apply a typed project patch. Apply requires the identical patch to have passed a prior dry-run.",
+            {
+                "type": "object",
+                "properties": {
+                    "section": {"type": "string", "enum": ["outline", "craft", "setup", "recap", "chapter"]},
+                    "target": {"type": "string"},
+                    "id": {"type": "string"},
+                    "patch": {"type": "object", "additionalProperties": True},
+                    "patch_buffer": {"type": "string"},
+                    "apply": {"type": "boolean"},
+                    "refresh_derived": {"type": "boolean"},
+                    "target_words": {"type": "integer"},
+                },
+                "required": ["section"],
+                "additionalProperties": False,
+            },
+        )
+        async def project_patch(args: Dict[str, Any]) -> Dict[str, Any]:
+            section = str(args.get("section") or "").strip()
+            patch = args.get("patch")
+            patch_buffer = str(args.get("patch_buffer") or "").strip()
+            has_patch = isinstance(patch, dict)
+            if not section or has_patch == bool(patch_buffer):
+                return {"content": [{"type": "text", "text": "project_patch requires section and exactly one of patch or patch_buffer"}], "isError": True}
+            target = str(args.get("target") or "").strip()
+            target_id = str(args.get("id") or "").strip()
+            apply_patch = bool(args.get("apply"))
+            refresh_derived = bool(args.get("refresh_derived"))
+            patch_key = f"{section}:{target}:{target_id}"
+            patch_text: Optional[str] = None
+            if has_patch:
+                patch_text = json.dumps(patch, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+                fingerprint_doc: Dict[str, Any] = {"patch": patch}
+            else:
+                buffer_version = int(native_state["buffer_versions"].get(patch_buffer, 0))
+                fingerprint_doc = {"patch_buffer": patch_buffer, "buffer_version": buffer_version}
+            fingerprint_doc["target_words"] = args.get("target_words") or 0
+            fingerprint_payload = json.dumps(
+                fingerprint_doc,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            fingerprint = hashlib.sha256(fingerprint_payload.encode("utf-8")).hexdigest()
+            if refresh_derived and not apply_patch:
+                return {
+                    "content": [{
+                        "type": "text",
+                        "text": "project_patch refresh_derived is valid only with apply=true",
+                    }],
+                    "isError": True,
+                }
+            if apply_patch and patch_dry_runs.get(patch_key) != fingerprint:
+                return {
+                    "content": [{
+                        "type": "text",
+                        "text": "project_patch apply rejected: run the identical patch with apply=false first",
+                    }],
+                    "isError": True,
+                }
+            cli_args = ["tool", "patch", section]
+            append_optional_arg(cli_args, "--target", target)
+            append_optional_arg(cli_args, "--id", target_id)
+            append_optional_arg(cli_args, "--target-words", args.get("target_words"))
+            if patch_buffer:
+                cli_args.extend(["--patch-buffer", patch_buffer])
+            if refresh_derived:
+                cli_args.append("--refresh-derived")
+            if apply_patch:
+                cli_args.append("--apply")
+            payload, ok = await execute_tool(
+                "project_patch",
+                cli_args,
+                stdin_text=patch_text,
+                patch_key=patch_key,
+                patch_apply=apply_patch,
+            )
+            if ok:
+                if apply_patch:
+                    patch_dry_runs.pop(patch_key, None)
+                else:
+                    patch_dry_runs[patch_key] = fingerprint
+            return payload
+
+        @tool(
+            "project_refresh",
+            "Refresh a derived project artifact, currently chapter RPG DSL.",
+            {
+                "type": "object",
+                "properties": {
+                    "chapter_id": {"type": "string"},
+                    "batch_size": {"type": "integer"},
+                },
+                "required": ["chapter_id"],
+                "additionalProperties": False,
+            },
+        )
+        async def project_refresh(args: Dict[str, Any]) -> Dict[str, Any]:
+            chapter_id = str(args.get("chapter_id") or "").strip()
+            if not chapter_id:
+                return {"content": [{"type": "text", "text": "project_refresh requires chapter_id"}], "isError": True}
+            cli_args = ["tool", "refresh", "chapter-dsl", "--id", chapter_id]
+            append_optional_arg(cli_args, "--batch-size", args.get("batch_size"))
+            payload, _ = await execute_tool("project_refresh", cli_args)
+            return payload
+
+    registered = [plan_get, plan_update, skill_list, skill_read, project_query, project_check]
+    if allow_write:
+        registered.extend([
+            patch_buffer_clear,
+            patch_buffer_append,
+            patch_buffer_show,
+            project_patch,
+            project_refresh,
+        ])
+    return registered
 
 
 def load_sdk_skill_prompt(skill_names: list[str], add_dirs: list[str]) -> tuple[str, list[str], list[str]]:
@@ -1277,9 +1848,9 @@ def tool_call_denial_reason(tool_name: str, tool_input: Dict[str, Any], allowlis
     if is_final_json_shell_output_command(normalized):
         return "Denied shell output of final JSON. Return only the final JSON directly as the assistant response; do not use Bash, echo, printf, temp files, or redirection."
     if not contains_allowed_tool_command(normalized):
-        return "Only novelgen tool query/check/patch/refresh commands are allowed in this workflow."
+        return "Only novelgen tool skill/query/check/patch/refresh commands are allowed in this workflow."
     if "novelgen" not in normalized:
-        return "Command must invoke novelgen tool query/check/patch/refresh."
+        return "Command must invoke novelgen tool skill/query/check/patch/refresh."
     if "--view full" in normalized:
         return "Denied --view full. Use --view brief or --view index, then query a precise ID/name if needed."
     if has_chained_command_after_tool(normalized):
@@ -1637,6 +2208,7 @@ def exact_required_queries(allowlist: list[str]) -> set[str]:
     }
     if any(item in (
         "novelgen tool query",
+        "novelgen tool skill",
         "novelgen tool query story-setup --type search",
         "novelgen tool query story-setup --type core-cast",
         "novelgen tool query story-setup --type storyline",
@@ -2200,6 +2772,10 @@ def is_legacy_broad_novelgen_query(normalized: str) -> bool:
 
 def contains_allowed_tool_command(normalized: str) -> bool:
     return any(prefix in normalized for prefix in [
+        "novelgen tool skill",
+        "novelgen.exe tool skill",
+        "novelgen.exe' tool skill",
+        'novelgen.exe" tool skill',
         "novelgen tool query",
         "novelgen.exe tool query",
         "novelgen.exe' tool query",
@@ -2345,6 +2921,8 @@ def has_literal_json_pipe_to_patch(normalized: str) -> bool:
 
 def broad_allowed_tool_prefixes(normalized_allowlist: list[str]) -> list[str]:
     prefixes: list[str] = []
+    if "novelgen tool skill" in normalized_allowlist:
+        prefixes.append("novelgen tool skill")
     if "novelgen tool query" in normalized_allowlist:
         prefixes.append("novelgen tool query")
     for item in story_setup_query_type_prefixes():
@@ -2543,7 +3121,7 @@ def mask_quoted_shell_segments(command: str) -> str:
 
 
 def has_chained_command_after_tool(command: str) -> bool:
-    for marker in ("tool query", "tool check", "tool patch outline", "tool patch craft", "tool patch setup", "tool patch recap", "tool patch chapter", "tool patch-buffer", "tool refresh chapter-dsl"):
+    for marker in ("tool skill", "tool query", "tool check", "tool patch outline", "tool patch craft", "tool patch setup", "tool patch recap", "tool patch chapter", "tool patch-buffer", "tool refresh chapter-dsl"):
         if marker not in command:
             continue
         _, _, tail = command.partition(marker)

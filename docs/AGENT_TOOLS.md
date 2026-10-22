@@ -32,6 +32,8 @@ novelgen tool query ideas --type axiom --genre 仙侠 --mode wild --seed 42 --co
 novelgen tool query ideas --type scenario --genre 科幻 --seed 12 --count 3
 novelgen tool query logs --type prompts|responses|agent-live [--name <agent>] [--view index|brief]
 novelgen tool query logs --id <relative_log_path> --content --view brief
+novelgen tool skill list
+novelgen tool skill read chapter-repair
 novelgen tool check quality|simulation|all --target setup
 novelgen tool check quality|simulation|all --target outline [--scope all|volume|chapter] [--id <id>]
 novelgen tool check quality|simulation|all --target chapter --scope chapter --id <chapter_id>
@@ -93,6 +95,68 @@ applies to list-shaped results; when the result is an object the tool returns a
 warning instead of silently ignoring the limit. A truncated list reports the
 returned count in `count` and the untruncated total in `meta.total_count`.
 Unknown `--view` values are rejected with the valid values.
+
+## Goal Agent
+
+`novelgen agent run` is the goal-level autonomous surface. It gives the model an
+objective, a compact skill catalog, and project query/check/patch tools. The
+model chooses which skills to load and which tools to call; Go does not prescribe
+a stage script.
+
+```bash
+novelgen agent run "检查第三卷大纲的节奏问题，只读"
+novelgen agent run --write "把 P1-V1-C3 的节奏改紧并确保检查通过"
+novelgen agent run --skill write-improve-workflow --write "修复 P1-V1-C4 的连续性问题"
+```
+
+The default policy is read-only. `--write` grants the validated
+`tool patch`/`patch-buffer`/`refresh` families; it does not grant arbitrary file
+or shell access. The goal session must return `status=completed` with concrete
+verification or `status=blocked` with remaining issues. Go rejects a reported
+write without an observed patch apply, a patch apply without a follow-up check,
+or a completion that never used a project tool. If final validation fails,
+`--max-attempts` (default 2) allows one read-only correction/verification pass;
+the retry cannot apply more patches.
+
+When the installed Claude Agent SDK supports in-process MCP tools, goal mode
+exposes typed tools instead of a Bash allowlist:
+
+- `skill_list` / `skill_read`
+- `plan_get` / `plan_update`
+- `project_query`
+- `project_check`
+- `project_patch` (only with `--write`)
+- `project_refresh` (only with `--write`)
+- `patch_buffer_clear` / `patch_buffer_append` / `patch_buffer_show` (only with `--write`)
+
+The typed handlers still call the `novelgen tool` CLI internally, so mutation
+validation, checkpoints, and storage ownership stay unchanged. A dry-run
+fingerprint is tracked inside the session; `project_patch apply=true` is rejected
+unless the identical patch already passed `apply=false`. For `patch_buffer`
+patches, the buffer version is part of that fingerprint, so editing the buffer
+after a dry-run invalidates the apply. If the SDK cannot host an MCP server, the
+runner falls back to the broad Bash allowlist.
+
+`plan_update` replaces a visible todo list stored in the native tool session. The
+final goal report and live log include the latest plan; updates do not count as
+project mutation evidence. The plan is also persisted under the project's
+`.novelgen` scratch keyed by session id, so `--resume` restores the todo list.
+
+Each finished run returns a `session_id`. Continue the same conversation with:
+
+```bash
+novelgen agent run --resume <session_id> "继续处理剩下的问题"
+```
+
+Skills are discovered on demand (`--skill` accepts the names printed here):
+
+```bash
+novelgen tool skill list
+novelgen tool skill read <name>
+```
+
+The full `SKILL.md` is loaded only for the skills the agent selects, instead of
+preloading every workflow prompt into the system context.
 
 `--type` values per query section (`novelgen tool query --help` prints the same
 table). An omitted `--type` uses the section default (normally its first value;
@@ -889,8 +953,9 @@ history for debugging or creative continuation. Omit it for a lighter sandbox.
 The clone command refuses to overwrite existing directories and refuses targets
 inside the source project, so iterative agent runs do not accidentally mutate the
 original book or recursively copy themselves. It always skips the source
-project's `.novelgen/` temporary workspace, including stale patch buffers, so a
-new sandbox starts with clean agent patch state even when logs are copied.
+project's `.novelgen/` temporary workspace, including stale patch buffers and
+goal plans, so a new sandbox starts with clean agent scratch state even when logs
+are copied.
 
 If the cloned project name needs cleanup after copying, run:
 
@@ -934,6 +999,7 @@ Current Agent SDK command surface:
 
 | Command | Agent SDK role | Writer |
 | --- | --- | --- |
+| `agent run [--write] [--resume id]` | Goal-level autonomous session; model selects skills/tools | typed `project_patch` tools when `--write`, otherwise read-only |
 | `compose gen --agent-sdk` | Generate skeleton/volume JSON with project queries | Go saves outline |
 | `compose improve/pipeline --agent-sdk` | Review/repair selected outline volumes with query/check/patch tools | Go saves, or patch tool with `--agent-apply` |
 | `setup improve/regen --agent-sdk` | Review or regenerate setup through minimal setup patches | Go saves, or patch tool with `--agent-apply` |

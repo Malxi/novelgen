@@ -14,6 +14,14 @@ func TestAgentToolsDocsDeclareAgentSDKCommandCoverage(t *testing.T) {
 	text := string(data)
 	for _, want := range []string{
 		"## Agent SDK Command Coverage",
+		"## Goal Agent",
+		"novelgen agent run --write",
+		"novelgen agent run --resume",
+		"novelgen tool skill list",
+		"novelgen tool skill read <name>",
+		"typed tools",
+		"plan_update",
+		"patch_buffer_append",
 		"`compose gen --agent-sdk`",
 		"`compose improve/pipeline --agent-sdk`",
 		"`setup improve/regen --agent-sdk`",

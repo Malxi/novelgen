@@ -162,11 +162,39 @@ prompt/tool allowlist 与写入方式。后续新增阶段应优先把这种差�
 | 路径 | 数量 | 用途 |
 | --- | --- | --- |
 | [`internal/fiction/agents/base/skills/`](../internal/fiction/agents/base/skills/) | 38 | chat 路径的阶段 prompt（`setup-gen`、`compose-review`、`craft-characters` …） |
-| [`internal/platform/agentruntime/skills/`](../internal/platform/agentruntime/skills/) | 17 | SDK workflow prompt（`write-chapter-workflow`、`outline-review-workflow`、`novel-tools-core` …） |
+| [`internal/platform/agentruntime/skills/`](../internal/platform/agentruntime/skills/) | 22 | SDK workflow prompt（`goal-agent-core`、`write-chapter-workflow`、`outline-review-workflow`、`novel-tools-core` …） |
 
 SDK skills 会在运行时物化到 `~/.novelgen/agents/skills/`；chat skills 直接读源码树旁的 `skills/` 或内嵌副本。
 
 > 仓库里另有 `.agents/skills/` 与 `.trae/skills/`：那是给外部编辑器/助手（Trae 等）用的开发辅助技能，与运行时无关。
+
+### 4.3 Goal Agent（目标级自主执行）
+
+`novelgen agent run` 不再按固定 stage 方法编排一次调用，而是把 goal、skill
+catalog、工具白名单和权限交给 Agent SDK：
+
+- **Skill catalog**：`ListEmbeddedSkills()` 只注入 name/description；模型通过
+  `novelgen tool skill read <name>` 按需加载完整 `SKILL.md`。
+- **Tool families**：只读模式开放 `tool skill/query/check`；`--write` 才增加
+  `tool patch`、`patch-buffer` 和 `refresh`。工具仍然是结构化项目入口，不是
+  任意 shell。
+- **Typed tools**：支持 in-process MCP 的 SDK 会暴露
+  `skill_list`/`skill_read`/`project_query`/`project_check`/`project_patch`/
+  `project_refresh`，以及长正文分块的 `patch_buffer_*` 和可见 todo 的
+  `plan_update`。它们内部仍调用 `novelgen tool`，因此不绕过 mutation/check；
+  不支持 MCP 的 SDK 自动退回 Bash allowlist。patch buffer 的版本号参与 dry-run
+  指纹，dry-run 后继续 append 会让 apply 失效。
+- **Session resume**：runner 从 `ResultMessage.session_id` 取回 session id；
+  `agent run --resume <id>` 把它传给 SDK 的 `resume`，继续同一段对话上下文。
+- **模型决定过程**：读哪些事实、加载哪个 skill、是否 patch、修几轮，由模型
+  在 goal 内决定。
+- **Go 决定完成边界**：`RunAgentGoal` 校验最终报告；声称改动但未观察到
+  `patch --apply`、apply 后没有 follow-up check、或完全没有使用项目工具，
+  都会被拒绝。usage 继续写入 `logs/usage.jsonl`。
+
+这是与 `--agent-sdk` stage 模式并行的另一层抽象：stage 模式适合可重复和窄范围
+的 pipeline；goal agent 适合跨对象、需要自主探索和组合 skill 的任务。二者共享
+同一套 Agent runtime、project tools、mutation/check 与持久化边界。
 
 ---
 
@@ -176,6 +204,7 @@ SDK Agent **不能直接读写项目文件**。它们只能通过 CLI 的 `tool`
 
 | 命令 | 作用 |
 | --- | --- |
+| `tool skill list/read` | 发现技能目录并按需加载一个 `SKILL.md` |
 | `tool query <story-setup\|outline\|craft\|chapter\|context\|logs>` | 只读查询，带 `--view index\|brief\|full`、`--limit`、`--fields` 预算控制 |
 | `tool check <quality\|simulation\|all\|schema>` | 确定性校验 |
 | `tool patch <outline\|craft\|setup\|recap\|chapter>` | 打补丁，**默认 dry-run** |

@@ -15,6 +15,7 @@ Novelgen 是一个命令行工具，用于 AI 辅助小说创作。它提供了�
 
 - **结构化创作**: 部→卷→章的三级大纲体系
 - **AI 驱动**: 每个阶段都有专门的 AI Agent
+- **目标级 Agent**: `novelgen agent run` 让模型自主发现 skill、调用项目工具并循环到目标完成
 - **RPG 验证**: 通过 DSL 系统验证内容一致性
 - **约束写作**: RPG 约束指导 AI 写作，避免战力崩坏等问题
 - **连续性保证**: 自动检测角色出场、转场桥段、章节回顾
@@ -521,7 +522,27 @@ novelgen tool refresh chapter-dsl --id P1-V1-C1
 
 每个 section 可用的 `--type`、patch 的 section/`--target` 组合、`--patch-buffer` 与 `--task` 的用法都写在 `novelgen tool <subcommand> --help` 里；完整契约见 [docs/AGENT_TOOLS.md](docs/AGENT_TOOLS.md)。
 
-### 14. `novelgen storage` - 项目存储读写接口
+### 14. `novelgen agent` - 目标级自主 Agent
+
+给 agent 一个目标，由模型自己发现/加载 skill、调用项目工具并循环到完成。默认只读；加 `--write` 才允许经过校验的 project patch/refresh：
+
+```bash
+novelgen agent run "检查第三卷大纲的节奏问题，只读"
+novelgen agent run --write "把 P1-V1-C3 的节奏改紧并确保检查通过"
+novelgen agent run --skill write-improve-workflow --write "修复 P1-V1-C4 的连续性问题"
+```
+
+skill 目录通过 `novelgen tool skill list` 发现，通过 `novelgen tool skill read <name>` 按需读取。agent 返回完成报告后，Go 会校验：声称改动必须有真实 patch apply，apply 后必须有 follow-up check，只读会话不得报告写入。校验失败时默认做一次只读复查，可用 `--max-attempts` 调整。
+
+支持 in-process MCP 的 SDK 会使用 typed tools（`skill_list`、`project_query`、`project_check`、`project_patch` 等），否则自动退回 CLI 工具。每次运行会返回 `session_id`，可继续同一段上下文：
+
+```bash
+novelgen agent run --resume <session_id> "继续处理剩下的问题"
+```
+
+多步骤任务可以用 `plan_update` 维护可见 todo，resume 时会恢复；长章节正文可以用 typed `patch_buffer_*` 分块写入，再让 `project_patch` 使用该 buffer。
+
+### 15. `novelgen storage` - 项目存储读写接口
 
 供 Web UI 和脚本按项目相对路径访问内容；命令内部走当前 storage backend，不要求调用方知道磁盘布局：
 
@@ -535,7 +556,7 @@ printf '{"parts":[]}' | novelgen storage write --project ../books/mine --path st
 
 命令输出单行 JSON；读取失败会带 `code=not_found|unreadable|invalid_path|storage_error`，便于 Web UI 区分“文件不存在”和“读取失败”。
 
-### 15. RPG / 分析类命令（Go 自有的确定性工具）
+### 16. RPG / 分析类命令（Go 自有的确定性工具）
 
 `novelgen rpg`（生成/模拟/导出 RPG 数据）、`novelgen rpg-dsl`（校验、合并、转换、导出分阶段 DSL）、`novelgen simulate-dsl`（DSL 模拟器）、`novelgen analyze-ai-rpg` / `analyze-chapter-ai`（AI 章节分析）属于确定性或分析基础设施，不参与 Agent SDK 创作流水线；详见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 
