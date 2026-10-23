@@ -35,7 +35,10 @@ type composeAgentSDKChaptersPromptInput struct {
 	VolumeIndex      int      `json:"volume_index" md:"volume_index" desc:"1-based global volume index"`
 	TotalVolumes     int      `json:"total_volumes" md:"total_volumes" desc:"Total volume count"`
 	ChaptersPerVol   int      `json:"chapters_per_volume" md:"chapters_per_volume" desc:"Exact number of chapters to return"`
+	ChapterStart     int      `json:"chapter_start" md:"chapter_start" desc:"1-based ordinal of the first chapter requested in this call"`
+	ChapterEnd       int      `json:"chapter_end" md:"chapter_end" desc:"1-based ordinal of the last chapter requested in this call"`
 	PreviousVolumeID string   `json:"previous_volume_id,omitempty" md:"previous_volume_id" desc:"Previous volume ID for continuity queries"`
+	ExistingChapters string   `json:"existing_chapters,omitempty" md:"existing_chapters" desc:"Chapters already generated in earlier batches; continue after them and do not repeat them"`
 	RequiredQueries  []string `json:"required_queries" md:"required_queries" desc:"Read-only novelgen tool query commands that must be used before answering"`
 	Instructions     []string `json:"instructions" md:"instructions" desc:"Workflow constraints for the SDK agent"`
 }
@@ -182,7 +185,53 @@ func (a *ComposeAgent) GenerateSkeletonWithAgentSDK(ctx context.Context, input C
 func (a *ComposeAgent) GenerateChaptersForVolumeWithAgentSDK(ctx context.Context, input ComposeChaptersInput) (ComposeImproveVolumeOutput, error) {
 	logger.Section("COMPOSE AGENT SDK - Generating Chapters for Volume")
 	logger.Info("Volume: %s (%d/%d)", input.Volume.Title, input.VolumeIndex, input.TotalVolumes)
+	if input.ChaptersPerVol <= 0 {
+		return ComposeImproveVolumeOutput{}, fmt.Errorf("chapters per volume must be positive")
+	}
 
+	chapters := make([]models.Chapter, 0, input.ChaptersPerVol)
+	for len(chapters) < input.ChaptersPerVol {
+		batchInput := input
+		batchInput.Volume.Chapters = append([]models.Chapter(nil), chapters...)
+		promptForEstimate := buildAgentSDKChaptersPromptInput(batchInput)
+		contextWindow, maxOutputTokens := a.base.ActiveModelLimits()
+		batchSize := composeChapterBatchSize(
+			input.ChaptersPerVol-len(chapters),
+			contextWindow,
+			maxOutputTokens,
+			estimateComposePromptTokens(promptForEstimate),
+		)
+		batchInput.ChaptersPerVol = batchSize
+		batchInput.ChapterStart = len(chapters) + 1
+		logger.Info("Agent SDK chapter batch %d-%d of %d (window=%d output=%d prompt≈%d tokens)",
+			len(chapters)+1, len(chapters)+batchSize, input.ChaptersPerVol,
+			contextWindow, maxOutputTokens, estimateComposePromptTokens(buildAgentSDKChaptersPromptInput(batchInput)))
+
+		batchOutput, err := a.generateChapterBatchWithAgentSDK(ctx, batchInput)
+		if err != nil {
+			return ComposeImproveVolumeOutput{}, err
+		}
+		before := len(chapters)
+		chapters = appendNewChapters(chapters, batchOutput.Volume.Chapters)
+		if len(chapters) == before {
+			return ComposeImproveVolumeOutput{}, fmt.Errorf("agent SDK chapter batch returned no new chapters at %d/%d", len(chapters), input.ChaptersPerVol)
+		}
+		if len(chapters) > input.ChaptersPerVol {
+			chapters = chapters[:input.ChaptersPerVol]
+		}
+	}
+
+	for i, chapter := range chapters {
+		if err := a.validateChapterOutput(&chapter); err != nil {
+			return ComposeImproveVolumeOutput{}, fmt.Errorf("chapter %d invalid: %w", i+1, err)
+		}
+	}
+	volume := input.Volume
+	volume.Chapters = chapters
+	return ComposeImproveVolumeOutput{Volume: volume}, nil
+}
+
+func (a *ComposeAgent) generateChapterBatchWithAgentSDK(ctx context.Context, input ComposeChaptersInput) (ComposeImproveVolumeOutput, error) {
 	var output ComposeImproveVolumeOutput
 	promptInput := buildAgentSDKChaptersPromptInput(input)
 	params := composeAgentSDKParams("generate chapters for this volume using read-only project queries", "outline-compose-volume-workflow", 24, composeRequiredQueryAllowlist(promptInput.RequiredQueries))
@@ -997,6 +1046,29 @@ func buildAgentSDKChaptersPromptInput(input ComposeChaptersInput) composeAgentSD
 	if input.PreviousVolume != nil && strings.TrimSpace(input.PreviousVolume.ID) != "" {
 		previousID = input.PreviousVolume.ID
 	}
+	var existing strings.Builder
+	for _, chapter := range input.Volume.Chapters {
+		existing.WriteString(formatChapterBrief(chapter))
+	}
+	chapterStart := input.ChapterStart
+	if chapterStart <= 0 {
+		chapterStart = 1
+	}
+	instructions := []string{
+		"Use the required context query to fetch compact story setup, target volume, neighboring volumes, entity index, events, and navigation.",
+		"After the brief queries, use targeted detail queries only when needed: chapter by id, events by chapter id, craft by exact name.",
+		"Do not ask for, inspect, or modify source files.",
+		fmt.Sprintf("Return exactly one volume object with exactly %d chapters numbered %d through %d.",
+			input.ChaptersPerVol,
+			chapterStart,
+			chapterStart+input.ChaptersPerVol-1),
+		"Do not invent or change project-wide facts that are absent from tool query results.",
+	}
+	if existing.Len() > 0 {
+		instructions = append(instructions,
+			"existing_chapters lists chapters already generated in earlier batches. Continue directly after the last one, preserve their facts, and return only the requested number of new chapters.",
+		)
+	}
 	return composeAgentSDKChaptersPromptInput{
 		TargetPartID:     input.Part.ID,
 		TargetVolumeID:   input.Volume.ID,
@@ -1004,15 +1076,12 @@ func buildAgentSDKChaptersPromptInput(input ComposeChaptersInput) composeAgentSD
 		VolumeIndex:      input.VolumeIndex,
 		TotalVolumes:     input.TotalVolumes,
 		ChaptersPerVol:   input.ChaptersPerVol,
+		ChapterStart:     chapterStart,
+		ChapterEnd:       chapterStart + input.ChaptersPerVol - 1,
 		PreviousVolumeID: previousID,
+		ExistingChapters: strings.TrimSpace(existing.String()),
 		RequiredQueries:  required,
-		Instructions: []string{
-			"Use the required context query to fetch compact story setup, target volume, neighboring volumes, entity index, events, and navigation.",
-			"After the brief queries, use targeted detail queries only when needed: chapter by id, events by chapter id, craft by exact name.",
-			"Do not ask for, inspect, or modify source files.",
-			"Return exactly one volume object with exactly chapters_per_volume chapters.",
-			"Do not invent or change project-wide facts that are absent from tool query results.",
-		},
+		Instructions:     instructions,
 	}
 }
 

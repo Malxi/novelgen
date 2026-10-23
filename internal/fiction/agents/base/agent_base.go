@@ -415,6 +415,27 @@ func (a *BaseAgent) chatOptions() *llm.ChatOptions {
 	return options
 }
 
+// ActiveModelLimits reports the configured context window and generation token
+// budget for the model the agent will invoke. Callers use it to size batched
+// structured outputs before sending a prompt that can exceed the model budget.
+func (a *BaseAgent) ActiveModelLimits() (contextWindow, maxOutputTokens int) {
+	if a == nil || a.config == nil || a.projectLLM == nil {
+		return 0, 0
+	}
+	options := a.chatOptions()
+	if options != nil {
+		maxOutputTokens = options.MaxTokens
+	}
+	provider := a.config.GetActiveProvider(a.projectLLM)
+	if provider == nil || options == nil {
+		return 0, maxOutputTokens
+	}
+	if model := provider.Models[options.Model]; model != nil {
+		contextWindow = model.Context
+	}
+	return contextWindow, maxOutputTokens
+}
+
 // loadSystemPromptWithSkills loads the system prompt from specified skills
 // All skills are wrapped with skill markers
 func (a *BaseAgent) loadSystemPromptWithSkills(skills []string) (string, error) {

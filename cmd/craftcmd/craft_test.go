@@ -37,6 +37,7 @@ func TestElementExtractorUsesRPGRelevantOutlineFields(t *testing.T) {
 					{Actor: "Chen Dong", Action: models.ActionAcquire, Target: "Blood Token", TargetType: models.TargetTypeItem},
 					{Actor: "Drone Guard", Action: models.ActionMove, Target: "Mine Gate", TargetType: models.TargetTypeLocation},
 					{Actor: "San Ge", Action: models.ActionMeet, Target: "Hidden Trader", TargetType: models.TargetTypeCharacter},
+					{Actor: "Chen Dong", Action: models.ActionMeet, Target: "Iron Hive", TargetType: models.TargetTypeCharacter, Context: "天监司·谢停云传命，顾照与定灯"},
 				},
 			}},
 		}},
@@ -61,6 +62,11 @@ func TestElementExtractorUsesRPGRelevantOutlineFields(t *testing.T) {
 	}
 	if !containsString(elements.Organizations, "Iron Hive") {
 		t.Fatalf("missing organization %q in %+v", "Iron Hive", elements.Organizations)
+	}
+	for _, bogus := range []string{"天监司·谢停云传命，顾照与定灯"} {
+		if containsString(elements.Locations, bogus) {
+			t.Fatalf("event context must not become a location: %+v", elements.Locations)
+		}
 	}
 }
 

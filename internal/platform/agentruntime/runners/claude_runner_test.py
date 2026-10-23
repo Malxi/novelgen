@@ -45,6 +45,41 @@ class FakeMessage:
 
 
 class ClaudeRunnerTests(unittest.IsolatedAsyncioTestCase):
+    async def test_sdk_empty_message_stream_fails_fast(self):
+        runner = load_runner()
+        fake_sdk = types.ModuleType("claude_agent_sdk")
+
+        async def fake_query(prompt, options):
+            for _ in range(10):
+                yield FakeMessage(content=None)
+
+        fake_sdk.ClaudeAgentOptions = FakeOptions
+        fake_sdk.query = fake_query
+        previous = sys.modules.get("claude_agent_sdk")
+        sys.modules["claude_agent_sdk"] = fake_sdk
+        try:
+            with unittest.mock.patch.dict(
+                os.environ,
+                {
+                    "NOVELGEN_AGENT_MAX_EMPTY_MESSAGES": "3",
+                    "NOVELGEN_AGENT_IDLE_TIMEOUT": "0",
+                },
+                clear=False,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "consecutive non-actionable messages"):
+                    await runner.run_with_claude_agent_sdk({
+                        "agent_name": "EmptyAgent",
+                        "command": "test",
+                        "user_prompt": "Respond.",
+                        "system_prompt": "System.",
+                        "options": {"model": "sonnet", "max_turns": 2},
+                    })
+        finally:
+            if previous is None:
+                sys.modules.pop("claude_agent_sdk", None)
+            else:
+                sys.modules["claude_agent_sdk"] = previous
+
     def test_tool_allowlist_rejects_patch_json_placeholder_payload(self):
         runner = load_runner()
         reason = runner.tool_call_denial_reason(

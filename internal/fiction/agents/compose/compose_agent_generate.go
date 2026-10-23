@@ -5,10 +5,12 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	agentbase "novelgen/internal/fiction/agents/base"
 	"novelgen/internal/fiction/agents/prompt"
 	"strings"
+	"unicode/utf8"
 
 	"novelgen/internal/contract/story"
 	"novelgen/internal/fiction/domain/logic"
@@ -65,6 +67,7 @@ type ComposeChaptersInput struct {
 	VolumeIndex    int               `json:"volume_index" md:"volume_index" desc:"Index of current volume"`
 	TotalVolumes   int               `json:"total_volumes" md:"total_volumes" desc:"Total number of volumes"`
 	ChaptersPerVol int               `json:"chapters_per_volume" md:"chapters_per_volume" desc:"Number of chapters per volume"`
+	ChapterStart   int               `json:"chapter_start,omitempty" md:"chapter_start" desc:"1-based ordinal of the first chapter requested in this call"`
 	PreviousVolume *models.Volume    `json:"previous_volume,omitempty" md:"previous_volume,omitempty" desc:"Previous volume for continuity"`
 	OutlineContext string            `json:"outline_context" md:"outline_context" desc:"Context from previously generated outline"`
 }
@@ -102,6 +105,7 @@ type composeChaptersPromptInput struct {
 	VolumeIndex    int            `json:"volume_index" md:"volume_index" desc:"Index of current volume"`
 	TotalVolumes   int            `json:"total_volumes" md:"total_volumes" desc:"Total number of volumes"`
 	ChaptersPerVol int            `json:"chapters_per_volume" md:"chapters_per_volume" desc:"Number of chapters to generate in this call"`
+	ChapterStart   int            `json:"chapter_start,omitempty" md:"chapter_start" desc:"1-based ordinal of the first chapter requested in this call"`
 	PreviousVolume *models.Volume `json:"previous_volume,omitempty" md:"previous_volume,omitempty" desc:"Previous volume for continuity"`
 	OutlineContext string         `json:"outline_context" md:"outline_context" desc:"Context from previously generated outline"`
 }
@@ -677,18 +681,67 @@ func (a *ComposeAgent) GenerateChaptersForVolume(ctx context.Context, input Comp
 	logger.Info("Volume: %s (%d/%d)", input.Volume.Title, input.VolumeIndex, input.TotalVolumes)
 	logger.Info("Chapters to generate: %d", input.ChaptersPerVol)
 	logger.Info("Language: %s", a.base.Language())
-
-	var output ComposeChaptersOutput
-	params := agentbase.InvokeParams{
-		Skills:  []string{"compose-chapters"},
-		Command: fmt.Sprintf("generate %d chapters for this volume with proper continuity", input.ChaptersPerVol),
+	if input.ChaptersPerVol <= 0 {
+		return ComposeChaptersOutput{}, fmt.Errorf("chapters per volume must be positive")
 	}
 
+	chapters := make([]models.Chapter, 0, input.ChaptersPerVol)
+	for len(chapters) < input.ChaptersPerVol {
+		batchInput := input
+		// Keep previously generated chapters as compact continuation briefs.
+		// Re-embedding their full nested event/scene JSON would make later
+		// batches consume the context window they are trying to protect.
+		batchInput.Volume.Chapters = nil
+		if len(chapters) > 0 {
+			batchInput.OutlineContext = buildChapterContinuationContext(input.OutlineContext, chapters, input.ChaptersPerVol)
+		}
+		contextWindow, maxOutputTokens := a.base.ActiveModelLimits()
+		batchSize := composeChapterBatchSize(
+			input.ChaptersPerVol-len(chapters),
+			contextWindow,
+			maxOutputTokens,
+			estimateComposePromptTokens(a.buildChaptersPromptInput(batchInput)),
+		)
+		batchInput.ChaptersPerVol = batchSize
+		batchInput.ChapterStart = len(chapters) + 1
+		logger.Info("Generating chapter batch %d-%d of %d (window=%d output=%d prompt≈%d tokens)",
+			len(chapters)+1, len(chapters)+batchSize, input.ChaptersPerVol,
+			contextWindow, maxOutputTokens, estimateComposePromptTokens(a.buildChaptersPromptInput(batchInput)))
+
+		batchOutput, err := a.generateChapterBatch(ctx, batchInput)
+		if err != nil {
+			return ComposeChaptersOutput{}, err
+		}
+		before := len(chapters)
+		chapters = appendNewChapters(chapters, batchOutput.Chapters)
+		if len(chapters) == before {
+			return ComposeChaptersOutput{}, fmt.Errorf("chapter batch returned no new chapters at %d/%d", len(chapters), input.ChaptersPerVol)
+		}
+		if len(chapters) > input.ChaptersPerVol {
+			chapters = chapters[:input.ChaptersPerVol]
+		}
+	}
+
+	for i, chapter := range chapters {
+		if err := a.validateChapterOutput(&chapter); err != nil {
+			return ComposeChaptersOutput{}, fmt.Errorf("chapter %d invalid: %w", i+1, err)
+		}
+	}
+	logger.Info("Generated %d chapters for volume", len(chapters))
+	return ComposeChaptersOutput{Chapters: chapters}, nil
+}
+
+func (a *ComposeAgent) generateChapterBatch(ctx context.Context, input ComposeChaptersInput) (ComposeChaptersOutput, error) {
+	var output ComposeChaptersOutput
+	chapterEnd := input.ChapterStart + input.ChaptersPerVol - 1
+	params := agentbase.InvokeParams{
+		Skills:  []string{"compose-chapters"},
+		Command: fmt.Sprintf("generate chapters %d-%d (%d chapters) for this volume with proper continuity", input.ChapterStart, chapterEnd, input.ChaptersPerVol),
+	}
 	promptInput := a.buildChaptersPromptInput(input)
 	if err := a.base.Execute(ctx, params, promptInput, &output); err != nil {
 		return ComposeChaptersOutput{}, err
 	}
-
 	chapters := append([]models.Chapter(nil), output.Chapters...)
 	if len(chapters) > input.ChaptersPerVol {
 		logger.Warn("AI generated %d chapters, but %d were requested; truncating extras", len(chapters), input.ChaptersPerVol)
@@ -703,7 +756,8 @@ func (a *ComposeAgent) GenerateChaptersForVolume(ctx context.Context, input Comp
 
 		continueInput := input
 		continueInput.ChaptersPerVol = missing
-		continueInput.Volume.Chapters = append([]models.Chapter(nil), chapters...)
+		continueInput.ChapterStart = input.ChapterStart + len(chapters)
+		continueInput.Volume.Chapters = nil
 		continueInput.OutlineContext = buildChapterContinuationContext(input.OutlineContext, chapters, input.ChaptersPerVol)
 
 		continueParams := agentbase.InvokeParams{
@@ -733,17 +787,55 @@ func (a *ComposeAgent) GenerateChaptersForVolume(ctx context.Context, input Comp
 			len(chapters), input.ChaptersPerVol)
 	}
 
-	// Validate each chapter
-	for i, chapter := range chapters {
-		if err := a.validateChapterOutput(&chapter); err != nil {
-			return ComposeChaptersOutput{}, fmt.Errorf("chapter %d invalid: %w", i+1, err)
+	output.Chapters = chapters
+	return output, nil
+}
+
+const (
+	composeChapterBatchHardLimit = 8
+	composeChapterOutputTokens   = 900
+	composeOutputReserveTokens   = 1800
+)
+
+// composeChapterBatchSize keeps structured outline output comfortably below
+// both the model's generation budget and context window. The eight-chapter
+// hard cap is deliberately conservative: outline chapters carry nested events,
+// scenes, and state anchors, so raw token estimates understate JSON size.
+func composeChapterBatchSize(target, contextWindow, maxOutputTokens, promptTokens int) int {
+	if target <= 0 {
+		return 0
+	}
+	if maxOutputTokens <= 0 {
+		maxOutputTokens = 8000
+	}
+	if contextWindow > 0 {
+		contextBudget := contextWindow - promptTokens - composeOutputReserveTokens
+		if contextBudget < maxOutputTokens {
+			maxOutputTokens = contextBudget
 		}
 	}
+	usableOutput := maxOutputTokens - composeOutputReserveTokens
+	limit := usableOutput / composeChapterOutputTokens
+	if limit < 1 {
+		limit = 1
+	}
+	if limit > composeChapterBatchHardLimit {
+		limit = composeChapterBatchHardLimit
+	}
+	if target < limit {
+		return target
+	}
+	return limit
+}
 
-	output.Chapters = chapters
-	logger.Info("Generated %d chapters for volume", len(output.Chapters))
-
-	return output, nil
+func estimateComposePromptTokens(value any) int {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return 0
+	}
+	// Serialized CJK is close to one token per rune; add 20% for schema and
+	// instruction overhead that is not part of the typed prompt object.
+	return utf8.RuneCount(data) * 6 / 5
 }
 
 func (a *ComposeAgent) buildChaptersPromptInput(input ComposeChaptersInput) composeChaptersPromptInput {
@@ -754,6 +846,7 @@ func (a *ComposeAgent) buildChaptersPromptInput(input ComposeChaptersInput) comp
 		VolumeIndex:    input.VolumeIndex,
 		TotalVolumes:   input.TotalVolumes,
 		ChaptersPerVol: input.ChaptersPerVol,
+		ChapterStart:   input.ChapterStart,
 		PreviousVolume: input.PreviousVolume,
 		OutlineContext: input.OutlineContext,
 	}

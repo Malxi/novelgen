@@ -95,6 +95,9 @@ func TestBuildNovelContentFormats(t *testing.T) {
 			t.Fatalf("markdown missing %q:\n%s", want, markdown)
 		}
 	}
+	if strings.Count(markdown, "Opening") != 1 {
+		t.Fatalf("chapter title should appear exactly once in markdown:\n%s", markdown)
+	}
 	if strings.Contains(markdown, "Missing") {
 		t.Fatalf("chapters without a file must be skipped:\n%s", markdown)
 	}
@@ -111,5 +114,8 @@ func TestBuildNovelContentFormats(t *testing.T) {
 	}
 	if !strings.Contains(plain, "Body text.") {
 		t.Fatalf("txt should include the cleaned chapter body:\n%s", plain)
+	}
+	if strings.Count(plain, "Opening") != 1 {
+		t.Fatalf("chapter title should appear exactly once in txt:\n%s", plain)
 	}
 }

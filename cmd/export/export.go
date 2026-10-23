@@ -163,6 +163,9 @@ func buildNovelContent(root *store.Root, config *models.ProjectConfig, setup *mo
 			// Skip if chapter not generated
 			continue
 		}
+		// Chapter files keep their canonical "# title" heading for the editor,
+		// while the compiled export supplies the numbered chapter heading.
+		chapterContent = project.StripChapterTitle(chapterContent, chapter.Title)
 
 		// Add chapter number and title
 		chapterNum := i + 1

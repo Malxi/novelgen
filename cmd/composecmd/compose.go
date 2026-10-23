@@ -84,6 +84,8 @@ var composeGenCmd = &cobra.Command{
 
 This command reads story/setup/story_setup.json and uses AI to generate
 a hierarchical outline structure based on the predefined structure in novel.json.
+Long volumes are generated in context-budgeted chapter batches so one truncated
+JSON response cannot discard or duplicate the whole volume.
 
 Examples:
   novelgen compose gen                      # Generate using hierarchical approach with progress resume

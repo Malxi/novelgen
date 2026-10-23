@@ -155,6 +155,11 @@ cmd.ExecuteContext(ctx)     // 长流程可在安全点响应取消
 prompt/tool allowlist 与写入方式。后续新增阶段应优先把这种差异表达为显式的 mode/options，
 而不是继续增加 `WithAgentSDK` 方法对。
 
+runner 必须区分“SDK 还在工作”和“SDK 只返回空消息”。连续无可消费消息（无正文、
+结构化输出、result 或新 tool event）达到阈值，或长时间没有有效进展时，会快速失败并把
+最近消息类型写入 live log/error；阈值可用 `NOVELGEN_AGENT_MAX_EMPTY_MESSAGES` 与
+`NOVELGEN_AGENT_IDLE_TIMEOUT` 调整。这样空系统消息不会再耗尽整个 stage timeout。
+
 ### 4.2 两套技能集（用途不同，不是重复）
 
 两套技能集**用途不同、名称不重叠**，都通过 `go:embed` 打进二进制：

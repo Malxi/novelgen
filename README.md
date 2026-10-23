@@ -284,6 +284,8 @@ novelgen write pipeline --chapter P1-V1-C1 --agent-sdk
 novelgen write pipeline --chapter P1-V1-C1 --agent-sdk --agent-apply
 ```
 
+`write pipeline` 使用已有的章节、逐章评审文件、recap 和派生 DSL 作为断点：正文未改动且逐章评审不早于正文时会复用评审；评审无具体问题、recap 有效且 DSL 已存在时整章跳过。因此 `--all` 可安全重复运行，不会重审已完成章节。
+
 | Option | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
 | `--agent-sdk` | bool | false | 使用 Agent SDK 进行章节生成、改进和最终 recap 抽取，Go 仍负责校验与保存 |
@@ -314,7 +316,7 @@ novelgen write pipeline --chapter P1-V1-C1 --agent-sdk --agent-apply
 | `--volume` | string | "" | 指定卷 |
 | `--part` | string | "" | 指定部 |
 | `--max-rounds` | int | 1 | 最大改进轮数 |
-| `--min-score` | int | 70 | 最低可接受分数 (0-100) |
+| `--min-score` | int | 70 | 有具体评审问题时的分数下限（0-100；评分仅作诊断，不是发布门禁） |
 | `--concurrency` | int | 1 | 并发数 |
 | `--enable-teleport-auto-fix` | bool | true | 启用瞬移自动修复 |
 | `--enable-character-presence-auto-fix` | bool | true | 启用角色出场自动修复 |
@@ -325,6 +327,8 @@ novelgen write pipeline --chapter P1-V1-C1 --agent-sdk --agent-apply
 
 Agent SDK 小修默认保持当前章节篇幅：除非问题明确要求扩写或补字数，否则不会为了项目目标字数重写整章。对 system log / 信息差题材，日志线索、可执行判断和信息优势也计入主角成长。
 
+`--volume` 配合 `--prompt` 时，提示词只应用到已有具体评审/检查问题的章节；不会因为提供了提示词就返修整卷。需要强制处理某一章时使用 `--chapter`。
+
 **连续性/自动修复说明：**
 - 仅在 `write improve` 阶段生效。
 - `teleport` 修复会尝试补齐章节转场桥段（依赖上一章 recap）。
@@ -334,7 +338,7 @@ Agent SDK 小修默认保持当前章节篇幅：除非问题明确要求扩写�
 ```bash
 novelgen write pipeline --chapter 1       # 推荐：生成/评审/改进/recap/RPG DSL
 novelgen write pipeline --all             # 推荐：处理所有章节
-novelgen write improve --volume 1 --min-score 75  # 手动改进第1卷，低于75分则改进
+novelgen write improve --volume 1 --min-score 75  # 手动改进第1卷中有具体问题且低于75分的章节
 ```
 
 ---
@@ -383,6 +387,8 @@ novelgen export novel                     # 导出为 markdown
 novelgen export novel --format txt        # 导出为文本
 novelgen export novel --output my_book.md # 指定输出文件
 ```
+
+导出器会去掉章节文件开头与章名一致的 `# 标题`，再写唯一的“第 N 章 标题”标题，避免 Markdown/TXT 成稿出现重复章名。
 
 ---
 

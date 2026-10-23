@@ -826,6 +826,16 @@ deterministic fixers, checkpoint-like saves, recap extraction validation, RPG DS
 refresh, and final markdown writes unless `--agent-apply` is enabled for the
 validated improvement patch loop.
 
+The pipeline also uses those persisted artifacts as its resume checkpoints.
+An unchanged chapter reuses its volume review when the per-chapter full-review
+file is at least as new as the markdown. A chapter with no actionable findings,
+a valid recap, and the required chapter DSL is skipped on later `--all` runs.
+Review scores are diagnostic; medium-or-higher concrete findings decide
+revision, while `--min-score` is only a secondary floor for chapters that
+already contain findings. For `write improve`, a volume-scoped `--prompt`
+narrows the repair text to those chapters and does not force the whole volume
+through improvement.
+
 `write improve --agent-sdk` keeps the existing review, chapter selection,
 deterministic fixer, and save flow, but routes each suggestion-based prose
 rewrite through the Agent SDK `write-improve-workflow`. The agent gets the

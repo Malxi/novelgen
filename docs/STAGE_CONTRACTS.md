@@ -411,6 +411,14 @@ Required invariants:
 - Part and volume counts match `ProjectConfig.Structure`.
 - Complete outlines have each volume's chapter count matching
   `ProjectConfig.Structure.TargetChapters`.
+- Chat and Agent SDK chapter generation must split a volume into multiple
+  structured-output calls when the configured context window or generation
+  budget cannot safely hold the requested chapters. The split is deterministic
+  and conservative (currently at most eight chapters per call). Later batches
+  receive the already generated chapter briefs and must return only new
+  chapters; Go merges, deduplicates, assigns stable IDs, and validates the final
+  volume. JSON repair remains a fallback for malformed output, not the primary
+  mechanism for handling long outlines.
 - In-progress hierarchical outlines may have empty `Volume.Chapters` for
   not-yet-generated volumes. Downstream stages that require chapters must skip
   or reject those empty volumes; `compose improve` improves only generated
@@ -559,9 +567,13 @@ Required invariants:
   produced by `craft gen` from explicit outline factions and faction-like setup
   storylines, then refined by `craft improve`. Missing
   `organizations.json` remains valid for older projects.
-- Craft extraction scans chapter characters, scenes, enemies, `state_anchor`,
-  typed event actors/targets via `Event` accessors, and `resource_ledger` so
-  RPG-relevant elements are not missed.
+- Craft extraction scans only explicit entity-bearing outline fields:
+  `Chapter.Characters`, `Chapter.Location`, scenes, enemies, `state_anchor`,
+  typed event actors/targets via `Event` accessors, and `resource_ledger`.
+  Free-text `Event.Context`, results, descriptions, and beat prose are not
+  entity sources. This prevents phrases such as narrative action/context text
+  from becoming characters or locations. Extracted names are deduplicated
+  case-insensitively while preserving their first display spelling.
 - Outline events that reference premise/ability targets should resolve to
   `StorySetup.Premises[]` names or progression stage names. Missing references
   are reported by `craft gen` as setup gaps; craft does not create a separate
@@ -657,12 +669,27 @@ Required invariants:
   state.
 - Review/improve should preserve chapter identity and should not silently write
   results for a different chapter ID.
-- `write pipeline --min-score` is the single CLI threshold for pipeline
-  `NeedsRevision` decisions and post-improvement early stopping. It is expressed
-  as 0-100 on the CLI, matching `models.ReviewResult.OverallScore`. Compatibility
-  volume review files may still store old 1-10 scores; write improve normalizes
-  them to percent before comparing. New write review compatibility files store
-  percent scores.
+- Review scores are diagnostic. Medium-or-higher concrete suggestions and
+  continuity issues decide whether a chapter needs revision; `--min-score` is a
+  secondary floor that can select a chapter only when review findings also
+  exist. A low score with no findings must not rewrite a chapter, and a high
+  score must not suppress a concrete finding. Compatibility volume review files
+  may still store old 1-10 scores; write improve normalizes them to percent when
+  displaying or applying that secondary floor. New write review compatibility
+  files store percent scores.
+- `write pipeline` is resumable from canonical artifacts. A chapter's persisted
+  volume review is reusable when its per-chapter full-review file is at least as
+  new as the saved chapter markdown. A chapter is complete when that review has
+  no actionable findings, its recap passes the minimal recap gate, and the
+  required chapter DSL artifact exists and is at least as new as the chapter.
+  Completed chapters are skipped;
+  interrupted runs continue from the first missing or stale artifact instead of
+  re-reviewing earlier chapters.
+- A volume-scoped `write improve --prompt` applies only to chapters already
+  selected by concrete review/check findings. Only an explicit `--chapter`
+  target forces a chapter through improvement regardless of findings. After
+  each improvement round, including the final round, write persists a fresh
+  review so the next batch invocation does not act on pre-improvement findings.
 - Batch write commands must surface chapter-level generation, review, improve,
   save, and final recap failures as command errors instead of reporting overall
   success after skipped failed chapters.

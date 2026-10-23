@@ -400,9 +400,6 @@ func (e *ElementExtractor) Extract() *ExtractedElements {
 					if isItemAction(event.GetAction()) && event.GetTarget() != "" && event.GetTargetType() == "" {
 						addExtractedName(event.GetTarget(), itemMap, &result.Items)
 					}
-					if event.Context != "" {
-						addExtractedName(event.Context, locMap, &result.Locations)
-					}
 				}
 			}
 		}
@@ -496,10 +493,11 @@ func addKnownAbilityRef(ref string, known map[string]bool) {
 
 func addExtractedName(name string, seen map[string]bool, out *[]string) {
 	name = cleanExtractedName(name)
-	if name == "" || seen[name] {
+	key := normalizedExtractedNameKey(name)
+	if name == "" || key == "" || seen[key] {
 		return
 	}
-	seen[name] = true
+	seen[key] = true
 	*out = append(*out, name)
 }
 
@@ -515,6 +513,10 @@ func cleanExtractedName(name string) string {
 		}
 	}
 	return name
+}
+
+func normalizedExtractedNameKey(name string) string {
+	return strings.ToLower(strings.Join(strings.Fields(name), " "))
 }
 
 func isItemAction(action string) bool {

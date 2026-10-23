@@ -245,7 +245,19 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
 
     async def consume() -> Dict[str, Any]:
         nonlocal assistant_text, final_result, final_structured, usage, session_id
-        async for message in query(prompt=sdk_prompt, options=options):
+        non_actionable_streak = 0
+        recent_message_types: list[str] = []
+        last_progress_at = _time.monotonic()
+        tool_event_cursor = 0
+        idle_timeout = agent_idle_timeout(invocation)
+        max_empty_messages = agent_max_empty_messages()
+        iterator = query(prompt=sdk_prompt, options=options).__aiter__()
+        while True:
+            try:
+                message = await iterator.__anext__()
+            except StopAsyncIteration:
+                break
+
             structured = extract_message_value(message, "structured_output")
             if structured is not None:
                 structured = repair_encoding_value(structured)
@@ -265,6 +277,51 @@ async def run_with_claude_agent_sdk(invocation: Dict[str, Any]) -> Dict[str, Any
             if message_session_id:
                 session_id = str(message_session_id)
             live_log.write("message", summarize_live_message(message, message_text, structured, result, message_usage))
+
+            message_type = type(message).__name__
+            subtype = str(extract_message_value(message, "type") or "").strip()
+            recent_message_types.append(f"{message_type}:{subtype}" if subtype else message_type)
+            recent_message_types = recent_message_types[-8:]
+            has_new_tool_event = len(tool_events) > tool_event_cursor
+            tool_event_cursor = len(tool_events)
+            actionable = bool(
+                message_text.strip()
+                or structured is not None
+                or result not in (None, "")
+                or has_new_tool_event
+            )
+            if actionable:
+                non_actionable_streak = 0
+                last_progress_at = _time.monotonic()
+                continue
+
+            non_actionable_streak += 1
+            if non_actionable_streak >= max_empty_messages:
+                detail = (
+                    f"Claude Agent SDK produced {non_actionable_streak} consecutive non-actionable messages "
+                    f"without assistant text, structured output, result, or tool events; "
+                    f"recent message types: {', '.join(recent_message_types)}"
+                )
+                live_log.write("error", {
+                    "type": "EmptySDKProgress",
+                    "detail": detail,
+                    "non_actionable_messages": non_actionable_streak,
+                    "recent_message_types": recent_message_types,
+                })
+                raise RuntimeError(detail)
+            if idle_timeout is not None and _time.monotonic() - last_progress_at > idle_timeout:
+                detail = (
+                    f"Claude Agent SDK made no actionable progress for {idle_timeout}s "
+                    f"after {non_actionable_streak} non-actionable message(s); "
+                    f"recent message types: {', '.join(recent_message_types)}"
+                )
+                live_log.write("error", {
+                    "type": "StalledSDKProgress",
+                    "detail": detail,
+                    "non_actionable_messages": non_actionable_streak,
+                    "recent_message_types": recent_message_types,
+                })
+                raise RuntimeError(detail)
 
         if final_structured is not None:
             text = encode_content(final_structured)
@@ -350,6 +407,29 @@ def agent_runner_deadline(invocation: Dict[str, Any]) -> Optional[float]:
     if timeout <= 0:
         return None
     return float(min(timeout, max(timeout - 60, 60)))
+
+
+def agent_idle_timeout(invocation: Dict[str, Any]) -> Optional[float]:
+    raw = os.getenv("NOVELGEN_AGENT_IDLE_TIMEOUT", "300")
+    try:
+        seconds = float(raw)
+    except (TypeError, ValueError):
+        seconds = 300.0
+    if seconds <= 0:
+        return None
+    overall = agent_runner_deadline(invocation)
+    if overall is not None:
+        seconds = min(seconds, overall)
+    return seconds
+
+
+def agent_max_empty_messages() -> int:
+    raw = os.getenv("NOVELGEN_AGENT_MAX_EMPTY_MESSAGES", "24")
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = 24
+    return max(value, 1)
 
 
 def run_with_anthropic_http(invocation: Dict[str, Any]) -> Dict[str, Any]:

@@ -58,15 +58,17 @@ func TestGetWriteChaptersNeedingImprovementUsesPercentThreshold(t *testing.T) {
 					{ID: "P1-V1-C1", Title: "Legacy 7"},
 					{ID: "P1-V1-C2", Title: "Percent 74"},
 					{ID: "P1-V1-C3", Title: "Percent 85"},
+					{ID: "P1-V1-C4", Title: "Low score without findings"},
 				},
 			}},
 		}},
 	}
 	review := &agents.VolumeReview{
 		Reviews: []agents.DraftReview{
-			{ChapterID: "P1-V1-C1", OverallScore: 7},
-			{ChapterID: "P1-V1-C2", OverallScore: 74},
+			{ChapterID: "P1-V1-C1", OverallScore: 7, NeedsRevision: true, Suggestions: []string{"[high] continuity: repair the opening"}},
+			{ChapterID: "P1-V1-C2", OverallScore: 74, Suggestions: []string{"[medium] pace: tighten the middle"}},
 			{ChapterID: "P1-V1-C3", OverallScore: 85},
+			{ChapterID: "P1-V1-C4", OverallScore: 45},
 		},
 	}
 
@@ -76,5 +78,21 @@ func TestGetWriteChaptersNeedingImprovementUsesPercentThreshold(t *testing.T) {
 	}
 	if chapters[0].ID != "P1-V1-C1" || chapters[1].ID != "P1-V1-C2" {
 		t.Fatalf("unexpected chapters needing improvement: %#v", chapters)
+	}
+}
+
+func TestReviewResultRequiresRevisionUsesFindingsNotScoreAlone(t *testing.T) {
+	if writecmd.ReviewResultRequiresRevision(models.ReviewResult{OverallScore: 35}) {
+		t.Fatal("a score without findings must not force a rewrite")
+	}
+	review := models.ReviewResult{
+		OverallScore: 94,
+		Suggestions: []models.ReviewSuggestion{{
+			Priority: models.PriorityHigh,
+			Issue:    "The chapter contradicts the established timeline.",
+		}},
+	}
+	if !writecmd.ReviewResultRequiresRevision(review) {
+		t.Fatal("a high-priority finding must force a rewrite even with a high score")
 	}
 }

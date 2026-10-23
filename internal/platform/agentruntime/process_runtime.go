@@ -132,7 +132,15 @@ func (r *ProcessRuntime) Invoke(ctx context.Context, invocation Invocation) (*Re
 		return nil, fmt.Errorf("failed to parse agent runner result: %w; stdout=%s; stderr=%s", err, trimRunnerDetail(stdout.String()), trimRunnerDetail(stderr.String()))
 	}
 	if strings.TrimSpace(result.Content) == "" {
-		return nil, fmt.Errorf("agent runner returned empty content; stderr=%s", trimRunnerDetail(stderr.String()))
+		result.LiveLogPath = invocation.LiveLogPath
+		summary := summarizeLiveLog(invocation.LiveLogPath)
+		messageCount, eventCount := 0, 0
+		if summary != nil {
+			messageCount = summary.Messages
+			eventCount = summary.Events
+		}
+		return nil, fmt.Errorf("agent runner returned empty content (messages=%d, events=%d, live_log=%s); stderr=%s",
+			messageCount, eventCount, invocation.LiveLogPath, trimRunnerDetail(stderr.String()))
 	}
 	result.LiveLogPath = invocation.LiveLogPath
 	result.LiveSummary = summarizeLiveLog(invocation.LiveLogPath)
