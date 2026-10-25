@@ -42,7 +42,7 @@ var storylineArchetypes = map[string][]storylineArchetype{
 			Opposition:           "{antagonist}利用吊销权逼迫买家交出名单。",
 			Turn:                 "黑市副本比正本更早记录了{hidden}。",
 			Payoff:               "{protagonist}让黑市渠道成为公开审计入口，使{issuer}无法继续独占解释权。",
-			LinkedRoles:          []string{"ally", "antagonist"},
+			LinkedRoles:          []string{"protagonist", "ally", "antagonist"},
 			LinkedItemCategories: []string{"commodity", "credential"},
 		},
 		{
@@ -64,7 +64,7 @@ var storylineArchetypes = map[string][]storylineArchetype{
 			Opposition:           "{antagonist}以程序合法为由完成债务转移。",
 			Turn:                 "缺失的联合签名可以让债务回到签发者身上。",
 			Payoff:               "{protagonist}公开转移链，让{issuer}自己成为最后债务人。",
-			LinkedRoles:          []string{"ally", "antagonist"},
+			LinkedRoles:          []string{"protagonist", "ally", "antagonist"},
 			LinkedItemCategories: []string{"credential", "prop"},
 		},
 	},
