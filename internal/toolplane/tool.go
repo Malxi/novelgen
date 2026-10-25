@@ -35,6 +35,8 @@ var ToolQueryFlags struct {
 	Select         int
 	Source         string
 	Category       string
+	Intent         string
+	MaxChars       int
 }
 
 var ToolProcessStartedAt = time.Now()
@@ -76,11 +78,11 @@ var toolQuerySectionTypes = map[string][]string{
 	"story-setup": {"all", "index", "search", "storyline", "premise", "core-cast", "resource", "timeline", "rules", "long-form-plan"},
 	"outline":     {"all", "part", "volume", "chapter", "refs", "events"},
 	"craft":       {"all", "character", "item", "location", "organization"},
-	"chapter":     {"all", "refs", "events"},
+	"chapter":     {"all", "refs", "events", "paragraphs"},
 	"context": {
 		"craft-character", "craft-item", "craft-location", "craft-organization",
 		"outline-volume", "outline-repair", "outline-global-repair",
-		"recap-repair", "chapter-write", "chapter-repair",
+		"recap-repair", "chapter-write", "chapter-repair", "narrative-memory",
 	},
 	"ideas": {"provocation", "axiom", "event", "law", "scenario", "engine", "worldpack", "premise", "storyline", "cast", "namecard", "resource", "itemcard", "reference", "name"},
 	"logs":  {"prompts", "responses", "agent-live"},
@@ -100,6 +102,8 @@ func toolQueryLongHelp() string {
 	}
 	b.WriteString("\n--view index is route-only (ids/titles/counts); brief is the default; full is for one precise object.")
 	b.WriteString("\n--fields projects fields, --limit applies to list results, and exact --id/--name narrows the target.")
+	b.WriteString("\ncontext --type narrative-memory combines a deterministic story graph, BM25/CJK retrieval and optional vectors.")
+	b.WriteString("\n--intent and --max-chars apply only to narrative-memory context queries.")
 	return b.String()
 }
 
@@ -172,11 +176,13 @@ var ToolQueryCmd = &cobra.Command{
   novelgen tool query outline --type events --entity-type item --name "Star Core"
   novelgen tool query craft --type character --name Lin
   novelgen tool query context --type craft-character --name Lin
+  novelgen tool query context --type narrative-memory --id P1-V1-C8 --intent chapter-write
   novelgen tool query ideas --type axiom --genre 仙侠 --mode wild --seed 42 --count 5
   novelgen tool query ideas --type worldpack --genre 科幻 --seed 42 --count 3 --source 星战
   novelgen tool query ideas --type storyline --genre 科幻 --seed 42 --count 3
   novelgen tool query logs --view index
   novelgen tool query chapter --id chap_001 --content
+  novelgen tool query chapter --type paragraphs --id chap_001 --view brief
   novelgen tool query chapter --entity-type location --name "Mine"`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runToolQuery,
@@ -219,7 +225,9 @@ section is patched:
   craft     --target character|item|location|organization (required), --id <element key>
   setup     no --id, no --target; the patch merges into the typed story setup
   recap     no --target; --id <chapter id>
-  chapter   no --target; --id <chapter id> with {"content":"..."}; runs the
+  chapter   no --target; --id <chapter id> with either {"content":"..."} for a
+            full replacement or {"expected_content_sha256":"...",
+            "paragraph_edits":[...]} for a minimal saved-chapter edit; runs the
             deterministic chapter check, and with --refresh-derived also
             rebuilds the chapter RPG DSL
 
@@ -237,21 +245,24 @@ var ToolPatchBufferCmd = &cobra.Command{
 	Short: "Manage a novelgen-owned temporary patch buffer",
 	Long: `Manage a novelgen-owned temporary patch buffer.
 
-This command exists for agent workflows that need to pass long chapter text to
-tool patch without shell temp files or very long --patch-json arguments. It
-stores text under .novelgen/agent-patches and does not mutate story state.`,
+This command exists for agent workflows that need to pass long chapter text or
+a complete chapter patch JSON object to tool patch without shell temp files or
+very long --patch-json arguments. It stores text under .novelgen/agent-patches
+and does not mutate story state.`,
 	Args: cobra.ExactArgs(1),
 	RunE: RunToolPatchBuffer,
 }
 
 var ToolRefreshCmd = &cobra.Command{
-	Use:   "refresh [chapter-dsl]",
+	Use:   "refresh [chapter-dsl|narrative-memory]",
 	Short: "Refresh derived project artifacts for agent workflows",
 	Long: `Refresh derived project artifacts for agent workflows.
 
 Refresh commands are explicit mutating tools. They do not edit story source
 state such as setup, outline, craft, recaps, or chapter markdown; they rebuild
-derived files that downstream checks consume.`,
+derived files that downstream checks and retrieval consume. Use
+chapter-dsl for one chapter's RPG DSL and narrative-memory for the
+rebuildable story graph, BM25 index metadata and optional scene vectors.`,
 	Args: cobra.ExactArgs(1),
 	RunE: RunToolRefresh,
 }
@@ -314,7 +325,9 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 	case "chapter":
 		resp = queryChapterSection(ctx, queryType, queryID, ToolQueryFlags.EntityType, queryName, queryChapterID, queryVolumeID, ToolQueryFlags.IncludeContent)
 	case "context":
-		resp = QueryContext(ctx, queryType, queryID, queryName)
+		resp = QueryContextWithOptions(ctx, queryType, queryID, queryName, QueryContextOptions{
+			Intent: ToolQueryFlags.Intent, Limit: ToolQueryFlags.Limit, MaxChars: ToolQueryFlags.MaxChars,
+		})
 	case "ideas":
 		resp, queryErr = QueryIdeas(queryType, ToolQueryFlags.Genre, ToolQueryFlags.Level, ToolQueryFlags.Mode, ToolQueryFlags.Seed, ToolQueryFlags.Count, ToolQueryFlags.Select, ToolQueryFlags.Source, ToolQueryFlags.Category)
 		if queryErr != nil {
@@ -368,6 +381,8 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 		"select":      fmt.Sprintf("%d", ToolQueryFlags.Select),
 		"source":      ToolQueryFlags.Source,
 		"category":    ToolQueryFlags.Category,
+		"intent":      ToolQueryFlags.Intent,
+		"max_chars":   fmt.Sprintf("%d", ToolQueryFlags.MaxChars),
 	}
 	if section == "ideas" {
 		for _, key := range []string{"genre", "level", "mode"} {
@@ -423,6 +438,8 @@ func init() {
 	ToolQueryCmd.Flags().IntVar(&ToolQueryFlags.Select, "select", 0, "Scenario cards: select this many diverse cards from a larger draw (0 = return all)")
 	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Source, "source", "", "Reference style for worldpack/premise/storyline/cast/namecard/resource/itemcard/reference: stellaris, warhammer40k, alien, starwars, nomanssky")
 	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Category, "category", "", "Item category for --type itemcard: resource, commodity, equipment, consumable, prop, vehicle, credential")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Intent, "intent", "", "Narrative memory intent: chapter-write, promise-audit, voice-echo, continuity, or all")
+	ToolQueryCmd.Flags().IntVar(&ToolQueryFlags.MaxChars, "max-chars", 0, "Narrative memory scene-text budget in characters (default 4000)")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Target, "target", "outline",
 		"Check target: outline, setup, craft, chapter, or recap; craft requires kind schema")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Scope, "scope", "all",

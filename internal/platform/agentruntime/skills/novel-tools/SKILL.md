@@ -12,7 +12,8 @@ description: Novelgen 项目查询、检查和受控 patch 工具的使用规则
 - `novelgen tool query story-setup`：查询故事设定。
 - `novelgen tool query outline`：查询大纲、卷、章节、角色/物品/地点关联章节。
 - `novelgen tool query craft`：查询角色、物品、地点、组织 craft。
-- `novelgen tool query chapter`：查询章节正文或章节上下文。
+- `novelgen tool query chapter`：查询章节正文、事件或带哈希的段落块。
+- `novelgen tool query context --type narrative-memory`：按目标章检索故事图、前文场景、开放承诺和可选向量结果。
 - `novelgen tool query ideas`：生成可复现的随机挑衅、场景卡、制度引擎、参考风格卡、角色姓名卡、物品卡与相容世界卡包；需要成套设定时使用 `--type worldpack`，剧情卡从三类槽位的原型池抽取并绑定同包人物与物品。
 - `novelgen tool check ...`：运行 schema、quality、simulation 检查。
 - `novelgen tool patch ...`：dry-run 或受控 apply patch。
@@ -24,4 +25,6 @@ description: Novelgen 项目查询、检查和受控 patch 工具的使用规则
 - 不要使用 shell 重定向或 `2>&1`。
 - 只在 workflow 明确允许时使用 `--apply`。
 - patch 前先 dry-run；apply 后必须运行对应 check。
+- 已有章节只需小改时，查询 `chapter --type paragraphs` 并用 `paragraph_edits`；全章创建或重写才提交完整 `content`。
+- `tool refresh narrative-memory` 重建派生检索缓存；索引缺失或过期时查询会自动在内存中重建。
 - 最终只输出 JSON，不输出 Markdown 或解释。

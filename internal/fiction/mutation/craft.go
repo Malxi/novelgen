@@ -85,6 +85,7 @@ func runCraftMutationLocked(root *store.Root, target, id string, patchBytes []by
 		}
 		files["craft"] = path
 		files["checkpoint"] = checkpointPath
+		warnings = markMemoryDirtyAfterWrite(root, "craft:"+target+":"+key, warnings)
 	}
 
 	ok = !check.Blocking || !opts.Validate
@@ -214,6 +215,7 @@ func runCraftBulkMutation(root *store.Root, kind store.CraftKind, elements map[s
 			}
 			files["craft"] = path
 			files["checkpoint"] = checkpointPath
+			warnings = markMemoryDirtyAfterWrite(root, "craft:"+string(kind), warnings)
 		}
 		ok := !check.Blocking || !opts.Validate
 		result = &ToolPatchResult{

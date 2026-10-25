@@ -15,8 +15,17 @@ import (
 )
 
 type toolChapterPatch struct {
-	ID      string `json:"id,omitempty"`
-	Content string `json:"content"`
+	ID                    string                     `json:"id,omitempty"`
+	Content               string                     `json:"content,omitempty"`
+	ExpectedContentSHA256 string                     `json:"expected_content_sha256,omitempty"`
+	ParagraphEdits        []toolChapterParagraphEdit `json:"paragraph_edits,omitempty"`
+}
+
+type toolChapterParagraphEdit struct {
+	Op             string `json:"op"`
+	Index          int    `json:"index"`
+	ExpectedSHA256 string `json:"expected_sha256"`
+	Text           string `json:"text,omitempty"`
 }
 
 func runChapterMutation(ctx context.Context, root *store.Root, id string, patchBytes []byte, opts MutationOptions, warnings []string) (*ToolPatchResult, error) {
@@ -61,13 +70,6 @@ func runChapterMutationLocked(ctx context.Context, root *store.Root, id string, 
 	if strings.TrimSpace(patch.ID) != "" && strings.TrimSpace(patch.ID) != id {
 		return nil, fmt.Errorf("patch id %q does not match target chapter %q", patch.ID, id)
 	}
-	content := NormalizeChapterPatchContent(chapter, patch.Content)
-	if strings.TrimSpace(content) == "" {
-		return nil, fmt.Errorf("chapter patch content is required")
-	}
-	if err := utils.ValidateNoSuspiciousPatchText(content); err != nil {
-		return nil, fmt.Errorf("chapter patch rejected: %w", err)
-	}
 	targetWords := opts.TargetWords
 	if targetWords <= 0 {
 		targetWords = toolChapterTargetWords(root)
@@ -76,19 +78,19 @@ func runChapterMutationLocked(ctx context.Context, root *store.Root, id string, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to read chapter %s: %w", id, err)
 	}
+	content, changes, patchMeta, err := applyToolChapterPatch(chapter, id, beforeContent, beforePath, patch)
+	if err != nil {
+		return nil, err
+	}
+	if err := utils.ValidateNoSuspiciousPatchText(content); err != nil {
+		return nil, fmt.Errorf("chapter patch rejected: %w", err)
+	}
 	if opts.Validate {
 		if err := ValidateToolChapterPatchLength(chapter, content, targetWords, beforeContent); err != nil {
 			return nil, fmt.Errorf("chapter patch rejected: %w", err)
 		}
 	}
 
-	changes := []ToolPatchChange{{
-		Path:   "chapter." + id + ".content",
-		Action: "update",
-	}}
-	if beforePath == "" {
-		changes[0].Action = "create"
-	}
 	if beforePath != "" && content == beforeContent {
 		warnings = append(warnings, "chapter content is unchanged")
 	}
@@ -184,6 +186,9 @@ func runChapterMutationLocked(ctx context.Context, root *store.Root, id string, 
 			nextActions = BuildChapterPatchNextActions(id, opts.Apply, refreshedDerived, check)
 		}
 	}
+	if opts.Apply {
+		warnings = markMemoryDirtyAfterWrite(root, "chapter:"+id, warnings)
+	}
 
 	ok := postApplyError == ""
 	if ok && opts.Validate && check != nil {
@@ -201,19 +206,197 @@ func runChapterMutationLocked(ctx context.Context, root *store.Root, id string, 
 		Warnings:    warnings,
 		NextActions: nextActions,
 		Meta: map[string]interface{}{
-			"project_root":           root.Dir(),
-			"previous_content_path":  beforePath,
-			"previous_content_bytes": len(beforeContent),
-			"content_bytes":          len(content),
-			"refresh_derived":        refreshedDerived,
-			"mode":                   string(opts.Mode),
-			"source":                 opts.Source,
+			"project_root":            root.Dir(),
+			"previous_content_path":   beforePath,
+			"previous_content_bytes":  len(beforeContent),
+			"content_bytes":           len(content),
+			"previous_content_sha256": project.ChapterContentSHA256(beforeContent),
+			"content_sha256":          project.ChapterContentSHA256(content),
+			"refresh_derived":         refreshedDerived,
+			"mode":                    string(opts.Mode),
+			"source":                  opts.Source,
 		},
+	}
+	for key, value := range patchMeta {
+		result.Meta[key] = value
 	}
 	if postApplyError != "" {
 		result.Meta["post_apply_error"] = postApplyError
 	}
 	return &result, nil
+}
+
+func applyToolChapterPatch(chapter *models.Chapter, chapterID, beforeContent, beforePath string, patch toolChapterPatch) (string, []ToolPatchChange, map[string]interface{}, error) {
+	hasContent := strings.TrimSpace(patch.Content) != ""
+	hasParagraphEdits := len(patch.ParagraphEdits) > 0
+	if hasContent == hasParagraphEdits {
+		return "", nil, nil, fmt.Errorf("chapter patch requires exactly one of content or paragraph_edits")
+	}
+
+	currentSHA := project.ChapterContentSHA256(beforeContent)
+	if expected := strings.TrimSpace(patch.ExpectedContentSHA256); expected != "" && expected != currentSHA {
+		return "", nil, nil, fmt.Errorf(
+			"chapter %s changed since the patch was prepared: expected content sha256 %s, current %s; query paragraph hashes again",
+			chapterID, expected, currentSHA,
+		)
+	}
+
+	if hasContent {
+		content := NormalizeChapterPatchContent(chapter, patch.Content)
+		if strings.TrimSpace(content) == "" {
+			return "", nil, nil, fmt.Errorf("chapter patch content is required")
+		}
+		change := ToolPatchChange{Path: "chapter." + chapterID + ".content", Action: "update"}
+		if beforePath == "" {
+			change.Action = "create"
+		}
+		return content, []ToolPatchChange{change}, map[string]interface{}{
+			"patch_mode":              "content",
+			"paragraph_edit_count":    0,
+			"expected_content_sha256": strings.TrimSpace(patch.ExpectedContentSHA256),
+		}, nil
+	}
+
+	if strings.TrimSpace(beforePath) == "" {
+		return "", nil, nil, fmt.Errorf("paragraph_edits require an existing chapter manuscript; use content when creating chapter %s", chapterID)
+	}
+	expectedContentSHA := strings.TrimSpace(patch.ExpectedContentSHA256)
+	if expectedContentSHA == "" {
+		return "", nil, nil, fmt.Errorf("paragraph_edits require expected_content_sha256 from tool query chapter --type paragraphs")
+	}
+
+	content, changes, err := applyChapterParagraphEdits(chapterID, beforeContent, patch.ParagraphEdits)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("chapter paragraph patch rejected: %w", err)
+	}
+	content = NormalizeChapterPatchContent(chapter, content)
+	if strings.TrimSpace(content) == "" {
+		return "", nil, nil, fmt.Errorf("chapter paragraph patch produced empty content")
+	}
+	return content, changes, map[string]interface{}{
+		"patch_mode":              "paragraphs",
+		"paragraph_edit_count":    len(patch.ParagraphEdits),
+		"expected_content_sha256": expectedContentSHA,
+	}, nil
+}
+
+func applyChapterParagraphEdits(chapterID, beforeContent string, edits []toolChapterParagraphEdit) (string, []ToolPatchChange, error) {
+	paragraphs := project.SplitChapterParagraphs(beforeContent)
+	if len(paragraphs) == 0 {
+		return "", nil, fmt.Errorf("chapter %s has no paragraphs to edit", chapterID)
+	}
+
+	type editGroup struct {
+		replace    []string
+		replaceSet bool
+		delete     bool
+		before     [][]string
+		after      [][]string
+	}
+	groups := make(map[int]*editGroup, len(edits))
+	changes := make([]ToolPatchChange, 0, len(edits))
+	for _, edit := range edits {
+		op := strings.ToLower(strings.TrimSpace(edit.Op))
+		switch op {
+		case "replace", "delete", "insert_before", "insert_after":
+		default:
+			return "", nil, fmt.Errorf("unsupported paragraph edit op %q; valid ops: replace, delete, insert_before, insert_after", edit.Op)
+		}
+		if edit.Index < 1 || edit.Index > len(paragraphs) {
+			return "", nil, fmt.Errorf("paragraph index %d is out of range 1..%d", edit.Index, len(paragraphs))
+		}
+		anchor := paragraphs[edit.Index-1]
+		if anchor.Kind == "heading" {
+			return "", nil, fmt.Errorf("paragraph %d is the chapter heading; edit the chapter title through outline, not prose paragraph_edits", edit.Index)
+		}
+		expected := strings.TrimSpace(edit.ExpectedSHA256)
+		if expected == "" {
+			return "", nil, fmt.Errorf("paragraph %d requires expected_sha256 from tool query chapter --type paragraphs", edit.Index)
+		}
+		if expected != anchor.SHA256 {
+			return "", nil, fmt.Errorf("paragraph %d changed since it was queried: expected sha256 %s, current %s", edit.Index, expected, anchor.SHA256)
+		}
+
+		group := groups[edit.Index]
+		if group == nil {
+			group = &editGroup{}
+			groups[edit.Index] = group
+		}
+		switch op {
+		case "replace":
+			text := strings.TrimSpace(edit.Text)
+			if text == "" {
+				return "", nil, fmt.Errorf("paragraph %d replace requires text; use delete to remove it", edit.Index)
+			}
+			if group.replaceSet || group.delete {
+				return "", nil, fmt.Errorf("paragraph %d has conflicting replace/delete edits", edit.Index)
+			}
+			for _, replacement := range project.SplitChapterParagraphs(text) {
+				if replacement.Kind == "heading" {
+					return "", nil, fmt.Errorf("paragraph %d replacement cannot introduce a chapter heading", edit.Index)
+				}
+				group.replace = append(group.replace, replacement.Text)
+			}
+			group.replaceSet = true
+		case "delete":
+			if group.replaceSet || group.delete {
+				return "", nil, fmt.Errorf("paragraph %d has conflicting replace/delete edits", edit.Index)
+			}
+			if strings.TrimSpace(edit.Text) != "" {
+				return "", nil, fmt.Errorf("paragraph %d delete must not include text", edit.Index)
+			}
+			group.delete = true
+		case "insert_before", "insert_after":
+			text := strings.TrimSpace(edit.Text)
+			if text == "" {
+				return "", nil, fmt.Errorf("paragraph %d %s requires text", edit.Index, op)
+			}
+			blocks := project.SplitChapterParagraphs(text)
+			for _, block := range blocks {
+				if block.Kind == "heading" {
+					return "", nil, fmt.Errorf("paragraph %d %s cannot introduce a chapter heading", edit.Index, op)
+				}
+			}
+			inserted := make([]string, 0, len(blocks))
+			for _, block := range blocks {
+				inserted = append(inserted, block.Text)
+			}
+			if op == "insert_before" {
+				group.before = append(group.before, inserted)
+			} else {
+				group.after = append(group.after, inserted)
+			}
+		}
+		changes = append(changes, ToolPatchChange{
+			Path:   fmt.Sprintf("chapter.%s.paragraph[%d].%s", chapterID, edit.Index, op),
+			Action: "update",
+		})
+	}
+
+	output := make([]string, 0, len(paragraphs)+len(edits))
+	for _, paragraph := range paragraphs {
+		group := groups[paragraph.Index]
+		if group != nil {
+			for _, inserted := range group.before {
+				output = append(output, inserted...)
+			}
+		}
+		switch {
+		case group == nil:
+			output = append(output, paragraph.Text)
+		case group.delete:
+		case group.replaceSet:
+			output = append(output, group.replace...)
+		default:
+			output = append(output, paragraph.Text)
+		}
+		if group != nil {
+			for _, inserted := range group.after {
+				output = append(output, inserted...)
+			}
+		}
+	}
+	return strings.Join(output, "\n\n"), changes, nil
 }
 
 func BuildChapterPatchNextActions(chapterID string, applied bool, refreshedDerived bool, check *ToolCheckResult) []ToolNextAction {

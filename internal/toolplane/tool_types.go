@@ -5,6 +5,8 @@ package toolplane
 
 import (
 	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/memory"
+	"novelgen/internal/fiction/domain/project"
 	"time"
 )
 
@@ -46,6 +48,15 @@ type chapterHit struct {
 	ContentPath string          `json:"content_path,omitempty"`
 	Content     string          `json:"content,omitempty"`
 	Reasons     []string        `json:"reasons,omitempty"`
+}
+
+type chapterParagraphsHit struct {
+	ChapterID      string                     `json:"chapter_id"`
+	Title          string                     `json:"title,omitempty"`
+	ContentPath    string                     `json:"content_path"`
+	ContentSHA256  string                     `json:"content_sha256"`
+	ParagraphCount int                        `json:"paragraph_count"`
+	Paragraphs     []project.ChapterParagraph `json:"paragraphs"`
 }
 
 type EventHit struct {
@@ -165,6 +176,7 @@ type ChapterWriteContext struct {
 	CurrentRecap           interface{}            `json:"current_recap,omitempty"`
 	ExistingChapterExcerpt map[string]string      `json:"existing_chapter_excerpt,omitempty"`
 	CreativeHistory        *chapterWriteHistory   `json:"creative_history,omitempty"`
+	NarrativeMemory        *memory.ContextResult  `json:"narrative_memory,omitempty"`
 	EntityIndex            OutlineVolumeEntities  `json:"entity_index,omitempty"`
 	Events                 interface{}            `json:"events,omitempty"`
 	Navigation             map[string]interface{} `json:"navigation,omitempty"`
@@ -200,6 +212,7 @@ type ChapterRepairContext struct {
 	PreviousChapter        interface{}            `json:"previous_chapter,omitempty"`
 	NextChapter            interface{}            `json:"next_chapter,omitempty"`
 	ExistingChapterExcerpt map[string]string      `json:"existing_chapter_excerpt,omitempty"`
+	NarrativeMemory        *memory.ContextResult  `json:"narrative_memory,omitempty"`
 	EntityIndex            OutlineVolumeEntities  `json:"entity_index,omitempty"`
 	Events                 interface{}            `json:"events,omitempty"`
 	Navigation             map[string]interface{} `json:"navigation,omitempty"`

@@ -375,13 +375,15 @@ func (s *MutationService) CommitOutlineRaw(_ context.Context, outline *models.Ou
 		if err := root.SaveOutlineAt(path, outline); err != nil {
 			return fmt.Errorf("failed to save outline progress: %w", err)
 		}
+		warnings := markMemoryDirtyAfterWrite(root, "outline:progress", nil)
 		result = &ToolPatchResult{
-			OK:      true,
-			Applied: true,
-			DryRun:  false,
-			Target:  "outline",
-			ID:      "outline",
-			Files:   map[string]string{"outline": path},
+			OK:       true,
+			Applied:  true,
+			DryRun:   false,
+			Target:   "outline",
+			ID:       "outline",
+			Files:    map[string]string{"outline": path},
+			Warnings: warnings,
 			Meta: map[string]interface{}{
 				"project_root": root.Dir(),
 				"mode":         "progress",

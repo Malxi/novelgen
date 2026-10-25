@@ -506,7 +506,7 @@ func writeAgentSDKParams(command string, chapterID string, useHistory bool, targ
 	chapterID = strings.TrimSpace(chapterID)
 	requiredContextQuery := writeGenRequiredContextQuery(chapterID)
 	if requiredContextQuery != "" {
-		command = fmt.Sprintf("%s Before writing, run exactly this small context sanity query: `%s`. Use the typed input for chapter facts, recap, adjacent context, and next-chapter hook; do not run the plain chapter-write brief query, --view full, or any file/temp-result read.", command, requiredContextQuery)
+		command = fmt.Sprintf("%s Before writing, run exactly this focused project-state query: `%s`. Use the typed input for chapter facts, recap, adjacent context, and next-chapter hook. Use its narrative_memory must_include/promises/retrieved scenes as prior-story evidence with the supplied paragraph citations; do not treat planned events as already occurred. Do not run the plain chapter-write brief query, --view full, or any file/temp-result read.", command, requiredContextQuery)
 	}
 	if useHistory {
 		command = strings.TrimSpace(command) + " History continuation is requested: first inspect copied logs with `novelgen tool query logs --view index --limit 5`; by default use the index summaries only, and read at most one exact log brief if the index clearly shows a relevant completed prior run. Prefer prompt/response history when agent-live logs are absent. Do not read log content for chapter generation. History is reference only and must not increase target_words."
@@ -690,7 +690,7 @@ func writeImproveAgentSDKParams(command string, chapterID string, applyPatches b
 		MinCheckCalls:        1,
 	}
 	if applyPatches {
-		command += " apply_patches=true: do not run patch-buffer or patch commands until the exact focused chapter check above, including target_words when present, has completed. If the user request is conditional, exploratory, or says to keep the text when no issue is found, you may return final JSON without patching after the focused chapter/context fact query proves no edit should be made. IMPORTANT: if the focused chapter check reports zero issues (no critical/high/medium) and no concrete defect is named, YOU ARE DONE — return final JSON immediately with the current draft unchanged; do not re-query, do not re-check, do not loop. If the user request says not to modify when named characters, abilities, items, or settings are absent from project facts, verify those entities from chapter-repair/chapter-write context and exact craft-character/craft-item/craft-location queries before any patch; there is no craft-ability query. When verification fails, return the current draft unchanged and do not repair unrelated length/style/check issues. Only patch a clean chapter when the input suggestions or user request names a concrete prose defect or exact edit target; then create a minimal chapter patch, dry-run it, and apply the same validated patch with --apply --refresh-derived before returning final JSON. Never emit plans, status JSON, prose, or final JSON through Bash/printf/echo. After --apply --refresh-derived, use the returned check result directly; do not read task/tool-result temp files, run type/Get-Content/cat, run tool refresh again, or inspect saved chapter files."
+		command += " apply_patches=true: do not run patch-buffer or patch commands until the exact focused chapter check above, including target_words when present, has completed. If the user request is conditional, exploratory, or says to keep the text when no issue is found, you may return final JSON without patching after the focused chapter/context fact query proves no edit should be made. IMPORTANT: if the focused chapter check reports zero issues (no critical/high/medium) and no concrete defect is named, YOU ARE DONE — return final JSON immediately with the current draft unchanged; do not re-query, do not re-check, do not loop. If the user request says not to modify when named characters, abilities, items, or settings are absent from project facts, verify those entities from chapter-repair/chapter-write context and exact craft-character/craft-item/craft-location queries before any patch; there is no craft-ability query. When verification fails, return the current draft unchanged and do not repair unrelated length/style/check issues. Only patch a clean chapter when the input suggestions or user request names a concrete prose defect or exact edit target. Query `novelgen tool query chapter --type paragraphs --id <chapter_id> --view brief` and prefer a hash-guarded `paragraph_edits` patch for one or a few paragraphs; use full `content` only for a genuine chapter-wide rewrite or when no manuscript exists.\nDry-run the patch, then apply the same validated patch with --apply --refresh-derived before returning final JSON. Never emit plans, status JSON, prose, or final JSON through Bash/printf/echo. After --apply --refresh-derived, use the returned check result directly; do not read task/tool-result temp files, run type/Get-Content/cat, run tool refresh again, or inspect saved chapter files."
 		if targetWordCount > 0 {
 			command += fmt.Sprintf(" Because target_words=%d is active, every `novelgen tool patch chapter` dry-run and apply command must include `--target-words %d`; patch-buffer clear/append commands do not take this flag.", targetWordCount, targetWordCount)
 		}
@@ -747,7 +747,7 @@ func writeGenRequiredContextQuery(chapterID string) string {
 	if chapterID == "" {
 		return ""
 	}
-	return toolcmd.QueryContext(toolcmd.QueryOptions{Type: "chapter-write", ID: chapterID, Fields: "path,navigation,stats,warnings", View: "brief"})
+	return toolcmd.QueryContext(toolcmd.QueryOptions{Type: "chapter-write", ID: chapterID, Fields: "path,navigation,narrative_memory,stats,warnings", View: "brief"})
 }
 
 func writeImproveToolAllowlist(chapterID string, applyPatches bool, targetWords ...int) []string {
@@ -764,6 +764,7 @@ func writeImproveToolAllowlist(chapterID string, applyPatches bool, targetWords 
 			toolcmd.QueryChapter(toolcmd.QueryOptions{ID: chapterID, View: "brief"}),
 			toolcmd.QueryChapter(toolcmd.QueryOptions{ID: chapterID, Content: true}),
 			toolcmd.QueryChapter(toolcmd.QueryOptions{ID: chapterID, Content: true, View: "brief"}),
+			toolcmd.QueryChapter(toolcmd.QueryOptions{Type: "paragraphs", ID: chapterID, View: "brief"}),
 			toolcmd.QueryOutline(toolcmd.QueryOptions{Type: "chapter", ID: chapterID, View: "brief"}),
 			toolcmd.Check(toolcmd.CheckOptions{Target: "outline", Scope: "chapter", ID: chapterID, MaxIssues: 8}),
 			toolcmd.ChapterCheck(chapterID, toolcmd.ChapterCheckOptions{Kind: "simulation", MaxIssues: 8}),

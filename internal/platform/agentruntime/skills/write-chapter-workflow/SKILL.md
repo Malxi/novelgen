@@ -10,8 +10,10 @@ description: 使用 chapter-write 上下文生成单章正文 JSON。
 ## 必须执行
 
 - 先查询调用方指定的 `chapter-write` 小型确认包：
-  `novelgen tool query context --type chapter-write --id "<chapter_id>" --fields path,navigation,stats,warnings --view brief`
+  `novelgen tool query context --type chapter-write --id "<chapter_id>" --fields path,navigation,narrative_memory,stats,warnings --view brief`
 - 章节事实、recap、前后文和 next-chapter hook 以调用方 typed input 为准；这个小型确认包只用于确认项目路径、相邻章节、实体名和工具策略。
+- 小型确认包中的 `narrative_memory`（由 `tool query context --type narrative-memory` 生成）提供前文场景、当前状态、开放承诺和段落引用。主动使用其中与本章人物、地点、伏笔相关的证据；不要把检索相似度当剧情重要性，也不要引用未来章节。
+- `narrative_memory.promises` 中 `overdue` / `due_this_chapter` 必须优先处理或明确延后；`upcoming_due` 只用于有节制地铺垫。若检索证据和 typed input 冲突，以 typed input 和 canonical 当前状态为准，并在不破坏本章目标时采用更保守的事实。
 - 只写当前章节，不修改 outline、setup、craft、recap、draft 或其它章节。
 - 生成模式没有 patch 权限。不要运行 `tool patch`、`patch-buffer`、`tool check`、`tool refresh`。
 - 不要运行 `novelgen tool query chapter --content`。`chapter-write` context 已经是生成正文所需的事实包。

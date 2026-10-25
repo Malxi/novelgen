@@ -98,6 +98,7 @@ func runOutlinePatchMutationLocked(root *store.Root, target, id string, patchByt
 		files["outline"] = OutlinePath
 		files["markdown"] = mdPath
 		files["checkpoint"] = checkpointPath
+		warnings = markMemoryDirtyAfterWrite(root, "outline:"+target+":"+id, warnings)
 	} else {
 		ctx.Outline = beforeOutline
 	}
@@ -201,6 +202,10 @@ func runOutlineReplaceMutationLocked(root *store.Root, outline *models.Outline, 
 	}
 
 	ok := !opts.Validate || check == nil || !check.Blocking
+	warnings := appendNoChangeWarning(nil, changes)
+	if opts.Apply {
+		warnings = markMemoryDirtyAfterWrite(root, "outline", warnings)
+	}
 	return &ToolPatchResult{
 		OK:          ok,
 		Applied:     opts.Apply,
@@ -210,7 +215,7 @@ func runOutlineReplaceMutationLocked(root *store.Root, outline *models.Outline, 
 		Changed:     changes,
 		Check:       check,
 		Files:       files,
-		Warnings:    appendNoChangeWarning(nil, changes),
+		Warnings:    warnings,
 		NextActions: buildPatchNextActions(opts.Apply, check, "novelgen tool check all --target outline --min-priority medium --max-issues 12"),
 		Meta: map[string]interface{}{
 			"project_root": root.Dir(),

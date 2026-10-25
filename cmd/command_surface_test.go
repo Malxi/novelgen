@@ -122,7 +122,7 @@ func TestCommandSurfaceKeyFlags(t *testing.T) {
 		{[]string{"write", "improve"}, []string{"agent-sdk", "agent-apply"}},
 		{[]string{"polish"}, []string{"agent-sdk"}},
 		{[]string{"tool", "patch"}, []string{"patch-json", "apply"}},
-		{[]string{"tool", "query"}, []string{"view"}},
+		{[]string{"tool", "query"}, []string{"view", "intent", "max-chars"}},
 	}
 	for _, tc := range cases {
 		cmd := root

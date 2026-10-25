@@ -33,8 +33,10 @@ description: Common Novelgen Agent SDK tool rules. Project facts may only be que
 - `tool check schema --target craft --id "<name>"` 会从 craft 文件中推断类型；不传 scope/id 时检查全部四类 craft。`tool check --target recap --id "<chapter_id>"` 默认使用 chapter scope。
 - 有 `navigation`、`workflow`、`next_actions` 时按最小下一步执行。
 - 单章修复任务优先使用 `novelgen tool query context --type chapter-repair --id "<chapter_id>" --view brief`。
-- 章节生成任务只能使用 `novelgen tool query context --type chapter-write --id "<chapter_id>" --fields path,navigation,stats,warnings --view brief`；正文事实来自调用方 typed input，不要再查询普通 brief/full 或已保存章节正文。
+- 章节生成任务只能使用 `novelgen tool query context --type chapter-write --id "<chapter_id>" --fields path,navigation,narrative_memory,stats,warnings --view brief`；正文事实来自调用方 typed input，不要再查询普通 brief/full 或已保存章节正文。
+- `chapter-write` 和 `chapter-repair` 会自带 `narrative_memory`：先读其中的 `must_include`、到期承诺和带段落引用的 retrieved scenes。它是已发生正文的检索证据，不是新 canon；不要把 retrieval score 当情节权重。需要单独查记忆时使用 `novelgen tool query context --type narrative-memory --id "<chapter_id>" --intent chapter-write|promise-audit|voice-echo|continuity`。
 - 只有章节 review/improve/repair 等明确需要检查已有草稿的任务，才使用 `novelgen tool query chapter --id "<chapter_id>" --content --view brief`；brief 现在会返回 `content` 和 `content_path`，不要用 shell 读 `chapters/` 文件。`tool query chapter --type events --id "<chapter_id>"` 也按章节过滤事件。
+- 已有章节只改少数段落时，先查询 `novelgen tool query chapter --type paragraphs --id "<chapter_id>" --view brief`。用返回的整章 `content_sha256` 和每个段落的 `sha256` 构造最小 `paragraph_edits`，不要重写未改段落。标题段由 outline 标题拥有，不要用段落补丁改标题。
 - 不要一次扫描完整 setup、outline 或所有章节。
 - 有 `meta.context_budget` 或 `check_budget` 时必须遵守；不要违反 `avoid`。
 - `tool check all` 合并 deterministic quality 和 simulation；outline/setup simulation 由 Go 内存模型执行，不调用 LLM，不依赖 `story/rpg/01_outline.rpg`。
@@ -52,6 +54,9 @@ description: Common Novelgen Agent SDK tool rules. Project facts may only be que
 - `tool patch ...` 默认 dry-run；Go 负责 merge、保留 ID、normalize、schema/quality/simulation 校验，失败即拒绝。typed patch 会拒绝未知字段；空对象会被拒绝；`changed` 为空时会返回 no-change warning，不能当作写入成功。
 - 不要运行 Python、Node、PowerShell 或 help 命令来编码 JSON；`--patch-json` 只用于很短的 ASCII-only patch。
 - 长章节正文不要放进一个巨大的 `--text` 参数；优先使用 `patch-buffer clear`，再用 `printf '%s' '<content chunk>' | novelgen tool patch-buffer append --id "<chapter_id>-draft" --stdin` 分块追加，最后用 `tool patch chapter --patch-buffer` dry-run/apply。
+- 段落补丁可把完整 JSON 对象分块写入同一个 patch buffer；对象包含 `expected_content_sha256` 和 `paragraph_edits`。不要把它再包一层 `content`。全章创建或确实需要整章重写时才使用 `{"content":"..."}`。
+- 只在明确允许 refresh 时使用 `novelgen tool refresh narrative-memory`。索引缺失或过期时普通 narrative-memory 查询会自动在内存中重建；不要为了查询先写缓存。
+- canonical setup/outline/craft/recap/chapter 写入会自动把已有记忆缓存标脏，与 `--refresh-derived` 无关；不要因为忘记 refresh flag 而重复写章节或重复刷新 DSL。需要持久缓存时才运行 `tool refresh narrative-memory`。
 - 只有当前 workflow 明确允许 apply，例如 `apply_patches=true` 且 allowlist 允许时，才可以使用 `--apply`。
 - apply 前必须先对同一目标、同一 patch 成功执行 dry-run；`--apply` 命令必须复用上一轮 dry-run 的 patch 内容，只能追加 `--apply`。
 - 不要直接写项目文件。唯一落盘入口是 workflow 授权的 `novelgen tool patch ... --apply`。

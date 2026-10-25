@@ -97,6 +97,29 @@ func makeEventHitBrief(hit EventHit, indexOnly bool) EventHitBrief {
 }
 
 func briefChapterResults(results interface{}, indexOnly bool) interface{} {
+	if hit, ok := results.(chapterParagraphsHit); ok {
+		if !indexOnly {
+			return hit
+		}
+		paragraphs := make([]map[string]interface{}, 0, len(hit.Paragraphs))
+		for _, paragraph := range hit.Paragraphs {
+			paragraphs = append(paragraphs, map[string]interface{}{
+				"index":   paragraph.Index,
+				"kind":    paragraph.Kind,
+				"sha256":  paragraph.SHA256,
+				"preview": clipToolString(paragraph.Text, 120),
+			})
+		}
+		return map[string]interface{}{
+			"chapter_id":      hit.ChapterID,
+			"title":           hit.Title,
+			"content_path":    hit.ContentPath,
+			"content_sha256":  hit.ContentSHA256,
+			"paragraph_count": hit.ParagraphCount,
+			"paragraphs":      paragraphs,
+			"index_view_hint": "Use --view brief to include paragraph text before building paragraph_edits.",
+		}
+	}
 	values, ok := results.([]chapterHit)
 	if !ok {
 		return results

@@ -18,6 +18,7 @@ novelgen tool query story-setup [flags]
 novelgen tool query outline [flags]
 novelgen tool query craft [flags]
 novelgen tool query chapter [flags]
+novelgen tool query chapter --type paragraphs --id <chapter_id> --view brief
 novelgen tool query context --type craft-character --name <character>
 novelgen tool query context --type craft-item --name <item>
 novelgen tool query context --type craft-location --name <location>
@@ -28,6 +29,7 @@ novelgen tool query context --type outline-global-repair [--name <issue_category
 novelgen tool query context --type recap-repair --id <chapter_id>
 novelgen tool query context --type chapter-write --id <chapter_id>
 novelgen tool query context --type chapter-repair --id <chapter_id> [--name <issue_category>]
+novelgen tool query context --type narrative-memory --id <chapter_id> [--intent chapter-write|promise-audit|voice-echo|continuity|all] [--name <focus>] [--max-chars 4000]
 novelgen tool query ideas --type axiom --genre 仙侠 --mode wild --seed 42 --count 5
 novelgen tool query ideas --type scenario --genre 科幻 --seed 12 --count 3
 novelgen tool query logs --type prompts|responses|agent-live [--name <agent>] [--view index|brief]
@@ -44,12 +46,14 @@ novelgen tool patch outline --target chapter|volume --id <id> --patch-json '<jso
 novelgen tool patch craft --target character|item|location|organization --id <name> --patch-json '<json>' [--apply]
 novelgen tool patch recap --id <chapter_id> --patch-json '<json>' [--apply]
 printf '%s' '{"content":"..."}' | novelgen tool patch chapter --id <chapter_id> [--apply]
+printf '%s' '{"expected_content_sha256":"<hash>","paragraph_edits":[{"op":"replace","index":3,"expected_sha256":"<hash>","text":"Lin listens before opening the door."}]}' | novelgen tool patch chapter --id <chapter_id> [--apply]
 novelgen tool patch-buffer clear --id <buffer_id>
 novelgen tool patch-buffer append --id <buffer_id> --text '<chapter text chunk>'
 printf '%s' '<chapter text chunk>' | novelgen tool patch-buffer append --id <buffer_id> --stdin
 novelgen tool patch-buffer show --id <buffer_id> [--max-chars 300]
 novelgen tool patch chapter --id <chapter_id> --patch-buffer <buffer_id> [--apply --refresh-derived]
 novelgen tool refresh chapter-dsl --id <chapter_id> [--batch-size 10]
+novelgen tool refresh narrative-memory
 ```
 
 When using `--patch-json`, pass ASCII-only JSON. Escape non-ASCII text as
@@ -168,8 +172,8 @@ the valid list, so a typo tells the agent how to correct itself:
 | `story-setup` | `all`, `index`, `search`, `storyline`, `premise`, `core-cast`, `resource`, `timeline`, `rules`, `long-form-plan` |
 | `outline` | `all`, `part`, `volume`, `chapter`, `refs`, `events` |
 | `craft` | `all`, `character`, `item`, `location`, `organization` |
-| `chapter` | `all`, `refs`, `events` |
-| `context` | `craft-character`, `craft-item`, `craft-location`, `craft-organization`, `outline-volume`, `outline-repair`, `outline-global-repair`, `recap-repair`, `chapter-write`, `chapter-repair` |
+| `chapter` | `all`, `refs`, `events`, `paragraphs` |
+| `context` | `craft-character`, `craft-item`, `craft-location`, `craft-organization`, `outline-volume`, `outline-repair`, `outline-global-repair`, `recap-repair`, `chapter-write`, `chapter-repair`, `narrative-memory` |
 | `ideas` | `provocation`, `axiom`, `event`, `law`, `scenario`, `engine`, `worldpack`, `premise`, `storyline`, `cast`, `namecard`, `resource`, `itemcard`, `reference`, `name` |
 | `logs` | `prompts`, `responses`, `agent-live` |
 
@@ -188,6 +192,9 @@ Use `--fields a,b,c` to project only selected JSON fields from each result while
 preserving navigation keys such as `id`, `title`, and `path`. If no requested
 field exists, the warning is returned and the original results are preserved.
 Prefer this over shell pipes like `Select-String` or `grep`.
+`--intent` and `--max-chars` apply only to `context --type narrative-memory`.
+Other query types report them as ignored flags instead of silently accepting
+them.
 For history-aware continuation, use `tool query logs --view index` first. The
 logs query returns only relative log ids, agent names, sizes, mtimes, and
 detail queries in index mode. It returns capped content only when `--content`
@@ -211,6 +218,9 @@ For long chapter patches, prefer `tool patch-buffer` over Python, Node, temp
 files, `Get-Content`, or shell redirection. `patch-buffer` writes only a
 novelgen-managed temporary buffer under `.novelgen/agent-patches`; story state
 still changes only through `tool patch chapter --patch-buffer ... --apply`.
+For paragraph edits, append the complete chapter patch JSON object to the
+buffer. A valid JSON object is passed through unchanged; plain text is still
+wrapped as `{"content":"..."}` for backward compatibility.
 When applying a chapter patch in an Agent SDK workflow, prefer
 `tool patch chapter ... --apply --refresh-derived`. That single command writes
 the chapter, refreshes the target chapter DSL, and returns a post-refresh
@@ -281,12 +291,20 @@ novelgen tool query chapter --entity-type character --name "Lin"
 novelgen tool query chapter --entity-type item --name "Star Core" --content
 novelgen tool query chapter --entity-type location --name "Mine"
 novelgen tool query chapter --type events --chapter-id chap_001
+novelgen tool query chapter --type paragraphs --id chap_001 --view brief
 ```
 
 The `reasons` field explains why a chapter matched.
 For `tool query chapter --type events`, `--id <chapter_id>` is treated as the
 chapter to filter (the same as `--chapter-id`). `--type refs` does not accept
 `--id`; use `--entity-type`/`--name` without an id.
+
+`tool query chapter --type paragraphs` returns the saved manuscript as
+blank-line-delimited blocks. Every paragraph has a 1-based `index`, `kind`
+(`heading` or `prose`), `text`, and `sha256`; the result also includes the
+whole chapter `content_sha256`. These hashes are concurrency tokens for minimal
+patch edits. Use `--view brief` to get paragraph text; `--view index` keeps
+indexes and hashes but replaces text with a short preview.
 
 ## Context
 
@@ -304,6 +322,7 @@ novelgen tool query context --type outline-global-repair --name "structure"
 novelgen tool query context --type recap-repair --id "P1-V1-C3"
 novelgen tool query context --type chapter-write --id "P1-V1-C3"
 novelgen tool query context --type chapter-repair --id "P1-V1-C3" --name "logic"
+novelgen tool query context --type narrative-memory --id "P1-V1-C3" --intent chapter-write --name "sealed door" --max-chars 4000
 ```
 
 Most context bundles include `next_actions`: a small ordered plan for the
@@ -321,6 +340,16 @@ Use `--view index` on context when you only need the route: it keeps identity,
 check summary, navigation, workflow, next_actions, and stats while omitting
 excerpts, events, and target object detail. Use `--view brief` when you are
 ready to make or validate a patch.
+
+`narrative-memory` returns graph, BM25/CJK and optional vector retrieval for one
+target chapter. Intents are `chapter-write` (default), `promise-audit`,
+`voice-echo`, `continuity`, or `all`. `--name` is an optional focus phrase and
+`--max-chars` caps returned scene text (default 4000). The result includes
+`must_include`, due/open promises, retrieved prior scenes, citations with
+paragraph ranges and hashes, and retrieval metadata. The query never returns a
+scene from a later chapter than the target; current-chapter prose is excluded
+unless the caller explicitly opts into it through the internal API. Use
+`--view index` for ids/scores only and `--view brief` before writing.
 
 `craft-character`, `craft-item`, `craft-location`, and `craft-organization`
 include a clipped story setup brief, matching existing craft, outline refs or
@@ -366,8 +395,9 @@ files are still written by Go through recap extraction.
 `chapter-write` is the focused entry bundle for writing or revising one
 chapter. It returns the target chapter brief, parent volume brief, adjacent
 chapter briefs, previous/current recap briefs when present, a clipped existing
-manuscript excerpt, target chapter events, entity indexes, and concrete
-follow-up queries for craft context and recap checks. Agents should use it
+manuscript excerpt, target chapter events, entity indexes, a bounded
+`narrative_memory` retrieval block, and concrete follow-up queries for craft
+context and recap checks. Agents should use it
 before writing a chapter instead of querying full setup, full outline, or all
 chapter content. Use the returned `craft_context_queries` only for named
 entities that matter to the scene. Recap briefs are included only when they
@@ -381,6 +411,67 @@ check, target outline facts, saved chapter opening/closing excerpt, entity
 index, quality/simulation/all check commands, and the `write improve
 --agent-sdk` repair command. Use it instead of manually combining full chapter
 content, full outline, and RPG files.
+
+## Narrative Memory
+
+Narrative memory is a rebuildable derived index over setup, outline, craft,
+chapter markdown and recaps. Canonical project files remain the only source of
+truth. The persisted cache lives under `.novelgen/narrative-memory/` and may be
+deleted at any time.
+
+```bash
+novelgen tool refresh narrative-memory
+novelgen tool query context --type narrative-memory --id P1-V1-C8 --intent chapter-write
+novelgen tool query context --type narrative-memory --id P1-V1-C8 --intent promise-audit --view brief
+novelgen tool query context --type narrative-memory --id P1-V1-C8 --intent voice-echo --name "restrained underwater fear"
+novelgen tool query context --type narrative-memory --id P1-V1-C8 --intent continuity --name "blue key" --max-chars 2500
+```
+
+The index combines:
+
+- a deterministic story graph of chapters, scenes, characters, items,
+  locations, organizations, storylines, events and promises;
+- BM25 lexical search with CJK uni/bi/trigrams and Latin word tokens;
+- optional scene embeddings when the active provider defines
+  `embedding_model` and `embedding_base_url` (or uses its normal `base_url`);
+- graph-aware RRF-style rank fusion, promise urgency, scene importance and
+  recency;
+- a character budget and paragraph/hash citations on every returned scene.
+
+`chapter-write` and `chapter-repair` include a bounded `narrative_memory` block
+automatically. If the persisted index is missing or stale, read-only queries
+build an equivalent index in memory and report `meta.status=ephemeral` plus a
+warning. Refreshing does not modify setup, outline, craft, recaps or chapters.
+The refresh reuses embeddings for unchanged scene text and reports `reused`,
+`generated`, `coverage`, model and dimensions. `project doctor` reports missing,
+fresh or stale memory state.
+
+Vector embedding is optional. Add an embedding model to the active provider:
+
+```json
+{
+  "providers": {
+    "ollama": {
+      "name": "ollama",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "embedding_model": "nomic-embed-text"
+    }
+  }
+}
+```
+
+Scene vectors are stored in a compact local sidecar and searched with exact
+cosine similarity. A single-novel index is small enough that this avoids a
+separate vector database daemon; candidates are always filtered by canonical
+chapter order before ranking.
+
+An embedding failure degrades to graph plus BM25 and never blocks chapter
+generation. Every successful canonical setup/outline/craft/recap/chapter write
+automatically marks an existing memory cache stale, without requiring
+`--refresh-derived`. The marker is a fast invalidation hint; source
+fingerprints remain the final correctness check. The next query rebuilds an
+ephemeral index, and an explicit `tool refresh narrative-memory` persists it.
+`--refresh-derived` remains specific to chapter RPG DSL.
 
 ## Ideas
 
@@ -642,9 +733,40 @@ when available. Patch only content fields such as `location`, `present`,
 `plot_beats`, `last_line`, and `next_opening_hint`. Blocking minimal-gate
 failures reject `--apply`; fuzzy consistency issues are returned in `check`.
 
-Chapter patches update saved final chapter markdown. Use only
-`{"content":"complete revised chapter markdown or prose"}`. For full chapters,
-prefer piping a literal compact JSON string, for example
+Chapter patches update saved final chapter markdown. A patch object contains
+exactly one of:
+
+- `{"content":"complete revised chapter markdown or prose"}` for chapter-wide
+  creation or replacement.
+- `{"expected_content_sha256":"...","paragraph_edits":[...]}` for a minimal
+  existing-chapter edit. Each edit has `op` (`replace`, `delete`,
+  `insert_before`, or `insert_after`), a 1-based `index`, the anchor paragraph's
+  `expected_sha256`, and `text` except for `delete`.
+
+Get all three tokens from `tool query chapter --type paragraphs`. The patch is
+rejected if the whole chapter or the addressed paragraph changed after that
+query. Heading paragraphs are owned by the outline chapter title and cannot be
+edited through `paragraph_edits`. Go merges only the addressed blocks, writes
+the same checkpoint as a full-content patch, and runs the same quality/length
+checks on the merged result. Prefer paragraph edits when a review identifies one
+or a few concrete paragraphs; use full `content` for a new chapter or a genuine
+chapter-wide rewrite.
+
+```json
+{
+  "expected_content_sha256": "<chapter-content-sha256>",
+  "paragraph_edits": [
+    {
+      "op": "replace",
+      "index": 3,
+      "expected_sha256": "<paragraph-3-sha256>",
+      "text": "Lin listens at the sealed door before touching the handle."
+    }
+  ]
+}
+```
+
+For full chapters, prefer piping a literal compact JSON string, for example
 `printf '%s' '{"content":"# Opening\n\n..."}' | novelgen tool patch chapter --id P1-V1-C1`;
 on Windows PowerShell, set UTF-8 before piping Chinese stdin:
 `$OutputEncoding = [System.Text.UTF8Encoding]::new(); [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); [Console]::InputEncoding = [System.Text.UTF8Encoding]::new(); '{"content":"# Opening\n\n..."}' | novelgen tool patch chapter --id "P1-V1-C1"`.
@@ -862,12 +984,13 @@ SDK. The agent receives the normal typed write input, may use
 `novelgen tool query ...` and `novelgen tool check ...`, and should start from:
 
 ```bash
-novelgen tool query context --type chapter-write --id P1-V1-C1 --fields path,navigation,stats,warnings --view brief
+novelgen tool query context --type chapter-write --id P1-V1-C1 --fields path,navigation,narrative_memory,stats,warnings --view brief
 ```
 
 The typed write input already contains the chapter facts, recap, adjacent
-context, and next-chapter hook; the small tool query is only a project-state
-sanity check. The workflow does not grant patch tools. The agent returns typed
+context, and next-chapter hook. The focused tool query adds the bounded
+`narrative_memory` graph/BM25/vector retrieval block and confirms project state.
+The workflow does not grant patch tools. The agent returns typed
 `{"content": "..."}` JSON only; Go still validates that content is prose,
 rejects empty/JSON-as-prose/fenced output, severe length shortfalls, and severe
 Agent SDK length overshoots, saves `chapters/chapter-<chapter_id>.md`, and
@@ -1056,7 +1179,8 @@ novelgen project doctor --json
 setup, outline shape, queryable logs with per-kind counts (`logs_prompts`,
 `logs_responses`, `logs_agent_live`), clone metadata when present, Agent SDK
 runtime config, Python availability, `claude_agent_sdk` importability, and
-embedded workflow skills. It also reports the model that Agent SDK calls will
+embedded workflow skills. It also reports narrative-memory missing/fresh/stale
+state and graph counts, plus the model that Agent SDK calls will
 request per call; the runtime model is only a fallback when a project does not
 set one. A missing outline or empty log history is a warning; unreadable project
 config/setup, missing project model, or an unavailable Agent SDK runtime is a

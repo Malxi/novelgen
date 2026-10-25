@@ -96,6 +96,7 @@ func runRecapMutationLocked(root *store.Root, id string, patchBytes []byte, opts
 		if checkpointPath != "" {
 			files["checkpoint"] = checkpointPath
 		}
+		warnings = markMemoryDirtyAfterWrite(root, "recap:"+id, warnings)
 	}
 
 	ok := !opts.Validate || check == nil || !check.Blocking

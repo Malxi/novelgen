@@ -6,6 +6,7 @@ package toolplane
 import (
 	"fmt"
 	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/project"
 	"strings"
 )
 
@@ -37,6 +38,8 @@ func queryChapterSection(ctx ToolProjectContext, queryType, id, entityType, name
 		switch normalizeChapterType(queryType) {
 		case "events":
 			return QueryEvents(ctx.Outline, id, volumeID, entityType, name)
+		case "paragraphs":
+			return queryChapterParagraphs(ctx, id)
 		case "refs":
 			return ToolResponse{OK: false, Section: "chapter", Count: 0, Warnings: []string{
 				"--type refs does not accept --id; query refs with --entity-type/--name, or omit --type to read the chapter record",
@@ -54,6 +57,8 @@ func queryChapterSection(ctx ToolProjectContext, queryType, id, entityType, name
 		return queryChaptersByEntity(ctx, entityType, name, includeContent)
 	case "events":
 		return QueryEvents(ctx.Outline, chapterID, volumeID, entityType, name)
+	case "paragraphs":
+		return ToolResponse{OK: false, Count: 0, Warnings: []string{"--id is required for chapter --type paragraphs"}}
 	default:
 		return ToolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported chapter type %q", queryType)}}
 	}
@@ -148,6 +153,39 @@ func queryChapter(ctx ToolProjectContext, id string, includeContent bool) ToolRe
 		return ToolResponse{OK: true, Count: 1, Results: []chapterHit{hit}, Warnings: warnings}
 	}
 	return ToolResponse{OK: true, Count: 0, Results: []chapterHit{}, Warnings: []string{fmt.Sprintf("chapter %q not found in outline", id)}}
+}
+
+func queryChapterParagraphs(ctx ToolProjectContext, id string) ToolResponse {
+	if strings.TrimSpace(id) == "" {
+		return ToolResponse{OK: false, Count: 0, Warnings: []string{"--id is required for chapter --type paragraphs"}}
+	}
+	var target *models.Chapter
+	for _, chapter := range flattenChapters(ctx.Outline) {
+		if idMatches(chapter.Chapter.ID, id) {
+			target = chapter.Chapter
+			break
+		}
+	}
+	if target == nil {
+		return ToolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("chapter %q not found in outline", id)}}
+	}
+	content, contentPath, err := ctx.Root.LoadChapterContent(target.ID)
+	if err != nil {
+		return ToolResponse{OK: false, Count: 0, Warnings: []string{err.Error()}}
+	}
+	if strings.TrimSpace(contentPath) == "" {
+		return ToolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("chapter %s has no saved manuscript", target.ID)}}
+	}
+	paragraphs := project.SplitChapterParagraphs(content)
+	hit := chapterParagraphsHit{
+		ChapterID:      target.ID,
+		Title:          target.Title,
+		ContentPath:    contentPath,
+		ContentSHA256:  project.ChapterContentSHA256(content),
+		ParagraphCount: len(paragraphs),
+		Paragraphs:     paragraphs,
+	}
+	return ToolResponse{OK: true, Section: "chapter", Count: len(paragraphs), Results: hit}
 }
 
 func QueryOutlineRefs(outline *models.Outline, entityType, name string, chaptersOnly bool) ToolResponse {

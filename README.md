@@ -19,6 +19,7 @@ Novelgen 是一个命令行工具，用于 AI 辅助小说创作。它提供了�
 - **RPG 验证**: 通过 DSL 系统验证内容一致性
 - **约束写作**: RPG 约束指导 AI 写作，避免战力崩坏等问题
 - **连续性保证**: 自动检测角色出场、转场桥段、章节回顾
+- **叙事记忆**: 故事图 + BM25/CJK + 可选场景向量，按目标章召回前文、承诺与段落引用且禁止未来章节泄漏
 
 ## 🚀 快速开始
 
@@ -482,6 +483,20 @@ The base URL, API key, and timeout are resolved from the provider at runtime
 (explicit fields win), and a Claude flag-settings file is auto-generated under
 `~/.novelgen/agents/settings/` so no manual `settings` path is needed.
 
+Narrative memory can optionally use scene embeddings. Set these fields on the
+active OpenAI-compatible provider (Ollama, OpenAI-compatible gateways, etc.):
+
+```json
+{
+  "embedding_model": "nomic-embed-text",
+  "embedding_base_url": "http://127.0.0.1:11434/v1"
+}
+```
+
+`embedding_base_url` is optional and falls back to the provider's `base_url`.
+Without `embedding_model`, narrative memory uses the deterministic story graph
+and BM25/CJK retrieval only.
+
 ---
 
 ### 11. `novelgen project usage` - 查看 token 用量
@@ -506,7 +521,7 @@ By agent:
 
 ### 12. `novelgen project doctor` - 项目自检
 
-只读检查当前项目是否具备 Agent SDK 创作条件（项目元数据、setup、outline、日志可用性），适合在长流程开始前先跑一次：
+只读检查当前项目是否具备 Agent SDK 创作条件（项目元数据、setup、outline、日志与 narrative-memory 新鲜度），适合在长流程开始前先跑一次：
 
 ```bash
 novelgen project doctor
@@ -521,13 +536,20 @@ SDK Agent 不能直接读写项目文件，只能通过 `tool` 子命令访问�
 novelgen tool query story-setup --view index
 novelgen tool query outline --type chapter --id P1-V1-C1 --view brief
 novelgen tool query context --type chapter-repair --id P1-V1-C1 --view brief
+novelgen tool query context --type narrative-memory --id P1-V1-C1 --intent chapter-write --name "旧线索"
+novelgen tool query chapter --type paragraphs --id P1-V1-C1 --view brief
 novelgen tool query ideas --type worldpack --genre 科幻 --seed 42 --count 3 --source 星战
 novelgen tool query ideas --type namecard --genre 科幻 --seed 42 --count 8 --source 战锤
 novelgen tool query ideas --type itemcard --genre 科幻 --seed 42 --count 7 --source 异形
 novelgen tool check all --target outline --scope volume --id P1-V1
 novelgen tool patch outline --target volume --id P1-V1 --patch-json '{"changed_chapters":[...]}'   # dry-run
 novelgen tool refresh chapter-dsl --id P1-V1-C1
+novelgen tool refresh narrative-memory
 ```
+
+已有章节的正文有四种最小编辑操作：`replace`、`delete`、`insert_before`、`insert_after`。先查询带 `content_sha256` 和段落 `sha256` 的段落视图，再用 `paragraph_edits` 提交补丁；整章或目标段落已变化时会拒绝写入。新建章节或真正需要整章重写时才使用完整 `{"content":"..."}`。
+
+叙事记忆索引位于 `.novelgen/narrative-memory/`，由故事图、场景 BM25、承诺账本和可选向量组成。它始终是派生缓存：任何 canonical setup/outline/craft/recap/chapter 写入都会自动标记缓存 stale，不依赖 `--refresh-derived`；只读查询发现缺失或过期时会在内存中重建，`tool refresh narrative-memory` 可持久化缓存。`project doctor` 会报告 fresh/stale/missing 状态。索引绝不会把未来章节正文注入当前章上下文。
 
 每个 section 可用的 `--type`、patch 的 section/`--target` 组合、`--patch-buffer` 与 `--task` 的用法都写在 `novelgen tool <subcommand> --help` 里；完整契约见 [docs/AGENT_TOOLS.md](docs/AGENT_TOOLS.md)。
 
@@ -631,7 +653,8 @@ project-root/
 │   ├── craft/              # 世界元素
 │   │   ├── characters.json
 │   │   ├── locations.json
-│   │   └── items.json
+│   │   ├── items.json
+│   │   └── organizations.json
 │   ├── recaps/             # 章节回顾
 │   │   └── {chapter_id}.json
 │   └── reviews/            # 评审结果
@@ -640,6 +663,8 @@ project-root/
 │   └── chapter-{n}.md
 ├── drafts/                 # 旧版/可选草稿
 │   └── C{n}.md
+├── .novelgen/
+│   └── narrative-memory/   # 可删除、可重建的场景/图/承诺/向量缓存
 └── logs/                   # 日志
 ```
 

@@ -87,6 +87,7 @@ var toolPlaneModuleFiles = map[string]string{
 	"internal/toolplane/tool_view.go":           "view levels and context/check budgets",
 	"internal/toolplane/tool_logs.go":           "prompt/response/agent-live log queries",
 	"internal/toolplane/tool_refresh_cli.go":    "CLI adapter over the fiction/refresh engine",
+	"internal/toolplane/tool_memory.go":         "narrative-memory query and refresh adapters",
 	"internal/toolplane/tool_skill.go":          "agent skill catalog and on-demand skill loading",
 }
 

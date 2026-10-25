@@ -839,6 +839,8 @@ def build_native_novelgen_tools(
                 "seed": {"type": "integer"},
                 "count": {"type": "integer"},
                 "select": {"type": "integer"},
+                "intent": {"type": "string"},
+                "max_chars": {"type": "integer"},
             },
             "required": ["section"],
             "additionalProperties": False,
@@ -865,6 +867,8 @@ def build_native_novelgen_tools(
             ("seed", "--seed"),
             ("count", "--count"),
             ("select", "--select"),
+            ("intent", "--intent"),
+            ("max_chars", "--max-chars"),
         ):
             append_optional_arg(cli_args, flag, args.get(key))
         if args.get("include_content"):
@@ -1069,22 +1073,28 @@ def build_native_novelgen_tools(
 
         @tool(
             "project_refresh",
-            "Refresh a derived project artifact, currently chapter RPG DSL.",
+            "Refresh a derived project artifact: chapter RPG DSL or the narrative-memory index.",
             {
                 "type": "object",
                 "properties": {
+                    "target": {"type": "string", "enum": ["chapter-dsl", "narrative-memory"]},
                     "chapter_id": {"type": "string"},
                     "batch_size": {"type": "integer"},
                 },
-                "required": ["chapter_id"],
                 "additionalProperties": False,
             },
         )
         async def project_refresh(args: Dict[str, Any]) -> Dict[str, Any]:
             chapter_id = str(args.get("chapter_id") or "").strip()
-            if not chapter_id:
-                return {"content": [{"type": "text", "text": "project_refresh requires chapter_id"}], "isError": True}
-            cli_args = ["tool", "refresh", "chapter-dsl", "--id", chapter_id]
+            target = str(args.get("target") or "").strip().lower()
+            if not target:
+                target = "chapter-dsl" if chapter_id else "narrative-memory"
+            if target in ("narrative-memory", "memory"):
+                cli_args = ["tool", "refresh", "narrative-memory"]
+            else:
+                if not chapter_id:
+                    return {"content": [{"type": "text", "text": "project_refresh chapter-dsl requires chapter_id"}], "isError": True}
+                cli_args = ["tool", "refresh", "chapter-dsl", "--id", chapter_id]
             append_optional_arg(cli_args, "--batch-size", args.get("batch_size"))
             payload, _ = await execute_tool("project_refresh", cli_args)
             return payload

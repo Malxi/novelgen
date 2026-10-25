@@ -8,7 +8,18 @@ import (
 	"strings"
 )
 
+type QueryContextOptions struct {
+	Intent   string
+	Focus    string
+	Limit    int
+	MaxChars int
+}
+
 func QueryContext(ctx ToolProjectContext, queryType, id, name string) ToolResponse {
+	return QueryContextWithOptions(ctx, queryType, id, name, QueryContextOptions{})
+}
+
+func QueryContextWithOptions(ctx ToolProjectContext, queryType, id, name string, opts QueryContextOptions) ToolResponse {
 	contextType := normalizeContextType(queryType)
 	switch contextType {
 	case "craft-character", "craft-item", "craft-location", "craft-organization":
@@ -25,7 +36,29 @@ func QueryContext(ctx ToolProjectContext, queryType, id, name string) ToolRespon
 		return queryChapterWriteContext(ctx, id)
 	case "chapter-repair":
 		return queryChapterRepairContext(ctx, id, name)
+	case "narrative-memory":
+		if ctx.Root == nil || ctx.Root.Dir() == "" {
+			return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: []string{"narrative memory requires a project root"}}
+		}
+		result, warnings, err := queryNarrativeMemory(ctx.Root, memoryQueryOptions{
+			ChapterID: id,
+			Intent:    opts.Intent,
+			Focus:     firstMemoryFocus(name, opts.Focus),
+			MaxChars:  opts.MaxChars,
+			Limit:     opts.Limit,
+		})
+		if err != nil {
+			return ToolResponse{OK: false, Section: "context", Count: 0, Warnings: append(warnings, err.Error())}
+		}
+		return memoryToolResponse(result, warnings)
 	default:
 		return ToolResponse{OK: false, Count: 0, Warnings: []string{fmt.Sprintf("unsupported context type %q", queryType)}}
 	}
+}
+
+func firstMemoryFocus(name, focus string) string {
+	if strings.TrimSpace(focus) != "" {
+		return strings.TrimSpace(focus)
+	}
+	return strings.TrimSpace(name)
 }

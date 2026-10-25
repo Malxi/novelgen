@@ -114,6 +114,14 @@ func LoadToolPatchBuffer(root *store.Root, id, section string) ([]byte, error) {
 		return nil, fmt.Errorf("patch buffer %q is empty", id)
 	}
 	if NormalizeKey(section) == "chapter" {
+		trimmed := []byte(strings.TrimSpace(content))
+		var object map[string]json.RawMessage
+		if len(trimmed) > 0 && trimmed[0] == '{' && json.Unmarshal(trimmed, &object) == nil {
+			// A complete chapter patch object can be assembled here too. This
+			// keeps paragraph edits with long replacement prose on the same
+			// chunked stdin path as full chapter content.
+			return trimmed, nil
+		}
 		payload, err := json.Marshal(map[string]string{"content": content})
 		if err != nil {
 			return nil, err

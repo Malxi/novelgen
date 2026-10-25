@@ -114,6 +114,48 @@ func TestAgentSDKWriteDocsDeclareFocusedRepairAndInfoGrowth(t *testing.T) {
 	}
 }
 
+func TestAgentToolsDocsDeclareParagraphPatchContract(t *testing.T) {
+	files := []string{
+		"../docs/AGENT_TOOLS.md",
+		"../docs/STAGE_CONTRACTS.md",
+		"../internal/platform/agentruntime/skills/novel-tools-core/SKILL.md",
+		"../internal/platform/agentruntime/skills/write-improve-workflow/SKILL.md",
+	}
+	for _, path := range files {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		text := string(data)
+		for _, want := range []string{"paragraph_edits", "expected_content_sha256"} {
+			if !strings.Contains(text, want) {
+				t.Fatalf("%s missing %q", path, want)
+			}
+		}
+	}
+}
+
+func TestAgentToolsDocsDeclareNarrativeMemoryContract(t *testing.T) {
+	files := []string{
+		"../docs/AGENT_TOOLS.md",
+		"../docs/STAGE_CONTRACTS.md",
+		"../internal/platform/agentruntime/skills/novel-tools-core/SKILL.md",
+		"../internal/platform/agentruntime/skills/write-chapter-workflow/SKILL.md",
+	}
+	for _, path := range files {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		text := string(data)
+		for _, want := range []string{"narrative-memory", "narrative_memory"} {
+			if !strings.Contains(text, want) {
+				t.Fatalf("%s missing %q", path, want)
+			}
+		}
+	}
+}
+
 func TestAgentToolsDocsDeclareAgentLiveSummaryContract(t *testing.T) {
 	files := []string{
 		"../docs/AGENT_TOOLS.md",

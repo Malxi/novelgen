@@ -108,6 +108,7 @@ func runSetupMutationLocked(root *store.Root, patchBytes []byte, opts MutationOp
 		if checkpointPath != "" {
 			files["checkpoint"] = checkpointPath
 		}
+		warnings = markMemoryDirtyAfterWrite(root, "setup", warnings)
 	}
 
 	ok := true

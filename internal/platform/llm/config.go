@@ -24,12 +24,14 @@ type ModelConfig struct {
 
 // ProviderConfig represents configuration for a provider with multiple models
 type ProviderConfig struct {
-	Name         string                  `json:"name"`
-	APIKey       string                  `json:"api_key"`
-	BaseURL      string                  `json:"base_url"`
-	AgentBaseURL string                  `json:"agent_base_url,omitempty"` // Anthropic-compatible base URL for the agent runtime
-	Timeout      int                     `json:"timeout"`                  // seconds
-	Models       map[string]*ModelConfig `json:"models"`                   // Map of model name to config
+	Name             string                  `json:"name"`
+	APIKey           string                  `json:"api_key"`
+	BaseURL          string                  `json:"base_url"`
+	AgentBaseURL     string                  `json:"agent_base_url,omitempty"`     // Anthropic-compatible base URL for the agent runtime
+	EmbeddingModel   string                  `json:"embedding_model,omitempty"`    // Optional OpenAI-compatible embedding model
+	EmbeddingBaseURL string                  `json:"embedding_base_url,omitempty"` // Optional base URL override for /embeddings
+	Timeout          int                     `json:"timeout"`                      // seconds
+	Models           map[string]*ModelConfig `json:"models"`                       // Map of model name to config
 }
 
 // Config represents the LLM configuration with multiple providers
@@ -201,6 +203,24 @@ func GetConfigPath() string {
 		return filepath.Join(homeDir, ".novelgen", "llm_config.json")
 	}
 	return "llm_config.json"
+}
+
+// ConfigPathForRoot resolves the LLM config for an explicit project. It avoids
+// consulting the ambient store root when a command already has one.
+func ConfigPathForRoot(root *store.Root) string {
+	if root != nil && root.Exists(root.LLMConfigJSON()) {
+		return root.LLMConfigJSON()
+	}
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		globalConfigPath := filepath.Join(homeDir, ".novelgen", "llm_config.json")
+		if _, err := os.Stat(globalConfigPath); err == nil {
+			return globalConfigPath
+		}
+	}
+	if root != nil {
+		return root.LLMConfigJSON()
+	}
+	return ""
 }
 
 // LoadOrCreateConfig loads the config or returns an error if not found

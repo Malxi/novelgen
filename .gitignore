@@ -12,6 +12,7 @@ books/
 .codex_go_cache/
 *.log
 *.bak
+**/.novelgen/
 
 # Generated story artifacts (created by novelgen init / write / compose).
 chapters/

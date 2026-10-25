@@ -69,6 +69,16 @@ func queryChapterWriteContext(ctx ToolProjectContext, chapterID string) ToolResp
 
 	excerpt, _ := loadChapterExcerptForTool(ctx.Root, target.Chapter.ID)
 	creativeHistory := buildChapterWriteHistory(ctx.Root)
+	narrativeMemory, memoryWarnings, memoryErr := queryNarrativeMemory(ctx.Root, memoryQueryOptions{
+		ChapterID: target.Chapter.ID,
+		Intent:    "chapter-write",
+		MaxChars:  4000,
+		Limit:     6,
+	})
+	warnings = append(warnings, memoryWarnings...)
+	if memoryErr != nil {
+		warnings = append(warnings, memoryUnavailableWarning(memoryErr))
+	}
 	result := ChapterWriteContext{
 		ChapterID:              target.Chapter.ID,
 		Path:                   target.Path,
@@ -78,6 +88,7 @@ func queryChapterWriteContext(ctx ToolProjectContext, chapterID string) ToolResp
 		CurrentRecap:           makeRecapBrief(currentRecap),
 		ExistingChapterExcerpt: excerpt,
 		CreativeHistory:        creativeHistory,
+		NarrativeMemory:        narrativeMemory,
 		EntityIndex:            entities,
 		Events:                 briefOutlineResults(events, false),
 		Navigation:             buildChapterWriteNavigation(target.Chapter.ID, previousChapter, nextChapter, entities),
@@ -119,6 +130,11 @@ func queryChapterWriteContext(ctx ToolProjectContext, chapterID string) ToolResp
 		result.Stats["history_response_count"] = creativeHistory.Counts["responses"]
 		result.Stats["history_recent_prompts"] = len(creativeHistory.RecentPrompts)
 		result.Stats["history_recent_responses"] = len(creativeHistory.RecentResponses)
+	}
+	if narrativeMemory != nil {
+		result.Stats["narrative_memory_scenes"] = len(narrativeMemory.Retrieved)
+		result.Stats["narrative_memory_promises"] = len(narrativeMemory.Promises)
+		result.Stats["narrative_memory_chars"] = narrativeMemory.Meta.ReturnedChars
 	}
 
 	if eventsResp.Count > len(events) {
@@ -321,6 +337,16 @@ func queryChapterRepairContext(ctx ToolProjectContext, chapterID, issueCategory 
 
 	excerpt, excerptWarnings := loadChapterExcerptForTool(ctx.Root, target.Chapter.ID)
 	warnings = append(warnings, excerptWarnings...)
+	narrativeMemory, memoryWarnings, memoryErr := queryNarrativeMemory(ctx.Root, memoryQueryOptions{
+		ChapterID: target.Chapter.ID,
+		Intent:    "continuity",
+		MaxChars:  2500,
+		Limit:     4,
+	})
+	warnings = append(warnings, memoryWarnings...)
+	if memoryErr != nil {
+		warnings = append(warnings, memoryUnavailableWarning(memoryErr))
+	}
 
 	result := ChapterRepairContext{
 		ChapterID:              target.Chapter.ID,
@@ -330,6 +356,7 @@ func queryChapterRepairContext(ctx ToolProjectContext, chapterID, issueCategory 
 		SimulationRepairHints:  BuildChapterSimulationRepairHints(target.Chapter.ID, check),
 		TargetChapter:          makeRepairChapterBrief(*target.Chapter),
 		ExistingChapterExcerpt: excerpt,
+		NarrativeMemory:        narrativeMemory,
 		EntityIndex:            entities,
 		Events:                 briefOutlineResults(events, false),
 		Navigation:             BuildChapterRepairNavigation(target.Chapter.ID, issueCategory, entities),
@@ -363,6 +390,10 @@ func queryChapterRepairContext(ctx ToolProjectContext, chapterID, issueCategory 
 	if check != nil {
 		result.Stats["check_issues"] = check.Summary.Total
 		result.Stats["returned_check_issues"] = len(check.Issues)
+	}
+	if narrativeMemory != nil {
+		result.Stats["narrative_memory_scenes"] = len(narrativeMemory.Retrieved)
+		result.Stats["narrative_memory_promises"] = len(narrativeMemory.Promises)
 	}
 	if eventsResp.Count > len(events) {
 		warnings = append(warnings, fmt.Sprintf("events truncated from %d to %d", eventsResp.Count, len(events)))

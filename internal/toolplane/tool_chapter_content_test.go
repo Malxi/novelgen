@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/project"
 	"novelgen/internal/platform/store"
 )
 
@@ -78,6 +79,34 @@ func TestChapterQueryWithoutContentOmitsManuscriptText(t *testing.T) {
 	}
 	if hits[0].Content != "" || hits[0].ContentPath != "" {
 		t.Fatalf("content = %q path = %q, want both empty without --content", hits[0].Content, hits[0].ContentPath)
+	}
+}
+
+func TestChapterParagraphQueryReturnsHashesAndIndexViewStaysCompact(t *testing.T) {
+	content := "# Opening\n\nFirst paragraph.\n\nLin opens the sealed door.\n"
+	ctx := chapterContentContext(t, "P1-V1-C1", "P1-V1-C1", content)
+	resp := queryChapterSection(ctx, "paragraphs", "P1-V1-C1", "", "", "", "", false)
+	if !resp.OK || resp.Count != 3 {
+		t.Fatalf("paragraph query response = %#v", resp)
+	}
+	hit, ok := resp.Results.(chapterParagraphsHit)
+	if !ok {
+		t.Fatalf("results type = %T, want chapterParagraphsHit", resp.Results)
+	}
+	if hit.ContentSHA256 != project.ChapterContentSHA256(content) || hit.ParagraphCount != 3 {
+		t.Fatalf("unexpected paragraph query metadata: %#v", hit)
+	}
+	if hit.Paragraphs[1].Text != "First paragraph." || hit.Paragraphs[2].SHA256 == "" {
+		t.Fatalf("unexpected paragraph query records: %#v", hit.Paragraphs)
+	}
+
+	brief := briefChapterResults(hit, true).(map[string]interface{})
+	paragraphs := brief["paragraphs"].([]map[string]interface{})
+	if _, hasText := paragraphs[1]["text"]; hasText {
+		t.Fatalf("index view should not include paragraph text: %#v", paragraphs[1])
+	}
+	if paragraphs[1]["sha256"] == "" {
+		t.Fatalf("index view must retain paragraph hashes: %#v", paragraphs[1])
 	}
 }
 

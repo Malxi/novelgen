@@ -103,6 +103,9 @@ func TestWriteAgentGenerateChapterWithAgentSDKUsesFocusedWorkflow(t *testing.T) 
 	if len(runtime.invocation.ToolAllowlist) != 1 {
 		t.Fatalf("write generation should grant exactly one required query: %#v", runtime.invocation.ToolAllowlist)
 	}
+	if !strings.Contains(runtime.invocation.ToolAllowlist[0], "narrative_memory") {
+		t.Fatalf("write generation context query must include narrative_memory: %#v", runtime.invocation.ToolAllowlist)
+	}
 	if containsAllStrings(runtime.invocation.ToolAllowlist, "novelgen tool query") ||
 		containsAllStrings(runtime.invocation.ToolAllowlist, "novelgen tool check") {
 		t.Fatalf("write generation should not grant broad query/check tools: %#v", runtime.invocation.ToolAllowlist)
@@ -477,6 +480,7 @@ func TestWriteAgentImproveWithAgentSDKUsesFocusedWorkflow(t *testing.T) {
 		`novelgen tool query chapter --id 'P1-V1-C1' --view brief`,
 		`novelgen tool query chapter --id 'P1-V1-C1' --content`,
 		`novelgen tool query chapter --id 'P1-V1-C1' --content --view brief`,
+		`novelgen tool query chapter --type paragraphs --id 'P1-V1-C1' --view brief`,
 		`novelgen tool query outline --type chapter --id 'P1-V1-C1' --view brief`,
 		`novelgen tool check quality --target chapter --scope chapter --id 'P1-V1-C1' --max-issues 8`,
 		`novelgen tool check simulation --target chapter --scope chapter --id 'P1-V1-C1' --max-issues 8`,
@@ -549,6 +553,7 @@ func TestWriteAgentImproveWithAgentSDKApplyAllowsValidatedChapterApply(t *testin
 		`novelgen tool query chapter --id 'P1-V1-C1' --view brief`,
 		`novelgen tool query chapter --id 'P1-V1-C1' --content`,
 		`novelgen tool query chapter --id 'P1-V1-C1' --content --view brief`,
+		`novelgen tool query chapter --type paragraphs --id 'P1-V1-C1' --view brief`,
 		`novelgen tool query outline --type chapter --id 'P1-V1-C1' --view brief`,
 		`novelgen tool patch-buffer --id 'P1-V1-C1-draft'`,
 		`novelgen tool refresh chapter-dsl --id 'P1-V1-C1'`,
@@ -578,6 +583,8 @@ func TestWriteAgentImproveWithAgentSDKApplyAllowsValidatedChapterApply(t *testin
 		!strings.Contains(runtime.invocation.Command, "When verification fails, return the current draft unchanged") ||
 		!strings.Contains(runtime.invocation.Command, "do not repair unrelated length/style/check issues") ||
 		!strings.Contains(runtime.invocation.Command, "there is no craft-ability query") ||
+		!strings.Contains(runtime.invocation.Command, "--type paragraphs") ||
+		!strings.Contains(runtime.invocation.Command, "paragraph_edits") ||
 		!strings.Contains(runtime.invocation.Command, "Before any patch-buffer or patch command") {
 		t.Fatalf("Command did not force patch apply for explicit edit requests: %s", runtime.invocation.Command)
 	}

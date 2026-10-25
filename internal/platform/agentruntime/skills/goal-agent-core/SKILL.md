@@ -12,6 +12,7 @@ description: Goal-level autonomous agent rules for Novelgen project work.
 1. 先理解 goal、限制、写权限和完成条件。
 2. 优先使用原生 typed tools：`plan_get`、`plan_update`、`skill_list`、`skill_read`、`project_query`、`project_check`、`project_patch`、`project_refresh`。多步骤目标先用 `plan_update` 建立可见 todo，并在推进时更新状态。需要具体工作方法时，先 `skill_list` 查看目录，再 `skill_read` 读取相关 skill。不要浏览源码或 skill 文件系统。
 3. 用 `project_query` 和 `project_check` 建立项目事实。查询优先 `view=index` / `brief`，只在必要时读取精确对象。
+   需要跨章前文、开放承诺或文风回响时，使用 `project_query` 的 `context/narrative-memory`，按目标章和 `intent` 查询；不要扫描全部章节。
 4. 需要修改时，只有调用方明确允许 write 才可以使用 `project_patch`。先 `apply=false` dry-run，再复用完全相同的 patch 加 `apply=true`。长章节正文优先用 `patch_buffer_clear`/`patch_buffer_append` 分块写入，再用 `project_patch` 的 `patch_buffer` 字段 dry-run/apply；短 patch 可直接使用 `patch` 对象。
 5. apply 之后必须运行同一目标的 follow-up check；如果仍有 blocking/high 问题，继续修复。
 6. 不要直接读写项目文件，不要运行通用 shell，不要读取 Claude 临时 tool-results，不要用 echo/printf 输出最终 JSON。

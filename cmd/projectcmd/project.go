@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/memory"
 	"novelgen/internal/fiction/domain/project"
 	"novelgen/internal/platform/agentruntime"
 	"novelgen/internal/platform/store"
@@ -453,6 +454,24 @@ func inspectProjectForAgentSDK(root string) projectDoctorReport {
 	}
 	if projectRoot.Exists(projectRoot.CloneManifest()) {
 		addCheck("clone_manifest", true, "info", "clone manifest is present")
+	}
+	memoryStatus := memory.Inspect(projectRoot, toolplane.NarrativeMemoryModel(projectRoot))
+	report.Counts["narrative_memory_scenes"] = memoryStatus.Stats.Scenes
+	report.Counts["narrative_memory_nodes"] = memoryStatus.Stats.Nodes
+	report.Counts["narrative_memory_edges"] = memoryStatus.Stats.Edges
+	report.Counts["narrative_memory_promises"] = memoryStatus.Stats.Promises
+	switch memoryStatus.Status {
+	case "fresh":
+		addCheck("narrative_memory", true, "info", fmt.Sprintf(
+			"narrative memory is fresh (%d scenes, %d nodes, %d edges, %d promises)",
+			memoryStatus.Stats.Scenes, memoryStatus.Stats.Nodes, memoryStatus.Stats.Edges, memoryStatus.Stats.Promises,
+		))
+	case "missing":
+		addCheck("narrative_memory", true, "info", "narrative memory is not persisted yet; queries build an ephemeral index and `tool refresh narrative-memory` can cache it")
+	case "stale":
+		addCheck("narrative_memory", false, "warning", "narrative memory is stale; run `tool refresh narrative-memory` ("+strings.Join(memoryStatus.ChangedSources, ", ")+")")
+	default:
+		addCheck("narrative_memory", false, "warning", "narrative memory cannot be inspected: "+memoryStatus.Error)
 	}
 	addAgentSDKReadinessChecks(report, addCheck, config.LLM.Model)
 	return report

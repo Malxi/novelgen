@@ -37,7 +37,7 @@ func TestToolQueryTypeTableMatchesNormalizers(t *testing.T) {
 		"outline":     {"parts:part", "volumes:volume", "chapters:chapter", "references:refs"},
 		"craft":       {"characters:character", "chars:character", "items:item", "locations:location", "orgs:organization"},
 		"chapter":     {"event:events", "references:refs"},
-		"context":     {"chapter-draft:chapter-write", "repair-outline:outline-repair", "global-repair:outline-global-repair", "recap:recap-repair", "char:craft-character", "org:craft-organization", "volume:outline-volume"},
+		"context":     {"chapter-draft:chapter-write", "repair-outline:outline-repair", "global-repair:outline-global-repair", "recap:recap-repair", "char:craft-character", "org:craft-organization", "volume:outline-volume", "memory:narrative-memory"},
 		"logs":        {"prompt:prompts", "response:responses", "live:agent-live"},
 	}
 	for section, types := range toolQuerySectionTypes {
@@ -105,7 +105,7 @@ func TestToolQueryRequiresASectionIncludingLogs(t *testing.T) {
 // the help must say which sections ignore --target.
 func TestToolPatchHelpExplainsSectionAndTarget(t *testing.T) {
 	help := ToolPatchCmd.Long
-	for _, want := range []string{"--target", "--id", "--patch-buffer", "--task", "--refresh-derived", "setup", "recap", "chapter"} {
+	for _, want := range []string{"--target", "--id", "--patch-buffer", "--task", "--refresh-derived", "paragraph", "setup", "recap", "chapter"} {
 		if !strings.Contains(help, want) {
 			t.Errorf("patch help does not mention %q", want)
 		}
@@ -115,5 +115,25 @@ func TestToolPatchHelpExplainsSectionAndTarget(t *testing.T) {
 	}
 	if task := ToolPatchCmd.Flags().Lookup("task"); task == nil || !strings.Contains(task.Usage, "outline-global-repair") {
 		t.Errorf("--task help must name the supported task form, got %v", task)
+	}
+}
+
+func TestToolQueryHelpDeclaresNarrativeMemory(t *testing.T) {
+	help := ToolQueryCmd.Long
+	for _, want := range []string{"narrative-memory", "story graph", "BM25"} {
+		if !strings.Contains(help, want) {
+			t.Errorf("query help does not mention %q", want)
+		}
+	}
+	if ToolQueryCmd.Flags().Lookup("intent") == nil || ToolQueryCmd.Flags().Lookup("max-chars") == nil {
+		t.Fatalf("narrative memory query flags missing")
+	}
+}
+
+func TestToolRefreshHelpDeclaresNarrativeMemory(t *testing.T) {
+	for _, want := range []string{"chapter-dsl", "narrative-memory"} {
+		if !strings.Contains(ToolRefreshCmd.Long, want) || !strings.Contains(ToolRefreshCmd.Use, want) {
+			t.Errorf("refresh help does not declare %q", want)
+		}
 	}
 }

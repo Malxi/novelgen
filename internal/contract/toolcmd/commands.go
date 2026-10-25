@@ -87,6 +87,8 @@ type QueryOptions struct {
 	View       string
 	Content    bool
 	Limit      int
+	Intent     string
+	MaxChars   int
 }
 
 // QueryStorySetup builds `novelgen tool query story-setup ...`.
@@ -109,7 +111,7 @@ func QueryLogs(opts QueryOptions) string { return query("logs", opts) }
 
 // query builds a query command with the optional flags in their canonical
 // order: --type, --id, --chapter-id, --volume-id, --entity-type, --name,
-// --fields, --content, --view, --limit.
+// --fields, --content, --view, --limit, --intent, --max-chars.
 func query(section string, opts QueryOptions) string {
 	var b strings.Builder
 	b.WriteString(prefix)
@@ -127,6 +129,8 @@ func query(section string, opts QueryOptions) string {
 	}
 	writeFlag(&b, "--view", opts.View, false)
 	writeInt(&b, "--limit", opts.Limit)
+	writeFlag(&b, "--intent", opts.Intent, false)
+	writeInt(&b, "--max-chars", opts.MaxChars)
 	return b.String()
 }
 

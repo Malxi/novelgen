@@ -15,6 +15,7 @@ import (
 	"novelgen/internal/contract/testfixtures"
 	"novelgen/internal/fiction/agents"
 	"novelgen/internal/fiction/domain/logic/continuity/recap"
+	"novelgen/internal/fiction/domain/project"
 	"novelgen/internal/fiction/domain/quality"
 	"novelgen/internal/fiction/pipeline"
 	rpgdsl "novelgen/internal/fiction/rpg/dsl"
@@ -1657,6 +1658,156 @@ func TestToolPatchChapterDryRunAndApply(t *testing.T) {
 	}
 }
 
+func TestToolPatchChapterParagraphEditOnlyChangesTargetBlock(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"project_name":"Paragraph Patch Test"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeToolTestOutline(root, validToolPatchTestOutline()); err != nil {
+		t.Fatal(err)
+	}
+	chapterPath := filepath.Join(root, "chapters", "chapter-P1-V1-C1.md")
+	if err := os.MkdirAll(filepath.Dir(chapterPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	first := strings.Repeat("矿道里的风从裂缝里挤出来，Lin听见远处的铁轨轻轻震动。", 18)
+	target := strings.Repeat("Lin停在封死的门前，蓝色灯光从门缝下面漏出来。", 18)
+	last := strings.Repeat("Lin把手按在冰冷的铁门上，决定先确认门后是否有人呼吸。", 18)
+	content := "# Opening\n\n" + first + "\n\n" + target + "\n\n" + last
+	if err := os.WriteFile(chapterPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	replacement := strings.Repeat("Lin没有推门，只把耳朵贴上去，先数清门后究竟有几道呼吸。", 18)
+	patch := map[string]interface{}{
+		"expected_content_sha256": project.ChapterContentSHA256(content),
+		"paragraph_edits": []map[string]interface{}{{
+			"op":              "replace",
+			"index":           3,
+			"expected_sha256": project.ChapterParagraphSHA256(target),
+			"text":            replacement,
+		}},
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	originalFlags := toolplane.ToolPatchFlags
+	defer func() { toolplane.ToolPatchFlags = originalFlags }()
+	toolplane.ToolPatchFlags = struct {
+		Target         string
+		ID             string
+		PatchJSON      string
+		PatchBuffer    string
+		Task           string
+		Apply          bool
+		DryRun         bool
+		RefreshDerived bool
+		TargetWords    int
+	}{
+		ID:          "P1-V1-C1",
+		PatchJSON:   string(patchBytes),
+		TargetWords: 2000,
+	}
+
+	dryCmd := bindProject(&cobra.Command{}, toolRoot(t, root))
+	var dryOut bytes.Buffer
+	dryCmd.SetOut(&dryOut)
+	if err := toolplane.RunToolPatch(dryCmd, []string{"chapter"}); err != nil {
+		t.Fatalf("dry-run paragraph patch: %v", err)
+	}
+	dryResult := decodeToolPatchResult(t, dryOut.String())
+	if dryResult.Applied || dryResult.Meta["patch_mode"] != "paragraphs" || dryResult.Meta["paragraph_edit_count"] != float64(1) {
+		t.Fatalf("unexpected paragraph dry-run result: %#v", dryResult)
+	}
+	if len(dryResult.Changed) != 1 || !strings.Contains(dryResult.Changed[0].Path, "paragraph[3].replace") {
+		t.Fatalf("unexpected paragraph changes: %#v", dryResult.Changed)
+	}
+	if saved, err := os.ReadFile(chapterPath); err != nil || string(saved) != content {
+		t.Fatalf("paragraph dry-run modified chapter, err=%v", err)
+	}
+
+	toolplane.ToolPatchFlags.Apply = true
+	applyCmd := bindProject(&cobra.Command{}, toolRoot(t, root))
+	var applyOut bytes.Buffer
+	applyCmd.SetOut(&applyOut)
+	if err := toolplane.RunToolPatch(applyCmd, []string{"chapter"}); err != nil {
+		t.Fatalf("apply paragraph patch: %v", err)
+	}
+	applyResult := decodeToolPatchResult(t, applyOut.String())
+	if !applyResult.Applied || applyResult.Meta["patch_mode"] != "paragraphs" {
+		t.Fatalf("unexpected paragraph apply result: %#v", applyResult)
+	}
+	saved, err := os.ReadFile(chapterPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(saved)
+	if !strings.Contains(got, first) || !strings.Contains(got, last) {
+		t.Fatalf("paragraph patch changed untouched blocks:\n%s", got)
+	}
+	if strings.Contains(got, target) || !strings.Contains(got, replacement) {
+		t.Fatalf("paragraph patch did not replace only the target block:\n%s", got)
+	}
+}
+
+func TestToolPatchChapterParagraphEditRejectsStaleContent(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"project_name":"Paragraph Stale Test"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeToolTestOutline(root, validToolPatchTestOutline()); err != nil {
+		t.Fatal(err)
+	}
+	chapterPath := filepath.Join(root, "chapters", "chapter-P1-V1-C1.md")
+	if err := os.MkdirAll(filepath.Dir(chapterPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	target := "Lin stops before the sealed door."
+	content := "# Opening\n\nFirst block.\n\n" + target + "\n"
+	if err := os.WriteFile(chapterPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	patch := map[string]interface{}{
+		"expected_content_sha256": project.ChapterContentSHA256(content),
+		"paragraph_edits": []map[string]interface{}{{
+			"op":              "replace",
+			"index":           3,
+			"expected_sha256": project.ChapterParagraphSHA256(target),
+			"text":            "Lin listens at the sealed door.",
+		}},
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(chapterPath, []byte(content+"\nConcurrent edit.\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	originalFlags := toolplane.ToolPatchFlags
+	defer func() { toolplane.ToolPatchFlags = originalFlags }()
+	toolplane.ToolPatchFlags = struct {
+		Target         string
+		ID             string
+		PatchJSON      string
+		PatchBuffer    string
+		Task           string
+		Apply          bool
+		DryRun         bool
+		RefreshDerived bool
+		TargetWords    int
+	}{ID: "P1-V1-C1", PatchJSON: string(patchBytes), TargetWords: 2000}
+
+	cmd := bindProject(&cobra.Command{}, toolRoot(t, root))
+	cmd.SetOut(&bytes.Buffer{})
+	err = toolplane.RunToolPatch(cmd, []string{"chapter"})
+	if err == nil || !strings.Contains(err.Error(), "changed since the patch was prepared") {
+		t.Fatalf("expected stale content error, got %v", err)
+	}
+}
+
 func TestToolPatchBufferAppendShowClear(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "novel.json"), []byte(`{"project_name":"Patch Buffer Test"}`), 0644); err != nil {
@@ -1777,6 +1928,28 @@ func TestLoadToolPatchBufferWrapsChapterContent(t *testing.T) {
 	}
 	if _, err := toolplane.ToolPatchBufferPath(toolRoot(t, root), "../bad"); err == nil {
 		t.Fatalf("expected invalid patch buffer id to be rejected")
+	}
+}
+
+func TestLoadToolPatchBufferPreservesCompleteChapterPatchJSON(t *testing.T) {
+	root := t.TempDir()
+	path, err := toolplane.ToolPatchBufferPath(toolRoot(t, root), "chapter-json-patch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatal(err)
+	}
+	patchJSON := `{"expected_content_sha256":"abc","paragraph_edits":[{"op":"replace","index":2,"expected_sha256":"def","text":"Lin opens the door."}]}`
+	if err := os.WriteFile(path, []byte(patchJSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+	payload, err := toolplane.LoadToolPatchBuffer(toolRoot(t, root), "chapter-json-patch", "chapter")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(payload) != patchJSON {
+		t.Fatalf("raw chapter patch buffer changed:\n got %s\nwant %s", payload, patchJSON)
 	}
 }
 

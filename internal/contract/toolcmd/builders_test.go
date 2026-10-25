@@ -97,6 +97,14 @@ func TestQueryFlagOrder(t *testing.T) {
 			want: `novelgen tool query context --type craft-character --name 'Lin' --view brief`,
 		},
 		{
+			name: "context narrative memory",
+			got: QueryContext(QueryOptions{
+				Type: "narrative-memory", ID: "P1-V1-C8", Name: "sealed door",
+				View: "brief", Intent: "chapter-write", MaxChars: 4000,
+			}),
+			want: `novelgen tool query context --type narrative-memory --id 'P1-V1-C8' --name 'sealed door' --view brief --intent chapter-write --max-chars 4000`,
+		},
+		{
 			name: "setup search",
 			got:  QueryStorySetup(QueryOptions{Type: "search", Name: "insect swarm", View: "brief"}),
 			want: `novelgen tool query story-setup --type search --name 'insect swarm' --view brief`,

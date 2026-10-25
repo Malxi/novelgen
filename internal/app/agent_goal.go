@@ -317,6 +317,7 @@ func goalToolAllowlist(allowWrite bool) []string {
 		"novelgen tool patch chapter",
 		"novelgen tool patch-buffer",
 		"novelgen tool refresh chapter-dsl",
+		"novelgen tool refresh narrative-memory",
 		"novelgen tool patch outline --apply",
 		"novelgen tool patch craft --apply",
 		"novelgen tool patch setup --apply",

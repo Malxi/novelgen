@@ -1,6 +1,6 @@
 # Novelgen Stage Contracts
 
-Last updated: 2026-10-17
+Last updated: 2026-10-25
 
 This document defines the persistent data contracts between Novelgen workflow
 stages. Treat these contracts as part of the public behavior of the repository:
@@ -54,6 +54,12 @@ Project root:
 - `story/reviews/*.json`: review outputs
 - `story/rpg/*.rpg`: RPG-DSL fragments
 - `logs/usage.jsonl`: append-only `usage.Entry` records (one per LLM call)
+- `.novelgen/narrative-memory/index.json`: derived scene/graph/promise index and
+  source fingerprints; never canonical story state
+- `.novelgen/narrative-memory/vectors.bin`: optional versioned float32 scene
+  vectors; safe to delete and rebuild
+- `.novelgen/narrative-memory/dirty.json`: fast stale-invalidation marker written
+  by canonical mutations; source fingerprints remain authoritative
 
 Usage records (observability, not story state):
 
@@ -133,7 +139,9 @@ Global user config:
 - `~/.novelgen/llm_config.json`: OpenAI-compatible provider config shared by
   the legacy pipeline and agent runtime provider references. Optional
   `agent_base_url` pins the Anthropic-compatible base URL used by the agent
-  runtime; otherwise a trailing `/v1` is stripped from `base_url`.
+  runtime; otherwise a trailing `/v1` is stripped from `base_url`. Optional
+  `embedding_model` enables OpenAI-compatible narrative-memory vectors;
+  `embedding_base_url` overrides `base_url` only for `/embeddings`.
 
 ## Stage Matrix
 
@@ -143,6 +151,7 @@ Global user config:
 | `setup.v1` | `novelgen setup` | `story/setup/story_setup.json` | compose, craft, write, RPG |
 | `compose.v1` | `novelgen compose` | `story/compose/outline.json` | craft, write continuity, RPG DSL |
 | `craft.v1` | `novelgen craft` | `story/craft/*.json` | write continuity, RPG DSL |
+| `narrative-memory.v1` | `tool refresh narrative-memory`, stale-query fallback | `.novelgen/narrative-memory/*` | chapter-write/repair context, `project doctor` |
 | `write.v1` | `novelgen write` | `chapters/chapter-<chapter_id>.md` | recap, review, RPG DSL |
 | `recap.v1` | `novelgen recap`, `write pipeline` | `story/recaps/<chapter_id>.json` | continuity, write |
 | `rpg-dsl.v1` | `novelgen rpg-dsl`, `write pipeline` | `story/rpg/*.rpg` | parser, validator, simulator, write continuity |
@@ -610,6 +619,75 @@ Change checklist:
 - Update RPG adapters if the new field maps into simulation.
 - Add fixture or roundtrip tests for changed element shapes.
 
+## `narrative-memory.v1`
+
+Producer:
+
+- `internal/fiction/domain/memory`
+- `novelgen tool refresh narrative-memory`
+- Read-only `tool query context --type narrative-memory` and the automatic
+  `chapter-write` / `chapter-repair` context builders may create an equivalent
+  in-memory index when the persisted cache is missing or stale.
+
+Inputs:
+
+- `story/setup/story_setup.json`
+- `story/compose/outline.json`
+- `story/craft/*.json`
+- `chapters/chapter-<chapter_id>.md`
+- `story/recaps/<chapter_id>.json`
+- Optional provider `embedding_model` and `embedding_base_url`
+
+Outputs:
+
+- `.novelgen/narrative-memory/index.json`
+- `.novelgen/narrative-memory/vectors.bin` when vectors are enabled
+- `.novelgen/narrative-memory/dirty.json` between a canonical write and refresh
+
+Required invariants:
+
+- The index is derived and rebuildable; it must never become canonical story
+  state or be required for setup/compose/craft/write to function.
+- Scene windows are built from saved prose paragraphs. Each scene, graph node,
+  edge, promise and citation carries stable chapter/paragraph identity and a
+  content or paragraph SHA-256 where applicable.
+- Retrieval for a target chapter must never return a scene from a later chapter.
+  The target chapter manuscript is excluded by default for generation.
+- Planned facts (`outline`) and actual facts (`chapter`/`recap`) remain
+  distinguishable. Planned events may guide intent but must not be reported as
+  already-occurred state.
+- A resolved mystery with a resolution chapter later than the query target is
+  still open at the target chapter. Open promises are ordered overdue, due this
+  chapter, open, then upcoming.
+- Source fingerprints cover setup, outline, each craft file, each chapter, each
+  recap, index version and embedding model. A changed source marks the persisted
+  index stale; read-only query returns `meta.status=ephemeral` and rebuilds in
+  memory rather than trusting stale state.
+- Vector generation reuses vectors only when scene text identity and embedding
+  model match. Embedding failures degrade to graph plus BM25 and return warnings.
+- Retrieval is bounded by `--limit` and `--max-chars`; every returned scene has a
+  citation containing chapter id, paragraph range and text hash.
+- Refresh and derived updates are atomic through `store.Root`; deleting the
+  narrative-memory directory must always be safe.
+
+Consumers:
+
+- `tool query context --type narrative-memory`
+- Automatic `narrative_memory` blocks in `chapter-write` and `chapter-repair`
+- `project doctor`
+- All successful canonical setup/outline/craft/recap/chapter mutations mark an
+  existing persisted memory cache stale through `.novelgen/narrative-memory/dirty.json`.
+- Chapter `--refresh-derived` remains the chapter-RPG-DSL switch and does not
+  control memory correctness or cache persistence.
+
+Change checklist:
+
+- Update the memory schema version and source fingerprints when persisted fields
+  or ranking semantics change.
+- Update retrieval evaluation fixtures for chapter-order leakage, promise
+  resolution, current-state recall and vector fallback.
+- Update Agent SDK tool docs/skills when context shape or intent values change.
+
 ## `write.v1`
 
 Producer:
@@ -631,6 +709,8 @@ Inputs:
 - `story/recaps/<previous_chapter_id>.json`
 - `story/rpg/*.rpg` when RPG checks are enabled
 - Neighboring chapter text when context is requested
+- Optional narrative-memory retrieval for prior scenes, open promises and
+  paragraph citations; a missing/stale cache is rebuilt in memory for the query
 
 Outputs:
 
@@ -662,6 +742,10 @@ Required invariants:
   configured word target. The continuity sent to write generation/review/improve
   represents facts before the target chapter begins; the target chapter's own
   events remain planned beats/deltas rather than already-true state.
+- Focused tool context may include `narrative_memory`: graph/BM25/vector-selected
+  prior scenes, open promises, current recap state and paragraph citations. It is
+  retrieval evidence, not new canon; later-chapter scenes and the target
+  chapter's unplanned prose must not leak into generation context.
 - Optional setup `WritingStyle` is passed to write generation, review, improve,
   and volume review as part of the compact setup. Long `ReferenceExcerpt` values
   are truncated before prompt use. The excerpt may guide prose-level style only;
@@ -741,12 +825,21 @@ Required invariants:
   and final markdown saves remain in Go. The SDK agent receives the current
   draft plus review suggestions, may query focused `chapter-write` or
   `chapter-repair` context, run scoped checks, and use `tool patch chapter`
-  dry-run validation. With `--agent-apply`, the SDK agent may repeat a
+  dry-run validation. A saved chapter can be edited through a hash-guarded
+  `paragraph_edits` patch after querying
+  `tool query chapter --type paragraphs`; the patch must carry the whole
+  `expected_content_sha256` plus each addressed paragraph's `sha256`, and Go
+  merges only those blank-line-delimited blocks before running the normal
+  length/structure/quality checks. Heading paragraphs are outline-owned and not
+  patchable through `paragraph_edits`. Full `content` remains the creation and
+  chapter-wide-rewrite path. With `--agent-apply`, the SDK agent may repeat a
   successful chapter patch dry-run with `--apply`; Go then reloads the saved
   chapter and continues deterministic fixers/post-save checks. Long chapter
-  edits are limited to the scoped patch buffer `<chapter_id>-draft`; once a
-  dry-run validates, the runner rejects further buffer mutation for that
-  chapter and requires apply or final JSON. Chapter applies should use
+  edits are limited to the scoped patch buffer `<chapter_id>-draft`; a complete
+  chapter patch JSON object is buffered as-is, while legacy plain text is still
+  wrapped as full `content`. Once a dry-run validates, the runner rejects
+  further buffer mutation for that chapter and requires apply or final JSON.
+  Chapter applies should use
   `--apply --refresh-derived` so the same validated patch write refreshes the
   target chapter DSL and returns a post-refresh focused check. Standalone
   `tool refresh chapter-dsl --id <chapter_id>` is reserved for workflows that

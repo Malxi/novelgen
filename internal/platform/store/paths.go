@@ -15,29 +15,33 @@ import (
 // Layout directories and file names. These constants are the canonical
 // spelling of the project layout documented in docs/ARCHITECTURE.md §7.
 const (
-	novelFileName         = "novel.json"
-	llmConfigName         = "llm_config.json"
-	storyDirName          = "story"
-	setupDirName          = "setup"
-	composeDirName        = "compose"
-	craftDirName          = "craft"
-	recapsDirName         = "recaps"
-	reviewsDirName        = "reviews"
-	rpgDirName            = "rpg"
-	chaptersDirName       = "chapters"
-	draftsDirName         = "drafts"
-	logsDirName           = "logs"
-	checkpointsName       = "checkpoints"
-	backupsName           = "backups"
-	setupJSONName         = "story_setup.json"
-	setupMarkdownName     = "story_setup.md"
-	setupExploreDirName   = "explore"
-	outlineJSONName       = "outline.json"
-	outlineMarkdownName   = "outline.md"
-	cacheDirName          = "cache"
-	chapterBatchesDirName = "chapter_batches"
-	agentPatchDirName     = "agent-patches"
-	agentGoalPlanDirName  = "goal-plans"
+	novelFileName              = "novel.json"
+	llmConfigName              = "llm_config.json"
+	storyDirName               = "story"
+	setupDirName               = "setup"
+	composeDirName             = "compose"
+	craftDirName               = "craft"
+	recapsDirName              = "recaps"
+	reviewsDirName             = "reviews"
+	rpgDirName                 = "rpg"
+	chaptersDirName            = "chapters"
+	draftsDirName              = "drafts"
+	logsDirName                = "logs"
+	checkpointsName            = "checkpoints"
+	backupsName                = "backups"
+	setupJSONName              = "story_setup.json"
+	setupMarkdownName          = "story_setup.md"
+	setupExploreDirName        = "explore"
+	outlineJSONName            = "outline.json"
+	outlineMarkdownName        = "outline.md"
+	cacheDirName               = "cache"
+	chapterBatchesDirName      = "chapter_batches"
+	agentPatchDirName          = "agent-patches"
+	agentGoalPlanDirName       = "goal-plans"
+	narrativeMemoryDirName     = "narrative-memory"
+	narrativeMemoryIndexName   = "index.json"
+	narrativeMemoryVectorsName = "vectors.bin"
+	narrativeMemoryDirtyName   = "dirty.json"
 )
 
 // CraftKind identifies one of the four craft element files.
@@ -244,6 +248,32 @@ func (r *Root) AgentPatchDir() string {
 func (r *Root) AgentGoalPlanFile(sessionID string) string {
 	sum := sha256.Sum256([]byte(strings.TrimSpace(sessionID)))
 	return filepath.Join(r.AgentWorkDir(), agentGoalPlanDirName, hex.EncodeToString(sum[:8])+".json")
+}
+
+// NarrativeMemoryDir is project-local, rebuildable derived memory. Queries may
+// build an equivalent index in memory, while `tool refresh narrative-memory`
+// persists it here for faster follow-up queries.
+func (r *Root) NarrativeMemoryDir() string {
+	return filepath.Join(r.AgentWorkDir(), narrativeMemoryDirName)
+}
+
+// NarrativeMemoryIndexFile stores scene, graph, promise and source-fingerprint
+// metadata. It is not canon and may be deleted at any time.
+func (r *Root) NarrativeMemoryIndexFile() string {
+	return filepath.Join(r.NarrativeMemoryDir(), narrativeMemoryIndexName)
+}
+
+// NarrativeMemoryVectorsFile stores optional float32 scene vectors separately,
+// so the human-readable index JSON stays manageable.
+func (r *Root) NarrativeMemoryVectorsFile() string {
+	return filepath.Join(r.NarrativeMemoryDir(), narrativeMemoryVectorsName)
+}
+
+// NarrativeMemoryDirtyFile records that canonical story sources changed after
+// the last persisted memory index. It is a fast invalidation hint; source
+// fingerprints remain the final correctness check.
+func (r *Root) NarrativeMemoryDirtyFile() string {
+	return filepath.Join(r.NarrativeMemoryDir(), narrativeMemoryDirtyName)
 }
 
 // RelPath renders a project path relative to the project directory with forward

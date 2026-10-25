@@ -214,7 +214,7 @@ SDK Agent **不能直接读写项目文件**。它们只能通过 CLI 的 `tool`
 | `tool check <quality\|simulation\|all\|schema>` | 确定性校验 |
 | `tool patch <outline\|craft\|setup\|recap\|chapter>` | 打补丁，**默认 dry-run** |
 | `tool patch-buffer append/show/clear` | 大正文分块暂存 |
-| `tool refresh [chapter-dsl]` | 重建派生数据 |
+| `tool refresh [chapter-dsl\|narrative-memory]` | 重建章节 DSL 或叙事记忆派生索引 |
 
 这保证了 AGENTS.md 的硬规则：**AI 输出不得直接成为项目状态**。Agent 只能提交 patch，由 [`internal/fiction/mutation`](../internal/fiction/mutation/mutation.go)（merge、保留 ID、normalize、落盘与 checkpoint）与 [`internal/fiction/check`](../internal/fiction/check/check.go)（schema/quality/simulation 校验）负责，失败即拒绝，`--apply` 才落盘。
 
@@ -250,6 +250,7 @@ canonical 产物（setup/outline/craft/chapter/recap/draft）的命令层直写�
 | 层 | 位置 | 角色 |
 | --- | --- | --- |
 | **持久化模型（唯一事实源）** | [`internal/contract/story`](../internal/contract/story/) | `StorySetup` / `Outline` / `Elements` / `Recap` / `StateMatrix` 等，落盘为 `story/**` 的 JSON |
+| **叙事记忆（派生检索）** | [`internal/fiction/domain/memory`](../internal/fiction/domain/memory/) | 场景窗口、故事图、承诺账本、BM25 与可选向量；只读重建，不是 canon |
 | **RPG 引擎模型** | [`internal/fiction/rpg`](../internal/fiction/rpg/) | `GameWorld`/`Character`/`Item`/`Map`/`Quest`… 由 models 派生，用于模拟与基准 |
 | **DSL AST** | [`internal/fiction/rpg/dsl`](../internal/fiction/rpg/dsl/) | `ast.go`/`parser.go`/`validator.go`/`converter.go`/`simulator.go`/`merger.go`/`hook*.go` |
 
@@ -278,6 +279,7 @@ AI 分析章节/大纲
 - [`internal/fiction/domain/logic/state_matrix.go`](../internal/fiction/domain/logic/state_matrix.go) 的 `StateMatrixManager` 是**活跃**的状态折叠引擎，会把本章事件与 DSL `state_delta` 折进 `models.StateMatrix`。
 - [`internal/fiction/domain/logic/chapter_continuity.go`](../internal/fiction/domain/logic/chapter_continuity.go) 的 `ChapterContinuityBuilder` 在其上生成写作面向的连续性快照。
 - `models.StateMatrix` 是数据，`logic.StateMatrixManager` 是计算——二者是类型与逻辑的分工，不是重复实现。
+- `domain/memory` 把 setup/outline/craft/recap/chapter 投影为场景与图，使用时间顺序、到期承诺和章节边界约束检索；未来章节正文不得进入当前章上下文。
 
 ---
 
@@ -296,6 +298,7 @@ AI 分析章节/大纲
 │   └── rpg/*.rpg
 ├── drafts/C{n}.md                 # legacy（write 直接产出最终稿）
 ├── chapters/chapter-{n}.md
+├── .novelgen/narrative-memory/{index.json,vectors.bin,dirty.json}  # 可删除、可重建的检索缓存
 ├── logs/{prompts,responses,agent-live,write_contexts,draft_contexts}.md 日志流
 │        ai_calls/<id>.json（每次 AI 调用一条结构化记录：model/tokens/两个 prompt/response）
 │        usage.jsonl（成本账本）、clone_manifest.json
@@ -380,7 +383,7 @@ chapter check/refresh、`internal/fiction/domain/logic` 的 state matrix/continu
 | 配置 | 位置 |
 | --- | --- |
 | 项目 | `<book>/novel.json` |
-| LLM | `<book>/llm_config.json` 或 `~/.novelgen/llm_config.json` |
+| LLM | `<book>/llm_config.json` 或 `~/.novelgen/llm_config.json`；provider 可选 `embedding_model` / `embedding_base_url` |
 | Agent 运行时 | `~/.novelgen/agent_config.json`（缺失时回退 `~/.claude/settings.json`） |
 | Agent 资产 | `~/.novelgen/agents/{runners,skills,settings}` |
 

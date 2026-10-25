@@ -24,6 +24,8 @@ func RunToolRefresh(cmd *cobra.Command, args []string) error {
 	switch target {
 	case "chapter-dsl", "chapters-dsl", "chapter-rpg-dsl", "rpg-chapters":
 		return runToolRefreshChapterDSL(cmd)
+	case "narrative-memory", "story-memory", "memory":
+		return runToolRefreshNarrativeMemory(cmd)
 	default:
 		return fmt.Errorf("unsupported refresh target %q", target)
 	}
@@ -43,6 +45,18 @@ func runToolRefreshChapterDSL(cmd *cobra.Command) error {
 		return fmt.Errorf("--id is required for chapter-dsl refresh")
 	}
 	result, err := RefreshToolChapterDSL(cmd.Context(), root, id, ToolRefreshFlags.BatchSize)
+	if err != nil {
+		return err
+	}
+	return writeJSON(cmd, result)
+}
+
+func runToolRefreshNarrativeMemory(cmd *cobra.Command) error {
+	book, err := project.ForCommand(cmd)
+	if err != nil {
+		return err
+	}
+	result, err := refreshNarrativeMemory(book.Root())
 	if err != nil {
 		return err
 	}

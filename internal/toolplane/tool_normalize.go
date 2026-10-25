@@ -45,6 +45,8 @@ func normalizeContextType(value string) string {
 		return "chapter-repair"
 	case "chapter-write", "write-chapter", "chapter-draft", "draft-chapter", "write", "chapter-context":
 		return "chapter-write"
+	case "narrative-memory", "narrative_memory", "story-memory", "memory":
+		return "narrative-memory"
 	default:
 		return NormalizeKey(value)
 	}
@@ -146,6 +148,8 @@ func normalizeChapterType(value string) string {
 		return "refs"
 	case "event":
 		return "events"
+	case "paragraph", "blocks":
+		return "paragraphs"
 	default:
 		return NormalizeKey(value)
 	}
@@ -176,6 +180,13 @@ func appendToolQueryFlagWarnings(resp *ToolResponse, section, queryType, id, nam
 	categoryUsed := section == "ideas" && queryType == "itemcard"
 	if strings.TrimSpace(ToolQueryFlags.Category) != "" && !categoryUsed {
 		add("--category is only used by itemcard idea queries and was ignored")
+	}
+	memoryUsed := section == "context" && queryType == "narrative-memory"
+	if strings.TrimSpace(ToolQueryFlags.Intent) != "" && !memoryUsed {
+		add("--intent is only used by narrative-memory context queries and was ignored")
+	}
+	if ToolQueryFlags.MaxChars > 0 && !memoryUsed {
+		add("--max-chars is only used by narrative-memory context queries and was ignored")
 	}
 	entityUsed := (section == "outline" && (queryType == "refs" || queryType == "events")) ||
 		(section == "chapter" && (queryType == "refs" || queryType == "events" ||

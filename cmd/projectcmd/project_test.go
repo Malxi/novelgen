@@ -1,6 +1,7 @@
 package projectcmd
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"novelgen/internal/contract/story"
+	"novelgen/internal/fiction/domain/memory"
 	"novelgen/internal/platform/agentruntime"
 	"novelgen/internal/platform/store"
 )
@@ -198,10 +200,29 @@ func TestProjectDoctorReadyOnCloneFixture(t *testing.T) {
 	if report.Counts["agent_sdk_skills"] == 0 {
 		t.Fatalf("agent SDK skill count missing: %#v", report.Counts)
 	}
-	for _, name := range []string{"agent_sdk_config", "agent_sdk_model", "agent_sdk_python", "agent_sdk_python_package", "agent_sdk_skills"} {
+	for _, name := range []string{"agent_sdk_config", "agent_sdk_model", "agent_sdk_python", "agent_sdk_python_package", "agent_sdk_skills", "narrative_memory"} {
 		if !doctorHasCheck(report, name, true, "info") {
 			t.Fatalf("missing ready check %q in %#v", name, report.Checks)
 		}
+	}
+}
+
+func TestProjectDoctorReportsFreshAndStaleNarrativeMemory(t *testing.T) {
+	withReadyAgentRuntime(t)
+	root := writeCloneProjectFixture(t)
+	if _, err := memory.Refresh(context.Background(), store.At(root), nil); err != nil {
+		t.Fatal(err)
+	}
+	report := inspectProjectForAgentSDK(root)
+	if !doctorCheckMessageContains(report, "narrative_memory", "fresh") {
+		t.Fatalf("missing fresh narrative memory check: %#v", report.Checks)
+	}
+	if err := os.WriteFile(filepath.Join(root, "chapters", "chapter-P1-V1-C1.md"), []byte("# Changed\n\nChanged prose.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	report = inspectProjectForAgentSDK(root)
+	if !doctorHasCheck(report, "narrative_memory", false, "warning") || !doctorCheckMessageContains(report, "narrative_memory", "stale") {
+		t.Fatalf("missing stale narrative memory check: %#v", report.Checks)
 	}
 }
 

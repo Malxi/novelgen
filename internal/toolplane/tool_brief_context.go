@@ -8,6 +8,7 @@ import (
 
 	"novelgen/internal/contract/story"
 	"novelgen/internal/contract/toolcmd"
+	"novelgen/internal/fiction/domain/memory"
 )
 
 func briefContextResults(results interface{}, indexOnly bool) interface{} {
@@ -44,6 +45,8 @@ func briefContextResults(results interface{}, indexOnly bool) interface{} {
 	case CraftElementContext:
 		typed.Events = stripContextEventPaths(typed.Events)
 		return typed
+	case memory.ContextResult:
+		return typed
 	default:
 		return results
 	}
@@ -52,7 +55,7 @@ func briefContextResults(results interface{}, indexOnly bool) interface{} {
 func indexContextResults(results interface{}) interface{} {
 	switch typed := results.(type) {
 	case ChapterRepairContext:
-		return map[string]interface{}{
+		result := map[string]interface{}{
 			"chapter_id":     typed.ChapterID,
 			"path":           typed.Path,
 			"issue_category": typed.IssueCategory,
@@ -63,8 +66,12 @@ func indexContextResults(results interface{}) interface{} {
 			"stats":          typed.Stats,
 			"entity_index":   typed.EntityIndex,
 		}
+		if typed.NarrativeMemory != nil {
+			result["narrative_memory"] = memoryContextIndex(typed.NarrativeMemory)
+		}
+		return result
 	case ChapterWriteContext:
-		return map[string]interface{}{
+		result := map[string]interface{}{
 			"chapter_id":   typed.ChapterID,
 			"path":         typed.Path,
 			"navigation":   typed.Navigation,
@@ -73,6 +80,10 @@ func indexContextResults(results interface{}) interface{} {
 			"stats":        typed.Stats,
 			"entity_index": typed.EntityIndex,
 		}
+		if typed.NarrativeMemory != nil {
+			result["narrative_memory"] = memoryContextIndex(typed.NarrativeMemory)
+		}
+		return result
 	case RecapRepairContext:
 		return map[string]interface{}{
 			"chapter_id":   typed.ChapterID,
@@ -124,8 +135,41 @@ func indexContextResults(results interface{}) interface{} {
 			"next_actions": craftElementIndexNextActions(typed),
 			"stats":        typed.Stats,
 		}
+	case memory.ContextResult:
+		return memoryContextIndex(&typed)
 	default:
 		return results
+	}
+}
+
+func memoryContextIndex(result *memory.ContextResult) map[string]interface{} {
+	if result == nil {
+		return nil
+	}
+	retrieved := make([]map[string]interface{}, 0, len(result.Retrieved))
+	for _, scene := range result.Retrieved {
+		retrieved = append(retrieved, map[string]interface{}{
+			"chapter_id":      scene.ChapterID,
+			"paragraph_start": scene.ParagraphStart,
+			"paragraph_end":   scene.ParagraphEnd,
+			"score":           scene.Score,
+		})
+	}
+	promises := make([]map[string]interface{}, 0, len(result.Promises))
+	for _, promise := range result.Promises {
+		promises = append(promises, map[string]interface{}{
+			"id":     promise.ID,
+			"kind":   promise.Kind,
+			"status": promise.Status,
+			"reason": promise.Reason,
+		})
+	}
+	return map[string]interface{}{
+		"chapter_id": result.ChapterID,
+		"intent":     result.Intent,
+		"retrieved":  retrieved,
+		"promises":   promises,
+		"meta":       result.Meta,
 	}
 }
 
