@@ -2,6 +2,7 @@ package creativity
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -28,7 +29,7 @@ func TestGenerateWorldPacksIsDeterministicAndCompatible(t *testing.T) {
 		if !pack.Compatibility.Compatible {
 			t.Fatalf("pack %s marked incompatible: %v", pack.ID, pack.Compatibility.Warnings)
 		}
-		if len(pack.Storylines) != 3 || len(pack.Cast) != 4 || len(pack.Resources) != 2 || len(pack.Items) != 5 {
+		if len(pack.Storylines) != 3 || len(pack.Cast) != 4 || len(pack.Resources) != 2 || len(pack.Items) != 7 {
 			t.Fatalf("incomplete decks for %s: %#v", pack.ID, pack)
 		}
 		categories := map[string]bool{}
@@ -38,7 +39,7 @@ func TestGenerateWorldPacksIsDeterministicAndCompatible(t *testing.T) {
 				t.Fatalf("foreign item: %#v", item)
 			}
 		}
-		for _, category := range []string{"resource", "equipment", "consumable", "prop", "credential"} {
+		for _, category := range itemCategories {
 			if !categories[category] {
 				t.Fatalf("pack %s missing item category %s", pack.ID, category)
 			}
@@ -102,6 +103,61 @@ func TestWorldPackCastNamesAreUnique(t *testing.T) {
 	}
 }
 
+func TestWorldPackStorylineArchetypesAreDistinctAndLinked(t *testing.T) {
+	result, err := GenerateWorldPacks(EngineRequest{Genre: "科幻", Seed: 42, Count: 4, Source: "星战"})
+	if err != nil {
+		t.Fatalf("GenerateWorldPacks: %v", err)
+	}
+	seenAcrossPacks := map[string]bool{}
+	for _, pack := range result.Packs {
+		if len(pack.Storylines) != 3 {
+			t.Fatalf("storylines = %d, want 3", len(pack.Storylines))
+		}
+		castIDs := map[string]bool{}
+		for _, cast := range pack.Cast {
+			castIDs[cast.ID] = true
+		}
+		itemIDs := map[string]bool{}
+		for _, item := range pack.Items {
+			itemIDs[item.ID] = true
+		}
+		archetypes := map[string]bool{}
+		slots := map[string]bool{}
+		for i, storyline := range pack.Storylines {
+			if storyline.ArchetypeID == "" || archetypes[storyline.ArchetypeID] {
+				t.Fatalf("duplicate or empty archetype in %s: %#v", pack.ID, pack.Storylines)
+			}
+			if storyline.ArcSlot != storylineArcSlots[i] || slots[storyline.ArcSlot] {
+				t.Fatalf("unexpected arc slot in %s: %#v", pack.ID, pack.Storylines)
+			}
+			archetypes[storyline.ArchetypeID] = true
+			slots[storyline.ArcSlot] = true
+			seenAcrossPacks[storyline.ArchetypeID] = true
+			if len(storyline.LinkedCharacters) == 0 || len(storyline.LinkedItems) == 0 {
+				t.Fatalf("storyline links are empty: %#v", storyline)
+			}
+			for _, id := range storyline.LinkedCharacters {
+				if !castIDs[id] {
+					t.Fatalf("unknown linked cast %s", id)
+				}
+			}
+			for _, id := range storyline.LinkedItems {
+				if !itemIDs[id] {
+					t.Fatalf("unknown linked item %s", id)
+				}
+			}
+			combined := storyline.Title + storyline.Promise + storyline.Pressure +
+				storyline.Opposition + storyline.Turn + storyline.Payoff
+			if strings.Contains(combined, "{") || strings.Contains(combined, "}") {
+				t.Fatalf("unresolved storyline token: %#v", storyline)
+			}
+		}
+	}
+	if len(seenAcrossPacks) < 6 {
+		t.Fatalf("storyline archetype variety too low: %#v", seenAcrossPacks)
+	}
+}
+
 func TestWorldPackAppliesRequestedReferenceAsOneLens(t *testing.T) {
 	result, err := GenerateWorldPacks(EngineRequest{Genre: "科幻", Seed: 137, Count: 2, Source: "异形"})
 	if err != nil {
@@ -114,6 +170,9 @@ func TestWorldPackAppliesRequestedReferenceAsOneLens(t *testing.T) {
 		if pack.Reference.SourceURL == "" || pack.Reference.CorePattern == "" {
 			t.Fatalf("missing researched reference data: %#v", pack.Reference)
 		}
+		if len(pack.Reference.StoryBias) == 0 {
+			t.Fatalf("missing reference storyline biases: %#v", pack.Reference)
+		}
 		if pack.Premise.ReferenceID != "alien" {
 			t.Fatalf("premise reference = %q, want alien", pack.Premise.ReferenceID)
 		}
@@ -122,6 +181,28 @@ func TestWorldPackAppliesRequestedReferenceAsOneLens(t *testing.T) {
 				t.Fatalf("cast reference = %q, want alien", cast.ReferenceID)
 			}
 		}
+	}
+}
+
+func TestReferenceSourceChangesStorylineArchetypes(t *testing.T) {
+	starWars, err := GenerateWorldPacks(EngineRequest{Genre: "科幻", Seed: 42, Count: 1, Source: "星战"})
+	if err != nil {
+		t.Fatalf("GenerateWorldPacks starwars: %v", err)
+	}
+	alien, err := GenerateWorldPacks(EngineRequest{Genre: "科幻", Seed: 42, Count: 1, Source: "异形"})
+	if err != nil {
+		t.Fatalf("GenerateWorldPacks alien: %v", err)
+	}
+	starIDs := make([]string, 0, 3)
+	alienIDs := make([]string, 0, 3)
+	for _, storyline := range starWars.Packs[0].Storylines {
+		starIDs = append(starIDs, storyline.ArchetypeID)
+	}
+	for _, storyline := range alien.Packs[0].Storylines {
+		alienIDs = append(alienIDs, storyline.ArchetypeID)
+	}
+	if reflect.DeepEqual(starIDs, alienIDs) {
+		t.Fatalf("reference source did not change storyline archetypes: %#v", starIDs)
 	}
 }
 
@@ -134,7 +215,7 @@ func TestReferenceCardsHaveSourcesAndAliases(t *testing.T) {
 		t.Fatalf("reference cards = %d, want 5", len(cards))
 	}
 	for _, card := range cards {
-		if card.SourceURL == "" || card.AccessedOn == "" || len(card.StructuralMechanics) < 3 {
+		if card.SourceURL == "" || card.AccessedOn == "" || len(card.StructuralMechanics) < 3 || len(card.StoryBias) == 0 {
 			t.Fatalf("incomplete reference card: %#v", card)
 		}
 	}

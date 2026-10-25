@@ -16,6 +16,7 @@ description: Common Novelgen Agent SDK tool rules. Project facts may only be que
 - `tool query context` 的形态是：`novelgen tool query context --type <context-type> ...`。
 - `tool query ideas` 生成随机的“结构化废话”，用于 setup/outline 构思；它是只读的，不依赖已有 setup。把每条结果当作必须合理化的约束，而不是成品设定。
 - 需要成套相容设定时优先使用 `--type worldpack`：同一结果的 premise、storyline、cast、resource 共享 `pack_id`、同一个 Engine 和同一个 `reference_id`。也可用相同 genre/seed/count/source 分别抽 `premise|storyline|cast|resource`，再按 `pack_id` 对齐；不要把不同 pack_id 或不同 reference 的卡片直接拼接。
+- `storyline` 会从 claim、revelation、choice 三个槽位各抽一个不同原型，并通过 `linked_characters` / `linked_items` 绑定同包角色和物品。优先检查这些引用，而不是只看剧情标题。
 - `tool check` 的形态是：`novelgen tool check <quality|simulation|all> --target <target> ...`。不要省略 check kind。
 - 中文或非 ASCII patch JSON 优先走 stdin；允许的管道只有两种：把 compact JSON 传给 patch 工具：`printf '%s' '<compact-json>' | novelgen tool patch ...`；或把长章节正文分块传给 patch buffer：`printf '%s' '<content chunk>' | novelgen tool patch-buffer append --id "<chapter_id>-draft" --stdin`。
 - 输出过大时使用 `--view index|brief`、`--limit`、`--fields` 或精确 ID/name；默认不要使用 `--view full`。
