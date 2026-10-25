@@ -19,6 +19,7 @@ type ReferenceCard struct {
 	CorePattern         string   `json:"core_pattern"`
 	StructuralMechanics []string `json:"structural_mechanics"`
 	StoryEngines        []string `json:"story_engines"`
+	StoryBias           []string `json:"story_bias"`
 	ToneTags            []string `json:"tone_tags"`
 	FusionRule          string   `json:"fusion_rule"`
 	Avoid               []string `json:"avoid"`
@@ -43,6 +44,7 @@ var referenceCards = []ReferenceCard{
 			"一项看似无害的科研异常逐渐改变整个帝国的资源分配",
 			"边境殖民地用自治换生存，中央却要求统一征税",
 		},
+		StoryBias:  []string{"access_claim", "quota_revolt", "reform_dilemma", "public_audit"},
 		ToneTags:   []string{"银河尺度", "制度选择", "探索与外交", "长期经营"},
 		FusionRule: "把参考作品当作宏观策略层：只吸收探索—异常—政策—派系冲突的循环，不复制其种族、帝国或专有历史。",
 		Avoid:      []string{"把宏观外交写成单个救世主通关", "只借用外星种族名称而不改变制度"},
@@ -65,6 +67,7 @@ var referenceCards = []ReferenceCard{
 			"一个被宣布为异端的证人掌握着帝国最需要的技术",
 			"守住一座城市意味着向它征收足以毁掉它的战争税",
 		},
+		StoryBias:  []string{"debt_transfer", "reform_dilemma", "rival_conversion", "public_audit"},
 		ToneTags:   []string{"宏大压迫", "阵营冲突", "官僚战争", "黑暗讽刺"},
 		FusionRule: "只使用“战争常态、派系官僚、信仰与资源互相锁定”的结构；生成时使用原创阵营、神系与术语。",
 		Avoid:      []string{"直接搬用受保护角色、军团与神祇名称", "把黑暗写成无差别血腥描写"},
@@ -87,6 +90,7 @@ var referenceCards = []ReferenceCard{
 			"船员每救一个人就会暴露更多舱室位置",
 			"公司规章要求保留资产，却要求船员承担事故责任",
 		},
+		StoryBias:  []string{"black_market", "hidden_function", "false_witness", "loyalty_test"},
 		ToneTags:   []string{"幽闭恐惧", "企业阴谋", "生物威胁", "生存倒计时"},
 		FusionRule: "只吸收企业合同、封闭空间、未知生物和隐藏任务目标的因果链；不使用既有生物名称、船员或飞船情节。",
 		Avoid:      []string{"把异形写成不可解释的万能怪物", "让公司阴谋与生存机制各自独立"},
@@ -109,6 +113,7 @@ var referenceCards = []ReferenceCard{
 			"主角必须在拯救亲人和阻止政权篡位之间选择",
 			"古老组织的和平承诺掩盖了对力量使用者的长期控制",
 		},
+		StoryBias:  []string{"rival_conversion", "hidden_function", "public_audit", "missing_signature"},
 		ToneTags:   []string{"神话冒险", "能力与责任", "银河政治", "师徒冲突"},
 		FusionRule: "只吸收“有意志的力量、秩序与反叛、个人选择的宇宙后果”；生成原创力量体系、阵营和角色。",
 		Avoid:      []string{"直接使用既有绝地、西斯、帝国人物或台词", "把有意志的力量简化成无代价超能力"},
@@ -131,6 +136,7 @@ var referenceCards = []ReferenceCard{
 			"一个宜居星球的价值来自它能让多少艘船补给",
 			"探索队发现前文明留下的导航网络正在改变贸易路线",
 		},
+		StoryBias:  []string{"quota_revolt", "decoy_prize", "loyalty_test", "hidden_function"},
 		ToneTags:   []string{"开放探索", "资源循环", "孤独奇观", "共同建设"},
 		FusionRule: "只吸收探索—采集—建造—交易—生存的循环，以及程序化遗迹带来的认知悬念；不复制具体星球和图鉴。",
 		Avoid:      []string{"把无限宇宙写成没有成本的地图旅行", "只抽星球名字而不给资源循环"},

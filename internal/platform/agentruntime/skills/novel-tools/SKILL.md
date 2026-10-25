@@ -13,7 +13,7 @@ description: Novelgen 项目查询、检查和受控 patch 工具的使用规则
 - `novelgen tool query outline`：查询大纲、卷、章节、角色/物品/地点关联章节。
 - `novelgen tool query craft`：查询角色、物品、地点、组织 craft。
 - `novelgen tool query chapter`：查询章节正文或章节上下文。
-- `novelgen tool query ideas`：生成可复现的随机挑衅、场景卡、制度引擎、参考风格卡、角色姓名卡、物品卡与相容世界卡包；需要成套设定时使用 `--type worldpack`，需要带性格和角色扮演线索的人名时使用 `--type namecard`，需要资源/装备/道具时使用 `--type itemcard`。
+- `novelgen tool query ideas`：生成可复现的随机挑衅、场景卡、制度引擎、参考风格卡、角色姓名卡、物品卡与相容世界卡包；需要成套设定时使用 `--type worldpack`，剧情卡从三类槽位的原型池抽取并绑定同包人物与物品。
 - `novelgen tool check ...`：运行 schema、quality、simulation 检查。
 - `novelgen tool patch ...`：dry-run 或受控 apply patch。
 

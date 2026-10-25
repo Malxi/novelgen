@@ -89,12 +89,16 @@ func briefIdeaResults(results interface{}, index bool) interface{} {
 		out := make([]map[string]interface{}, 0, len(items))
 		for _, item := range items {
 			out = append(out, map[string]interface{}{
-				"id":           item.ID,
-				"pack_id":      item.PackID,
-				"reference_id": item.ReferenceID,
-				"kind":         item.Kind,
-				"title":        item.Title,
-				"turn":         item.Turn,
+				"id":                item.ID,
+				"pack_id":           item.PackID,
+				"reference_id":      item.ReferenceID,
+				"archetype_id":      item.ArchetypeID,
+				"arc_slot":          item.ArcSlot,
+				"kind":              item.Kind,
+				"title":             item.Title,
+				"turn":              item.Turn,
+				"linked_characters": item.LinkedCharacters,
+				"linked_items":      item.LinkedItems,
 			})
 		}
 		return out

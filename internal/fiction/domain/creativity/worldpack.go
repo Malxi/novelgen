@@ -55,18 +55,22 @@ type PremiseCard struct {
 
 // StorylineCard is one storyline promise tied to a WorldPack.
 type StorylineCard struct {
-	ID            string `json:"id"`
-	PackID        string `json:"pack_id"`
-	ReferenceID   string `json:"reference_id"`
-	Kind          string `json:"kind"`
-	Title         string `json:"title"`
-	Promise       string `json:"promise"`
-	Pressure      string `json:"pressure"`
-	Opposition    string `json:"opposition"`
-	Turn          string `json:"turn"`
-	Payoff        string `json:"payoff"`
-	LinkedPremise string `json:"linked_premise"`
-	ReferenceHook string `json:"reference_hook"`
+	ID               string   `json:"id"`
+	PackID           string   `json:"pack_id"`
+	ReferenceID      string   `json:"reference_id"`
+	ArchetypeID      string   `json:"archetype_id"`
+	ArcSlot          string   `json:"arc_slot"`
+	Kind             string   `json:"kind"`
+	Title            string   `json:"title"`
+	Promise          string   `json:"promise"`
+	Pressure         string   `json:"pressure"`
+	Opposition       string   `json:"opposition"`
+	Turn             string   `json:"turn"`
+	Payoff           string   `json:"payoff"`
+	LinkedPremise    string   `json:"linked_premise"`
+	LinkedCharacters []string `json:"linked_characters"`
+	LinkedItems      []string `json:"linked_items"`
+	ReferenceHook    string   `json:"reference_hook"`
 }
 
 // CastCard is a named role promise for one WorldPack. Names are presentation;
@@ -187,7 +191,7 @@ func buildWorldPack(engine Engine, reference ReferenceCard, index int) WorldPack
 	cast := buildCastDeck(engine, reference, packID)
 	resources := buildResourceDeck(engine, reference, packID)
 	items := buildItemDeck(engine, reference, packID)
-	storylines := buildStorylineDeck(engine, reference, packID, cast, resources)
+	storylines := buildStorylineDeck(engine, reference, packID, cast, resources, items)
 	pack := WorldPack{
 		ID:         packID,
 		Seed:       engine.Seed,
@@ -207,6 +211,8 @@ func buildWorldPack(engine Engine, reference ReferenceCard, index int) WorldPack
 			"all_cards_share_pack_id",
 			"premise_references_engine_artifact",
 			"storylines_reference_engine_domain",
+			"storyline_archetypes_are_distinct",
+			"storyline_links_are_closed",
 			"cast_has_closed_role_set",
 			"resources_include_engine_artifact",
 			"items_cover_core_categories",
@@ -245,56 +251,8 @@ func buildPremiseCard(engine Engine, reference ReferenceCard) PremiseCard {
 	}
 }
 
-func buildStorylineDeck(engine Engine, reference ReferenceCard, packID string, cast []CastCard, resources []ResourceCard) []StorylineCard {
-	resourceName := engine.Artifact
-	if len(resources) > 0 {
-		resourceName = resources[0].Name
-	}
-	premiseID := "premise-" + packID
-	return []StorylineCard{
-		{
-			ID:            "storyline-" + packID + "-resource",
-			PackID:        packID,
-			ReferenceID:   reference.ID,
-			Kind:          "resource",
-			Title:         "谁有权使用" + resourceName,
-			Promise:       fmt.Sprintf("%s用%s解决眼前损失，读者看到规则如何定价。", cast[0].Name, resourceName),
-			Pressure:      fmt.Sprintf("%s掌握签发权，%s必须付出%s才能继续。", engine.Issuer, engine.Holder, engine.Cost),
-			Opposition:    fmt.Sprintf("%s不能让所有人都获得同一种%s解释权。", engine.Issuer, resourceName),
-			Turn:          fmt.Sprintf("主角发现%s并非事故，而是%s的日常收益。", engine.HiddenFunction, engine.Issuer),
-			Payoff:        engine.SignatureWin,
-			LinkedPremise: premiseID,
-			ReferenceHook: reference.StoryEngines[0],
-		},
-		{
-			ID:            "storyline-" + packID + "-revelation",
-			PackID:        packID,
-			ReferenceID:   reference.ID,
-			Kind:          "revelation",
-			Title:         "被隐藏的" + engine.Artifact,
-			Promise:       fmt.Sprintf("主角追查%s为什么失效，逐步得到可验证的签名和记录。", engine.Artifact),
-			Pressure:      fmt.Sprintf("%s会封存%s，并把追查者登记为违约者。", engine.Issuer, engine.Artifact),
-			Opposition:    fmt.Sprintf("%s代表制度执行，%s则同时依赖这套制度生活。", engine.Issuer, engine.Holder),
-			Turn:          fmt.Sprintf("关键漏洞是：%s", engine.Loophole),
-			Payoff:        fmt.Sprintf("%s的真实功能被公开，%s失去独占解释权。", engine.HiddenFunction, engine.Issuer),
-			LinkedPremise: premiseID,
-			ReferenceHook: reference.StoryEngines[1],
-		},
-		{
-			ID:            "storyline-" + packID + "-institution",
-			PackID:        packID,
-			ReferenceID:   reference.ID,
-			Kind:          "institution",
-			Title:         "制度的第一个早晨：" + engine.Artifact,
-			Promise:       fmt.Sprintf("主角准备废除%s，却发现很多普通人正靠它换取生活所需。", engine.Artifact),
-			Pressure:      fmt.Sprintf("一旦%s停摆，%s会立刻承担%s。", engine.Artifact, engine.Issuer, engine.Cost),
-			Opposition:    fmt.Sprintf("%s内部的执行者并非都想作恶，他们也在维护自己的配额。", engine.Issuer),
-			Turn:          engine.CounterExpectation,
-			Payoff:        fmt.Sprintf("主角改写%s的签发条件，而不是简单摧毁它。", engine.Artifact),
-			LinkedPremise: premiseID,
-			ReferenceHook: reference.StoryEngines[2],
-		},
-	}
+func buildStorylineDeck(engine Engine, reference ReferenceCard, packID string, cast []CastCard, resources []ResourceCard, items []ItemCard) []StorylineCard {
+	return buildStorylineArchetypeDeck(engine, reference, packID, cast, resources, items)
 }
 
 func buildCastDeck(engine Engine, reference ReferenceCard, packID string) []CastCard {
@@ -446,7 +404,7 @@ func buildItemDeck(engine Engine, reference ReferenceCard, packID string) []Item
 	result, _ := GenerateItemCards(ItemRequest{
 		Genre:       engine.Genre,
 		Seed:        engine.Seed,
-		Count:       5,
+		Count:       7,
 		Source:      reference.ID,
 		PackID:      packID,
 		ReferenceID: reference.ID,
@@ -511,8 +469,8 @@ func ValidateWorldPack(pack WorldPack) []string {
 	if len(pack.Resources) < 2 {
 		issues = append(issues, "world pack needs at least two resource cards")
 	}
-	if len(pack.Items) < 5 {
-		issues = append(issues, "world pack needs at least five item cards")
+	if len(pack.Items) < 7 {
+		issues = append(issues, "world pack needs at least seven item cards")
 	}
 	premiseText := strings.Join([]string{
 		pack.Premise.Statement,
@@ -523,6 +481,16 @@ func ValidateWorldPack(pack WorldPack) []string {
 	if pack.Engine.Artifact != "" && !strings.Contains(premiseText, pack.Engine.Artifact) {
 		issues = append(issues, "premise does not reference engine artifact")
 	}
+	castIDs := make(map[string]bool, len(pack.Cast))
+	for _, cast := range pack.Cast {
+		castIDs[cast.ID] = true
+	}
+	itemIDs := make(map[string]bool, len(pack.Items))
+	for _, item := range pack.Items {
+		itemIDs[item.ID] = true
+	}
+	seenArchetypes := make(map[string]bool)
+	seenSlots := make(map[string]bool)
 	for _, storyline := range pack.Storylines {
 		if storyline.PackID != pack.ID {
 			issues = append(issues, "storyline "+storyline.ID+" has a foreign pack_id")
@@ -530,8 +498,32 @@ func ValidateWorldPack(pack WorldPack) []string {
 		if storyline.ReferenceID != pack.Reference.ID {
 			issues = append(issues, "storyline "+storyline.ID+" has a foreign reference_id")
 		}
+		if strings.TrimSpace(storyline.ArchetypeID) == "" || seenArchetypes[storyline.ArchetypeID] {
+			issues = append(issues, "storyline archetypes must be non-empty and unique")
+		}
+		if strings.TrimSpace(storyline.ArcSlot) == "" || seenSlots[storyline.ArcSlot] {
+			issues = append(issues, "storyline arc slots must be non-empty and unique")
+		}
+		seenArchetypes[storyline.ArchetypeID] = true
+		seenSlots[storyline.ArcSlot] = true
+		if storyline.LinkedPremise != pack.Premise.ID {
+			issues = append(issues, "storyline "+storyline.ID+" does not link to its premise")
+		}
 		if strings.TrimSpace(storyline.ReferenceHook) == "" {
 			issues = append(issues, "storyline "+storyline.ID+" has no reference hook")
+		}
+		if len(storyline.LinkedCharacters) == 0 || len(storyline.LinkedItems) == 0 {
+			issues = append(issues, "storyline "+storyline.ID+" has no linked cast/item")
+		}
+		for _, castID := range storyline.LinkedCharacters {
+			if !castIDs[castID] {
+				issues = append(issues, "storyline "+storyline.ID+" links unknown cast "+castID)
+			}
+		}
+		for _, itemID := range storyline.LinkedItems {
+			if !itemIDs[itemID] {
+				issues = append(issues, "storyline "+storyline.ID+" links unknown item "+itemID)
+			}
 		}
 		text := storyline.Promise + storyline.Pressure + storyline.Opposition + storyline.Turn + storyline.Payoff
 		if !containsAnyWorldPackText(text, pack.Engine.Artifact, pack.Engine.Issuer, pack.Engine.Holder, pack.Engine.HiddenFunction) {
@@ -588,7 +580,7 @@ func ValidateWorldPack(pack WorldPack) []string {
 		}
 		itemCategoriesSeen[item.Category] = true
 	}
-	for _, category := range []string{"resource", "equipment", "consumable", "prop", "credential"} {
+	for _, category := range itemCategories {
 		if !itemCategoriesSeen[category] {
 			issues = append(issues, "world pack is missing item category "+category)
 		}

@@ -456,6 +456,14 @@ deck views of the same generator: for the same `--genre`, `--seed`, and
 without mixing unrelated settings. `--count` means the number of world packs,
 not the number of flat deck items.
 
+Storylines are drawn from twelve compatible archetypes across three slots:
+`claim` (resource and debt conflicts), `revelation` (hidden function, missing
+signature, false witness, decoy prize), and `choice` (institutional reform,
+rival conversion, loyalty test, public audit). Each pack selects one distinct
+archetype per slot. Cards include `archetype_id`, `arc_slot`,
+`linked_characters`, and `linked_items`; validation rejects unknown or mixed
+`pack_id` references.
+
 `--type reference` returns the researched reference pool with source URL,
 access date, core pattern, structural mechanics, story engines, tone tags, and a
 fusion rule. Supported `--source` values and aliases currently include
@@ -465,7 +473,9 @@ one reference lens to the pack; generated cards still use original names,
 factions, and events rather than importing protected setting text. The selected
 mechanic appears in `premise.reference_mechanic`, `storyline.reference_hook`,
 and `resource.reference_constraint`, so the reference changes structure instead
-of being a decorative tag.
+of being a decorative tag. Its `story_bias` also changes which storyline
+archetypes are eligible, so the same seed can produce different plot shapes for
+different reference sources.
 
 Reference cards were reviewed on 2026-10-25. The configured source pages are:
 GOG's Stellaris product page, the Warhammer Community Warhammer 40,000 universe
@@ -488,8 +498,9 @@ are linked. Surname inspiration comes from the public 《百家姓》 entry and
 `prop`, `vehicle`, and `credential`; Chinese aliases such as `装备`, `消耗品`,
 `道具`, `载具` and `凭证` are accepted. Every card states physical form,
 function, acquisition, use cost, limit, counterplay, failure mode, narrative
-uses, and the applied reference constraint. A `worldpack` includes five linked
-items covering resource, equipment, consumable, prop, and credential.
+uses, and the applied reference constraint. A `worldpack` includes seven linked
+items covering resource, equipment, consumable, prop, credential, commodity,
+and vehicle.
 
 ## Check
 
