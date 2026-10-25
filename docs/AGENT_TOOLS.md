@@ -350,6 +350,12 @@ paragraph ranges and hashes, and retrieval metadata. The query never returns a
 scene from a later chapter than the target; current-chapter prose is excluded
 unless the caller explicitly opts into it through the internal API. Use
 `--view index` for ids/scores only and `--view brief` before writing.
+`promise-audit` returns every open promise established before the target
+chapter so a long-book audit cannot silently miss promises beyond the bounded
+chapter-writing context. The other intents keep the small writing-oriented
+promise budget. `--max-chars` limits scene text only, not the promise-audit
+ledger. A promise found in a recap is not closed merely because a later recap
+omits it; omission is not evidence of payoff.
 
 `craft-character`, `craft-item`, `craft-location`, and `craft-organization`
 include a clipped story setup brief, matching existing craft, outline refs or
@@ -404,6 +410,10 @@ entities that matter to the scene. Recap briefs are included only when they
 match the outline chapter identity/title and are not older than the saved
 chapter markdown; stale or mismatched recaps are omitted with warnings so the
 agent does not mix an old storyline into current prose.
+When the bounded narrative-memory block omits additional open promises,
+`warnings` names the full `promise-audit` query. The omitted promises are still
+tracked; the warning prevents an agent from treating the displayed subset as
+the complete book ledger.
 
 `chapter-repair` is the focused entry bundle after `tool check --target chapter`
 reports final prose or RPG simulation issues. It returns the scoped chapter

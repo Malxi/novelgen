@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const IndexVersion = 1
+const IndexVersion = 2
 
 type Index struct {
 	Version            int               `json:"version"`
