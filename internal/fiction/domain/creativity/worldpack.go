@@ -529,6 +529,24 @@ func ValidateWorldPack(pack WorldPack) []string {
 		if !containsAnyWorldPackText(text, pack.Engine.Artifact, pack.Engine.Issuer, pack.Engine.Holder, pack.Engine.HiddenFunction) {
 			issues = append(issues, "storyline "+storyline.ID+" does not reference its engine")
 		}
+		linkedCast := make(map[string]bool, len(storyline.LinkedCharacters))
+		for _, id := range storyline.LinkedCharacters {
+			linkedCast[id] = true
+		}
+		for _, cast := range pack.Cast {
+			if cast.Name != "" && strings.Contains(text, cast.Name) && !linkedCast[cast.ID] {
+				issues = append(issues, "storyline "+storyline.ID+" names "+cast.Name+" without linking "+cast.ID)
+			}
+		}
+		linkedItems := make(map[string]bool, len(storyline.LinkedItems))
+		for _, id := range storyline.LinkedItems {
+			linkedItems[id] = true
+		}
+		for _, item := range pack.Items {
+			if item.Name != "" && strings.Contains(text, item.Name) && !linkedItems[item.ID] {
+				issues = append(issues, "storyline "+storyline.ID+" names "+item.Name+" without linking "+item.ID)
+			}
+		}
 	}
 	seenNames := make(map[string]bool)
 	for _, cast := range pack.Cast {
