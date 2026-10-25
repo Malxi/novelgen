@@ -47,6 +47,9 @@ func TestGenerateEnginesProducesValidCards(t *testing.T) {
 			len(engine.StorylineSeeds) < 3 || len(engine.CastSeeds) < 4 {
 			t.Fatalf("incomplete scaffold: %#v", engine)
 		}
+		if !contains(engineDefaultExpectationsByFamily[engine.Family], engine.DefaultExpectation) {
+			t.Fatalf("default expectation %q does not belong to family %q", engine.DefaultExpectation, engine.Family)
+		}
 	}
 }
 

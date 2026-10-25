@@ -33,6 +33,8 @@ var ToolQueryFlags struct {
 	Seed           int64
 	Count          int
 	Select         int
+	Source         string
+	Category       string
 }
 
 var ToolProcessStartedAt = time.Now()
@@ -62,7 +64,7 @@ var toolQuerySectionSummary = map[string]string{
 	"craft":       "Crafted characters, items, locations, organizations",
 	"chapter":     "Chapter outline records and manuscript text",
 	"context":     "Compact workflow-specific context bundles",
-	"ideas":       "Deterministic random provocations for setup and outline ideation",
+	"ideas":       "Deterministic provocations, scenarios, and compatible world packs",
 	"logs":        "Prompt, response, and agent-live log indexes",
 }
 
@@ -80,7 +82,7 @@ var toolQuerySectionTypes = map[string][]string{
 		"outline-volume", "outline-repair", "outline-global-repair",
 		"recap-repair", "chapter-write", "chapter-repair",
 	},
-	"ideas": {"provocation", "axiom", "event", "law", "scenario", "name"},
+	"ideas": {"provocation", "axiom", "event", "law", "scenario", "engine", "worldpack", "premise", "storyline", "cast", "namecard", "resource", "itemcard", "reference", "name"},
 	"logs":  {"prompts", "responses", "agent-live"},
 }
 
@@ -171,6 +173,8 @@ var ToolQueryCmd = &cobra.Command{
   novelgen tool query craft --type character --name Lin
   novelgen tool query context --type craft-character --name Lin
   novelgen tool query ideas --type axiom --genre 仙侠 --mode wild --seed 42 --count 5
+  novelgen tool query ideas --type worldpack --genre 科幻 --seed 42 --count 3 --source 星战
+  novelgen tool query ideas --type storyline --genre 科幻 --seed 42 --count 3
   novelgen tool query logs --view index
   novelgen tool query chapter --id chap_001 --content
   novelgen tool query chapter --entity-type location --name "Mine"`,
@@ -312,7 +316,7 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 	case "context":
 		resp = QueryContext(ctx, queryType, queryID, queryName)
 	case "ideas":
-		resp, queryErr = QueryIdeas(queryType, ToolQueryFlags.Genre, ToolQueryFlags.Level, ToolQueryFlags.Mode, ToolQueryFlags.Seed, ToolQueryFlags.Count, ToolQueryFlags.Select)
+		resp, queryErr = QueryIdeas(queryType, ToolQueryFlags.Genre, ToolQueryFlags.Level, ToolQueryFlags.Mode, ToolQueryFlags.Seed, ToolQueryFlags.Count, ToolQueryFlags.Select, ToolQueryFlags.Source, ToolQueryFlags.Category)
 		if queryErr != nil {
 			return queryErr
 		}
@@ -362,6 +366,8 @@ func runToolQuery(cmd *cobra.Command, args []string) error {
 		"seed":        fmt.Sprintf("%d", ToolQueryFlags.Seed),
 		"count":       fmt.Sprintf("%d", ToolQueryFlags.Count),
 		"select":      fmt.Sprintf("%d", ToolQueryFlags.Select),
+		"source":      ToolQueryFlags.Source,
+		"category":    ToolQueryFlags.Category,
 	}
 	if section == "ideas" {
 		for _, key := range []string{"genre", "level", "mode"} {
@@ -415,6 +421,8 @@ func init() {
 	ToolQueryCmd.Flags().Int64Var(&ToolQueryFlags.Seed, "seed", 0, "Ideas random seed; 0 picks and reports a fresh reproducible seed")
 	ToolQueryCmd.Flags().IntVar(&ToolQueryFlags.Count, "count", 5, "Ideas count (maximum 20)")
 	ToolQueryCmd.Flags().IntVar(&ToolQueryFlags.Select, "select", 0, "Scenario cards: select this many diverse cards from a larger draw (0 = return all)")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Source, "source", "", "Reference style for worldpack/premise/storyline/cast/namecard/resource/itemcard/reference: stellaris, warhammer40k, alien, starwars, nomanssky")
+	ToolQueryCmd.Flags().StringVar(&ToolQueryFlags.Category, "category", "", "Item category for --type itemcard: resource, commodity, equipment, consumable, prop, vehicle, credential")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Target, "target", "outline",
 		"Check target: outline, setup, craft, chapter, or recap; craft requires kind schema")
 	ToolCheckCmd.Flags().StringVar(&ToolCheckFlags.Scope, "scope", "all",
