@@ -199,6 +199,76 @@ func TestQueryRespectsChapterOrderRecapAndPromise(t *testing.T) {
 	}
 }
 
+func TestBuildKeepsRecapPromiseOpenWhenLaterRecapOmitsIt(t *testing.T) {
+	root := memoryFixture(t)
+	if err := root.SaveRecap(&models.ChapterRecap{
+		ChapterID: "P1-V1-C2", Title: "Pressure", Location: "Mine",
+		Present: []string{"Lin"}, Status: []string{"Lin still has the blue key"},
+		LastLine: "The map shows an impossible chamber.", NextOpeningHint: "Lin returns to the door.",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := Build(context.Background(), root, BuildOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	promise := findPromise(result.Index.Promises, "Open the sealed door")
+	if promise == nil {
+		t.Fatalf("recap promise missing: %#v", result.Index.Promises)
+	}
+	if promise.Status != "open" || promise.ResolvedChapter != 0 {
+		t.Fatalf("omitting a promise from a later recap must not resolve it: %#v", promise)
+	}
+	if promise.LastSeenChapter != 1 {
+		t.Fatalf("last seen chapter = %d, want 1", promise.LastSeenChapter)
+	}
+}
+
+func TestPromiseAuditReturnsAllOpenPromisesWhileWriteContextStaysBounded(t *testing.T) {
+	root := memoryFixture(t)
+	promises := make([]string, 0, 12)
+	for i := 0; i < 12; i++ {
+		promises = append(promises, fmt.Sprintf("Open promise %02d", i))
+	}
+	if err := root.SaveRecap(&models.ChapterRecap{
+		ChapterID: "P1-V1-C2", Title: "Pressure", Location: "Mine",
+		Present: []string{"Lin"}, Promises: promises,
+		Status:   []string{"Lin still has the blue key"},
+		LastLine: "The map shows an impossible chamber.", NextOpeningHint: "Lin returns to the door.",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	audit, err := Query(context.Background(), root, QueryOptions{
+		ChapterID: "P1-V1-C3", Intent: "promise-audit",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(audit.Promises) <= 8 {
+		t.Fatalf("promise audit returned only %d promises: %#v", len(audit.Promises), audit.Promises)
+	}
+	for _, text := range promises {
+		if findPromiseHit(audit.Promises, text) == nil {
+			t.Fatalf("promise audit omitted %q: %#v", text, audit.Promises)
+		}
+	}
+	if len(audit.Retrieved) != 0 {
+		t.Fatalf("promise audit should not return scenes: %#v", audit.Retrieved)
+	}
+
+	writeContext, err := Query(context.Background(), root, QueryOptions{
+		ChapterID: "P1-V1-C3", Intent: "chapter-write",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(writeContext.Promises) > 8 {
+		t.Fatalf("chapter-write promise context should stay bounded: %d", len(writeContext.Promises))
+	}
+}
+
 func TestRefreshPersistsIndexAndReusesUnchangedVectors(t *testing.T) {
 	root := memoryFixture(t)
 	embedder := &fakeEmbedder{model: "fake-embed-v1"}
@@ -380,6 +450,25 @@ func TestInspectReportsFreshAndStaleIndex(t *testing.T) {
 	}
 }
 
+func TestInspectInvalidatesLegacyPromiseSemantics(t *testing.T) {
+	root := memoryFixture(t)
+	if _, err := Refresh(context.Background(), root, nil); err != nil {
+		t.Fatal(err)
+	}
+	var index Index
+	if err := root.ReadJSON(root.NarrativeMemoryIndexFile(), &index); err != nil {
+		t.Fatal(err)
+	}
+	index.Version = IndexVersion - 1
+	if err := root.WriteJSON(root.NarrativeMemoryIndexFile(), &index); err != nil {
+		t.Fatal(err)
+	}
+	got := Inspect(root, "")
+	if got.Status != "stale" || !containsString(got.ChangedSources, "index_version") {
+		t.Fatalf("legacy index should be stale: %#v", got)
+	}
+}
+
 func TestInspectTreatsEmbeddingModelChangeAsStale(t *testing.T) {
 	root := memoryFixture(t)
 	if _, err := Refresh(context.Background(), root, &fakeEmbedder{model: "embed-v1"}); err != nil {
@@ -428,6 +517,24 @@ func hasPromiseText(promises []PromiseRecord, text string) bool {
 		}
 	}
 	return false
+}
+
+func findPromise(promises []PromiseRecord, text string) *PromiseRecord {
+	for i := range promises {
+		if promises[i].Text == text {
+			return &promises[i]
+		}
+	}
+	return nil
+}
+
+func findPromiseHit(promises []PromiseHit, text string) *PromiseHit {
+	for i := range promises {
+		if promises[i].Text == text {
+			return &promises[i]
+		}
+	}
+	return nil
 }
 
 func containsString(values []string, want string) bool {

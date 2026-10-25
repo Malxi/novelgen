@@ -659,6 +659,15 @@ Required invariants:
 - A resolved mystery with a resolution chapter later than the query target is
   still open at the target chapter. Open promises are ordered overdue, due this
   chapter, open, then upcoming.
+- A recap promise remains open when a later recap omits it. Omission from a
+  chapter recap is not a resolution event; only an explicit payoff or a
+  validated canonical resolution may close a promise.
+- `promise-audit` returns the complete open-promise ledger established before
+  the target chapter. Other query intents keep a bounded promise selection for
+  chapter-writing context.
+- When `chapter-write` or `chapter-repair` receives only a bounded subset of
+  open promises, its response must warn with the exact `promise-audit` query so
+  the visible subset is not mistaken for the complete ledger.
 - Source fingerprints cover setup, outline, each craft file, each chapter, each
   recap, index version and embedding model. A changed source marks the persisted
   index stale; read-only query returns `meta.status=ephemeral` and rebuilds in

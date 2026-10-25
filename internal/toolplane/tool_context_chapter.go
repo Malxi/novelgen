@@ -8,6 +8,7 @@ import (
 	"novelgen/internal/contract/story"
 	"novelgen/internal/contract/toolcmd"
 	"novelgen/internal/fiction/domain/logic/continuity/recap"
+	"novelgen/internal/fiction/domain/memory"
 	"novelgen/internal/platform/store"
 	"os"
 	"path/filepath"
@@ -79,6 +80,7 @@ func queryChapterWriteContext(ctx ToolProjectContext, chapterID string) ToolResp
 	if memoryErr != nil {
 		warnings = append(warnings, memoryUnavailableWarning(memoryErr))
 	}
+	warnings = appendPromiseAuditCoverageWarning(warnings, target.Chapter.ID, narrativeMemory)
 	result := ChapterWriteContext{
 		ChapterID:              target.Chapter.ID,
 		Path:                   target.Path,
@@ -347,6 +349,7 @@ func queryChapterRepairContext(ctx ToolProjectContext, chapterID, issueCategory 
 	if memoryErr != nil {
 		warnings = append(warnings, memoryUnavailableWarning(memoryErr))
 	}
+	warnings = appendPromiseAuditCoverageWarning(warnings, target.Chapter.ID, narrativeMemory)
 
 	result := ChapterRepairContext{
 		ChapterID:              target.Chapter.ID,
@@ -399,6 +402,19 @@ func queryChapterRepairContext(ctx ToolProjectContext, chapterID, issueCategory 
 		warnings = append(warnings, fmt.Sprintf("events truncated from %d to %d", eventsResp.Count, len(events)))
 	}
 	return ToolResponse{OK: true, Section: "context", Count: 1, Results: result, Warnings: warnings}
+}
+
+func appendPromiseAuditCoverageWarning(warnings []string, chapterID string, result *memory.ContextResult) []string {
+	if result == nil || result.Meta.OpenPromises <= len(result.Promises) {
+		return warnings
+	}
+	command := toolcmd.QueryContext(toolcmd.QueryOptions{
+		Type: "narrative-memory", ID: chapterID, Intent: "promise-audit", View: "brief",
+	})
+	return append(warnings, fmt.Sprintf(
+		"narrative memory has %d open promises; this context includes the %d highest-priority items. Use `%s` for the complete open-promise ledger.",
+		result.Meta.OpenPromises, len(result.Promises), command,
+	))
 }
 
 func BuildChapterRepairNavigation(chapterID, issueCategory string, entities OutlineVolumeEntities) map[string]interface{} {

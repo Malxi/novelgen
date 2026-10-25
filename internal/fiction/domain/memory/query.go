@@ -137,7 +137,11 @@ func Query(ctx context.Context, root *store.Root, opts QueryOptions) (*ContextRe
 		}
 	}
 
-	result.Promises = selectPromises(index, target.Order, intent, 8)
+	promiseLimit := 8
+	if intent == "promise-audit" {
+		promiseLimit = 0
+	}
+	result.Promises = selectPromises(index, target.Order, intent, promiseLimit)
 	result.Meta.OpenPromises = countOpenPromises(index, target.Order)
 	result.Meta.ElapsedMilliseconds = time.Since(startedAt).Milliseconds()
 	if intent == "promise-audit" {

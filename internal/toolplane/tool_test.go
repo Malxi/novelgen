@@ -1528,6 +1528,16 @@ func TestQueryStorySetupSearchReturnsCompactCrossSetupContext(t *testing.T) {
 
 func TestToolQueryContextChapterWriteBundlesFocusedContinuityAndNavigation(t *testing.T) {
 	root := t.TempDir()
+	rootStore := toolRoot(t, root)
+	if err := rootStore.SaveConfig(&models.ProjectConfig{Name: "Context Fixture", Language: "en"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := rootStore.SaveSetup(&models.StorySetup{
+		ProjectName: "Context Fixture",
+		Premise:     "A signal leads through an abandoned mine.",
+	}); err != nil {
+		t.Fatal(err)
+	}
 	targetID := "P1-V1-C2"
 	if err := saveTestRecap(root, models.ChapterRecap{
 		ChapterID:       "P1-V1-C1",
@@ -1535,6 +1545,7 @@ func TestToolQueryContextChapterWriteBundlesFocusedContinuityAndNavigation(t *te
 		Location:        "Mine",
 		Present:         []string{"Lin"},
 		PlotBeats:       []string{"Lin finds the Star Core."},
+		Promises:        []string{"P01", "P02", "P03", "P04", "P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12"},
 		LastLine:        "The signal points toward Camp.",
 		NextOpeningHint: "Lin follows the signal.",
 	}); err != nil {
@@ -1608,6 +1619,9 @@ func TestToolQueryContextChapterWriteBundlesFocusedContinuityAndNavigation(t *te
 			}},
 		}}},
 	}
+	if err := rootStore.SaveOutline(ctx.Outline); err != nil {
+		t.Fatal(err)
+	}
 
 	resp := toolplane.QueryContext(ctx, "write-chapter", targetID, "")
 	if !resp.OK || resp.Count != 1 {
@@ -1628,6 +1642,9 @@ func TestToolQueryContextChapterWriteBundlesFocusedContinuityAndNavigation(t *te
 	}
 	if result.CurrentRecap != nil || !strings.Contains(strings.Join(resp.Warnings, "\n"), "current recap ignored") {
 		t.Fatalf("stale current recap should be ignored with warning, current=%+v warnings=%v", result.CurrentRecap, resp.Warnings)
+	}
+	if !strings.Contains(strings.Join(resp.Warnings, "\n"), "--intent promise-audit") {
+		t.Fatalf("bounded promise context should advertise the complete audit: %v", resp.Warnings)
 	}
 	if result.ExistingChapterExcerpt == nil || !strings.Contains(result.ExistingChapterExcerpt["last_line"], "Camp lights") {
 		t.Fatalf("missing chapter excerpt: %#v", result.ExistingChapterExcerpt)

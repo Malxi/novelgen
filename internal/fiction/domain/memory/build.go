@@ -977,18 +977,8 @@ func (b *indexBuilder) addOwnershipEdges(spans []ownershipSpan) {
 }
 
 func (b *indexBuilder) finishPromises() {
-	maxRecapOrder := 0
-	for _, chapter := range b.index.Chapters {
-		if chapter.RecapSHA256 != "" && chapter.RecapSHA256 != "missing" && chapter.Order > maxRecapOrder {
-			maxRecapOrder = chapter.Order
-		}
-	}
 	for i := range b.index.Promises {
 		promise := &b.index.Promises[i]
-		if promise.Kind == "recap_promise" && promise.LastSeenChapter > 0 && promise.LastSeenChapter < maxRecapOrder && promise.Status != "resolved" {
-			promise.Status = "resolved"
-			promise.ResolvedChapter = promise.LastSeenChapter + 1
-		}
 		b.addNode(NodeRecord{
 			ID: promise.ID, Type: "promise", Name: promise.Kind, ChapterID: promise.ChapterID,
 			ChapterOrder: promise.ChapterOrder, Scope: "planned", Importance: promiseImportance(*promise),
