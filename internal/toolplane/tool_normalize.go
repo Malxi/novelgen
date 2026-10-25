@@ -173,6 +173,10 @@ func appendToolQueryFlagWarnings(resp *ToolResponse, section, queryType, id, nam
 	if ToolQueryFlags.IncludeContent && !contentUsed {
 		add("--content is only used by chapter records and logs and was ignored")
 	}
+	categoryUsed := section == "ideas" && queryType == "itemcard"
+	if strings.TrimSpace(ToolQueryFlags.Category) != "" && !categoryUsed {
+		add("--category is only used by itemcard idea queries and was ignored")
+	}
 	entityUsed := (section == "outline" && (queryType == "refs" || queryType == "events")) ||
 		(section == "chapter" && (queryType == "refs" || queryType == "events" ||
 			(strings.TrimSpace(id) == "" && (queryType == "" || queryType == "all"))))

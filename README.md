@@ -521,6 +521,9 @@ SDK Agent 不能直接读写项目文件，只能通过 `tool` 子命令访问�
 novelgen tool query story-setup --view index
 novelgen tool query outline --type chapter --id P1-V1-C1 --view brief
 novelgen tool query context --type chapter-repair --id P1-V1-C1 --view brief
+novelgen tool query ideas --type worldpack --genre 科幻 --seed 42 --count 3 --source 星战
+novelgen tool query ideas --type namecard --genre 科幻 --seed 42 --count 8 --source 战锤
+novelgen tool query ideas --type itemcard --genre 科幻 --seed 42 --count 7 --source 异形
 novelgen tool check all --target outline --scope volume --id P1-V1
 novelgen tool patch outline --target volume --id P1-V1 --patch-json '{"changed_chapters":[...]}'   # dry-run
 novelgen tool refresh chapter-dsl --id P1-V1-C1

@@ -15,6 +15,7 @@ description: Common Novelgen Agent SDK tool rules. Project facts may only be que
 - 不要添加 `2>&1`、`>`、`<`、`| grep`、`Out-File`、`Get-Content`、`Select-String`、`cat` 或 `type`。
 - `tool query context` 的形态是：`novelgen tool query context --type <context-type> ...`。
 - `tool query ideas` 生成随机的“结构化废话”，用于 setup/outline 构思；它是只读的，不依赖已有 setup。把每条结果当作必须合理化的约束，而不是成品设定。
+- 需要成套相容设定时优先使用 `--type worldpack`：同一结果的 premise、storyline、cast、resource 共享 `pack_id`、同一个 Engine 和同一个 `reference_id`。也可用相同 genre/seed/count/source 分别抽 `premise|storyline|cast|resource`，再按 `pack_id` 对齐；不要把不同 pack_id 或不同 reference 的卡片直接拼接。
 - `tool check` 的形态是：`novelgen tool check <quality|simulation|all> --target <target> ...`。不要省略 check kind。
 - 中文或非 ASCII patch JSON 优先走 stdin；允许的管道只有两种：把 compact JSON 传给 patch 工具：`printf '%s' '<compact-json>' | novelgen tool patch ...`；或把长章节正文分块传给 patch buffer：`printf '%s' '<content chunk>' | novelgen tool patch-buffer append --id "<chapter_id>-draft" --stdin`。
 - 输出过大时使用 `--view index|brief`、`--limit`、`--fields` 或精确 ID/name；默认不要使用 `--view full`。
@@ -23,6 +24,10 @@ description: Common Novelgen Agent SDK tool rules. Project facts may only be que
 
 - `tool query` 和 `tool check` 是只读操作；优先使用 context bundle。
 - 需要打破套路时可运行 `novelgen tool query ideas --type axiom|event|law|name --genre <genre> --count <n> --mode wild --seed <seed>`。`law` 生成“什么被守恒/转移”的系统性世界法则，优先用于 setup。逐条回答 `must_answer`，拒绝 `forbidden_explanations`，并遵守 `output_contract`。
+- `engine` 返回制度引擎；`worldpack` 返回完整相容包。需要世界前提、剧情线、人物与资源时，优先抽取 `worldpack` 而不是分别无约束抽词。
+- `--type reference` 返回带来源链接与访问日期的研究型参考卡；`--source` 支持群星、战锤、异形、星战、无人深空。参考卡只提供结构机制和语气，生成时必须使用原创专名、阵营和情节。
+- `--type namecard` 返回“先原型、后名字”的角色卡：先抽 archetype、性格矛盾、恐惧与说话方式，再生成姓名；用 `speech_style`、`body_language` 和 `backstory_hook` 做角色扮演，不要只取姓名。
+- `--type itemcard` 返回资源、商品、装备、消耗品、剧情道具、载具或凭证；`--category` 支持这些类别及中文别名。每张卡必须检查 function、use_cost、limit、counterplay 和 failure_mode，避免只抽到装饰性道具。
 - `--view index` 只给路由信息（id/title/count），不会携带章节 summary；需要事实时再升级到 `--view brief`。`--limit` 只作用于列表结果，对象结果会返回 warning。
 - `tool check schema --target craft --id "<name>"` 会从 craft 文件中推断类型；不传 scope/id 时检查全部四类 craft。`tool check --target recap --id "<chapter_id>"` 默认使用 chapter scope。
 - 有 `navigation`、`workflow`、`next_actions` 时按最小下一步执行。

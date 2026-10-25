@@ -52,9 +52,10 @@ type EngineResult struct {
 
 // EngineRequest controls one engine-card draw.
 type EngineRequest struct {
-	Genre string
-	Seed  int64
-	Count int
+	Genre  string
+	Seed   int64
+	Count  int
+	Source string
 }
 
 const maxEngineCount = 20
@@ -599,13 +600,67 @@ var engineCosts = []string{
 	"未来十年的劳动", "全部信用记录", "对亲人的记忆", "离开辖区的权利",
 }
 
-var engineDefaultExpectations = []string{
-	"主角揭露黑幕、推翻公司并救出所有人",
-	"主角靠武力夺冠并赢得自由",
-	"主角找到失踪的亲人并揭开身世",
-	"主角打败虫族母巢并成为英雄",
-	"主角继承隐藏力量并逆袭所有敌人",
-	"主角牺牲自己换来大家安全",
+var engineDefaultExpectationsByFamily = map[string][]string{
+	"insurance": {
+		"主角揭穿骗局，让所有被拒赔的人得到补偿",
+		"主角迫使保险公司公开风险模型",
+		"主角发现事故本身被设计成理赔业务",
+	},
+	"license": {
+		"主角偷到许可证并绕过管理局",
+		"主角靠一张临时许可证完成不可能的通行",
+		"主角发现许可证本身就是定位工具",
+	},
+	"contract": {
+		"主角靠武力撕毁合同并赢得自由",
+		"主角发现工人正在被合同转换成设备",
+		"主角利用替班条款让所有工人获得索赔权",
+	},
+	"inheritance": {
+		"主角继承隐藏遗产并成为新继承人",
+		"主角发现遗嘱把债务和身份一起传给了自己",
+		"主角被迫替一个从未见过的人主持继承听证",
+	},
+	"death_record": {
+		"主角找到凶手并让死者安息",
+		"主角发现死者身份被机构用来清理活人",
+		"主角追查一名仍活在档案里的死者",
+	},
+	"salvage": {
+		"主角打捞到最值钱的宝物并成为英雄",
+		"主角在残骸里找到能推翻机构的证据",
+		"主角必须先证明打捞物不是自己偷走的",
+	},
+	"quota": {
+		"主角击败排队者成为配额拥有者",
+		"主角发现配额系统靠制造短缺维持利润",
+		"主角把自己的名额让给陌生人，逼系统重新分配",
+	},
+	"maintenance": {
+		"主角关闭旧系统并让所有人重获自由",
+		"主角发现维修延误本身就是一门生意",
+		"主角必须在系统停摆前决定谁先被修复",
+	},
+	"registry": {
+		"主角恢复真实身份并推翻档案署",
+		"主角发现有人正在批量制造合法身份",
+		"主角必须证明自己不是系统里已经死亡的那个人",
+	},
+	"evidence": {
+		"主角把证据交给官方，法庭主持正义",
+		"主角发现证据封存制度正在帮助凶手拖延时间",
+		"主角必须让一份无法公开的证据被所有人看见",
+	},
+	"sanctuary": {
+		"主角抢到唯一庇护名额",
+		"主角发现庇护名额只按身份和关系分配",
+		"主角必须决定让谁进入只剩一个位置的安全区",
+	},
+	"ration": {
+		"主角夺取最多配给并成为幸存者领袖",
+		"主角发现配给点故意保持长期短缺",
+		"主角必须让所有人共同签收一份配给账单",
+	},
 }
 
 // GenerateEngines draws deterministic institution/artifact engine cards.
@@ -684,7 +739,11 @@ func buildEngine(rng *rand.Rand, seed int64, genre string, def engineFamilyDef) 
 	loophole := pick(rng, def.Loopholes)
 	cost := pick(rng, engineCosts)
 	role := rolePrefix + def.RoleSuffix
-	defaultExpectation := pick(rng, engineDefaultExpectations)
+	defaultExpectations := engineDefaultExpectationsByFamily[def.ID]
+	if len(defaultExpectations) == 0 {
+		defaultExpectations = []string{"主角沿用现有规则解决眼前问题"}
+	}
+	defaultExpectation := pick(rng, defaultExpectations)
 	counterExpectation := pick(rng, def.CounterMoves)
 	win := pick(rng, def.SignatureWins)
 	misread := pick(rng, def.Misreads)

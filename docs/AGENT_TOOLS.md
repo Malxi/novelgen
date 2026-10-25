@@ -170,7 +170,7 @@ the valid list, so a typo tells the agent how to correct itself:
 | `craft` | `all`, `character`, `item`, `location`, `organization` |
 | `chapter` | `all`, `refs`, `events` |
 | `context` | `craft-character`, `craft-item`, `craft-location`, `craft-organization`, `outline-volume`, `outline-repair`, `outline-global-repair`, `recap-repair`, `chapter-write`, `chapter-repair` |
-| `ideas` | `provocation`, `axiom`, `event`, `law`, `scenario`, `name` |
+| `ideas` | `provocation`, `axiom`, `event`, `law`, `scenario`, `engine`, `worldpack`, `premise`, `storyline`, `cast`, `namecard`, `resource`, `itemcard`, `reference`, `name` |
 | `logs` | `prompts`, `responses`, `agent-live` |
 
 `tool patch` takes the section as its positional argument and `--target` selects
@@ -393,6 +393,16 @@ novelgen tool query ideas --type axiom --genre 仙侠 --mode wild --seed 42 --co
 novelgen tool query ideas --type law --genre 仙侠 --mode wild --seed 42 --count 5
 novelgen tool query ideas --type law --genre 科幻 --mode grounded --seed 12 --count 5
 novelgen tool query ideas --type scenario --genre 科幻 --seed 12 --count 3
+novelgen tool query ideas --type worldpack --genre 科幻 --seed 42 --count 3
+novelgen tool query ideas --type premise --genre 科幻 --seed 42 --count 3
+novelgen tool query ideas --type storyline --genre 科幻 --seed 42 --count 3
+novelgen tool query ideas --type cast --genre 科幻 --seed 42 --count 3
+novelgen tool query ideas --type namecard --genre 科幻 --seed 42 --count 8
+novelgen tool query ideas --type resource --genre 科幻 --seed 42 --count 3
+novelgen tool query ideas --type itemcard --genre 科幻 --seed 42 --count 7
+novelgen tool query ideas --type itemcard --genre 科幻 --seed 42 --count 4 --category 装备
+novelgen tool query ideas --type reference
+novelgen tool query ideas --type worldpack --genre 科幻 --seed 42 --count 3 --source 星战
 novelgen tool query ideas --type event --genre 都市 --seed 7 --count 3
 novelgen tool query ideas --type law --genre 都市 --seed 7 --count 3
 novelgen tool query ideas --type name --genre 悬疑 --mode balanced --count 3
@@ -432,6 +442,54 @@ volume-level conflicts.
 `scarcity`, `hazard`, `objective`, `enforcer`, `mobility`, `mecha_role`,
 `threat`, `cost`, `twist`). Treat every role as binding and expand it into
 setup; do not replace the scarcity or hazard with a new magic rule.
+
+`--type engine` returns an institutional engine card: artifact, issuer, holder,
+surface purpose, hidden function, trigger, loophole, cost, protagonist role,
+storyline seeds, cast seeds, escalation ladder, and rejection rules.
+
+`--type worldpack` is the compatibility-oriented draw. Each result contains one
+engine plus a premise card, three storyline cards, four named cast cards, two
+resource cards, and a `compatibility` report. All derived cards share the
+engine's `pack_id`. `premise`, `storyline`, `cast`, and `resource` are separate
+deck views of the same generator: for the same `--genre`, `--seed`, and
+`--count`, their `pack_id` values match, so an individual deck can be retrieved
+without mixing unrelated settings. `--count` means the number of world packs,
+not the number of flat deck items.
+
+`--type reference` returns the researched reference pool with source URL,
+access date, core pattern, structural mechanics, story engines, tone tags, and a
+fusion rule. Supported `--source` values and aliases currently include
+`stellaris`/群星, `warhammer40k`/战锤, `alien`/异形, `starwars`/星战, and
+`nomanssky`/无人深空. Passing the same `--source` to `worldpack` applies exactly
+one reference lens to the pack; generated cards still use original names,
+factions, and events rather than importing protected setting text. The selected
+mechanic appears in `premise.reference_mechanic`, `storyline.reference_hook`,
+and `resource.reference_constraint`, so the reference changes structure instead
+of being a decorative tag.
+
+Reference cards were reviewed on 2026-10-25. The configured source pages are:
+GOG's Stellaris product page, the Warhammer Community Warhammer 40,000 universe
+page, 20th Century Studios' Alien page, the StarWars.com Force databank entry,
+and the official No Man's Sky page. The pool stores short original summaries
+and citations; it does not copy source paragraphs, characters, or protected
+setting text.
+
+`--type namecard` draws roleplay-ready characters rather than bare names. It
+selects an archetype and personality contradiction first, then derives a naming
+style, surname, and given name. Each card contains `archetype`, `personality`,
+`contradiction`, `want`, `fear`, `social_mask`, `speech_style`,
+`body_language`, and `backstory_hook`. Generated cast cards in `worldpack`
+reuse the same name cards, so their names, personalities, and narrative roles
+are linked. Surname inspiration comes from the public 《百家姓》 entry and
+族谱网 genealogy context; the cards do not reproduce specific family members.
+
+`--type itemcard` draws props that participate in scenes. Canonical
+`--category` values are `resource`, `commodity`, `equipment`, `consumable`,
+`prop`, `vehicle`, and `credential`; Chinese aliases such as `装备`, `消耗品`,
+`道具`, `载具` and `凭证` are accepted. Every card states physical form,
+function, acquisition, use cost, limit, counterplay, failure mode, narrative
+uses, and the applied reference constraint. A `worldpack` includes five linked
+items covering resource, equipment, consumable, prop, and credential.
 
 ## Check
 
