@@ -20,15 +20,16 @@ import (
 // BaseAgent is the base struct for all agents.
 // It loads prompts from skill files and provides common LLM interaction logic.
 type BaseAgent struct {
-	name          string
-	client        llm.Client
-	runtime       agentruntime.Runtime
-	config        *llm.Config
-	projectLLM    *models.ProjectLLM
-	skillLoader   *SkillLoader
-	language      string
-	modelOverride string
-	project       *store.Root
+	name           string
+	client         llm.Client
+	runtime        agentruntime.Runtime
+	config         *llm.Config
+	projectLLM     *models.ProjectLLM
+	skillLoader    *SkillLoader
+	language       string
+	modelOverride  string
+	noRecapContext bool
+	project        *store.Root
 }
 
 // BaseAgentConfig holds configuration for creating a BaseAgent
@@ -118,6 +119,15 @@ func (a *BaseAgent) Config() *llm.Config {
 // and temperature are applied as well; otherwise only the model name changes.
 func (a *BaseAgent) SetModelOverride(model string) {
 	a.modelOverride = strings.TrimSpace(model)
+}
+
+// SetNoRecapContext propagates the recap-retirement experiment into Agent SDK
+// tool child processes. It only suppresses recap prompt blocks; canonical recap
+// data remains available to deterministic checks and state accounting.
+func (a *BaseAgent) SetNoRecapContext(disabled bool) {
+	if a != nil {
+		a.noRecapContext = disabled
+	}
 }
 
 // InvokeParams holds the parameters for invoking an agent
@@ -248,15 +258,26 @@ func (a *BaseAgent) invokeAIWithRuntimeResult(ctx context.Context, params Invoke
 	if options == nil {
 		options = &llm.ChatOptions{}
 	}
+	startedAt := time.Now()
+	systemPrompt := messageContent(messages, "system")
+	userPrompt := messageContent(messages, "user")
 	runtime := a.runtime
 	if runtime == nil && params.RequireSDK {
 		requiredRuntime, err := loadRequiredAgentRuntime()
 		if err != nil {
+			a.recordRunMetrics(ctx, params, systemPrompt, userPrompt, "", "agent-sdk", "", llm.Usage{}, nil, startedAt, err)
 			return nil, nil, err
 		}
 		runtime = requiredRuntime
 	}
 	if runtime != nil {
+		metadata := map[string]string{}
+		if run := a.currentRun(ctx); run != nil {
+			metadata["run_id"] = run.ID()
+		}
+		if a.noRecapContext {
+			metadata["no_recap_context"] = "1"
+		}
 		invocation := agentruntime.Invocation{
 			AgentName:              a.name,
 			Command:                params.Command,
@@ -277,6 +298,7 @@ func (a *BaseAgent) invokeAIWithRuntimeResult(ctx context.Context, params Invoke
 			CompactOutputSchema:    params.CompactOutputSchema,
 			DisableSDKOutputFormat: params.DisableSDKOutputFormat,
 			ToolEvidence:           agentEvidenceConfig(params.ToolEvidence),
+			Metadata:               metadata,
 			Options: agentruntime.Options{
 				Model:       agentRuntimeModel(params, options.Model),
 				Temperature: options.Temperature,
@@ -286,6 +308,19 @@ func (a *BaseAgent) invokeAIWithRuntimeResult(ctx context.Context, params Invoke
 			},
 		}
 		result, err := runtime.Invoke(ctx, invocation)
+		usage := llm.Usage{}
+		model := ""
+		response := ""
+		if result != nil {
+			model = result.Model
+			response = result.Content
+			usage = llm.Usage{
+				PromptTokens:     result.Usage.PromptTokens,
+				CompletionTokens: result.Usage.CompletionTokens,
+				TotalTokens:      result.Usage.TotalTokens,
+			}
+		}
+		a.recordRunMetrics(ctx, params, systemPrompt, userPrompt, model, "agent-sdk", response, usage, result, startedAt, err)
 		if err != nil {
 			return nil, result, err
 		}
@@ -301,12 +336,20 @@ func (a *BaseAgent) invokeAIWithRuntimeResult(ctx context.Context, params Invoke
 		}, result, nil
 	}
 	if params.RequireSDK {
-		return nil, nil, fmt.Errorf("the Claude Agent SDK runtime is required for this workflow")
+		err := fmt.Errorf("the Claude Agent SDK runtime is required for this workflow")
+		a.recordRunMetrics(ctx, params, systemPrompt, userPrompt, "", "agent-sdk", "", llm.Usage{}, nil, startedAt, err)
+		return nil, nil, err
 	}
 	if a.client == nil {
+		a.recordRunMetrics(ctx, params, systemPrompt, userPrompt, "", "chat", "", llm.Usage{}, nil, startedAt, fmt.Errorf("no LLM client or agent runtime configured"))
 		return nil, nil, fmt.Errorf("no LLM client or agent runtime configured")
 	}
 	resp, err := a.client.ChatCompletion(ctx, messages, options)
+	if resp != nil {
+		a.recordRunMetrics(ctx, params, systemPrompt, userPrompt, resp.Model, "chat", resp.Content, resp.Usage, nil, startedAt, err)
+	} else {
+		a.recordRunMetrics(ctx, params, systemPrompt, userPrompt, "", "chat", "", llm.Usage{}, nil, startedAt, err)
+	}
 	return resp, nil, err
 }
 

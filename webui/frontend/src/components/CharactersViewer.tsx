@@ -153,7 +153,7 @@ export function CharactersViewer({ projectPath }: { projectPath: string }) {
       const data = await getCharacters(projectPath);
       setCharacters(data.characters || []);
       setError(null);
-    } catch (err) {
+    } catch {
       setError('角色数据不存在');
       setCharacters([]);
     } finally {

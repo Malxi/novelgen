@@ -117,6 +117,22 @@ func TestNovelGenNormalizeCommandUsesProjectDir(t *testing.T) {
 	}
 }
 
+func TestNovelGenCandidatesPreferRepositoryBinOverStaleWorkingCopy(t *testing.T) {
+	execPath := filepath.Join("C:", "repo", "webui", "webui.exe")
+	cwd := filepath.Join("C:", "repo", "webui")
+	candidates := novelGenCandidates(execPath, cwd, "novelgen.exe")
+	if len(candidates) < 2 {
+		t.Fatalf("candidates = %#v", candidates)
+	}
+	wantFirst := filepath.Join("C:", "repo", "webui", "..", "bin", "novelgen.exe")
+	if candidates[0] != wantFirst {
+		t.Fatalf("first candidate = %q, want %q", candidates[0], wantFirst)
+	}
+	if candidates[1] != filepath.Join("C:", "repo", "webui", "novelgen.exe") {
+		t.Fatalf("executable-local fallback = %q", candidates[1])
+	}
+}
+
 func executableForTest(t *testing.T) string {
 	t.Helper()
 	exe, err := os.Executable()

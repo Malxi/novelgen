@@ -11,7 +11,7 @@ require (
 	novelgen v0.0.0
 )
 
-replace novelgen => ..
+replace novelgen => ../
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect

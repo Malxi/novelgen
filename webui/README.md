@@ -12,6 +12,7 @@ NovelGen 的现代化 Web 界面，提供直观的图形界面来管理小说创
 - 📝 **草稿管理** - 生成和改进草稿章节
 - 📄 **章节管理** - 生成最终章节并导出
 - ⚡ **任务队列** - 实时监控 AI 生成任务
+- 🔎 **Agent 运行** - 查看模型调用、skill、工具 command、拒绝原因和 stuck 信号
 
 ## 技术栈
 
@@ -127,6 +128,8 @@ webui/
 - `GET /api/content/drafts` - 获取草稿
 - `POST /api/tasks` - 创建任务
 - `GET /api/tasks` - 列出任务
+- `GET /api/runs` - 列出 Agent 运行摘要
+- `GET /api/runs/:id` - 查看一次 Agent 运行的事件时间线
 - `GET /ws` - WebSocket 连接
 
 ## 工作流程

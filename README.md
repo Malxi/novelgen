@@ -9,6 +9,7 @@ Novelgen 是一个命令行工具，用于 AI 辅助小说创作。它提供了�
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 项目架构总览 |
 | [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | 开发者指南 |
 | [docs/RPG_DSL_DOCUMENTATION_INDEX.md](docs/RPG_DSL_DOCUMENTATION_INDEX.md) | RPG-DSL 系统文档索引 |
+| [docs/RUN_METRICS.md](docs/RUN_METRICS.md) | Agent 运行指标与事件格式 |
 | [docs/](docs/) | 技术文档目录 |
 
 ## ✨ 核心特性
@@ -293,6 +294,7 @@ novelgen write pipeline --chapter P1-V1-C1 --agent-sdk --agent-apply
 | `--agent-apply` | bool | false | 配合 `--agent-sdk`，允许 agent 通过 validated chapter patch 写入正文 |
 | `--recap-agent-sdk` | bool | false | 仅将自动 recap 抽取切到 Agent SDK |
 | `--best-of` | int | 0 | 每章并行生成 N 个独立副本并用 AI 按阅读体验评分，选最高分落盘（0 关闭，最大 5） |
+| `--no-recap-context` | bool | false | 不把上一章 recap 放入 prompt；上一章正文和 canonical state 仍保留 |
 
 #### `write gen` - 生成最终章节
 | Option | 类型 | 默认值 | 说明 |
@@ -307,6 +309,7 @@ novelgen write pipeline --chapter P1-V1-C1 --agent-sdk --agent-apply
 | `--agent-sdk` | bool | false | 使用 Agent SDK focused chapter workflow，Go 仍负责校验和保存 |
 | `--recap-agent-sdk` | bool | false | 使用 Agent SDK 抽取自动 recap |
 | `--best-of` | int | 0 | 每章并行生成 N 个独立副本并用 AI 按阅读体验评分，选最高分落盘（0 关闭，最大 5） |
+| `--no-recap-context` | bool | false | 不把上一章 recap 放入 prompt；上一章正文和 canonical state 仍保留 |
 
 `--best-of N` 用于结构性问题靠重写才能解决的场景：同一章用独立采样并行生成 N 个副本，再由轻量评分 agent 从开篇吸引力、剧情张力、阅读流畅度、人物鲜活度、爽点/情绪五个读者维度打分，最终只有最高分副本通过现有校验与保存路径落盘。各副本分数对比会写入运行日志。
 
@@ -325,6 +328,7 @@ novelgen write pipeline --chapter P1-V1-C1 --agent-sdk --agent-apply
 | `--character-patch-retries` | int | 1 | 角色补丁重试次数 |
 | `--agent-sdk` | bool | false | 使用 Agent SDK 的逐章 focused repair workflow |
 | `--agent-apply` | bool | false | 配合 `--agent-sdk`，允许 agent 通过 validated chapter patch 写入 |
+| `--no-recap-context` | bool | false | 不把上一章 recap 放入 prompt；上一章正文和 canonical state 仍保留 |
 
 Agent SDK 小修默认保持当前章节篇幅：除非问题明确要求扩写或补字数，否则不会为了项目目标字数重写整章。对 system log / 信息差题材，日志线索、可执行判断和信息优势也计入主角成长。
 
@@ -359,6 +363,7 @@ novelgen write improve --volume 1 --min-score 75  # 手动改进第1卷中有具
 | `--agent-sdk` | bool | false | 使用 Agent SDK 的逐章 focused repair workflow |
 | `--agent-apply` | bool | false | 配合 `--agent-sdk`，允许 agent 通过 validated chapter patch 写入 |
 | `--recap-agent-sdk` | bool | false | 使用 Agent SDK 刷新 recap |
+| `--no-recap-context` | bool | false | 不把上一章 recap 放入 prompt；上一章正文和 canonical state 仍保留 |
 
 **示例：**
 ```bash
@@ -518,6 +523,19 @@ By agent:
   ComposeAgent                  120 calls       520300 tokens
   WriteAgent                    292 calls      1322920 tokens
 ```
+
+#### Agent 运行指标
+
+每个项目命令还会在 `logs/runs/<run_id>.jsonl` 记录确定性的执行事件，包括模型调用、skill 加载、工具 command、权限拒绝、耗时、token 和 stuck 信号。它不是让 AI 给正文打分。
+
+```bash
+novelgen project runs                      # 最近运行
+novelgen project runs --stuck              # 只看卡住的运行
+novelgen project run <run_id>              # 查看完整事件时间线
+novelgen project runs --json               # 给 Web UI 或外部脚本
+```
+
+Web UI 的“Agent 运行”页面可以查看同一份数据。设置 `NOVELGEN_DISABLE_RUN_METRICS=1` 可关闭记录。详细说明见 [docs/RUN_METRICS.md](docs/RUN_METRICS.md)。
 
 ### 12. `novelgen project doctor` - 项目自检
 

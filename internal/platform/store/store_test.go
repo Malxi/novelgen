@@ -57,6 +57,8 @@ func TestLayoutPaths(t *testing.T) {
 		{"DraftFile", root.DraftFile("P1-V1-C1"), "book/drafts/P1-V1-C1.md"},
 		{"UsageLog", root.UsageLog(), "book/logs/usage.jsonl"},
 		{"CloneManifest", root.CloneManifest(), "book/logs/clone_manifest.json"},
+		{"RunMetricsDir", root.RunMetricsDir(), "book/logs/runs"},
+		{"RunMetricsFile", root.RunMetricsFile("run-1"), "book/logs/runs/run-1.jsonl"},
 		{"LogFile", root.LogFile("agent-live"), "book/logs/agent-live"},
 		{"AgentWorkDir", root.AgentWorkDir(), "book/.novelgen"},
 		{"AgentPatchDir", root.AgentPatchDir(), "book/.novelgen/agent-patches"},

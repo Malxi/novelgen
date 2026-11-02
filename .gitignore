@@ -20,6 +20,7 @@ drafts/
 simulation_reports/
 output/
 test_compose/
+tmp_hookdebug/
 
 # Frontend dependencies and build output.
 node_modules/

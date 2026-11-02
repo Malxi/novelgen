@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   cli:
     name: CLI (build, vet, test)
@@ -30,6 +34,41 @@ jobs:
       - name: Build release binary
         run: go build -o bin/novelgen .
 
+  cli-race:
+    name: CLI (race detector)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+          cache: true
+
+      # workerpool, the process runtime and the mutation lock are concurrent;
+      # keep at least one job that can see a data race.
+      - name: Test with -race
+        run: go test -race ./...
+
+  cli-windows:
+    name: CLI (Windows build, test)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+          cache: true
+
+      # The shipped binary is a Windows .exe and project paths go through
+      # filepath, so a Linux-only matrix cannot see Windows-only breakage.
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./...
+
   webui:
     name: Web UI (build, vet, test)
     runs-on: ubuntu-latest
@@ -51,11 +90,12 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # node_modules contains a vendored Go package; it is not part of the module.
       - name: Test
-        run: go test ./...
+        run: go test $(go list ./... | grep -v /node_modules/)
 
   frontend:
-    name: Frontend (install, typecheck, build)
+    name: Frontend (install, lint, typecheck, build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -72,5 +112,27 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
       - name: Build
         run: npm run build
+
+  gofmt:
+    name: gofmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Check formatting
+        run: |
+          unformatted=$(git ls-files '*.go' | xargs gofmt -l)
+          if [ -n "$unformatted" ]; then
+            echo "These files are not gofmt-formatted:"
+            echo "$unformatted"
+            exit 1
+          fi

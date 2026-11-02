@@ -751,6 +751,10 @@ Required invariants:
   configured word target. The continuity sent to write generation/review/improve
   represents facts before the target chapter begins; the target chapter's own
   events remain planned beats/deltas rather than already-true state.
+- `--no-recap-context` removes the previous-chapter recap prompt block while
+  retaining neighboring chapter text and canonical continuity. It is the
+  compatibility switch for validating recap retirement; recap extraction and
+  persistence are unchanged by this flag.
 - Focused tool context may include `narrative_memory`: graph/BM25/vector-selected
   prior scenes, open promises, current recap state and paragraph citations. It is
   retrieval evidence, not new canon; later-chapter scenes and the target

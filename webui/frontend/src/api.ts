@@ -1,4 +1,4 @@
-import type { APIResponse, Project, Task, Outline, StorySetup, Character, Location, Item, AICallSummary, AICallDetail, TemplateLibrary, FileVersion } from './types';
+import type { APIResponse, Project, Task, Outline, StorySetup, Character, Location, Item, AICallSummary, AICallDetail, AgentRunSummary, AgentRunDetail, TemplateLibrary, FileVersion } from './types';
 
 const API_BASE = '/api';
 
@@ -55,6 +55,16 @@ export const listAICalls = (project?: string) =>
 
 export const getAICall = (id: string, project?: string) =>
   fetchAPI<AICallDetail>(`/ai-calls/${encodeURIComponent(id)}${project ? `?project=${encodeURIComponent(project)}` : ''}`);
+
+export const listAgentRuns = (project?: string, limit = 50, stuckOnly = false) => {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (project) params.set('project', project);
+  if (stuckOnly) params.set('stuck', 'true');
+  return fetchAPI<AgentRunSummary[]>(`/runs?${params.toString()}`);
+};
+
+export const getAgentRun = (id: string, project?: string) =>
+  fetchAPI<AgentRunDetail>(`/runs/${encodeURIComponent(id)}${project ? `?project=${encodeURIComponent(project)}` : ''}`);
 
 // Content
 export const getOutline = (project?: string) =>

@@ -608,6 +608,19 @@ func TestProcessRuntimeEnvIncludesWorkspaceAndCliPath(t *testing.T) {
 	if got := env["NOVELGEN_CLI_PATH"]; got == "" {
 		t.Fatalf("NOVELGEN_CLI_PATH is empty")
 	}
+	env = envMap(runtime.env(Invocation{
+		WorkspaceRoot: workspace,
+		Metadata: map[string]string{
+			"run_id":           "run-123",
+			"no_recap_context": "1",
+		},
+	}))
+	if got := env["NOVELGEN_RUN_ID"]; got != "run-123" {
+		t.Fatalf("NOVELGEN_RUN_ID = %q, want run-123", got)
+	}
+	if got := env["NOVELGEN_NO_RECAP_CONTEXT"]; got != "1" {
+		t.Fatalf("NOVELGEN_NO_RECAP_CONTEXT = %q, want 1", got)
+	}
 }
 
 func TestSummarizeLiveLogCountsToolActivity(t *testing.T) {

@@ -1,6 +1,6 @@
 # Novelgen 技术文档
 
-> 最后更新: 2026-04-24
+> 最后更新: 2026-11-02
 
 ---
 
@@ -13,6 +13,7 @@
 | [../README.md](../README.md) | 主文档，命令参考和工作流程 | 所有用户 |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 项目架构总览 | 开发者/架构师 |
 | [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | 开发者指南 | 开发者 |
+| [RUN_METRICS.md](RUN_METRICS.md) | Agent 运行指标、事件和 stuck 信号 | 开发者/高级用户 |
 | [RPG_DSL_DOCUMENTATION_INDEX.md](RPG_DSL_DOCUMENTATION_INDEX.md) | RPG-DSL 系统文档索引 | RPG-DSL 用户 |
 
 ### RPG-DSL 系统
@@ -30,8 +31,7 @@
 
 | 文档 | 说明 |
 |------|------|
-| [compose_improvements.md](compose_improvements.md) | RPG-Compose 集成改进总结 |
-| [setup_improvements.md](setup_improvements.md) | Novelgen + RPG 集成改进总结 |
+| [IMPROVEMENT_LOG.md](IMPROVEMENT_LOG.md) | 各阶段行为变更与改进摘要 |
 
 ---
 

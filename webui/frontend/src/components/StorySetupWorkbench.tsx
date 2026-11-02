@@ -182,6 +182,9 @@ function TaskStrip({ taskId, onDone }: { taskId: string | null; onDone: () => vo
 
   useEffect(() => {
     if (!taskId) {
+      // Clearing the previous task is the purpose of this branch, not a
+      // cascading render: it runs once per task id change.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTask(null);
       return;
     }

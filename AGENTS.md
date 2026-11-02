@@ -15,7 +15,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 All build scripts output the executable to `bin/novelgen.exe`. The `bin/` directory is created automatically if it doesn't exist.
 
-Tests exist in `cmd/`, `internal/contract/story/`, `internal/fiction/domain/logic/`, and `internal/fiction/rpg/`. Run the focused package tests for narrow changes, and `go test ./...` before broad or contract-level changes. The `webui/` directory is a **separate Go module** (see `go.work`); the root `go test ./...` does not cover it.
+Tests exist in `cmd/`, `internal/contract/story/`, `internal/fiction/domain/logic/`, `internal/fiction/rpg/`, `internal/fiction/check/`, `internal/fiction/refresh/`, and `internal/platform/runmetrics/`; `internal/architecture/` holds the boundary and schema tests. Run the focused package tests for narrow changes, and `go test ./...` before broad or contract-level changes. The `webui/` directory is a **separate Go module** (see `go.work`); the root `go test ./...` does not cover it.
 
 ## Architecture overview
 
@@ -54,7 +54,7 @@ Tests exist in `cmd/`, `internal/contract/story/`, `internal/fiction/domain/logi
 - AI output must not become project state directly. Parse AI output into a typed Go struct, normalize it when needed, validate deterministic invariants, then save it.
 - When changing a model used as AI input or output, update all related skill prompts, validators/normalizers, downstream consumers, docs, and at least one focused test or fixture.
 - Keep producer and consumer ownership explicit. If a field is added, document which command/agent writes it, which command/agent reads it, whether it is required, and how old projects behave when it is missing.
-- JSON that crosses the webui module boundary has no shared Go type (webui cannot import `internal/`). Change both sides in one go: the writer struct and the webui reader struct; `internal/architecture/schema_test.go` compares the JSON tags and fails when they drift (today: `logs/ai_calls` records).
+- JSON that crosses the webui module boundary has no shared Go type (webui cannot import `internal/`). Change both sides in one go: the writer struct and the webui reader struct; `internal/architecture/schema_test.go` compares the JSON tags and fails when they drift (today: `logs/ai_calls` and `logs/runs` records).
 - Prefer deterministic logic for checks, normalization, IDs, ordering, state math, and DSL validation. Prompts may request good output, but code must enforce required invariants.
 - Do not read `models.Event` fields directly in state, write, continuity, or RPG logic unless there is a specific compatibility reason. Prefer `GetActor`, `GetAction`, `GetTarget`, and `GetTargetType` so old and new outline formats stay compatible.
 - Project state is read and written through `internal/platform/store` only: get paths from a `*store.Root` (or `project.Book.Root()`) and do IO with `Root.Read`/`Write*`/`Append`/`Save*`/`FS()`. Never feed a store path to `os.ReadFile`/`os.WriteFile`/`os.Stat`/…; `os.*` is for host paths that are not project layout (agent home, the user-global config, a caller-chosen output path, whole-directory copies). A missing `*store.Root` fails closed with `store.ErrNilRoot` and must never fall back to the process working directory. `internal/architecture` enforces this plus the directory/file-name literal rule, the web UI layout parity and an allowlist of the remaining ambient-root users, so a new violation fails the build.

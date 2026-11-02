@@ -12,8 +12,8 @@ import (
 	"testing"
 )
 
-// TestAICallLogSchemaMatchesWebUI pins the one artifact whose schema crosses the
-// webui module boundary: internal/fiction/agents writes logs/ai_calls/<id>.json, and the
+// TestAICallLogSchemaMatchesWebUI pins the first artifact whose schema crosses
+// the webui module boundary: internal/fiction/agents writes logs/ai_calls/<id>.json, and the
 // web UI reads it with its own struct (it cannot import this module, see
 // webui/boundary_test.go). Neither compiler sees the other side, so the JSON tags
 // are compared here — a rename on either side then fails the build instead of
@@ -40,6 +40,56 @@ func TestAICallLogSchemaMatchesWebUI(t *testing.T) {
 	}
 	if len(writer) == 0 {
 		t.Fatalf("no JSON tags found for aiCallRecord; the schema test is not checking anything")
+	}
+}
+
+// TestRunMetricsSchemaMatchesWebUI pins the run-metrics ledger, the second
+// artifact whose schema crosses the webui module boundary. The CLI writes
+// logs/runs/<id>.jsonl and `project runs --json`; webui decodes it with its own
+// mirror structs (runs.go) because it cannot import internal/.
+func TestRunMetricsSchemaMatchesWebUI(t *testing.T) {
+	repo := repoRoot(t)
+	writerPath := filepath.Join(repo, "internal", "platform", "runmetrics", "runmetrics.go")
+	readerPath := filepath.Join(repo, "webui", "runs.go")
+
+	assertJSONSchemaMatches(t,
+		jsonFieldTypes(t, writerPath, "RunSummary"),
+		jsonFieldTypes(t, readerPath, "agentRunSummary"),
+		"runmetrics.RunSummary", "webui.agentRunSummary",
+	)
+	assertJSONSchemaMatches(t,
+		jsonFieldTypes(t, writerPath, "Event"),
+		jsonFieldTypes(t, readerPath, "agentRunEvent"),
+		"runmetrics.Event", "webui.agentRunEvent",
+	)
+}
+
+// assertJSONSchemaMatches compares two flattened JSON schemas, allowing the
+// reader to spell the mirrored struct types with its own local names.
+func assertJSONSchemaMatches(t *testing.T, writer, reader map[string]string, writerName, readerName string) {
+	t.Helper()
+	normalize := strings.NewReplacer(
+		"agentRunSummary", "RunSummary",
+		"agentRunEvent", "Event",
+		"stuckSignal", "StuckSignal",
+	).Replace
+	for _, path := range missingPaths(reader, writer) {
+		t.Errorf("%s expects %q but %s never sets it; keep the two structs in step", readerName, path, writerName)
+	}
+	for _, path := range missingPaths(writer, reader) {
+		t.Errorf("%s records %q but %s does not decode it; keep the two structs in step", writerName, path, readerName)
+	}
+	for path, writerType := range writer {
+		readerType, ok := reader[path]
+		if !ok {
+			continue
+		}
+		if normalize(writerType) != normalize(readerType) {
+			t.Errorf("%s: %s writes %s but %s decodes it as %s", path, writerName, writerType, readerName, readerType)
+		}
+	}
+	if len(writer) == 0 {
+		t.Fatalf("no JSON tags found for %s; the schema test is not checking anything", writerName)
 	}
 }
 

@@ -1,0 +1,40 @@
+# Normalize line endings so a Windows checkout and a Linux CI checkout agree.
+# Without this, core.autocrlf=true rewrites every Go file to CRLF locally and
+# `gofmt -l` flags the whole repository.
+* text=auto
+
+.gitattributes text eol=lf
+*.go        text eol=lf
+*.md        text eol=lf
+*.json      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.css       text eol=lf
+*.html      text eol=lf
+*.js        text eol=lf
+*.sh        text eol=lf
+Makefile    text eol=lf
+
+# Go module files are read by tooling on every platform; keep them uniform.
+go.mod      text eol=lf
+go.sum      text eol=lf
+go.work     text eol=lf
+go.work.sum text eol=lf
+
+# Windows-only tooling keeps its native endings.
+*.ps1       text eol=crlf
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+# Binary artifacts.
+*.exe       binary
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.zip       binary
+*.gz        binary
+*.bin       binary

@@ -279,6 +279,7 @@ func TestBaseAgentExecuteDeterministicallyRepairsResourceLedgerNumbers(t *testin
 type fakeRuntime struct {
 	invocation agentruntime.Invocation
 	summary    *agentruntime.LiveSummary
+	toolEvents []agentruntime.ToolEvent
 	calls      int
 }
 
@@ -289,6 +290,7 @@ func (r *fakeRuntime) Invoke(ctx context.Context, invocation agentruntime.Invoca
 		Content:     `{"name":"runtime"}`,
 		Usage:       agentruntime.Usage{TotalTokens: 7},
 		LiveSummary: r.summary,
+		ToolEvents:  r.toolEvents,
 	}, nil
 }
 
@@ -318,6 +320,26 @@ func TestBaseAgentExecuteUsesRuntime(t *testing.T) {
 	}
 	if runtime.invocation.OutputJSONSchema["type"] != "object" {
 		t.Fatalf("OutputJSONSchema type = %v, want object", runtime.invocation.OutputJSONSchema["type"])
+	}
+}
+
+func TestBaseAgentExecutePropagatesNoRecapContextToRuntime(t *testing.T) {
+	runtime := &fakeRuntime{}
+	agent := &BaseAgent{
+		name:           "TestAgent",
+		runtime:        runtime,
+		config:         &llm.Config{},
+		noRecapContext: true,
+	}
+
+	var output struct {
+		Name string `json:"name"`
+	}
+	if err := agent.Execute(context.Background(), InvokeParams{Command: "return a test object"}, struct{}{}, &output); err != nil {
+		t.Fatalf("Execute() returned error: %v", err)
+	}
+	if got := runtime.invocation.Metadata["no_recap_context"]; got != "1" {
+		t.Fatalf("no_recap_context metadata = %q, want 1", got)
 	}
 }
 

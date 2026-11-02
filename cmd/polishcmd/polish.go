@@ -31,6 +31,7 @@ var (
 	polishAgentSDKFlag    bool
 	polishAgentApplyFlag  bool
 	polishRecapAgentSDK   bool
+	polishNoRecapContext  bool
 )
 
 var polishCmd = &cobra.Command{
@@ -73,6 +74,7 @@ func init() {
 	polishCmd.Flags().BoolVar(&polishAgentSDKFlag, "agent-sdk", false, "Use Claude Agent SDK workflow for focused chapter polishing")
 	polishCmd.Flags().BoolVar(&polishAgentApplyFlag, "agent-apply", false, "With --agent-sdk, let the agent write chapter patches through validated patch tools")
 	polishCmd.Flags().BoolVar(&polishRecapAgentSDK, "recap-agent-sdk", false, "Use Claude Agent SDK workflow for recap refresh after polishing")
+	polishCmd.Flags().BoolVar(&polishNoRecapContext, "no-recap-context", false, "Omit the previous-chapter recap from prompt context; previous chapter text and canonical state remain available")
 
 	// Register polish command using the plugin mechanism
 }
@@ -108,6 +110,7 @@ func runPolish(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	writeAgent.SetNoRecapContext(polishNoRecapContext)
 	recapAgent, err := session.NewRecapAgent()
 	if err != nil {
 		return err
@@ -434,7 +437,9 @@ func improveChaptersWithVolumeReviewAndRPGIssues(ctx context.Context, book *proj
 		}
 
 		// Load context
-		chapterContext := writepipe.LoadChapterContext(book, outline, chapter, 2)
+		chapterContext := writepipe.LoadChapterContextWithOptions(book, outline, chapter, 2, writepipe.ChapterContextOptions{
+			DisableRecap: polishNoRecapContext,
+		})
 
 		// Calculate continuity
 		continuity := continuityBuilder.BuildBefore(outline, chapter)

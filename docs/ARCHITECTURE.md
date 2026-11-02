@@ -109,13 +109,16 @@ novelgen/
 ```go
 ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 defer stop()
-cmd.RegisterAllCommands()   // 触发各命令文件 init() 中的注册
-cmd.ExecuteContext(ctx)     // 长流程可在安全点响应取消
+cmd.RegisterAllCommands()       // 触发各命令文件 init() 中的注册
+err := cmd.ExecuteContext(ctx)  // 长流程可在安全点响应取消；返回 error 便于嵌入和测试
+if err != nil {
+	os.Exit(1)
+}
 ```
 
 命令通过 [`cmd/registry.go`](../cmd/registry.go) 的 `RegisterCommand` 在 `init()` 中自注册，最终挂到 [`cmd/root.go`](../cmd/root.go) 的 `rootCmd`。所有命令都在同一个 `cmd` 包内。
 
-**命令子包约定**：自包含的命令组可拆成 `cmd/<group>/` 子包（当前有 `config`、`translate`、`initcmd`、`export`）。子包导出 `NewCommand() *cobra.Command`，由 `cmd/<group>_register.go` 统一接线到 `RegisterCommand`。共享的项目定位/加载逻辑放在 [`internal/fiction/domain/project`](../internal/fiction/domain/project/project.go)，不再散落在 `cmd` 里。新增命令若只依赖 `internal/*`，优先放进子包。
+**命令子包约定**：自包含的命令组可拆成 `cmd/<group>/` 子包（如 `initcmd`、`composecmd`、`craftcmd`、`writecmd`、`rpgcmd`、`recap`、`export`、`config`、`translate`）。子包导出 `NewCommand() *cobra.Command`，由 `cmd/<group>_register.go` 统一接线到 `RegisterCommand`。共享的项目定位/加载逻辑放在 [`internal/fiction/domain/project`](../internal/fiction/domain/project/project.go)，不再散落在 `cmd` 里。新增命令若只依赖 `internal/*`，优先放进子包。
 
 主要命令分组：
 
@@ -301,6 +304,7 @@ AI 分析章节/大纲
 ├── .novelgen/narrative-memory/{index.json,vectors.bin,dirty.json}  # 可删除、可重建的检索缓存
 ├── logs/{prompts,responses,agent-live,write_contexts,draft_contexts}.md 日志流
 │        ai_calls/<id>.json（每次 AI 调用一条结构化记录：model/tokens/两个 prompt/response）
+│        runs/<run_id>.jsonl（Agent 运行事件：model/skill/tool/stuck/token）
 │        usage.jsonl（成本账本）、clone_manifest.json
 └── story/{setup,compose,craft,recaps}/checkpoints/   # patch 前快照
 ```

@@ -20,6 +20,12 @@ type WriteErrorCollector struct {
 	errs []error
 }
 
+// ChapterContextOptions controls optional prompt context for write/review
+// workflows. The zero value preserves the existing behavior.
+type ChapterContextOptions struct {
+	DisableRecap bool
+}
+
 func (c *WriteErrorCollector) Add(err error) {
 	if err == nil {
 		return
@@ -60,6 +66,13 @@ func loadChapterContent(book *project.Book, chapterID string) string {
 }
 
 func LoadChapterContext(book *project.Book, outline *models.Outline, targetChapter *models.Chapter, contextCount int) *agents.ChapterContext {
+	return LoadChapterContextWithOptions(book, outline, targetChapter, contextCount, ChapterContextOptions{})
+}
+
+// LoadChapterContextWithOptions is the explicit form used by commands that are
+// testing recap retirement. Disabling recap only removes the duplicated recap
+// prompt block; neighboring chapter text and canonical state remain available.
+func LoadChapterContextWithOptions(book *project.Book, outline *models.Outline, targetChapter *models.Chapter, contextCount int, options ChapterContextOptions) *agents.ChapterContext {
 	context := &agents.ChapterContext{
 		Current:  targetChapter,
 		Previous: make([]*agents.ContextChapter, 0),
@@ -88,10 +101,12 @@ func LoadChapterContext(book *project.Book, outline *models.Outline, targetChapt
 		return context
 	}
 
-	if recapJSON := novelcont.LoadPreviousRecapJSON(book, outline, targetChapter); strings.TrimSpace(recapJSON) != "" {
-		context.Recap = recapJSON
-	} else if draftRecap := novelcont.LoadPreviousDraftRecap(book, outline, targetChapter); strings.TrimSpace(draftRecap) != "" {
-		context.Recap = draftRecap
+	if !options.DisableRecap {
+		if recapJSON := novelcont.LoadPreviousRecapJSON(book, outline, targetChapter); strings.TrimSpace(recapJSON) != "" {
+			context.Recap = recapJSON
+		} else if draftRecap := novelcont.LoadPreviousDraftRecap(book, outline, targetChapter); strings.TrimSpace(draftRecap) != "" {
+			context.Recap = draftRecap
+		}
 	}
 
 	// Load previous chapters (prefer final, fallback to draft, then outline)

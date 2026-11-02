@@ -42,6 +42,7 @@ const (
 	narrativeMemoryIndexName   = "index.json"
 	narrativeMemoryVectorsName = "vectors.bin"
 	narrativeMemoryDirtyName   = "dirty.json"
+	runMetricsDirName          = "runs"
 )
 
 // CraftKind identifies one of the four craft element files.
@@ -329,6 +330,14 @@ func (r *Root) UsageLog() string { return r.LogFile("usage.jsonl") }
 // CloneManifest is logs/clone_manifest.json, written by `project clone`.
 func (r *Root) CloneManifest() string { return r.LogFile("clone_manifest.json") }
 
+// RunMetricsDir is logs/runs, the append-only Agent run event ledger.
+func (r *Root) RunMetricsDir() string { return r.LogFile(runMetricsDirName) }
+
+// RunMetricsFile is logs/runs/<runID>.jsonl.
+func (r *Root) RunMetricsFile(runID string) string {
+	return filepath.Join(r.RunMetricsDir(), runID+".jsonl")
+}
+
 // Log stream names under logs/. They are part of the layout the CLI writes and
 // the web UI reads, so they are spelled once here; the layout parity test fails
 // when a web UI literal stops matching these names.
@@ -342,6 +351,7 @@ const (
 	LogAgentLiveName     = "agent-live"
 	LogWriteContextsName = "write_contexts"
 	LogDraftContextsName = "draft_contexts"
+	LogRunMetricsName    = "runs"
 )
 
 // LogStreamNames returns every log stream directory store knows about, so a
@@ -354,6 +364,7 @@ func LogStreamNames() []string {
 		LogAgentLiveName,
 		LogWriteContextsName,
 		LogDraftContextsName,
+		LogRunMetricsName,
 	}
 }
 

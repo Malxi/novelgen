@@ -62,6 +62,70 @@ export interface AICallDetail extends AICallSummary {
   response_path?: string;
 }
 
+export interface StuckSignal {
+  reason: string;
+  event?: string;
+  count?: number;
+}
+
+export interface AgentRunSummary {
+  run_id: string;
+  command?: string;
+  status: 'running' | 'completed' | 'failed';
+  started_at?: string;
+  finished_at?: string;
+  duration_ms?: number;
+  events: number;
+  agent_calls: number;
+  tool_calls: number;
+  tool_denied?: number;
+  retries?: number;
+  stuck_events?: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+  agents?: string[];
+  models?: string[];
+  skills?: string[];
+  commands?: string[];
+  stuck?: StuckSignal[];
+  errors?: string[];
+  live_log?: string;
+}
+
+export interface AgentRunEvent {
+  version: number;
+  run_id: string;
+  span_id?: string;
+  event: string;
+  time: string;
+  status?: string;
+  agent?: string;
+  model?: string;
+  kind?: string;
+  command?: string;
+  normalized_command?: string;
+  skills?: string[];
+  loaded_skills?: string[];
+  missing_skills?: string[];
+  tool_name?: string;
+  allowed?: boolean;
+  reason?: string;
+  error?: string;
+  duration_ms?: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+  prompt_chars?: number;
+  response_chars?: number;
+  live_log_path?: string;
+}
+
+export interface AgentRunDetail {
+  summary: AgentRunSummary;
+  events: AgentRunEvent[];
+}
+
 export interface Outline {
   parts: Part[];
 }

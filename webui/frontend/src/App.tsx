@@ -10,6 +10,7 @@ import { ChaptersViewer } from './components/ChaptersViewer';
 import { TaskManager } from './components/TaskManager';
 import { RPGManager } from './components/RPGManager';
 import { AICallsViewer } from './components/AICallsViewer';
+import { AgentRunsViewer } from './components/AgentRunsViewer';
 import { listProjects } from './api';
 import type { Project } from './types';
 
@@ -80,6 +81,8 @@ function App() {
         return <RPGManager projectPath={selectedProject.path} />;
       case 'ai-calls':
         return <AICallsViewer projectPath={selectedProject.path} />;
+      case 'agent-runs':
+        return <AgentRunsViewer key={selectedProject.path} projectPath={selectedProject.path} />;
       case 'chapters':
         return <ChaptersViewer projectPath={selectedProject.path} />;
       case 'tasks':

@@ -102,7 +102,7 @@ export function ItemsViewer({ projectPath }: { projectPath: string }) {
       const data = await getItems(projectPath);
       setItems(data.items || []);
       setError(null);
-    } catch (err) {
+    } catch {
       setError('物品数据不存在');
       setItems([]);
     } finally {

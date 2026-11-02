@@ -3,11 +3,13 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
+	"sync"
 
 	"novelgen/internal/platform/cli"
 	"novelgen/internal/platform/envutil"
+	"novelgen/internal/platform/logger"
+	"novelgen/internal/platform/runmetrics"
 	"novelgen/internal/platform/store"
 
 	"github.com/spf13/cobra"
@@ -18,6 +20,11 @@ import (
 // directory, and it is how the commands stopped disagreeing about whether the
 // working directory is the project root.
 var projectDirFlag string
+
+var activeRun struct {
+	mu  sync.Mutex
+	run *runmetrics.Run
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "novelgen",
@@ -71,6 +78,7 @@ func resolveProjectRoot(cmd *cobra.Command, _ []string) error {
 		}
 		store.SetDefault(root)
 		cmd.SetContext(store.WithRoot(cmd.Context(), root))
+		startRunMetrics(cmd, root)
 		return nil
 	}
 	root, err := store.LocateProject("")
@@ -79,16 +87,53 @@ func resolveProjectRoot(cmd *cobra.Command, _ []string) error {
 	}
 	store.SetDefault(root)
 	cmd.SetContext(store.WithRoot(cmd.Context(), root))
+	startRunMetrics(cmd, root)
 	return nil
 }
 
-// ExecuteContext runs the command tree with the given context so callers can
-// cancel long-running workflows (for example on SIGINT).
-func ExecuteContext(ctx context.Context) {
-	cli.SetRootContext(ctx)
-	if err := rootCmd.ExecuteContext(ctx); err != nil {
-		os.Exit(1)
+func startRunMetrics(cmd *cobra.Command, root *store.Root) {
+	if cmd == nil || root == nil || isRunMetricsReadCommand(cmd.CommandPath()) {
+		return
 	}
+	if strings.TrimSpace(envutil.String("NOVELGEN_RUN_ID")) != "" {
+		// Agent SDK tool commands are child processes of an already-recorded run.
+		// The parent records the tool call and duration; starting another run
+		// here would turn every query into a misleading standalone job.
+		return
+	}
+	ctx, run, err := runmetrics.Start(cmd.Context(), root, cmd.CommandPath())
+	if err != nil {
+		logger.Warn("Failed to start run metrics: %v", err)
+		return
+	}
+	cmd.SetContext(ctx)
+	activeRun.mu.Lock()
+	activeRun.run = run
+	activeRun.mu.Unlock()
+}
+
+func isRunMetricsReadCommand(commandPath string) bool {
+	switch strings.TrimSpace(commandPath) {
+	case "novelgen project run", "novelgen project runs", "novelgen project usage", "novelgen project doctor":
+		return true
+	default:
+		return false
+	}
+}
+
+// ExecuteContext runs the command tree with the given context so callers can
+// cancel long-running workflows (for example on SIGINT). It returns the command
+// error instead of calling os.Exit so embedding callers and tests can choose
+// their own exit behaviour; main.go maps it to the process exit code.
+func ExecuteContext(ctx context.Context) error {
+	cli.SetRootContext(ctx)
+	err := rootCmd.ExecuteContext(ctx)
+	activeRun.mu.Lock()
+	run := activeRun.run
+	activeRun.run = nil
+	activeRun.mu.Unlock()
+	run.Finish("", err)
+	return err
 }
 
 // init is called after all other init() functions in the cmd package

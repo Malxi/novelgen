@@ -138,6 +138,7 @@ var layer = map[string]int{
 	// the storage layer rather than beside the other leaf utilities.
 	"internal/platform/logger":                            2,
 	"internal/platform/store":                             2,
+	"internal/platform/runmetrics":                        2,
 	"internal/fiction/rpg":                                2,
 	"internal/fiction/rpg/dsl":                            2,
 	"internal/fiction/rpg/benchmark":                      2,

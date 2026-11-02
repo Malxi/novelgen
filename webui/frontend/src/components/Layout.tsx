@@ -5,6 +5,7 @@ import {
   Bot,
   ChevronRight,
   FileText,
+  Gauge,
   LayoutDashboard,
   Loader2,
   MapPin,
@@ -41,6 +42,7 @@ const navItems = [
   { id: 'craft', label: '世界元素', icon: Package },
   { id: 'rpg', label: '数值化系统', icon: Swords },
   { id: 'tasks', label: '任务', icon: Activity },
+  { id: 'agent-runs', label: 'Agent 运行', icon: Gauge },
   { id: 'ai-calls', label: 'AI 调用', icon: Bot },
   { id: 'chapters', label: '章节', icon: FileText },
 ];

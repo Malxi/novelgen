@@ -256,6 +256,13 @@ func (a *WriteAgent) SetProjectRoot(root *store.Root) {
 	}
 }
 
+// SetNoRecapContext suppresses recap prompt blocks in Agent SDK tool contexts.
+func (a *WriteAgent) SetNoRecapContext(disabled bool) {
+	if a != nil && a.base != nil {
+		a.base.SetNoRecapContext(disabled)
+	}
+}
+
 // GenerateChapter generates final chapter content with continuity
 func (a *WriteAgent) GenerateChapter(ctx context.Context, chapter *models.Chapter, context *ChapterContext, continuity *models.ChapterContinuity, targetWords int) (string, error) {
 	logger.Section("WRITE AGENT - Final Chapter Generation")

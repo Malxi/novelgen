@@ -52,7 +52,8 @@ func queryChapterWriteContext(ctx ToolProjectContext, chapterID string) ToolResp
 	var previousRecap *models.ChapterRecap
 	var currentRecap *models.ChapterRecap
 	warnings := []string{}
-	if ctx.Root != nil {
+	recapContextDisabled := strings.TrimSpace(os.Getenv("NOVELGEN_NO_RECAP_CONTEXT")) == "1"
+	if ctx.Root != nil && !recapContextDisabled {
 		store := recap.NewStoreAt(ctx.Root)
 		if previousChapter != nil && previousChapter.Chapter != nil {
 			if loaded, warning := loadUsableToolContextRecap(ctx.Root, store, previousChapter.Chapter); loaded != nil {
@@ -66,6 +67,8 @@ func queryChapterWriteContext(ctx ToolProjectContext, chapterID string) ToolResp
 		} else if warning != "" {
 			warnings = append(warnings, "current recap ignored: "+warning)
 		}
+	} else if recapContextDisabled {
+		warnings = append(warnings, "recap briefs omitted because NOVELGEN_NO_RECAP_CONTEXT=1; previous chapter text and canonical continuity remain available")
 	}
 
 	excerpt, _ := loadChapterExcerptForTool(ctx.Root, target.Chapter.ID)
@@ -123,6 +126,9 @@ func queryChapterWriteContext(ctx ToolProjectContext, chapterID string) ToolResp
 	}
 	if currentRecap != nil {
 		result.Stats["has_current_recap"] = 1
+	}
+	if recapContextDisabled {
+		result.Stats["recap_context_disabled"] = 1
 	}
 	if excerpt != nil {
 		result.Stats["excerpt_fields"] = len(excerpt)

@@ -102,7 +102,7 @@ export function LocationsViewer({ projectPath }: { projectPath: string }) {
       const data = await getLocations(projectPath);
       setLocations(data.locations || []);
       setError(null);
-    } catch (err) {
+    } catch {
       setError('地点数据不存在');
       setLocations([]);
     } finally {

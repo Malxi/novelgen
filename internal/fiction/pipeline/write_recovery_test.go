@@ -74,6 +74,34 @@ func TestLoadChapterContextUsesInjectedRoot(t *testing.T) {
 	}
 }
 
+func TestLoadChapterContextCanOmitRecapWithoutDroppingPreviousText(t *testing.T) {
+	root := store.MemRoot()
+	book := project.Open(root)
+	if err := book.Root().SaveChapterContent("P1-V1-C1", "# One\n\nLin opens the door."); err != nil {
+		t.Fatalf("SaveChapterContent: %v", err)
+	}
+	outline := &models.Outline{Parts: []models.Part{{
+		ID: "P1",
+		Volumes: []models.Volume{{
+			ID: "P1-V1",
+			Chapters: []models.Chapter{
+				{ID: "P1-V1-C1", Title: "One"},
+				{ID: "P1-V1-C2", Title: "Two"},
+			},
+		}},
+	}}}
+
+	ctx := writepipe.LoadChapterContextWithOptions(book, outline, &models.Chapter{ID: "P1-V1-C2"}, 1, writepipe.ChapterContextOptions{
+		DisableRecap: true,
+	})
+	if ctx.Recap != "" {
+		t.Fatalf("recap should be omitted, got %q", ctx.Recap)
+	}
+	if len(ctx.Previous) != 1 || !strings.Contains(ctx.Previous[0].Content, "Lin opens the door") {
+		t.Fatalf("previous chapter text was dropped: %#v", ctx.Previous)
+	}
+}
+
 func TestRecoverAgentAppliedChapterContentAfterErrorRejectsOvershoot(t *testing.T) {
 	t.Parallel()
 

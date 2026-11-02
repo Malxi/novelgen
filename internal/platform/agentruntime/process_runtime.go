@@ -1010,6 +1010,12 @@ func (r *ProcessRuntime) env(invocation Invocation) []string {
 	for key, value := range r.config.Env {
 		appendKV(key, value)
 	}
+	if invocation.Metadata != nil {
+		appendKV("NOVELGEN_RUN_ID", invocation.Metadata["run_id"])
+		if invocation.Metadata["no_recap_context"] == "1" {
+			appendKV("NOVELGEN_NO_RECAP_CONTEXT", "1")
+		}
+	}
 	return env
 }
 

@@ -151,6 +151,9 @@ function EditableListField({
   const valueKey = (value || []).join('\n');
 
   useEffect(() => {
+    // The textarea keeps a local draft; re-seed it when the incoming value
+    // changes (for example after a reload) so edits never go stale.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraftItems(value && value.length > 0 ? value : ['']);
   }, [valueKey]);
 
@@ -243,6 +246,9 @@ function TaskStrip({ taskId, onDone }: { taskId: string | null; onDone: () => vo
 
   useEffect(() => {
     if (!taskId) {
+      // Clearing the previous task is the purpose of this branch, not a
+      // cascading render: it runs once per task id change.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTask(null);
       return;
     }

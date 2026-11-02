@@ -17,5 +17,7 @@ func main() {
 
 	// Register all commands (including plugin commands)
 	cmd.RegisterAllCommands()
-	cmd.ExecuteContext(ctx)
+	if err := cmd.ExecuteContext(ctx); err != nil {
+		os.Exit(1)
+	}
 }
