@@ -1,0 +1,10 @@
+- insert:
+    - id: novelgen
+      name: '@local/dsh-novelgen'
+      config:
+        # Optional absolute path to a Novelgen project (the directory with novel.json).
+        projectRoot: ''
+        # Optional directories that contain one sub-directory per novel project.
+        projectRoots: []
+        # Optional absolute path to the novelgen executable. Auto-detected when empty.
+        novelgenPath: ''

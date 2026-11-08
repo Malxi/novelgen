@@ -81,6 +81,7 @@ var toolPlaneConcernFiles = map[string][]string{
 var toolPlaneModuleFiles = map[string]string{
 	"internal/toolplane/mutation_aliases.go":    "compatibility aliases over the fiction/mutation service",
 	"internal/toolplane/tool_patch_cli.go":      "CLI adapter over the fiction/mutation service",
+	"internal/toolplane/tool_replace_cli.go":    "complete-artifact replace adapter over the fiction/mutation service",
 	"internal/toolplane/tool_patch_adapters.go": "per-section adapters over the fiction/mutation service",
 	"internal/toolplane/check_aliases.go":       "compatibility aliases over the fiction/check engine",
 	"internal/toolplane/tool_check_cli.go":      "CLI adapter over the fiction/check engine",

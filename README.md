@@ -10,6 +10,7 @@ Novelgen 是一个命令行工具，用于 AI 辅助小说创作。它提供了�
 | [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | 开发者指南 |
 | [docs/RPG_DSL_DOCUMENTATION_INDEX.md](docs/RPG_DSL_DOCUMENTATION_INDEX.md) | RPG-DSL 系统文档索引 |
 | [docs/RUN_METRICS.md](docs/RUN_METRICS.md) | Agent 运行指标与事件格式 |
+| [docs/AGENT_KIT.md](docs/AGENT_KIT.md) | Claude Code / Codex / DSH 适配器、MCP、hooks 与安装 |
 | [docs/](docs/) | 技术文档目录 |
 
 ## ✨ 核心特性
@@ -17,6 +18,7 @@ Novelgen 是一个命令行工具，用于 AI 辅助小说创作。它提供了�
 - **结构化创作**: 部→卷→章的三级大纲体系
 - **AI 驱动**: 每个阶段都有专门的 AI Agent
 - **目标级 Agent**: `novelgen agent run` 让模型自主发现 skill、调用项目工具并循环到目标完成
+- **Agent 适配器**: `novelgen agent install` 生成 Claude Code / Codex / DSH 的项目级适配器；`novelgen mcp serve` 暴露统一工具面，`novelgen hook` 提供直写护栏
 - **RPG 验证**: 通过 DSL 系统验证内容一致性
 - **约束写作**: RPG 约束指导 AI 写作，避免战力崩坏等问题
 - **连续性保证**: 自动检测角色出场、转场桥段、章节回顾

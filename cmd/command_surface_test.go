@@ -57,7 +57,9 @@ func TestCommandSurfaceTopLevel(t *testing.T) {
 		"craft",
 		"draft",
 		"export",
+		"hook",
 		"init",
+		"mcp",
 		"polish",
 		"project",
 		"recap",
@@ -81,7 +83,7 @@ func TestCommandSurfaceTopLevel(t *testing.T) {
 func TestCommandSurfaceSubcommands(t *testing.T) {
 	root := fullCommandTree()
 	want := map[string][]string{
-		"agent":   {"run"},
+		"agent":   {"install", "run"},
 		"compose": {"check", "gen", "improve", "normalize", "pipeline", "regen", "review", "skeleton-improve", "skeleton-review"},
 		"config":  {"agent", "set", "show"},
 		"craft":   {"gen", "improve"},
@@ -93,7 +95,7 @@ func TestCommandSurfaceSubcommands(t *testing.T) {
 		"rpg-dsl": {"check", "convert", "convert-chapters", "export-dsl", "merge", "simulate", "validate"},
 		"setup":   {"check", "explore", "gen", "import", "improve", "regen"},
 		"storage": {"list", "projects", "read", "replace", "stat", "write"},
-		"tool":    {"check", "patch", "patch-buffer", "query", "refresh", "skill"},
+		"tool":    {"check", "patch", "patch-buffer", "query", "refresh", "replace", "skill"},
 		"write":   {"gen", "improve", "pipeline", "review"},
 	}
 	for name, expected := range want {

@@ -113,7 +113,13 @@ func startRunMetrics(cmd *cobra.Command, root *store.Root) {
 }
 
 func isRunMetricsReadCommand(commandPath string) bool {
-	switch strings.TrimSpace(commandPath) {
+	path := strings.TrimSpace(commandPath)
+	// Harness hooks run on every Write/Edit and only read project state; each
+	// invocation must not create a standalone run record.
+	if path == "novelgen hook" || strings.HasPrefix(path, "novelgen hook ") {
+		return true
+	}
+	switch path {
 	case "novelgen project run", "novelgen project runs", "novelgen project usage", "novelgen project doctor":
 		return true
 	default:

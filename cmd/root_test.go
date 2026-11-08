@@ -93,3 +93,16 @@ func TestResolveProjectRootWithoutProjectIsNotAnError(t *testing.T) {
 		t.Fatalf("resolveProjectRoot outside a project should not fail: %v", err)
 	}
 }
+
+func TestHookCommandsAreNotRecordedAsRuns(t *testing.T) {
+	for _, path := range []string{"novelgen hook", "novelgen hook guard-write", "novelgen hook session-start"} {
+		if !isRunMetricsReadCommand(path) {
+			t.Errorf("%s should not start a run record", path)
+		}
+	}
+	for _, path := range []string{"novelgen tool query", "novelgen tool replace", "novelgen agent run", "novelgen mcp serve", "novelgen hookx"} {
+		if isRunMetricsReadCommand(path) {
+			t.Errorf("%s should start a run record", path)
+		}
+	}
+}

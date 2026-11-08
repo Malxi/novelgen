@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "novelgen": {
+      "command": "{{NOVELGEN}}",
+      "args": [
+        "mcp",
+        "serve"
+      ]
+    }
+  }
+}

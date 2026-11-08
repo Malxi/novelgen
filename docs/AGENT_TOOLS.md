@@ -3,7 +3,11 @@
 `novelgen tool query` provides read-only JSON queries for Claude/agent use.
 `novelgen tool check` provides scoped quality/simulation checks, and
 `novelgen tool patch setup|outline|craft|recap|chapter` applies validated patches through Go.
-The `tool patch` commands are the CLI adapter over
+`novelgen tool replace setup|outline|craft|chapter|recap` replaces a complete
+artifact (generation/regeneration) through the same mutation service. It is a
+validated dry run by default and writes only with `--apply`; a whole-outline
+result warns about chapters it would remove.
+The `tool patch`/`tool replace` commands are the CLI adapters over
 `internal/fiction/mutation.MutationService`; Chat/typed-JSON pipelines use the same
 service directly, so Agent outputs cannot bypass normalization, checkpoints,
 atomic writes, or the project mutation lock.
@@ -52,6 +56,11 @@ novelgen tool patch-buffer append --id <buffer_id> --text '<chapter text chunk>'
 printf '%s' '<chapter text chunk>' | novelgen tool patch-buffer append --id <buffer_id> --stdin
 novelgen tool patch-buffer show --id <buffer_id> [--max-chars 300]
 novelgen tool patch chapter --id <chapter_id> --patch-buffer <buffer_id> [--apply --refresh-derived]
+printf '%s' '<complete setup json>' | novelgen tool replace setup --apply
+printf '%s' '<complete outline json>' | novelgen tool replace outline --apply
+printf '%s' '<complete craft map json>' | novelgen tool replace craft --target character --apply
+printf '%s' '<chapter markdown>' | novelgen tool replace chapter --id <chapter_id> --apply
+printf '%s' '<recap json>' | novelgen tool replace recap --id <chapter_id> --apply
 novelgen tool refresh chapter-dsl --id <chapter_id> [--batch-size 10]
 novelgen tool refresh narrative-memory
 ```

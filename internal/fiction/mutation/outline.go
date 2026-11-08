@@ -203,6 +203,7 @@ func runOutlineReplaceMutationLocked(root *store.Root, outline *models.Outline, 
 
 	ok := !opts.Validate || check == nil || !check.Blocking
 	warnings := appendNoChangeWarning(nil, changes)
+	warnings = append(warnings, removedOutlineChapterWarnings(root, before, candidate)...)
 	if opts.Apply {
 		warnings = markMemoryDirtyAfterWrite(root, "outline", warnings)
 	}
@@ -223,6 +224,47 @@ func runOutlineReplaceMutationLocked(root *store.Root, outline *models.Outline, 
 			"source":       opts.Source,
 		},
 	}, nil
+}
+
+// removedOutlineChapterWarnings reports chapters that a whole-outline replace
+// drops, including whether saved prose or a recap would be orphaned. The warning
+// is emitted for dry runs too, so an agent can review the deletion before apply.
+func removedOutlineChapterWarnings(root *store.Root, before, after *models.Outline) []string {
+	if root == nil || before == nil || after == nil {
+		return nil
+	}
+	remaining := map[string]bool{}
+	for _, part := range after.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				remaining[chapter.ID] = true
+			}
+		}
+	}
+	var warnings []string
+	for _, part := range before.Parts {
+		for _, volume := range part.Volumes {
+			for _, chapter := range volume.Chapters {
+				if chapter.ID == "" || remaining[chapter.ID] {
+					continue
+				}
+				detail := ""
+				hasProse, proseErr := root.ExistsErr(root.ChapterFile(chapter.ID))
+				hasRecap, recapErr := root.ExistsErr(root.RecapFile(chapter.ID))
+				switch {
+				case proseErr == nil && hasProse && recapErr == nil && hasRecap:
+					detail = " (saved chapter content and recap exist)"
+				case proseErr == nil && hasProse:
+					detail = " (saved chapter content exists)"
+				case recapErr == nil && hasRecap:
+					detail = " (saved recap exists)"
+				}
+				warnings = append(warnings,
+					fmt.Sprintf("outline replace removes chapter %s%s", chapter.ID, detail))
+			}
+		}
+	}
+	return warnings
 }
 
 func newBlockingPatchIssues(root *store.Root, before *models.Outline, setup *models.StorySetup, afterCheck *ToolCheckResult) []models.ReviewSuggestion {

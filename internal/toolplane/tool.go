@@ -464,12 +464,20 @@ func init() {
 	ToolPatchBufferCmd.Flags().StringVar(&ToolPatchBufferFlags.Text, "text", "", "Text chunk to append; stdin is used when omitted")
 	ToolPatchBufferCmd.Flags().BoolVar(&ToolPatchBufferFlags.Stdin, "stdin", false, "Read text chunk from stdin explicitly")
 	ToolPatchBufferCmd.Flags().IntVar(&ToolPatchBufferFlags.MaxChars, "max-chars", 400, "Preview character limit for show")
+	ToolReplaceCmd.Flags().StringVar(&ToolReplaceFlags.Target, "target", "",
+		"Section-specific replace target: craft character|item|location|organization (required); setup/outline/chapter/recap ignore it")
+	ToolReplaceCmd.Flags().StringVar(&ToolReplaceFlags.ID, "id", "", "Chapter ID for chapter/recap replace")
+	ToolReplaceCmd.Flags().BoolVar(&ToolReplaceFlags.Apply, "apply", false,
+		"Write the replacement; without it the command only validates and reports changes")
+	ToolReplaceCmd.Flags().BoolVar(&ToolReplaceFlags.DryRun, "dry-run", false,
+		"Force a dry run even when --apply is set")
 	ToolRefreshCmd.Flags().StringVar(&ToolRefreshFlags.ID, "id", "", "Target chapter ID for scoped refresh")
 	ToolRefreshCmd.Flags().IntVar(&ToolRefreshFlags.BatchSize, "batch-size", 10, "Chapter markdown batch size for AI -> RPG DSL conversion")
 	ToolCmd.AddCommand(ToolQueryCmd)
 	ToolCmd.AddCommand(ToolCheckCmd)
 	ToolCmd.AddCommand(ToolPatchCmd)
 	ToolCmd.AddCommand(ToolPatchBufferCmd)
+	ToolCmd.AddCommand(ToolReplaceCmd)
 	ToolCmd.AddCommand(ToolRefreshCmd)
 	ToolCmd.AddCommand(ToolSkillCmd)
 }

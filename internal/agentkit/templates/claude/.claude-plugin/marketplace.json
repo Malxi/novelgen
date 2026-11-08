@@ -1,0 +1,14 @@
+{
+  "name": "novelgen-local",
+  "description": "Project-local Novelgen workflow, skills, hooks and MCP tools.",
+  "owner": {
+    "name": "novelgen"
+  },
+  "plugins": [
+    {
+      "name": "novelgen",
+      "source": "./plugin",
+      "description": "Novelgen workflow commands, skills, hooks and MCP tools."
+    }
+  ]
+}

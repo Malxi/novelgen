@@ -31,6 +31,8 @@ func internalModule(pkg string) string {
 		return "fiction"
 	case pkg == "internal/toolplane":
 		return "toolplane"
+	case pkg == "internal/agentkit" || pkg == "internal/agentmcp":
+		return "app"
 	case pkg == "internal/app":
 		return "app"
 	default:

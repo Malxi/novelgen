@@ -28,8 +28,13 @@ const (
 // their own quality gate can commit a generated artifact without paying for a
 // second full check, while still getting normalization, checkpoints and the
 // store's atomic write.
+//
+// DryRun lets a Replace* caller keep the wrapper's write semantics opt-in: when
+// true, the wrapper computes normalization/validation/change reports but does
+// not write. Existing host callers leave it false, so they still commit.
 type MutationOptions struct {
 	Apply          bool
+	DryRun         bool
 	Validate       bool
 	Mode           MutationMode
 	TargetWords    int
@@ -154,7 +159,7 @@ func (s *MutationService) ReplaceSetup(_ context.Context, setup *models.StorySet
 		return nil, fmt.Errorf("encode story setup: %w", err)
 	}
 	opts = opts.normalized()
-	opts.Apply = true
+	opts.Apply = !opts.DryRun
 	opts.Mode = MutationReplace
 	return runSetupMutation(root, data, opts, nil)
 }
@@ -176,7 +181,7 @@ func (s *MutationService) UpsertCraftElements(_ context.Context, kind store.Craf
 		return nil, fmt.Errorf("decode craft elements: %w", err)
 	}
 	opts = opts.normalized()
-	opts.Apply = true
+	opts.Apply = !opts.DryRun
 	opts.Mode = MutationMerge
 	return runCraftBulkMutation(root, kind, elements, opts, nil, false)
 }
@@ -198,7 +203,7 @@ func (s *MutationService) ReplaceCraftElements(_ context.Context, kind store.Cra
 		return nil, fmt.Errorf("decode craft elements: %w", err)
 	}
 	opts = opts.normalized()
-	opts.Apply = true
+	opts.Apply = !opts.DryRun
 	opts.Mode = MutationReplace
 	return runCraftBulkMutation(root, kind, elements, opts, nil, true)
 }
@@ -214,7 +219,7 @@ func (s *MutationService) UpsertCraftElement(_ context.Context, kind, key string
 		return nil, fmt.Errorf("encode craft element: %w", err)
 	}
 	opts = opts.normalized()
-	opts.Apply = true
+	opts.Apply = !opts.DryRun
 	opts.Mode = MutationReplace
 	return runCraftMutation(root, kind, key, data, opts, nil)
 }
@@ -230,7 +235,7 @@ func (s *MutationService) ReplaceChapter(ctx context.Context, chapterID, content
 		return nil, fmt.Errorf("encode chapter patch: %w", err)
 	}
 	opts = opts.normalized()
-	opts.Apply = true
+	opts.Apply = !opts.DryRun
 	opts.Mode = MutationReplace
 	return runChapterMutation(ctx, root, chapterID, data, opts, nil)
 }
@@ -252,7 +257,7 @@ func (s *MutationService) ReplaceChapterObject(ctx context.Context, chapter *mod
 		return nil, fmt.Errorf("encode chapter patch: %w", err)
 	}
 	opts = opts.normalized()
-	opts.Apply = true
+	opts.Apply = !opts.DryRun
 	opts.Mode = MutationReplace
 	return runChapterMutationForChapter(ctx, root, chapter.ID, chapter, data, opts, nil)
 }
@@ -270,7 +275,7 @@ func (s *MutationService) ReplaceDraft(_ context.Context, chapter *models.Chapte
 		return nil, fmt.Errorf("chapter is nil")
 	}
 	opts = opts.normalized()
-	opts.Apply = true
+	opts.Apply = !opts.DryRun
 	opts.Mode = MutationReplace
 	var result *ToolPatchResult
 	err = root.WithMutationLock(func() error {
@@ -278,16 +283,20 @@ func (s *MutationService) ReplaceDraft(_ context.Context, chapter *models.Chapte
 		if readErr != nil {
 			return fmt.Errorf("failed to read draft %s: %w", chapter.ID, readErr)
 		}
-		if err := project.Open(root).SaveDraft(chapter, draft); err != nil {
-			return err
+		files := map[string]string{}
+		if opts.Apply {
+			if err := project.Open(root).SaveDraft(chapter, draft); err != nil {
+				return err
+			}
+			files["draft"] = root.DraftFile(chapter.ID)
 		}
 		result = &ToolPatchResult{
 			OK:      true,
-			Applied: true,
-			DryRun:  false,
+			Applied: opts.Apply,
+			DryRun:  !opts.Apply,
 			Target:  "draft",
 			ID:      chapter.ID,
-			Files:   map[string]string{"draft": root.DraftFile(chapter.ID)},
+			Files:   files,
 			Meta: map[string]interface{}{
 				"project_root": root.Dir(),
 				"mode":         string(opts.Mode),
@@ -314,7 +323,7 @@ func (s *MutationService) ReplaceRecap(_ context.Context, value *models.ChapterR
 		return nil, fmt.Errorf("encode recap: %w", err)
 	}
 	opts = opts.normalized()
-	opts.Apply = true
+	opts.Apply = !opts.DryRun
 	opts.Mode = MutationReplace
 	return runRecapMutation(root, value.ChapterID, data, opts, nil)
 }
@@ -330,7 +339,7 @@ func (s *MutationService) ReplaceOutline(_ context.Context, outline *models.Outl
 		return nil, fmt.Errorf("outline is nil")
 	}
 	opts = opts.normalized()
-	opts.Apply = true
+	opts.Apply = !opts.DryRun
 	opts.Mode = MutationReplace
 	opts.Normalize = true
 	opts.WriteDerived = true
@@ -350,7 +359,7 @@ func (s *MutationService) ReplaceOutlineRaw(_ context.Context, outline *models.O
 		return nil, fmt.Errorf("outline is nil")
 	}
 	opts = opts.normalized()
-	opts.Apply = true
+	opts.Apply = !opts.DryRun
 	opts.Mode = MutationReplace
 	opts.Normalize = false
 	opts.WriteDerived = false

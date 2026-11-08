@@ -13,6 +13,7 @@ books/
 *.log
 *.bak
 **/.novelgen/
+.dsh-novelgen/
 
 # Generated story artifacts (created by novelgen init / write / compose).
 chapters/

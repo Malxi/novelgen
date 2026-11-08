@@ -134,6 +134,8 @@ var layer = map[string]int{
 	"internal/platform/cli":          1,
 	"internal/contract/testfixtures": 1,
 	"internal/contract/toolcmd":      1,
+	"internal/agentkit":              1,
+	"internal/agentmcp":              8,
 	// logger writes into the project layout (the logs/ directory), so it sits at
 	// the storage layer rather than beside the other leaf utilities.
 	"internal/platform/logger":                            2,

@@ -1,0 +1,15 @@
+{
+  "name": "novelgen",
+  "description": "Structured AI-assisted novel creation through the Novelgen CLI and MCP server.",
+  "version": "0.1.0",
+  "author": {
+    "name": "novelgen"
+  },
+  "license": "MIT",
+  "keywords": [
+    "novel",
+    "writing",
+    "fiction",
+    "novelgen"
+  ]
+}
