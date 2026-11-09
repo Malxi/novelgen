@@ -7,6 +7,7 @@ package agentkit
 
 import (
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -26,6 +27,9 @@ type Options struct {
 	Apply        bool
 	Force        bool
 	AllowHooks   bool
+	SkipMCP      bool
+	UserSkill    bool
+	UserHome     string
 	NovelgenPath string
 	CodexHome    string
 }
@@ -80,6 +84,8 @@ func Install(root string, targets []string, opts Options) (Result, error) {
 			changes, err = installClaude(root, opts, &result)
 		case "codex":
 			changes, err = installCodex(root, opts, &result)
+		case "workbuddy":
+			changes, err = installWorkbuddy(root, opts, &result)
 		case "dsh":
 			changes, err = installDSH(root, opts, &result)
 		}
@@ -114,9 +120,9 @@ func normalizeTargets(targets []string) ([]string, error) {
 				continue
 			}
 			switch piece {
-			case "claude", "codex", "dsh":
+			case "claude", "codex", "dsh", "workbuddy":
 			default:
-				return nil, fmt.Errorf("unsupported target %q (use claude, codex, dsh, or all)", piece)
+				return nil, fmt.Errorf("unsupported target %q (use claude, codex, dsh, workbuddy, or all)", piece)
 			}
 			if !seen[piece] {
 				seen[piece] = true
@@ -165,7 +171,7 @@ func installCodex(root string, opts Options, result *Result) ([]FileChange, erro
 		return nil, err
 	}
 	agentsPath := filepath.Join(root, "AGENTS.md")
-	agentsChange, err := upsertManagedBlock(agentsPath, "novelgen", string(block), opts)
+	agentsChange, err := upsertManagedBlock(root, agentsPath, "novelgen", string(block), opts)
 	if err != nil {
 		return nil, err
 	}
@@ -239,6 +245,199 @@ func installCodexHome(opts Options) (FileChange, error) {
 		return change, err
 	}
 	return change, nil
+}
+
+// installWorkbuddy writes the project-local WorkBuddy (CodeBuddy) adapter:
+// a project .mcp.json entry for the Novelgen MCP server, a managed guidance
+// block, and a project skill. WorkBuddy supplies the model/token; Novelgen
+// tools only read, validate and write project state.
+func installWorkbuddy(root string, opts Options, result *Result) ([]FileChange, error) {
+	changes := make([]FileChange, 0, 3)
+
+	if !opts.SkipMCP {
+		mcpChange, err := upsertWorkbuddyMCP(root, opts)
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, mcpChange)
+	}
+
+	block, err := fs.ReadFile(templates, "templates/workbuddy/CODEBUDDY.block.md")
+	if err != nil {
+		return nil, err
+	}
+	guidance := workbuddyGuidancePath(root)
+	guidanceChange, err := upsertManagedBlock(root, guidance, "novelgen-workbuddy", string(block), opts)
+	if err != nil {
+		return nil, err
+	}
+	changes = append(changes, guidanceChange)
+
+	skills, err := fs.Sub(templates, "templates/workbuddy/skills")
+	if err != nil {
+		return nil, err
+	}
+	skillChanges, err := copyTree(skills, root, ".codebuddy/skills", opts, nil)
+	if err != nil {
+		return nil, err
+	}
+	changes = append(changes, skillChanges...)
+
+	if opts.UserSkill {
+		home := strings.TrimSpace(opts.UserHome)
+		if home == "" {
+			home, err = os.UserHomeDir()
+			if err != nil {
+				return nil, fmt.Errorf("resolve user home for WorkBuddy skill: %w", err)
+			}
+		}
+		data, err := fs.ReadFile(templates, "templates/workbuddy/skills/novelgen/SKILL.md")
+		if err != nil {
+			return nil, err
+		}
+		userOpts := opts
+		userOpts.Force = true
+		for _, rel := range []string{
+			".workbuddy/skills/novelgen/SKILL.md",
+			".codebuddy/skills/novelgen/SKILL.md",
+		} {
+			change, err := writeFile(home, rel, data, userOpts)
+			if err != nil {
+				return nil, err
+			}
+			change.Path = filepath.ToSlash(filepath.Join(home, filepath.FromSlash(rel)))
+			changes = append(changes, change)
+		}
+	}
+
+	result.Warnings = append(result.Warnings,
+		"Restart WorkBuddy (or reopen this project) and approve the local novelgen MCP server before using the tools")
+	return changes, nil
+}
+
+// workbuddyGuidancePath picks the file WorkBuddy reads first without shadowing
+// an existing project guidance file: CODEBUDDY.md, .codebuddy/CODEBUDDY.md, then
+// AGENTS.md. If none exists, create CODEBUDDY.md.
+func workbuddyGuidancePath(root string) string {
+	rootFile := filepath.Join(root, "CODEBUDDY.md")
+	if fileExists(rootFile) {
+		return rootFile
+	}
+	nested := filepath.Join(root, ".codebuddy", "CODEBUDDY.md")
+	if fileExists(nested) {
+		return nested
+	}
+	agents := filepath.Join(root, "AGENTS.md")
+	if fileExists(agents) {
+		return agents
+	}
+	return rootFile
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
+// upsertWorkbuddyMCP merges the novelgen stdio server into the project
+// .mcp.json. WorkBuddy expands ${CODEBUDDY_PROJECT_DIR} in cwd, so the server
+// resolves the project from the workspace without a machine-specific --dir.
+func upsertWorkbuddyMCP(root string, opts Options) (FileChange, error) {
+	target := filepath.Join(root, ".mcp.json")
+	change := FileChange{Path: ".mcp.json"}
+	settings := map[string]interface{}{}
+	existing, err := os.ReadFile(target)
+	switch {
+	case err == nil:
+		if strings.TrimSpace(string(existing)) != "" {
+			if err := json.Unmarshal(existing, &settings); err != nil {
+				return change, fmt.Errorf("%s is not a JSON object: %w", target, err)
+			}
+		}
+	case os.IsNotExist(err):
+	default:
+		return change, err
+	}
+
+	servers, err := mcpServerMap(settings)
+	if err != nil {
+		return change, err
+	}
+	entry := map[string]interface{}{
+		"type":    "stdio",
+		"command": opts.NovelgenPath,
+		"args":    []string{"mcp", "serve"},
+		"cwd":     "${CODEBUDDY_PROJECT_DIR}",
+	}
+	current, exists := servers["novelgen"]
+	unchanged := false
+	if exists {
+		// The decoded entry uses []interface{} for args while the generated entry
+		// uses []string; compare the canonical JSON instead of the Go values.
+		if currentJSON, currentErr := json.Marshal(current); currentErr == nil {
+			if entryJSON, entryErr := json.Marshal(entry); entryErr == nil {
+				unchanged = string(currentJSON) == string(entryJSON)
+			}
+		}
+	}
+	switch {
+	case exists && unchanged:
+		change.Action = "unchanged"
+		return change, nil
+	case exists:
+		change.Action = "update"
+	default:
+		change.Action = "create"
+	}
+	servers["novelgen"] = entry
+	rendered, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return change, err
+	}
+	rendered = append(rendered, '\n')
+	if !opts.Apply {
+		return change, nil
+	}
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		return change, err
+	}
+	if err := os.WriteFile(target, rendered, 0o644); err != nil {
+		return change, err
+	}
+	return change, nil
+}
+
+func mcpServerMap(settings map[string]interface{}) (map[string]interface{}, error) {
+	if raw, ok := settings["mcpServers"]; ok {
+		servers, ok := raw.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf(".mcp.json mcpServers must be an object")
+		}
+		return servers, nil
+	}
+	// WorkBuddy also accepts a direct server map (no mcpServers wrapper). Keep
+	// that shape when it is clearly a server map.
+	direct := false
+	for _, value := range settings {
+		entry, ok := value.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if _, hasCommand := entry["command"]; hasCommand {
+			direct = true
+			break
+		}
+		if _, hasURL := entry["url"]; hasURL {
+			direct = true
+			break
+		}
+	}
+	if direct {
+		return settings, nil
+	}
+	servers := map[string]interface{}{}
+	settings["mcpServers"] = servers
+	return servers, nil
 }
 
 func installDSH(root string, opts Options, result *Result) ([]FileChange, error) {
@@ -325,8 +524,12 @@ func renderTemplate(data []byte, opts Options) []byte {
 	return []byte(strings.ReplaceAll(string(data), "{{NOVELGEN}}", escaped))
 }
 
-func upsertManagedBlock(file, name, body string, opts Options) (FileChange, error) {
-	change := FileChange{Path: "AGENTS.md"}
+func upsertManagedBlock(root, file, name, body string, opts Options) (FileChange, error) {
+	display := filepath.Base(file)
+	if rel, err := filepath.Rel(root, file); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		display = filepath.ToSlash(rel)
+	}
+	change := FileChange{Path: display}
 	existing, readErr := os.ReadFile(file)
 	if readErr != nil && !os.IsNotExist(readErr) {
 		return change, readErr
@@ -351,6 +554,9 @@ func upsertManagedBlock(file, name, body string, opts Options) (FileChange, erro
 	}
 	if !opts.Apply {
 		return change, nil
+	}
+	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+		return change, err
 	}
 	if err := os.WriteFile(file, []byte(text), 0o644); err != nil {
 		return change, err

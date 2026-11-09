@@ -1,0 +1,16 @@
+{
+  "name": "wish-machine",
+  "description": "许愿机 — Novelgen book creation, checks, ideas and generation guidance for AI agents.",
+  "owner": {
+    "name": "wish-machine"
+  },
+  "plugins": [
+    {
+      "name": "wish",
+      "description": "许愿机 · Novelgen: book management, checks, ideas and generation guidance.",
+      "version": "0.1.0",
+      "source": "./plugins/wish",
+      "license": "MIT"
+    }
+  ]
+}

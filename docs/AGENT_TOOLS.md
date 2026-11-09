@@ -6,13 +6,44 @@
 `novelgen tool replace setup|outline|craft|chapter|recap` replaces a complete
 artifact (generation/regeneration) through the same mutation service. It is a
 validated dry run by default and writes only with `--apply`; a whole-outline
-result warns about chapters it would remove.
+result warns about chapters it would remove. `tool patch` and `tool replace`
+accept `--max-issues N` to cap the returned issue list; the check summary still
+reports the full count.
 The `tool patch`/`tool replace` commands are the CLI adapters over
 `internal/fiction/mutation.MutationService`; Chat/typed-JSON pipelines use the same
 service directly, so Agent outputs cannot bypass normalization, checkpoints,
 atomic writes, or the project mutation lock.
 Run commands from a novel project root, or any child directory under a project
 containing `novel.json`.
+
+## Agent-facing groups
+
+The stable agent surface is grouped by intent; the `tool` commands below remain
+compatibility aliases.
+
+```bash
+novelgen book init|status|read|write|refresh
+novelgen check [--profile quality|schema|rpg|all]
+novelgen ideas draw|types
+novelgen gen workflow|skill|reference list|read
+```
+
+- `book read` accepts the friendly section names `setup`, `outline`, `craft`,
+  `chapter`, `context`, `logs`.
+- `book write <section> --mode patch|replace` reads the artifact from stdin and
+  defaults to a dry run. `--apply` writes; `--max-issues` caps returned issues.
+- `check` returns `findings` (with `issues` as a compatibility alias). `rpg`
+  maps to the simulation backend; `custom` evaluates `.novelgen/rules/*.json`
+  for setup, outline, or chapter targets.
+- `ideas draw` is project-independent and supports `--type`, `--genre`,
+  `--count`, `--seed`, `--mode`, `--source`, and `--category`.
+- `gen workflow|skill|reference` is read-only generation guidance; the MCP
+  equivalent is `book_guide`. Load `setup-schema` before the first setup write
+  and `outline-schema` before the first outline write.
+
+MCP exposes the same surface as `book_init`, `book_status`, `book_read`,
+`book_write`, `book_refresh`, `book_check`, `book_ideas`, and `book_guide`.
+`book_guide(kind, name)` reads workflows, SDK skills, or references.
 
 The command is organized by seven query sections (`story-setup`, `outline`, `craft`,
 `chapter`, `context`, `ideas`, `logs`):

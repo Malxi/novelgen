@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "novelgen": {
+      "type": "stdio",
+      "command": "novelgen",
+      "args": [
+        "mcp",
+        "serve",
+        "--global"
+      ]
+    }
+  }
+}

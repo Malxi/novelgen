@@ -460,6 +460,8 @@ func init() {
 	ToolPatchCmd.Flags().BoolVar(&ToolPatchFlags.DryRun, "dry-run", false, "Force dry-run mode even when --apply is present")
 	ToolPatchCmd.Flags().BoolVar(&ToolPatchFlags.RefreshDerived, "refresh-derived", false, "For chapter --apply, regenerate derived RPG DSL and return a post-refresh all check")
 	ToolPatchCmd.Flags().IntVar(&ToolPatchFlags.TargetWords, "target-words", 0, "Override target narrative units for chapter patch length checks")
+	ToolPatchCmd.Flags().IntVar(&ToolPatchMaxIssues, "max-issues", 0,
+		"Cap returned check issues (0 = no cap)")
 	ToolPatchBufferCmd.Flags().StringVar(&ToolPatchBufferFlags.ID, "id", "", "Patch buffer id")
 	ToolPatchBufferCmd.Flags().StringVar(&ToolPatchBufferFlags.Text, "text", "", "Text chunk to append; stdin is used when omitted")
 	ToolPatchBufferCmd.Flags().BoolVar(&ToolPatchBufferFlags.Stdin, "stdin", false, "Read text chunk from stdin explicitly")
@@ -471,6 +473,8 @@ func init() {
 		"Write the replacement; without it the command only validates and reports changes")
 	ToolReplaceCmd.Flags().BoolVar(&ToolReplaceFlags.DryRun, "dry-run", false,
 		"Force a dry run even when --apply is set")
+	ToolReplaceCmd.Flags().IntVar(&ToolReplaceFlags.MaxIssues, "max-issues", 0,
+		"Cap returned check issues (0 = no cap)")
 	ToolRefreshCmd.Flags().StringVar(&ToolRefreshFlags.ID, "id", "", "Target chapter ID for scoped refresh")
 	ToolRefreshCmd.Flags().IntVar(&ToolRefreshFlags.BatchSize, "batch-size", 10, "Chapter markdown batch size for AI -> RPG DSL conversion")
 	ToolCmd.AddCommand(ToolQueryCmd)

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"novelgen/internal/contract/story"
 	"novelgen/internal/fiction/domain/project"
 	"novelgen/internal/platform/store"
+	"novelgen/internal/projectinit"
 )
 
 // testBook returns a project rooted at a temporary directory, so these tests
@@ -26,13 +26,16 @@ func TestCreateProjectStructureCreatesDocumentedLayout(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-
-	config := &models.ProjectConfig{
-		Name: "test-book",
-		LLM:  models.ProjectLLM{Provider: models.ProviderClaude, Model: "sonnet"},
-	}
-	if err := createProjectStructure(testBook(t, root), config); err != nil {
-		t.Fatalf("createProjectStructure: %v", err)
+	if _, err := projectinit.Create(testBook(t, root), projectinit.Options{
+		Name:     "test-book",
+		Parts:    1,
+		Volumes:  1,
+		Chapters: 20,
+		Provider: "claude",
+		Model:    "sonnet",
+		Language: "zh",
+	}); err != nil {
+		t.Fatalf("create project: %v", err)
 	}
 
 	for _, dir := range []string{
@@ -51,15 +54,5 @@ func TestCreateProjectStructureCreatesDocumentedLayout(t *testing.T) {
 	}
 	if !strings.Contains(string(placeholder), "Story Setup") {
 		t.Fatalf("placeholder should be a usable template:\n%s", placeholder)
-	}
-}
-
-func TestSplitAndTrimDropsBlanks(t *testing.T) {
-	got := splitAndTrim(" fantasy , , wuxia ,")
-	if len(got) != 2 || got[0] != "fantasy" || got[1] != "wuxia" {
-		t.Fatalf("splitAndTrim = %#v", got)
-	}
-	if got := splitAndTrim(""); len(got) != 0 {
-		t.Fatalf("empty input should yield no entries: %#v", got)
 	}
 }

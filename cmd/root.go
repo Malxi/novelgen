@@ -101,7 +101,7 @@ func startRunMetrics(cmd *cobra.Command, root *store.Root) {
 		// here would turn every query into a misleading standalone job.
 		return
 	}
-	ctx, run, err := runmetrics.Start(cmd.Context(), root, cmd.CommandPath())
+	ctx, run, err := runmetrics.StartWithMetadata(cmd.Context(), root, cmd.CommandPath(), runMetadata())
 	if err != nil {
 		logger.Warn("Failed to start run metrics: %v", err)
 		return
@@ -112,11 +112,30 @@ func startRunMetrics(cmd *cobra.Command, root *store.Root) {
 	activeRun.mu.Unlock()
 }
 
+func runMetadata() map[string]string {
+	metadata := map[string]string{}
+	for envName, key := range map[string]string{
+		"NOVELGEN_ORIGIN":            "origin",
+		"NOVELGEN_TOOL":              "tool",
+		"NOVELGEN_SECTION":           "section",
+		"NOVELGEN_MCP_SESSION":       "mcp_session",
+		"NOVELGEN_WORKBUDDY_SESSION": "workbuddy_session",
+		"NOVELGEN_INPUT_BYTES":       "input_bytes",
+	} {
+		if value := strings.TrimSpace(envutil.String(envName)); value != "" {
+			metadata[key] = value
+		}
+	}
+	return metadata
+}
+
 func isRunMetricsReadCommand(commandPath string) bool {
 	path := strings.TrimSpace(commandPath)
-	// Harness hooks run on every Write/Edit and only read project state; each
-	// invocation must not create a standalone run record.
-	if path == "novelgen hook" || strings.HasPrefix(path, "novelgen hook ") {
+	// Harness hooks and the long-lived MCP stdio server only read project state;
+	// they must not create standalone run records. Each MCP tool child records
+	// its own origin/tool/session metadata.
+	if path == "novelgen hook" || strings.HasPrefix(path, "novelgen hook ") ||
+		path == "novelgen mcp serve" {
 		return true
 	}
 	switch path {

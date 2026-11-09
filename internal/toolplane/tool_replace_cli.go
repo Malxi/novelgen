@@ -19,10 +19,11 @@ import (
 
 // ToolReplaceFlags holds the flags for `novelgen tool replace`.
 var ToolReplaceFlags struct {
-	Target string
-	ID     string
-	Apply  bool
-	DryRun bool
+	Target    string
+	ID        string
+	Apply     bool
+	DryRun    bool
+	MaxIssues int
 }
 
 var ToolReplaceCmd = &cobra.Command{
@@ -148,6 +149,7 @@ func RunToolReplace(cmd *cobra.Command, args []string) error {
 	if target != "" && section != "craft" {
 		result.Warnings = append(result.Warnings, fmt.Sprintf("--target %q is not used by %s replace and was ignored", target, section))
 	}
+	limitToolPatchResult(result, ToolReplaceFlags.MaxIssues)
 	return writeJSON(cmd, result)
 }
 

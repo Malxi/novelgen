@@ -83,6 +83,7 @@ var toolPlaneModuleFiles = map[string]string{
 	"internal/toolplane/tool_patch_cli.go":      "CLI adapter over the fiction/mutation service",
 	"internal/toolplane/tool_replace_cli.go":    "complete-artifact replace adapter over the fiction/mutation service",
 	"internal/toolplane/tool_patch_adapters.go": "per-section adapters over the fiction/mutation service",
+	"internal/toolplane/result_limits.go":       "caps returned issue/change lists for agent contexts",
 	"internal/toolplane/check_aliases.go":       "compatibility aliases over the fiction/check engine",
 	"internal/toolplane/tool_check_cli.go":      "CLI adapter over the fiction/check engine",
 	"internal/toolplane/tool_view.go":           "view levels and context/check budgets",

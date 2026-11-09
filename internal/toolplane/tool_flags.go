@@ -26,6 +26,10 @@ var ToolPatchFlags struct {
 	TargetWords    int
 }
 
+// ToolPatchMaxIssues is separate from ToolPatchFlags because tests and callers
+// construct ToolPatchFlags literals; the cap is an output-only concern.
+var ToolPatchMaxIssues int
+
 var ToolPatchBufferFlags struct {
 	ID       string
 	Text     string

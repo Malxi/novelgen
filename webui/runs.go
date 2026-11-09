@@ -18,28 +18,29 @@ import (
 // internal/architecture/schema_test.go compares the JSON tags on both sides; keep
 // every field in step or the build fails.
 type agentRunSummary struct {
-	RunID            string        `json:"run_id"`
-	Command          string        `json:"command,omitempty"`
-	Status           string        `json:"status"`
-	StartedAt        string        `json:"started_at,omitempty"`
-	FinishedAt       string        `json:"finished_at,omitempty"`
-	DurationMS       int64         `json:"duration_ms,omitempty"`
-	Events           int           `json:"events"`
-	AgentCalls       int           `json:"agent_calls"`
-	ToolCalls        int           `json:"tool_calls"`
-	ToolDenied       int           `json:"tool_denied,omitempty"`
-	Retries          int           `json:"retries,omitempty"`
-	StuckEvents      int           `json:"stuck_events,omitempty"`
-	PromptTokens     int           `json:"prompt_tokens,omitempty"`
-	CompletionTokens int           `json:"completion_tokens,omitempty"`
-	TotalTokens      int           `json:"total_tokens,omitempty"`
-	Agents           []string      `json:"agents,omitempty"`
-	Models           []string      `json:"models,omitempty"`
-	Skills           []string      `json:"skills,omitempty"`
-	Commands         []string      `json:"commands,omitempty"`
-	Stuck            []stuckSignal `json:"stuck,omitempty"`
-	Errors           []string      `json:"errors,omitempty"`
-	LiveLog          string        `json:"live_log,omitempty"`
+	RunID            string            `json:"run_id"`
+	Command          string            `json:"command,omitempty"`
+	Status           string            `json:"status"`
+	StartedAt        string            `json:"started_at,omitempty"`
+	FinishedAt       string            `json:"finished_at,omitempty"`
+	DurationMS       int64             `json:"duration_ms,omitempty"`
+	Events           int               `json:"events"`
+	AgentCalls       int               `json:"agent_calls"`
+	ToolCalls        int               `json:"tool_calls"`
+	ToolDenied       int               `json:"tool_denied,omitempty"`
+	Retries          int               `json:"retries,omitempty"`
+	StuckEvents      int               `json:"stuck_events,omitempty"`
+	PromptTokens     int               `json:"prompt_tokens,omitempty"`
+	CompletionTokens int               `json:"completion_tokens,omitempty"`
+	TotalTokens      int               `json:"total_tokens,omitempty"`
+	Agents           []string          `json:"agents,omitempty"`
+	Models           []string          `json:"models,omitempty"`
+	Metadata         map[string]string `json:"metadata,omitempty"`
+	Skills           []string          `json:"skills,omitempty"`
+	Commands         []string          `json:"commands,omitempty"`
+	Stuck            []stuckSignal     `json:"stuck,omitempty"`
+	Errors           []string          `json:"errors,omitempty"`
+	LiveLog          string            `json:"live_log,omitempty"`
 }
 
 type stuckSignal struct {

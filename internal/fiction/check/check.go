@@ -31,6 +31,8 @@ type ToolCheckResult struct {
 type toolCheckIssue struct {
 	models.ReviewSuggestion
 	Navigation map[string]interface{} `json:"navigation,omitempty"`
+	Severity   string                 `json:"severity,omitempty"`
+	RuleID     string                 `json:"rule_id,omitempty"`
 }
 
 type toolCheckResultJSON struct {
@@ -43,6 +45,7 @@ type toolCheckResultJSON struct {
 	Score       float64                `json:"score"`
 	Summary     ToolCheckSummary       `json:"summary"`
 	Issues      []toolCheckIssue       `json:"issues,omitempty"`
+	Findings    []toolCheckIssue       `json:"findings,omitempty"`
 	Warnings    []string               `json:"warnings,omitempty"`
 	NextActions []ToolNextAction       `json:"next_actions,omitempty"`
 	Meta        map[string]interface{} `json:"meta,omitempty"`
@@ -68,6 +71,7 @@ type ToolNextAction struct {
 }
 
 func (r ToolCheckResult) MarshalJSON() ([]byte, error) {
+	issues := toolCheckIssuesForJSON(r)
 	return json.Marshal(toolCheckResultJSON{
 		Kind:        r.Kind,
 		Target:      r.Target,
@@ -77,7 +81,8 @@ func (r ToolCheckResult) MarshalJSON() ([]byte, error) {
 		Blocking:    r.Blocking,
 		Score:       r.Score,
 		Summary:     r.Summary,
-		Issues:      toolCheckIssuesForJSON(r),
+		Issues:      issues,
+		Findings:    issues,
 		Warnings:    r.Warnings,
 		NextActions: toolCheckNextActions(r),
 		Meta:        toolCheckMetaForJSON(r),
@@ -322,9 +327,17 @@ func toolCheckIssuesForJSON(result ToolCheckResult) []toolCheckIssue {
 	issues := make([]toolCheckIssue, 0, len(result.Issues))
 	targetWords := ToolCheckResultTargetWords(result)
 	for _, issue := range result.Issues {
+		severity := strings.ToLower(strings.TrimSpace(issue.Priority))
+		switch severity {
+		case "critical", "high", "medium", "low":
+		default:
+			severity = "medium"
+		}
 		issues = append(issues, toolCheckIssue{
 			ReviewSuggestion: issue,
 			Navigation:       ToolIssueNavigation(result.Kind, result.Target, result.Scope, result.ID, issue, targetWords),
+			Severity:         severity,
+			RuleID:           issue.Category,
 		})
 	}
 	return issues

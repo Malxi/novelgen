@@ -77,6 +77,35 @@ func TestRunLedgerSummarizesCallsToolsSkillsAndStuck(t *testing.T) {
 	}
 }
 
+func TestStartWithMetadataSummarizesCallerFacts(t *testing.T) {
+	root := store.MemRoot()
+	ctx, run, err := StartWithMetadata(context.Background(), root, "novelgen tool replace", map[string]string{
+		"origin":      "mcp",
+		"tool":        "novelgen_replace",
+		"mcp_session": "session-1",
+		"input_bytes": "4096",
+	})
+	if err != nil {
+		t.Fatalf("StartWithMetadata: %v", err)
+	}
+	if run == nil || FromContext(ctx) != run {
+		t.Fatal("run was not attached to context")
+	}
+	run.Finish("", nil)
+	runs, err := List(root, ListOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 {
+		t.Fatalf("runs = %d", len(runs))
+	}
+	for key, want := range map[string]string{"origin": "mcp", "tool": "novelgen_replace", "mcp_session": "session-1", "input_bytes": "4096"} {
+		if got := runs[0].Metadata[key]; got != want {
+			t.Fatalf("metadata[%s] = %q, want %q", key, got, want)
+		}
+	}
+}
+
 func TestMaskCommandRedactsPayloadFlags(t *testing.T) {
 	got := MaskCommand(`novelgen tool patch chapter --patch-json "{\"content\":\"private\"}" --apply --prompt secret`)
 	if strings.Contains(got, "private") || strings.Contains(got, "secret") {

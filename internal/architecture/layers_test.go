@@ -154,6 +154,7 @@ var layer = map[string]int{
 	"internal/fiction/domain/creativity":                  3,
 	"internal/fiction/domain/quality":                     3,
 	"internal/fiction/domain/project":                     4,
+	"internal/projectinit":                                4,
 	"internal/fiction/domain/memory":                      5,
 	"internal/fiction/check":                              5,
 	"internal/platform/agentruntime":                      5,

@@ -32,6 +32,17 @@ func Open(root *store.Root) *Book {
 	return &Book{root: root}
 }
 
+// OpenDir opens one explicit project directory. Unlike Default it never falls
+// back to the process working directory; callers that need an explicit
+// projectDir (the MCP workspace server) use this instead of store.OpenProject.
+func OpenDir(dir string) (*Book, error) {
+	root, err := store.OpenProject(dir)
+	if err != nil {
+		return nil, err
+	}
+	return Open(root), nil
+}
+
 // Root returns the explicit storage root behind the project facade. Low-level
 // path and file operations remain available through this escape hatch, but they
 // are no longer promoted as project-domain methods.

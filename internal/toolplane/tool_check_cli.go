@@ -21,8 +21,8 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 	if kind == "" {
 		kind = "all"
 	}
-	if kind != "quality" && kind != "simulation" && kind != "all" && kind != "schema" {
-		return fmt.Errorf("unsupported check kind %q; valid kinds: quality, simulation, all, schema", kind)
+	if kind != "quality" && kind != "simulation" && kind != "all" && kind != "schema" && kind != "custom" {
+		return fmt.Errorf("unsupported check kind %q; valid kinds: quality, simulation, all, schema, custom", kind)
 	}
 	target := NormalizeKey(ToolCheckFlags.Target)
 	if target == "" {
@@ -40,8 +40,8 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 	if target == "recap" && kind == "simulation" {
 		return fmt.Errorf("recap checks do not support kind simulation; use quality, all, or schema")
 	}
-	if target == "chapter" && kind != "quality" && kind != "simulation" && kind != "all" {
-		return fmt.Errorf("chapter checks currently support only kind quality, simulation, or all")
+	if target == "chapter" && kind != "quality" && kind != "simulation" && kind != "all" && kind != "custom" {
+		return fmt.Errorf("chapter checks currently support only kind quality, simulation, all, or custom")
 	}
 
 	book, err := project.ForCommand(cmd)
@@ -49,6 +49,18 @@ func runToolCheck(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	root := book.Root()
+	if kind == "custom" {
+		result, err := check.RunToolCustomRules(root, target, ToolCheckFlags.Scope, ToolCheckFlags.ID)
+		if err != nil {
+			return err
+		}
+		addToolCheckMeta(result, "project_root", root.Dir())
+		applyToolCheckFlagWarnings(result, target)
+		if err := check.ApplyToolCheckIssueFilters(result, ToolCheckFlags.MinPriority, ToolCheckFlags.Category, ToolCheckFlags.MaxIssues); err != nil {
+			return err
+		}
+		return writeJSON(cmd, result)
+	}
 	if target == "craft" {
 		scope, err := resolveCraftCheckScope(root, ToolCheckFlags.Scope, ToolCheckFlags.ID)
 		if err != nil {

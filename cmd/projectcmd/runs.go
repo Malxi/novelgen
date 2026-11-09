@@ -89,8 +89,15 @@ func runProjectRuns(cmd *cobra.Command, _ []string) error {
 			stuck = " stuck=" + truncateUsageText(strings.Join(reasons, ", "), 90)
 		}
 		fmt.Fprintf(out, "%s  %-9s %s", run.RunID, run.Status, truncateUsageText(run.Command, 72))
-		fmt.Fprintf(out, "  calls=%d tools=%d tokens=%d%s\n",
-			run.AgentCalls, run.ToolCalls, run.TotalTokens, stuck)
+		meta := ""
+		if origin := run.Metadata["origin"]; origin != "" {
+			meta = " origin=" + origin
+		}
+		if tool := run.Metadata["tool"]; tool != "" {
+			meta += " tool=" + tool
+		}
+		fmt.Fprintf(out, "  calls=%d tools=%d tokens=%d%s%s\n",
+			run.AgentCalls, run.ToolCalls, run.TotalTokens, meta, stuck)
 	}
 	return nil
 }
@@ -112,6 +119,15 @@ func runProjectRun(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(out, "Run: %s\n", summary.RunID)
 	fmt.Fprintf(out, "Command: %s\n", summary.Command)
 	fmt.Fprintf(out, "Status: %s\n", summary.Status)
+	if origin := summary.Metadata["origin"]; origin != "" {
+		fmt.Fprintf(out, "Origin: %s\n", origin)
+	}
+	if tool := summary.Metadata["tool"]; tool != "" {
+		fmt.Fprintf(out, "Tool: %s\n", tool)
+	}
+	if session := summary.Metadata["mcp_session"]; session != "" {
+		fmt.Fprintf(out, "MCP session: %s\n", session)
+	}
 	fmt.Fprintf(out, "Window: %s .. %s\n", summary.StartedAt, summary.FinishedAt)
 	fmt.Fprintf(out, "Calls: %d  Tools: %d  Denied: %d  Tokens: %d\n",
 		summary.AgentCalls, summary.ToolCalls, summary.ToolDenied, summary.TotalTokens)

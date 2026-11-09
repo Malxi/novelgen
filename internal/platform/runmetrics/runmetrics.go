@@ -104,6 +104,12 @@ type runContextKey struct{}
 // Start creates a run and appends its run_start event. A nil root or disabled
 // metrics returns a nil Run and no error; metrics must never block creative work.
 func Start(ctx context.Context, root *store.Root, command string) (context.Context, *Run, error) {
+	return StartWithMetadata(ctx, root, command, nil)
+}
+
+// StartWithMetadata is Start plus caller-supplied execution facts (for example
+// origin=mcp, tool=novelgen_replace, mcp_session=...). The cwd is always added.
+func StartWithMetadata(ctx context.Context, root *store.Root, command string, metadata map[string]string) (context.Context, *Run, error) {
 	if metricsDisabled() || root == nil || root.Dir() == "" {
 		return ctx, nil, nil
 	}
@@ -113,6 +119,14 @@ func Start(ctx context.Context, root *store.Root, command string) (context.Conte
 		command:   strings.TrimSpace(command),
 		startedAt: time.Now(),
 	}
+	merged := map[string]string{"cwd": root.Dir()}
+	for key, value := range metadata {
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		if key != "" && value != "" {
+			merged[key] = value
+		}
+	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -121,7 +135,7 @@ func Start(ctx context.Context, root *store.Root, command string) (context.Conte
 		Event:    EventRunStart,
 		Status:   StatusRunning,
 		Command:  run.command,
-		Metadata: map[string]string{"cwd": root.Dir()},
+		Metadata: merged,
 	}); err != nil {
 		return ctx, run, err
 	}
@@ -254,28 +268,29 @@ type ListOptions struct {
 
 // RunSummary is the compact representation used by the CLI and Web UI.
 type RunSummary struct {
-	RunID            string        `json:"run_id"`
-	Command          string        `json:"command,omitempty"`
-	Status           string        `json:"status"`
-	StartedAt        string        `json:"started_at,omitempty"`
-	FinishedAt       string        `json:"finished_at,omitempty"`
-	DurationMS       int64         `json:"duration_ms,omitempty"`
-	Events           int           `json:"events"`
-	AgentCalls       int           `json:"agent_calls"`
-	ToolCalls        int           `json:"tool_calls"`
-	ToolDenied       int           `json:"tool_denied,omitempty"`
-	Retries          int           `json:"retries,omitempty"`
-	StuckEvents      int           `json:"stuck_events,omitempty"`
-	PromptTokens     int           `json:"prompt_tokens,omitempty"`
-	CompletionTokens int           `json:"completion_tokens,omitempty"`
-	TotalTokens      int           `json:"total_tokens,omitempty"`
-	Agents           []string      `json:"agents,omitempty"`
-	Models           []string      `json:"models,omitempty"`
-	Skills           []string      `json:"skills,omitempty"`
-	Commands         []string      `json:"commands,omitempty"`
-	Stuck            []StuckSignal `json:"stuck,omitempty"`
-	Errors           []string      `json:"errors,omitempty"`
-	LiveLog          string        `json:"live_log,omitempty"`
+	RunID            string            `json:"run_id"`
+	Command          string            `json:"command,omitempty"`
+	Status           string            `json:"status"`
+	StartedAt        string            `json:"started_at,omitempty"`
+	FinishedAt       string            `json:"finished_at,omitempty"`
+	DurationMS       int64             `json:"duration_ms,omitempty"`
+	Events           int               `json:"events"`
+	AgentCalls       int               `json:"agent_calls"`
+	ToolCalls        int               `json:"tool_calls"`
+	ToolDenied       int               `json:"tool_denied,omitempty"`
+	Retries          int               `json:"retries,omitempty"`
+	StuckEvents      int               `json:"stuck_events,omitempty"`
+	PromptTokens     int               `json:"prompt_tokens,omitempty"`
+	CompletionTokens int               `json:"completion_tokens,omitempty"`
+	TotalTokens      int               `json:"total_tokens,omitempty"`
+	Agents           []string          `json:"agents,omitempty"`
+	Models           []string          `json:"models,omitempty"`
+	Metadata         map[string]string `json:"metadata,omitempty"`
+	Skills           []string          `json:"skills,omitempty"`
+	Commands         []string          `json:"commands,omitempty"`
+	Stuck            []StuckSignal     `json:"stuck,omitempty"`
+	Errors           []string          `json:"errors,omitempty"`
+	LiveLog          string            `json:"live_log,omitempty"`
 }
 
 type StuckSignal struct {
@@ -461,6 +476,12 @@ func summarize(runID string, events []Event) RunSummary {
 		}
 		if event.Event == EventRunStart {
 			summary.StartedAt = event.Time.Format(time.RFC3339Nano)
+			if len(event.Metadata) > 0 {
+				summary.Metadata = make(map[string]string, len(event.Metadata))
+				for key, value := range event.Metadata {
+					summary.Metadata[key] = value
+				}
+			}
 		}
 		if event.Event == EventRunEnd {
 			summary.FinishedAt = event.Time.Format(time.RFC3339Nano)

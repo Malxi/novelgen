@@ -16,21 +16,27 @@ var (
 	agentInstallApply      bool
 	agentInstallForce      bool
 	agentInstallAllowHooks bool
+	agentInstallUserSkill  bool
 	agentInstallJSON       bool
 	agentInstallCodexHome  string
 )
 
 var agentInstallCmd = &cobra.Command{
 	Use:   "install",
-	Short: "Install Novelgen adapters for Claude Code, Codex, or DSH",
+	Short: "Install legacy project adapters for Codex or DSH",
 	Long: `Install project-local agent adapters.
+
+Claude Code and WorkBuddy should use the native wish-machine marketplace
+instead (see docs/WISH_MACHINE.md). This command remains for Codex, DSH, and
+projects that need a project-local fallback.
 
 The shared stage workflows are written to .novelgen/workflows/. Target-specific
 files are thin adapters:
 
-  claude  .claude-plugin plugin, commands, skill, hooks and MCP config
-  codex   AGENTS.md block, .codex MCP config, skill
-  dsh     shared workflows and a pointer to the Cordis bundle
+  claude    .claude-plugin plugin, commands, skill, hooks and MCP config
+  codex     AGENTS.md block, .codex MCP config, skill
+  workbuddy .mcp.json MCP server, CODEBUDDY.md block, .codebuddy project skill
+  dsh       shared workflows and a pointer to the Cordis bundle
 
 The command is dry-run by default. Pass --apply to write. Existing files are
 preserved unless --force is supplied; the managed AGENTS.md block is updated in
@@ -41,11 +47,13 @@ place. Claude hooks are skipped unless --allow-hooks is explicit.`,
 
 func init() {
 	agentInstallCmd.Flags().StringVar(&agentInstallTargets, "target", "claude,codex",
-		"Comma-separated targets: claude, codex, dsh; all = claude+codex")
+		"Comma-separated targets: claude, codex, dsh, workbuddy; all = claude+codex")
 	agentInstallCmd.Flags().BoolVar(&agentInstallApply, "apply", false, "Write adapter files")
 	agentInstallCmd.Flags().BoolVar(&agentInstallForce, "force", false, "Overwrite existing adapter files")
 	agentInstallCmd.Flags().BoolVar(&agentInstallAllowHooks, "allow-hooks", false,
 		"Install executable Claude hooks (PreToolUse write guard, SessionStart status)")
+	agentInstallCmd.Flags().BoolVar(&agentInstallUserSkill, "user-skill", false,
+		"Also install the WorkBuddy skill under ~/.workbuddy/skills and ~/.codebuddy/skills")
 	agentInstallCmd.Flags().BoolVar(&agentInstallJSON, "json", false, "Print the install report as JSON")
 	agentInstallCmd.Flags().StringVar(&agentInstallCodexHome, "codex-home", "",
 		"Write the Codex MCP entry into this CODEX_HOME/config.toml (Codex CLI does not read a project .codex/config.toml)")
@@ -62,6 +70,7 @@ func runAgentInstall(cmd *cobra.Command, _ []string) error {
 		Apply:      agentInstallApply,
 		Force:      agentInstallForce,
 		AllowHooks: agentInstallAllowHooks,
+		UserSkill:  agentInstallUserSkill,
 		CodexHome:  agentInstallCodexHome,
 	})
 	if err != nil {

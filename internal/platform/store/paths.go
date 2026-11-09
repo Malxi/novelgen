@@ -27,6 +27,8 @@ const (
 	chaptersDirName            = "chapters"
 	draftsDirName              = "drafts"
 	logsDirName                = "logs"
+	novelgenDirName            = ".novelgen"
+	rulesDirName               = "rules"
 	checkpointsName            = "checkpoints"
 	backupsName                = "backups"
 	setupJSONName              = "story_setup.json"
@@ -120,6 +122,9 @@ func (r *Root) LLMConfigJSON() string { return filepath.Join(r.Dir(), llmConfigN
 
 // StoryDir is the directory holding all story state.
 func (r *Root) StoryDir() string { return filepath.Join(r.Dir(), storyDirName) }
+
+// RulesDir is the user-authored check rule directory.
+func (r *Root) RulesDir() string { return filepath.Join(r.Dir(), novelgenDirName, rulesDirName) }
 
 // SetupDir is story/setup.
 func (r *Root) SetupDir() string { return filepath.Join(r.StoryDir(), setupDirName) }

@@ -7,6 +7,8 @@ quality score.
 ## What is recorded
 
 - CLI command, start/end time and status
+- Caller metadata: `cwd`, `origin` (for example `mcp`), `tool`, `section`,
+  `mcp_session`, `workbuddy_session`, and `input_bytes`
 - Agent and model calls with token usage, duration and prompt/response sizes
 - Requested and loaded skills, including missing SDK skills
 - Tool commands, permission decisions, denial reasons and tool durations

@@ -150,6 +150,7 @@ func RunToolPatch(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	limitToolPatchResult(result, ToolPatchMaxIssues)
 	return writeJSON(cmd, result)
 }
 
