@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.asset }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            asset: novelgen-windows-amd64.exe
+          - goos: windows
+            goarch: arm64
+            asset: novelgen-windows-arm64.exe
+          - goos: darwin
+            goarch: amd64
+            asset: novelgen-darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            asset: novelgen-darwin-arm64
+          - goos: linux
+            goarch: amd64
+            asset: novelgen-linux-amd64
+          - goos: linux
+            goarch: arm64
+            asset: novelgen-linux-arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+          cache: true
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          go build -trimpath \
+            -ldflags "-s -w -X novelgen/cmd/versioncmd.Version=${version}" \
+            -o "dist/${{ matrix.asset }}" .
+          ls -lh "dist/${{ matrix.asset }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+          if-no-files-found: error
+
+  package:
+    name: Package release assets
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Build npm launcher tarball
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          node -e "const fs=require('fs');const p='npm/novelgen-cli/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version=process.argv[1];fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');" "${version}"
+          npm pack ./npm/novelgen-cli --pack-destination dist
+          cp dist/novelgen-cli-*.tgz dist/novelgen-cli.tgz
+          ls -lh dist
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

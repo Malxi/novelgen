@@ -90,6 +90,13 @@ DSH uses the separate `dsh-novelgen` Cordis bundle.
 
 `kind` is `regex` or `contains`; rules may be a single object or an array.
 
+## Official WorkBuddy platform
+
+For the public WorkBuddy market, use the CLI + Skill Connector package in
+[`open-platform/novelgen-connector`](../open-platform/novelgen-connector) and
+follow [OPEN_PLATFORM.md](OPEN_PLATFORM.md). The marketplace in this repository
+is for local/team GitHub installation, not the official public listing.
+
 ## CLI mapping
 
 ```text

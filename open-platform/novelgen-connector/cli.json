@@ -1,0 +1,29 @@
+{
+  "runtime": {
+    "type": "node",
+    "version": ">=18"
+  },
+  "init": {
+    "darwin": "npm install -g https://github.com/Malxi/novelgen/releases/latest/download/novelgen-cli.tgz && novelgen version",
+    "linux": "npm install -g https://github.com/Malxi/novelgen/releases/latest/download/novelgen-cli.tgz && novelgen version",
+    "win32": "npm install -g https://github.com/Malxi/novelgen/releases/latest/download/novelgen-cli.tgz && novelgen version"
+  },
+  "unAuth": {
+    "darwin": "novelgen version",
+    "linux": "novelgen version",
+    "win32": "novelgen version"
+  },
+  "status": {
+    "darwin": "novelgen version",
+    "linux": "novelgen version",
+    "win32": "novelgen version"
+  },
+  "versionCheck": {
+    "command": {
+      "darwin": "novelgen version",
+      "linux": "novelgen version",
+      "win32": "novelgen version"
+    },
+    "minVersion": "0.1.0"
+  }
+}

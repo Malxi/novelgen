@@ -74,6 +74,7 @@ func TestCommandSurfaceTopLevel(t *testing.T) {
 		"storage",
 		"tool",
 		"translate",
+		"version",
 		"write",
 	}
 	if strings.Join(got, ",") != strings.Join(want, ",") {

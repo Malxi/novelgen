@@ -12,6 +12,7 @@ Novelgen 是一个命令行工具，用于 AI 辅助小说创作。它提供了�
 | [docs/RUN_METRICS.md](docs/RUN_METRICS.md) | Agent 运行指标与事件格式 |
 | [docs/AGENT_KIT.md](docs/AGENT_KIT.md) | Claude Code / Codex / DSH 适配器、MCP、hooks 与安装 |
 | [docs/WISH_MACHINE.md](docs/WISH_MACHINE.md) | 许愿机 marketplace：四个 skill、四个 command 与 `book_*` MCP 工具 |
+| [docs/OPEN_PLATFORM.md](docs/OPEN_PLATFORM.md) | WorkBuddy 官方开放平台：CLI + Skill Connector 发布 |
 
 ## 许愿机 marketplace
 

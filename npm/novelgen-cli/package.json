@@ -1,0 +1,22 @@
+{
+  "name": "novelgen-cli",
+  "version": "0.1.0",
+  "description": "Novelgen CLI launcher for WorkBuddy and other agent harnesses.",
+  "license": "MIT",
+  "bin": {
+    "novelgen": "bin/novelgen.js"
+  },
+  "files": [
+    "bin"
+  ],
+  "scripts": {
+    "postinstall": "node bin/install.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Malxi/novelgen.git"
+  }
+}
