@@ -45,8 +45,8 @@ novelgen-cli.tgz
 Trigger it by pushing a tag:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.1
+git push origin v0.1.1
 ```
 
 Wait for the GitHub Release to publish before submitting the connector.

@@ -4,10 +4,54 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const https = require('https');
+const { execFileSync } = require('child_process');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 
 const pkg = require('../package.json');
 const version = process.env.NOVELGEN_VERSION || pkg.version;
 const repo = 'Malxi/novelgen';
+
+function windowsSystemProxy() {
+  if (process.platform !== 'win32') {
+    return '';
+  }
+  try {
+    const key = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings';
+    const enabled = execFileSync('reg', ['query', key, '/v', 'ProxyEnable'], {
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    if (!/ProxyEnable\s+REG_DWORD\s+0x1/i.test(enabled)) {
+      return '';
+    }
+    const server = execFileSync('reg', ['query', key, '/v', 'ProxyServer'], {
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    const match = server.match(/ProxyServer\s+REG_SZ\s+(\S+)/i);
+    if (!match) {
+      return '';
+    }
+    let value = match[1];
+    if (value.includes('=')) {
+      const entries = Object.fromEntries(value.split(';').map((item) => item.split('=')));
+      value = entries.https || entries.http || '';
+    }
+    if (!value) {
+      return '';
+    }
+    return /^https?:\/\//i.test(value) ? value : `http://${value}`;
+  } catch {
+    return '';
+  }
+}
+
+function proxyAgent() {
+  const proxy = process.env.HTTPS_PROXY || process.env.https_proxy ||
+    process.env.HTTP_PROXY || process.env.http_proxy || process.env.ALL_PROXY ||
+    windowsSystemProxy();
+  return proxy ? new HttpsProxyAgent(proxy) : undefined;
+}
 
 function platformAsset() {
   const platform = process.platform;
@@ -45,7 +89,7 @@ function download(url, destination, redirects = 0) {
       reject(new Error('too many redirects'));
       return;
     }
-    https.get(url, { headers: { 'user-agent': 'novelgen-cli' } }, (response) => {
+    https.get(url, { headers: { 'user-agent': 'novelgen-cli' }, agent: proxyAgent() }, (response) => {
       if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
         response.resume();
         resolve(download(response.headers.location, destination, redirects + 1));

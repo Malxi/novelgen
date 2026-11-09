@@ -7,7 +7,7 @@
   "description_en": "Manage and write novels with Novelgen: read and write setup/outline artifacts, run deterministic checks, draw reference cards, and load generation workflows.",
   "source": "novelgen",
   "type": "cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minWorkbuddyVersion": "4.24.0",
   "examples_zh": [
     "创建一个 3 卷 × 5 章的科幻小说项目，并生成设定和大纲",

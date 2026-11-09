@@ -1,6 +1,6 @@
 {
   "name": "novelgen-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Novelgen CLI launcher for WorkBuddy and other agent harnesses.",
   "license": "MIT",
   "bin": {
@@ -11,6 +11,9 @@
   ],
   "scripts": {
     "postinstall": "node bin/install.js"
+  },
+  "dependencies": {
+    "https-proxy-agent": "^7.0.5"
   },
   "engines": {
     "node": ">=18"

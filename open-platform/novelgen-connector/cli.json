@@ -24,6 +24,6 @@
       "linux": "novelgen version",
       "win32": "novelgen version"
     },
-    "minVersion": "0.1.0"
+    "minVersion": "0.1.1"
   }
 }

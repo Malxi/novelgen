@@ -35,8 +35,8 @@ npm 启动器会把对应平台的 `novelgen` 二进制下载到 `~/.novelgen/bi
 发布流程：
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.1
+git push origin v0.1.1
 ```
 
 `.github/workflows/release.yml` 会生成：
